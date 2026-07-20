@@ -74,14 +74,10 @@ final class ImportPipeline
      */
     public function preview(string $localPath, string $sourceFormat, AccountResolver $accounts, User $user, int $importRunId, ?BankCsvFormatHint $formatHint = null): array
     {
-        // Backstop guard at the public-contract boundary: CSV is the only
-        // ambiguous bank-statement format, and the file's own header is
-        // not enough to disambiguate the dialect reliably. Any caller
-        // that asks for a CSV import without naming the bank explicitly
-        // is refused here even if it bypassed the wizard's own
-        // server-side rules() validation (other modules, future
-        // programmatic callers, tests that drive the contract
-        // directly).
+        // Backstop at the public-contract boundary: CSV is the only
+        // ambiguous bank-statement format and cannot self-disambiguate,
+        // so any caller lacking a format hint is refused here even if
+        // it bypassed the wizard's own server-side validation.
         if ($formatHint === null && in_array($sourceFormat, ['asn-csv', 'ing-csv'], strict: true)) {
             throw new InvalidArgumentException('CSV imports require a format hint.');
         }
@@ -196,23 +192,15 @@ final class ImportPipeline
                     $normalized = $this->paymentTypeClassifier->run($normalized, $user, $sourceFormat);
                     $autoOutcome = $this->autoCategory->apply($normalized, $user);
                     $normalized = $autoOutcome->canonical;
-                    // ResolveCounterpartyStage sits between auto-category
-                    // application and the FingerprintStage post-commit
-                    // boundary so the resolved counterparty_id rides
-                    // along on the canonical row that eventually hits
-                    // RecordTransactions. The Public contract resolves
-                    // through DI; the Internal implementation walks the
-                    // seven-step precedence chain and upserts the
-                    // matching `counterparties` row.
+                    // Runs between auto-category and the fingerprint
+                    // stage so the resolved counterparty_id rides along
+                    // on the canonical row that eventually hits
+                    // RecordTransactions.
                     $normalized = $this->resolveCounterparty->run($normalized, $user);
                 } catch (Throwable $e) {
-                    // Log every per-row failure with the full stack
-                    // trace so a developer can open /dev/logs and see
-                    // which adapter / stage threw — the preview-row
-                    // surfaces only the user-facing message, which is
+                    // Log the full stack trace so /dev/logs shows which
+                    // adapter/stage threw — the preview row's message is
                     // intentionally short and loses the call site.
-                    // Without this log the failure was "silent" past
-                    // the preview row (no entry anywhere triagable).
                     $this->logger->warning('ImportPipeline: row failed.', [
                         'source_format' => $sourceFormat,
                         'import_run_id' => $importRunId,
@@ -283,12 +271,10 @@ final class ImportPipeline
                 }
             }
         } catch (Throwable $e) {
-            // A fatal adapter-level error (bad header, encoding mismatch, etc.)
-            // surfaces as a single ERROR row covering the whole file so the
-            // wizard can still render the preview screen rather than 500ing.
-            // Log the full stack trace so the failure is triagable on
-            // /dev/logs — the surfaced row carries only the user-facing
-            // message, which loses the call site.
+            // A fatal adapter-level error (bad header, encoding mismatch)
+            // surfaces as a single ERROR row so the wizard still renders
+            // instead of 500ing. Full trace logged to /dev/logs since the
+            // surfaced row keeps only the user-facing message.
             $this->logger->warning('ImportPipeline: parse failed.', [
                 'source_format' => $sourceFormat,
                 'import_run_id' => $importRunId,

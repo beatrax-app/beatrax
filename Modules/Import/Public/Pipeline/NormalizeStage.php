@@ -60,11 +60,10 @@ final class NormalizeStage
             default => 'adjustment',
         };
 
-        // Substitute settled = native when the source did not supply a
-        // settled pair. EUR-native source rows leave the settled fields
-        // null and inherit the native pair here; foreign-currency rows
-        // (where the source supplies a settled-EUR leg alongside the
-        // native amount and currency) carry both pairs verbatim.
+        // Substitute settled = native when the source omitted a settled
+        // pair: EUR-native rows leave the settled fields null and inherit
+        // the native pair; foreign-currency rows carry both pairs
+        // verbatim (settled-EUR leg alongside the native amount).
         $settledMinor = $source->settledAmountMinor ?? $source->amountMinor;
         $settledCurrency = $source->settledCurrency ?? $source->currency;
 

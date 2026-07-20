@@ -61,7 +61,6 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
      * @var array<string, array{type: PaymentType, confidence: int}>
      */
     private const EVENT_TYPES = [
-        // Observed NL event types (current PayPal Activity Download corpus).
         'vooraf goedgekeurde betaling – rekening betaald door gebruiker' => ['type' => PaymentType::Online, 'confidence' => 95],
         'express checkout-betaling' => ['type' => PaymentType::Online, 'confidence' => 95],
         'algemene valutaomrekening' => ['type' => PaymentType::Fee, 'confidence' => 95],

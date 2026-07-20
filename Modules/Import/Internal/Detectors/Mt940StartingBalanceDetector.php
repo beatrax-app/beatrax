@@ -67,11 +67,9 @@ final class Mt940StartingBalanceDetector implements DetectsStartingBalance
             ])
             ->get();
 
-        // Emit every distinct (openingBalanceMinor, openingBalanceDate)
-        // pair at the earliest opening-balance-date per account so the
-        // aggregator can detect within-source conflicts. The detector
-        // itself only restricts to "earliest date per account"; the
-        // aggregator applies the cross-source tie-break rules.
+        // Earliest opening-balance-date per account wins; the
+        // aggregator (not this detector) resolves any cross-source
+        // opening-balance conflicts among candidates sharing a date.
         $earliestDatePerAccount = [];
         $emittedKeys = [];
         $out = [];

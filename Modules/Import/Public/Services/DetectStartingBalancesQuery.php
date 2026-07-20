@@ -136,7 +136,9 @@ final readonly class DetectStartingBalancesQuery
             return [$atEarliest[0]];
         }
 
-        // 2. On a date tie, prefer canonical CAMT.053 over MT940.
+        // 2. On a date tie, prefer canonical CAMT.053 over MT940 (CAMT
+        //    carries an explicit <OpngBal> element; MT940 sometimes
+        //    recomputes a running total).
         $camt053 = [];
         $other = [];
         foreach ($atEarliest as $candidate) {
@@ -155,17 +157,20 @@ final readonly class DetectStartingBalancesQuery
             return [$other[0]];
         }
 
-        // CAMT-only with multiple winners — still tied: surface both.
+        // CAMT-only with multiple winners — still tied on both date and
+        // source: surface every remaining candidate.
         if (count($camt053) >= 2) {
             return $camt053;
         }
 
-        // No CAMT in the tie and multiple non-CAMT candidates — surface all.
+        // No CAMT in the tie and multiple non-CAMT candidates — still
+        // tied: surface every remaining candidate.
         if (count($other) >= 2) {
             return $other;
         }
 
-        // Fallback: every entry tied at the same date — surface them all.
+        // Fallback: every entry tied at the same date with no CAMT/
+        // non-CAMT split possible — surface them all.
         return $atEarliest;
     }
 }

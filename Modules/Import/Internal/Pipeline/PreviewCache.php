@@ -26,11 +26,11 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  *
  * `Clock` is injected so the TTL window is deterministic in tests.
  *
- * WR-11 (knowingly-accepted transient plaintext staging): the canonical
+ * Knowingly-accepted transient plaintext staging: the canonical
  * (`CanonicalTransaction::toArray()`) and enrichments payloads written here
  * carry sensitive content in the clear — `counterparty_name`/`description`/
- * `counterparty_iban`, and the decrypted `conflictingFields['stored']` value
- * (see CR-03). With `CACHE_STORE=file` that is a plaintext file under
+ * `counterparty_iban`, and the decrypted `conflictingFields['stored']` value.
+ * With `CACHE_STORE=file` that is a plaintext file under
  * `storage/framework/cache/`; the default `database` store is an on-disk SQLite
  * `cache` table. Either way sensitive content sits in cleartext at rest for the
  * 30-minute TTL between preview and confirm. This is a REVIEWED, accepted

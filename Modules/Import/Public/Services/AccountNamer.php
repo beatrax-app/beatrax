@@ -57,13 +57,10 @@ final class AccountNamer implements NamesAccounts
     {
         [$trimmed, $slugBody] = self::validateName($userSuppliedName);
 
-        // Structural IBAN guard. Mod-97 checksum validation is intentionally
-        // not enforced here — a future ingestion path that funnels
-        // counterparty IBANs from MT940 / CAMT extracts will sometimes carry
-        // already-truncated values that the user still wants to attach a
-        // friendly name to. The shape check catches the common-case
-        // corruption (empty string, single char, lowercase, embedded
-        // whitespace) without rejecting legitimate edge cases.
+        // Structural IBAN guard only — Mod-97 checksum validation is
+        // intentionally not enforced since counterparty IBANs from
+        // MT940/CAMT extracts can already be truncated. Catches the
+        // common-case corruption without rejecting legitimate edge cases.
         $pattern = sprintf(
             '/^[A-Z0-9]{%d,%d}$/',
             self::IBAN_MIN_LENGTH,
@@ -117,11 +114,9 @@ final class AccountNamer implements NamesAccounts
         }
 
         // Str::slug() strips characters it cannot transliterate (emoji,
-        // pure punctuation, scripts without a transliteration map). A
-        // name composed entirely of such characters passes the length
-        // bound but produces an empty slug body — the account row would
-        // then carry a non-meaningful slug. Reject so every account row
-        // carries a slug derived from a meaningful name.
+        // punctuation, untransliterable scripts). A name composed
+        // entirely of such characters passes the length bound but
+        // produces an empty slug — reject so every account gets a slug.
         $slugBody = Str::slug($trimmed);
         if ($slugBody === '') {
             throw new InvalidAccountNameException(

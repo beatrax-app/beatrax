@@ -139,11 +139,10 @@ final class ImportServiceProvider extends ServiceProvider
         $this->app->singleton(KnownCounterpartyIbanResolver::class);
         $this->app->singleton(DefaultKnownCounterpartyIbansSeeder::class);
 
-        // Merchant-alias collaborators. The resolver is stateless and
-        // read-only; the generalizer is pure; the preview query and
-        // create-alias action both wrap a single DB write or read.
-        // Binding as singletons keeps the per-row allocation cost zero
-        // in the import pipeline's hot loop.
+        // Merchant-alias collaborators: resolver is stateless/read-only,
+        // generalizer is pure, preview query + create-alias action each
+        // wrap a single DB op — bound as singletons since none hold
+        // per-request state.
         $this->app->singleton(PatternGeneralizer::class);
         $this->app->singleton(MerchantNameResolver::class);
         $this->app->singleton(AliasMatchPreviewQuery::class);
@@ -155,13 +154,10 @@ final class ImportServiceProvider extends ServiceProvider
         // ids. Stateless: holds only its three constructor deps.
         $this->app->singleton(BuildConsolidatedPreviewQuery::class);
 
-        // Settings → Aliases collaborators. LongestCommonPrefix is a
-        // stateless pure function; the YAML exporter wraps a single
-        // read query; the YAML importer wraps a parse + diff + apply
-        // trio (the apply step opens a transaction). The merge action
-        // is a single transactional write. None hold per-request
-        // state, so they are bound as singletons alongside the rest of
-        // the alias-resolution chain.
+        // Settings → Aliases collaborators: LongestCommonPrefix is pure,
+        // the YAML exporter wraps a single read, the YAML importer wraps
+        // parse+diff+apply (apply opens a transaction), and the merge
+        // action is a single transactional write — all singletons.
         $this->app->singleton(LongestCommonPrefix::class);
         $this->app->singleton(AliasYamlExporter::class);
         $this->app->singleton(AliasYamlImporter::class);
@@ -223,11 +219,10 @@ final class ImportServiceProvider extends ServiceProvider
         $livewire->component('import.rename-counterparty-popover', RenameCounterpartyPopover::class);
         $livewire->component('import.aliases-settings-page', AliasesSettingsPage::class);
 
-        // SC3 routing caveat: .csv FileOpenedFromOs intents land here
-        // (Import), not in Ingestion. The listener filters by extension
-        // and persists the validated path into the Desktop pending-intent
-        // store; the user then lands on the Desktop staging page bound
-        // to the file.
+        // .csv FileOpenedFromOs intents land here (Import), not in
+        // Ingestion. The listener filters by extension and persists the
+        // validated path into the Desktop pending-intent store; the user
+        // then lands on the Desktop staging page bound to the file.
         $events->listen(FileOpenedFromOs::class, [HandleFileOpenedFromOs::class, 'handle']);
 
         // Freshly installed users receive the two seeded institution-IBAN

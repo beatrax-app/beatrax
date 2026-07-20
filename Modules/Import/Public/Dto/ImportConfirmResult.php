@@ -11,7 +11,7 @@ use Spatie\LaravelData\Data;
  * "Imported N transactions · skipped M duplicates · P enriched · K errors"
  * summary directly from these counts.
  *
- * IN-04 per-attempt semantics: each ImportConfirmResult describes ONE confirm
+ * Per-attempt semantics: each ImportConfirmResult describes ONE confirm
  * attempt in isolation. On a re-confirm of an already-`confirmed` run,
  * `inserted` is 0 and the original inserts are reported as `duplicates` (the
  * attempt sees them as already-present) — so `inserted + duplicates` must NOT

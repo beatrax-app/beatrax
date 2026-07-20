@@ -114,25 +114,14 @@ final class RenameCounterpartyPopover extends Component
                 );
             } catch (ValidationException) {
                 // A zero-condition/zero-action rejection can't happen
-                // here (both are always supplied) — retained as
-                // defence-in-depth. A duplicate-rule signal is benign:
-                // the alias has already persisted and an equivalent
-                // rule was already contributing to the categorization
-                // outcome. Swallow it so the popover closes calmly.
+                // here (both are always supplied); a duplicate-rule
+                // signal is benign — the alias already persisted, so
+                // swallow it and let the popover close calmly.
             } catch (InvalidArgumentException) {
-                // WR-04: CreateCategorizationRule throws
-                // InvalidArgumentException when the embedded category_id
-                // fails assertCategoryVisible() — reachable if
-                // $categoryHint (a public Livewire property re-serialized
-                // with every request payload) is stale, foreign, or a
-                // tampered wire snapshot. Without this catch, the alias
-                // (already durably persisted above) would leave the user
-                // with a half-completed action and an uncaught 500,
-                // unlike every other rule-authoring call site in this
-                // phase (RuleFormModal::save(), CorrectionDivergenceToast::
-                // update()). Swallow it so the popover still closes calmly
-                // — the alias succeeded even though the opportunistic rule
-                // did not.
+                // CreateCategorizationRule throws InvalidArgumentException
+                // when the embedded category_id fails assertCategoryVisible()
+                // — reachable if a stale/tampered categoryHint arrives.
+                // Swallow it; the alias already persisted successfully.
             }
         }
 

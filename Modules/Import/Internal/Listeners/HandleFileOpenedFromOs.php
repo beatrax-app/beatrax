@@ -8,7 +8,7 @@ use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 
 /**
- * Routes a .csv `FileOpenedFromOs` intent into the Import flow (D-01).
+ * Routes a .csv `FileOpenedFromOs` intent into the Import flow.
  *
  * SC3 routing caveat (locked): `.csv` files routed by the OS double-click
  * land in the user-facing import flow — `Modules\Import` — not the
@@ -26,7 +26,7 @@ use Modules\Desktop\Public\Events\FileOpenedFromOs;
  * Idempotency: a re-fired `FileOpenedFromOs` (cold start followed by a
  * race-condition second-instance event for the same file) overwrites
  * the intent with the same payload — the store keeps at most one
- * pending intent per session (D-03's one-window UX).
+ * pending intent per session (single-window UX).
  */
 final class HandleFileOpenedFromOs
 {

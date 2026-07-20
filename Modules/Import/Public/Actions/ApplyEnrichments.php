@@ -121,12 +121,10 @@ final class ApplyEnrichments implements AppliesEnrichments
                 return false;
             }
 
-            // Re-evaluate the rank ordering against the stored ref at
-            // write time, not just the preview-time snapshot. Between
-            // preview and confirm, a parallel import (or a re-preview)
-            // may already have stored a stronger reference; without this
-            // check the cached PendingEnrichment would silently
-            // overwrite the stronger value with a weaker one.
+            // Re-evaluate rank against the stored ref at write time, not
+            // just the preview-time snapshot — a parallel import between
+            // preview and confirm may have already stored a stronger
+            // reference, which this check stops from being overwritten.
             $existingFormat = is_string($row->source_format) ? $row->source_format : '';
             $incomingRank = $this->ranker->rank($enrichment->newSourceRef, $enrichment->sourceFormat);
             $existingRank = $this->ranker->rank($existingRef, $existingFormat);
@@ -234,13 +232,12 @@ final class ApplyEnrichments implements AppliesEnrichments
      * the table makes re-import idempotent — the second import upserts
      * via insertOrIgnore so no duplicate pending rows accumulate.
      *
-     * D-07 plaintext-only persistence (14.1-12 Cluster 3): `$values['stored']`
-     * arrives here ALREADY DECRYPTED — `FingerprintStage::detectConflicts()`
-     * is the sole producer of `conflictingFields` and decrypts the stored
-     * `counterparty_name`/`description` before ever populating the map (see
-     * that method's own D-07 fix). So `stored_value` and the dispatched
-     * event's `csvValue` below carry plaintext, never ciphertext, without
-     * any further decrypt step here.
+     * Plaintext-only persistence: `$values['stored']` arrives here ALREADY
+     * DECRYPTED — `FingerprintStage::detectConflicts()` is the sole producer
+     * of `conflictingFields` and decrypts the stored `counterparty_name`/
+     * `description` before ever populating the map. So `stored_value` and
+     * the dispatched event's `csvValue` below carry plaintext, never
+     * ciphertext, without any further decrypt step here.
      */
     private function holdConflicts(PendingEnrichment $enrichment, User $user): void
     {
@@ -289,9 +286,9 @@ final class ApplyEnrichments implements AppliesEnrichments
      * cache row cannot inject an unintended column name into the
      * UPDATE.
      *
-     * D-07 encrypt-incoming-before-update (14.1-12 Cluster 3 / CR-01/
-     * CR-02 class): the incoming value is a fresh plaintext string
-     * (parsed straight off the receipt), so it must be encrypted
+     * Encrypt-incoming-before-update: the incoming value is a fresh
+     * plaintext string (parsed straight off the receipt), so it must be
+     * encrypted
      * before it lands in the `transactions` UPDATE for an encrypted
      * user — otherwise plaintext is re-introduced into an at-rest-
      * encrypted column. `encryptAttrs()` only touches string-valued,

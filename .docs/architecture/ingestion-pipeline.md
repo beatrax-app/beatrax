@@ -138,6 +138,59 @@ re-run; the confirm step is the single write boundary. Reviewers and arch
 tests know there are no other paths into the `transactions` table from the
 Import module.
 
+## Confirm: bounded recorder and post-commit dispatch
+
+`ConfirmImport` deliberately does NOT wrap the whole confirm in one
+transaction. A full-year confirm must not run as a single unbounded DB
+transaction, so the write boundary splits into two phases:
+
+1. **Recorder phase (no outer transaction).** `RecordsTransactions` commits
+   in bounded per-chunk transactions, each idempotent via the transaction
+   fingerprint (`insertOrIgnore`). Wrapping this phase in an outer
+   transaction would demote those commits to savepoints and re-form the
+   year-sized transaction this design avoids. A crash after this phase
+   leaves committed rows that a re-run safely (idempotently) completes.
+2. **Enrichment + status-flip phase (one transaction).** Applying
+   enrichments, updating the `ImportRun` counts, and flipping `status` to
+   `confirmed` all run inside a single `DB::transaction()`, so a committed
+   `confirmed` status ALWAYS implies the enrichment writes fully landed.
+   A mid-enrichment failure rolls both back together, leaving the run on
+   its previous status; a re-confirm then replays the enrichments from a
+   clean slate (`AppliesEnrichments`'s own per-row rank/exact-ref
+   short-circuits make even a partial-then-replay sequence a no-op for
+   rows already applied).
+
+Re-confirming an already-`confirmed` run short-circuits before either
+phase: it returns a zero-action result derived from the persisted counts
+(zero inserts, the file's original inserted+duplicate count reported as
+duplicates), so a wizard refresh/back-button can never double-import or
+double-enrich.
+
+### Post-commit dispatch ordering
+
+After the transaction above commits, `ConfirmImport` runs a two-stage
+post-commit block — skipped entirely on the re-confirm short-circuit:
+
+- **Stage A** (always, when `$dispatchChain` is true): promotes every
+  ICS-kind `statement_summaries` row written under this import run into a
+  `card_statements` row via `UpsertsCardStatements`. The upsert is
+  idempotent (`UNIQUE(user_id, account_id, period_start, period_end)`),
+  deliberately decoupled from the inserted/enriched gate so it also
+  recovers a manually-deleted `card_statements` row on a re-import where
+  every transaction is a fingerprint-duplicate.
+- **Stage B** (gated on `$result->inserted > 0 || $result->enriched > 0`):
+  inserts a `pending` `chain_resolution_runs` row (so the wizard's
+  `wire:poll` has something to display on its first tick), then dispatches
+  the chain resolver and the recurring-detection sweep.
+
+Both dispatches run strictly AFTER the transaction commits, never inside
+the closure — the queue driver does not share the SQLite transaction
+frame, so an in-transaction dispatch would let a worker observe stale
+state. Callers that batch several `ConfirmImport` invocations inside
+their own outer transaction pass `$dispatchChain = false` and dispatch
+once themselves after that outer transaction returns; the default `true`
+preserves the single-run behaviour every other caller expects.
+
 ## Idempotency contract
 
 The whole pipeline is safe to re-run. Re-uploading the same ASN CSV file

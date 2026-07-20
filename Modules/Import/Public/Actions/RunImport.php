@@ -24,7 +24,7 @@ use RuntimeException;
  * Preview action — the first half of the wizard's two-step ceremony.
  *
  * Flow:
- *  1. Hash the local file (SHA-256). If the user already imported a file
+ *  1. Hash the local file (SHA256). If the user already imported a file
  *     with the same hash AND that import landed (status='confirmed'),
  *     short-circuit with an empty preview — the file-layer idempotency
  *     guard backed by the UNIQUE `(user_id, sha256)` index on import_runs.
@@ -59,7 +59,7 @@ final class RunImport implements RunsImports
     {
         $sha = hash_file('sha256', $localPath);
         if (! is_string($sha)) {
-            throw new RuntimeException('Could not compute SHA-256 of uploaded file.');
+            throw new RuntimeException('Could not compute SHA256 of uploaded file.');
         }
 
         /** @var ImportRun|null $existing */
@@ -69,7 +69,7 @@ final class RunImport implements RunsImports
             ->first();
 
         if ($existing !== null && $existing->status === 'confirmed') {
-            // File-layer idempotency: the SHA-256 was already imported and
+            // File-layer idempotency: the SHA256 was already imported and
             // landed. Skip the (expensive, identical) re-parse and signal to
             // the wizard that nothing remains to do for this upload.
             return new ImportPreviewResult(
@@ -82,11 +82,10 @@ final class RunImport implements RunsImports
         $stablePath = $this->copyToStableLocation($localPath, $user, $sha, $sourceFormat);
 
         if ($existing !== null) {
-            // The row is being reused for a fresh preview (prior status was
-            // 'previewed' or 'discarded'). Reset the audit fields so the
-            // wizard's status string and counters match the new attempt;
-            // otherwise a discarded run would silently retain status =
-            // 'discarded' and stale insertion counts on the re-upload.
+            // Reused for a fresh preview (prior status was 'previewed' or
+            // 'discarded'). Reset the audit fields so the wizard's status
+            // and counters match the new attempt — otherwise a discarded
+            // run would silently retain stale status/counts.
             $importRun = $this->resetPreviewedRun($existing, $sourceFormat, $stablePath);
         } else {
             try {
@@ -99,11 +98,10 @@ final class RunImport implements RunsImports
                     'status' => 'previewed',
                 ]);
             } catch (UniqueConstraintViolationException) {
-                // WR-14: a concurrent preview for the same (user_id, sha256)
-                // committed the row between our SELECT and this INSERT.
-                // Re-read the winner's row and fall through to the same
-                // confirmed-short-circuit / reuse-reset semantics instead
-                // of surfacing an unhandled 500.
+                // A concurrent preview for the same (user_id, sha256)
+                // committed between our SELECT and this INSERT. Re-read
+                // the winner's row and fall through to the same
+                // confirmed-short-circuit / reuse-reset semantics.
                 $raced = $this->reReadAfterRace($user, $sha);
                 if ($raced->status === 'confirmed') {
                     return new ImportPreviewResult(
@@ -140,7 +138,7 @@ final class RunImport implements RunsImports
 
     /**
      * Copies the upload to a deterministic, app-owned location keyed by the
-     * user id and the file's SHA-256. The same file uploaded twice resolves
+     * user id and the file's SHA256. The same file uploaded twice resolves
      * to the same on-disk path; a no-op overwrite keeps the path stable. The
      * file extension matches the declared source format so the stored copy
      * round-trips through the format-specific HeaderSniffer on re-read.
@@ -188,7 +186,7 @@ final class RunImport implements RunsImports
      * to hash and copy:
      *
      *  1. Dedup at the `ImportRun` grain on `$idempotencyKey` instead of a
-     *     file SHA-256 (there is no file — see the contract's docblock for
+     *     file SHA256 (there is no file — see the contract's docblock for
      *     the deterministic-window-key requirement).
      *  2. Create-or-reuse an `ImportRun` row with `status='previewed'`.
      *     `raw_file_path` has no real file to point at, so it carries a
@@ -224,11 +222,10 @@ final class RunImport implements RunsImports
         }
 
         if ($existing !== null) {
-            // Reused row from a prior 'previewed' or 'discarded' attempt —
-            // reset the audit fields exactly like runFromUpload()'s reuse
-            // branch so stale counters/status never leak into the fresh
-            // preview. `raw_file_path` keeps its deterministic synthetic
-            // marker (passed null here, so it is left untouched).
+            // Reused row from a prior 'previewed'/'discarded' attempt —
+            // reset audit fields like runFromUpload()'s reuse branch so
+            // stale counters/status never leak. `raw_file_path` keeps
+            // its deterministic synthetic marker (passed null, untouched).
             $importRun = $this->resetPreviewedRun($existing, $sourceFormat, null);
         } else {
             try {
@@ -241,7 +238,7 @@ final class RunImport implements RunsImports
                     'status' => 'previewed',
                 ]);
             } catch (UniqueConstraintViolationException) {
-                // WR-14: same-key concurrent preview won the insert race;
+                // Same-key concurrent preview won the insert race;
                 // re-read and fall through to the reuse/confirmed semantics
                 // rather than 500-ing the loser.
                 $raced = $this->reReadAfterRace($user, $idempotencyKey);
@@ -292,7 +289,7 @@ final class RunImport implements RunsImports
 
     /**
      * Reset a reused `ImportRun` row's audit fields for a fresh preview
-     * attempt — shared by the normal reuse branch and the WR-14
+     * attempt — shared by the normal reuse branch and the
      * unique-violation race-recovery path. `$stablePath` is null for the
      * remote-fetch path (its synthetic `raw_file_path` marker is left
      * unchanged); non-null for the upload path.
@@ -320,9 +317,9 @@ final class RunImport implements RunsImports
 
     /**
      * Re-read the row a concurrent preview just committed under the same
-     * `(user_id, sha256)` unique key after our own INSERT lost the race
-     * (WR-14). The row must exist — the violation proves it was committed —
-     * so a null here is a genuine, unexpected invariant break.
+     * `(user_id, sha256)` unique key after our own INSERT lost the race.
+     * The row must exist — the violation proves it was committed — so a
+     * null here is a genuine, unexpected invariant break.
      */
     private function reReadAfterRace(User $user, string $sha256): ImportRun
     {

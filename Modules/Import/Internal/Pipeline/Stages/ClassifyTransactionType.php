@@ -79,26 +79,14 @@ final class ClassifyTransactionType
 
     public function run(CanonicalTransaction $tx, User $user): CanonicalTransaction
     {
-        // Step 1 — preserve pre-classified rows.
         if (in_array($tx->type, ['refund', 'fee', 'adjustment'], true)) {
             return $tx;
         }
 
-        // Step 2 — cross-account-IBAN check (every source format).
-        //
-        // Two-arm consult: the alias bridge (Arm A) resolves real
-        // institution IBANs that appear on the ASN side of a cross-
-        // account hop to the user's own synthetic-IBAN account; the
-        // literal own-IBAN match (Arm B) catches bank-to-bank
-        // transfers between two of the user's accounts whose
-        // Account.iban values literally match the counterparty IBAN.
-        // Both arms scope by `$user->id` so cross-user counterparties
-        // never trigger a flip.
-        //
-        // Raw Query Builder count() (rather than Eloquent's static
-        // exists()) keeps Larastan strict happy with the same
-        // staticMethod.dynamicCall posture PreviewWizard::needsIcsAccountName
-        // uses for the same predicate shape.
+        // Two-arm cross-account-IBAN check, both scoped by $user->id:
+        // the alias bridge (Arm A) maps real institution IBANs to the
+        // user's synthetic-IBAN account; the literal own-IBAN match
+        // (Arm B) catches transfers between two of the user's accounts.
         if ($tx->counterpartyIban !== null && $tx->counterpartyIban !== '') {
             // Arm A — alias bridge: real institution IBAN -> user's
             // own synthetic-IBAN account whose kind matches the alias.
@@ -107,7 +95,8 @@ final class ClassifyTransactionType
                 return $tx->withType($tx->amountMinor < 0 ? 'transfer_out' : 'transfer_in');
             }
 
-            // Arm B — literal own-IBAN match.
+            // Arm B — literal own-IBAN match: catches bank-to-bank
+            // transfers between two of the user's own accounts.
             $isOwnAccount = $this->db->connection()
                 ->table('accounts')
                 ->where('user_id', $user->id)
@@ -119,7 +108,6 @@ final class ClassifyTransactionType
             }
         }
 
-        // Step 3 — PayPal source-format event-type map.
         $rawPayload = $tx->rawPayload;
         if (is_array($rawPayload) && ($rawPayload['format'] ?? null) === 'paypal-csv') {
             $events = $rawPayload['events'] ?? null;
@@ -142,30 +130,20 @@ final class ClassifyTransactionType
 
                     return $tx->withType($mappedType);
                 } catch (MissingPaypalTransactionTypeMapException $missing) {
-                    // Code-internal inconsistency — an event type
-                    // classified as `parent` in MAP has no
-                    // corresponding TRANSACTION_TYPE entry. Re-throw
-                    // so the developer sees it fail at parse time
-                    // rather than silently misclassifying via the
-                    // amount-sign default. The exception extends
-                    // UnknownPaypalEventTypeException so legacy
-                    // callers that catch the supertype still catch
-                    // it, but the narrower clause MUST come first.
+                    // Code-internal inconsistency (MAP entry with no
+                    // TRANSACTION_TYPE) — re-throw so it fails loudly
+                    // at parse time. Extends UnknownPaypalEventTypeException,
+                    // so this narrower catch MUST come before that one.
                     throw $missing;
                 } catch (UnknownPaypalEventTypeException) {
-                    // Unknown parent event type — user-data condition
-                    // (PayPal shipped a string we have not mapped
-                    // yet). Fall through to the subtractive default.
-                    // The adapter would have raised a typed
-                    // exception at parse time when the event was
-                    // genuinely unmappable upstream; here we treat
-                    // it as "use the amount-sign default" rather
-                    // than hard-aborting the import.
+                    // Unmapped event type is a user-data condition, not
+                    // a bug (the adapter already raised at parse time
+                    // for genuinely-unmappable events) — fall through
+                    // to the amount-sign default rather than aborting.
                 }
             }
         }
 
-        // Step 4 — subtractive income rule.
         if (
             $tx->amountMinor > 0
             && ! in_array($tx->type, ['transfer_in', 'transfer_out', 'refund', 'fee'], true)

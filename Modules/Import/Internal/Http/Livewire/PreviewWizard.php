@@ -71,7 +71,7 @@ final class PreviewWizard extends Component
     public bool $previewExpired = false;
 
     /**
-     * Chain-resolution polling state (D-103 / D-105). The wizard's
+     * Chain-resolution polling state. The wizard's
      * `wire:poll.2s="refreshChainResolutionStatus"` populates these
      * properties from the `chain_resolution_runs` audit table —
      * filtered by EXACT `user_id` match.
@@ -139,7 +139,8 @@ final class PreviewWizard extends Component
     ): void {
         $user = $currentUser->user();
 
-        // Exact user_id match — never LIKE substring (issue #1 + #8).
+        // Exact user_id equality match, never a LIKE substring — a
+        // substring match here would let user_id=1 match user_id=11.
         $row = $db->connection()->table('chain_resolution_runs')
             ->where('user_id', $user->id)
             ->orderByDesc('id')
@@ -178,19 +179,16 @@ final class PreviewWizard extends Component
     ): void {
         $this->resetErrorBag('accountName');
 
-        // Keep the property in sync with the argument so the error bag
-        // surfaces next to the bound input on re-render. Validation
-        // itself is delegated to AccountNamer: the service is the single
-        // authoritative validator (trim + length bound + slug-body
-        // guard), so a Livewire-side rules() declaration would either
-        // duplicate that logic or drift from it.
+        // Keep the property in sync so the error bag surfaces next to
+        // the bound input on re-render. Validation itself is delegated
+        // to AccountNamer — the single authoritative validator — so a
+        // Livewire-side rules() declaration would duplicate or drift.
         $this->accountName = $name;
 
-        // Bound the action to the IBANs the wizard actually surfaced as
-        // unknown for this preview. A crafted wire request that tries to
-        // name an arbitrary IBAN gets rejected before it reaches the
-        // namer. The downstream AccountNamer also user-scopes every write
-        // — this check is defence-in-depth.
+        // Bound to the IBANs this preview actually surfaced as unknown;
+        // a crafted wire request naming an arbitrary IBAN is rejected
+        // here before it reaches the namer (defence-in-depth — AccountNamer
+        // also user-scopes every write).
         $preview = $cache->getPreview($this->importRunId);
         $allowedIbans = $preview === null
             ? []
@@ -379,12 +377,10 @@ final class PreviewWizard extends Component
         PreviewCache $cache,
         DatabaseManager $db,
     ): void {
-        // Defense-in-depth: the Confirm button is always rendered in the
-        // page header and only disabled via the `@disabled` attribute when
-        // the user still has accounts to name. The DOM-level guard can be
-        // bypassed via devtools, so refuse to proceed server-side when
-        // any of the naming preconditions are still unmet. Matches the
-        // `$canConfirmImport` computed condition in preview-wizard.blade.php.
+        // Defense-in-depth: the Confirm button is disabled client-side
+        // via `@disabled` while accounts still need naming, but that
+        // DOM guard can be bypassed via devtools — refuse server-side
+        // too when any naming precondition is still unmet.
         if ($this->needsIcsAccountName($currentUser, $db)
             || $this->needsPaypalAccountName($currentUser, $db)) {
             return;
