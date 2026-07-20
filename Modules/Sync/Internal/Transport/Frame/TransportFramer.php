@@ -8,37 +8,15 @@ use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 
 /**
- * Length-prefixed binary codec for OpLogEntry batches.
- *
- * Wire format (per frame):
- *   [4 bytes: uint32 LE payload length][payload bytes: JSON array of op-log entries]
- *
- * Each op-log entry is serialized to a JSON object preserving all 10 constructor
- * fields plus the Ed25519 signature. The signature is included to allow the receiver
- * to verify it via DeviceKeySigner::verify() after decryption (transport encryption
- * is additive to op-log signatures, not a replacement — RESEARCH Pitfall 7).
- *
- * Constraints:
- *   - Maximum frame payload: 65,536 bytes (64 KB) per RESEARCH Pattern 6.
- *   - Maximum ops per frame: 1,024 entries per RESEARCH Pattern 6.
- *   - Oversized frames are rejected on encode (throw) and decode (throw).
- *
- * encode() → binary string ready for NoiseSession::encrypt()
- * decode() → list<OpLogEntry> ready for OpLogReplayer::replay()
- *
- * The signature field is the hex-encoded Ed25519 detached signature that was set
- * when the entry was originally signed (OpLogEntry::$signature). Round-tripping
- * through encode/decode must preserve this field exactly.
+ * @link ../../../../../.docs/features/sync/architecture.md
  */
 final class TransportFramer
 {
-    private const MAX_PAYLOAD_BYTES = 65536;  // 64 KB
+    private const MAX_PAYLOAD_BYTES = 65536;
 
     private const MAX_OPS_PER_FRAME = 1024;
 
     /**
-     * Encodes a list of OpLogEntry objects into a length-prefixed binary frame.
-     *
      * @param  list<OpLogEntry>  $entries  Must not be empty and must not exceed MAX_OPS_PER_FRAME.
      * @return string Binary frame: [uint32 LE length][JSON payload].
      *
@@ -68,13 +46,10 @@ final class TransportFramer
             ));
         }
 
-        // 4-byte LE uint32 length prefix + payload
         return pack('V', strlen($payload)).$payload;
     }
 
     /**
-     * Decodes a length-prefixed binary frame back into a list of OpLogEntry objects.
-     *
      * @param  string  $frame  Binary frame from encode() (or received over the wire).
      * @return list<OpLogEntry>
      *
@@ -138,13 +113,9 @@ final class TransportFramer
         return array_map([$this, 'arrayToEntry'], $rows);
     }
 
+    // Mirrors OpLogEntry::signingPayload()'s field order for auditability
+    // but adds the signature key explicitly (not part of the signed payload).
     /**
-     * Serializes one OpLogEntry to an associative array for JSON encoding.
-     *
-     * Includes all 10 constructor fields + the signature (which is NOT in the
-     * signingPayload but IS a constructor field). This mirrors OpLogEntry::signingPayload()
-     * field order for auditability but adds the signature key explicitly.
-     *
      * @return array<string, mixed>
      */
     private function entryToArray(OpLogEntry $entry): array
@@ -160,19 +131,15 @@ final class TransportFramer
             'op_type' => $entry->opType->value,
             'signature' => $entry->signature,
             'user_id' => $entry->userId,
-            // Phase 14 (CRYPT-01): the GDK epoch tag doubles op-log-value
-            // encryption as transport encryption (D-02) — it MUST travel
-            // alongside the ciphertext, or the receiving peer cannot decrypt
-            // a sensitive field's value at all. Nullable: omitted/null means
-            // plaintext (field not sensitive, or encryption not yet enabled
-            // when the op was written).
+            // The GDK epoch tag doubles op-log-value encryption as transport
+            // encryption — it MUST travel alongside the ciphertext, or the
+            // receiving peer cannot decrypt a sensitive field's value at
+            // all. Nullable: null means plaintext.
             'gdk_epoch' => $entry->gdkEpoch,
         ];
     }
 
     /**
-     * Deserializes one row from JSON back into an OpLogEntry.
-     *
      * @param  array<string, mixed>  $row
      *
      * @throws \UnexpectedValueException on missing or invalid fields.
@@ -202,7 +169,6 @@ final class TransportFramer
             );
         }
 
-        // pk can be int or string (JSON number or string)
         $pkRaw = $row['pk'];
         if (! is_int($pkRaw) && ! is_string($pkRaw)) {
             throw new \UnexpectedValueException('TransportFramer::decode — pk must be int or string.');
@@ -250,8 +216,8 @@ final class TransportFramer
             throw new \UnexpectedValueException('TransportFramer::decode — user_id must be an int.');
         }
 
-        // Optional (backward-compatible with pre-Phase-14 wire frames that never
-        // carried this key): null means the value is plaintext.
+        // Optional, backward-compatible with older wire frames that never
+        // carried this key: null means the value is plaintext.
         $gdkEpochRaw = $row['gdk_epoch'] ?? null;
         if ($gdkEpochRaw !== null && ! is_int($gdkEpochRaw)) {
             throw new \UnexpectedValueException('TransportFramer::decode — gdk_epoch must be an int or null.');

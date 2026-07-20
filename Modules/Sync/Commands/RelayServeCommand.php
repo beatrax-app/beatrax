@@ -17,77 +17,8 @@ use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Psr\Log\LoggerInterface;
 
 /**
- * Zero-knowledge relay HTTP endpoint daemon (XPORT-03, D-01/D-02/D-03/D-04).
- *
- * Exposes the ZK relay mailbox over three HTTP routes:
- *
- *   POST   /relay/deliver                → Accept a Noise ciphertext blob (open submission)
- *   GET    /relay/drain                  → Return pending blobs for authenticated device
- *   DELETE /relay/drain/{id}             → Mark a blob as delivered (confirmed drain)
- *
- * ## Zero-knowledge invariant (D-02 / T-13-06 / T-13-SC2)
- *
- *   This command contains ZERO sodium_* calls. Blobs are stored and forwarded
- *   verbatim — the relay never decrypts, inspects, or JSON-decodes blob content.
- *   All cryptographic operations live end-to-end between devices (inside the Noise
- *   session); the relay operator learns only: sender_did, recipient_did, blob size,
- *   and delivery timestamp.
- *
- * ## Drain authorization (T-13-13 / CR-04)
- *
- *   GET /relay/drain and DELETE /relay/drain/{id} require the caller to present
- *   a bearer token in the Authorization header that matches the PER-DEVICE token
- *   derived for the mailbox being accessed:
- *       expected = HMAC-SHA256(RelayConfig::authToken(), recipient_did)
- *   (RelayConfig::deriveDeviceToken()). A single relay-wide token is NOT
- *   accepted — a token scoped to device A cannot drain or confirm-delete device
- *   B's mailbox. This closes the metadata-isolation hole where any holder of the
- *   shared token could pull or delete an arbitrary recipient's blobs.
- *
- *   ZK is preserved: the relay only HMACs the device_id (routing metadata it
- *   already sees) with the secret it already holds — it never reads blobs, never
- *   learns a user_id, and never has device key material.
- *
- *   Authorization is enforced HERE (at the endpoint), NOT inside RelayMailbox
- *   (which is a pure ZK store). This separation keeps RelayMailbox testable
- *   without auth scaffolding and makes the authorization policy explicit and
- *   auditable in this one file.
- *
- *   Deliver (POST /relay/deliver) is open — anyone can drop a ciphertext blob
- *   into any mailbox. The recipient's per-device drain token is the only thing
- *   that gates retrieval.
- *
- * ## Resource-exhaustion guards on the open deliver path
- *
- *   Because delivery is intentionally unauthenticated, handleDeliver() bounds
- *   the abuse surface instead of gating it:
- *     - Blob size is capped server-side at RelayClient::MAX_BLOB_BYTES (mirrors
- *       the client-side cap so a caller that skips RelayClient entirely cannot
- *       smuggle an oversized blob past it) → 413 when exceeded.
- *     - sender_did / recipient_did must match a bounded, safe character set
- *       (self::DID_PATTERN) → 422 when malformed or oversized.
- *     - Each recipient mailbox is capped at self::MAX_PENDING_PER_RECIPIENT
- *       undelivered rows → 429 when full, preventing unbounded SQLite growth
- *       for the 30-day undelivered TTL.
- *   GET /relay/drain additionally caps the page size at self::DRAIN_PAGE_SIZE
- *   so a single drain response cannot force the draining device to buffer an
- *   unbounded backlog in memory.
- *
- * ## Opt-in deployment (D-01)
- *
- *   The relay is NOT started automatically by the application. Self-hosters run
- *   `php artisan relay:serve` manually or via their own supervised process.
- *   The default out-of-box path is LAN-direct (sync:serve); the relay is the
- *   offline-buffering fallback when the user explicitly opts in by configuring a
- *   relay endpoint URL in RelayConfig.
- *
- * ## Event-loop lifecycle (D-04)
- *
- *   handle() calls \Amp\trapSignal([SIGTERM, SIGINT]) which suspends the current
- *   fiber until one of those signals arrives. On shutdown: stop the HTTP server,
- *   return self::SUCCESS.
- *
- * @internal Plan 05 — registered via SyncServiceProvider.
+ * @link ../../../.docs/features/sync/architecture.md
+ * @see SyncServiceProvider
  */
 final class RelayServeCommand extends Command
 {
@@ -97,39 +28,22 @@ final class RelayServeCommand extends Command
     /** @var string */
     protected $description = 'Start the ZK relay HTTP endpoint daemon (POST /relay/deliver, GET /relay/drain, DELETE /relay/drain/{id}).';
 
-    /**
-     * Maximum pending (undelivered) rows allowed per recipient mailbox.
-     *
-     * Resource-exhaustion guard: deliver is open-submission by design, so
-     * without a per-mailbox cap a flood of deliveries into one recipient_did
-     * would grow the SQLite file without bound for the full 30-day
-     * undelivered TTL. 1000 is generous headroom above any realistic personal
-     * multi-device backlog while still bounding worst-case disk growth.
-     */
+    // Resource-exhaustion guard: deliver is open-submission by design, so a flood
+    // of deliveries into one recipient could grow the SQLite file unbounded for
+    // the 30-day undelivered TTL. 1000 is generous headroom above a realistic
+    // personal multi-device backlog.
     private const MAX_PENDING_PER_RECIPIENT = 1000;
 
-    /**
-     * Maximum rows returned per GET /relay/drain call.
-     *
-     * Resource-exhaustion guard: an unbounded drain would let a caller force
-     * the server to serialize (and the draining device to buffer) an entire
-     * mailbox backlog in one JSON response. Callers loop drain → confirm each
-     * row → drain again until fewer than this many rows come back.
-     */
+    // Resource-exhaustion guard: an unbounded drain would force the server to
+    // serialize (and the draining device to buffer) an entire mailbox backlog in
+    // one JSON response. Callers loop drain -> confirm -> drain again until
+    // fewer than this many rows come back.
     private const DRAIN_PAGE_SIZE = 100;
 
-    /**
-     * Allowed character set + length bound for sender_did / recipient_did.
-     *
-     * Device ids in this codebase are UUID v4 strings (DeviceIdentityService),
-     * but the relay wire contract only ever treats them as opaque routing
-     * keys, so this pattern is deliberately format-agnostic beyond a safe,
-     * bounded character class: letters, digits, `-`, `_`, `:`, and `.`, capped
-     * at 128 bytes (well above a 36-char UUID, with headroom for a future
-     * did:key:-style identifier). This rejects control characters, whitespace,
-     * and unbounded-length strings without coupling the open deliver endpoint
-     * to one specific id scheme.
-     */
+    // Device ids are UUID v4 strings, but this pattern is deliberately
+    // format-agnostic beyond a safe, bounded character class (letters, digits,
+    // -, _, :, .) capped at 128 bytes, rejecting control characters and
+    // unbounded-length strings without coupling to one specific id scheme.
     private const DID_PATTERN = '/^[A-Za-z0-9_:.-]{1,128}$/';
 
     public function __construct(
@@ -164,7 +78,6 @@ final class RelayServeCommand extends Command
             $this->logger->info('relay:serve: endpoint started.', ['port' => $port]);
             $this->info("relay:serve: ZK relay listening on 0.0.0.0:{$port} (SIGTERM/SIGINT to stop).");
 
-            // Suspend this fiber until SIGTERM or SIGINT arrives (D-04).
             \Amp\trapSignal([\SIGTERM, \SIGINT]);
 
             $this->logger->info('relay:serve: shutdown signal received — stopping relay.');
@@ -182,15 +95,6 @@ final class RelayServeCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Route incoming HTTP requests to the appropriate relay handler.
-     *
-     * Routes:
-     *   POST   /relay/deliver         → deliverHandler
-     *   GET    /relay/drain           → drainHandler (auth required)
-     *   DELETE /relay/drain/{id}      → confirmHandler (auth required)
-     *   *      (no match)             → 404 Not Found
-     */
     private function route(Request $request): Response
     {
         $method = $request->getMethod();
@@ -204,7 +108,6 @@ final class RelayServeCommand extends Command
             return $this->handleDrain($request);
         }
 
-        // DELETE /relay/drain/{id} — matches DELETE method + /relay/drain/ prefix with a non-empty id segment.
         if ($method === 'DELETE' && str_starts_with($path, '/relay/drain/')) {
             $idStr = ltrim(substr($path, strlen('/relay/drain/')), '/');
             if ($idStr !== '' && ctype_digit($idStr)) {
@@ -215,25 +118,10 @@ final class RelayServeCommand extends Command
         return new Response(HttpStatus::NOT_FOUND, ['content-type' => 'application/json'], '{"error":"not_found"}');
     }
 
-    /**
-     * POST /relay/deliver — accept a Noise ciphertext blob into a recipient's mailbox.
-     *
-     * Required JSON body fields:
-     *   - sender_did    string: sending device_id (routing metadata only)
-     *   - recipient_did string: receiving device_id (mailbox address)
-     *   - blob          string: base64-encoded Noise ciphertext blob
-     *
-     * Authorization: OPEN — any caller may POST a blob into any mailbox. The
-     * recipient's drain token gates retrieval; delivery is always accepted (like
-     * an email relay accepting inbound SMTP from anyone). Because this path is
-     * intentionally unauthenticated, it is instead bounded: blob size
-     * (RelayClient::MAX_BLOB_BYTES), did format/length (self::DID_PATTERN), and
-     * a per-recipient pending-row quota (self::MAX_PENDING_PER_RECIPIENT) —
-     * see the class docblock.
-     *
-     * ZK: the blob is stored verbatim — no decryption, no sodium calls, no
-     * json_decode of the blob content itself.
-     */
+    // POST /relay/deliver — open submission; the recipient's drain token gates
+    // retrieval, not this endpoint. Bounded by blob size, DID_PATTERN, and
+    // MAX_PENDING_PER_RECIPIENT since the endpoint is intentionally
+    // unauthenticated (see class @link).
     private function handleDeliver(Request $request): Response
     {
         $rawBody = $request->getBody()->buffer();
@@ -255,15 +143,14 @@ final class RelayServeCommand extends Command
             return $this->jsonError(HttpStatus::UNPROCESSABLE_ENTITY, 'invalid_did');
         }
 
-        // Decode base64 blob to raw binary for ZK storage.
         $blob = base64_decode($blobB64, strict: true);
         if ($blob === false || $blob === '') {
             return $this->jsonError(HttpStatus::BAD_REQUEST, 'invalid_blob_encoding');
         }
 
-        // Mirror RelayClient's own cap server-side (IN-02): a caller that hits
-        // this open endpoint directly (bypassing RelayClient) must not be able
-        // to smuggle a larger-than-intended blob past the client-only check.
+        // Mirror RelayClient's own cap server-side: a caller that hits this open
+        // endpoint directly (bypassing RelayClient) must not be able to smuggle a
+        // larger-than-intended blob past the client-only check.
         if (strlen($blob) > RelayClient::MAX_BLOB_BYTES) {
             return $this->jsonError(HttpStatus::PAYLOAD_TOO_LARGE, 'blob_too_large');
         }
@@ -288,34 +175,18 @@ final class RelayServeCommand extends Command
         return new Response(HttpStatus::ACCEPTED, ['content-type' => 'application/json'], '{"status":"accepted"}');
     }
 
-    /**
-     * GET /relay/drain — return all pending blobs for the authenticated device.
-     *
-     * Required query parameter:
-     *   - did  string: recipient device_id whose mailbox to drain
-     *
-     * Authorization: Bearer token in Authorization header must match
-     * RelayConfig::authToken() (T-13-13). Returns 401 on mismatch or missing token.
-     *
-     * Response: JSON array of pending blobs, each with:
-     *   { "id": int, "sender_did": string, "blob": string (base64), "created_at": string }
-     *
-     * Bounded (resource-exhaustion guard): returns at most
-     * self::DRAIN_PAGE_SIZE rows, oldest first. A caller draining a backlog
-     * larger than the page size must confirm() the returned rows and call
-     * drain again to fetch the remainder — repeat until fewer than the page
-     * size comes back.
-     *
-     * ZK: blobs are base64-encoded and returned verbatim — no decryption.
-     */
+    // GET /relay/drain — bearer-token authorized (see class @link); returns up
+    // to DRAIN_PAGE_SIZE pending blobs, oldest first, base64-encoded and
+    // unmodified (ZK).
     private function handleDrain(Request $request): Response
     {
-        // Extract the recipient device_id from the query string. Authorization is
-        // bound to this $did (CR-04), so it must be resolved before the auth check.
+        // Authorization is bound to $did, so it must be resolved before the auth
+        // check runs.
         $query = $request->getUri()->getQuery();
-        // WR-08: initialize + annotate the parse_str() target. parse_str can build
-        // nested arrays from `did[]=x` syntax; the is_string() guard below degrades
-        // those to '' (safe), and the explicit init/annotation keeps this L10-clean.
+
+        // parse_str() can build nested arrays from `did[]=x` syntax; the
+        // is_string() guard below degrades those to '' (safe), and the explicit
+        // init + @var annotation below keeps this PHPStan-strict clean.
         /** @var array<string, mixed> $params */
         $params = [];
         parse_str($query, $params);
@@ -355,24 +226,14 @@ final class RelayServeCommand extends Command
         return new Response(HttpStatus::OK, ['content-type' => 'application/json'], $json);
     }
 
-    /**
-     * DELETE /relay/drain/{id} — confirm delivery of a blob by id.
-     *
-     * Authorization: Bearer token required (T-13-13).
-     *
-     * Marks the blob as delivered (sets delivered_at, resets expires_at to 7d TTL)
-     * so it is cleaned up by the GC sweep. The blob is NOT deleted immediately —
-     * this gives the draining device a chance to re-confirm if it crashes after
-     * draining but before persisting locally.
-     *
-     * ZK: no blob content is read or touched in this method.
-     */
+    // DELETE /relay/drain/{id} — bearer-token authorized against the row's own
+    // recipient (see class @link). Marks the blob delivered (7d TTL) rather than
+    // deleting it immediately, so a draining device that crashes before
+    // persisting locally can re-confirm.
     private function handleConfirm(Request $request, int $id): Response
     {
-        // Bind authorization to the mailbox owner of this row (CR-04): only the
-        // recipient device that owns the row may confirm-delete it. Resolve the
-        // recipient_did (routing metadata only — never the blob) and require a
-        // per-device token scoped to that device.
+        // Resolve the recipient_did (routing metadata only — never the blob) and
+        // require a per-device token scoped to that device before it is exposed.
         $recipientDid = $this->mailbox->recipientDidFor($id);
         if ($recipientDid === null) {
             // Unknown row id. Return 401 (not 404) so a caller cannot probe which
@@ -398,36 +259,14 @@ final class RelayServeCommand extends Command
         return new Response(HttpStatus::OK, ['content-type' => 'application/json'], '{"status":"confirmed"}');
     }
 
-    /**
-     * Check whether the incoming request is authorized to drain/confirm the
-     * mailbox belonging to $did (CR-04).
-     *
-     * Authorization is BOUND to the specific device whose mailbox is being
-     * accessed: the presented bearer token must equal the per-device token
-     * derived via RelayConfig::deriveDeviceToken($did)
-     * (= HMAC-SHA256(authToken, did)). A single relay-wide token is NOT accepted;
-     * a token scoped to device A cannot drain or confirm device B's mailbox.
-     * This preserves the ZK threat model (T-13-13): the relay only HMACs the
-     * device_id (routing metadata it already sees) with the secret it already
-     * holds — it never reads blobs or learns a user_id.
-     *
-     * Timing-safe comparison via hash_equals() prevents timing oracle attacks.
-     *
-     * Returns false when:
-     *   - No token is configured in RelayConfig (relay was set up without a token)
-     *   - $did is empty (no mailbox to bind the token to)
-     *   - The Authorization header is absent or malformed
-     *   - The presented token does not match the per-device derived token
-     *
-     * Authorization enforcement lives HERE (at the endpoint), NOT inside
-     * RelayMailbox. RelayMailbox is a pure ZK store (T-13-13).
-     */
+    // Authorization is bound to the specific device whose mailbox is being
+    // accessed (see class @link): timing-safe compare against the per-device
+    // token derived from RelayConfig::deriveDeviceToken($did). Returns false
+    // when no token is configured, $did is empty, or the header is missing/mismatched.
     private function isAuthorized(Request $request, string $did): bool
     {
-        // Per-device token derived from the relay secret + the requested mailbox.
         $expectedToken = $this->config->deriveDeviceToken($did);
         if ($expectedToken === null) {
-            // No token configured, or empty $did — deny.
             return false;
         }
 
@@ -436,7 +275,6 @@ final class RelayServeCommand extends Command
             return false;
         }
 
-        // Expect "Bearer <token>" format.
         if (! str_starts_with($authHeader, 'Bearer ')) {
             return false;
         }
@@ -446,21 +284,11 @@ final class RelayServeCommand extends Command
         return hash_equals($expectedToken, $presentedToken);
     }
 
-    /**
-     * Whether $did is a safe, bounded routing key (self::DID_PATTERN).
-     *
-     * Resource-exhaustion / injection guard on the open deliver path: rejects
-     * empty, oversized, or control-character-laden sender_did/recipient_did
-     * values before they ever reach RelayMailbox.
-     */
     private function isValidDid(string $did): bool
     {
         return preg_match(self::DID_PATTERN, $did) === 1;
     }
 
-    /**
-     * Return a JSON error response.
-     */
     private function jsonError(int $status, string $errorCode): Response
     {
         $body = json_encode(['error' => $errorCode], JSON_THROW_ON_ERROR);

@@ -14,38 +14,14 @@ use RuntimeException;
 use SodiumException;
 
 /**
- * CRYPT-02 core: device removal = trust revocation + forward-only GDK epoch
- * rotation, in ONE operation (T-14-04). A rotate-only or revoke-only
- * implementation is a HIGH-severity access-control gap — RESEARCH's Security
- * Domain mandates BOTH.
- *
- * ## Order of operations (deliberate)
- *
- * 1. Revoke `device_registry` trust for the removed device FIRST (clear
- *    `confirmed_at`, mirroring how `DeviceRegistryService::deviceKeys()` /
- *    `deviceX25519Keys()` / `confirmedDevices()` already filter on
- *    `confirmed_at IS NOT NULL`) — this closes the Ed25519 gate before any
- *    new epoch key is even generated, so there is no window where the
- *    removed device is both still-trusted AND aware of the new epoch.
- * 2. Generate a fresh GDK epoch key (D-04 forward-only: `appendEpoch()`
- *    never discards a prior epoch — Pitfall 4) and advance
- *    `sync_encryption_state.current_epoch`.
- * 3. Wrap the new epoch to every REMAINING confirmed device's X25519
- *    public key via `sodium_crypto_box_seal` (D-05) and enqueue each
- *    opaque blob on the ZK-pure `RelayMailbox` for offline pickup —
- *    `RelayMailbox` never inspects the blob (T-13-06 invariant preserved).
- *
- * `rotateAndRevoke()` tolerates encryption not yet being enabled for the
- * user (no `sync_encryption_state` row / empty keyring) by treating that as
- * a group-of-one bootstrap — the new epoch becomes epoch 1 — rather than
- * requiring `GdkKeyringService::currentEpoch()`'s hard "no current epoch
- * recorded" failure.
- *
- * Removing the last remaining peer still rotates locally and enqueues zero
- * wraps (nothing to fan out to).
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class GdkRotationService
 {
+    // Device removal = trust revocation + forward-only GDK epoch rotation, in
+    // ONE operation. A rotate-only or revoke-only implementation is a
+    // HIGH-severity access-control gap. Order: revoke device_registry trust
+    // first, THEN rotate the epoch, THEN fan out the new epoch (see @link).
     public function __construct(
         private readonly GdkKeyringService $keyringService,
         private readonly DeviceRegistryService $deviceRegistry,
@@ -54,21 +30,14 @@ final class GdkRotationService
         private readonly Clock $clock,
     ) {}
 
+    // $session is a PER-METHOD parameter, not a constructor-captured field —
+    // this class is bound as a singleton, so a constructor-held Session would
+    // be captured once at first resolve and go stale across requests/the
+    // device-removal daemon path.
     /**
-     * Revoke $deviceRegistryId's trust and rotate the GDK epoch for $userId,
-     * fanning the new epoch out (sealed-box wrapped) to every remaining
-     * confirmed device.
-     *
-     * $session is a PER-METHOD parameter (D-11), not a constructor-captured
-     * field — this class is bound as a singleton (`SyncServiceProvider`), so
-     * a constructor-held `Session` would be captured once at first resolve
-     * and go stale across requests/the device-removal daemon path. Mirrors
-     * `GdkKeyringService`/`SensitiveColumnCodec`'s existing per-method-Session
-     * convention.
-     *
      * @throws \LogicException when the app-lock KEK is unavailable (propagated
      *                         from GdkKeyringService — the keyring is never
-     *                         touched without the LOCK-04 key).
+     *                         touched without the app-lock key).
      * @throws RuntimeException on a crypto / I-O failure during rotation.
      */
     public function rotateAndRevoke(int $userId, int $deviceRegistryId, Session $session): void
@@ -76,12 +45,10 @@ final class GdkRotationService
         $connection = $this->db->connection();
         $now = $this->clock->now()->toIso8601String();
 
-        // WR-06: never allow the acting device (`is_self = 1`) to be revoked.
-        // Livewire actions are client-invokable, so a crafted
-        // removeDevice(selfRowId) must be rejected AUTHORITATIVELY here — not
-        // merely hidden in the blade — before any write. Self-revocation would
-        // clear the user's own `confirmed_at` and drop them out of their own
-        // trusted-device set.
+        // Never allow the acting device (is_self = 1) to be revoked. Livewire
+        // actions are client-invokable, so a crafted removeDevice(selfRowId)
+        // must be rejected AUTHORITATIVELY here, not merely hidden in the
+        // blade — self-revocation would drop the user out of their own trusted-device set.
         $targetIsSelf = $connection->table('device_registry')
             ->where('id', $deviceRegistryId)
             ->where('user_id', $userId)
@@ -92,16 +59,10 @@ final class GdkRotationService
             );
         }
 
-        // CR-02: fail fast if the app-lock KEK is unavailable BEFORE mutating
-        // device_registry. loadKeyring() is read-only and throws LogicException
-        // when locked; doing it here (rather than after the revoke write)
-        // guarantees a locked-app removal can never leave the device
-        // revoked-but-not-rotated — the exact revoke-only state this class
-        // declares a HIGH-severity access-control gap. The epoch key itself is
-        // still generated AFTER the revoke inside the transaction below, so the
-        // documented "close the Ed25519 gate before the new epoch exists"
-        // ordering is preserved. loadKeyring() returns an empty keyring when
-        // encryption is not yet enabled (group-of-one bootstrap → epoch 1).
+        // Fail fast if the app-lock KEK is unavailable BEFORE mutating
+        // device_registry, so a locked-app removal can never leave the device
+        // revoked-but-not-rotated. Empty keyring means encryption is not yet
+        // enabled (group-of-one bootstrap -> epoch 1).
         $keyring = $this->keyringService->loadKeyring($userId, $session);
         $newEpochId = 1;
         foreach ($keyring->epochs() as $epoch) {
@@ -111,24 +72,14 @@ final class GdkRotationService
         $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
 
         try {
-            // CR-02: revoke + epoch append (current_epoch advance) + fan-out run
-            // in ONE SQL transaction, so a failure anywhere after the revoke can
-            // no longer COMMIT the revoke-only state — every DB write rolls back
-            // together and the removal can be retried cleanly.
-            //
-            // Residual (documented; CR-02 marked requires-human-verification):
-            // appendEpoch() writes the keyring FILE, which cannot join the SQL
-            // transaction. On a post-append rollback the file keeps the appended
-            // (unused) epoch key — forward-only append makes that benign, but a
-            // retry mints a fresh epoch id rather than resuming. A fully
-            // idempotent staged-finalize rotation is deferred.
+            // Revoke + epoch append (current_epoch advance) + fan-out run in
+            // ONE SQL transaction, so a failure anywhere after the revoke can
+            // no longer COMMIT the revoke-only state. Residual: appendEpoch()
+            // writes the keyring FILE, which cannot join the SQL transaction.
             $connection->transaction(function () use ($connection, $userId, $deviceRegistryId, $now, $newEpochId, $rawGdkKey, $session): void {
-                // Step 1 (T-14-04): revoke trust. Clearing confirmed_at is the
-                // exact column DeviceRegistryService::deviceKeys()/
-                // deviceX25519Keys()/confirmedDevices() already filter on
-                // (whereNotNull('confirmed_at')), so this single write closes
-                // the Ed25519 gate — the removed device drops out of every
-                // confirmed-device query from this point on.
+                // Step 1: revoke trust. Clearing confirmed_at is the exact
+                // column DeviceRegistryService's device-key queries already
+                // filter on, so this single write closes the Ed25519 gate.
                 $connection->table('device_registry')
                     ->where('id', $deviceRegistryId)
                     ->where('user_id', $userId)
@@ -137,15 +88,12 @@ final class GdkRotationService
                         'updated_at' => $now,
                     ]);
 
-                // Step 2 (D-04): forward-only epoch rotation.
                 $newEpoch = new GdkEpoch(epochId: $newEpochId, keyHex: sodium_bin2hex($rawGdkKey));
                 $this->keyringService->appendEpoch($userId, $newEpoch, $session);
 
-                // Step 3 (D-05): wrap-per-remaining-device fan-out over the
-                // ZK-pure relay mailbox. Excludes self (no wrap-to-self — the
-                // acting device already appended the epoch to its own keyring)
-                // and the just-revoked device (already absent from
-                // deviceX25519Keys() after Step 1).
+                // Step 3: wrap-per-remaining-device fan-out over the ZK-pure
+                // relay mailbox. Excludes self and the just-revoked device
+                // (already absent from deviceX25519Keys() after Step 1).
                 $selfDeviceId = $this->selfDeviceId($userId);
 
                 foreach ($this->deviceRegistry->deviceX25519Keys($userId) as $deviceId => $x25519PublicKeyHex) {
@@ -170,29 +118,11 @@ final class GdkRotationService
         }
     }
 
+    // Builds the opaque GDK_EPOCH_WRAP blob for one recipient device.
+    // SECURITY PRECONDITION: sodium_crypto_box_seal provides confidentiality
+    // but NO sender authentication, so this wrap is safe to trust on receipt
+    // ONLY over a channel that has independently authenticated the sender as a CONFIRMED peer.
     /**
-     * Build the opaque `GDK_EPOCH_WRAP` control-message blob for one
-     * recipient device — $rawGdkKey sealed-box-encrypted to the recipient's
-     * X25519 public key (D-05). Mirrors PeerCatchUpExchanger's plain
-     * array-with-'type'-key control-message idiom.
-     *
-     * SECURITY PRECONDITION (WR-07): `sodium_crypto_box_seal` provides
-     * CONFIDENTIALITY but NO sender authentication — anyone who knows a
-     * device's X25519 public key can craft a wrap sealing an attacker-chosen
-     * epoch key to it. This wrap is therefore SAFE to trust on receipt ONLY
-     * when the delivery channel has independently authenticated the sender as a
-     * CONFIRMED peer. In this codebase that authentication is provided by the
-     * Noise IK session in `SyncWebSocketHandler` (peer static key verified
-     * against `DeviceRegistryService::deviceX25519Keys()`, confirmed-only,
-     * before any blob is exchanged). `GdkEpochControlHandler::handle()` (the
-     * receive side) MUST NOT be invoked for a wrap that did not arrive over
-     * such an authenticated, confirmed-peer channel — the seal alone is not a
-     * sufficient trust anchor. A future hardening adds an explicit Ed25519
-     * sender signature over the wrap so the receiver can verify provenance
-     * without relying on transport-layer authentication; until then the
-     * authenticated-channel precondition is a hard requirement, not a
-     * convenience.
-     *
      * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string}
      *
      * @throws InvalidArgumentException when $rawGdkKey or
@@ -220,35 +150,11 @@ final class GdkRotationService
         ];
     }
 
+    // ADD-device analog of rotateAndRevoke()'s fan-out: wraps EVERY epoch
+    // already in $userId's keyring to $newDeviceRegistryId's confirmed
+    // X25519 public key. NO rotation, NO revoke, NO appendEpoch() — purely
+    // additive delivery of already-existing epochs to a newly-confirmed peer.
     /**
-     * ADD-device analog of {@see rotateAndRevoke()}'s Steps 1-2 fan-out
-     * (minus Steps 1-2 themselves): wrap EVERY epoch already in $userId's
-     * keyring, sealed to $newDeviceRegistryId's confirmed X25519 public key,
-     * and enqueue each on the ZK-pure RelayMailbox for pickup — the SAME
-     * delivery primitive `rotateAndRevoke()` uses, reused unchanged. Added
-     * for Phase 15 import-join (B1): the desktop must push its FULL epoch
-     * history to a newly-confirmed phone, not just future rotations.
-     *
-     * NO rotation, NO revoke, NO `appendEpoch()`, NO `current_epoch` change
-     * — this is purely additive delivery of ALREADY-EXISTING epochs. An
-     * empty keyring (encryption never enabled on this desktop) enqueues
-     * zero wraps — benign; the phone stays unencrypted-but-synced.
-     *
-     * ## Trust-gate ordering (critical, threat-model item 1)
-     *
-     * This method is SAFE to call only for an already-CONFIRMED recipient.
-     * Defense-in-depth: it re-checks `confirmed_at IS NOT NULL` on the
-     * recipient row itself and refuses (zero wraps, no exception, nothing
-     * logged that could leak trust state) when the row is not confirmed OR
-     * is the acting self device (no wrap-to-self) OR does not exist for
-     * this user. The CALLER (`PairingFlowModal`, Task 3 UI half) is
-     * additionally responsible for reaching this method ONLY from the
-     * `state === CONFIRMED` branch returned by
-     * `PairingTokenService::confirm()`'s `bothConfirmed()` transition — a
-     * pending/awaiting/expired/rejected token must never reach this method
-     * at all, so the two checks are independent, redundant gates on the
-     * SAME invariant (T-15-17/T-15-19 preserved).
-     *
      * @throws \LogicException when the app-lock KEK is unavailable
      *                         (propagated from `GdkKeyringService::loadKeyring()`).
      * @throws RuntimeException on a crypto / I-O failure while wrapping.
@@ -272,7 +178,8 @@ final class GdkRotationService
             return;
         }
 
-        // No wrap-to-self — mirrors rotateAndRevoke()'s Step 3 self-exclusion.
+        // No wrap-to-self, mirroring rotateAndRevoke()'s own self-exclusion —
+        // the acting device already has every epoch in its own keyring.
         if ((bool) $recipient->is_self === true) {
             return;
         }
@@ -285,10 +192,8 @@ final class GdkRotationService
         }
 
         // loadKeyring() throws \LogicException when the KEK is unavailable
-        // (D-02 weak-key-window guard) and returns an EMPTY keyring when
-        // encryption was never enabled for this user (group-of-one
-        // bootstrap posture, mirrors rotateAndRevoke()'s own tolerance) —
-        // in the latter case the foreach below simply enqueues zero wraps.
+        // and returns an EMPTY keyring when encryption was never enabled for
+        // this user — in that case the foreach below enqueues zero wraps.
         $keyring = $this->keyringService->loadKeyring($userId, $session);
         $selfDeviceId = $this->selfDeviceId($userId);
         $recipientPub = sodium_hex2bin($recipientPubHex);
@@ -316,10 +221,6 @@ final class GdkRotationService
         }
     }
 
-    /**
-     * The acting device's own device_id (the `is_self = 1` row), or null if
-     * this user somehow has no self row yet.
-     */
     private function selfDeviceId(int $userId): ?string
     {
         $value = $this->db->connection()->table('device_registry')

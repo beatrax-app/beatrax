@@ -7,22 +7,14 @@ namespace Modules\Sync\Internal\Crypto;
 use InvalidArgumentException;
 
 /**
- * Immutable, append-only in-memory collection of a user's GDK epochs (D-04).
- *
- * Mirrors `DeviceIdentityDto`'s "never persist outside the sanctioned
- * encrypted key-file" posture — this VO is the in-memory shape
- * `GdkKeyringService` decrypts a keyring file into and re-encrypts a
- * keyring file from. It is never itself serialized anywhere except inside
- * the app-lock-KEK-wrapped file `GdkKeyringService` writes.
- *
- * Append-only by construction: `withEpoch()` returns a NEW GdkKeyring with
- * the epoch appended, never mutating or discarding any prior epoch
- * (14-RESEARCH.md Pitfall 4 — `OpLogRebuilder::rebuild()` replays the
- * entire persisted op-log and must be able to decrypt every historical
- * epoch, forever).
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final readonly class GdkKeyring
 {
+    // Immutable, append-only in-memory collection of a user's GDK epochs —
+    // never persisted outside the app-lock-KEK-wrapped file GdkKeyringService
+    // writes. Append-only because OpLogRebuilder::rebuild() replays the
+    // entire persisted op-log and must be able to decrypt every historical epoch, forever.
     /**
      * @param  list<GdkEpoch>  $epochs
      */
@@ -51,19 +43,13 @@ final readonly class GdkKeyring
         return $this->epochs;
     }
 
-    /**
-     * Returns a NEW keyring with $epoch appended — never mutates $this or
-     * discards any existing epoch.
-     */
+    // Returns a NEW keyring with $epoch appended — never mutates $this or
+    // discards any existing epoch.
     public function withEpoch(GdkEpoch $epoch): self
     {
         return new self([...$this->epochs, $epoch]);
     }
 
-    /**
-     * The raw key hex for a given epoch id, or null when the keyring holds
-     * no such epoch.
-     */
     public function keyFor(int $epochId): ?string
     {
         foreach ($this->epochs as $epoch) {

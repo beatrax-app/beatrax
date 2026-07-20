@@ -5,25 +5,13 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Identity;
 
 /**
- * Immutable device-identity DTO — the in-memory shape of the decrypted
- * key-file (PAIR-01, D-01/D-03).
- *
- * This DTO carries BOTH public and secret key material in hex form. It is
- * only ever constructed from the decrypted key-file (held in memory while
- * the app-lock is unlocked) and MUST NEVER be persisted to the database —
- * the DB holds public keys only (see the device_registry migration). The
- * secret keys rest only inside the BackupEncryptor-encrypted key-file on
- * disk, routed through UserDataPathService.
- *
- * fromArray()/toArray() round-trip the on-disk JSON key-file shape
- * (RESEARCH §Pattern 1):
- *   v, device_id, user_id,
- *   ed25519_secret_key_hex, ed25519_public_key_hex,
- *   x25519_secret_key_hex, x25519_public_key_hex,
- *   created_at
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final readonly class DeviceIdentityDto
 {
+    // Carries BOTH public and secret key material in hex form. MUST NEVER be
+    // persisted to the database — the DB holds public keys only. Secret keys
+    // rest only inside the BackupEncryptor-encrypted key-file on disk.
     public function __construct(
         public int $version,
         public string $deviceId,
@@ -36,8 +24,6 @@ final readonly class DeviceIdentityDto
     ) {}
 
     /**
-     * Build the DTO from the decrypted key-file JSON shape.
-     *
      * @param  array<string, mixed>  $data
      */
     public static function fromArray(array $data): self
@@ -81,8 +67,6 @@ final readonly class DeviceIdentityDto
     }
 
     /**
-     * Produce the on-disk key-file JSON shape (inverse of fromArray()).
-     *
      * @return array<string, mixed>
      */
     public function toArray(): array

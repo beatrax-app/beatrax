@@ -8,50 +8,15 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use RuntimeException;
 
 /**
- * HTTP client for the zero-knowledge ciphertext relay (XPORT-03, D-01/D-02).
- *
- * Moves opaque Noise ciphertext between this device and a configured relay endpoint
- * via the relay's HTTP surface:
- *   POST   {endpoint}/relay/deliver         — submit ciphertext blob for a recipient
- *   GET    {endpoint}/relay/drain           — retrieve pending blobs (auth required)
- *   DELETE {endpoint}/relay/drain/{id}      — confirm delivery of a drained blob
- *
- * ZK constraint: this client NEVER has access to plaintext or session keys.
- * It receives already-encrypted Noise ciphertext blobs from the transport layer
- * and forwards them verbatim to the relay. The relay operator sees only routing
- * metadata + opaque ciphertext (T-13-06 / T-13-08).
- *
- * HTTPS enforcement: deliver() / drain() throw RuntimeException when the
- * configured endpoint uses plain HTTP (T-13-08 / Pitfall 6). The relay remains
- * ZK from the operator's perspective regardless of TLS, but network observers
- * can intercept metadata on an HTTP endpoint.
- *
- * Auth: the auth token (from RelayConfig::authToken()) is sent as a Bearer token
- * header. It is never stored in .env — RelayConfig reads it from
- * secretsPath()/sync-relay-token.json (chmod 600).
- *
- * Http\Factory is constructor-injected (never the Http facade) to satisfy the
- * BoundaryArchTest "no Illuminate\Support\Facades inside Modules\" rule — mirrors
- * the EcbRateProvider pattern (Pitfall T-02-04).
+ * @link ../../../../../.docs/features/sync/architecture.md
  */
 final readonly class RelayClient
 {
-    /** HTTP timeout for relay requests in seconds. */
     private const TIMEOUT_SECONDS = 10;
 
-    /**
-     * Cap on a single relay blob (IN-02). TransportFramer caps the
-     * plaintext payload at 64 KB; a Noise-encrypted blob is that plus AEAD/Noise
-     * framing overhead. 64 KB + 1 KB headroom bounds the upload surface without
-     * rejecting any legitimate frame. The relay is opaque to blob content, so this
-     * is a sanity bound, not a correctness gate.
-     *
-     * Public: POST /relay/deliver is intentionally unauthenticated (any caller
-     * may deliver into any mailbox — see RelayServeCommand::handleDeliver doc).
-     * RelayServeCommand mirrors this exact constant server-side so a caller that
-     * bypasses this client (hitting the socket directly) cannot smuggle a
-     * larger-than-intended blob past the client-only check.
-     */
+    // 64 KB TransportFramer ceiling + 1 KB headroom for AEAD/Noise overhead.
+    // RelayServeCommand mirrors this exact constant server-side so a caller
+    // bypassing this client can't smuggle an oversized blob past it.
     public const MAX_BLOB_BYTES = 65536 + 1024;
 
     public function __construct(
@@ -59,17 +24,10 @@ final readonly class RelayClient
         private RelayConfig $config,
     ) {}
 
+    // ZK: $blob is forwarded verbatim — no inspection, no decryption. It is
+    // base64-encoded inside a JSON envelope so it survives JSON transport;
+    // the relay base64-decodes it back to raw bytes and never inspects it.
     /**
-     * POST an opaque ciphertext blob to the relay for the given recipient device.
-     *
-     * ZK: $blob is forwarded verbatim — no inspection, no decryption. The blob is
-     * base64-encoded inside a JSON envelope so it survives JSON transport; the
-     * relay base64-decodes it back to raw bytes for storage and never inspects it.
-     *
-     * Wire contract (must match RelayServeCommand::handleDeliver):
-     *   POST {endpoint}/relay/deliver
-     *   JSON body: { "sender_did": string, "recipient_did": string, "blob": base64 }
-     *
      * @param  string  $senderDid  Sending device_id (routing metadata only)
      * @param  string  $recipientDid  Recipient device_id (relay routing key)
      * @param  string  $blob  Opaque Noise ciphertext
@@ -81,9 +39,6 @@ final readonly class RelayClient
     {
         $endpoint = $this->resolvedEndpoint();
 
-        // IN-02: bound the upload surface. A legitimate Noise-encrypted op frame
-        // never exceeds the framer ceiling + overhead; a larger blob is rejected
-        // before hitting the network.
         if (strlen($blob) > self::MAX_BLOB_BYTES) {
             throw new RuntimeException(sprintf(
                 'RelayClient::deliver — blob too large (%d bytes). Maximum is %d bytes.',
@@ -110,19 +65,10 @@ final readonly class RelayClient
     }
 
     /**
-     * GET all pending blobs from the relay for the given device.
-     *
-     * Returns an array of relay rows, each containing at minimum:
-     *   - id: int  (relay_mailbox row id for confirm())
-     *   - blob: string  (opaque Noise ciphertext)
-     *   - sender_did: string
-     *
-     * ZK: blobs are returned opaque — never decoded here.
-     *
      * @param  string  $deviceId  Authenticated device draining its mailbox
      * @param  string  $authToken  Per-device bearer token bound to $deviceId
      *                             (RelayConfig::deriveDeviceToken($deviceId)); a
-     *                             relay-wide token is rejected by the server (CR-04).
+     *                             relay-wide token is rejected by the server.
      * @return list<array<string, mixed>>
      *
      * @throws RuntimeException when the request fails.
@@ -143,9 +89,8 @@ final readonly class RelayClient
             );
         }
 
-        // The server wraps the rows in a {"blobs": [...]} envelope
-        // (RelayServeCommand::handleDrain). Unwrap it to the documented
-        // list<array<string,mixed>> return shape.
+        // The server wraps the rows in a {"blobs": [...]} envelope; unwrap
+        // to the documented list<array<string,mixed>> return shape.
         $decoded = $response->json();
         /** @var list<array<string, mixed>> $rows */
         $rows = is_array($decoded) && isset($decoded['blobs']) && is_array($decoded['blobs'])
@@ -156,17 +101,11 @@ final readonly class RelayClient
     }
 
     /**
-     * DELETE (confirm delivery of) a drained blob by relay row ID.
-     *
-     * Called after the receiver has successfully decrypted and replayed the blob.
-     * The relay marks the row as delivered (sets delivered_at) and it will be
-     * GC'd after the delivered TTL.
-     *
      * @param  int  $id  relay_mailbox.id from a drain() response row
      * @param  string  $authToken  Per-device bearer token bound to the recipient
      *                             device that owns the row
      *                             (RelayConfig::deriveDeviceToken($recipientDid)); a
-     *                             relay-wide token is rejected by the server (CR-04).
+     *                             relay-wide token is rejected by the server.
      *
      * @throws RuntimeException when the request fails.
      */
@@ -188,10 +127,8 @@ final readonly class RelayClient
     }
 
     /**
-     * Resolve and validate the configured endpoint URL.
-     *
-     * @throws RuntimeException when no endpoint is configured (D-01 default-none
-     *                          posture) or the endpoint is insecure (http://).
+     * @throws RuntimeException when no endpoint is configured or the
+     *                          endpoint is insecure (http://).
      */
     private function resolvedEndpoint(): string
     {
@@ -203,8 +140,6 @@ final readonly class RelayClient
         }
 
         if ($this->config->isInsecure()) {
-            // T-13-08 / Pitfall 6: warn on non-HTTPS.
-            // Still throw — the relay endpoint MUST be HTTPS to protect routing metadata.
             throw new RuntimeException(
                 'RelayClient: relay endpoint must use HTTPS to protect routing metadata. '
                 .'The configured endpoint appears to use plain HTTP.'
@@ -213,8 +148,8 @@ final readonly class RelayClient
 
         $endpoint = $this->config->endpointUrl();
 
-        // isConfigured() above guarantees endpointUrl() is non-null here.
-        // PHPStan sees the return type as ?string; we assert non-null via the guard.
+        // isConfigured() above guarantees this is non-null; PHPStan sees
+        // ?string, so assert it explicitly.
         if ($endpoint === null) {
             throw new RuntimeException('RelayClient: relay endpoint unexpectedly null after isConfigured() check.');
         }
@@ -222,12 +157,9 @@ final readonly class RelayClient
         return rtrim($endpoint, '/');
     }
 
+    // Empty array when no token is configured — some relay deployments may
+    // be token-optional (e.g. on a private LAN).
     /**
-     * Build the Authorization header from RelayConfig's stored token.
-     *
-     * Returns an empty array when no token is configured — some relay deployments
-     * may be token-optional (e.g. on a private LAN).
-     *
      * @return array<string, string>
      */
     private function authHeaders(): array

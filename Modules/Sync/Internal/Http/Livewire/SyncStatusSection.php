@@ -13,66 +13,28 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 /**
- * Sync-status surface for the "Devices & Sync" settings section (D-06).
- *
- * Renders:
- *   - An overall "all devices up to date · synced Nm ago" line (or error/offline state).
- *   - A per-peer list with online/offline dot, last-seen relative time, and
- *     explicit error states (can't reach peer, relay unreachable, handshake failure).
- *
- * Cross-module rule: reads peer status exclusively via SyncStatusService (public
- * service) — never queries sync_sessions directly (T-13-16 / CLAUDE.md).
- *
- * No constructor — all collaborators arrive via mount()/render() method DI per
- * the project's larastan-strict-rules profile (noGlobalLaravelFunction + the
- * Livewire "no constructor DI" pattern in DevicesAndSyncSettingsSection).
- *
- * Singleton-registered in SyncServiceProvider via the singletonIfExists() guard
- * that already forward-registered 'Modules\Sync\Public\Services\SyncStatusService'.
- * The Livewire component name 'sync.sync-status-section' is also already guarded
- * in SyncServiceProvider::boot(). No provider edits needed.
+ * @link ../../../../../.docs/features/sync/architecture.md
  */
 final class SyncStatusSection extends Component
 {
+    // Each element: peer_device_id (string), status
+    // (connecting|handshaking|active|closed|failed), error_message
+    // (string|null), last_seen_at (ISO8601|null), last_seen_human (e.g. "2m
+    // ago"), error_label (human-readable error copy for UI).
     /**
-     * Per-peer session status rows (view-model arrays, safe for Livewire wire serialisation).
-     *
-     * Each element: [
-     *   'peer_device_id' => string,
-     *   'status'         => string,  // 'connecting'|'handshaking'|'active'|'closed'|'failed'
-     *   'error_message'  => string|null,
-     *   'last_seen_at'   => string|null,  // ISO8601 or null
-     *   'last_seen_human'=> string|null,  // e.g. "2m ago"
-     *   'error_label'    => string,       // human-readable error copy for UI
-     * ]
-     *
      * @var list<array<string, mixed>>
      */
     public array $peerStatuses = [];
 
     /**
-     * Derived overall sync health.
-     *
      * @var 'all_synced'|'syncing'|'offline'|'error'|'unknown'
      */
     public string $overallStatus = 'unknown';
 
-    /**
-     * Human-readable relative time for the most-recent sync across all peers.
-     * Null when no peer has ever synced.
-     */
     public ?string $lastSyncedHuman = null;
 
-    // -------------------------------------------------------------------------
-    // Lifecycle
-    // -------------------------------------------------------------------------
-
-    /**
-     * Hydrate per-peer statuses + overall status from SyncStatusService.
-     *
-     * Method DI only — no constructor. Clock is injected here for the relative
-     * time derivation (noGlobalLaravelFunction guard).
-     */
+    // Clock is injected here for the relative time derivation
+    // (noGlobalLaravelFunction guard).
     public function mount(
         CurrentUser $currentUser,
         SyncStatusService $statusService,
@@ -86,22 +48,12 @@ final class SyncStatusSection extends Component
         $this->lastSyncedHuman = $statusService->lastSyncedHuman($now, $userId);
     }
 
-    // -------------------------------------------------------------------------
-    // Render
-    // -------------------------------------------------------------------------
-
     public function render(ViewFactory $views): View
     {
         return $views->make('sync::livewire.sync-status-section');
     }
 
-    // -------------------------------------------------------------------------
-    // Internals
-    // -------------------------------------------------------------------------
-
     /**
-     * Map raw stdClass rows to safe wire-serialisable view-model arrays.
-     *
      * @param  array<int, \stdClass>  $rows
      * @param  CarbonImmutable  $now  Reference point for relative time.
      * @return list<array<string, mixed>>
@@ -138,16 +90,9 @@ final class SyncStatusSection extends Component
         return $viewModels;
     }
 
-    /**
-     * Derive a human-readable error label for a failed-status row.
-     *
-     * Maps known error_message prefixes to D-06-specified copy:
-     *   - "can't reach peer" / connection-failure variants
-     *   - "relay unreachable"
-     *   - "handshake" / "verify" / "authentication" failures
-     *
-     * Returns empty string when the status is not 'failed'.
-     */
+    // Maps known error_message prefixes ("can't reach peer" / connection
+    // variants, "relay unreachable", "handshake"/"verify"/"authentication")
+    // to human-readable copy. Returns empty string when status isn't 'failed'.
     private function deriveErrorLabel(string $status, ?string $errorMessage): string
     {
         if ($status !== 'failed') {
@@ -183,10 +128,6 @@ final class SyncStatusSection extends Component
         return 'Connection failed';
     }
 
-    /**
-     * Compute a relative time string from an ISO8601 timestamp string.
-     * Returns null if the timestamp cannot be parsed.
-     */
     private function humanRelativeTime(CarbonImmutable $now, string $isoTimestamp): ?string
     {
         try {

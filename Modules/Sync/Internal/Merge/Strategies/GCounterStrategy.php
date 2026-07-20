@@ -7,21 +7,14 @@ namespace Modules\Sync\Internal\Merge\Strategies;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 
 /**
- * G-Counter (grow-only counter) merge strategy.
- *
- * Used for fields like merchant_memories.occurrence_count where each device
- * independently increments its own count. The merge is convergent:
- *
- *   result = SUM of MAX(value) per device_id
- *
- * This is Pitfall-5-safe: re-replaying the same ops yields the same sum because
- * we take the per-device MAX (not add all ops from the same device). Each device
- * stores its running total as the op value, not an increment delta.
- *
- * Standard Kulkarni-Demirbas / Shapiro 2011 G-Counter semantics.
+ * @link ../../../../../.docs/features/sync/architecture.md
  */
 final class GCounterStrategy implements MergeStrategyInterface
 {
+    // Used for fields like merchant_memories.occurrence_count where each
+    // device independently increments its own count: result = SUM of
+    // MAX(value) per device_id. Re-replaying the same ops yields the same
+    // sum because each device stores its running total, not a delta.
     /**
      * @param  list<OpLogEntry>  $candidateEntries  HLC-sorted ascending.
      * @return int The merged count: sum of per-device maxima.
@@ -38,10 +31,9 @@ final class GCounterStrategy implements MergeStrategyInterface
 
             $decoded = json_decode($entry->value, true, 512, JSON_THROW_ON_ERROR);
 
-            // IN-04: a non-int decoded value (e.g. a float 3.0 or a string from a
-            // corrupted op) must NOT be silently coerced to 0 — that would LOWER a
-            // device's contribution and break convergence with no signal. Throw a
-            // typed error so the replayer quarantines the op with a precise reason.
+            // A non-int decoded value (e.g. a float or a string from a corrupted
+            // op) must NOT be silently coerced to 0 — that would LOWER a device's
+            // contribution and break convergence with no signal.
             if (! is_int($decoded)) {
                 throw new \UnexpectedValueException('Malformed G-Counter value: expected an integer total.');
             }

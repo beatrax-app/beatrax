@@ -17,45 +17,14 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use RuntimeException;
 
 /**
- * Persists op-log entries to the op_log_entries table.
- *
- * Responsibilities:
- *   - Always-JSON encode the raw PHP value (SE-07 producer side).
- *   - Sign each entry via DeviceKeySigner (Ed25519, ext-sodium).
- *   - Tick the HLC and persist the updated clock state in the same
- *     DB transaction as the op insert (D-12 monotonic guard).
- *   - Restore the HLC high-water mark from hlc_clock_state on construction
- *     so a restart or wall-clock rewind cannot lower the logical clock (Pitfall 6).
- *
- * ## Always-JSON wire contract (SE-07)
- *
- * PHP null maps to SQL NULL (the clear/tombstone sentinel).
- * All other values are stored as json_encode($rawValue, JSON_THROW_ON_ERROR).
- * NEVER call json_encode(null) — that would store the JSON string "null"
- * where SQL NULL is the sentinel.
- *
- * ## HLC persistence (D-12)
- *
- * After every write, hlc_clock_state is updated (upserted) atomically in the
- * same DB transaction. On construction, any existing hlc_clock_state row for
- * (user_id, device_id) is read and clock->receive() is called to restore the
- * high-water mark.
- *
- * ## GDK encrypt-on-write hook (Phase 14, CRYPT-01, D-02)
- *
- * Before a sensitive field's JSON-encoded value ever reaches op_log_entries
- * (and therefore the wire — this is the "doubles as transport encryption"
- * boundary, 14-RESEARCH.md Pattern 1), it is encrypted under the CURRENT GDK
- * epoch and the entry is tagged with `gdk_epoch`. The epoch id is bound as
- * AEAD associated data (`"{table}:{pk}:{field}:{epochId}"`) so relabeling the
- * tag on a stored ciphertext invalidates the authentication tag. When GDK
- * encryption is not yet enabled for this user (no `sync_encryption_state`
- * row, or the app-lock is currently locked), the write falls back to
- * plaintext with a null `gdk_epoch` — pre-migration rows stay plaintext
- * until the Plan 06 migration converts them.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class OpLogWriter
 {
+    // Always-JSON wire contract: PHP null maps to SQL NULL (the
+    // clear/tombstone sentinel); all other values are
+    // json_encode($rawValue, JSON_THROW_ON_ERROR) — NEVER json_encode(null),
+    // which would store the JSON string "null" where SQL NULL is the sentinel.
     public function __construct(
         private readonly HybridLogicalClock $clock,
         private readonly DatabaseManager $db,
@@ -73,20 +42,14 @@ final class OpLogWriter
         $this->restoreClockState();
     }
 
-    /**
-     * Expose the hex-encoded Ed25519 public key for this device.
-     *
-     * Callers (e.g., OpLogReplayer factory code) can use this to build the
-     * device-key map required for signature verification.
-     */
+    // Callers (e.g. OpLogReplayer factory code) use this to build the
+    // device-key map required for signature verification.
     public function publicKeyHex(): string
     {
         return bin2hex($this->publicKey);
     }
 
     /**
-     * Persist a Set op for a single field change.
-     *
      * @param  string  $table  Target table name.
      * @param  int|string  $pk  Primary key of the row being mutated.
      * @param  string  $field  Column name being changed.
@@ -100,13 +63,9 @@ final class OpLogWriter
     }
 
     /**
-     * Persist CreateRow ops for all fields of a new row.
-     *
-     * Emits one op per field, each with an independent HLC tick.
-     *
      * @param  string  $table  Target table name.
      * @param  int|string  $pk  Primary key of the new row.
-     * @param  array<string, mixed>  $fields  Field => value map of all required columns.
+     * @param  array<string, mixed>  $fields  Field => value map of all required columns (emits one op per field, each with an independent HLC tick).
      */
     public function writeCreateRow(string $table, int|string $pk, array $fields): void
     {
@@ -117,17 +76,11 @@ final class OpLogWriter
         }
     }
 
+    // Encrypts $jsonValue under the CURRENT GDK epoch when (table, field) is
+    // on the sensitive allow-list. Falls back to plaintext + null epoch when
+    // GDK encryption is not currently usable for this user — never blocks
+    // the write.
     /**
-     * Encrypt $jsonValue under the CURRENT GDK epoch when (table, field) is
-     * on the D-02b sensitive allow-list. Returns [value, gdkEpochId] — the
-     * (possibly ciphertext) value to persist, and the epoch id to tag the
-     * entry with (null when the value was left plaintext).
-     *
-     * Falls back to plaintext + null epoch when GDK encryption is not
-     * currently usable for this user (never enabled yet, or the app-lock is
-     * locked) — never blocks the write, matching every other GDK read site's
-     * "false not garbage" / pass-through posture.
-     *
      * @return array{0: ?string, 1: ?int}
      */
     private function maybeEncrypt(string $table, int|string $pk, string $field, ?string $jsonValue): array
@@ -155,11 +108,8 @@ final class OpLogWriter
         return [$ciphertext, $epoch->epochId];
     }
 
-    /**
-     * Resolve the current GDK epoch, or null when encryption is not
-     * currently usable (never enabled for this user, or the app-lock KEK is
-     * unavailable) — never throws.
-     */
+    // Null when encryption is not currently usable for this user (never
+    // enabled, or the app-lock KEK is unavailable) — never throws.
     private function tryCurrentEpoch(): ?GdkEpoch
     {
         try {
@@ -169,23 +119,13 @@ final class OpLogWriter
         }
     }
 
-    /**
-     * Persist a DeleteTombstone op.
-     *
-     * @param  string  $table  Target table name.
-     * @param  int|string  $pk  Primary key of the row being deleted.
-     */
     public function writeDelete(string $table, int|string $pk): void
     {
         $this->writeEntry($table, $pk, '__tombstone__', null, OpType::DeleteTombstone);
     }
 
-    /**
-     * Restore the HLC high-water mark from the persisted clock state.
-     *
-     * Called once in __construct. Prevents clock rewind on restart (Pitfall 6):
-     * the next tick() starts from max(wall_ms, last_l), never below last_l.
-     */
+    // Called once in __construct. Prevents clock rewind on restart: the next
+    // tick() starts from max(wall_ms, last_l), never below last_l.
     private function restoreClockState(): void
     {
         $state = $this->db->connection()
@@ -201,10 +141,6 @@ final class OpLogWriter
         }
     }
 
-    /**
-     * Build, sign, and persist a single op-log entry in a DB transaction.
-     * The hlc_clock_state row is upserted atomically in the same transaction.
-     */
     private function writeEntry(
         string $table,
         int|string $pk,
@@ -215,7 +151,6 @@ final class OpLogWriter
     ): void {
         [$hlcL, $hlcC] = $this->clock->tick();
 
-        // Build a stub entry to get the signing payload (signature is empty at this stage).
         $stub = new OpLogEntry(
             table: $table,
             pk: $pk,
@@ -232,7 +167,6 @@ final class OpLogWriter
 
         $signature = $this->signer->sign($stub->signingPayload(), $this->secretKey);
 
-        // Reconstruct with the real signature (OpLogEntry is readonly).
         $entry = new OpLogEntry(
             table: $table,
             pk: $pk,
@@ -265,10 +199,9 @@ final class OpLogWriter
                 'recorded_at' => $now,
             ]);
 
-            // Persist the updated clock state atomically (D-12).
-            // Key the upsert on the composite PRIMARY KEY (user_id, device_id)
-            // ONLY — the old 'id' => 1 singleton key (CR-01) is gone, so a
-            // second device/user gets its own row instead of colliding on id=1.
+            // Key the upsert on the composite PRIMARY KEY (user_id,
+            // device_id) so a second device/user gets its own row instead of
+            // colliding on a shared singleton key.
             $this->db->connection()->table('hlc_clock_state')->updateOrInsert(
                 [
                     'user_id' => $this->userId,

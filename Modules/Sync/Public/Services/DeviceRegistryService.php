@@ -9,13 +9,7 @@ use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 
 /**
- * Public façade over the trusted-device registry (PAIR-01/PAIR-03).
- *
- * This is the ONLY input OpLogReplayer accepts for its $deviceKeys map. The
- * deviceKeys() query MUST filter `confirmed_at IS NOT NULL` (T-12-04, Pitfall
- * 2): an unconfirmed device key in the replayer is a forged-op vector — the
- * device was never safety-number verified (D-07). Every query is also scoped
- * to user_id (T-12-08) so no cross-user key material leaks.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final readonly class DeviceRegistryService
 {
@@ -23,12 +17,9 @@ final readonly class DeviceRegistryService
         private DatabaseManager $db,
     ) {}
 
+    // The ONLY confirmed-only source OpLogReplayer accepts for its
+    // $deviceKeys map — an unconfirmed key here would be a forged-op vector.
     /**
-     * Confirmed-only device-id → hex Ed25519 public-key map for $userId.
-     *
-     * CRITICAL: only rows where confirmed_at IS NOT NULL are returned. This is
-     * the exact shape OpLogReplayer's $deviceKeys constructor arg expects.
-     *
      * @return array<string, string> device_id => hex Ed25519 public key.
      */
     public function deviceKeys(int $userId): array
@@ -45,8 +36,6 @@ final readonly class DeviceRegistryService
     }
 
     /**
-     * Confirmed device rows for the device-list UI (PAIR-03), user-scoped.
-     *
      * @return array<int, \stdClass>
      */
     public function confirmedDevices(int $userId): array
@@ -60,16 +49,11 @@ final readonly class DeviceRegistryService
             ->all();
     }
 
+    // Used by the Noise handshake authenticator: the Noise static key is the
+    // X25519 keypair, NOT the Ed25519 signing key. Same confirmed-only trust
+    // anchor as deviceKeys() — an unconfirmed key can never reach handshake.
     /**
-     * Confirmed-only device-id → hex X25519 public-key map for $userId.
-     *
-     * Used by the Noise handshake authenticator (Phase 13 XPORT-01): the
-     * Noise static key is the X25519 keypair, NOT the Ed25519 signing key.
-     * Only rows where confirmed_at IS NOT NULL are returned — the same trust
-     * anchor as deviceKeys() (T-13-01, D-01 of Phase 12). An unconfirmed
-     * device key can never reach the Noise handshake.
-     *
-     * @return array<string, string> device_id => hex X25519 public key (Noise handshake auth).
+     * @return array<string, string> device_id => hex X25519 public key.
      */
     public function deviceX25519Keys(int $userId): array
     {
@@ -85,8 +69,6 @@ final readonly class DeviceRegistryService
     }
 
     /**
-     * Compute the shared safety-number for two hex public keys (D-07/D-08).
-     *
      * @return string 6 BIP39 words, space-separated.
      */
     public function safetyNumberFor(string $selfPubHex, string $peerPubHex): string
@@ -96,16 +78,9 @@ final readonly class DeviceRegistryService
         return implode(' ', $deriver->deriveWords($selfPubHex, $peerPubHex));
     }
 
-    /**
-     * Resolves this installation's own device id, or null when unpaired.
-     *
-     * This is the sanctioned crossing for `Modules\Notifications`, which may
-     * not reach `Modules\Sync\Internal\Identity` directly. Reads only the
-     * `device_registry` row where `is_self = 1` — public data, no key
-     * material, no app-lock unlock required. `null` (unpaired / no self
-     * row) is a total, non-error outcome: callers treat it as "no
-     * preference row exists for this device".
-     */
+    // Sanctioned crossing for Modules\Notifications, which may not reach
+    // Modules\Sync\Internal\Identity directly. Reads only public data (no
+    // key material, no app-lock unlock). Null (unpaired) is non-error.
     public function localDeviceId(int $userId): ?string
     {
         $deviceId = $this->db->connection()
@@ -117,15 +92,9 @@ final readonly class DeviceRegistryService
         return is_string($deviceId) && $deviceId !== '' ? $deviceId : null;
     }
 
+    // Sanctioned crossing for Modules\Notifications; excludes the local
+    // device's own row. Mirrors confirmedDevices()'s confirmed-only filter.
     /**
-     * Confirmed-only device-id → name map, excluding the local device's own
-     * row (D-35's read-only "Other devices" panel).
-     *
-     * This is the sanctioned crossing for `Modules\Notifications`, which may
-     * not reach `Modules\Sync\Internal\Identity` directly. Mirrors
-     * `confirmedDevices()`'s `confirmed_at IS NOT NULL` filter exactly, so
-     * an unconfirmed peer never surfaces here either.
-     *
      * @return array<string, string> device_id => name.
      */
     public function otherDeviceNames(int $userId): array

@@ -7,24 +7,14 @@ namespace Modules\Sync\Internal\Merge\Strategies;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 
 /**
- * OR-Set (Observed-Remove Set) merge strategy.
- *
- * Used for fields like merchant_aliases.merged_from that hold a set of values
- * where concurrent adds and removes must converge correctly.
- *
- * Each op value is a JSON object:
- *   {"added": [{"v": "element", "tag": "device-id:hlcL:hlcC"}], "removed": ["tag1", "tag2"]}
- *
- * Merge algorithm (standard OR-Set / 2P-Set variant):
- *   1. Collect all added {v, tag} pairs from all entries into a global add-set.
- *   2. Collect all removed tags from all entries into a global remove-set.
- *   3. Return elements whose tag is in the add-set but NOT in the remove-set.
- *
- * This is convergent: an element removed on any device is excluded from the union
- * as long as the remove op references the element's original add tag.
+ * @link ../../../../../.docs/features/sync/architecture.md
  */
 final class OrSetStrategy implements MergeStrategyInterface
 {
+    // Used for fields like merchant_aliases.merged_from that hold a set of
+    // values where concurrent adds and removes must converge: collect all
+    // added {v, tag} pairs and removed tags across entries, then return
+    // elements whose tag is in the add-set but NOT in the remove-set.
     /**
      * @param  list<OpLogEntry>  $candidateEntries  HLC-sorted ascending.
      * @return list<array{v: string, tag: string}> The merged set of live elements.
@@ -44,10 +34,10 @@ final class OrSetStrategy implements MergeStrategyInterface
 
             $decoded = json_decode($entry->value, true, 512, JSON_THROW_ON_ERROR);
 
-            // WR-02: validate the OR-Set wire shape explicitly and throw a typed
-            // error on a malformed value, rather than relying on a downstream
-            // string-offset TypeError. The replayer catches this and quarantines
-            // the op with a meaningful 'strategy_error' reason.
+            // Validate the OR-Set wire shape explicitly and throw a typed error
+            // on a malformed value, rather than relying on a downstream
+            // string-offset TypeError — the replayer catches this and
+            // quarantines the op with a meaningful 'strategy_error' reason.
             $added = is_array($decoded) ? ($decoded['added'] ?? null) : null;
             $removed = is_array($decoded) ? ($decoded['removed'] ?? null) : null;
 
@@ -75,7 +65,6 @@ final class OrSetStrategy implements MergeStrategyInterface
             }
         }
 
-        // Result: elements whose tag is in the add-set but not in the remove-set.
         $result = [];
 
         foreach ($addSet as $tag => $value) {
