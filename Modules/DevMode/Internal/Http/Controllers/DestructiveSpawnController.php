@@ -64,17 +64,16 @@ final readonly class DestructiveSpawnController
         CurrentUser $user,
         Session $session,
     ): JsonResponse {
-        // ---- Gate 1: Dev Mode env flag ----
+        // Re-validates all three TripleGateModal gates server-side:
+        // Dev Mode env flag, session Advanced toggle, typed-app-name.
         if (! $this->devMode->isOn()) {
             throw new AccessDeniedHttpException('dev_mode_off');
         }
 
-        // ---- Gate 2: Session Advanced toggle ----
         if ($session->get('dev_mode.advanced') !== true) {
             throw new AccessDeniedHttpException('advanced_off');
         }
 
-        // ---- Gate 3: Typed-app-name in body ----
         $payload = $request->all();
         $confirmed = $payload['confirmed_typed'] ?? '';
         if (! is_string($confirmed) || ! hash_equals('beatrax', $confirmed)) {

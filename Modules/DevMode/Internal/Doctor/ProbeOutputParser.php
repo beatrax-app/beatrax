@@ -67,11 +67,9 @@ final class ProbeOutputParser
         if ($trimmed === '') {
             return null;
         }
-        // Skip banner + divider lines.
         if ($trimmed === 'beatrax:doctor' || preg_match('/^-+$/', $trimmed) === 1) {
             return null;
         }
-        // Skip the summary footer.
         if (preg_match('/^(All checks passed|\d+ warning|\d+ blocker)/i', $trimmed) === 1) {
             return null;
         }

@@ -214,20 +214,19 @@ final class QueueInspectorPage extends Component
             return;
         }
 
-        // Gate 1 — Dev Mode env flag must still be on.
+        // Re-validate all three triple-gate checks server-side: Dev
+        // Mode env flag, session Advanced toggle, and a timing-safe
+        // comparison of the typed app-name confirmation token.
         if (! $devMode->isOn()) {
             $this->dispatch('toast', message: 'Bulk delete refused — Dev Mode is OFF.');
 
             return;
         }
-        // Gate 2 — Advanced toggle for this session must still be on.
         if ($session->get('dev_mode.advanced') !== true) {
             $this->dispatch('toast', message: 'Bulk delete refused — Advanced toggle is OFF.');
 
             return;
         }
-        // Gate 3 — Typed app-name token must match the exact lowercase
-        // 'beatrax' string. hash_equals is timing-safe.
         if (! hash_equals('beatrax', $confirmed_typed)) {
             $this->dispatch('toast', message: 'Bulk delete refused — typed confirmation token mismatch.');
 
@@ -268,7 +267,6 @@ final class QueueInspectorPage extends Component
         // normalised array shape below.
         $rows = $this->loadRows($db);
 
-        // Pre-scrub the inline-expand payload exactly once per render.
         $expandedPayload = null;
         if ($this->expandedRowId !== null) {
             $expandedPayload = $this->renderExpandedPayload($scrub, $rows);
@@ -322,11 +320,9 @@ final class QueueInspectorPage extends Component
     {
         $out = [];
         foreach ($raw as $row) {
-            // get_object_vars() converts the stdClass row to an array
-            // so larastan-strict-rules does not flag the dynamic
-            // property access. The raw query builder returns rows as
-            // stdClass instances; every value lives as a public
-            // property keyed by column name.
+            // get_object_vars() converts the stdClass row to an array so
+            // larastan-strict-rules does not flag the dynamic property
+            // access on the raw query builder's per-column properties.
             $vars = get_object_vars($row);
             $idRaw = $vars['id'] ?? null;
             $key = is_int($idRaw) ? (string) $idRaw : (is_string($idRaw) ? $idRaw : '');

@@ -128,7 +128,7 @@ final readonly class RunRegistry
 
     /**
      * Convert a RunRecord into a primitive array safe to round-trip
-     * through the cache driver. Carbon dates serialise as ISO-8601
+     * through the cache driver. Carbon dates serialise as ISO 8601
      * strings; the {@see hydrate()} step parses them back via
      * CarbonImmutable::parse() to dodge spatie/laravel-data's strict
      * default-format cast (which rejects strings with timezone offset).

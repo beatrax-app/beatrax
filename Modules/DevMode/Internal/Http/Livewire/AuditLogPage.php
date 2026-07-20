@@ -113,11 +113,9 @@ final class AuditLogPage extends Component
 
     public function render(ViewFactory $views, DatabaseManager $db): View
     {
-        // Use the raw query builder via DatabaseManager — sidesteps
-        // the Eloquent\Builder __call → Query\Builder forwarding that
-        // triggers larastan-strict `staticMethod.dynamicCall` flags
-        // on `limit()` / `whereIn()`. Equivalent semantics; same
-        // dev_mode_audit table.
+        // Raw query builder via DatabaseManager sidesteps the
+        // Eloquent\Builder __call forwarding that triggers
+        // larastan-strict staticMethod.dynamicCall on limit()/whereIn().
         $audit = $db->connection()->table('dev_mode_audit')
             ->where('log_name', 'dev_mode');
 
@@ -132,33 +130,25 @@ final class AuditLogPage extends Component
         }
 
         if ($this->callerFilter !== '') {
-            // Username lookup → user id (the JSON shape stores the int
-            // causer_id, not the username; the username filter is more
-            // useful to the operator). Use the raw query builder
-            // ->value('id') so the lookup pulls a single scalar rather
-            // than hydrating the full Eloquent User model.
+            // The JSON shape stores causer_id (int), not username, so
+            // resolve the operator-facing username filter to an id via
+            // a scalar ->value() lookup rather than hydrating a User.
             $callerId = $db->connection()->table('users')
                 ->where('username', $this->callerFilter)
                 ->value('id');
             if ($callerId !== null) {
                 $audit->where('causer_id', $callerId);
             } else {
-                // Unknown username — force an empty result set with a
-                // self-contradictory predicate the query planner
-                // collapses cheaply. Cleaner than a whereRaw('1 = 0')
-                // and survives the trailing limit(50) the caller
-                // applies below.
+                // Unknown username: force an empty result set with a
+                // self-contradictory predicate rather than whereRaw('1 = 0').
                 $audit->whereNull('id')->whereNotNull('id');
             }
         }
 
-        // Cursor pagination — Older walks back through the audit
-        // history without skipping rows that arrived between requests.
-        // Using id < ?before is correct because rows are append-only
-        // and the id column is monotonically increasing with
-        // created_at; ordering by id desc gives the same chronological
-        // order as ordering by created_at desc but stable against
-        // sub-second timestamp ties.
+        // id < ?before walks back without skipping rows that arrive
+        // between requests: rows are append-only with a monotonically
+        // increasing id, so ordering by id desc matches created_at
+        // desc but stays stable against sub-second timestamp ties.
         if ($this->before !== null && $this->before > 0) {
             $audit->where('id', '<', $this->before);
         }

@@ -175,11 +175,9 @@ final class CommandPaletteModal extends Component
         $isDeveloper = $user->isAuthenticated() && $user->user()->is_developer === true;
 
         foreach ($nav->all() as $entry) {
-            // Nav entries whose id starts with `dev.` are Dev-Console
-            // sub-routes; filter them for non-developers so the
-            // palette JSON never exposes Dev Console route labels to
-            // an unprivileged user (defense-in-depth — the routes
-            // themselves are already gated by `EnsureDeveloperMode`).
+            // Filter Dev-Console sub-route entries (`dev.` prefix) for
+            // non-developers so the JSON never exposes those labels —
+            // defense-in-depth on top of the EnsureDeveloperMode guard.
             if (! $isDeveloper && str_starts_with($entry->id, 'dev.')) {
                 continue;
             }
@@ -200,19 +198,10 @@ final class CommandPaletteModal extends Component
         }
 
         if ($isDeveloper) {
-            // SAFE-tier only — DESTRUCTIVE commands deliberately
-            // EXCLUDED from the palette to prevent muscle-memory
-            // disasters; they remain reachable via the per-row
-            // Re-run affordance on the artisan timeline, which
-            // routes through the triple-gate.
-            //
-            // `hasArgs` lets the client-side dispatcher in palette.js
-            // choose between direct-spawn (no args) and the arg-prompt
-            // modal (any args at all — required OR optional, since
-            // the user might still want to fill an optional value).
-            // Computed server-side so the per-row bool is on the
-            // registry JSON the client already receives — no extra
-            // round trip.
+            // SAFE-tier only — DESTRUCTIVE stays reachable via the
+            // Re-run affordance's triple-gate. `hasArgs` lets
+            // palette.js choose direct-spawn vs. the arg-prompt modal
+            // without an extra round trip.
             foreach ($commands->safe() as $spec) {
                 $hasArgs = count($spec->argsSchema) > 0;
                 $registry[] = [

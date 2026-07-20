@@ -78,7 +78,6 @@ final readonly class ArtisanSpawnController
             );
         }
 
-        // Reject anything that is not in the SAFE allow-list.
         if (! in_array($command, $safeNames, true)) {
             return new JsonResponse(
                 ['error' => 'unknown_command', 'command' => $command],

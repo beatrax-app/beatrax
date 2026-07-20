@@ -34,9 +34,7 @@ final class NullAuditWriter implements AuditWriter
         string $stdoutExcerpt,
         string $errorExcerpt,
         ?string $runId = null,
-    ): void {
-        // Null-shape no-op.
-    }
+    ): void {}
 
     public function finalizeCommandRun(
         string $runId,
@@ -46,7 +44,6 @@ final class NullAuditWriter implements AuditWriter
         string $errorExcerpt,
         bool $cancelled,
     ): bool {
-        // Null-shape no-op — pretend the row existed.
         return false;
     }
 
@@ -57,16 +54,12 @@ final class NullAuditWriter implements AuditWriter
         string $action,
         array $context,
         int $callerUserId,
-    ): void {
-        // Null-shape no-op.
-    }
+    ): void {}
 
     public function recordSelectQuery(
         string $query,
         int $rowcount,
         int $durationMs,
         int $callerUserId,
-    ): void {
-        // Null-shape no-op.
-    }
+    ): void {}
 }

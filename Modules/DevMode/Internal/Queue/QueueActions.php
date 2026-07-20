@@ -107,19 +107,17 @@ final readonly class QueueActions
             return;
         }
 
-        // The framework's FailedJob stdClass shape from
-        // DatabaseFailedJobProvider exposes id/uuid/connection/queue/
-        // payload/exception/failed_at as dynamic properties. We rely
-        // on connection + queue + payload for the re-push.
-        // FailedJobProviderInterface::find() returns `object|null`;
-        // property access is dynamic, so use property_exists() before
-        // each read to keep larastan-strict-rules happy.
+        // FailedJobProviderInterface::find() returns `object|null` with
+        // dynamic properties (id/uuid/connection/queue/payload/etc.);
+        // readObjectStringProp() reads them via get_object_vars() so
+        // larastan-strict-rules doesn't flag the dynamic-name access.
         $connection = $this->readObjectStringProp($job, 'connection', 'database');
         $queueName = $this->readObjectStringProp($job, 'queue', 'default');
         $payload = $this->readObjectStringProp($job, 'payload', '');
 
         if ($payload !== '') {
-            // Reset attempts so the worker treats this as a fresh job.
+            // Reset attempts to 0 so the worker treats the re-push as a
+            // fresh job rather than continuing the exhausted count.
             $decoded = json_decode($payload, true);
             if (is_array($decoded) && isset($decoded['attempts'])) {
                 $decoded['attempts'] = 0;

@@ -42,24 +42,19 @@ final class PushRedactProcessor
 
         $underlying = $logger->getLogger();
 
-        // Laravel's Illuminate\Log\Logger::getLogger() is typed as
-        // `\Psr\Log\LoggerInterface` but in every Monolog-driven
-        // channel (single, daily, stack, etc.) the concrete is a
-        // `Monolog\Logger`. The instanceof check narrows the type for
-        // Larastan and skips the rare non-Monolog channel (e.g. a
-        // future custom PSR-3 logger that doesn't expose handlers)
-        // without throwing.
+        // Illuminate\Log\Logger::getLogger() is typed as a generic PSR
+        // logger interface, but every Monolog-driven channel (single,
+        // daily, stack, etc.) is concretely a Monolog\Logger; the
+        // instanceof check narrows the type and skips any other channel.
         if (! $underlying instanceof MonologLogger) {
             return;
         }
 
         foreach ($underlying->getHandlers() as $handler) {
-            // Only ProcessableHandlerInterface handlers accept processors;
-            // most concrete Monolog handlers (StreamHandler, RotatingFileHandler,
-            // SyslogHandler, ErrorLogHandler, NullHandler) implement it via
-            // the ProcessableHandlerTrait. A handler that doesn't (e.g. a
-            // bare custom adapter that only implements HandlerInterface) is
-            // silently skipped rather than crashing channel boot.
+            // Most concrete Monolog handlers implement
+            // ProcessableHandlerInterface via ProcessableHandlerTrait; a
+            // bare custom adapter that doesn't is silently skipped
+            // rather than crashing channel boot.
             if ($handler instanceof ProcessableHandlerInterface) {
                 $handler->pushProcessor($processor);
             }
