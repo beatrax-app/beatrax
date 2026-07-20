@@ -13,52 +13,19 @@ use Livewire\Component;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 
 /**
- * Global triple-gate modal SFC. Mounted once in the dev-shell
- * layout so the `triple-gate:open` Livewire event can open the
- * modal from anywhere on `/dev/*` (runner timeline rows, command
- * palette, queue inspector's bulk-delete affordance).
- *
- * Server-side enforcement of all three locks before any DESTRUCTIVE
- * command spawns:
- *
- *   Gate 1: config('app.dev_mode') === true (env-pinned).
- *   Gate 2: session('dev_mode.advanced') === true (the operator
- *           flipped the in-session Advanced toggle inside the
- *           current login — resets on Login via
- *           ResetAdvancedToggleOnLogin).
- *   Gate 3: Operator typed the exact lowercase app name `beatrax`
- *           (timing-safe hash_equals comparison so client-side
- *           enable/disable of the button is purely cosmetic).
- *
- * On all-three-pass: dispatches `triple-gate:confirmed` with the
- * command + args + the typed token. Downstream listeners
- * (DestructiveSpawnController for artisan; QueueInspectorPage for
- * bulk-delete) re-validate all three gates a second time —
- * defense-in-depth so a tampered Livewire payload that somehow
- * spoofs the confirmed event still cannot reach the spawner /
- * delete path without passing the identical three-gate sweep.
- *
- * Method-DI on confirm() — Livewire components never receive
- * constructor DI per the project's larastan-strict-rules profile.
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 final class TripleGateModal extends Component
 {
-    /** Command name set by the `triple-gate:open` event. */
     public string $command = '';
 
     /**
-     * Args set by the `triple-gate:open` event. Forwarded verbatim
-     * into the spawn payload so the DestructiveSpawnController re-
-     * validates them against the ArgSpec::rules array.
-     *
      * @var array<string, mixed>
      */
     public array $resolvedArgs = [];
 
-    /** The operator's typed input for the third gate mode. */
     public string $typed = '';
 
-    /** Last server-side gate error code (form-level). */
     public string $gateError = '';
 
     /**

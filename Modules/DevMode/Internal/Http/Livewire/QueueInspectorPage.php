@@ -19,38 +19,7 @@ use Modules\DevMode\Internal\Queue\QueueActions;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 
 /**
- * `/dev/queue/{tab}` — three-tab queue inspector.
- *
- * Deep-linkable URLs: pending / failed / batches each resolve to
- * this single component with the tab driven by the route param. The
- * `/dev/queue` bare URL redirects to `/dev/queue/pending` (registered
- * in Routes/web.php).
- *
- * Per-row actions:
- *   - Pending (`jobs`):                delete
- *   - Failed  (`failed_jobs`):         retry, delete (forget)
- *   - Batches (`job_batches`):         retry-failures, cancel, delete
- *
- * Bulk actions:
- *   - Bulk retry  → single-confirm modal (`bulk-retry`).
- *   - Bulk delete → triple-gate via the shared TripleGateModal
- *                   (`triple-gate:open`); the modal's confirmed
- *                   event listener calls executeBulkDelete(), which
- *                   re-validates all three gates before delegating
- *                   to QueueActions::bulkDelete.
- *
- * Count tiles: three header tiles (Pending / Failed / Batches)
- * driven by raw query-builder counts (Eloquent\\Builder dynamic-call
- * narrowing is banned by the larastan-strict-rules profile).
- * wire:poll.5s lives in the Blade.
- *
- * Inline JSON payload viewer: every payload (jobs + failed_jobs)
- * passes through RedactSecretsProcessor::scrub() at render time so
- * Bearer / JWT / OAuth-secret literals never reach the browser. The
- * viewer is opt-in via expandedRowId (one expanded row per page).
- *
- * Method-DI on every action — Livewire components never receive
- * constructor DI per the project's larastan-strict-rules profile.
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  *
  * @phpstan-type QueueRow array{
  *   key: string,
@@ -73,29 +42,18 @@ final class QueueInspectorPage extends Component
 {
     public const TABS = ['pending', 'failed', 'batches'];
 
-    /** Active tab. Driven by the route param (mount injects it). */
     public string $tab = 'pending';
 
+    // Pending tab holds string-encoded int ids; Failed tab holds uuids;
+    // Batches tab holds batch UUIDs.
     /**
-     * Bulk-selected row keys. Pending tab holds string-encoded int ids;
-     * Failed tab holds uuids; Batches tab holds batch UUIDs.
-     *
      * @var list<string>
      */
     #[Url]
     public array $selected = [];
 
-    /**
-     * Expanded-payload row id. `null` = none expanded.
-     */
     public ?string $expandedRowId = null;
 
-    /**
-     * mount() runs once per page load — Livewire 4 wires route params
-     * via the parameter name. Allow-list guard mirrors the same
-     * tab-switching pattern used elsewhere in the codebase (e.g.
-     * DriftPage::setTab).
-     */
     public function mount(string $tab = 'pending'): void
     {
         if (! in_array($tab, self::TABS, true)) {
@@ -145,10 +103,8 @@ final class QueueInspectorPage extends Component
         $this->dispatch('toast', message: 'Batch failures re-queued');
     }
 
-    /**
-     * Bulk-retry path. Non-destructive — Blade dispatches a
-     * single-confirm Flux modal; this method runs on confirmation.
-     */
+    // Non-destructive — Blade dispatches a single-confirm Flux modal;
+    // this method runs on confirmation.
     public function bulkRetryConfirm(QueueActions $actions): void
     {
         if ($this->selected === []) {
@@ -164,12 +120,9 @@ final class QueueInspectorPage extends Component
         $this->dispatch('toast', message: 'Failed jobs re-queued');
     }
 
-    /**
-     * Bulk-delete path. DESTRUCTIVE — Blade dispatches
-     * `triple-gate:open` with the current tab + selected ids forwarded
-     * so the TripleGate modal's confirm event arrives back here in
-     * executeBulkDelete().
-     */
+    // DESTRUCTIVE — Blade dispatches triple-gate:open with the current
+    // tab + selected ids forwarded so the TripleGate modal's confirm
+    // event arrives back here in executeBulkDelete().
     public function bulkDeleteRequest(): void
     {
         if ($this->selected === []) {
@@ -182,20 +135,11 @@ final class QueueInspectorPage extends Component
         );
     }
 
+    // Re-validates the three triple-gate checks server-side (mirrors
+    // DestructiveSpawnController's re-validation on the artisan side) and
+    // discriminates on the command string so unrelated gate confirms
+    // (artisan-tier destructive) cannot accidentally delete queue rows.
     /**
-     * Triple-gate has fired the `triple-gate:confirmed` event. The
-     * gate has already validated DevModeFlag + session.advanced +
-     * typed-name; this listener re-validates those same three gates
-     * before performing the destructive write — defense-in-depth in
-     * case a future TripleGateModal bug ever lets a confirmed event
-     * escape without full validation (e.g. an exception in confirm()
-     * that fires the dispatch before throwing). The pattern mirrors
-     * DestructiveSpawnController's re-validation on the artisan side.
-     *
-     * Discriminates on the command string so unrelated gate confirms
-     * (artisan-tier destructive) cannot accidentally delete queue
-     * rows.
-     *
      * @param  array<string, mixed>  $args
      */
     #[On('triple-gate:confirmed')]
@@ -284,12 +228,10 @@ final class QueueInspectorPage extends Component
         ]);
     }
 
+    // Raw query builder + an explicit array mapper keeps larastan-strict
+    // happy (no Eloquent dynamic-call narrowing) and gives the Blade a
+    // single, predictable contract.
     /**
-     * Load the rows for the active tab in a normalised shape. Using
-     * the raw query builder + an explicit array mapper keeps the
-     * larastan-strict-rules profile happy (no Eloquent dynamic call
-     * narrowing) AND gives the Blade a single, predictable contract.
-     *
      * @return list<QueueRow>
      */
     private function loadRows(DatabaseManager $db): array
@@ -408,11 +350,9 @@ final class QueueInspectorPage extends Component
         return $out;
     }
 
+    // Pending + failed rows expose a payload column; batches use the
+    // options blob instead.
     /**
-     * Pretty-print the expanded row's payload after running it through
-     * the redaction processor. Pending + failed rows expose a payload
-     * column; batches use the options blob instead.
-     *
      * @param  list<QueueRow>  $rows
      */
     private function renderExpandedPayload(RedactSecretsProcessor $scrub, array $rows): ?string

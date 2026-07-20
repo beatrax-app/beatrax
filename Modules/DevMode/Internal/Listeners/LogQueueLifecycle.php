@@ -9,23 +9,10 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Psr\Log\LoggerInterface;
 
-/**
- * Surfaces queue lifecycle into the Laravel log so /dev/logs shows
- * "what just ran" / "what just failed". The Laravel database driver
- * and Horizon both delete successful jobs from the `jobs` table on
- * completion, so /dev/queue has no Completed tab — this listener is
- * the visibility seam.
- *
- * Two structured log messages:
- *
- *   - `queue.processed` at INFO    (success path)
- *   - `queue.failed`    at WARNING (retries exhausted)
- *
- * Filter the tailer's `contains` field by either string to slice the
- * stream to queue activity. Context keys are stable (`job`, `queue`,
- * `connection`, `attempts`, `uuid`) so a future enrichment surface
- * can lift them without reparsing the message body.
- */
+// Both the database queue driver and Horizon delete successful rows
+// from `jobs` on completion, so /dev/queue has no Completed tab — this
+// listener writes `queue.processed` (INFO) / `queue.failed` (WARNING) to
+// the Laravel log instead, filterable via the tailer's `contains` field.
 final readonly class LogQueueLifecycle
 {
     public function __construct(

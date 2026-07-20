@@ -5,37 +5,20 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Sql;
 
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Schema\Builder;
 use Throwable;
 
-/**
- * Read-only schema enumeration for the /dev/sql schema viewer.
- *
- * Uses Laravel 11+'s native Schema API
- * ({@see Builder::getTables()} +
- * {@see Builder::getColumns()} +
- * {@see Builder::getIndexes()} +
- * {@see Builder::getForeignKeys()}) — no raw PRAGMA queries. The
- * read-only sibling connection is sqlite-only, but the schema
- * enumeration itself is portable across drivers.
- *
- * Row count uses the raw query builder (the table is enumerated via
- * the schema API which has no count primitive); the count flows
- * through the same DatabaseManager so reads stay on the default
- * connection, not the read-only sibling.
- */
+// Uses Laravel's native Schema API (getTables/getColumns/getIndexes/
+// getForeignKeys) rather than raw PRAGMA queries, so the enumeration
+// stays portable across drivers even though the read-only sibling
+// connection this reads from is sqlite-only.
 final readonly class SchemaSnapshot
 {
     public function __construct(private DatabaseManager $db) {}
 
+    // Row count uses the raw query builder on the default connection
+    // (not the read-only sibling), since the schema API itself has no
+    // count primitive.
     /**
-     * Snapshot of every table the configured connection sees.
-     *
-     * Each entry exposes the Laravel-native getColumns / getIndexes /
-     * getForeignKeys arrays plus a best-effort row count (null when a
-     * count read fails — e.g. system tables the count primitive
-     * cannot read).
-     *
      * @return list<array{
      *   name: string,
      *   columns: list<array<string, mixed>>,

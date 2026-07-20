@@ -6,33 +6,17 @@ namespace Modules\DevMode\Public\Contracts;
 
 use Carbon\CarbonInterface;
 
-/**
- * Cross-module audit-write seam for the Dev Console.
- *
- * Every Dev Console action that crosses an operational trust
- * boundary (artisan run, destructive queue action, SELECT-only SQL
- * query) writes one row through this interface. The concrete
- * SpatieAuditWriter routes the rows through
- * spatie/laravel-activitylog into the dev_mode_audit table.
- * NullAuditWriter is a no-op fallback so consumer code can resolve
- * the contract without bound() guards.
- */
+// Cross-module audit-write seam: every Dev Console action crossing an
+// operational trust boundary (artisan run, destructive queue action,
+// SELECT-only SQL query) writes one row here. SpatieAuditWriter routes
+// rows into dev_mode_audit; NullAuditWriter is the ad-hoc-test fallback.
 interface AuditWriter
 {
+    // stdoutExcerpt/errorExcerpt are bounded by the calling pipeline —
+    // already passed through RedactionExcerptCap's scrub + 8 KiB cap.
+    // runId, when provided, lets finalizeCommandRun() locate and update
+    // the same row later; one-shot legacy callers may pass null.
     /**
-     * Record a SAFE or DESTRUCTIVE artisan command run.
-     *
-     * `stdoutExcerpt` and `errorExcerpt` are bounded by the calling
-     * pipeline — every byte stored inside the audit row has already
-     * passed RedactionExcerptCap's OAuth scrub-set + Bearer + JWT
-     * redaction sweep and the 8 KiB byte cap.
-     *
-     * `runId` is the spawn-time identifier; when provided it lands in
-     * the row's properties so {@see finalizeCommandRun()} can locate
-     * and update the same row when the run completes. Callers that
-     * always have a finishedAt + exitCode (one-shot writes from
-     * legacy paths) may pass null.
-     *
      * @param  array<string, mixed>  $args
      */
     public function recordCommandRun(
@@ -48,16 +32,9 @@ interface AuditWriter
         ?string $runId = null,
     ): void;
 
-    /**
-     * Finalize a previously-eager-written command run by `runId`.
-     * Returns true when the row was located and updated, false when
-     * no matching row existed (callers fall back to a fresh
-     * recordCommandRun() in that case so the audit trail still
-     * captures the fact-of-run).
-     *
-     * `stdoutExcerpt` is bounded by the same redaction + byte-cap
-     * pipeline as recordCommandRun().
-     */
+    // Returns true when the row was located and updated, false when no
+    // matching row existed (callers fall back to a fresh
+    // recordCommandRun() so the audit trail still captures the run).
     public function finalizeCommandRun(
         string $runId,
         CarbonInterface $finishedAt,
@@ -67,12 +44,9 @@ interface AuditWriter
         bool $cancelled,
     ): bool;
 
+    // `context` is a free-form metadata bag the queue inspector
+    // populates with the action's specifics (job id, batch id, etc.).
     /**
-     * Record a destructive queue action (retry-failed, flush-failed,
-     * kill-batch). `context` is a free-form metadata bag the queue
-     * inspector populates with the action's specifics (the job id, the
-     * batch id, the failure reason, etc.).
-     *
      * @param  array<string, mixed>  $context
      */
     public function recordDestructiveQueueAction(
@@ -81,13 +55,8 @@ interface AuditWriter
         int $callerUserId,
     ): void;
 
-    /**
-     * Record a SELECT-only SQL query executed through the Read-only
-     * SQL panel. `query` is the verbatim SQL the user typed (post
-     * `SelectOnlyValidator` acceptance), `rowcount` is the row count
-     * returned, `durationMs` is the wall-clock duration measured
-     * around the query call.
-     */
+    // `query` is the verbatim SQL the user typed (post
+    // SelectOnlyValidator acceptance).
     public function recordSelectQuery(
         string $query,
         int $rowcount,

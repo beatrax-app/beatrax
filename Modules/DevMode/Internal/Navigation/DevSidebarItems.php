@@ -4,37 +4,19 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Navigation;
 
+// Single source of truth for the dev-shell sidebar nav-item list. The
+// layout still gates `nav-disabled` on Router::has('dev.{slug}') at
+// render time — `enabled` is informational only, so drift between it
+// and the live router surfaces config drift rather than masking it.
 /**
- * Registry of Dev Console sidebar items.
- *
- * Single source of truth for the dev-shell layout's sidebar nav-item
- * list. Each entry carries the slug, label, icon, route name, and an
- * `enabled` field that documents the intended state of the matching
- * route.
- *
- * The dev-shell layout reads this service for the *labels*, *slugs*,
- * and *icons*, but continues to gate the `nav-disabled` class on
- * Router::has('dev.{slug}') at render time. The `enabled` field is
- * informational: drift between this constant and the live router
- * resolves at render time — if a slug is marked enabled here but its
- * route is absent, the layout still shows nav-disabled. The dual
- * representation surfaces config drift instead of masking it.
- *
  * @phpstan-type DevSidebarItem array{slug: string, label: string, icon: string, route: string, enabled: bool|string}
  */
 final class DevSidebarItems
 {
+    // `enabled`: true = route registered; false = not yet registered
+    // (placeholder); 'conditional' = enabled only when the named route
+    // resolves at render time (e.g. the require-dev-gated Horizon iframe).
     /**
-     * Canonical list. The order is the sidebar render order.
-     *
-     * `enabled`:
-     *   - true          — route should be registered; the sidebar
-     *                     renders the item without nav-disabled.
-     *   - false         — route is not yet registered (placeholder).
-     *   - 'conditional' — enabled only when the named route resolves
-     *                     at render time (e.g. the Horizon iframe,
-     *                     which depends on a require-dev package).
-     *
      * @var list<DevSidebarItem>
      */
     private const ITEMS = [

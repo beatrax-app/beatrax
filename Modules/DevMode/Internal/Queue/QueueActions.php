@@ -7,8 +7,6 @@ namespace Modules\DevMode\Internal\Queue;
 use Illuminate\Bus\BatchRepository;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Queue\Console\RetryCommand;
-use Illuminate\Queue\Failed\DatabaseFailedJobProvider;
 use Illuminate\Queue\Failed\FailedJobProviderInterface;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -16,43 +14,7 @@ use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 
 /**
- * Queue actions service — programmatic interface for the Dev Console
- * queue inspector page. Every action writes one dev_mode_audit row
- * via the injected AuditWriter so the operator audit trail captures
- * every destructive (and re-dispatch) write.
- *
- * Constructor DI per the project's DI-only rule:
- *   - FailedJobProviderInterface  — Laravel's queue-failed seam.
- *                                   Bound by the framework's queue
- *                                   service provider; the default
- *                                   binding for a database queue is
- *                                   {@see DatabaseFailedJobProvider}.
- *                                   Used for forget / find / all + the
- *                                   payload accessor needed for retry.
- *   - BatchRepository             — direct DI for cancel/delete batch
- *                                   ops; never the Bus facade.
- *   - QueueFactory                — needed by retryFailed to re-push
- *                                   the original payload via
- *                                   connection($name)->pushRaw($payload, $queue).
- *   - DatabaseManager             — direct row-level access for the
- *                                   pending jobs table (no model
- *                                   write surface; the framework
- *                                   provider does not expose
- *                                   deletePending).
- *   - AuditWriter                 — recordDestructiveQueueAction
- *                                   wraps every call.
- *   - CurrentUser                 — the caller identity for the
- *                                   audit's causer_id field.
- *
- * Every action method writes ONE audit row via AuditEvent enum
- * values — never a free-form string.
- *
- * Triple-gate enforcement: the QueueInspectorPage Livewire layer
- * dispatches `triple-gate:open` BEFORE invoking bulkDelete and the
- * confirmed-event listener inside the page re-validates all three
- * gates before delegating to this class. The action class itself
- * is a thin, testable seam — it trusts the caller to have validated
- * the gates.
+ * @link ../../../../.docs/features/dev-mode/architecture.md
  */
 final readonly class QueueActions
 {
@@ -65,10 +27,6 @@ final readonly class QueueActions
         private CurrentUser $currentUser,
     ) {}
 
-    /**
-     * Forget a single failed-job row (drop it without re-dispatching).
-     * Writes an audit row with action = queue.failed.forget.
-     */
     public function forgetFailed(string $uuid): void
     {
         $this->failed->forget($uuid);
@@ -80,16 +38,10 @@ final readonly class QueueActions
         );
     }
 
-    /**
-     * Re-dispatch a single failed job: look up the failed_jobs row by
-     * uuid, push the payload back onto the original connection +
-     * queue, then forget the failed_jobs row. Writes
-     * action = queue.failed.retry.
-     *
-     * Mirrors {@see RetryCommand::retryJob}
-     * but injects via Queue::connection(...) so the call respects the
-     * project's no-facade rule.
-     */
+    // Looks up the failed_jobs row by uuid, pushes the payload back onto
+    // the original connection + queue, then forgets the failed_jobs row.
+    // Mirrors RetryCommand::retryJob but injects via Queue::connection(...)
+    // so the call respects the project's no-facade rule.
     public function retryFailed(string $uuid): void
     {
         $job = $this->failed->find($uuid);
@@ -139,10 +91,6 @@ final readonly class QueueActions
         );
     }
 
-    /**
-     * Delete a single pending `jobs` row by id. Writes
-     * action = queue.pending.delete.
-     */
     public function deletePending(int $id): void
     {
         $this->db->connection()->table('jobs')->where('id', $id)->delete();
@@ -154,11 +102,6 @@ final readonly class QueueActions
         );
     }
 
-    /**
-     * Cancel a batch (sets cancelled_at on the row). Writes
-     * action = queue.batch.cancel. No-ops when the batch id is
-     * unknown.
-     */
     public function cancelBatch(string $batchId): void
     {
         $this->batches->cancel($batchId);
@@ -170,10 +113,6 @@ final readonly class QueueActions
         );
     }
 
-    /**
-     * Delete a batch row from job_batches. Writes
-     * action = queue.batch.delete.
-     */
     public function deleteBatch(string $batchId): void
     {
         $this->batches->delete($batchId);
@@ -185,13 +124,8 @@ final readonly class QueueActions
         );
     }
 
-    /**
-     * Retry every failed job that belongs to the batch by uuid.
-     * The framework's Batch class does not expose a "retry-failures"
-     * method; instead, we read the persisted `failed_job_ids` JSON
-     * (uuids of the batch members that landed in failed_jobs) and
-     * loop retryFailed. Writes action = queue.batch.retry-failures.
-     */
+    // The framework's Batch class exposes no "retry-failures" method, so
+    // this reads the persisted failed_job_ids JSON and loops retryFailed.
     public function retryBatchFailures(string $batchId): void
     {
         $batch = $this->batches->find($batchId);
@@ -225,10 +159,9 @@ final readonly class QueueActions
         );
     }
 
+    // Non-destructive — the Livewire layer surfaces a single-confirm
+    // modal before calling.
     /**
-     * Bulk retry every uuid in the list. Non-destructive — the
-     * Livewire layer surfaces a single-confirm modal before calling.
-     *
      * @param  list<string>  $uuids
      */
     public function bulkRetry(array $uuids): void
@@ -249,13 +182,10 @@ final readonly class QueueActions
         );
     }
 
+    // Destructive — the Livewire layer routes the call through the
+    // TripleGateModal before invoking this method. $kind is one of:
+    // pending | failed | batches.
     /**
-     * Bulk delete N rows from the matching table. Destructive — the
-     * Livewire layer routes the call through the TripleGateModal
-     * before invoking this method.
-     *
-     * `$kind` is one of: pending | failed | batches.
-     *
      * @param  list<int|string>  $ids
      */
     public function bulkDelete(array $ids, string $kind): void
@@ -296,14 +226,9 @@ final readonly class QueueActions
         );
     }
 
-    /**
-     * Resolve the audit's `causer_id`. The CurrentUser contract throws
-     * when no user is bound; the queue inspector page sits behind the
-     * `ensureDeveloperMode` middleware so a caller always exists, but
-     * keep a sentinel fallback (0) so the audit row still writes
-     * cleanly when the action runs from a background context (e.g.
-     * a console command that exercises QueueActions directly).
-     */
+    // CurrentUser throws when no user is bound; keep a sentinel fallback
+    // (0) so the audit row still writes when the action runs from a
+    // background context (e.g. a console command).
     private function callerId(): int
     {
         try {
@@ -313,16 +238,8 @@ final readonly class QueueActions
         }
     }
 
-    /**
-     * Read a string property off a dynamically-typed `object`
-     * (FailedJobProviderInterface::find returns `object|null`). Falls
-     * back to the supplied default when the property is missing or
-     * not a string.
-     *
-     * Uses get_object_vars() rather than `$object->{$name}` so
-     * larastan-strict-rules does NOT flag the dynamic property name
-     * read (property.dynamicName).
-     */
+    // Uses get_object_vars() rather than $object->{$name} so
+    // larastan-strict-rules doesn't flag the dynamic property name read.
     private function readObjectStringProp(object $object, string $name, string $default): string
     {
         $vars = get_object_vars($object);

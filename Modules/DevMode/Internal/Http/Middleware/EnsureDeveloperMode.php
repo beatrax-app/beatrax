@@ -10,23 +10,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Gates the in-app Developer Console at `/dev/*`.
- *
- * Non-developers (including unauthenticated requests) receive a 404
- * NotFoundHttpException rather than a 403, so the route's existence is
- * not disclosed to a partner-account user or an anonymous probe. The
- * current user is read through the CurrentUser contract — never the
- * Auth facade or the auth() helper — so the DI-only invariant the
- * project enforces stays intact.
- *
- * The Modules/DevMode/Routes/web.php route group attaches this
- * middleware via the `ensureDeveloperMode` alias registered in
- * DevModeServiceProvider::boot(); every `/dev/*` route MUST apply the
- * alias. The arch invariant
- * `everyDevModeRouteAppliesEnsureDeveloperModeMiddleware` (in
- * tests/Contracts/BoundaryArchTest.php) locks the coverage at PR time.
- */
+// Non-developers (incl. unauthenticated) receive a 404 rather than a
+// 403, so the route's existence is not disclosed. Every `/dev/*` route
+// must apply the `ensureDeveloperMode` alias — the arch invariant
+// everyDevModeRouteAppliesEnsureDeveloperModeMiddleware locks that at PR time.
 final readonly class EnsureDeveloperMode
 {
     public function __construct(private CurrentUser $currentUser) {}

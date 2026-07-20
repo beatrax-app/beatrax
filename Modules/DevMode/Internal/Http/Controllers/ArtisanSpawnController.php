@@ -14,26 +14,10 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 use RuntimeException;
 
-/**
- * POST /dev/artisan/spawn — SAFE-tier spawn endpoint.
- *
- * Accepts {command: string, args?: array<string, mixed>} and
- * returns {run_id, pid} with HTTP 202. The actual process runs
- * detached; the SSE stream endpoint (ArtisanStreamController) tails
- * its stdout tmp file.
- *
- * **DESTRUCTIVE-tier commands are rejected at this layer.** The
- * DESTRUCTIVE execution path lives behind the TripleGate modal +
- * DestructiveSpawnController, which re-validates the triple-gate
- * server-side and then calls CommandSpawner directly. Keeping the
- * rejection at this controller isolates the SAFE-tier surface so a
- * future bug that leaks a DESTRUCTIVE name into the palette cannot
- * fire it through the SAFE pipe.
- *
- * Defense in depth: the EnsureDeveloperMode middleware on the route
- * gates non-developers (404). The arg-spec validation + command-name
- * whitelist add two more independent layers below.
- */
+// SAFE-tier spawn endpoint; DESTRUCTIVE-tier commands are rejected at
+// this layer — that path lives behind the TripleGate modal +
+// DestructiveSpawnController instead, isolating the SAFE-tier surface so
+// a palette bug leaking a DESTRUCTIVE name cannot fire it through here.
 final readonly class ArtisanSpawnController
 {
     public function __construct(

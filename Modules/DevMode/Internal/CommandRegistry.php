@@ -8,21 +8,10 @@ use InvalidArgumentException;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-/**
- * Concrete DevCommandRegistry implementation.
- *
- * Holds the full SAFE (9) + DESTRUCTIVE (6) roster the Dev Console
- * surfaces. The NEVER-EXPOSED commands (migrate, migrate:rollback,
- * db:seed) are deliberately absent — the spawner whitelists against
- * find() so any attempt to spawn one of them throws
- * InvalidArgumentException at the controller layer before a Process
- * is constructed.
- *
- * The spec list is supplied at construction time so the actual
- * roster lives in the DevModeServiceProvider singleton factory
- * (one-place reviewable + bindable from tests). This class is the
- * partitioning + lookup primitive; the rosters are configuration.
- */
+// NEVER-EXPOSED commands (migrate, migrate:rollback, db:seed) are
+// deliberately absent from the supplied spec list — find() throws
+// InvalidArgumentException for anything not in it. The spec list is
+// configuration, supplied by the DevModeServiceProvider singleton factory.
 final readonly class CommandRegistry implements DevCommandRegistry
 {
     /** @var list<CommandSpec> */

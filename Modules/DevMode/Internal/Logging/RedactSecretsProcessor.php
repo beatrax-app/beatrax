@@ -4,68 +4,22 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Logging;
 
-use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
-use Modules\DevMode\Providers\DevModeServiceProvider;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
 /**
- * On-write Monolog processor that scrubs every OAuth secret literal,
- * `Authorization: Bearer …` header, and JWT-shape token from every
- * log line BEFORE the formatter writes it to disk.
- *
- * Registered via {@see PushRedactProcessor} (a Laravel tap class)
- * onto every handler of the `stack`, `single`, and `daily` channels
- * defined in config/logging.php. Together with the LogStreamController
- * (which re-applies the same processor at read time) this gives
- * belt-and-braces redaction: every record passes through the same
- * scrub at write time AND at read time.
- *
- * The on-write redaction order matters:
- *   1. OAuth scrub-set (the `client_secret` + every string in
- *      `tokens_blob` for every `oauth_secrets` row) runs FIRST so a
- *      literal that looks like a JWT (which OAuth tokens often do,
- *      since refresh tokens encode user state as JWT) is replaced
- *      with `[REDACTED]` rather than the less-specific
- *      `[JWT_REDACTED]`. The scrub-set's compiled regex is a single
- *      pre-compiled alternation; one preg_replace per record
- *      regardless of set size.
- *   2. `Authorization: Bearer …` header pattern.
- *   3. JWT shape (eyJ…header.payload.signature).
- *
- * Separate artifact from
- * {@see RedactionExcerptCap}
- * (the audit-DB row scrub). Both apply the same three-layer
- * redaction; both live at different paths because they bound
- * different exit points: this one writes into the rolling log file,
- * the other writes into the dev_mode_audit row.
- *
- * Container resolution contract:
- * {@see PushRedactProcessor::__invoke()} resolves this class via the
- * container on every channel boot. The container binding (declared
- * in DevModeServiceProvider::register()) constructor-injects the
- * OAuthScrubSet singleton.
- *
- * Empty-scrub-set fast path: when OAuthScrubSet::compiledPattern()
- * returns null (no oauth_secrets rows yet, or the table is missing,
- * or the encrypter rejected the cast) the scrub-set step is skipped.
- * Bearer + JWT scrubbing still runs.
+ * @link ../../../../.docs/features/dev-mode/architecture.md
  */
 final class RedactSecretsProcessor implements ProcessorInterface
 {
-    /** Bearer-header scrub (case-insensitive). */
     private const BEARER_PATTERN = '/Authorization:\s*Bearer\s+\S+/i';
 
-    /** JWT shape (eyJ...header.payload.signature with min 20-char segments). */
     private const JWT_PATTERN = '/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/';
 
-    /**
-     * OAuthScrubSet is nullable so direct instantiation (e.g. unit
-     * tests that exercise only the Bearer + JWT branches) keeps
-     * working without re-instantiating an empty scrub set; the
-     * container binding always passes the real singleton.
-     */
+    // OAuthScrubSet is nullable so direct instantiation (e.g. unit tests
+    // exercising only the Bearer + JWT branches) still works; the
+    // container binding always passes the real singleton.
     public function __construct(
         private readonly ?OAuthScrubSet $scrubSet = null,
     ) {}
@@ -84,9 +38,6 @@ final class RedactSecretsProcessor implements ProcessorInterface
     }
 
     /**
-     * Recursively scrub every string value inside the array; arrays
-     * recurse, non-strings pass through untouched.
-     *
      * @param  array<array-key, mixed>  $values
      * @return array<array-key, mixed>
      */
@@ -106,12 +57,9 @@ final class RedactSecretsProcessor implements ProcessorInterface
         return $out;
     }
 
-    /**
-     * Apply the three-layer scrub in the documented order: OAuth
-     * scrub-set first (so JWT-shaped real tokens are recognised as
-     * `[REDACTED]` rather than `[JWT_REDACTED]`), then Bearer header
-     * pattern, then JWT shape.
-     */
+    // OAuth scrub-set runs first (so JWT-shaped real tokens are
+    // recognised as [REDACTED] rather than [JWT_REDACTED]), then the
+    // Bearer header pattern, then the JWT shape.
     public function scrub(string $text): string
     {
         if ($this->scrubSet !== null) {

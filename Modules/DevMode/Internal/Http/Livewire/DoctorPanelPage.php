@@ -13,27 +13,7 @@ use Livewire\Component;
 use Modules\DevMode\Internal\Doctor\ProbeOutputParser;
 
 /**
- * `/dev/doctor` panel.
- *
- * Thin wrapper that triggers `beatrax:doctor` through the same
- * Process+SSE pipeline as the artisan runner. The page itself does
- * not own the SSE consumer — that lives in Alpine on the page (POST
- * /dev/artisan/spawn with command=beatrax:doctor, then open an
- * EventSource against /dev/artisan/stream/{runId}). When the stream
- * terminates, the captured stdout lands in the dev_mode_audit row
- * via the FinalizeRunAudit hook — so on the NEXT GET, this page
- * reads the latest beatrax:doctor audit row's
- * properties.stdout_excerpt and parses it via
- * {@see ProbeOutputParser} into pass/warn/fail rows.
- *
- * Single code path = identical UX between "run from CLI" and "run
- * from /dev/doctor": both write a dev_mode_audit row that the page
- * reads back. The Re-run button surfaces the spawn endpoint; the
- * audit row is the source of truth for what's displayed.
- *
- * No constructor — Livewire components never receive constructor
- * DI per the project's larastan-strict-rules profile; collaborators
- * arrive as method-DI on render().
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 #[Layout('dev::layouts.dev-shell')]
 final class DoctorPanelPage extends Component

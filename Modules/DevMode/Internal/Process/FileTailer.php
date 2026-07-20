@@ -4,34 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Process;
 
-/**
- * Single-shot tail primitive for a growing file.
- *
- * Pure-PHP utility shared between the artisan-run SSE controller and
- * the log-tailer SSE controller. Both surfaces need the same "open
- * file, seek to known offset, read new bytes, return chunk + new
- * offset" pattern; centralising it here keeps the two SSE pipelines
- * on one tested seam.
- *
- * `tailOnce()` invariants:
- *   - `clearstatcache()` is called BEFORE `filesize()` so a growing
- *     file's new size is observed (PHP caches filesize per request
- *     by default).
- *   - If the file does not exist OR `filesize() < $fromOffset`
- *     (rotation / truncation), returns an empty chunk and the
- *     UNCHANGED `$fromOffset`. The caller decides whether to reset
- *     to 0 or keep waiting.
- *   - Reads at most 65 536 bytes per call. The SSE loop calls this
- *     once per tick (150 ms for the artisan stream, 250 ms for the
- *     log stream), giving ~430 KB/s and ~262 KB/s throughput
- *     ceilings respectively — well above any whitelisted SAFE
- *     command's stdout rate.
- *
- * No constructor — stateless pure function class. No DI; no facades.
- */
+// Shared tail primitive between the artisan-run and log-tailer SSE
+// controllers. clearstatcache() runs BEFORE filesize() so growth is
+// observed; a missing file or filesize() < $fromOffset (rotation)
+// returns an empty chunk + the UNCHANGED offset for the caller to decide.
 final readonly class FileTailer
 {
-    /** Maximum bytes read per tail tick. */
     private const READ_CHUNK_BYTES = 65_536;
 
     /**

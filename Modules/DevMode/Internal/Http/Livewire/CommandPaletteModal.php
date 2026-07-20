@@ -16,53 +16,17 @@ use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
 
 /**
- * Global command-palette modal.
- *
- * Mounted once per base layout
- * (resources/views/layouts/app.blade.php and
- * Modules/DevMode/Resources/views/layouts/dev-shell.blade.php) so
- * any authenticated page can open the palette by dispatching the
- * `palette:open` Livewire event (the global Alpine x-data keybind
- * handler on <body> fires this on ⌘K / Ctrl+K).
- *
- * Renders the server-side JSON registry the client-side Fuse.js
- * factory consumes. The registry merges three sources:
- *
- *   - Navigation entries (every authenticated app view) — visible
- *     to every user.
- *   - Dev commands (SAFE-tier only; DESTRUCTIVE-tier deliberately
- *     EXCLUDED to prevent muscle-memory disasters) — visible to
- *     developers only. The filter applies at JSON-emit time (this
- *     method), never on the client.
- *   - App actions (named cross-app actions like "Open profile") —
- *     visible to every user.
- *
- * The non-developer's JSON literally does not contain the
- * `source: 'dev'` rows — tampering with the client-side JSON does
- * not bypass the filter.
- *
- * Recent shortcuts (per-user, 5 entries, 30-day TTL) live in cache
- * key `dev_mode.palette_recent.{userId}`. pickEntry() writes to
- * that key on every selection; the same key is read on mount() to
- * seed the Recent rail divider.
- *
- * Method-DI throughout (no facades, per the project's DI-only rule).
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 final class CommandPaletteModal extends Component
 {
     /**
-     * Recent-shortcuts list seeded on `mount()` and refreshed on every
-     * `pickEntry()` call. Each entry mirrors the registry row shape so
-     * the Recent rail can render labels without a second lookup.
-     *
      * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}>
      */
     public array $recent = [];
 
-    /** Maximum number of Recent rows cached per user (per UI-SPEC). */
     public const RECENT_LIMIT = 5;
 
-    /** Cache TTL for the Recent list: 30 days, in seconds. */
     public const RECENT_TTL_SECONDS = 30 * 86400;
 
     public function mount(CurrentUser $user, CacheRepository $cache): void
@@ -70,15 +34,9 @@ final class CommandPaletteModal extends Component
         $this->recent = $this->loadRecent($user, $cache);
     }
 
-    /**
-     * Listen for the global `palette:open` Livewire event so any page
-     * (sidebar ⌘K hint, sidebar Dev block "Open Dev Console" link, the
-     * Alpine `<body>` keybind) can pop the modal without owning the
-     * mounting logic. The Alpine `palette()` factory the modal's
-     * Blade view registers handles the actual open transition; this
-     * Livewire endpoint exists purely so the dispatch has a sink and
-     * server-side state (Recent list seed) refreshes on demand.
-     */
+    // The Alpine palette() factory handles the actual open transition;
+    // this endpoint exists purely so the dispatch has a sink and the
+    // server-side Recent list seed refreshes on demand.
     #[On('palette:open')]
     public function open(CurrentUser $user, CacheRepository $cache): void
     {
@@ -86,17 +44,10 @@ final class CommandPaletteModal extends Component
         $this->dispatch('palette:opened');
     }
 
+    // Navigation itself is handled client-side by the palette() Alpine
+    // factory; this method exists solely to persist the selection to
+    // the Recent cache so the rail rebuilds on the next open.
     /**
-     * Called by the client-side `palette:picked` Livewire dispatch
-     * after the user selects an entry. Writes the entry to the
-     * Recent cache (dedup + cap at RECENT_LIMIT, 30-day TTL).
-     *
-     * Navigation is handled client-side by the `palette()` Alpine
-     * factory (window.location for `url`-shaped rows, Livewire
-     * browser event for `handlerEvent`-shaped rows, `spawn-command`
-     * for `dev`-source rows). This method exists solely to persist
-     * the selection so the Recent rail rebuilds on the next open.
-     *
      * @param  array{id?: mixed, label?: mixed, icon?: mixed, hint?: mixed, source?: mixed, url?: mixed, handler?: mixed, name?: mixed, tier?: mixed}  $entry
      */
     #[On('palette:picked')]
@@ -154,14 +105,10 @@ final class CommandPaletteModal extends Component
         ]);
     }
 
+    // Filters dev rows by is_developer at this layer — non-developers
+    // receive ZERO source:'dev' rows, so the labels are never on the
+    // client — defense-in-depth on top of EnsureDeveloperMode.
     /**
-     * Build the merged JSON registry the client-side Fuse.js factory
-     * consumes. Filters dev rows by `is_developer` at this layer —
-     * non-developers receive ZERO `source: 'dev'` rows so the dev
-     * command labels are never on the client — defense-in-depth on
-     * top of the EnsureDeveloperMode middleware on the routes
-     * themselves.
-     *
      * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, hasArgs: bool, keywords: list<string>}>
      */
     public function buildRegistry(
@@ -239,12 +186,10 @@ final class CommandPaletteModal extends Component
         return $registry;
     }
 
+    // Returns an empty array if the key is absent or the cached value
+    // isn't the expected shape — defensive, since the cache store is
+    // shared with other features.
     /**
-     * Read the per-user Recent list out of cache. Returns an empty
-     * array if the key is absent or the cached value is not a list
-     * of the expected shape (defensive — the cache store is shared
-     * with other features).
-     *
      * @return list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}>
      */
     private function loadRecent(CurrentUser $user, CacheRepository $cache): array
