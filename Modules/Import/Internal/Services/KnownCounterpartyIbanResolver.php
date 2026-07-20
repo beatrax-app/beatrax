@@ -60,11 +60,9 @@ final class KnownCounterpartyIbanResolver implements ResolvesKnownCounterpartyIb
         }
 
         // Disambiguation: raw query builder returns the lowest-id
-        // matching account; the Eloquent `find($id)` then hydrates
-        // the full model. The two-step shape sidesteps Larastan's
-        // `staticMethod.dynamicCall` lint on Eloquent's `orderBy()`
-        // while still returning the typed Account model the
-        // contract promises.
+        // matching account id; Eloquent's find($id) then hydrates
+        // the full model — sidesteps Larastan's staticMethod.dynamicCall
+        // lint while still returning the typed Account the contract promises.
         $accountId = $this->db->connection()
             ->table('accounts')
             ->where('user_id', $userId)

@@ -119,13 +119,10 @@ final class UploadWizard extends Component
      */
     public function rules(): array
     {
-        // The .eml/.mbox arms validate with the `extensions:` rule
-        // rather than `mimes:` because both extensions have no
-        // native MIME-type registration — Laravel's `mimes:` rule
-        // resolves to detected MIME types via the mimetypes config
-        // and would silently reject every email-file upload. The
-        // `extensions:` rule (Laravel 9+) accepts files by file
-        // extension regardless of detected MIME.
+        // .eml/.mbox validate via `extensions:` not `mimes:` — neither
+        // extension has a native MIME-type registration, so `mimes:`
+        // would silently reject every email-file upload regardless of
+        // the actual file contents.
         $sizeRule = match ($this->sourceFormat) {
             'mbox' => 'max:1048576',
             'eml' => 'max:20480',
@@ -242,12 +239,9 @@ final class UploadWizard extends Component
         $originalFilename = $this->sanitiseFilename($this->file->getClientOriginalName());
 
         // The two ambiguous CSV dialects need an explicit bank-format
-        // hint to bypass content-sniffing in the pipeline; every other
-        // format (CAMT.053, MT940, ICS PDF, PayPal CSV, eml/mbox) is
-        // self-describing, so the hint is null. The standalone upload
-        // wizard maps the selected `sourceFormat` 1:1 onto the enum
-        // because the picker already commits the user to a specific
-        // bank format.
+        // hint to bypass content-sniffing; every other format is
+        // self-describing, so the hint is null. The picker already
+        // commits the user to a specific bank format here.
         $formatHint = match ($this->sourceFormat) {
             'asn-csv' => BankCsvFormatHint::Asn,
             'ing-csv' => BankCsvFormatHint::Ing,
@@ -263,19 +257,10 @@ final class UploadWizard extends Component
                 $formatHint,
             );
         } catch (Throwable $e) {
-            // Catch-all guard for failures that bubble out of
-            // runFromUpload() BEFORE the import pipeline's own
-            // try/catch wraps the parse loop — file-system errors on
-            // copyToStableLocation(), hash_file() failures, ImportRun
-            // insert clashes, etc. The pipeline already converts every
-            // parse-time exception into an ERROR row, so a Throwable
-            // hitting this catch is by definition a wizard-layer
-            // failure that the preview screen never sees.
-            //
-            // Log the full stack trace so the failure is triagable on
-            // /dev/logs; surface a stable user-facing copy with the
-            // exception class appended so the operator can grep the
-            // log for the matching entry.
+            // Catch-all for failures that bubble out of runFromUpload()
+            // before the pipeline's own try/catch wraps the parse loop
+            // (filesystem errors, hash_file() failures, ImportRun insert
+            // clashes) — logged in full for triage via /dev/logs.
             $logger->error('UploadWizard: import preview failed.', [
                 'source_format' => $this->sourceFormat,
                 'filename' => $originalFilename,

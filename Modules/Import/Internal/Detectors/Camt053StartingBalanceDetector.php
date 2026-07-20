@@ -61,13 +61,10 @@ final class Camt053StartingBalanceDetector implements DetectsStartingBalance
             ])
             ->get();
 
-        // Emit every distinct (openingBalanceMinor, openingBalanceDate)
-        // pair at the earliest opening-balance-date per account so the
-        // aggregator can detect within-source conflicts (two CAMT
-        // imports of overlapping periods reporting different opening
-        // balances on the same date). The detector itself only
-        // restricts to "earliest date per account"; the aggregator
-        // applies the cross-source tie-break rules.
+        // Earliest opening-balance-date per account wins; multiple CAMT
+        // statements covering overlapping periods can report different
+        // opening balances on the same date, so the aggregator (not
+        // this detector) resolves those cross-source conflicts.
         $earliestDatePerAccount = [];
         $emittedKeys = [];
         $out = [];

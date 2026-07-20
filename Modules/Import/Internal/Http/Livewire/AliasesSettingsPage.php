@@ -296,11 +296,9 @@ final class AliasesSettingsPage extends Component
         }
 
         // Cross-user attempts return 0 affected rows; surface a calm
-        // flash + clear the editing state so the user sees the same
-        // "not found" message they would on a legitimately-stale row
-        // (analogous to RulesPage::deleteRule's WR-02 catch pattern).
-        // The structural guard is the user_id clause — the flash is
-        // only the UI surface.
+        // "not found" flash and clear editing state, the same message
+        // shown for a legitimately-stale row. The where('user_id', …)
+        // clause is the structural guard — the flash is only UI.
         $affected = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)
@@ -333,9 +331,8 @@ final class AliasesSettingsPage extends Component
     {
         // The where('user_id', current) clause is the structural
         // ownership guard; cross-user ids hit zero affected rows and
-        // surface a calm "not found" flash (analogous to RulesPage's
-        // WR-02 catch pattern). The action never throws to a 500 —
-        // a tampered payload sees the same calm UI a stale row would.
+        // surface a calm "not found" flash instead of throwing — a
+        // tampered payload sees the same calm UI a stale row would.
         $affected = $db->connection()
             ->table('merchant_aliases')
             ->where('user_id', $currentUser->user()->id)

@@ -23,14 +23,13 @@ final class SourceRefRanker
 {
     /**
      * Source-format slugs that represent an email-receipt-derived
-     * canonical row. The first-conflict toast flow (D-707) only
-     * triggers when an enrichment is sourced from a receipt format;
-     * a CSV-vs-MT940 enrichment is a Wave 1 silent ENRICHED path
-     * with no user-visible conflict prompt.
+     * canonical row. The first-conflict toast flow only triggers when
+     * an enrichment is sourced from a receipt format; a CSV-vs-MT940
+     * enrichment is a silent ENRICHED path with no user-visible
+     * conflict prompt.
      *
-     * Centralising the list here means plan 05's CAT-04 surfacing +
-     * future per-sender matchers share one source of truth for
-     * "is this row a receipt?".
+     * Centralising the list here means any future per-sender matchers
+     * share one source of truth for "is this row a receipt?".
      *
      * @var list<string>
      */
@@ -51,39 +50,26 @@ final class SourceRefRanker
             'camt053' => 4,
             'mt940' => 2,
             // PayPal email receipts win on ENRICHED over their CSV
-            // counterpart: a receipt carries the canonical PayPal
-            // Transaction ID (17-char alphanumeric) while the CSV's
-            // Transactiereferentie is the same identifier rendered as
-            // an `O-...` slug. When both surface for the same logical
-            // payment the receipt-derived reference is the audit-
-            // friendly choice — ranking it ABOVE 'paypal-csv' makes
-            // the FingerprintStage prefer the receipt at the cross-
-            // format enrichment site.
+            // counterpart: the receipt carries the canonical PayPal
+            // Transaction ID while the CSV renders the same identifier
+            // as an `O-...` slug — ranked above 'paypal-csv' so it wins.
             'paypal-receipt' => 2,
-            // ICS receipts (email) beat ICS PDF (consumer-portal
-            // statement) on ENRICHED for the merchant-name field: the
-            // email-receipt anchor carries a clean "Verkoper: <name>"
-            // value while the PDF row carries the same merchant fused
-            // with a city + country fragment in the "Omschrijving"
-            // column. Rank 2 places the receipt one above the PDF so
-            // when both surface for the same logical card-charge the
-            // receipt-derived reference (when present) wins.
+            // ICS receipts beat ICS PDF on ENRICHED for merchant-name:
+            // the receipt carries a clean "Verkoper: <name>" value while
+            // the PDF fuses the merchant with a city/country fragment —
+            // rank one above the PDF so the receipt wins when present.
             'ics-receipt' => 2,
             'ics-pdf' => 1,
-            // Google Play receipts are standalone in v1 — Google Play
-            // has no other ingestion path. Rank below paypal-receipt
-            // (no cross-format dedup risk; the (account_id, currency,
-            // amount) tuple keeps Google Play disjoint from ASN/ICS
-            // rows under v3 fingerprint).
+            // Google Play receipts are standalone — no other ingestion
+            // path exists, so there is no cross-format dedup risk; the
+            // (account_id, currency, amount) tuple already keeps them
+            // disjoint from ASN/ICS rows under the fingerprint.
             'google-play-receipt' => 1,
             'asn-csv' => 1,
             // PayPal Activity Download CSV rides in the same band as
-            // asn-csv. PayPal rows never collide with ASN rows under
-            // the v3 fingerprint tuple due to disjoint account_id
-            // values, so the equivalent rank is correct: cross-format
-            // enrichment between PayPal and any ASN format is a
-            // deliberate non-goal handled by the chain-resolver
-            // module rather than by this ranker.
+            // asn-csv — disjoint account_id values mean the two never
+            // collide under the fingerprint tuple, so cross-format
+            // enrichment between them is a non-goal for this ranker.
             'paypal-csv' => 1,
             default => 0,
         };

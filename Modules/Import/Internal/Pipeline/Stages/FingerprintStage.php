@@ -15,7 +15,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Computes and inspects the SHA-256 fingerprint of a canonical row, then
+ * Computes and inspects the SHA256 fingerprint of a canonical row, then
  * decides whether the incoming row is a brand-new insert, a pure
  * duplicate, or an ENRICHMENT of an existing row.
  *
@@ -105,23 +105,9 @@ final class FingerprintStage
         $existingFormat = is_string($existing->source_format) ? $existing->source_format : '';
 
         // Statement-vs-statement collisions drop as duplicates without
-        // upgrading source_ref. The user's UAT report (phase 16, batch
-        // 7) was that re-importing the same date range as XML (CAMT.053)
-        // after CSV showed every overlapping row as "enriched" — they
-        // expected the second import to recognise the row as the same
-        // transaction and skip it. Cross-statement-format enrichment
-        // was the design intent of the rank-based source_ref upgrade,
-        // but the user's policy is "same transaction → drop, never
-        // enrich" for bank-statement re-imports.
-        //
-        // Receipt-driven enrichment is preserved: when ONE side is a
-        // receipt format (paypal-receipt / ics-receipt /
-        // google-play-receipt) the receipt may legitimately carry data
-        // the bank statement lacks (clean merchant name, line items),
-        // so the rank-based upgrade still applies. The receipt-side
-        // dedup pay-off documented in
-        // Modules/Receipts/tests/Contracts/FingerprintParityTest
-        // depends on this branch staying alive.
+        // upgrading source_ref — the policy is "same transaction, never
+        // enrich" for bank-statement re-imports. Receipt-driven
+        // enrichment (one side a receipt format) still applies.
         $incomingIsReceipt = $this->ranker->isReceiptFormat($tx->sourceFormat);
         $existingIsReceipt = $this->ranker->isReceiptFormat($existingFormat);
         if (! $incomingIsReceipt && ! $existingIsReceipt) {
@@ -162,8 +148,8 @@ final class FingerprintStage
      *  - currency: uppercase compare (USD === usd is not a conflict).
      *  - amount_minor: exact int compare.
      *
-     * D-07 decrypt-before-compare (14.1-12 Cluster 3 / RESEARCH Pitfall
-     * 4): `counterparty_name`/`description` are ciphertext at rest for an
+     * Decrypt-before-compare: `counterparty_name`/`description` are
+     * ciphertext at rest for an
      * encrypted user, so the stored value is decrypted before the
      * `stringsDiffer()` compare — otherwise ciphertext can never equal
      * the incoming plaintext and every receipt-vs-statement re-import

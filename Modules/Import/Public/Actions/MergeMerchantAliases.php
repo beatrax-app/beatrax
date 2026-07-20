@@ -27,7 +27,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Surviving-row selection: the lowest id wins. The remaining rows are
  * marked as "absorbed" and their `(pattern, generalized_pattern,
  * friendly_name)` triple is appended into the survivor's `merged_from`
- * JSON column alongside an ISO-8601 timestamp produced by the injected
+ * JSON column alongside an ISO 8601 timestamp produced by the injected
  * `DateFactory` (constructor-DI, never the global `now()` helper). The
  * absorbed rows are deleted in the same DB transaction so the merge is
  * atomic: a failure mid-way leaves the table exactly as it was.
@@ -105,12 +105,9 @@ final class MergeMerchantAliases
                 $rowFriendly = isset($row->friendly_name) && is_string($row->friendly_name)
                     ? $row->friendly_name : '';
                 // Raw bank-statement text occasionally carries stray
-                // bytes that are not valid UTF-8. json_encode() under
+                // bytes that are not valid UTF8. json_encode() under
                 // JSON_THROW_ON_ERROR aborts the whole transaction for
-                // a single bad byte, so coerce each string field to
-                // valid UTF-8 here. The substitution character is
-                // benign for provenance — the merged_from JSON is a
-                // human-auditable record, not a fingerprint key.
+                // a single bad byte, so coerce each string field here.
                 $mergedFrom[] = [
                     'pattern' => self::coerceUtf8($rowPattern),
                     'generalized_pattern' => self::coerceUtf8($rowGeneralized),
@@ -166,10 +163,10 @@ final class MergeMerchantAliases
     }
 
     /**
-     * Convert any byte sequence to valid UTF-8 by replacing invalid
+     * Convert any byte sequence to valid UTF8 by replacing invalid
      * bytes with the Unicode substitution character. Keeps the
      * merged_from JSON encode infallible even for raw bank-statement
-     * descriptions that occasionally include non-UTF-8 bytes from
+     * descriptions that occasionally include non-UTF8 bytes from
      * legacy encodings.
      */
     private static function coerceUtf8(string $value): string
