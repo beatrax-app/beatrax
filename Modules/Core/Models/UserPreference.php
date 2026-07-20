@@ -9,42 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Eloquent model for the `user_preferences` table — one row models the
- * full set of per-user preferences for a single user. The row is the
- * canonical place every domain module reaches for to read or write a
- * user-scoped preference value.
- *
- * Cross-user posture: the `BelongsToUser` trait installs a global
- * scope that filters queries by the authenticated user's id whenever
- * an Eloquent surface reaches this model inside an HTTP-bound
- * request. The unique constraint on user_id at the database boundary
- * makes the one-row-per-user invariant impossible to violate from any
- * call site.
- *
- * The `$fillable` list grows as domain modules ship additive
- * column-add migrations against this table. Each consuming module's
- * column lands in `$fillable` here so the Eloquent mass-assignable
- * surface stays the single canonical write path. Current columns:
- *
- *   - `user_id` — foundation
- *   - `counterparty_index_view` — `/counterparties` index view mode
- *     (`cards` | `list`). Default `cards` materialises at the DB
- *     boundary, so omission on insert yields the canonical default
- *     without an Eloquent assignment.
- *   - `skipped_update_versions` — per-user list of release versions
- *     the user dismissed via the auto-update banner's "Skip this
- *     version" action. JSON-cast to `array` so SystemAlertsBanner
- *     can apply the suppression filter without per-row decoding.
- *   - `calendar_entries_accounts` — JSON array of account IDs whose
- *     recurring entries appear on the /calendar grid. Null = all accounts
- *     (entries all ON by default). Resolved at CalendarQuery read time.
- *   - `calendar_balance_accounts` — JSON array of account IDs whose
- *     forecast balances are summed for the calendar balance line. Null =
- *     spendable default (checking + PayPal ON; savings + ICS OFF).
- *     Resolved at CalendarQuery read time.
- *   - `reports_index_view` — `/reports/library` index view mode
- *     (`cards` | `list`). Default `cards` materialises at the
- *     DB boundary, same convention as `counterparty_index_view`.
+ * @link ../../../.docs/features/core/architecture.md
  *
  * @property int $id
  * @property int|null $user_id

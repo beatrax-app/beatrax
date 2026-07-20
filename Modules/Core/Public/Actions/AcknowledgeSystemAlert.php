@@ -12,35 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Acknowledges a `system_alerts` row by stamping `acknowledged_at`
- * with the current clock value, removing the row from the dashboard
- * banner's active stack without deleting it (the audit trail of
- * operational incidents accumulates forever).
- *
- * Lookup is scoped to the caller user OR a system-wide row
- * (`user_id IS NULL`), so a user can dismiss a SQLite-PRAGMA banner
- * but not silence another user's private corrupt-backup alert. Any
- * cross-user attempt raises `NotFoundHttpException` to avoid disclosing
- * row existence, and the failed read leaves the original row's
- * `acknowledged_at` unchanged.
- *
- * Idempotent: an already-acknowledged row returns the existing model
- * with no write, so a double-click or a stale Livewire batched
- * request never bumps the stamp to a fresh value.
- *
- * The mutation runs inside `connection()->transaction(...)` so the
- * status flip is atomic on the row level; SQLite's single-writer
- * model already serialises writers, but the wrapper documents intent
- * and gives a hook for the future addition of a transitions audit
- * table.
- *
- * The lookup uses the raw `DatabaseManager::table()` Query Builder
- * for the compound `where(function () { … })` predicate so the call
- * stays clean under larastan-strict-rules; the resolved row id is
- * then re-hydrated through `SystemAlert::query()->findOrFail()` so
- * the rest of the action operates on a real Eloquent model with all
- * casts (immutable_datetime on acknowledged_at, array on metadata)
- * applied.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class AcknowledgeSystemAlert
 {

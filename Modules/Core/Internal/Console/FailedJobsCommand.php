@@ -12,28 +12,7 @@ use Modules\Core\Internal\Console\Support\DurationParser;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Maintenance operations on the Laravel-managed `failed_jobs` table.
- *
- * The action argument selects the subcommand; only `prune` is wired
- * for v1. Future verbs (`view`, `retry-all`, `clear`) can extend
- * without renaming the command surface.
- *
- *   php artisan beatrax:failed-jobs prune --older-than=30d
- *   php artisan beatrax:failed-jobs prune --older-than=7d --dry-run
- *
- * The duration token grammar (`30d`, `12h`, `2w`) is parsed by
- * `DurationParser`; invalid tokens exit 1 with the regex error
- * message. The default cutoff is 30 days, which matches the project's
- * conservative starting retention policy.
- *
- * Dry-run lists the would-be-deleted rows (capped at the first 50 to
- * keep the console output sane on large failure backlogs) and exits
- * without writing.
- *
- * The command is constructor-DI'd with `DatabaseManager`, `Clock`, and
- * `DurationParser`. No Laravel facade is imported. The
- * `BoundaryArchTest::noFacadeCallsFromCoreConsoleCommands` invariant
- * locks the DI-only posture.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class FailedJobsCommand extends Command
 {

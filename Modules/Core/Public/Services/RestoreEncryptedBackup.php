@@ -11,17 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use RuntimeException;
 
 /**
- * Restores the SQLite database from a passphrase-encrypted backup, mirroring the
- * db:restore CLI's safety rails for the in-app flow.
- *
- * Ordering is the safety contract: the upload is decrypted and integrity-checked
- * to a temp file FIRST — if the passphrase is wrong or the backup is corrupt, it
- * throws and the live database is never touched. Only once the source is proven
- * good does it take a pre-restore snapshot of the current database (so the old
- * state is always recoverable) and then atomically swap the file in. SQLite-only;
- * the caller is responsible for the destructive-action gate (a typed confirmation)
- * and for reloading the app afterwards (the live connection now points at the
- * restored file).
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class RestoreEncryptedBackup
 {

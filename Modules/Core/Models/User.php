@@ -11,13 +11,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 
 /**
- * Authentication entity.
- *
- * The login identity is a `username`. `is_developer` marks a user as
- * eligible for the in-app developer console; when
- * `force_password_change_at_next_login` is set, a request middleware
- * redirects the user to the change-password page on every authenticated
- * route until they replace their password.
+ * @link ../../../.docs/features/core/architecture.md
  *
  * @property int $id
  * @property string $username
@@ -77,11 +71,6 @@ final class User extends Authenticatable
     protected $hidden = ['password', 'remember_token'];
 
     /**
-     * Default attribute values matching the recurring-related users
-     * column defaults. Eloquent applies these to a freshly-constructed
-     * model so a new instance carries the same values the schema would
-     * apply on insert.
-     *
      * @var array<string, mixed>
      */
     protected $attributes = [

@@ -9,10 +9,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 
-/**
- * Default `CurrentUser` implementation. Reads the authenticated user from the
- * Laravel auth factory's default guard.
- */
 final class CurrentUserService implements CurrentUser
 {
     public function __construct(

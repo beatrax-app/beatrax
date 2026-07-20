@@ -9,28 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Eloquent model for the system_alerts table — one row models one
- * operational-failure event surfaced to the user via the persistent
- * dashboard banner (corrupt backup, overdue backup, misconfigured
- * SQLite PRAGMA, etc.).
- *
- * Severity is one of `info` / `warning` / `critical`; the schema-level
- * trigger pair rejects out-of-band values so the Eloquent cast map
- * stays purely informational. Rows are never deleted; acknowledging an
- * alert stamps `acknowledged_at` so the audit trail accumulates.
- *
- * `user_id` is nullable: NULL means a system-wide alert visible to
- * every authenticated user (e.g. a SQLite PRAGMA drift). The
- * BelongsToUser trait adds the trait's user() relation and the
- * standard per-user global scope; the system-wide carve-out happens
- * at the read-service / action layer, where the per-user predicate is
- * widened with `orWhereNull('user_id')`.
- *
- * Read filters (active = `whereNull('acknowledged_at')`, by kind =
- * `where('kind', …)`) live inline at the call site rather than as
- * model scopes — the project's larastan-strict-rules profile rejects
- * local query scopes in favour of explicit query-builder predicates
- * at the service layer.
+ * @link ../../../.docs/features/core/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
@@ -56,13 +35,6 @@ final class SystemAlert extends Model
     ];
 
     /**
-     * system_alerts rows write their own `created_at` via a SQLite
-     * `useCurrent()` default and never update once acknowledged
-     * (acknowledging stamps a separate `acknowledged_at` column),
-     * so the `updated_at` column is omitted from the migration. Disable
-     * Eloquent's auto-managed timestamps so `created_at` flows through
-     * the cast pipeline without triggering an `updated_at` write.
-     *
      * @var bool
      */
     public $timestamps = false;

@@ -16,31 +16,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\SystemAlertQuery;
 
 /**
- * Persistent dashboard banner that surfaces every un-acknowledged
- * `system_alerts` row visible to the current user — their own rows
- * plus system-wide (user_id IS NULL) rows. Sits at the top of every
- * authenticated page via the `@livewire('core.system-alerts-banner')`
- * slot in `resources/views/layouts/app.blade.php`.
- *
- * Severity-first stack:
- *   critical → warning → info
- * with chronological tie-break inside each tier (locked by
- * `SystemAlertQuery::active`).
- *
- * Suppression rule for the auto-update kinds: an `update.available`
- * row whose `metadata.latestVersion` value is already in the current
- * user's `user_preferences.skipped_update_versions` array is filtered
- * out at render time. The filter intentionally ignores `update.stale`
- * and `update.critical` rows — those bypass the skip list because
- * their threat models (long-unsupported version, security-fix
- * critical update) explicitly override the user's earlier dismissal.
- *
- * No constructor DI — phpstan-strict-rules bans it on Livewire
- * Component subclasses. Method-parameter DI on `render()` /
- * `acknowledge()` / `skipVersion()` instead. The class deliberately
- * holds zero properties so the component is stateless across
- * re-renders; Livewire re-runs `render()` after every action returns,
- * so the post-acknowledge view automatically drops the dismissed row.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class SystemAlertsBanner extends Component
 {
@@ -63,16 +39,9 @@ final class SystemAlertsBanner extends Component
         $action($alertId, $currentUser->user());
     }
 
-    /**
-     * Persists the alert's `metadata.latestVersion` into the current
-     * user's `user_preferences.skipped_update_versions` JSON column
-     * AND acknowledges the alert in one wire round-trip. Idempotent
-     * on the skip list — re-skipping a version that is already
-     * present does not duplicate the entry.
-     *
-     * Method-parameter DI per Livewire conventions; the wire action
-     * resolves dependencies fresh on every invocation.
-     */
+    // Persists metadata.latestVersion into skipped_update_versions AND
+    // acknowledges the alert in one wire round-trip. Idempotent — re-skipping
+    // an already-present version does not duplicate the entry.
     public function skipVersion(
         int $alertId,
         DatabaseManager $db,
@@ -108,9 +77,6 @@ final class SystemAlertsBanner extends Component
     }
 
     /**
-     * Reads the current user's skip list from `user_preferences`,
-     * returning an empty list when no row exists yet for the user.
-     *
      * @return list<string>
      */
     private function skippedVersionsFor(int $userId): array
@@ -131,10 +97,6 @@ final class SystemAlertsBanner extends Component
     }
 
     /**
-     * Drops every `update.available` row whose
-     * `metadata.latestVersion` field is in the user's skip list.
-     * Every other alert kind passes through untouched.
-     *
      * @param  Collection<int, SystemAlert>  $alerts
      * @param  list<string>  $skippedVersions
      * @return Collection<int, SystemAlert>

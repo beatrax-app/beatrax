@@ -10,15 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 
 /**
- * Per-user item counts for the sidebar nav badges (Transactions, Recurring,
- * Counterparties, Drift alerts, Budgets, Subscriptions, Imports).
- *
- * The sidebar renders on every authenticated page, so running a COUNT per item
- * per render would be a steady tax. Instead the whole set is computed once and
- * CACHED per user (short TTL); writes that materially change a count call
- * forget() to drop the cache. Counts are read straight from the canonical
- * tables (user-scoped) rather than fanning out to each module's query service,
- * to keep the sidebar's hot path to a single cached read.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class NavCountsService
 {

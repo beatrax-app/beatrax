@@ -13,23 +13,7 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
 /**
- * Reads the newest `*.meta.json` sidecar under the backups directory
- * (resolved via the injected `UserDataPathService`). The sidecar's
- * `completed_at` timestamp is compared to
- * `$clock->now()`; if no sidecar exists OR the newest is older than
- * 48 hours, the probe returns a `warning` result AND writes a
- * system-wide `system_alerts(kind=backup_overdue, severity=warning)`
- * row so the dashboard banner picks it up on the next page load.
- *
- * The Eloquent write happens through the framework's default model
- * connection (`SystemAlert::create([...])`). The injected
- * `DatabaseManager` powers the duplicate-suppression recency check
- * via the raw Query Builder — the larastan-strict-rules profile
- * rejects chained Eloquent\Builder calls after Model::query(), so the
- * existence probe goes through `$this->db->connection()->table(...)`.
- *
- * The directory read + sidecar JSON decode are wrapped in try/catch
- * returning a `critical` `ProbeResult` so the probe never throws.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class BackupFreshnessProbe implements Probe
 {
@@ -92,12 +76,9 @@ final class BackupFreshnessProbe implements Probe
         );
     }
 
-    /**
-     * Locate the newest `*.meta.json` sidecar by `completed_at`. Returns
-     * null if the directory is missing, empty, or every sidecar is
-     * unreadable / malformed (which is itself an "overdue" signal — the
-     * caller treats null + ≥48h identically).
-     */
+    // Returns null if the directory is missing, empty, or every sidecar is
+    // unreadable/malformed — itself an "overdue" signal the caller treats
+    // identically to a genuine ≥48h-old timestamp.
     private function findNewestSidecarCompletedAt(): ?CarbonImmutable
     {
         $backupsPath = $this->paths->backups();
@@ -143,24 +124,6 @@ final class BackupFreshnessProbe implements Probe
         return $newest;
     }
 
-    /**
-     * Inserts a system-wide `system_alerts(backup_overdue)` row at
-     * `warning` severity, gated by a 1-hour recency check: if a
-     * matching unacknowledged row already exists within the last
-     * hour, this is a no-op. The gate mirrors
-     * HealthCheckServiceProvider::recordDriftAlert — running
-     * `beatrax:doctor` 100 times in an hour produces at most one
-     * banner card, not 100. The banner renders one card per row
-     * (`@foreach ($alerts as $alert)`), so without this suppression
-     * an audit-trail expectation becomes operator-visible noise.
-     *
-     * The whole body is wrapped in try/catch so a missing
-     * system_alerts table (e.g. probe invoked before migrations have
-     * run on a fresh checkout) does NOT make the probe throw — the
-     * Probe contract forbids that. The alert write is best-effort;
-     * the operator-visible signal is the `warning` ProbeResult the
-     * caller returns.
-     */
     private function recordOverdueAlert(?int $hoursOld): void
     {
         try {

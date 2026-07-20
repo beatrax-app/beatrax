@@ -8,21 +8,7 @@ use Symfony\Component\Process\Process;
 use Throwable;
 
 /**
- * Shared `Probe` implementation that runs an external CLI tool with
- * `--version` (or an equivalent argv tail) and surfaces the stdout
- * trim as an `ok` `ProbeResult`. Failure modes — binary not on PATH,
- * non-zero exit, empty stdout — surface as a `warning` so the
- * doctor command's exit-code aggregator routes them to the 1-exit-
- * warning slot rather than the 2-exit-blocker slot. External tooling
- * being missing is operationally relevant but not load-bearing for
- * the local dashboard's runtime (the project has no Composer dep on
- * `composer` itself at runtime, and Node only matters for asset
- * builds), so warning is the honest severity.
- *
- * Sub-classes provide `$label`, the argv tuple to invoke, and the
- * warning message that explains what the operator loses without the
- * tool. The 5-second timeout matches the legacy inline `reportTool()`
- * helper this probe family replaces.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 abstract class ExternalToolVersionProbe implements Probe
 {
@@ -55,14 +41,11 @@ abstract class ExternalToolVersionProbe implements Probe
         );
     }
 
+    // On success the version string is read from stdout, so chatty
+    // deprecation notices on stderr never leak into the result. On failure
+    // the stderr trim is the diagnostic; empty stderr becomes "(not
+    // available)" so the operator still gets a non-empty hint.
     /**
-     * Executes the argv and returns `[output-string, success-flag]`.
-     * On success the version string is read from stdout — chatty
-     * deprecation notices on stderr no longer leak into the result.
-     * On failure the stderr trim is returned as the diagnostic; an
-     * empty stderr is replaced with `(not available)` so the operator
-     * still gets a non-empty hint.
-     *
      * @param  list<string>  $argv
      * @return array{0: string, 1: bool}
      */

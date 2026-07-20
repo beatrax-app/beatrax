@@ -9,10 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Adds strict no-store cache-control headers to every response that passes
- * through this middleware. Prevents the browser from caching authenticated
- * finance pages where the back button could otherwise reveal sensitive
- * balances after sign-out.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class NoStoreFinancialData
 {

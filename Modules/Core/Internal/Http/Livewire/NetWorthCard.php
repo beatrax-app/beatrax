@@ -11,12 +11,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Forecasting\Public\Services\NetWorthQuery;
 
 /**
- * Dashboard net-worth card — one EUR figure across all accounts (assets minus
- * liabilities) with the per-account breakdown, from NetWorthQuery. Renders
- * nothing until there is at least one account.
- *
- * Service collaborators arrive as render() parameters (constructor injection is
- * banned on Livewire Component subclasses by phpstan-strict-rules).
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class NetWorthCard extends Component
 {

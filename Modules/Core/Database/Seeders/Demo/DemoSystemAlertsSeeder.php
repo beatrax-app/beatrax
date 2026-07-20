@@ -9,31 +9,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
 
-/**
- * Materialises one row per `system_alerts.kind` for the primary demo
- * user so the dashboard's sticky banner-rotation logic exercises every
- * code branch on a fresh demo install:
- *
- *   - `backup_corrupt` — critical severity, surfaces the corrupt-backup
- *     warning banner
- *   - `doctor_warning` — warning severity, surfaces a misconfiguration
- *     advisory
- *   - `update_available` — info severity, surfaces the update prompt
- *   - `force_password_change` — critical severity, surfaces the
- *     password-change required banner
- *
- * One extra acknowledged row (a stale `update_available` from a prior
- * release) exists with `acknowledged_at` stamped, so the read filter
- * `whereNull('acknowledged_at')` excludes it. The banner therefore
- * renders four active alerts while the audit history holds five total.
- *
- * Idempotency: the table has no UNIQUE constraint (duplicate alerts of
- * the same kind ARE expected in production — a user with two corrupt
- * backup runs sees two rows). The seeder keys on the application-
- * defined tuple `(user_id, kind, metadata->>$.seed_key)` so a re-run
- * skips rows it previously inserted; production rows never carry the
- * `seed_key` metadata marker and are therefore left untouched.
- */
+// Materialises one row per `system_alerts.kind` (see ALERTS below) so the
+// banner-rotation logic exercises every branch on a fresh install.
+// `system_alerts` has no UNIQUE constraint, so this keys the upsert on
+// `(user_id, kind, metadata->>$.seed_key)` — production rows never carry it.
 final class DemoSystemAlertsSeeder
 {
     /**
