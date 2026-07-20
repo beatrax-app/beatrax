@@ -10,11 +10,13 @@ use Livewire\LivewireManager;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
+use Modules\OpenBanking\Internal\Console\ServeOpenBankingTlsCommand;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingStatusRow;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingWizardModal;
 use Modules\OpenBanking\Internal\Listeners\RaiseOpenBankingReconsentAlert;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
+use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
 use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
@@ -60,6 +62,10 @@ final class OpenBankingServiceProvider extends ServiceProvider
         $this->app->singleton(RemoteSourceAdapter::class, EnableBankingSourceAdapter::class);
         $this->app->singleton(OpenBankingFetchService::class);
         $this->app->singleton(OpenBankingConnectionQuery::class);
+        $this->app->singleton(
+            LoopbackTlsCertificate::class,
+            static fn (): LoopbackTlsCertificate => new LoopbackTlsCertificate(storage_path('app/open-banking-tls')),
+        );
     }
 
     public function boot(LivewireManager $livewire, EventsDispatcher $events): void
@@ -79,5 +85,12 @@ final class OpenBankingServiceProvider extends ServiceProvider
         $livewire->component('openbanking.open-banking-wizard-modal', OpenBankingWizardModal::class);
         $livewire->component('openbanking.open-banking-settings-page', OpenBankingSettingsPage::class);
         $livewire->component('openbanking.open-banking-status-row', OpenBankingStatusRow::class);
+
+        // Local dev/UAT only: the HTTPS-loopback TLS listener that lets the
+        // Enable Banking consent dance run against the https://127.0.0.1:PORT
+        // redirect URI. Guarded so it never binds on web requests.
+        if ($this->app->runningInConsole()) {
+            $this->commands([ServeOpenBankingTlsCommand::class]);
+        }
     }
 }

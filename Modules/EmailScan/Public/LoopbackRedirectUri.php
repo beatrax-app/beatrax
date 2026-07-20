@@ -29,9 +29,11 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
  * exception to plain HTTP on `127.0.0.1`. OpenBanking therefore calls
  * `forProvider('open-banking', scheme: 'https')`; the caller is
  * responsible for actually terminating TLS on that loopback listener
- * (a self-signed local certificate) — tracked as deferred follow-up
- * infrastructure work (see 19-05-SUMMARY.md), since the local dev/prod
- * web server this project standardizes on does not itself terminate TLS.
+ * (a self-signed local certificate). The `open-banking:serve-tls` artisan
+ * command (Modules\OpenBanking\Internal\Console) provides that listener —
+ * a stunnel-style TLS terminator that tunnels this HTTPS loopback port to a
+ * plain `artisan serve` backend — since the plain dev web server this
+ * project standardizes on does not itself terminate TLS.
  *
  * Google/Microsoft both reject `https://*.test` redirect URIs (their
  * native-app spec requires the loopback IP shape); Enable Banking
