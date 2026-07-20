@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Services;
 
 use Modules\Core\Models\SystemAlert;
+use Modules\Core\Public\Contracts\SecretShield;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Listeners\BustOAuthScrubSetOnSecretChange;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
@@ -70,6 +71,18 @@ class OAuthScrubSet
      * subsequent load() failures route through the runtime branch.
      */
     protected bool $bootPhase = true;
+
+    /**
+     * @param  SecretShield  $shield  Reveals the keychain-shielded
+     *                                client_secret / tokens_blob on the desktop bundle so the scrub set
+     *                                holds the real PLAINTEXT secrets (identity elsewhere). Without this
+     *                                the set would collect safeStorage ciphertext and the true secret —
+     *                                the value that actually appears in HTTP calls and could leak into
+     *                                logs — would never be redacted.
+     */
+    public function __construct(
+        private readonly SecretShield $shield,
+    ) {}
 
     /**
      * Empty the cache. The next `all()` / `compiledPattern()` call
@@ -166,14 +179,16 @@ class OAuthScrubSet
             /** @var iterable<OAuthSecret> $rows */
             $rows = OAuthSecret::query()->get();
             foreach ($rows as $row) {
-                $clientSecret = $row->client_secret;
+                // Reveal the keychain shield so the scrub set holds the true
+                // plaintext secret, not desktop safeStorage ciphertext.
+                $clientSecret = $this->shield->reveal($row->client_secret);
                 if (trim($clientSecret) !== '') {
                     $collected[$clientSecret] = true;
                 }
 
                 $blob = $row->tokens_blob;
                 if (is_string($blob) && $blob !== '') {
-                    $decoded = json_decode($blob, true);
+                    $decoded = json_decode($this->shield->reveal($blob), true);
                     if (is_array($decoded)) {
                         $this->collectStrings($decoded, $collected);
                     }

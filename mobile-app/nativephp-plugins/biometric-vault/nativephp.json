@@ -1,0 +1,54 @@
+{
+    "namespace": "BiometricVault",
+    "bridge_functions": [
+        {
+            "name": "BiometricVault.Set",
+            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.Set",
+            "ios": "BiometricVaultFunctions.Set",
+            "description": "Store a value in a biometric-gated keychain/keystore entry"
+        },
+        {
+            "name": "BiometricVault.Get",
+            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.Get",
+            "ios": "BiometricVaultFunctions.Get",
+            "description": "Read a value, releasing it ONLY after a fresh biometric authentication"
+        },
+        {
+            "name": "BiometricVault.Delete",
+            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.Delete",
+            "ios": "BiometricVaultFunctions.Delete",
+            "description": "Delete a biometric-gated entry"
+        },
+        {
+            "name": "BiometricVault.PollRecovered",
+            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.PollRecovered",
+            "ios": "BiometricVaultFunctions.PollRecovered",
+            "description": "Consume the transient blob an async BiometricPrompt callback stashed (Android async recover; key never crosses the JS bridge)"
+        }
+    ],
+    "android": {
+        "min_version": 28,
+        "permissions": [
+            "android.permission.USE_BIOMETRIC"
+        ],
+        "dependencies": {
+            "implementation": [
+                "androidx.biometric:biometric:1.1.0"
+            ]
+        }
+    },
+    "ios": {
+        "min_version": "18.2",
+        "info_plist": {
+            "NSFaceIDUsageDescription": "Unlock beatrax with Face ID"
+        },
+        "dependencies": {
+            "swift_packages": [],
+            "pods": []
+        }
+    },
+    "events": [
+        "BiometricVault.Recovered",
+        "BiometricVault.Failed"
+    ]
+}

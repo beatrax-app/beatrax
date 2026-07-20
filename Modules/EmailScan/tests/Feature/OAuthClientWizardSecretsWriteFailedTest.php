@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Contracts\SecretShield;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
@@ -30,11 +31,12 @@ it('surfaces an inline errorMessage on SecretsWriteFailed instead of bubbling th
     // the EACCES / QueryException production failure mode.
     $db = $this->app->make(DatabaseManager::class);
     $currentUser = $this->app->make(CurrentUser::class);
-    $throwingRepo = new class($db, $currentUser) extends OAuthSecretsRepository
+    $shield = $this->app->make(SecretShield::class);
+    $throwingRepo = new class($db, $currentUser, $shield) extends OAuthSecretsRepository
     {
-        public function __construct(DatabaseManager $db, CurrentUser $currentUser)
+        public function __construct(DatabaseManager $db, CurrentUser $currentUser, SecretShield $shield)
         {
-            parent::__construct($db, $currentUser);
+            parent::__construct($db, $currentUser, $shield);
         }
 
         public function saveProviderClient(
@@ -75,11 +77,12 @@ it('still bubbles non-SecretsWriteFailed exceptions (defensive — the catch is 
 
     $db = $this->app->make(DatabaseManager::class);
     $currentUser = $this->app->make(CurrentUser::class);
-    $throwingRepo = new class($db, $currentUser) extends OAuthSecretsRepository
+    $shield = $this->app->make(SecretShield::class);
+    $throwingRepo = new class($db, $currentUser, $shield) extends OAuthSecretsRepository
     {
-        public function __construct(DatabaseManager $db, CurrentUser $currentUser)
+        public function __construct(DatabaseManager $db, CurrentUser $currentUser, SecretShield $shield)
         {
-            parent::__construct($db, $currentUser);
+            parent::__construct($db, $currentUser, $shield);
         }
 
         public function saveProviderClient(

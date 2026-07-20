@@ -6,6 +6,7 @@ namespace Modules\Auth\Internal\Lock;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Session\Session;
+use Modules\Core\Public\Contracts\SecretShield;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Uid\Uuid;
 use Webauthn\AttestationStatement\AttestationStatementSupportManager;
@@ -68,6 +69,7 @@ final class WebAuthnBiometricService
         private readonly AppLockKeyWrap $keyWrap,
         private readonly LockStateManager $lockState,
         private readonly ConfigRepository $config,
+        private readonly SecretShield $shield,
     ) {}
 
     // -------------------------------------------------------------------------
@@ -222,11 +224,16 @@ final class WebAuthnBiometricService
         $storedBlob = $secret.$wrappedKeyBytes;
         sodium_memzero($secret);
 
+        // Shield the blob in the OS keychain on the desktop bundle (identity
+        // on web / mobile) so the persisted secret||wrapped-key bytes are
+        // machine-bound ciphertext, not recoverable from the raw DB row.
+        $shieldedBlob = $this->shield->protect($storedBlob);
+
         $this->store->store(
             $userId,
             $credentialId,
             $deviceLabel,
-            $storedBlob,
+            $shieldedBlob,
             $publicKeyCbor,
             $platform,
         );
@@ -414,13 +421,17 @@ final class WebAuthnBiometricService
             // D-16: reset the failure count on success.
             $this->store->resetFailureCount((int) $credRowId);
 
-            // Unwrap the data key from the stored per-device blob.
+            // Unwrap the data key from the stored per-device blob. Reveal it
+            // from the OS keychain first (identity on web / mobile, and on
+            // desktop for legacy rows written before shielding — reveal()
+            // returns the input unchanged when it is not safeStorage
+            // ciphertext).
             $storedBlob = $credRow->biometric_wrap_secret;
             if (! is_string($storedBlob)) {
                 return false;
             }
 
-            $dataKey = $this->extractDataKey($storedBlob);
+            $dataKey = $this->extractDataKey($this->shield->reveal($storedBlob));
             if ($dataKey === null) {
                 return false;
             }

@@ -19,6 +19,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Contracts\SecretShield;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
@@ -509,7 +510,9 @@ final class DevModeServiceProvider extends ServiceProvider
         // observer registered in boot() busts this cache on every
         // OAuthSecret save/delete so a rotated secret applies on the
         // very next log line / audit excerpt write.
-        $this->app->singleton(OAuthScrubSet::class, static fn (): OAuthScrubSet => new OAuthScrubSet);
+        $this->app->singleton(OAuthScrubSet::class, static fn (Application $app): OAuthScrubSet => new OAuthScrubSet(
+            $app->make(SecretShield::class),
+        ));
 
         // RedactionExcerptCap with the OAuthScrubSet singleton wired
         // in so the audit-row excerpt scrubs every oauth_secret

@@ -32,6 +32,7 @@ use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Internal\Lock\NullKeyCustodian;
 use Modules\Auth\Internal\Lock\PinHasher;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
@@ -46,8 +47,10 @@ use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Auth\Public\Actions\ResetPasswordAction;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 
 /**
  * Service provider for the Auth module.
@@ -81,10 +84,17 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(RecoveryCodeNormalizer::class);
         $this->app->singleton(RecoveryCodeAuthenticator::class);
 
+        // At-rest key custody while unlocked. Defaults to the pass-through
+        // NullKeyCustodian (session-held key, unchanged web behaviour); the
+        // Desktop / Mobile providers override this binding on their bundles
+        // to route the key through the OS keychain / Keystore.
+        $this->app->singleton(KeyCustodian::class, NullKeyCustodian::class);
+
         // App-lock infrastructure singletons (05-02).
         $this->app->singleton(PinHasher::class);
         $this->app->singleton(AppLockKdf::class);
         $this->app->singleton(AppLockKeyWrap::class);
+        $this->app->singleton(BiometricKeyBlobCodec::class);
         $this->app->singleton(LockStateManager::class);
         $this->app->singleton(AppLockKeyService::class);
         $this->app->singleton(AppLockClientConfig::class);

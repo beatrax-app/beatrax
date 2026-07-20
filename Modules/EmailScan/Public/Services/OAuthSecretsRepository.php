@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Contracts\SecretShield;
 use Modules\EmailScan\Models\OAuthSecret;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use RuntimeException;
@@ -40,6 +41,7 @@ class OAuthSecretsRepository
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly CurrentUser $currentUser,
+        private readonly SecretShield $shield,
     ) {}
 
     public function hasProviderClient(string $provider): bool
@@ -61,7 +63,9 @@ class OAuthSecretsRepository
 
         $row = $this->providerRow($provider) ?? $this->newProviderRow($provider);
         $row->client_id = $clientId;
-        $row->client_secret = $clientSecret;
+        // Keychain-shield under the model's own APP_KEY encryption on the
+        // desktop bundle (identity elsewhere); revealed in loadProviderClient.
+        $row->client_secret = $this->shield->protect($clientSecret);
         $row->redirect_uri = $redirectUri;
         $this->persist($row);
     }
@@ -78,7 +82,7 @@ class OAuthSecretsRepository
 
         return [
             'client_id' => $row->client_id,
-            'client_secret' => $row->client_secret,
+            'client_secret' => $this->shield->reveal($row->client_secret),
             'redirect_uri' => $row->redirect_uri,
         ];
     }
@@ -265,6 +269,10 @@ class OAuthSecretsRepository
         if ($blob === null || $blob === '') {
             return [];
         }
+        // Reveal the keychain-shielded blob before decoding (identity on
+        // web / mobile, and on desktop for legacy unshielded rows —
+        // reveal() returns the input unchanged when it is not ciphertext).
+        $blob = $this->shield->reveal($blob);
         $decoded = json_decode($blob, true);
         if (! is_array($decoded)) {
             return [];
@@ -296,7 +304,12 @@ class OAuthSecretsRepository
             );
         }
 
-        return $encoded;
+        // Keychain-shield the whole token blob on the desktop bundle (identity
+        // elsewhere), layered under the model's APP_KEY column encryption.
+        // Applied here so all three write paths (saveInboxRefreshToken,
+        // rotateRefreshToken, removeInbox) shield uniformly; decodeInboxes
+        // reveals on the way back.
+        return $this->shield->protect($encoded);
     }
 
     private function assertProvider(string $provider): void

@@ -51,9 +51,7 @@ class AppLockKeyService
             return null;
         }
 
-        $key = $session->get(LockStateManager::DATA_KEY_SESSION);
-
-        return is_string($key) ? $key : null;
+        return $this->lockState->heldKey($session);
     }
 
     /**
@@ -67,5 +65,23 @@ class AppLockKeyService
     public function withhold(Session $session): void
     {
         $this->lockState->lock($session);
+    }
+
+    /**
+     * Admit a data key into the session, transitioning it to unlocked.
+     *
+     * The authorized inverse of withhold(): used by the mobile cold-start
+     * biometric unlock (Phase: cold-start-biometric-unlock) to unlock the
+     * session with a data key recovered from the secure enclave. The KEY'S
+     * PROVENANCE IS THE TRUST GATE — the only sanctioned caller obtains
+     * $dataKey from BiometricKeyVault::recover(), which the OS enclave releases
+     * only after a fresh, live biometric (Decision 1: biometric is a full
+     * cryptographic root on mobile). Callers MUST NOT pass a key derived from a
+     * bypassable signal (a bare bool prompt); a spoofed/aborted biometric never
+     * yields a key here because recover() returns null in that case.
+     */
+    public function admitDataKey(Session $session, string $dataKey): void
+    {
+        $this->lockState->unlock($session, $dataKey);
     }
 }

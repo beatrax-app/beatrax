@@ -149,6 +149,10 @@ final class PinVerificationService
                     'failed_attempts' => 0,
                     'locked_until' => null,
                     'last_activity_at' => $this->clock->now(),
+                    // Anchor the cold-start biometric PIN floor: a genuine PIN
+                    // unlock refreshes the "must re-enter PIN every N days"
+                    // clock (see MobileLockGateway::pinFloorDue()).
+                    'last_pin_unlock_at' => $this->clock->now(),
                 ]);
 
             // D-16: a successful PIN unlock re-arms ALL of the user's

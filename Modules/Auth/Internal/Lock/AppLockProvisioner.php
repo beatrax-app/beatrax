@@ -126,6 +126,11 @@ final class AppLockProvisioner
             'failed_attempts' => 0,
             'locked_until' => null,
             'last_activity_at' => $this->clock->now(),
+            // WR-06 extends to cold-start biometric: enable() mints a NEW data
+            // key, so any prior cold-start enclave blob (which wraps the OLD
+            // key) is stale. Reset the flag so the mobile recover path refuses
+            // it (the dead blob is overwritten on the next enroll).
+            'cold_start_biometric_enrolled' => false,
             'updated_at' => $now,
         ];
 
@@ -424,6 +429,9 @@ final class AppLockProvisioner
                 'password_wrapped_key' => null,
                 'failed_attempts' => 0,
                 'locked_until' => null,
+                // Disabling the lock removes the data key entirely, so any
+                // cold-start enclave blob is dead — reset the flag.
+                'cold_start_biometric_enrolled' => false,
             ]);
 
         // WR-06: the wrapped data key is gone — remove every biometric

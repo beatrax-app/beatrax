@@ -11,6 +11,7 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Core\Public\Contracts\Clock;
 
 /**
  * Narrow Public read/write surface letting a non-Auth module's OWN
@@ -41,7 +42,85 @@ final class MobileLockGateway
         private readonly PlatformDetector $detector,
         private readonly DatabaseManager $db,
         private readonly AppLockProvisioner $provisioner,
+        private readonly AppLockKeyService $keyService,
+        private readonly Clock $clock,
     ) {}
+
+    /**
+     * Unlock the session with a data key recovered from the mobile cold-start
+     * biometric vault, and stamp `last_activity_at` so the idle-timeout
+     * middleware does not immediately re-lock the unlock.
+     *
+     * A genuine cold start (app killed / rebooted) almost always exceeds the
+     * idle window, so without this stamp the very next request would see a
+     * stale `last_activity_at`, treat the session as idle-expired, and bounce
+     * the user back to the lock screen — making cold-start unlock useless
+     * whenever idle timeout is enabled. The PIN path is immune because
+     * PinVerificationService::verify() stamps activity on success; this is the
+     * biometric equivalent. Key provenance (a real enclave recover) is the
+     * caller's contract — see {@see AppLockKeyService::admitDataKey()}.
+     */
+    public function unlockWithRecoveredKey(int $userId, string $dataKey, Session $session): void
+    {
+        $this->keyService->admitDataKey($session, $dataKey);
+
+        $this->db->connection()->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update(['last_activity_at' => $this->clock->now()]);
+    }
+
+    /**
+     * Record whether the user has a cold-start biometric enrollment. Stored as
+     * a plain flag on user_app_lock_configs so the lock screen / settings can
+     * check enrollment without triggering a biometric prompt just to read it.
+     */
+    public function markColdStartEnrolled(int $userId, bool $enrolled): void
+    {
+        $this->db->connection()->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update(['cold_start_biometric_enrolled' => $enrolled]);
+    }
+
+    /**
+     * True when the user has an active cold-start biometric enrollment.
+     */
+    public function isColdStartEnrolled(int $userId): bool
+    {
+        $row = $this->db->connection()->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['cold_start_biometric_enrolled']);
+
+        return $row !== null && (bool) $row->cold_start_biometric_enrolled === true;
+    }
+
+    /** Default cold-start PIN-floor cadence (days) — tunable per install later. */
+    public const PIN_FLOOR_DAYS = 14;
+
+    /**
+     * True when the cold-start biometric PIN floor is overdue: the user must
+     * re-enter their PIN instead of using biometric. Due when there has never
+     * been a PIN unlock (fresh install / just enrolled without a later PIN
+     * unlock counts as fresh) OR the last PIN unlock is older than $floorDays.
+     * A successful PIN unlock refreshes the anchor (last_pin_unlock_at) and
+     * clears the floor. This keeps the PIN as a periodic re-auth even though
+     * biometric is the everyday unlock root (Decision: PIN floor).
+     */
+    public function pinFloorDue(int $userId, int $floorDays = self::PIN_FLOOR_DAYS): bool
+    {
+        $row = $this->db->connection()->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['last_pin_unlock_at']);
+
+        $lastRaw = $row?->last_pin_unlock_at;
+        if (! is_string($lastRaw)) {
+            // Never unlocked / unparseable → floor is due (fail safe: require PIN).
+            return true;
+        }
+
+        $last = CarbonImmutable::parse($lastRaw);
+
+        return $this->clock->now()->diffInDays($last, absolute: true) >= $floorDays;
+    }
 
     /**
      * Enable the app lock for a fresh device-local identity bootstrap
