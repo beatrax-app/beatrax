@@ -5,36 +5,23 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Clock;
 
 /**
- * Hybrid Logical Clock (HLC) value object implementing the Kulkarni-Demirbas
- * 2014 algorithm ("Logical Physical Clocks and Consistent Snapshots in
- * Globally Distributed Databases").
- *
- * The HLC merges wall-clock time with a logical Lamport counter so that
- * events are ordered causally while remaining close to physical time.
- * Two components are maintained:
- *   - $l (physical time in milliseconds): the highest wall-clock or
- *     remote-entry timestamp seen so far.
- *   - $c (counter): a monotone counter that increments only when $l
- *     cannot advance (i.e. when wall-clock has not moved forward).
- *
- * This class is NOT readonly — $l and $c are mutable state.
- * Bind as TRANSIENT in the service provider (never singleton) to avoid
- * leaking clock state across unrelated callers.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class HybridLogicalClock
 {
+    // Not readonly — $l and $c are mutable state. Bind as TRANSIENT in the
+    // service provider (never singleton) to avoid leaking clock state across
+    // unrelated callers.
+
     /** @var int Max physical time seen (wall-clock ms). */
     private int $l = 0;
 
     /** @var int Logical counter; resets to 0 when advances. */
     private int $c = 0;
 
+    // Advances $l to max(wall_ms, $l). If $l did not change, increments $c;
+    // otherwise resets $c to 0.
     /**
-     * Call for every local event or outgoing op-log entry.
-     *
-     * Advances $l to max(wall_ms, $l). If $l did not change, increments
-     * $c; otherwise resets $c to 0.
-     *
      * @return array{int, int} [$l, $c] to embed in the op-log entry.
      */
     public function tick(): array
@@ -51,15 +38,10 @@ final class HybridLogicalClock
         return [$this->l, $this->c];
     }
 
+    // Applies the four-branch Kulkarni-Demirbas update rule: all three equal ->
+    // c = max(c_local, c_msg) + 1; l_new === l_local only -> c_local++;
+    // l_new === l_msg only -> c = c_msg + 1; wall-clock was highest -> c = 0.
     /**
-     * Call when receiving a remote op-log entry with HLC [$lMsg, $cMsg].
-     *
-     * Applies the four-branch Kulkarni-Demirbas update rule:
-     *   - all three equal → c = max(c_local, c_msg) + 1
-     *   - l_new === l_local (only) → c_local++
-     *   - l_new === l_msg (only) → c = c_msg + 1
-     *   - wall-clock was highest → c = 0
-     *
      * @param  int  $lMsg  physical_ms from the remote entry
      * @param  int  $cMsg  counter from the remote entry
      * @return array{int, int} Updated [$l, $c].
@@ -84,15 +66,9 @@ final class HybridLogicalClock
         return [$this->l, $this->c];
     }
 
-    /**
-     * Total-order comparison of two HLC tuples.
-     *
-     * Order: l (physical ms) first, then c (counter), then strcmp($d1, $d2)
-     * (device-id as the final tie-breaker to guarantee a deterministic total
-     * order across all devices — required for non-determinism-free LWW merge).
-     *
-     * Returns -1, 0, or +1 (spaceship-compatible).
-     */
+    // Order: l (physical ms) first, then c (counter), then strcmp($d1, $d2) as
+    // the final tie-breaker, guaranteeing a deterministic total order across
+    // all devices — required for non-determinism-free LWW merge.
     public static function compare(
         int $l1,
         int $c1,

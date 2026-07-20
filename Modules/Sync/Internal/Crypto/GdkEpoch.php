@@ -5,24 +5,14 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Crypto;
 
 /**
- * Immutable {epochId, keyHex} pair — one entry in a user's GDK (Group Data
- * Key) epoch keyring (D-03/D-04).
- *
- * `epochId` is a small monotonically-increasing integer (NOT a UUID —
- * epochs are ordered: a device removal always mints epochId+1). `keyHex` is
- * the raw 32-byte symmetric AEAD key, hex-encoded, for
- * `sodium_crypto_aead_xchacha20poly1305_ietf_*` calls via
- * `OpLogFieldCrypto`/the Sync Public `SensitiveColumnCodec`.
- *
- * NEVER PERSIST THIS DTO OUTSIDE THE KEYRING'S OWN ENCRYPTED JSON FILE
- * (mirrors `DeviceIdentityDto`'s in-memory-only warning). `keyHex` is secret
- * key material — it must only ever live inside the app-lock-KEK-wrapped
- * keyring file written by `GdkKeyringService`, never in the database, never
- * logged, never serialized into a Livewire snapshot or session array beyond
- * what `AppLockKeyWrap`'s wrap already covers.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final readonly class GdkEpoch
 {
+    // NEVER PERSIST THIS DTO OUTSIDE THE KEYRING'S OWN ENCRYPTED JSON FILE.
+    // `keyHex` is secret key material — it must only ever live inside the
+    // app-lock-KEK-wrapped keyring file GdkKeyringService writes: never in the
+    // database, never logged, never serialized into a Livewire snapshot or session array.
     public function __construct(
         public int $epochId,
         public string $keyHex,

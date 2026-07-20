@@ -7,17 +7,7 @@ namespace Modules\Sync\Internal\Crypto;
 use Modules\Core\Public\Services\UserDataPathService;
 
 /**
- * Delegates D-10 passphrase-change re-wraps to `GdkKeyringService::rewrapUnderNewKek()`.
- *
- * Guards the "clean no-op when no keyring exists" requirement itself
- * (rather than relying on `GdkKeyringService`): `rewrapUnderNewKek()`'s
- * `readKeyringFile()` silently returns an EMPTY keyring when no file exists
- * yet, and `writeKeyringFile()` would then happily encrypt+persist that
- * empty keyring under `$newKek` — fabricating a keyring file for a user who
- * never enabled encryption. Checking file existence first (mirroring
- * `GdkKeyringService`'s own private `keyringPath()` computation, safe to
- * duplicate here since both classes live in the same `Sync\Internal\Crypto`
- * namespace) keeps this a genuine no-op.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class GdkRewrapService implements GdkRewrapContract
 {

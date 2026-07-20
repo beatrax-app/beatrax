@@ -16,31 +16,14 @@ use RuntimeException;
 use SodiumException;
 
 /**
- * Generate/load/append/re-wrap the per-user GDK (Group Data Key) epoch
- * keyring (D-03/D-04) — mirrors `Modules\Sync\Internal\Identity\DeviceIdentityService`'s
- * encrypted-key-file idiom exactly: a single JSON blob (here, the list of
- * `{epoch_id, key_hex}` pairs) encrypted as a whole via `BackupEncryptor`
- * under the app-lock KEK released by `AppLockKeyService::release()`, staged
- * through the sanctioned 0700 `sync/gdk` directory (never `sys_get_temp_dir()`),
- * written atomically (stage plaintext at 0600 -> encrypt to a `.tmp` sibling
- * -> rename over the real path).
- *
- * D-02 weak-key-window guard (mirrors T-12-06): every keyring
- * read/write HARD-throws `\LogicException` when the KEK is null. The
- * keyring is never touched under anything weaker than the LOCK-04 key.
- *
- * D-04 append-only invariant (14-RESEARCH.md Pitfall 4): `appendEpoch()`
- * always re-persists EVERY prior epoch alongside the new one — the keyring
- * must never discard an epoch, because `OpLogRebuilder::rebuild()` can
- * replay op-log entries encrypted under any historical epoch at any time.
- *
- * T-14-01 invariant (mirrors `device_registry`'s STRIDE T-12-02 rule): NO
- * key material is ever written to `sync_encryption_state` — only the plain
- * integer `current_epoch` pointer. Secret key bytes live exclusively in the
- * encrypted keyring file on disk.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class GdkKeyringService
 {
+    // Every keyring read/write HARD-throws \LogicException when the KEK is
+    // null — the keyring is never touched under anything weaker than the
+    // app-lock key. NO key material is ever written to
+    // sync_encryption_state — only the plain integer current_epoch pointer.
     public function __construct(
         private readonly AppLockKeyService $appLockKeyService,
         private readonly BackupEncryptor $backupEncryptor,
@@ -48,11 +31,10 @@ final class GdkKeyringService
         private readonly Clock $clock,
     ) {}
 
+    // Generates GDK epoch 1, persists the encrypted keyring file, and sets
+    // sync_encryption_state.current_epoch = 1. Returns the in-memory epoch
+    // DTO (carries the raw key hex — never persist the DTO itself).
     /**
-     * Generate GDK epoch 1, persist the encrypted keyring file, and set
-     * `sync_encryption_state.current_epoch = 1`. Returns the in-memory
-     * epoch DTO (carries the raw key hex — never persist the DTO itself).
-     *
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws RuntimeException on a crypto / I-O failure.
      */
@@ -60,8 +42,6 @@ final class GdkKeyringService
     {
         $kek = $this->appLockKeyService->release($session);
         if ($kek === null) {
-            // T-14-05 / weak-key-window guard: never write the keyring
-            // without the LOCK-04 KEK.
             throw new \LogicException('Cannot generate GDK keyring: app-lock not unlocked.');
         }
 
@@ -84,22 +64,11 @@ final class GdkKeyringService
         }
     }
 
+    // Like generateAndPersist(), but STAGES the keyring file (encrypts to the
+    // .tmp sibling of the real path) WITHOUT renaming it into place, and
+    // returns a GdkKeyringStage the caller must pass to finalizeStagedEpoch()
+    // or discardStagedEpoch() once the surrounding SQL transaction resolves.
     /**
-     * D-10 atomicity fix: like {@see generateAndPersist()}, but STAGES the
-     * keyring file (encrypts to the `.tmp` sibling of the real path)
-     * WITHOUT renaming it into place, and returns a {@see GdkKeyringStage}
-     * the caller must pass to {@see finalizeStagedEpoch()} (success) or
-     * {@see discardStagedEpoch()} (rollback) once the surrounding SQL
-     * transaction has committed/rolled back.
-     *
-     * The `sync_encryption_state.current_epoch` write still happens here,
-     * via the same `DatabaseManager` connection the caller's ambient SQL
-     * transaction runs on — so it participates in that transaction's
-     * rollback exactly like before. Only the FILE finalize (the
-     * rename-into-place) is deferred: a mid-migration failure that rolls
-     * back `current_epoch` must never leave a finalized epoch-1 keyring
-     * file contradicting it on disk (T-14.1-05).
-     *
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws RuntimeException on a crypto / I-O failure.
      */
@@ -107,8 +76,6 @@ final class GdkKeyringService
     {
         $kek = $this->appLockKeyService->release($session);
         if ($kek === null) {
-            // T-14-05 / weak-key-window guard: never write the keyring
-            // without the LOCK-04 KEK.
             throw new \LogicException('Cannot generate GDK keyring: app-lock not unlocked.');
         }
 
@@ -131,12 +98,10 @@ final class GdkKeyringService
         }
     }
 
+    // Finalizes a previously-staged epoch — renames the .tmp encrypted
+    // keyring file into place. Call ONLY after the ambient SQL transaction
+    // that wrote current_epoch in stageFirstEpoch() has committed.
     /**
-     * D-10: finalize a previously-staged epoch — rename the `.tmp`
-     * encrypted keyring file into place. Call ONLY after the ambient SQL
-     * transaction that wrote `current_epoch` in {@see stageFirstEpoch()}
-     * has committed.
-     *
      * @throws RuntimeException if the rename fails.
      */
     public function finalizeStagedEpoch(GdkKeyringStage $stage): void
@@ -144,33 +109,23 @@ final class GdkKeyringService
         $encPath = $this->keyringPath($stage->userId);
 
         if (! @rename($stage->tmpEncPath, $encPath)) {
-            // CR-01: do NOT @unlink the staged file on rename failure. At this
-            // point `current_epoch` is already committed, and this staged
-            // `.tmp` is the ONLY copy of the epoch key. Deleting it would leave
-            // `current_epoch` set with no recoverable keyring — encryption
-            // silently and permanently disabled. Keep the staged file so a
-            // re-entry (see EncryptionMigrationService::migrate WR-01 reconcile)
-            // can retry the rename and recover.
+            // Do NOT @unlink the staged file on rename failure. At this point
+            // current_epoch is already committed and this .tmp is the ONLY
+            // copy of the epoch key — keep it so a re-entrant call can retry.
             throw new RuntimeException("Could not finalize the GDK keyring file for user {$stage->userId}.");
         }
     }
 
-    /**
-     * D-10: discard a previously-staged epoch — delete the un-finalized
-     * `.tmp` encrypted keyring file after the ambient SQL transaction
-     * rolled back. Best-effort cleanup (never throws): the SQL rollback is
-     * the actual correctness guarantee, this only tidies up the orphaned
-     * `.tmp` file.
-     */
+    // Deletes the un-finalized .tmp encrypted keyring file after the ambient
+    // SQL transaction rolled back. Best-effort cleanup (never throws): the
+    // SQL rollback is the actual correctness guarantee, this only tidies up
+    // the orphaned .tmp file.
     public function discardStagedEpoch(GdkKeyringStage $stage): void
     {
         @unlink($stage->tmpEncPath);
     }
 
     /**
-     * Decrypt and return the full keyring (all epochs). Empty keyring when
-     * no file exists yet for $userId.
-     *
      * @throws \LogicException when the app-lock KEK is unavailable.
      */
     public function loadKeyring(int $userId, Session $session): GdkKeyring
@@ -187,11 +142,9 @@ final class GdkKeyringService
         }
     }
 
+    // Appends $epoch to the keyring WITHOUT discarding any prior epoch,
+    // re-encrypts atomically, and advances current_epoch to $epoch->epochId.
     /**
-     * Append $epoch to the keyring WITHOUT discarding any prior epoch
-     * (D-04 append-only forever), re-encrypt atomically, and advance
-     * `sync_encryption_state.current_epoch` to $epoch->epochId.
-     *
      * @throws \LogicException when the app-lock KEK is unavailable.
      */
     public function appendEpoch(int $userId, GdkEpoch $epoch, Session $session): void
@@ -212,11 +165,9 @@ final class GdkKeyringService
         }
     }
 
+    // Resolves the epoch whose id equals current_epoch, paired with its raw
+    // key from the keyring — the single accessor the write hooks consume.
     /**
-     * Resolve the epoch whose id equals `sync_encryption_state.current_epoch`,
-     * paired with its raw key from the keyring — the single accessor the
-     * write hooks (Plans 03/04) consume.
-     *
      * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws RuntimeException when no current epoch is recorded, or the
      *                          keyring does not hold a key for it.
@@ -245,15 +196,11 @@ final class GdkKeyringService
         }
     }
 
+    // Re-encrypts the SAME keyring contents (every epoch, unchanged) under
+    // $newKek — raw wrap-key bytes the caller already holds directly,
+    // bypassing AppLockKeyService::release(). After this call the OLD key
+    // can no longer decrypt the file; only $newKek can.
     /**
-     * Re-encrypt the SAME keyring contents (every epoch, unchanged) under
-     * $newKek. $oldKek/$newKek are raw wrap-key bytes the caller already
-     * holds directly (Plan 07's `AppLockProvisioner` derives both from the
-     * old/new passphrase without going through `AppLockKeyService::release()`,
-     * which only ever exposes ONE currently-active key) — this method takes
-     * no `Session` for that reason. After this call the OLD key can no
-     * longer decrypt the file; only $newKek can.
-     *
      * @throws InvalidArgumentException when either key is empty.
      * @throws RuntimeException when $oldKek cannot decrypt the current file.
      */
@@ -320,11 +267,9 @@ final class GdkKeyringService
         $encPath = $this->keyringPath($userId);
         $tmpEncPath = $this->stageKeyringFile($userId, $keyring, $kek);
 
-        // Rename over the real path immediately — every OTHER caller of
-        // this method (generateAndPersist/appendEpoch/rewrapUnderNewKek)
-        // does not need the D-10 deferred-finalize seam: none of them run
-        // inside an ambient SQL transaction whose rollback could strand
-        // this file.
+        // Rename over the real path immediately — every OTHER caller of this
+        // method does not need the deferred-finalize seam: none of them run
+        // inside an ambient SQL transaction whose rollback could strand this file.
         if (! @rename($tmpEncPath, $encPath)) {
             @unlink($tmpEncPath);
 
@@ -332,13 +277,10 @@ final class GdkKeyringService
         }
     }
 
-    /**
-     * Encrypt $keyring to a `.tmp` sibling of the real keyring path WITHOUT
-     * renaming it into place — the shared staging primitive behind both
-     * {@see writeKeyringFile()} (immediate finalize) and
-     * {@see stageFirstEpoch()} (deferred finalize, D-10). Returns the
-     * `.tmp` path.
-     */
+    // Encrypts $keyring to a .tmp sibling of the real keyring path WITHOUT
+    // renaming it into place — the shared staging primitive behind both
+    // writeKeyringFile() (immediate finalize) and stageFirstEpoch() (deferred
+    // finalize). Returns the .tmp path.
     private function stageKeyringFile(int $userId, GdkKeyring $keyring, string $kek): string
     {
         $encPath = $this->keyringPath($userId);
@@ -353,16 +295,9 @@ final class GdkKeyringService
         $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_gdk_'.bin2hex(random_bytes(8)).'.tmp';
         SecureTempFile::write($tmpPlainPath, $payload);
 
-        // Encrypt to a randomized `.tmp` sibling; the caller decides when (or
-        // whether) to rename it over the real path.
-        //
-        // WR-08: the staged encrypted filename is randomized (mirroring the
-        // decrypt path in readKeyringFile()) rather than a fixed
-        // `{userId}.enc.tmp`. A fixed path let two concurrent stage/write
-        // operations — or a stale `.tmp` from a crashed run — collide, so one
-        // could silently overwrite the other or be mistaken for the current
-        // stage on finalize. The concrete path is returned and threaded through
-        // GdkKeyringStage, so each stage is isolated.
+        // Randomized rather than a fixed `{userId}.enc.tmp` — a fixed path let
+        // two concurrent stage/write operations, or a stale `.tmp` from a
+        // crashed run, collide and silently overwrite each other.
         $tmpEncPath = $encPath.'.'.bin2hex(random_bytes(8)).'.tmp';
 
         try {
@@ -374,11 +309,9 @@ final class GdkKeyringService
         return $tmpEncPath;
     }
 
-    /**
-     * Upsert `sync_encryption_state.current_epoch` — NEVER any key material
-     * (T-14-01). Sets `enabled_at` only the first time a row is created for
-     * this user (i.e. when encryption is first enabled).
-     */
+    // Upserts sync_encryption_state.current_epoch — NEVER any key material.
+    // Sets enabled_at only the first time a row is created for this user
+    // (i.e. when encryption is first enabled).
     private function setCurrentEpoch(int $userId, int $epochId): void
     {
         $connection = $this->db->connection();

@@ -18,46 +18,7 @@ use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Psr\Log\LoggerInterface;
 
 /**
- * Routes TransactionMutated events to the OpLogWriter.
- *
- * Wired in SyncServiceProvider::boot() via a class_exists()-guarded
- * events->listen() call (D-01 / Plan 02 provider pattern).
- *
- * ## Emit-after-commit contract (WR-06)
- *
- * OpLogWriter::writeEntry() opens its OWN DB transaction (op insert + HLC
- * clock-state upsert). Emit sites MUST dispatch TransactionMutated only AFTER
- * the originating write transaction has COMMITTED — never from inside an open
- * transaction. If a mutation event were dispatched mid-transaction, the
- * writer's transaction would degrade into a savepoint of the outer one: an
- * outer rollback would then discard the op insert while the in-memory HLC tick
- * had already advanced (recovered only on next boot from hlc_clock_state),
- * breaking the op's atomicity-vs-outer-rollback guarantee. The reclassify path
- * (TransactionDetail::reclassify) already closes its transaction before
- * dispatching; all current and future emit sites must follow the same shape.
- *
- * ## Never-throw contract (D-07)
- *
- * The entire handler body is wrapped in try/catch(\Throwable). A capture
- * failure is logged but NEVER propagated — a broken op-log write must
- * never abort or roll back the user's originating save action. The user's
- * data is always written first; the op-log is a secondary concern.
- *
- * ## Lazy OpLogWriter resolution
- *
- * OpLogWriter requires runtime device credentials (deviceId, userId, secretKey,
- * publicKey) that are only available after Phase 12 configures the device identity.
- * The writer is resolved from the container lazily inside handle(), so if the
- * container cannot resolve it (e.g. no device creds bound yet, or in test contexts
- * that don't set up Sync), the BindingResolutionException is caught by the
- * try/catch and the listener returns normally — the originating save is never aborted.
- *
- * ## Routing by mutationType
- *
- * - 'edit'   → one OpLogWriter::writeSet() per dirty field
- * - 'delete' → OpLogWriter::writeDelete()
- * - 'create' → OpLogWriter::writeCreateRow()
- * - unknown  → logged and ignored (future-proof against new mutation types)
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class SyncCaptureListener
 {
@@ -69,9 +30,10 @@ final class SyncCaptureListener
     public function handle(TransactionMutated $event): void
     {
         try {
-            // Lazy resolution — Phase 12 binds OpLogWriter with device creds.
-            // Until then (or in test contexts without Sync setup), this throws
-            // BindingResolutionException which the catch block swallows (D-07).
+            // Lazy resolution — OpLogWriter needs runtime device credentials
+            // that only exist once the device identity is configured. Until
+            // then (or in test contexts without Sync setup), this throws
+            // BindingResolutionException which the catch block swallows.
             $writer = $this->container->make(OpLogWriter::class);
 
             match ($event->mutationType) {
@@ -84,7 +46,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,
@@ -94,16 +55,10 @@ final class SyncCaptureListener
         }
     }
 
-    /**
-     * Routes TransactionSplitMutated events to the OpLogWriter with
-     * table: 'transaction_splits' (13.1-03 / Req 10).
-     *
-     * Mirrors handle() exactly: same never-throw try/catch wrapper (D-07),
-     * same lazy Container::make(OpLogWriter::class) resolution. The leg's
-     * STABLE splitId (transaction_splits.id) is the pk — SaveTransactionSplit's
-     * PK-preserving edit diff never regenerates it, so ops are keyed on a
-     * stable per-(table,pk,field) identity across edits.
-     */
+    // Routes TransactionSplitMutated events to the OpLogWriter with table:
+    // 'transaction_splits'. Mirrors handle() exactly. The leg's STABLE
+    // splitId (transaction_splits.id) is the pk — SaveTransactionSplit's
+    // PK-preserving edit diff never regenerates it.
     public function handleSplit(TransactionSplitMutated $event): void
     {
         try {
@@ -119,7 +74,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: split capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,
@@ -152,7 +106,7 @@ final class SyncCaptureListener
 
     private function handleCreate(TransactionMutated $event, OpLogWriter $writer): void
     {
-        // IN-02: write the CreateRow snapshot directly — the previous
+        // Writes the CreateRow snapshot directly — a previous
         // writeCreateFields() one-line indirection added no value.
         $writer->writeCreateRow(
             table: 'transactions',
@@ -190,15 +144,10 @@ final class SyncCaptureListener
         );
     }
 
-    /**
-     * Routes EnvelopeAssignmentMutated events to the OpLogWriter with
-     * table: 'envelope_assignments' (13.2-05 / Req 11).
-     *
-     * Mirrors handleSplit() exactly: same never-throw try/catch wrapper
-     * (D-07), same lazy Container::make(OpLogWriter::class) resolution.
-     * `assignmentId` is the stable envelope_assignments.id pk, set once via
-     * updateOrCreate() and never regenerated by an edit.
-     */
+    // Routes EnvelopeAssignmentMutated events to the OpLogWriter with table:
+    // 'envelope_assignments'. Mirrors handleSplit() exactly. `assignmentId`
+    // is the stable envelope_assignments.id pk, set once via updateOrCreate()
+    // and never regenerated by an edit.
     public function handleEnvelopeAssignment(EnvelopeAssignmentMutated $event): void
     {
         try {
@@ -214,7 +163,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: envelope assignment capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,
@@ -224,12 +172,9 @@ final class SyncCaptureListener
         }
     }
 
-    /**
-     * Routes EnvelopeMoveMutated events to the OpLogWriter with
-     * table: 'envelope_moves' (13.2-05 / Req 11). Moves are append-only —
-     * only 'create' and 'delete' mutation types are expected (undo hard-
-     * deletes both paired rows rather than editing them, D-07).
-     */
+    // Routes EnvelopeMoveMutated events to the OpLogWriter with table:
+    // 'envelope_moves'. Moves are append-only — only 'create' and 'delete'
+    // mutation types are expected (undo hard-deletes both paired rows).
     public function handleEnvelopeMove(EnvelopeMoveMutated $event): void
     {
         try {
@@ -245,7 +190,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: envelope move capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,
@@ -255,12 +199,9 @@ final class SyncCaptureListener
         }
     }
 
-    /**
-     * Routes EnvelopeSettingMutated events to the OpLogWriter with
-     * table: 'envelope_settings' (13.2-05 / Req 11). `settingId` is the
-     * stable envelope_settings.id pk, set once via updateOrCreate() and
-     * never regenerated by an edit.
-     */
+    // Routes EnvelopeSettingMutated events to the OpLogWriter with table:
+    // 'envelope_settings'. `settingId` is the stable envelope_settings.id
+    // pk, set once via updateOrCreate() and never regenerated by an edit.
     public function handleEnvelopeSetting(EnvelopeSettingMutated $event): void
     {
         try {
@@ -276,7 +217,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: envelope setting capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,
@@ -373,12 +313,9 @@ final class SyncCaptureListener
         );
     }
 
-    /**
-     * Routes SavedReportMutated events to the OpLogWriter with
-     * table: 'saved_reports' (999.6-01 / Req 9/10). `reportId` is the
-     * stable saved_reports.id pk, set once via create() and never
-     * regenerated by an edit.
-     */
+    // Routes SavedReportMutated events to the OpLogWriter with table:
+    // 'saved_reports'. `reportId` is the stable saved_reports.id pk, set
+    // once via create() and never regenerated by an edit.
     public function handleSavedReport(SavedReportMutated $event): void
     {
         try {
@@ -394,7 +331,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: saved report capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,
@@ -433,18 +369,10 @@ final class SyncCaptureListener
         );
     }
 
-    /**
-     * Routes NotificationMutated events to the OpLogWriter with
-     * table: 'notifications' (18-04 / Req 11/12). `$event->notificationId`
-     * is the D-05 deterministic sha256 STRING pk — flows straight through
-     * `OpLogWriter::writeSet(pk:)`/`writeCreateRow(pk:)` unchanged since
-     * `OpLogEntry::$pk` is already typed `int|string`.
-     *
-     * Only 'create' and 'edit' are routed — `notifications` has no delete
-     * mutation path in this phase. An unrecognized mutationType (including
-     * an accidental 'delete') hits the logged default arm rather than
-     * throwing, matching every other handler's future-proofing.
-     */
+    // Routes NotificationMutated events to the OpLogWriter with table:
+    // 'notifications'. `notificationId` is a deterministic sha256 STRING pk
+    // (OpLogEntry::$pk is already typed int|string). Only 'create' and
+    // 'edit' are routed — notifications has no delete mutation path here.
     public function handleNotificationMutated(NotificationMutated $event): void
     {
         try {
@@ -459,7 +387,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: notification capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,
@@ -481,21 +408,10 @@ final class SyncCaptureListener
         }
     }
 
-    /**
-     * Unlike every other registered table, `notifications.id` is NOT an
-     * autoincrement surrogate — it is the D-05 deterministic sha256 digest
-     * computed by domain code before insert. `OpLogReplayer`'s CreateRow
-     * assembly writes resolved fields straight into the INSERT payload but
-     * never adds the pk column itself (every other table relies on the DB's
-     * own autoincrement to fill it in), so `id` MUST be carried as an
-     * explicit field here or a fresh device's `insertOrIgnore` would
-     * silently drop the row on the `id` NOT NULL constraint. Mirrors the
-     * existing `user_id` field-carrying precedent documented in
-     * `OpLogReplayer`'s CREATE_ROW path (the "SEC finding" comment) —
-     * `id` is registered in `MergeRulesRegistry`'s `notifications
-     * ._create_required` for the same reason `user_id` is registered on
-     * `envelope_assignments`/`envelope_settings`.
-     */
+    // Unlike every other registered table, notifications.id is NOT an
+    // autoincrement surrogate — it is a deterministic sha256 digest, so it
+    // MUST be carried as an explicit field or a fresh device's
+    // insertOrIgnore would silently drop the row (see MergeRulesRegistry).
     private function handleNotificationCreate(NotificationMutated $event, OpLogWriter $writer): void
     {
         $writer->writeCreateRow(
@@ -505,14 +421,10 @@ final class SyncCaptureListener
         );
     }
 
-    /**
-     * Routes NotificationPreferenceMutated events to the OpLogWriter with
-     * table: 'notification_preferences' (18-04 / D-34). `preferenceId` is
-     * the LOCAL autoincrement `notification_preferences.id` surrogate —
-     * unlike `notifications`, this table is never independently generated
-     * on two devices from the same logical fact (D-05's convergence
-     * argument does not apply), so an int pk is correct here.
-     */
+    // Routes NotificationPreferenceMutated events to the OpLogWriter with
+    // table: 'notification_preferences'. `preferenceId` is a LOCAL
+    // autoincrement id surrogate — unlike notifications, this table is never
+    // independently generated on two devices from the same logical fact.
     public function handleNotificationPreferenceMutated(NotificationPreferenceMutated $event): void
     {
         try {
@@ -527,7 +439,6 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            // Swallow — a capture failure must NEVER break the originating save (D-07).
             $this->log->error('SyncCaptureListener: notification preference capture failed', [
                 'exception' => $e->getMessage(),
                 'mutationType' => $event->mutationType,

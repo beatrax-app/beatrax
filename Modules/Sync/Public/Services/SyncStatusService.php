@@ -8,17 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 
 /**
- * Read-only sync-status surface for the D-06 Livewire component.
- *
- * Provides per-peer session status rows from sync_sessions, user-scoped,
- * and derives an overall sync health summary string from those rows.
- *
- * All queries are scoped to the caller's user_id (T-13-16 — no cross-user
- * status leak). The Livewire component reads exclusively via this service
- * and never queries sync_sessions directly (cross-module boundary rule).
- *
- * Singleton registration: SyncServiceProvider already registers this class
- * with a singletonIfExists() guard — no provider edit needed.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final readonly class SyncStatusService
 {
@@ -27,13 +17,6 @@ final readonly class SyncStatusService
     ) {}
 
     /**
-     * Per-peer sync session rows for $userId, ordered by last_seen_at desc.
-     *
-     * Returns only the most recent session per peer (the latest status row).
-     * Rows are stdClass objects with fields:
-     *   id, user_id, local_device_id, peer_device_id, status, error_message,
-     *   last_seen_at, connected_at, created_at, updated_at.
-     *
      * @return array<int, \stdClass>
      */
     public function peerStatuses(int $userId): array
@@ -49,17 +32,10 @@ final readonly class SyncStatusService
         return $rows;
     }
 
+    // Priority order: 'error' if any row failed with a message; 'syncing' if
+    // any row is connecting/handshaking/active; 'offline'/'all_synced'
+    // depending on whether any row is currently active; 'unknown' if no rows.
     /**
-     * Derive an overall sync health string from $userId's session rows.
-     *
-     * The derivation rule (in priority order):
-     *   'error'      — any row has status='failed' with a non-empty error_message
-     *   'syncing'    — any row has status in ('connecting','handshaking','active')
-     *   'offline'    — rows exist but none are active/connecting/handshaking
-     *   'all_synced' — rows exist and none match error/syncing/offline conditions
-     *                  (every peer's last session is 'closed' or unknown but not failed)
-     *   'unknown'    — no rows (no peers have ever synced with this user)
-     *
      * @return 'all_synced'|'syncing'|'offline'|'error'|'unknown'
      */
     public function overallStatus(int $userId): string
@@ -93,7 +69,6 @@ final readonly class SyncStatusService
                 $hasActive = true;
             }
 
-            // IN-04: track this in the single pass instead of re-looping below.
             if ($status === 'closed' || ($status === 'failed' && $lastSeen !== '')) {
                 $hasClosedOrSynced = true;
             }
@@ -108,9 +83,8 @@ final readonly class SyncStatusService
         }
 
         if (! $hasActive) {
-            // All peers are closed/failed-without-message — last sync happened but peers are now offline.
-            // A status='closed' row (or failed-with-last-seen) means sync completed
-            // but the peer is now disconnected. Computed in the single pass above (IN-04).
+            // A status='closed' row (or failed-with-last-seen) means sync
+            // completed but the peer is now disconnected.
             if ($hasClosedOrSynced) {
                 return 'all_synced';
             }
@@ -121,15 +95,10 @@ final readonly class SyncStatusService
         return 'all_synced';
     }
 
+    // Returns null when no sessions exist or no last_seen_at has been
+    // recorded. The caller passes the Clock-derived $now to avoid any use
+    // of the global now() helper.
     /**
-     * Human-readable relative time for the most-recent last_seen_at across all
-     * of the user's peer sessions. Returns null when no sessions exist or no
-     * last_seen_at has been recorded.
-     *
-     * The caller (Livewire component) uses this to render "synced Nm ago".
-     * The component passes the Clock-derived $now to this method to avoid any
-     * use of the global now() helper (larastanStrictRules.noGlobalLaravelFunction).
-     *
      * @param  CarbonImmutable  $now  The reference point for the relative diff.
      */
     public function lastSyncedHuman(CarbonImmutable $now, int $userId): ?string
@@ -160,8 +129,6 @@ final readonly class SyncStatusService
         }
 
         $diffSeconds = (int) $now->diffInSeconds($past, false);
-
-        // diffInSeconds returns negative when $past is in the past relative to $now.
         $absDiff = abs($diffSeconds);
 
         if ($absDiff < 60) {

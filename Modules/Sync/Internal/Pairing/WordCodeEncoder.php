@@ -7,25 +7,14 @@ namespace Modules\Sync\Internal\Pairing;
 use InvalidArgumentException;
 
 /**
- * First-class typed fallback to the QR (D-05): encodes the pairing token as a
- * human-typeable base-32 word-code, chunked XXXX-XXXX-XXXX-XXXX.
- *
- * Used whenever scanning is not possible (desktop↔desktop, no camera, camera
- * denied). The encoding is RFC 4648 base-32 (alphabet A-Z, 2-7) — it omits the
- * ambiguous 0/O/1/I glyphs so the code reads and types cleanly across two
- * screens. encode()/decode() are an exact inverse pair so the code a user types
- * on the responder round-trips to the same lookup key the initiator displayed.
- *
- * Pure, stateless utility — no DI, no I/O.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class WordCodeEncoder
 {
     private const string ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-    /**
-     * Encode a hex-encoded token as an uppercase base-32 word-code chunked in
-     * 4-character groups joined by '-'.
-     */
+    // RFC 4648 base-32 (alphabet A-Z, 2-7) — omits the ambiguous 0/O/1/I
+    // glyphs so the code reads and types cleanly across two screens.
     public function encode(string $tokenHex): string
     {
         $bytes = $this->hexToBytes($tokenHex);
@@ -36,18 +25,15 @@ final class WordCodeEncoder
         return implode('-', $chunks);
     }
 
-    /**
-     * Reverse a word-code back to the token hex it was encoded from. Dashes and
-     * surrounding whitespace are stripped and the input is upper-cased so a
-     * user-typed code (lowercase, spaced) still round-trips.
-     */
+    // Dashes and surrounding whitespace are stripped and the input is
+    // upper-cased so a user-typed code (lowercase, spaced) still round-trips.
     public function decode(string $wordCode): string
     {
         $normalized = strtoupper(str_replace(['-', ' '], '', trim($wordCode)));
         $bytes = $this->base32Decode($normalized);
 
-        // IN-02: the token is exactly 16 bytes (128-bit). Reject an over-/under-
-        // long paste with a clear "invalid code" error rather than letting a
+        // The token is exactly 16 bytes (128-bit). Reject an over-/under-long
+        // paste with a clear "invalid code" error rather than letting a
         // wrong-length hex silently miss the DB lookup.
         if (strlen($bytes) !== 16) {
             throw new InvalidArgumentException('WordCodeEncoder: decoded token is not 16 bytes.');
@@ -66,9 +52,6 @@ final class WordCodeEncoder
         return $bytes;
     }
 
-    /**
-     * RFC 4648 base-32 encode (no padding) — exact inverse of base32Decode().
-     */
     private function base32Encode(string $bytes): string
     {
         $output = '';
@@ -95,9 +78,6 @@ final class WordCodeEncoder
         return $output;
     }
 
-    /**
-     * RFC 4648 base-32 decode (no padding) — exact inverse of base32Encode().
-     */
     private function base32Decode(string $code): string
     {
         $output = '';

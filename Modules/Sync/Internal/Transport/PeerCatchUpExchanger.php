@@ -11,53 +11,12 @@ use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 
 /**
- * HLC-watermark catch-up protocol between two syncing peers.
- *
- * ## Protocol (RESEARCH Pattern 6)
- *
- *   Initiator → Responder: CATCH_UP_REQUEST { hlc_l, hlc_c, device_id, user_id }
- *   Responder → Initiator: CATCH_UP_RESPONSE { ops: [...] where (hlc_l,hlc_c) > watermark }
- *   Initiator → Responder: CATCH_UP_REQUEST (symmetric — responder sends its own watermark)
- *   Responder → Initiator: CATCH_UP_RESPONSE (symmetric)
- *   Both sides: CATCH_UP_COMPLETE
- *   Both sides: switch to LIVE_STREAM mode
- *
- * ## HLC watermark
- *
- *   The local HLC watermark is read from hlc_clock_state for the given (user_id, device_id)
- *   pair. This tells the peer "I have seen all ops up through (hlc_l, hlc_c); send me anything
- *   newer."
- *
- * ## Op fetch query
- *
- *   Fetches op_log_entries WHERE user_id = $userId AND
- *     (hlc_l > peerHlcL) OR (hlc_l = peerHlcL AND hlc_c > peerHlcC),
- *   ordered by (hlc_l, hlc_c, device_id) for deterministic delivery.
- *
- * ## Batching
- *
- *   Ops are batched into TransportFramer frames of ≤ 64KB / ≤ 1024 ops each
- *   (RESEARCH Pattern 6). Large syncs (first onboarding of a new device) span many frames.
- *
- * ## Security
- *
- *   - All queries are user_id-scoped (T-13-11, I2 guard): catch-up for user A never
- *     returns ops belonging to user B.
- *   - Op signature re-verification is the caller's (SyncSession's) responsibility AFTER
- *     receiving frames. This class only reads from op_log_entries; it does not verify sigs.
- *
- * @internal Plan 04 — used by SyncWebSocketHandler.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final readonly class PeerCatchUpExchanger
 {
-    /**
-     * Maximum number of ops per catch-up frame (matches TransportFramer::MAX_OPS_PER_FRAME).
-     */
     private const int BATCH_OPS = 1024;
 
-    /**
-     * Catch-up message types (wire framing within the Noise session).
-     */
     public const string MSG_CATCH_UP_REQUEST = 'CATCH_UP_REQUEST';
 
     public const string MSG_CATCH_UP_RESPONSE = 'CATCH_UP_RESPONSE';
@@ -69,12 +28,9 @@ final readonly class PeerCatchUpExchanger
         private TransportFramer $framer,
     ) {}
 
+    // If no hlc_clock_state row exists (first sync), watermark is (0, 0)
+    // meaning "send me everything".
     /**
-     * Build a CATCH_UP_REQUEST payload from the local HLC watermark.
-     *
-     * Reads hlc_clock_state for (user_id, device_id) to find the local high-water mark.
-     * If no state exists (first sync), watermark is (0, 0) meaning "send me everything".
-     *
      * @return array{type: string, hlc_l: int, hlc_c: int, device_id: string, user_id: int}
      */
     public function buildRequest(int $userId, string $deviceId): array
@@ -102,20 +58,13 @@ final readonly class PeerCatchUpExchanger
     }
 
     /**
-     * Fetch all op_log_entries for $userId with (hlc_l, hlc_c) > ($peerHlcL, $peerHlcC).
-     *
-     * Returns ops as batches of TransportFramer frames (≤ 64KB / ≤ 1024 ops per frame).
-     * Each frame is a binary string ready for NoiseSession::encrypt().
-     *
-     * @param  int  $userId  Scope guard — only ops for this user are returned (T-13-11).
+     * @param  int  $userId  Scope guard — only ops for this user are returned.
      * @param  int  $peerHlcL  Peer's last known hlc_l (logical time).
      * @param  int  $peerHlcC  Peer's last known hlc_c (counter).
      * @return list<string> List of TransportFramer-encoded binary frames (may be empty if no gap).
      */
     public function opsAfterWatermark(int $userId, int $peerHlcL, int $peerHlcC): array
     {
-        // Lexicographic HLC comparison: (hlc_l, hlc_c) > ($peerHlcL, $peerHlcC).
-        // Pattern from 13-PATTERNS.md "PeerCatchUpExchanger.php" / OpLogWriter analog.
         $rows = $this->db->connection()
             ->table('op_log_entries')
             ->where('user_id', $userId)
@@ -135,7 +84,6 @@ final readonly class PeerCatchUpExchanger
             return [];
         }
 
-        // Deserialize rows to OpLogEntry objects.
         $entries = [];
         foreach ($rows as $row) {
             $opTypeRaw = is_string($row->op_type) ? $row->op_type : '';
@@ -156,10 +104,10 @@ final readonly class PeerCatchUpExchanger
                 opType: $opType,
                 signature: is_string($row->signature) ? $row->signature : '',
                 userId: is_numeric($row->user_id) ? (int) $row->user_id : 0,
-                // Phase 14 (CRYPT-01): the GDK epoch tag MUST travel with the
-                // ciphertext over the wire — the op-log value column doubles as
-                // the transport-encrypted payload (D-02); dropping this here
-                // would leave the receiving peer unable to decrypt it.
+                // The GDK epoch tag MUST travel with the ciphertext over the
+                // wire — the op-log value column doubles as the
+                // transport-encrypted payload; dropping this here would
+                // leave the receiving peer unable to decrypt it.
                 gdkEpoch: property_exists($row, 'gdk_epoch') && is_numeric($row->gdk_epoch) ? (int) $row->gdk_epoch : null,
             );
         }
@@ -168,15 +116,14 @@ final readonly class PeerCatchUpExchanger
             return [];
         }
 
-        // Batch into TransportFramer frames (≤ BATCH_OPS ops per frame; 64KB byte cap enforced
-        // by the framer). We accumulate entries per frame and start a new frame whenever the
-        // next entry would push the batch over BATCH_OPS ops or over 64KB serialized bytes.
-        // Both limits are required; real-world entries with long signatures/values can hit the
-        // byte cap well before 1024 ops (RESEARCH Pattern 6 — "≤ 1024 ops or ≤ 64KB per frame").
+        // Accumulate entries per frame, starting a new frame whenever the
+        // next entry would push the batch over BATCH_OPS ops or over 64KB
+        // serialized bytes. Both limits matter: entries with long
+        // signatures/values can hit the byte cap well before 1024 ops.
         $maxBytes = 65536;
         $frames = [];
         $batch = [];
-        $batchBytes = 2; // JSON array overhead: opening + closing bracket
+        $batchBytes = 2;
 
         foreach ($entries as $entry) {
             $entrySerialized = json_encode([
@@ -193,7 +140,6 @@ final readonly class PeerCatchUpExchanger
                 'gdk_epoch' => $entry->gdkEpoch,
             ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
-            // +1 for comma separator between array elements.
             $entryBytes = strlen($entrySerialized) + 1;
 
             $wouldExceedOps = count($batch) >= self::BATCH_OPS;
@@ -209,20 +155,14 @@ final readonly class PeerCatchUpExchanger
             $batchBytes += $entryBytes;
         }
 
-        // After the loop, $batch is guaranteed non-empty because $entries is non-empty
-        // (guard at the top of this method) and every entry is appended to $batch after
-        // any flush. The check $batch !== [] would always be true here — flush unconditionally.
+        // $batch is guaranteed non-empty here since $entries is non-empty
+        // and every entry is appended after any flush — flush unconditionally.
         $frames[] = $this->framer->encode($batch);
 
         return $frames;
     }
 
     /**
-     * Build a CATCH_UP_RESPONSE control message wrapping a list of frames.
-     *
-     * In the wire protocol, a CATCH_UP_RESPONSE carries the frames as-is; this helper
-     * builds the JSON control envelope that tells the peer how many frames to expect.
-     *
      * @param  list<string>  $frames  Encoded frames from opsAfterWatermark().
      * @return array{type: string, frame_count: int}
      */
@@ -235,8 +175,6 @@ final readonly class PeerCatchUpExchanger
     }
 
     /**
-     * Build a CATCH_UP_COMPLETE control message.
-     *
      * @return array{type: string}
      */
     public function buildComplete(): array
@@ -245,8 +183,6 @@ final readonly class PeerCatchUpExchanger
     }
 
     /**
-     * Parse a received JSON control message.
-     *
      * @param  string  $json  Received control message (plaintext, not a TransportFramer frame).
      * @return array<string, mixed>
      *

@@ -13,17 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Minimal read-only sync-health panel (D-07).
- *
- * Shows quarantined-op count (last 7 days) + recent-skip table.
- * Accessible from the Dev Console at /dev/sync-health.
- *
- * No constructor — Livewire components never receive constructor DI
- * per the project's larastan-strict-rules profile; collaborators
- * arrive as method-DI on render().
- *
- * ALWAYS filter op_log_quarantine by user_id (Pitfall 4 — no
- * BelongsToUser global scope on this table in queue/console context).
+ * @link ../../../../../.docs/features/sync/architecture.md
  */
 #[Layout('dev::layouts.dev-shell')]
 final class SyncHealthPage extends Component
@@ -36,16 +26,10 @@ final class SyncHealthPage extends Component
     ): View {
         $userId = $currentUser->user()->id;
 
-        // Pitfall 4: every query filters by user_id — no global scope here.
-        //
-        // WR-05 invariant: the 7-day window compares lexicographically-sortable
-        // `Y-m-d H:i:s` strings. This holds because EVERY writer of
-        // op_log_quarantine.created_at uses `Clock::now()->toDateTimeString()`
-        // (Y-m-d H:i:s) and the column default is SQLite CURRENT_TIMESTAMP (same
-        // format). Any future writer that inserts a differently-formatted
-        // timestamp (e.g. ISO-8601 with a `T` separator or a timezone offset)
-        // would silently fall out of this window — so all writers MUST keep
-        // emitting `Y-m-d H:i:s`.
+        // The 7-day window compares lexicographically-sortable `Y-m-d H:i:s`
+        // strings. This holds because every writer of
+        // op_log_quarantine.created_at uses Clock::now()->toDateTimeString()
+        // and the column default is SQLite CURRENT_TIMESTAMP (same format).
         $sevenDaysAgo = $clock->now()->subDays(7)->toDateTimeString();
 
         $recentCount = $db->connection()
@@ -54,9 +38,8 @@ final class SyncHealthPage extends Component
             ->where('created_at', '>=', $sevenDaysAgo)
             ->count();
 
-        // WR-03: apply the SAME 7-day window to the table as the header count,
-        // so the header total, the rendered rows, and the "last 7 days"
-        // empty-state copy can never disagree (e.g. header 0 vs 50 year-old rows).
+        // Applies the SAME 7-day window as the header count, so the header
+        // total, the rendered rows, and the empty-state copy never disagree.
         $recentSkips = $db->connection()
             ->table('op_log_quarantine')
             ->where('user_id', $userId)

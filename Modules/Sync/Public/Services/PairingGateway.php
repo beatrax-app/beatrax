@@ -20,34 +20,12 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use stdClass;
 
 /**
- * Narrow Public seam letting a non-Sync module's OWN pairing-entry surface
- * drive the SAME `PairingTokenService::accept()`/`confirm()` trust boundary
- * `Modules\Sync\Internal\Http\Livewire\PairingFlowModal` already uses —
- * without reaching into `Modules\Sync\Internal\*` directly (CLAUDE.md
- * modular-architecture constraint; enforced by `App\PhpStan\Rules\
- * BoundaryRule`, which — unlike the native-facade `phpstan.neon` carve-outs
- * — has NO per-file ignore mechanism at all).
- *
- * Added for Phase 15 Plan 07 (MOBILE-01, D-01/D-02):
- * `Modules\Mobile\Internal\Pairing\QrScanBridge` and
- * `Modules\Mobile\Internal\Http\Livewire\MobilePairingScan` need the exact
- * decode-then-accept-then-derive-safety-words shape
- * `PairingFlowModal::submitCode()` implements, plus its `confirmMatch()`
- * both-confirm gate (15-PATTERNS.md §QrScanBridge/§MobilePairingScan —
- * "extend, don't rebuild"). This gateway is that one seam. Every method is
- * a thin pass-through or re-composition of the existing Internal
- * collaborators (`PairingTokenService`, `WordCodeEncoder`,
- * `DeviceIdentityLoader`, `SafetyNumberDeriver`). NO new trust decision is
- * introduced anywhere in this class: `PairingTokenService::accept()`/
- * `confirm()` remain the SOLE points where a device is admitted to
- * `device_registry` (D-07 both-confirm gate; T-15-17/T-15-18/T-15-19).
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class PairingGateway
 {
-    /** Mirrors PairingStateMachine::AWAITING_CONFIRM (same-module re-export). */
     public const string STATE_AWAITING_CONFIRM = PairingStateMachine::AWAITING_CONFIRM;
 
-    /** Mirrors PairingStateMachine::CONFIRMED (same-module re-export). */
     public const string STATE_CONFIRMED = PairingStateMachine::CONFIRMED;
 
     public function __construct(
@@ -62,40 +40,20 @@ final class PairingGateway
         private readonly PairingRelayCourier $relayCourier,
     ) {}
 
-    /**
-     * Auto-configure this device's relay endpoint (+ optional bearer token)
-     * from a scanned QR's `relay`/`rtok` params (Phase 15 HIGH-01, Task 1) —
-     * the Mobile-module seam wrapping `RelayConfig::setEndpointUrl()`/
-     * `setAuthToken()` directly, since `Modules\Sync\Internal\*` is off-limits
-     * to `Modules\Mobile` (BoundaryRule). A fresh phone has no relay
-     * configured; without this, the cross-device pre-confirm handshake
-     * (`PairingRelayCourier`) has no transport to reach the desktop over.
-     *
-     * No-op when $endpoint is null (the QR carried no `relay` param — e.g. an
-     * older QR, or a desktop with no relay configured) — the caller falls
-     * through to the existing "connect over the same Wi-Fi" copy rather than
-     * a dead end. HTTPS enforcement stays in `RelayClient::deliver()`/
-     * `drain()` (`resolvedEndpoint()` throws on `http://`); this method only
-     * persists the raw values, exactly like the desktop's own
-     * `RelayConfig::setEndpointUrl()` call site.
-     *
-     * No new trust decision: the relay is zero-knowledge transport — the
-     * human-verified safety words remain the sole trust anchor (OQ-1,
-     * reviewed).
-     */
+    // Auto-configure this device's relay endpoint (+ optional bearer token)
+    // from a scanned QR's relay/rtok params — a fresh phone has no relay
+    // configured otherwise. No-op when $endpoint is null. No new trust
+    // decision: the human-verified safety words remain the sole trust anchor.
     public function configureRelayFromQr(?string $endpoint, ?string $authToken): void
     {
         if ($endpoint === null || $endpoint === '') {
             return;
         }
 
-        // MED-01 (15-crossdevice-pairing-REVIEW.md): $endpoint arrives from an
-        // untrusted scanned QR. Never persist an insecure endpoint (RelayClient
-        // later refuses http://, which would durably brick ALL relay-backed
-        // sync), and only bootstrap a FRESH device — never clobber an existing
-        // working relay (a crafted/wrong QR must not redirect the device's
-        // relay). Only overwrite the token when the QR actually carries one, so
-        // a token-less relay endpoint cannot wipe an existing auth token.
+        // $endpoint arrives from an untrusted scanned QR. Never persist an
+        // insecure endpoint, and only bootstrap a FRESH device — never
+        // clobber an existing working relay. Only overwrite the token when
+        // the QR actually carries one.
         if (! str_starts_with($endpoint, 'https://')) {
             return;
         }
@@ -111,23 +69,14 @@ final class PairingGateway
         }
     }
 
+    // Deliver this device's PAIR_RESPONDER_ACCEPT frame (phone -> desktop)
+    // over the relay. Loads this device's own identity first — the
+    // responder's OWN keys always come from the LOCAL identity, never wire
+    // content. No-op (silent) when the local identity is locked/unavailable.
     /**
-     * Deliver this device's `PAIR_RESPONDER_ACCEPT` frame (phone → desktop)
-     * over the relay — thin pass-through to
-     * `PairingRelayCourier::sendResponderAccept()`, loading this device's own
-     * identity first (the responder's OWN keys always come from the LOCAL
-     * `DeviceIdentityLoader`, never from any wire content, T-15-18).
-     *
-     * No-op (silent) when the local identity is locked/unavailable — mirrors
-     * every other identity-gated method on this gateway; the caller's own
-     * "unlock and retry" affordance handles that case, not an exception here.
-     *
      * @throws \RuntimeException when the relay is unconfigured or the
-     *                           delivery request fails — the CALLER is
-     *                           responsible for catching this and surfacing a
-     *                           non-blocking retry indicator (mirrors
-     *                           `PairingFlowModal::fanOutToNewlyConfirmedDevice()`'s
-     *                           established try/catch shape).
+     *                           delivery request fails — the caller must
+     *                           catch and surface a non-blocking retry.
      */
     public function sendResponderAccept(int $userId, string $tokenHash, string $desktopDeviceId, Session $session): void
     {
@@ -145,17 +94,12 @@ final class PairingGateway
         );
     }
 
+    // Deliver this device's Ed25519-signed PAIR_CONFIRM frame to
+    // $peerDeviceId over the relay. Reads the token's token_hash from the
+    // local row so the caller never reconstructs trust state itself. No-op
+    // when the local identity is locked, or $tokenId resolves to no row.
     /**
-     * Deliver this device's Ed25519-SIGNED `PAIR_CONFIRM` frame to $peerDeviceId
-     * over the relay — thin pass-through to
-     * `PairingRelayCourier::sendConfirm()`. Reads the token's `token_hash`
-     * from the local row so the caller never reconstructs trust state itself.
-     *
-     * No-op (silent) when the local identity is locked/unavailable, or when
-     * $tokenId does not resolve to a local row for $userId.
-     *
-     * @throws \RuntimeException — see {@see self::sendResponderAccept()}'s
-     *                           identical propagation contract.
+     * @throws \RuntimeException see {@see self::sendResponderAccept()}.
      */
     public function sendConfirm(int $userId, int $tokenId, string $peerDeviceId, Session $session): void
     {
@@ -176,73 +120,32 @@ final class PairingGateway
         $this->relayCourier->sendConfirm($identity, $peerDeviceId, $tokenHash);
     }
 
-    /**
-     * Drain this device's own relay mailbox and apply every pending pairing
-     * frame — thin pass-through to `PairingRelayCourier::drainAndApply()`.
-     * Callers invoke this at the TOP of their poll handler, before re-reading
-     * local pairing state, so an inbound `PAIR_RESPONDER_ACCEPT`/`PAIR_CONFIRM`
-     * is applied before the same tick decides what to render.
-     *
-     * Never throws out of the poll (LOW-02 posture) — every failure inside
-     * the courier's drain loop is caught, logged, and skipped.
-     */
+    // Drain this device's own relay mailbox and apply every pending pairing
+    // frame. Callers invoke this at the TOP of their poll handler, before
+    // re-reading local pairing state. Never throws out of the poll — every
+    // failure inside the courier's drain loop is caught, logged, and skipped.
     public function drainPairingFrames(int $userId, Session $session): void
     {
         $this->relayCourier->drainAndApply($userId);
     }
 
+    // Identity only — the import path defers epoch acquisition entirely to
+    // the desktop's delivered epochs; self-minting here would permanently
+    // strand desktop epoch-1 entries (see architecture doc). MUST NOT be
+    // extended to touch the GDK keyring or EncryptionMigrationService.
     /**
-     * Enable this device's sync identity WITHOUT minting a GDK epoch —
-     * identity only. Thin wrapper over
-     * `DeviceIdentityService::generateAndPersist()`, added for the mobile
-     * "Import from another device" fresh-device bootstrap (Phase 15
-     * import-join, B2). The import path defers epoch acquisition entirely
-     * to the desktop's delivered epochs (`GdkEpochControlHandler::handle()`
-     * over the authenticated LAN session) — calling
-     * `Modules\Core\Public\Services\EncryptionMigrationService::migrate()`
-     * here (or anywhere on the import path before pairing confirms) would
-     * self-mint a colliding local epoch 1 and permanently strand every
-     * desktop epoch-1 entry in `gdk_decrypt_failed` quarantine
-     * (`GdkEpochControlHandler`'s idempotency guard silently drops an
-     * already-present epoch id). This method MUST NOT be extended to touch
-     * the GDK keyring or `EncryptionMigrationService` — identity only.
-     *
-     * @throws \LogicException when the app-lock KEK is unavailable (D-02
-     *                         weak-key-window guard — propagated from
-     *                         `DeviceIdentityService::generateAndPersist()`).
+     * @throws \LogicException when the app-lock KEK is unavailable.
      */
     public function enableSyncIdentityWithoutEpoch(int $userId, Session $session): void
     {
         $this->identityService->generateAndPersist($userId, $session);
     }
 
+    // Fan out every epoch in $userId's GDK keyring to $newDeviceRegistryId's
+    // confirmed device over the relay. Callers MUST reach this only from
+    // the CONFIRMED both-confirm transition — see architecture doc for the
+    // full trust-gate ordering and channel-authentication precondition.
     /**
-     * Fan out EVERY epoch in $userId's GDK keyring, sealed to
-     * $newDeviceRegistryId's confirmed X25519 public key, over the ZK-pure
-     * RelayMailbox — the ADD-device analog of the existing device-removal
-     * fan-out (`GdkRotationService::rotateAndRevoke()`). Thin wrapper over
-     * `GdkRotationService::fanOutAllEpochsToDevice()` — no new trust
-     * decision here.
-     *
-     * ## WR-07 authenticated-channel precondition (threat-model item 3)
-     *
-     * Reuses the SAME `sodium_crypto_box_seal` delivery primitive
-     * `buildGdkEpochWrap()` already uses: confidential but unauthenticated
-     * on its own. Safe here ONLY because the recipient must already be a
-     * CONFIRMED `device_registry` row (re-checked inside
-     * `fanOutAllEpochsToDevice()`) — confirmation is gated behind the
-     * both-screen safety-number ceremony (D-07), an out-of-band-verified
-     * trust anchor independent of this wrap's own confidentiality property.
-     *
-     * ## Trust-gate ordering (critical, threat-model item 1)
-     *
-     * Callers MUST reach this method ONLY from the `state === CONFIRMED`
-     * branch returned by `confirm()`'s underlying
-     * `PairingTokenService::confirm()` both-confirm transition — never
-     * speculatively, never on a pending/awaiting/expired/rejected token.
-     * `fanOutAllEpochsToDevice()` independently re-verifies `confirmed_at`
-     * on the recipient row (defense-in-depth) and refuses otherwise.
-     *
      * @throws \LogicException when the app-lock KEK is unavailable.
      */
     public function deliverAllEpochsToDevice(int $userId, int $newDeviceRegistryId, Session $session): void
@@ -250,21 +153,10 @@ final class PairingGateway
         $this->rotationService->fanOutAllEpochsToDevice($userId, $newDeviceRegistryId, $session);
     }
 
-    /**
-     * Seed a LOCAL pending `pairing_tokens` row from a scanned QR's
-     * initiator identity (Phase 15 import-join, G1) — closes the gap where
-     * `acceptToken()`'s underlying `PairingTokenService::accept()` would
-     * otherwise find no local row on a genuinely fresh, separate device
-     * database. Thin wrapper over `PairingTokenService::seedFromInitiator()`
-     * — no new trust decision here; the seeded row still requires the full
-     * `acceptToken()` + both-confirm ceremony before any admission occurs.
-     *
-     * Callers should invoke this BEFORE `acceptToken($tokenHex, ...)` in
-     * import mode; a failed/no-op seed (malformed initiator key material)
-     * simply means the subsequent `acceptToken()` call finds no pending row
-     * and returns the SAME generic invalid/expired outcome any other bad
-     * code produces.
-     */
+    // Seed a LOCAL pending pairing_tokens row from a scanned QR's initiator
+    // identity — closes the gap where acceptToken() finds no local row on a
+    // fresh device database. No new trust decision: the seeded row still
+    // requires the full acceptToken() + both-confirm ceremony.
     public function seedResponderToken(
         string $tokenHex,
         string $initiatorDeviceId,
@@ -275,18 +167,11 @@ final class PairingGateway
         $this->tokenService->seedFromInitiator($userId, $initiatorDeviceId, $initiatorEd25519Hex, $initiatorX25519Hex, $tokenHex);
     }
 
+    // Accept a pairing token already in raw hex form — the QR path. The QR
+    // carries the token directly (no base32 round-trip); the word-code path
+    // base32-encodes the same raw hex purely so a human can type it.
     /**
-     * Accept a pairing token already in raw hex form — the QR path. The QR's
-     * `token` query parameter (`Modules\Sync\Internal\Pairing\
-     * QrPayloadBuilder::buildUri()`) IS the same raw hex
-     * `WordCodeEncoder::decode()` returns for a typed word-code; no base32
-     * round-trip applies here — the QR carries the token directly, whereas
-     * the word-code base32-encodes it purely so a human can type it.
-     *
-     * Mirrors `PairingFlowModal::submitCode()`'s accept-then-derive-safety-
-     * words shape exactly.
-     *
-     * @return array{pairingTokenId: string, safetyWords: list<string>}|null null on invalid/expired token or a locked/unavailable local identity.
+     * @return array{pairingTokenId: string, safetyWords: list<string>}|null
      */
     public function acceptToken(string $tokenHex, int $userId, Session $session): ?array
     {
@@ -315,13 +200,11 @@ final class PairingGateway
         ];
     }
 
+    // Accept a typed word-code (base32) — decodes then delegates to the
+    // same acceptToken() trust boundary above. Used by the mobile
+    // enter_code fallback step.
     /**
-     * Accept a typed word-code (base32) — decodes via `WordCodeEncoder`
-     * first, IDENTICAL to `PairingFlowModal::submitCode()`'s word-code path,
-     * then delegates to the SAME `acceptToken()` trust boundary above. Used
-     * by the mobile `enter_code` fallback step (D-02).
-     *
-     * @return array{pairingTokenId: string, safetyWords: list<string>}|null null on invalid/expired code.
+     * @return array{pairingTokenId: string, safetyWords: list<string>}|null
      */
     public function acceptWordCode(string $wordCode, int $userId, Session $session): ?array
     {
@@ -334,45 +217,29 @@ final class PairingGateway
         return $this->acceptToken($tokenHex, $userId, $session);
     }
 
-    /**
-     * Record this side's safety-number confirmation (D-07 trust gate) — thin
-     * pass-through to `PairingTokenService::confirm()`, the SOLE gate
-     * admitting a device to `device_registry`. Returns the resulting
-     * pairing state (see `STATE_*` constants), or null when the caller owns
-     * neither side of the token.
-     */
+    // Record this side's safety-number confirmation — pass-through to the
+    // sole gate admitting a device to device_registry. Null when the
+    // caller owns neither side of the token.
     public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): ?string
     {
         return $this->tokenService->confirm($tokenId, $userId, $confirmingDeviceId);
     }
 
-    /**
-     * Cancel/expire an in-flight token (mirrors
-     * `PairingFlowModal::cancelPairing()`'s expire call).
-     */
     public function expire(int $tokenId, int $userId): void
     {
         $this->tokenService->expire($tokenId, $userId);
     }
 
-    /**
-     * Load THIS device's own identity (device id only) — callers need the
-     * confirming device's real id to call `confirm()` (CR-01: the confirming
-     * side is derived from the caller's own device identity, never a
-     * client-supplied value). Returns null when locked / sync never enabled
-     * for this user.
-     */
+    // Load THIS device's own identity (device id only) — the confirming
+    // side must be derived from the caller's own identity, never a
+    // client-supplied value. Null when locked / sync never enabled.
     public function currentDeviceId(int $userId, Session $session): ?string
     {
         return $this->identityLoader->load($userId, $session)?->deviceId;
     }
 
-    /**
-     * Read the current state of a pairing token (user-scoped) — lets a
-     * poll-driven step machine detect a peer-side confirm without
-     * re-deriving any trust logic locally. Mirrors
-     * `PairingFlowModal::checkPairingState()`'s read shape.
-     */
+    // Read the current state of a pairing token — lets a poll-driven step
+    // machine detect a peer-side confirm without re-deriving trust logic.
     public function tokenState(int $tokenId, int $userId): ?string
     {
         $row = $this->db->connection()->table('pairing_tokens')
@@ -384,10 +251,6 @@ final class PairingGateway
     }
 
     /**
-     * Derive the shared 6-word safety-number from BOTH stored public keys of
-     * the in-flight token (D-07/D-08) — identical shape to
-     * `PairingFlowModal::deriveSafetyWords()`.
-     *
      * @return list<string>
      */
     private function deriveSafetyWords(string $pairingTokenId, int $userId): array

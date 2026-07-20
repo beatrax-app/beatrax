@@ -15,20 +15,7 @@ use RuntimeException;
 use SodiumException;
 
 /**
- * Generate + persist the per-(user, install) device identity (PAIR-01, D-01/
- * D-02/D-03/D-12).
- *
- * On enable-sync this generates a long-term Ed25519 signing keypair and a
- * SEPARATE X25519 key-agreement keypair, writes them to a key-file encrypted
- * with the v1.2 BackupEncryptor (Argon2id + XChaCha20-Poly1305) under the
- * app-lock KEK released by AppLockKeyService::release(), and inserts the
- * self-row into device_registry (public keys only — no secret key ever reaches
- * the DB).
- *
- * D-02 weak-key-window guard (T-12-06): generation HARD-throws when the KEK is
- * null. The key-file is never written under anything weaker than the LOCK-04
- * key. This service-level guard is defense-in-depth alongside the Plan 04 UI
- * gate — a second entry point (console command, future API) cannot bypass it.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class DeviceIdentityService
 {
@@ -40,19 +27,17 @@ final class DeviceIdentityService
         private readonly DeviceNameDetector $nameDetector,
     ) {}
 
+    // Generates the device identity, encrypts the key-file, and persists the
+    // device_registry self-row. Returns the in-memory identity DTO (which
+    // carries secret-key hex — never persist the DTO).
     /**
-     * Generate the device identity, encrypt the key-file, and persist the
-     * device_registry self-row. Returns the in-memory identity DTO (which
-     * carries secret-key hex — never persist the DTO).
-     *
-     * @throws \LogicException when the app-lock KEK is unavailable (D-02 gate).
+     * @throws \LogicException when the app-lock KEK is unavailable.
      * @throws RuntimeException on a crypto / I-O failure.
      */
     public function generateAndPersist(int $userId, Session $session): DeviceIdentityDto
     {
         $kek = $this->appLockKeyService->release($session);
         if ($kek === null) {
-            // T-12-06 / Pitfall 1: never write the key-file without the LOCK-04 KEK.
             throw new \LogicException('Cannot generate device identity: app-lock not unlocked.');
         }
 
@@ -61,8 +46,8 @@ final class DeviceIdentityService
             $createdAt = $this->clock->now()->toIso8601String();
 
             $signKp = sodium_crypto_sign_keypair();
-            // SEPARATE X25519 keypair — do NOT derive from the signing key
-            // (key-reuse across primitives is a crypto anti-pattern, RESEARCH §Pattern 1).
+            // SEPARATE X25519 keypair — do NOT derive from the signing key,
+            // since key-reuse across primitives is a crypto anti-pattern.
             $kxKp = sodium_crypto_kx_keypair();
 
             $ed25519SecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($signKp));
@@ -70,7 +55,8 @@ final class DeviceIdentityService
             $x25519SecretHex = sodium_bin2hex(sodium_crypto_kx_secretkey($kxKp));
             $x25519PublicHex = sodium_bin2hex(sodium_crypto_kx_publickey($kxKp));
 
-            // Zero the raw keypair buffers as soon as the hex is extracted.
+            // Zero the raw keypair buffers as soon as the hex is extracted —
+            // no reason to keep the binary form in memory afterward.
             sodium_memzero($signKp);
             sodium_memzero($kxKp);
 
@@ -92,10 +78,8 @@ final class DeviceIdentityService
             @mkdir($identityDir, 0700, true);
 
             // Stage the plaintext key-file inside the 0700 identity directory
-            // created above — NEVER sys_get_temp_dir(), which is world-
-            // traversable (e.g. /tmp at mode 1777) — and lock it to 0600
-            // immediately (SecureTempFile::write throws if the chmod fails),
-            // so a crash between staging and the finally-unlink below can
+            // created above — NEVER sys_get_temp_dir() — and lock it to 0600
+            // immediately, so a crash before the finally-unlink below can
             // never leave the secret keys world-readable.
             $tmpPath = $identityDir.DIRECTORY_SEPARATOR.'beatrax_identity_'.bin2hex(random_bytes(8)).'.tmp';
             SecureTempFile::write($tmpPath, $payload);
@@ -116,7 +100,8 @@ final class DeviceIdentityService
                 // at pairing time; the self-row stores an empty placeholder.
                 'safety_number_words' => '',
                 'is_self' => 1,
-                // The local device is implicitly trusted: confirmed + paired now.
+                // The local device is implicitly trusted — confirmed and
+                // paired the moment its own identity is generated.
                 'paired_at' => $createdAt,
                 'confirmed_at' => $createdAt,
                 'last_seen_at' => null,

@@ -5,28 +5,15 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Pairing;
 
 /**
- * The canonical BIP39 English wordlist — 2048 alphabetically-ordered,
- * lowercase words — bundled as a single class constant for deriving
- * human-readable, read-aloud safety-numbers (D-08).
- *
- * Source: the canonical BIP39 English list (github.com/trezor/python-mnemonic),
- * MIT licensed, stable since 2013. Verified at bundling time to contain
- * exactly 2048 entries with SHA-256
- * 2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda
- * (first word "abandon", last word "zoo").
- *
- * This is a flat array constant, NOT a Composer dependency — the list is
- * small, stable, and security-relevant (SafetyNumberDeriver maps a SHA-256
- * digest through `index % 2048` into these words), so it is vendored here
- * rather than pulled from an external package.
+ * @link ../../../../.docs/features/sync/architecture.md
  */
 final class Bip39WordList
 {
-    /**
-     * The 2048-word BIP39 English wordlist, in canonical order.
-     *
-     * @var list<string>
-     */
+    // The canonical BIP39 English wordlist (github.com/trezor/python-mnemonic,
+    // MIT), 2048 entries, first word "abandon", last word "zoo". A flat array
+    // constant, NOT a Composer dependency, since it is small, stable, and
+    // security-relevant (SafetyNumberDeriver maps a digest through index % 2048).
+    /** @var list<string> */
     public const array WORDS = [
         'abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract',
         'absurd', 'abuse', 'access', 'accident', 'account', 'accuse', 'achieve', 'acid',
