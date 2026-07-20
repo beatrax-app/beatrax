@@ -12,30 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 
 /**
- * Walk the per-day folded balance and write
- * `forecast_shortfall_windows` rows when the running balance crosses
- * below the effective per-account buffer.
- *
- * Effective buffer:
- *   - `accounts.forecast_min_buffer_minor` when set, else 0
- *     (zero-crossing default).
- *
- * Audit honesty: the captured `buffer_used_minor` is the buffer
- * effective at detection time. A later buffer edit triggers a
- * re-projection that writes NEW rows; historical rows survive in the
- * table with the original buffer captured (Drift-alerts honest-audit
- * mirror).
- *
- * Pre-write cleanup: every detect() call deletes the previous
- * `(user_id, account_id, scenario_id)` windows BEFORE inserting new
- * ones. Wrapped in a single DB transaction so a partial write never
- * leaves the table in an inconsistent state.
- *
- * Emits `ForecastShortfallDetected` per new window for Phase 11
- * operational-hardening hooks (backup-trigger, health-monitor pings).
- *
- * Pure pipeline class — only the DB write and the event dispatch are
- * side effects.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ShortfallDetector
 {

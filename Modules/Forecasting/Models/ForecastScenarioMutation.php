@@ -15,19 +15,7 @@ use Modules\Forecasting\Internal\Casts\ScenarioMutationPayloadCast;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
 
 /**
- * Eloquent model for the forecast_scenario_mutations table — one row
- * models one mutation inside a saved scenario.
- *
- * The `payload` column is a JSON envelope routed by the `kind` column
- * through `ScenarioMutationPayloadCast` into one of five concrete
- * `ScenarioMutationPayload` subclasses. Cross-kind property access is
- * caught at static-analysis time because each subclass exposes only
- * its own fields; the base type only exposes `kind()`.
- *
- * Allowed kinds: `cancel_series`, `add_one_off`, `add_recurring`,
- * `change_series_amount`, `shift_series_date`. The cast throws an
- * `InvalidArgumentException` when an unknown kind is read or when a
- * payload subclass does not match the row's kind on set.
+ * @see ScenarioMutationPayloadCast
  *
  * @property int $id
  * @property int $user_id

@@ -15,16 +15,6 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPaylo
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 
 /**
- * Custom Eloquent cast that bridges the JSON `payload` column on the
- * forecast_scenario_mutations table to a typed-per-kind
- * `ScenarioMutationPayload` subclass.
- *
- * The cast routes via `match($row['kind'])` to one of five concrete
- * subclasses. The kind/payload mismatch invariant is enforced on set
- * — the caller must assign the row's `kind` column before assigning
- * the payload (the cast verifies `$payload->kind() === $kind` and
- * throws on mismatch). Unknown kinds throw on get and set.
- *
  * @implements CastsAttributes<ScenarioMutationPayload, ScenarioMutationPayload>
  */
 final class ScenarioMutationPayloadCast implements CastsAttributes
@@ -79,11 +69,10 @@ final class ScenarioMutationPayloadCast implements CastsAttributes
             );
         }
 
-        // The about-to-be-set kind lives in $attributes (Laravel passes
-        // the full pending-attribute set, INCLUDING freshly assigned
-        // values, to set()). The caller must set the kind column before
-        // the payload column — the test asserts this contract via the
-        // "kind/payload mismatch throws" case.
+        // The about-to-be-set kind lives in $attributes (Laravel passes the
+        // full pending-attribute set, INCLUDING freshly assigned values, to
+        // set()). The caller must therefore set the kind column before the
+        // payload column, or this throws below.
         $kind = $attributes['kind'] ?? null;
         if (! is_string($kind) || $kind === '') {
             throw new InvalidArgumentException(

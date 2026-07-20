@@ -17,19 +17,7 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Phase 8 `/recurring/series/{id}` "Model what-if ↗" popover.
- *
- * Triggers the two launchpad Public Actions that pre-seed a fresh
- * scenario for the current series and redirect to
- * `/forecast?scenarioId={new}`. Two modes:
- *   - `modelCancellation` — invokes
- *     `CreateCancellationScenarioForSeries` and redirects immediately.
- *   - `modelAmountChange` — opens an inline amount input pre-populated
- *     with the current series amount; on Save, parses the input,
- *     invokes `CreateAmountChangeScenarioForSeries`, and redirects.
- *
- * Mount-time cross-user 404 — refuses to render with another user's
- * series id.
+ * @link ../../../../../.docs/features/forecasting/architecture.md
  */
 final class ModelWhatIfDropdown extends Component
 {

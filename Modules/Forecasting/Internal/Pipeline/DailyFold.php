@@ -8,27 +8,7 @@ use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 
 /**
- * Fold per-occurrence `ForecastContribution`s into a per-day running
- * balance with a confidence spread.
- *
- * Combines per-occurrence spreads via quadrature (`√(Σ spread²)`).
- * Statistically correct for INDEPENDENT series — if two series share
- * an underlying cause (for example two streaming subscriptions on the
- * same billing cycle), this UNDER-estimates the combined spread.
- * Phase 10 treats every approved recurring series as independent; the
- * percentile tier (Wave 5) sidesteps the assumption by reading the
- * observed empirical distribution per series. Reference:
- * Cornell 8.04 / MIT OCW 6.012.
- *
- * Cross-currency contributions are converted to `$defaultCurrency` at
- * fold time using the contribution's stored `fxRateUsed`. A contribution
- * whose currency differs from the account default but whose `fxRateUsed`
- * is null raises `InvalidArgumentException` — Phase 8 D-840 guarantees
- * every cross-currency occurrence carries a stored fx rate, so a null
- * here is a real data corruption that must surface rather than silently
- * leak a USD point into an EUR running balance.
- *
- * Pure-math class — no DI, no DB reads, no clock.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class DailyFold
 {
@@ -85,14 +65,9 @@ final readonly class DailyFold
         }
 
         // Walk each day in the horizon range from asOf through asOf +
-        // horizonDays inclusive. The running balance evolves
-        // monotonically as contributions fire. The per-day spread
-        // reflects the uncertainty in the latest active period's
-        // amount(s) — it combines same-day contributions via
-        // quadrature (independent series on a single billing day)
-        // but does NOT cumulate across days. Days without
-        // contributions carry the previous day's spread forward
-        // unchanged so the chart band stays continuous.
+        // horizonDays inclusive. The per-day spread combines same-day
+        // contributions via quadrature but does NOT cumulate across days
+        // — a day without contributions carries the prior spread forward.
         /** @var array<string, array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}> $result */
         $result = [];
         $running = $openingBalanceMinor;

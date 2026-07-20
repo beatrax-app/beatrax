@@ -12,29 +12,7 @@ use Modules\Forecasting\Public\Dto\ForecastHighlightsDto;
 use stdClass;
 
 /**
- * Public read API powering the dashboard "Forecast highlights" tile +
- * the top-nav "Forecast" slot badge.
- *
- * Returns a single `ForecastHighlightsDto` from `forUser` carrying the
- * lowest-projected-balance line + the active-shortfall count + the
- * next ICS bulk-iDEAL settlement (strict superset of the earlier
- * next-settlement-only tile). The top-nav badge composer uses the
- * lighter `activeShortfallCountForUser` which only counts baseline rows
- * — scenario shortfalls are "what-if" simulations and do NOT count
- * toward the badge.
- *
- * Baseline-only filter (`scenario_id IS NULL`): the dashboard +
- * top-nav represent the user's CURRENT financial picture. Scenarios
- * are "what-if" simulations the user explicitly opted into; they
- * carry their own UI affordances on /forecast. Including a scenario
- * shortfall in the badge would conflate "real" and "imagined" risk.
- *
- * Window-active filter: a window is "active in the next 30 days" when
- * `starts_at <= today + 30d` AND `ends_at >= today`. Past windows
- * remain in the table for the audit trail but do not surface in the
- * tile.
- *
- * Cross-user safety: every read filters on `user_id` before any join.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ForecastHighlightsQuery
 {
@@ -92,7 +70,6 @@ final readonly class ForecastHighlightsQuery
         }
 
         if ($accountsBlock !== null) {
-            // Account list — alphabetical by name, then id for stability.
             $accounts = $this->db->connection()->table('accounts')
                 ->where('user_id', $user->id)
                 ->orderBy('name')

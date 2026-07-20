@@ -8,11 +8,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Forecasting\Models\ForecastShortfallWindow;
 
 /**
- * Eloquent factory for the forecast_shortfall_windows table.
- *
- * Defaults to a ~€120-low ten-day shortfall against a €500 buffer in
- * EUR. State factories distinguish baseline runs from scenario runs.
- *
  * @extends Factory<ForecastShortfallWindow>
  */
 final class ForecastShortfallWindowFactory extends Factory

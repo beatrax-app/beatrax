@@ -53,29 +53,7 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 
 /**
- * Wires the Forecasting module.
- *
- * register() binds the in-tree event listeners, the projection
- * pipeline collaborators (anchor resolver, range projector, daily
- * fold, pipeline orchestrator, state machine), and the Public read
- * services (ForecastQuery, ScenarioQuery, ForecastDtoMapper) as
- * singletons.
- *
- * boot() conditionally loads migrations, routes, and views (each
- * guard remains for forward compatibility with module surfaces added
- * by later phases), registers the /forecast Livewire SFC, wires the
- * cross-module event listeners to the Recurring (Phase 8) + DriftAlerts
- * (Phase 9) Public events, and installs the top-nav badge composer.
- * The badge composer injects `forecastShortfallCount` into
- * `core::livewire.top-nav` through the ViewFactoryContract — the
- * global `view()` helper is forbidden by project convention.
- *
- * The `/forecast` SFC renders the baseline-only surface: per-account
- * tab bar, 30 / 60 / 90 horizon segmented control, and a single
- * rangeArea chart for the user's first per-account projection.
- * Subsequent phases extend the surface with the shortfall band
- * overlay, the buffer editor trigger, the scenario picker and
- * side-by-side, and the percentile-tier confidence legend.
+ * @link ../../../.docs/features/forecasting/architecture.md
  */
 final class ForecastingServiceProvider extends ServiceProvider
 {
@@ -85,9 +63,9 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ProjectForecastOnDriftDismissed::class);
         $this->app->singleton(ProjectForecastOnScenarioChange::class);
 
-        // Wave 2 projection pipeline + state machine. The job itself is
-        // constructor-positional (userId, scenarioId, horizonDays) so it
-        // is dispatched, not container-resolved — no singleton entry.
+        // The job itself is constructor-positional (userId, scenarioId,
+        // horizonDays) so it is dispatched, not container-resolved — no
+        // singleton entry.
         $this->app->singleton(BalanceAnchorResolver::class);
         $this->app->singleton(NetWorthQuery::class);
         $this->app->singleton(RangeProjector::class);
@@ -95,7 +73,6 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(ProjectionPipeline::class);
         $this->app->singleton(ForecastRunStateMachine::class);
 
-        // Wave 3 chain-aware routing + shortfall detection.
         $this->app->singleton(ChainAwareForecastRouter::class);
         $this->app->singleton(ShortfallDetector::class);
 
@@ -103,15 +80,11 @@ final class ForecastingServiceProvider extends ServiceProvider
         // routed contributions — the scenario-isolation boundary).
         $this->app->singleton(ScenarioApplier::class);
 
-        // Wave 3 Public Action + read service for the buffer editor and
-        // the dashboard / top-nav surfaces.
         $this->app->singleton(SetAccountForecastBuffer::class);
         $this->app->singleton(ForecastHighlightsQuery::class);
 
-        // Wave 5 Public Action for the opening-balance editor on /settings.
         $this->app->singleton(SetAccountOpeningBalance::class);
 
-        // Wave 4 scenario CRUD Public Actions.
         $this->app->singleton(CreateScenario::class);
         $this->app->singleton(RenameScenario::class);
         $this->app->singleton(DeleteScenario::class);
@@ -119,20 +92,17 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->app->singleton(RemoveScenarioMutation::class);
         $this->app->singleton(EditScenarioMutation::class);
 
-        // Wave 4 launchpad Public Actions (atomic CreateScenario +
+        // Launchpad Public Actions (atomic CreateScenario +
         // AddScenarioMutation pairs wrapped in a DB transaction).
         $this->app->singleton(CreateCancellationScenarioForAlert::class);
         $this->app->singleton(CreateCancellationScenarioForSeries::class);
         $this->app->singleton(CreateAmountChangeScenarioForSeries::class);
 
-        // The dashboard tile Livewire SFC is intentionally NOT bound as
-        // a singleton: Livewire's mount/render lifecycle resolves a fresh
-        // instance per request via `LivewireManager::component(...)`
-        // already, and singleton-binding a Component subclass would
-        // surface stale public-property state across requests under any
-        // future long-running process (Octane / Reverb).
+        // Livewire Components are intentionally NOT bound as singletons:
+        // the mount/render lifecycle resolves a fresh instance per request,
+        // and singleton-binding would leak stale public-property state
+        // across requests under a future long-running process (Octane).
 
-        // Wave 2 Public read API + DTO mapper.
         $this->app->singleton(ForecastDtoMapper::class);
         $this->app->singleton(ForecastQuery::class);
         $this->app->singleton(ScenarioQuery::class);
@@ -161,19 +131,6 @@ final class ForecastingServiceProvider extends ServiceProvider
         $this->registerTopNavBadgeComposer();
     }
 
-    /**
-     * Subscribe the Forecasting projection listeners to the upstream
-     * Recurring (Phase 8) and DriftAlerts (Phase 9) Public events. Each
-     * listener handle() fans the event out into one queued
-     * ProjectForecastJob per (user, scenario, horizon) tuple when the
-     * later wave swaps the scaffold bodies in.
-     *
-     * The scenario-side internal events (created, mutated, deleted) are
-     * wired in a later wave once those event classes land. The
-     * ProjectForecastOnScenarioChange listener scaffold is already
-     * singleton-bound in register() so the swap-in is a single
-     * $events->listen() line per event.
-     */
     private function registerListeners(Dispatcher $events): void
     {
         $events->listen(RecurringSeriesApproved::class, [ProjectForecastOnRecurringChange::class, 'handle']);
@@ -183,29 +140,17 @@ final class ForecastingServiceProvider extends ServiceProvider
 
         $events->listen(DriftAlertDismissedCancelled::class, [ProjectForecastOnDriftDismissed::class, 'handle']);
 
-        // Wave 4 scenario lifecycle events. Each event fans out into
-        // baseline + affected-scenario projection horizons via the
-        // ProjectForecastOnScenarioChange listener.
+        // Scenario lifecycle events fan out into baseline +
+        // affected-scenario projection horizons via the listener below.
         $events->listen(ScenarioCreated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
         $events->listen(ScenarioMutated::class, [ProjectForecastOnScenarioChange::class, 'handle']);
         $events->listen(ScenarioDeleted::class, [ProjectForecastOnScenarioChange::class, 'handle']);
     }
 
-    /**
-     * Inject the top-nav `forecastShortfallCount` into
-     * `core::livewire.top-nav` via the View Factory contract.
-     *
-     * The contract is resolved through `$this->app->make()` to keep the
-     * DI-only invariant visible at the call site; the global `view()`
-     * helper is forbidden in module code.
-     *
-     * The composer fires once per top-nav render. A later wave swaps
-     * the closure body to read the per-user active-shortfall count from
-     * the Forecasting Public services with a boot-scoped memo (same
-     * pattern as the DriftAlerts top-nav composer). For now the badge
-     * is always zero — the slot is reserved so the swap-in is a
-     * body-only change.
-     */
+    // The View Factory contract is resolved through $this->app->make() to
+    // keep the DI-only invariant visible at the call site; the global
+    // view() helper is forbidden in module code. $cache memoizes the
+    // per-user count for the lifetime of this composer's boot scope.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;

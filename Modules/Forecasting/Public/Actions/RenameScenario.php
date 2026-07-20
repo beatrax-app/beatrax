@@ -14,14 +14,7 @@ use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Renames a saved scenario. Cross-user invocation raises
- * `NotFoundHttpException` via the `(id, user_id)` guard; duplicate
- * names raise `InvalidArgumentException` ("A scenario with that name
- * already exists.").
- *
- * Dispatches `ScenarioMutated` after a successful update with
- * `mutationId=0` (sentinel) + `kind='rename'` so downstream listeners
- * can choose whether to act on rename events.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class RenameScenario
 {

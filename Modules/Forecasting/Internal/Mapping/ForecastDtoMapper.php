@@ -13,30 +13,9 @@ use Modules\Forecasting\Public\Dto\SeriesConfidenceDto;
 use Modules\Forecasting\Public\Dto\ShortfallWindowDto;
 use stdClass;
 
-/**
- * Pure-data transformer from raw row shapes (`stdClass` rows for
- * `forecast_scenarios` / `forecast_shortfall_windows`, decoded
- * `forecast_runs.result_json` sub-blocks for the per-account
- * projection) into the Public Spatie LaravelData DTOs the read API
- * surface returns.
- *
- * Static-only: no constructor dependencies. The mapper does not read
- * services or touch the DB; the read query class is responsible for
- * resolving cross-module joins (display names, mutation counts) and
- * handing them to the mapper alongside the row.
- *
- * Mirrors `Modules\DriftAlerts\Internal\Mapping\DriftAlertDtoMapper`.
- */
 final readonly class ForecastDtoMapper
 {
     /**
-     * Hydrate a single ForecastDto from the per-account sub-block of
-     * a decoded `forecast_runs.result_json` payload.
-     *
-     * `$seriesConfidence` is supplied by the caller (the read service
-     * resolves it via its own query path; the mapper stays static-only
-     * and side-effect-free).
-     *
      * @param  array<array-key, mixed>  $accountResult
      * @param  list<SeriesConfidenceDto>  $seriesConfidence
      */
@@ -76,9 +55,6 @@ final readonly class ForecastDtoMapper
     }
 
     /**
-     * Hydrate a single ForecastPointDto from one per-day array row in
-     * the decoded result_json payload.
-     *
      * @param  array<array-key, mixed>  $day
      */
     public function mapPoint(array $day): ForecastPointDto
@@ -92,10 +68,6 @@ final readonly class ForecastDtoMapper
         );
     }
 
-    /**
-     * Hydrate a single ScenarioDto from a raw `forecast_scenarios` row
-     * plus the externally-resolved mutation count.
-     */
     public function mapScenario(stdClass $row, int $mutationCount): ScenarioDto
     {
         $description = $row->description ?? null;
@@ -112,12 +84,6 @@ final readonly class ForecastDtoMapper
         );
     }
 
-    /**
-     * Hydrate a single ShortfallWindowDto from a raw
-     * `forecast_shortfall_windows` row. Wave 3 will populate the
-     * underlying table; the mapper lands now so the Public read API's
-     * type surface is forward-complete.
-     */
     public function mapShortfallWindow(stdClass $row): ShortfallWindowDto
     {
         return new ShortfallWindowDto(

@@ -19,17 +19,7 @@ use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Replaces the payload on an existing mutation row. The row's `kind`
- * column is immutable through this Action — switching kinds requires
- * a Remove + Add pair, which keeps the typed-cast contract symmetric.
- *
- * Cross-user 404 via the mutation's `(id, user_id)` guard. The new
- * payload must declare the same `kind()` as the existing row;
- * mismatches raise `InvalidArgumentException`. Series-belongs-to-user
- * validation runs for the same kinds as `AddScenarioMutation` so the
- * persisted state always references series rows the caller owns.
- *
- * Dispatches `ScenarioMutated` after the update.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class EditScenarioMutation
 {

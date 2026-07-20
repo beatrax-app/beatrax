@@ -15,17 +15,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
- * Eloquent model for the forecast_shortfall_windows table — one row
- * models one contiguous (starts_at, ends_at) window during which the
- * projected balance dipped below the effective per-account buffer.
- *
- * `lowest_balance_minor` is the signed bottom point of the window.
- * `buffer_used_minor` is the effective buffer captured at detection
- * time — Phase 9's honest-audit precedent so a later buffer edit
- * cannot silently rewrite the historical shortfall narrative.
- *
- * `scenario_id` is nullable: NULL = baseline projection's shortfall;
- * non-NULL = scenario projection's shortfall.
+ * @link ../../../.docs/features/forecasting/architecture.md
  *
  * @property int $id
  * @property int $user_id
@@ -87,11 +77,6 @@ final class ForecastShortfallWindow extends Model
         return $this->belongsTo(ForecastScenario::class, 'scenario_id');
     }
 
-    /**
-     * Returns the lowest projected balance as a Money value. The
-     * underlying column is signed — a negative result indicates the
-     * account went into overdraft during the window.
-     */
     public function lowestBalance(): Money
     {
         return Money::ofMinor($this->lowest_balance_minor, $this->currency);

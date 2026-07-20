@@ -18,26 +18,7 @@ use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Persists one mutation row for a saved scenario.
- *
- * Cross-user 404 on the parent scenario via `(scenario_id, user_id)`
- * guard. Defensive kind/payload match: throws
- * `InvalidArgumentException` when `$payload::kind() !== $kind` BEFORE
- * persisting — the Wave 1 cast's `set()` would catch the mismatch too
- * but the Action surfaces a cleaner error path.
- *
- * For `cancel_series`, `change_series_amount`, `shift_series_date`
- * payloads: validates `$payload->seriesId` belongs to a recurring
- * series owned by `$user` by reading `recurring_series` directly via
- * the raw query builder (scoped by user_id). A missing or cross-user
- * series id raises `NotFoundHttpException` — the cross-substrate
- * boundary lives at the Action layer; ScenarioApplier later TRUSTS the
- * persisted state.
- *
- * Persistence routes through the Eloquent model so the typed
- * `ScenarioMutationPayloadCast` runs and the JSON envelope is
- * validated end-to-end. Returns the new
- * mutation id and dispatches `ScenarioMutated`.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class AddScenarioMutation
 {
@@ -81,7 +62,6 @@ final class AddScenarioMutation
             $mutation->updated_at = $now;
             $mutation->save();
 
-            // Touch the parent scenario so the picker sorts by recency.
             $this->db->connection()->table('forecast_scenarios')
                 ->where('id', $scenarioId)
                 ->where('user_id', $user->id)

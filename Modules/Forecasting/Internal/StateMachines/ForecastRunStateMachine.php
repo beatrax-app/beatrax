@@ -11,35 +11,11 @@ use Modules\Forecasting\Models\ForecastRun;
 use RuntimeException;
 
 /**
- * The single legal mutator of `forecast_runs.status`. Other module
- * code reads the row freely but never UPDATEs the status column; the
- * `noTransactionWritesFromForecasting` arch invariant already guards
- * the broader substrate, and this class is the documented sole writer
- * of the run lifecycle.
- *
- * The locked transition map:
- *
- *   pending → running | failed
- *   running → complete | failed
- *   complete → (terminal)
- *   failed   → (terminal)
- *
- * Every transition opens a DB transaction, takes a row lock (a no-op
- * on SQLite but the project-wide pattern Phase 5 onward — the load-
- * bearing concurrency fence on Postgres / future tier-ups), validates
- * the move against the map, and writes the new status + the
- * appropriate lifecycle timestamp atomically. Illegal transitions
- * raise `InvalidForecastRunTransitionException` and leave the row
- * untouched.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ForecastRunStateMachine
 {
     /**
-     * Per-state allowed-target map. A transition not in this map
-     * raises `InvalidForecastRunTransitionException`. The map is
-     * public so tests + future contributors can assert the locked
-     * shape without reaching for reflection.
-     *
      * @return array<string, list<string>>
      */
     public static function transitionMap(): array
@@ -57,30 +33,18 @@ final readonly class ForecastRunStateMachine
         private Clock $clock,
     ) {}
 
-    /**
-     * Transitions pending → running. Stamps `started_at` from the
-     * injected Clock.
-     */
     public function start(ForecastRun $run): void
     {
         $now = $this->clock->now()->toDateTimeString();
         $this->transition($run, 'running', ['started_at' => $now, 'updated_at' => $now]);
     }
 
-    /**
-     * Transitions running → complete. Stamps `completed_at`.
-     */
     public function complete(ForecastRun $run): void
     {
         $now = $this->clock->now()->toDateTimeString();
         $this->transition($run, 'complete', ['completed_at' => $now, 'updated_at' => $now]);
     }
 
-    /**
-     * Transitions running → failed OR pending → failed. Stamps
-     * `completed_at` (even when the run never started — the lifecycle
-     * is sealed for audit purposes).
-     */
     public function fail(ForecastRun $run): void
     {
         $now = $this->clock->now()->toDateTimeString();

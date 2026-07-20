@@ -17,30 +17,7 @@ use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Public read API over the latest `forecast_runs.result_json` payload
- * for one (user, scenario, horizon) tuple. The /forecast page calls
- * `forUser` per account-and-horizon combination it renders; no
- * synchronous projection happens inside the request lifecycle (the
- * `noSynchronousForecastingInRequestLifecycle` arch invariant blocks
- * the heavy `ProjectionPipeline` class from being imported here).
- *
- * Cross-user 404: a missing or cross-user account id raises a
- * `NotFoundHttpException` so the calling Livewire component returns
- * a 404 response. The check uses a raw user-scoped row count rather
- * than `Account::query()->firstOrFail()` to keep the DI graph
- * Eloquent-free at this surface — the Models class still backs the
- * write paths, but the read API resolves through DatabaseManager.
- *
- * "Computing" sentinel: when the latest run for the tuple is not yet
- * `complete` (pending / running / failed / missing), the DTO carries
- * `isComputing=true` and an empty `points` array. The chart panel
- * shows the "Updating…" caption in this state.
- *
- * Flat-line fallback: when the run is complete but the account has no
- * series of its own (e.g. a new account with no recurring activity),
- * the points array is hydrated to `horizonDays + 1` flat days at the
- * account's anchor balance — the calm projection of "nothing changes
- * between now and the horizon end".
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ForecastQuery
 {
@@ -104,7 +81,6 @@ final readonly class ForecastQuery
 
         $accountResult = $accountsBlock[(string) $accountId] ?? $accountsBlock[$accountId] ?? null;
         if (! is_array($accountResult)) {
-            // Run is complete but this account has no series → flat line at the anchor.
             return $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf, $user);
         }
 
@@ -125,21 +101,7 @@ final readonly class ForecastQuery
     }
 
     /**
-     * Compute one `SeriesConfidenceDto` per approved series that
-     * contributes to the given account. The bucket thresholds are
-     * locked at code level (UI-SPEC):
-     *   - band_width / |point| <= 10%  → high
-     *   - 10% < ratio          <= 25%  → medium
-     *   - 25% < ratio                  → low
-     *
-     * The band width is derived from the series's
-     * `variance_tolerance_percent`: a series with var=5% has a band of
-     * 10% of the magnitude (low at -5%, high at +5% → width 10%); var
-     * of 10% has a 20%-wide band; etc. This is the envelope-tier
-     * formula. Percentile-tier series get an empirical band on the
-     * chart but the legend still reads the configured variance
-     * tolerance — the variance is the user-visible signal of how
-     * confident the projection is on this series.
+     * @link ../../../../.docs/features/forecasting/architecture.md
      *
      * @return list<SeriesConfidenceDto>
      */
@@ -165,7 +127,7 @@ final readonly class ForecastQuery
                 continue;
             }
             $tol = $series->varianceTolerancePercent;
-            $bandRatio = (2 * $tol); // band_width / |point| in percent.
+            $bandRatio = (2 * $tol);
 
             $confidence = match (true) {
                 $bandRatio <= 10 => 'high',

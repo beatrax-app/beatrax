@@ -14,19 +14,6 @@ use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Per-account buffer-editor popover (inline on the /forecast per-account
- * chart header). Mounts with the account's current
- * `forecast_min_buffer_minor` and the account's metadata, exposes a
- * save/clear/cancel surface, and dispatches a re-projection on save
- * via the `SetAccountForecastBuffer` Public Action.
- *
- * Constructor injection is banned on Livewire `Component` subclasses
- * by phpstan-strict-rules; collaborators arrive on `mount()` / `save()`
- * / `clear()` / `render()` as parameter DI.
- *
- * Mirror analog: `Modules\DriftAlerts\Internal\Http\Livewire\DriftThresholdEditor`.
- */
 final class AccountBufferEditor extends Component
 {
     public int $accountId = 0;
@@ -49,7 +36,10 @@ final class AccountBufferEditor extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
     ): void {
-        // Cross-user safety: refuse to mount with another user's account id.
+        // Cross-user safety: refuse to mount with another user's account id
+        // — the query below scopes the lookup to the current user, so a
+        // tampered accountId prop resolves to no row and throws 404
+        // instead of leaking another user's buffer.
         $row = $db->connection()->table('accounts')
             ->where('id', $accountId)
             ->where('user_id', $currentUser->user()->id)
@@ -113,14 +103,6 @@ final class AccountBufferEditor extends Component
         ]);
     }
 
-    /**
-     * Parse the user input (locale-aware "500,00" / "500.00" / "500")
-     * to BIGINT minor units. Returns false on any non-numeric input.
-     *
-     * An empty string is treated as "zero buffer" (the editor's clear
-     * affordance), preserving the prior behaviour. Negative values are
-     * rejected (a buffer below zero has no meaning).
-     */
     private function parseInputToMinor(string $input): int|false
     {
         if (trim($input) === '') {

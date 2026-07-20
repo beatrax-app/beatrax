@@ -19,60 +19,7 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 
 /**
- * The load-bearing scenario in-memory transform. Walls scenario
- * mutations off from any transaction-substrate JOIN.
- *
- * Reads `forecast_scenario_mutations` (Forecasting-owned) via
- * `ScenarioQuery` and reads `recurring_series` (Recurring-owned) via
- * `RecurringSeriesQuery::forSeries` ONLY to look up the
- * variance-tolerance + cadence of a series referenced by a mutation —
- * both reads are typed Public surfaces. ScenarioApplier NEVER joins
- * `forecast_scenario_mutations` onto `transactions`,
- * `recurring_series_occurrences`, `chain_links`, or `card_statements`.
- * The `noScenarioMutationsJoinedToTransactionQueries` arch invariant is
- * the single most load-bearing structural enforcement of the
- * scenario-isolation boundary, and ScenarioIsolationContractTest adds
- * a runtime end-to-end proof.
- *
- * The series_id validation in `AddScenarioMutation` /
- * `EditScenarioMutation` guarantees every persisted series_id belongs
- * to a user-owned recurring series; the Applier trusts that contract
- * and silently skips mutations whose referenced series has since been
- * deleted (the scenario row can outlive a series row).
- *
- * Defensive logging: when `forSeries` returns null but the underlying
- * recurring_series row exists, the persisted series_id refers to
- * another user's row — a contract violation that should never reach the
- * Applier through the Public Actions but COULD surface if a future
- * seeder / Artisan command / admin tool skips the Action layer. The
- * Applier logs a warning and continues with the silent skip; the log
- * provides the audit trail for diagnosing the upstream leak.
- *
- * Algorithm:
- *  1. Load the scenario's mutations.
- *  2. Start with the baseline contributions (an immutable copy is not
- *     required because the caller already passed the bucket and does
- *     not re-use the source list after the Applier returns).
- *  3. Apply each mutation as a pure in-memory transform per its kind.
- *
- * The five kinds:
- *  - `cancel_series` — filter out every contribution whose seriesId
- *    matches the payload.
- *  - `add_one_off` — append a single ForecastContribution at the
- *    payload's date when inside the horizon. Sign comes from the
- *    direction string. seriesId = 0 sentinel because the mutation has
- *    no underlying series.
- *  - `add_recurring` — expand into per-occurrence dates inside the
- *    horizon by walking the cadence forward. Each occurrence carries a
- *    ±5% envelope (calmest default — the form has no variance field).
- *  - `change_series_amount` — for matching seriesId, recompute the
- *    contribution's `(low, point, high)` triple using the new
- *    amount-minor and the underlying series's variance-tolerance.
- *  - `shift_series_date` — shift matching contributions forward by
- *    `(newNextDate - origNextDate)` days. `scope='next'` shifts only
- *    the first matching occurrence; `scope='all_subsequent'` shifts
- *    every matching occurrence. Entries that shift past the horizon
- *    end are dropped.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ScenarioApplier
 {
@@ -189,11 +136,10 @@ final readonly class ScenarioApplier
         $sign = $payload->direction === 'income' ? 1 : -1;
         $signed = $sign * $magnitude;
 
-        // One-off has no variance envelope; low = point = high.
         $accountId = $this->pickAccountIdForOneOff($contributions, $user);
         if ($accountId === 0) {
-            // No account to land on (empty baseline AND no owned account).
-            // Skip the mutation; the warning has been logged.
+            // No account to land on (empty baseline AND no owned account);
+            // skip the mutation. pickAccountIdForOneOff already logged.
             return $contributions;
         }
         $contributions[] = new ForecastContribution(
@@ -211,22 +157,7 @@ final readonly class ScenarioApplier
     }
 
     /**
-     * One-off mutations are not bound to any recurring series and the
-     * UI does not ask the user to pick a target account on the form.
-     * Land the contribution on whichever account already has the most
-     * baseline traffic so the daily fold sees the one-off.
-     *
-     * Tie-break: when two accounts have equal contribution counts, the
-     * lower accountId wins so the result is deterministic regardless of
-     * the order RangeProjector emits baseline contributions.
-     *
-     * Empty-baseline fallback: when no contributions exist (fresh-import
-     * user / no approved series), fall back to the user's lowest-id
-     * owned account. Returning a 0 sentinel here would silently drop the
-     * one-off at the per-account fold (no $byAccount[0] bucket), so the
-     * user's scenario chart would look identical to baseline. If the
-     * user owns no accounts at all, log a warning and return 0 — the
-     * caller skips the mutation rather than emitting a phantom row.
+     * @link ../../../../.docs/features/forecasting/architecture.md
      *
      * @param  list<ForecastContribution>  $contributions
      */
@@ -293,7 +224,8 @@ final readonly class ScenarioApplier
         $magnitude = abs($payload->amountMinor);
         $sign = $payload->direction === 'income' ? 1 : -1;
         $point = $sign * $magnitude;
-        // ±5% calmest-default envelope (form has no variance field).
+        // ±5% calmest-default envelope — the add_recurring form has no
+        // variance-tolerance field, so a fixed conservative band is used.
         $low5 = (int) round($magnitude * 0.95);
         $high5 = (int) round($magnitude * 1.05);
         if ($sign < 0) {
@@ -342,7 +274,7 @@ final readonly class ScenarioApplier
         if ($series === null) {
             $this->logCrossUserMismatchIfAny('change_series_amount', $payload->seriesId, $user);
 
-            return $contributions; // referenced series gone — skip silently.
+            return $contributions;
         }
         $tol = $series->varianceTolerancePercent;
 
@@ -370,7 +302,6 @@ final readonly class ScenarioApplier
         // negative (expense) and the user enters a positive newAmountMinor,
         // re-apply the negative sign to keep the convention consistent.
         $magnitude = abs($newAmountMinor);
-        // Direction inherited from the series's latest amount.
         $originalPoint = $series->latestAmount->toMinor();
         $sign = $originalPoint < 0 ? -1 : 1;
         $signedPoint = $sign * $magnitude;
@@ -411,7 +342,6 @@ final readonly class ScenarioApplier
             return $contributions;
         }
 
-        // Find the FIRST matching occurrence (smallest date for that seriesId).
         $firstIndex = null;
         $firstDate = null;
         foreach ($contributions as $i => $c) {
@@ -479,13 +409,7 @@ final readonly class ScenarioApplier
     }
 
     /**
-     * When `forSeries` returns null, double-check whether the underlying
-     * recurring_series row exists at all. If it does, the persisted
-     * series_id belongs to ANOTHER user — a contract violation that
-     * should never reach the Applier through the Public Actions. Log a
-     * warning so a future audit can trace the upstream leak. The
-     * lookup uses recurring_series.id only (no JOIN onto occurrences /
-     * transactions), preserving the no-transaction-substrate invariant.
+     * @link ../../../../.docs/features/forecasting/architecture.md
      */
     private function logCrossUserMismatchIfAny(string $mutationKind, int $seriesId, User $user): void
     {
@@ -493,7 +417,7 @@ final readonly class ScenarioApplier
             ->where('id', $seriesId)
             ->exists();
         if (! $exists) {
-            return; // genuinely deleted — silent skip is correct.
+            return;
         }
 
         $this->logger->warning(

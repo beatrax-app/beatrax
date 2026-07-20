@@ -15,40 +15,7 @@ use stdClass;
 use Throwable;
 
 /**
- * Orchestrates the Wave 2 baseline-only projection.
- *
- * Composes `BalanceAnchorResolver` (per-account opening balance),
- * `RangeProjector` (per-occurrence envelope contributions), and
- * `DailyFold` (signed running balance + quadrature spread per day)
- * into a single per-(user, scenarioId, horizon) projection.
- *
- * Output shape — serialized to `forecast_runs.result_json`:
- *
- *   {
- *     "as_of": "YYYY-MM-DD",
- *     "horizon_days": 30,
- *     "accounts": {
- *       "<accountId>": {
- *         "account_id": 1,
- *         "account_name": "ASN Betaalrekening",
- *         "default_currency": "EUR",
- *         "today_balance_minor": 150000,
- *         "anchor_source": "user_input_opening_balance",
- *         "points": [{date, low_minor, point_minor, high_minor, currency}, ...]
- *       }
- *     }
- *   }
- *
- * Lifecycle is mediated by `ForecastRunStateMachine`: the pipeline
- * creates a `pending` row, transitions to `running`, writes the
- * `result_json`, and transitions to `complete`. Any thrown exception
- * inside the heavy work transitions the run to `failed` and re-throws
- * so the queue worker logs the stack trace.
- *
- * Wave 2 deliberately ignores scenarios (the `$scenarioId` parameter is
- * always null at this wave). Wave 4 introduces `ScenarioApplier` ahead
- * of `RangeProjector` to fold in the user's saved mutations before the
- * per-occurrence emission.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ProjectionPipeline
 {
@@ -124,10 +91,7 @@ final readonly class ProjectionPipeline
 
         // Collect ALL contributions across ALL series first so the
         // chain-aware router can rewrite an account-id-routed
-        // contribution (e.g. a PayPal series whose chain link points at
-        // an ASN funder) before the per-account daily fold buckets
-        // them. The router also synthesises the next ICS bulk-iDEAL
-        // settlement contribution onto the funder account.
+        // contribution before the per-account daily fold buckets them.
         $allContributions = [];
         foreach ($allSeries as $series) {
             $seriesAccountId = $accountIdBySeriesId[$series->seriesId] ?? null;
@@ -152,13 +116,10 @@ final readonly class ProjectionPipeline
             viewByFunder: false,
         );
 
-        // Scenario branch — the scenario-isolation boundary. When the
-        // projection is for a saved scenario, the ScenarioApplier folds
-        // the user's mutations on top of the baseline contributions
-        // purely in memory — it NEVER joins forecast_scenario_mutations
-        // onto the transaction substrate. The
-        // noScenarioMutationsJoinedToTransactionQueries arch invariant
-        // is the load-bearing structural enforcement.
+        // Scenario-isolation boundary: ScenarioApplier folds the user's
+        // mutations on top of the baseline contributions purely in
+        // memory — it NEVER joins forecast_scenario_mutations onto the
+        // transaction substrate (noScenarioMutationsJoinedToTransactionQueries).
         if ($scenarioId !== null) {
             $routed = $this->scenarioApplier->apply(
                 baselineContributions: $routed,
@@ -169,7 +130,6 @@ final readonly class ProjectionPipeline
             );
         }
 
-        // Bucket the routed contributions by accountId.
         /** @var array<int, list<ForecastContribution>> $byAccount */
         $byAccount = [];
         foreach ($routed as $contrib) {
@@ -204,7 +164,6 @@ final readonly class ProjectionPipeline
                 ? (int) $account->forecast_min_buffer_minor
                 : null;
 
-            // Detect + persist shortfall windows for this account.
             $this->shortfall->detect(
                 dailyPoints: $points,
                 accountId: $accountId,

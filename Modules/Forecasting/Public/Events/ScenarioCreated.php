@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Public\Events;
 
+use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
+use Modules\Forecasting\Public\Actions\CreateScenario;
+
 /**
- * Dispatched immediately after a new forecast_scenarios row is
- * persisted by the `CreateScenario` Public Action. Carries the user
- * id, the newly-minted scenario id, and the scenario name so a
- * downstream listener can fan out per-horizon projection jobs without
- * re-reading the row.
- *
- * Listeners (Forecasting-internal): ProjectForecastOnScenarioChange.
+ * @see ProjectForecastOnScenarioChange
+ * @see CreateScenario
  */
 final readonly class ScenarioCreated
 {

@@ -11,23 +11,7 @@ use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
 
 /**
- * Subscribes to the three Forecasting Public scenario lifecycle
- * events (created / mutated / deleted) and fans out per-horizon
- * `ProjectForecastJob` dispatches for the AFFECTED scenario plus the
- * baseline.
- *
- * Important: the listener intentionally does NOT fan out to every
- * other saved scenario the user owns — that work is reserved for
- * upstream substrate events (Recurring approvals, drift dismissals)
- * which DO require every scenario to be re-projected. A
- * `ScenarioMutated` event only invalidates the affected scenario and
- * the baseline (because the picker may surface a delta against the
- * baseline), so the fan-out is six dispatches per event:
- * 3 baseline horizons + 3 affected-scenario horizons.
- *
- * For `ScenarioDeleted` events the listener dispatches the three
- * baseline horizons only; the affected scenario's runs were already
- * wiped by the cascade-on-delete FK from Plan 10-02.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ProjectForecastOnScenarioChange
 {

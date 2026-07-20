@@ -24,70 +24,32 @@ use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * `/forecast` Livewire SFC — the dedicated cash-flow forecast surface.
- *
- * Wave 2 surface is intentionally narrow: a per-account rangeArea
- * chart for the baseline projection, the 30 / 60 / 90 horizon
- * segmented control, and the per-account tab bar. Wave 3 adds the
- * shortfall band overlay + buffer editor trigger, Wave 4 lands the
- * scenario picker + side-by-side, Wave 5 brings the percentile-tier
- * confidence legend and the All-accounts aggregate chart.
- *
- * Service collaborators arrive as parameters on action methods and
- * `render()`. Constructor injection is banned on Livewire `Component`
- * subclasses by phpstan-strict-rules.
+ * @link ../../../../../.docs/features/forecasting/architecture.md
  */
 final class ForecastPage extends Component
 {
-    /**
-     * Selected account id (or the `'all'` sentinel which Wave 2 maps
-     * to the first per-account chart alphabetically; Wave 5 renders a
-     * true aggregate).
-     */
+    // 'all' is a sentinel value: it selects the All-accounts aggregate
+    // view rather than a specific account id.
     #[Url(as: 'account', except: 'all')]
     public string $account = 'all';
 
-    /**
-     * Active projection horizon — one of 30 / 60 / 90 (days).
-     */
     #[Url(as: 'horizon', except: 30)]
     public int $horizon = 30;
 
-    /**
-     * Active scenario id. Wave 2 keeps the baseline-only surface; the
-     * URL param is wired now so Wave 4 inherits the state contract.
-     */
     #[Url(as: 'scenarioId', except: null)]
     public ?int $scenarioId = null;
 
-    /**
-     * View-by-funder toggle. Wave 3 lights up the routing of an ICS
-     * card account's outflows back to the funding ASN account; the
-     * URL param ships here so the Wave 3 swap-in is body-only.
-     */
     #[Url(as: 'viewByFunder', except: false)]
     public bool $viewByFunder = false;
 
-    /**
-     * Inline two-step delete-scenario confirm state. Holds the
-     * scenarioId currently in "are you sure?" mode; null when not
-     * confirming.
-     */
+    // Holds the scenarioId currently in "are you sure?" mode for the
+    // inline two-step delete-scenario confirm; null when not confirming.
     public ?int $confirmingDeleteForScenarioId = null;
 
-    /**
-     * Whether the inline "+ New scenario" form is open.
-     */
     public bool $creatingScenario = false;
 
-    /**
-     * Inline new-scenario name input bound to the create form.
-     */
     public string $newScenarioName = '';
 
-    /**
-     * Inline new-scenario error message rendered next to the form.
-     */
     public ?string $createScenarioError = null;
 
     protected $listeners = [
@@ -174,13 +136,10 @@ final class ForecastPage extends Component
 
     public function deleteScenario(int $scenarioId, CurrentUser $currentUser, DeleteScenario $action, ScenarioQuery $scenarioQuery): void
     {
-        // Re-validate ownership before invoking the action. `$scenarioId`
-        // arrives as a browser-supplied parameter — a malicious caller could
-        // supply any integer. We re-fetch the user's scenarios from the DB
-        // (same query as render()) and verify the requested id is in the
-        // result set. This is a cheap check: ScenarioQuery returns only the
-        // authenticated user's own scenarios, so any foreign id silently
-        // returns nothing and the delete is rejected without leaking information.
+        // Re-validate ownership: $scenarioId is browser-supplied, so
+        // ScenarioQuery's own-scenarios-only result set is re-checked here
+        // rather than trusting the caller, without leaking whether a
+        // foreign id exists.
         $user = $currentUser->user();
         $owns = false;
         foreach ($scenarioQuery->forUser($user) as $s) {
@@ -266,9 +225,7 @@ final class ForecastPage extends Component
 
         // A tampered or stale ?account= value (anything that is neither
         // 'all' nor a numeric account id) falls back to the All-accounts
-        // tab — matching the `#[Url(as: 'account', except: 'all')]`
-        // intent. Renders the All-accounts view rather than a blank page
-        // with no error or fallback.
+        // tab rather than rendering a blank page with no error.
         if ($this->account !== 'all' && ! is_numeric($this->account)) {
             $this->account = 'all';
         }
@@ -292,7 +249,6 @@ final class ForecastPage extends Component
             }
         }
 
-        // Empty-state guard: no accounts at all.
         $isEmpty = count($accountList) === 0;
 
         $baseline = null;
@@ -362,7 +318,6 @@ final class ForecastPage extends Component
                 $effectiveBufferMinor = (int) $accountRow->forecast_min_buffer_minor;
             }
 
-            // Load any baseline shortfall windows for the inline badge.
             $windowRows = $db->connection()->table('forecast_shortfall_windows')
                 ->where('user_id', $user->id)
                 ->where('account_id', $selectedAccountId)
@@ -374,7 +329,6 @@ final class ForecastPage extends Component
                 $shortfallWindows[] = $mapper->mapShortfallWindow($row);
             }
 
-            // Load scenario forecast when the picker has an active selection.
             if ($this->scenarioId !== null) {
                 $scenario = $forecastQuery->forUser($selectedAccountId, $this->horizon, $this->scenarioId, $user);
                 $netDiff = $this->computeNetDiff($baseline, $scenario);
@@ -408,8 +362,10 @@ final class ForecastPage extends Component
             $aggregateChartElementId = 'forecast-chart-aggregate-'.$this->horizon;
         }
 
+        // Clock is kept on the render() signature for a future explicit
+        // "as of" badge; the current surface does not render one yet.
         $now = $clock->now();
-        unset($now); // Clock is kept on the render() signature for an explicit "as of" badge Wave 5 does not yet render.
+        unset($now);
 
         $view = $views->make('forecasting::livewire.forecast-page', [
             'accounts' => $accountList,
@@ -453,20 +409,7 @@ final class ForecastPage extends Component
     }
 
     /**
-     * Sum every account's per-day point estimate into a single
-     * date-indexed series for the All accounts aggregate chart. The
-     * rollup is in EUR — for accounts whose default_currency is
-     * non-EUR the per-account ForecastDto already carries amounts in
-     * that currency, and the per-point `currency` field tags the
-     * unit. Wave 5's All-accounts aggregate intentionally simplifies:
-     * the per-account default_currency is treated as already-converted
-     * (PayPal-USD points carry the per-occurrence settled-EUR amount
-     * from upstream FX conversion). Multi-currency edge cases are
-     * captured at the per-account chart's `series-confidence-row`
-     * legend rather than smudged into the aggregate.
-     *
-     * Buffer floor is the sum of every account's
-     * `forecast_min_buffer_minor` (treating NULL as 0).
+     * @link ../../../../../.docs/features/forecasting/architecture.md
      *
      * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
      * @return array{0: list<array{date: string, point_minor: int}>, 1: int}
@@ -508,12 +451,11 @@ final class ForecastPage extends Component
         return [$aggregatePoints, $bufferFloor];
     }
 
+    // Computed here rather than left to ApexCharts auto-scale so both
+    // panels render against identical y-axis bounds — otherwise the
+    // scenario panel's independent auto-scale would visually distort
+    // the baseline-vs-scenario delta.
     /**
-     * Pre-compute the shared y-axis range across baseline + scenario
-     * (when present) so both panels render against identical bounds.
-     * Without this, the scenario's y-axis would auto-scale and the
-     * visual delta would lie.
-     *
      * @return array{0: float, 1: float}
      */
     private function computeSharedYAxisRange(ForecastDto $baseline, ?ForecastDto $scenario, ?int $effectiveBufferMinor): array
@@ -542,10 +484,6 @@ final class ForecastPage extends Component
     }
 
     /**
-     * Compute the three-horizon Net diff (scenario - baseline) at days
-     * 30, 60, 90 from asOf — read each panel's `pointMinor` at the
-     * target date.
-     *
      * @return array<int, int>
      */
     private function computeNetDiff(ForecastDto $baseline, ForecastDto $scenario): array
@@ -612,12 +550,10 @@ final class ForecastPage extends Component
         $yMin = $yMinOverride ?? (($lows === [] ? 0 : min($lows)) / 100 - 1);
         $yMax = $yMaxOverride ?? (($highs === [] ? 0 : max($highs)) / 100 + 1);
 
-        // Wave 3 shortfall band overlay (RESEARCH Pattern 1). Render
-        // the rose-50 region BELOW the buffer floor so the user sees
-        // immediately where the projected balance dips below the floor.
-        // ApexCharts v5 requires the full annotations object shape: a bare []
-        // serializes to a JSON array, clobbers the library's annotation
-        // defaults, and crashes drawImageAnnos on annotations.images.
+        // Render the shortfall-band region BELOW the buffer floor so the
+        // user sees immediately where the projected balance dips below it.
+        // ApexCharts v5 requires the full annotations object shape: a bare
+        // [] serializes to a JSON array and crashes drawImageAnnos.
         $annotations = ['yaxis' => [], 'xaxis' => [], 'points' => [], 'images' => []];
         if ($effectiveBufferMinor !== null) {
             $bufferValue = $effectiveBufferMinor / 100;
@@ -625,7 +561,7 @@ final class ForecastPage extends Component
                 [
                     'y' => $yMin - 10,
                     'y2' => $bufferValue,
-                    'fillColor' => '#FECDD3', // rose-50
+                    'fillColor' => '#FECDD3',
                     'opacity' => 0.4,
                     'label' => ['text' => '', 'position' => 'left'],
                 ],
@@ -663,9 +599,9 @@ final class ForecastPage extends Component
             'legend' => ['show' => false],
             'tooltip' => ['shared' => true, 'intersect' => false],
             'annotations' => $annotations,
-            // D-11: phone-tuned responsive breakpoints baked into server-rendered
-            // options so the chart fills the container at phone width with fewer
-            // x-axis labels and no legend — no extra JS required.
+            // Phone-tuned responsive breakpoints baked into server-rendered
+            // options so the chart fills the container at phone width with
+            // fewer x-axis labels and no legend — no extra JS required.
             'responsive' => [
                 [
                     'breakpoint' => 768,

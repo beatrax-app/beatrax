@@ -12,17 +12,7 @@ use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Launchpad — Phase 8 recurring-series-detail "Model amount change…"
- * dropdown target.
- *
- * Looks up the series (cross-user-scoped), creates a new scenario
- * named `Change {series_name} amount`, and seeds a single
- * `change_series_amount` mutation against that series with the
- * user-supplied new amount. CreateScenario + AddScenarioMutation are
- * wrapped in a single DB transaction.
- *
- * Returns the new scenario id; the caller redirects to
- * `/forecast?scenarioId={id}`.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class CreateAmountChangeScenarioForSeries
 {
@@ -61,10 +51,8 @@ final class CreateAmountChangeScenarioForSeries
         } catch (InvalidArgumentException $e) {
             // A scenario with this name already exists (user double-
             // clicked the launchpad). Return the existing id so the
-            // caller redirects into it instead of surfacing a 500.
-            // Existing amount is NOT updated to the new amount — the
-            // user can edit the persisted mutation manually after
-            // landing on /forecast.
+            // caller redirects into it instead of surfacing a 500 —
+            // the existing mutation's amount is NOT updated.
             $existing = $this->existingScenarioIdByName($user, $scenarioName);
             if ($existing !== null) {
                 return $existing;

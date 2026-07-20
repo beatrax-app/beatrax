@@ -14,25 +14,7 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 
 /**
- * Subscribes to the four Recurring-side Public events that signal a
- * change in the recurring-series substrate (approve, cadence flip,
- * reject, metric refresh). Each upstream event fans out into one
- * baseline `ProjectForecastJob` dispatch per horizon in
- * `ProjectForecastJob::HORIZON_DAYS` — AND the same set per saved
- * scenario the user owns (note the two long horizons added in Phase 6
- * make each recurring change dispatch `count(HORIZON_DAYS) ×
- * (1 + scenarios)` jobs). The whole set of projections is invalidated
- * because the recurring-series substrate is the input to every
- * projection.
- *
- * The downstream job's `ShouldBeUniqueUntilProcessing` lock collapses
- * concurrent triggers per `(userId, scenarioKey, horizon)` so even
- * dozens of upstream events in the same window do NOT produce
- * duplicate work.
- *
- * Cross-module: imports `Modules\Recurring\Public\Events` only — never
- * `Modules\Recurring\Internal`. The
- * `crossModuleAccessGoesThroughPublic` arch invariant enforces this.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ProjectForecastOnRecurringChange
 {

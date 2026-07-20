@@ -9,26 +9,12 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Public Action that persists the per-account forecast buffer.
- *
- * Mirrors `Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert`:
- *   - Cross-user 404 via `(account_id, user_id)` guard — raises
- *     `NotFoundHttpException` when the account does not belong to the
- *     caller.
- *   - Server-side validation rejects negative buffer values with
- *     `InvalidArgumentException` (carrying the UI-SPEC-locked message
- *     "Buffer must be zero or positive.").
- *   - Write happens inside a single DB transaction; on success the
- *     three baseline projection horizons (30 / 60 / 90) are dispatched
- *     so the chart re-renders with the new floor line and any new
- *     shortfall band.
- *
- * `$bufferMinor === null` clears the buffer (effective zero-crossing
- * default).
+ * @see AcknowledgeDriftAlert
  */
 final class SetAccountForecastBuffer
 {

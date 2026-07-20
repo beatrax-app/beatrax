@@ -6,18 +6,10 @@ namespace Modules\Forecasting\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
 
-/**
- * One per-occurrence projected contribution emitted by `RangeProjector`
- * and consumed by `DailyFold`.
- *
- * The triple `(lowMinor, pointMinor, highMinor)` is signed and in the
- * contribution's native `currency` (an expense series carries negative
- * values; an income series carries positive ones). The daily fold
- * converts to the account's default currency using `fxRateUsed` before
- * combining the contributions per day.
- *
- * Pure value object — no behaviour beyond auto-generated constructor.
- */
+// The (lowMinor, pointMinor, highMinor) triple is signed and in the
+// contribution's native currency (expense series negative, income
+// series positive); DailyFold converts to the account's default
+// currency using fxRateUsed before combining per day.
 final readonly class ForecastContribution
 {
     public function __construct(

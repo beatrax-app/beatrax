@@ -5,15 +5,11 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Spatie\LaravelData\Data;
 
 /**
- * Read-side projection of a single forecast_scenarios row for the
- * scenario picker and the scenario CRUD panel.
- *
- * `mutationCount` is computed at query time by `ScenarioQuery`; it is
- * the number of `forecast_scenario_mutations` rows belonging to this
- * scenario.
+ * @see ScenarioQuery
  */
 final class ScenarioDto extends Data
 {

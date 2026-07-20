@@ -10,21 +10,6 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Forecasting\Public\Services\ForecastHighlightsQuery;
 
-/**
- * Dashboard "Forecast highlights" tile. REPLACES the Phase 5 inline
- * "Next ICS settlement" tile as a strict superset (the next-settlement
- * line is preserved alongside the new lowest-projected-balance +
- * active-shortfall-count lines).
- *
- * The tile is text-only (no sparkline). Drills to `/forecast` on click.
- * Hidden when the user has neither a lowest-projected balance nor a
- * next ICS settlement (calm-day collapse — same precedent as the
- * dashboard drift badge).
- *
- * Constructor injection is banned on Livewire `Component` subclasses
- * by phpstan-strict-rules; collaborators arrive on `render()` as
- * parameter DI.
- */
 final class ForecastHighlightsTile extends Component
 {
     public function render(

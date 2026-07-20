@@ -13,10 +13,7 @@ use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Hard-deletes one mutation row from a saved scenario. Cross-user
- * invocation raises `NotFoundHttpException` via the
- * `(id, user_id)` guard. Dispatches `ScenarioMutated` after the
- * delete so the projection pipeline re-runs.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class RemoveScenarioMutation
 {

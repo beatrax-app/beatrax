@@ -17,36 +17,7 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 
 /**
- * Async forecast projection job.
- *
- * Concurrency contract:
- *  - ShouldBeUniqueUntilProcessing keyed on
- *    `uniqueId() = "{userId}:{scenarioKey}:{horizonDays}"` where
- *    `scenarioKey` is the literal string `'baseline'` for a null
- *    scenarioId and the stringified scenario id otherwise. The
- *    `'baseline'` sentinel disambiguates the null case from a literal
- *    scenario id of 0 — the lock key is plain string equality, so
- *    `(5, null, 30)` and `(5, 0, 30)` must produce DIFFERENT keys
- *    (`'5:baseline:30'` vs `'5:0:30'`) to avoid silent collisions.
- *  - tries = 3 + backoff = [60, 300, 900] (mirrors DetectDriftAlertsJob)
- *    so a transient queue / DB hiccup retries without final-failing
- *    the run.
- *
- * Constructor-time validation: `horizonDays` must be one of the five
- * supported windows (30, 60, 90, 180, 365). Any other value raises
- * `InvalidArgumentException` so a tampered Livewire payload or a
- * misuse from a later wave's feature flag cannot reach the queue
- * worker. Phase 6 extends the set from 3 to 5 horizons to support
- * the 12-month calendar reach (D-14).
- *
- * Queue-uniqueness lock resolution is delegated to the shared
- * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
- * returns `LockStore::forUniqueJobs()`, which resolves the cache store
- * named by `config('cache.locks_store')`.
- *
- * `handle()` resolves the User via `firstOrFail` and hands off to
- * `ProjectionPipeline` which owns the math, the per-account fold, the
- * `forecast_runs.result_json` write, and the state-machine transitions.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -68,6 +39,8 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
         public readonly ?int $scenarioId,
         public readonly int $horizonDays,
     ) {
+        // Rejects a tampered Livewire payload or any other caller-supplied
+        // horizon so it never reaches the queue worker.
         if (! in_array($this->horizonDays, self::HORIZON_DAYS, true)) {
             throw new InvalidArgumentException(sprintf(
                 'ProjectForecastJob: horizonDays must be one of [30, 60, 90, 180, 365]; got %d.',
@@ -78,6 +51,10 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
 
     public function uniqueId(): string
     {
+        // The 'baseline' sentinel disambiguates a null scenarioId from a
+        // literal scenario id of 0 — the lock key is plain string equality,
+        // so (5, null, 30) and (5, 0, 30) must produce DIFFERENT keys
+        // ('5:baseline:30' vs '5:0:30') to avoid silent collisions.
         $scenarioKey = $this->scenarioId !== null
             ? (string) $this->scenarioId
             : 'baseline';
