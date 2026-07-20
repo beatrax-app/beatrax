@@ -192,3 +192,29 @@ The Horizon iframe flow (dev_mode + Horizon installed only):
        → renders <iframe src="/horizon"> with frame-ancestors header
             (applied by HorizonFrameAncestors middleware)
 ```
+
+## Horizon conditional-registration arch invariants
+
+`DevModeServiceProvider::boot()` registers the `/dev/horizon` route only
+when `config('app.dev_mode') === true` AND the Horizon package's
+`ServiceProvider` class is present (Horizon ships `require-dev`, so a
+`--no-dev` production build never has it). The dev_mode flag is read
+through an injected `Config\Repository`, not the `config()` global
+helper, keeping the provider facade-free per the DI-only rule.
+
+That registration walks two arch invariants:
+
+- `noHorizonImportsInShippedBuildCode` forbids any non-stripped
+  `Laravel\Horizon\` symbol outside `app/Providers/HorizonServiceProvider.php`.
+  The arch test strips `class_exists(\Laravel\Horizon\...)` arguments
+  from its regex sweep first, so an inline FQCN inside `class_exists()`
+  is legal.
+- Pint's `fully_qualified_strict_types` fixer would otherwise hoist an
+  inline `Laravel\Horizon\…::class` into a top-of-file `use` line,
+  breaking that arch test. The hoist is suppressed because the
+  imported short name `HorizonServiceProvider` is already in scope —
+  Pint refuses to introduce an ambiguity. The matching pattern lives in
+  `bootstrap/providers.php`: the local `App\Providers\HorizonServiceProvider`
+  is imported at the top of `DevModeServiceProvider` purely as a
+  name-conflict shim, and used in the route-registration body, so the
+  import is not unused.

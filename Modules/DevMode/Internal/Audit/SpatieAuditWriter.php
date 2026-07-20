@@ -213,7 +213,6 @@ final readonly class SpatieAuditWriter implements AuditWriter
                 return $authed;
             }
         } catch (NotAuthenticatedException) {
-            // Fall through to the lookup path.
         }
 
         if ($callerUserId <= 0) {

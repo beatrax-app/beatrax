@@ -230,7 +230,8 @@ class OAuthScrubSet
                 ],
             ]);
         } catch (Throwable) {
-            // Last-resort no-op — never break the surrounding logger.
+            // Last-resort no-op: a SystemAlert write failure here must
+            // never propagate and break the surrounding logger call.
         }
     }
 

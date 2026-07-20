@@ -125,11 +125,9 @@ final class CommandArgPromptModal extends Component
         }
 
         if ($spec->tier !== 'safe') {
-            // The palette JSON excludes destructive rows so this path
-            // should never fire from the legitimate UI. A hostile
-            // dispatch that ships a destructive name routes through
-            // the triple-gate instead of spawning — same defense-in-
-            // depth posture spawn() takes on the runner page.
+            // A hostile dispatch shipping a destructive name routes
+            // through the triple-gate instead of spawning — same
+            // defense-in-depth posture spawn() takes on the runner page.
             $this->dispatch(
                 'triple-gate:open',
                 command: $this->command,
@@ -151,11 +149,9 @@ final class CommandArgPromptModal extends Component
             return;
         }
 
-        // Normalise the args map: drop blank optional values so the
-        // spawner's renderArg() skips them entirely (it already
-        // skips null + missing keys, but an empty string would
-        // render as `php artisan cmd ''` which Laravel sometimes
-        // rejects).
+        // Drop blank optional values: renderArg() already skips null
+        // and missing keys, but an empty string renders as
+        // `php artisan cmd ''`, which Laravel sometimes rejects.
         $args = [];
         foreach ($spec->argsSchema as $arg) {
             $value = $this->values[$arg->name] ?? null;
@@ -172,16 +168,10 @@ final class CommandArgPromptModal extends Component
             $args[$arg->name] = $value;
         }
 
-        // Spawn directly via the CommandSpawner. The earlier draft
-        // dispatched `spawn-command` and relied on
-        // ArtisanRunnerPage::onSpawnCommand to perform the actual
-        // run, which silently failed whenever the operator opened
-        // the modal from any page other than /dev/artisan — the
-        // runner page was the SOLE listener for that event and was
-        // not mounted on /dev/logs, /dev/queue, etc. (user-visible
-        // symptom: "submit does nothing, no console / network
-        // errors"). Driving the spawner here means the modal works
-        // identically from every surface that mounts it.
+        // Spawn directly via CommandSpawner rather than dispatching a
+        // `spawn-command` event: ArtisanRunnerPage is not always
+        // mounted (e.g. on /dev/logs, /dev/queue), so an event-only
+        // path silently drops the spawn on those pages.
         $command = $this->command;
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
 

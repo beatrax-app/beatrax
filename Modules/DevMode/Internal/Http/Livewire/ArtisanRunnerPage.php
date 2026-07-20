@@ -66,31 +66,18 @@ final class ArtisanRunnerPage extends Component
         DevCommandRegistry $registry,
         ?string $spawn = null,
     ): void {
-        // Belt-and-braces Advanced-toggle reset on first dev-console
-        // load per session.
-        //
-        // The ResetAdvancedToggleOnLogin listener clears the toggle on
-        // every Illuminate\Auth\Events\Login event. Login fires on
-        // explicit credential auth AND on remember-me cookie hydration
-        // (SessionGuard::user() fires Login from the recaller branch),
-        // but does NOT fire on session-resume where the user id is
-        // already in the session — that branch fires only the
-        // Authenticated event. A long-lived sticky session that
-        // resumed without re-firing Login can therefore carry an
-        // Advanced=true value from a previous request unless something
-        // else clears it. This mount() reset closes that gap on the
-        // first /dev/* navigation per session.
+        // Belt-and-braces reset: ResetAdvancedToggleOnLogin clears the
+        // toggle on Login, but session-resume (no Login refire) can
+        // carry a stale Advanced=true across requests. This closes
+        // that gap on the first /dev/* navigation per session.
         if (! $session->has('dev_mode.advanced_session_seen')) {
             $session->forget('dev_mode.advanced');
             $session->put('dev_mode.advanced_session_seen', true);
         }
 
-        // Carry-across spawn intent from the command palette: when
-        // /dev/artisan is opened with ?spawn=<name>, fire the spawn
-        // immediately so picking a SAFE command from the palette
-        // outside the runner page produces the same outcome as
-        // picking it from inside. Reuses the spawn() guard logic so
-        // unknown / destructive names route correctly.
+        // Carry across a palette-picked spawn: ?spawn=<name> fires the
+        // same spawn() guard immediately so a pick made off-page
+        // produces the same outcome as one made on /dev/artisan.
         if (is_string($spawn) && $spawn !== '') {
             $this->spawn($spawn, [], $spawner, $user, $registry);
         }
@@ -126,7 +113,6 @@ final class ArtisanRunnerPage extends Component
         try {
             $spec = $registry->find($command);
         } catch (\InvalidArgumentException) {
-            // Unknown command — surface a toast but never spawn.
             $this->dispatch('toast', message: 'Unknown command: '.$command);
 
             return;
@@ -138,27 +124,10 @@ final class ArtisanRunnerPage extends Component
             return;
         }
 
-        // Pre-spawn required-arg guard.
-        //
-        // Several SAFE-tier registry entries declare arguments whose
-        // Laravel-command-side signature is REQUIRED (e.g.
-        // `config:show {config}`). The palette pick path dispatches
-        // `spawn-command` with `args: []`, so without this guard the
-        // spawner builds `php artisan config:show` (no args) and
-        // Symfony Console aborts with "Not enough arguments
-        // (missing: \"config\")". The error landed in the production
-        // log without any surface visible to the operator — the
-        // user-visible symptom was "the modal just closes and
-        // nothing happens".
-        //
-        // Validate against the schema before spawning: if any arg
-        // whose rules contain 'required' is absent (or present but
-        // null / empty-string), refuse and surface a toast naming
-        // the missing key(s). The future arg-prompt modal will
-        // intercept earlier on the palette path; until then, the
-        // toast tells the operator exactly what's missing so they
-        // can re-pick from /dev/artisan's fallback modal (which is
-        // also a future arg-form surface) or use the CLI.
+        // Some SAFE-tier registry entries declare REQUIRED args (e.g.
+        // `config:show {config}`); a palette pick dispatches `args: []`,
+        // so without this guard Symfony Console aborts with no surface
+        // visible to the operator. Refuse + toast the missing key(s).
         $missing = $this->missingRequiredArgs($spec->argsSchema, $args);
         if ($missing !== []) {
             $this->dispatch(
@@ -295,24 +264,16 @@ final class ArtisanRunnerPage extends Component
     ): View {
         $userId = $user->id();
 
-        // Auto-finalize sweep — every spawn writes an eager audit row
-        // with exit_code=null at spawn time. The SSE stream's done
-        // branch updates that row in place. If the operator never
-        // opens the stream, the row stays "running" forever. Walk
-        // the pending rows once per render, ask RunRegistry for the
-        // matching record, and synchronously finalize via the same
-        // FinalizeRunAudit hook the SSE done branch uses — for any
-        // PID that's already exited. Bounded by the limit on the
-        // pending query (the sweep is a no-op when nothing's stale).
+        // Every spawn writes an eager audit row with exit_code=null;
+        // the SSE done branch updates it in place, but a row stays
+        // "running" forever if the operator never opens the stream.
+        // Sweep once per render and finalize any PID that already exited.
         $this->sweepPendingRuns($db, $userId, $runRegistry, $liveness, $finalize);
 
-        // Use the raw query builder via DatabaseManager — this
-        // sidesteps the Eloquent\Builder __call → Query\Builder
-        // forwarding that triggers larastan-strict
-        // `staticMethod.dynamicCall` flags on `limit()` / `whereIn()`.
-        // Equivalent semantics; same dev_mode_audit table (named
-        // explicitly here since the custom Activity model is the only
-        // place that knows the table name override).
+        // Raw query builder via DatabaseManager sidesteps the
+        // Eloquent\Builder __call forwarding that triggers
+        // larastan-strict staticMethod.dynamicCall on limit()/whereIn();
+        // same dev_mode_audit table the custom Activity model targets.
         $audit = $db->connection()->table('dev_mode_audit')
             ->where('log_name', 'dev_mode')
             ->where('causer_id', $userId)
@@ -336,24 +297,18 @@ final class ArtisanRunnerPage extends Component
             $excerpt = is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : null;
             unset($args['__cancelled']);
 
-            // status: pending eager-write (no exit, no finish) →
-            // 'running' so the RunCard opens the SSE live tail.
-            // Anything else with a finish marker → 'done' (the
-            // RunCard's exit-code render picks the ok/fail variant
-            // off the exit code itself).
+            // Pending eager-write (no exit, no finish) → 'running' so
+            // the RunCard opens the SSE live tail; anything else with
+            // a finish marker → 'done'.
             $status = match (true) {
                 $cancelled => 'cancelled',
                 $exitCode === null && $finishedAt === null => 'running',
                 default => 'done',
             };
 
-            // Prefer the spawn-time UUID from properties so the
-            // RunCard's data-run-id matches the SSE route argument
-            // (`/dev/artisan/stream/{runId}`). Falls back to the
-            // audit table row id for pre-eager-write rows so the UI
-            // still has a stable key (the live-stream attach won't
-            // work for those, but they're already finalized — the
-            // excerpt renders inline instead).
+            // Prefer the spawn-time UUID so data-run-id matches the SSE
+            // route argument; fall back to the audit row id for
+            // pre-eager-write rows (already finalized, excerpt inline).
             $runIdFromProps = is_string($properties['run_id'] ?? null) ? $properties['run_id'] : '';
             $idRaw = $vars['id'] ?? null;
             $runId = $runIdFromProps !== '' ? $runIdFromProps : match (true) {
@@ -395,7 +350,6 @@ final class ArtisanRunnerPage extends Component
             default => $runs,
         };
 
-        // Pre-flight heartbeat pill.
         $heartbeatTs = $cache->get(WriteWorkerHeartbeat::CACHE_KEY);
         $heartbeatTs = is_int($heartbeatTs) ? $heartbeatTs : null;
         $workerAlive = $heartbeatTs !== null

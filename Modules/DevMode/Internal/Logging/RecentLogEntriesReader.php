@@ -102,15 +102,10 @@ final readonly class RecentLogEntriesReader
         foreach ($recent as $entry) {
             $scrubbed = $this->scrubber->scrub($entry['message']);
             $excerpt = $this->truncate($scrubbed, self::EXCERPT_MAX, appendEllipsis: true);
-            // The href's `contains` filter is a literal substring
-            // match against the source log line at /dev/logs. The
-            // user-facing excerpt above appends '…' on truncation;
-            // the href substring must NOT — '…' never appears in
-            // the source data and the search would silently return
-            // zero rows when the link is clicked. (User report:
-            // "click on an error on the dev overview does not show
-            // the record properly because it includes the truncate
-            // characters, so the search fails (the …)".)
+            // The href's `contains` filter is a literal substring match
+            // against the source log line at /dev/logs, so it must NOT
+            // append '…' the way the user-facing excerpt does — the
+            // ellipsis never appears in the source data.
             $hrefContains = $this->truncate($scrubbed, self::HREF_CONTAINS_MAX, appendEllipsis: false);
             $out[] = [
                 'timestamp' => $entry['timestamp'],

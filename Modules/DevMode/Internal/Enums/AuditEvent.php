@@ -30,8 +30,6 @@ enum AuditEvent: string
     /** SELECT-only SQL query executed through the read-only panel. */
     case SqlSelect = 'sql.select';
 
-    // ---- Queue inspector taxonomy ----
-
     /**
      * `jobs` table row deleted (drop a pending job). Triple-gate
      * required only when invoked through the bulk path

@@ -55,7 +55,7 @@ final class TripleGateModal extends Component
      */
     public array $resolvedArgs = [];
 
-    /** The operator's typed input. Mode 3 of the gate (D-21). */
+    /** The operator's typed input for the third gate mode. */
     public string $typed = '';
 
     /** Last server-side gate error code (form-level). */
@@ -79,31 +79,28 @@ final class TripleGateModal extends Component
     ): void {
         $this->gateError = '';
 
-        // Gate 1 — Dev Mode env flag must be on.
+        // Three server-side gates: Dev Mode env flag, session Advanced
+        // toggle, then the typed-name comparison below.
         if (! $devMode->isOn()) {
             $this->gateError = 'dev_mode_off';
             throw ValidationException::withMessages(['_gate' => 'dev_mode_off']);
         }
 
-        // Gate 2 — Advanced toggle for this session must be on.
         if ($session->get('dev_mode.advanced') !== true) {
             $this->gateError = 'advanced_off';
             throw ValidationException::withMessages(['_gate' => 'advanced_off']);
         }
 
-        // Gate 3 — Typed app name must equal the exact lowercase string.
-        // hash_equals is timing-safe; the comparison is intentionally
-        // case-sensitive — the lowercase token "beatrax".
+        // Case-sensitive, timing-safe comparison against the lowercase
+        // token "beatrax".
         if (! hash_equals('beatrax', $this->typed)) {
             $this->gateError = 'app_name_mismatch';
             throw ValidationException::withMessages(['typed' => 'app_name_mismatch']);
         }
 
-        // All three gates passed. Dispatch the confirmed event with
-        // the verified command + args + the typed token so the
-        // ArtisanRunnerPage listener can POST to
-        // DestructiveSpawnController, where the gates are re-validated
-        // — defense-in-depth.
+        // Downstream listeners (DestructiveSpawnController,
+        // QueueInspectorPage) re-validate all three gates a second
+        // time before acting — defense-in-depth against a spoofed event.
         $this->dispatch(
             'triple-gate:confirmed',
             command: $this->command,
@@ -113,7 +110,6 @@ final class TripleGateModal extends Component
 
         $this->dispatch('modal-close', name: 'triple-gate');
 
-        // Clear local state so the next open() starts fresh.
         $this->typed = '';
     }
 

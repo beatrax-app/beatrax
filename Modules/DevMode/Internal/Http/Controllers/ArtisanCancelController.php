@@ -53,23 +53,20 @@ final readonly class ArtisanCancelController
             throw new HttpException(500, 'posix_required_for_cancel');
         }
 
-        // Already finished — idempotent cancel returns 204.
+        // Already finished: an idempotent cancel on a dead PID still
+        // returns 204 rather than surfacing an error to the caller.
         if (! posix_kill($record->pid, 0)) {
             $this->registry->markCancelled($runId);
 
             return new JsonResponse(null, 204);
         }
 
-        // SIGTERM the running child.
         @posix_kill($record->pid, SIGTERM);
 
-        // 3-second grace, then SIGKILL fallback. Blocking the HTTP
-        // request is the documented trade-off: cancel is rare and
-        // the SSE controller's liveness check needs the PID to
-        // actually be gone before it emits its terminal done event.
-        // PHPStan's posix_kill stub claims `bool(true)` always — the
-        // ignores below are necessary because the runtime return
-        // depends on kernel state the static analyser cannot model.
+        // 3-second grace, then SIGKILL fallback — blocking the HTTP
+        // request trades latency so the SSE liveness check can observe
+        // the PID actually gone. The ignore directives below guard a
+        // stub that always claims a bool(true) return.
         $deadline = microtime(true) + self::SIGTERM_GRACE_SECONDS;
         while (microtime(true) < $deadline) {
             /** @phpstan-ignore-next-line booleanNot.alwaysFalse */

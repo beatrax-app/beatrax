@@ -77,11 +77,10 @@ final readonly class RedactionExcerptCap
             return $scrubbed;
         }
 
-        // Byte-cap (not mb_substr) so the 8 KiB invariant is exact
-        // on the underlying TEXT column. The downstream consumer
-        // tolerates a trailing partial multi-byte glyph; the
-        // alternative (mb_substr at character boundaries) gives
-        // unpredictable byte sizes that complicate the cap test.
+        // Byte-cap (not mb_substr) keeps the 8 KiB invariant exact on
+        // the underlying TEXT column, tolerating a trailing partial
+        // multi-byte glyph rather than the unpredictable byte sizes a
+        // character-boundary substr would produce.
         return substr($scrubbed, 0, $maxBytes);
     }
 }

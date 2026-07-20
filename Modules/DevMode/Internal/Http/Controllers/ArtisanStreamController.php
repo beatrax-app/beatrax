@@ -118,14 +118,10 @@ final readonly class ArtisanStreamController
                     @flush();
                 }
 
-                // Liveness check via ProcessLiveness::isAlive(). If the
-                // process is gone, the spawner-detached child has
-                // finished — emit the terminal `done` event with
-                // whatever exit code we can recover (best-effort; the
+                // A gone PID means the spawner-detached child has
+                // finished; emit the terminal `done` event with
+                // whatever exit code is recoverable (best-effort — the
                 // audit pipeline reads the exit code authoritatively).
-                // The helper prefers posix_kill($pid, 0) and falls back
-                // to `kill -0` shell_exec on builds without ext-posix
-                // (the shipped NativePHP Mac PHP binary omits posix).
                 if (! $liveness->isAlive($record->pid)) {
                     // Read once more in case the child wrote a final
                     // chunk between the previous tail and the exit.
@@ -143,31 +139,17 @@ final readonly class ArtisanStreamController
                     $cancelled = $fresh?->status === 'cancelled';
 
                     // Mark finished in the registry so subsequent SSE
-                    // reconnects observe a terminal status. The
-                    // FinalizeRunAudit hook (invoked below) writes
-                    // the dev_mode_audit row that captures the
-                    // authoritative exit code + the redacted stdout
-                    // excerpt.
+                    // reconnects observe a terminal status; FinalizeRunAudit
+                    // (below) then writes the dev_mode_audit row that
+                    // captures the authoritative exit code + stdout excerpt.
                     if ($fresh !== null && $fresh->status === 'running') {
                         $registry->markFinished($runIdLocal, $exit ?? 0);
                     }
 
-                    // Audit pipeline hook: write the dev_mode_audit row
-                    // BEFORE emitting the terminal `event: done` so the
-                    // client observes a strict happens-before between
-                    // "audit row exists" and "browser sees stream
-                    // closed".
-                    //
-                    // A finalize failure must NEVER propagate out of
-                    // the SSE handler — the client always gets a clean
-                    // terminal frame. But the failure also must NOT be
-                    // silently swallowed: a corrupt audit row, a DB
-                    // permission error, or a missing
-                    // dev_mode_audit table needs to surface somewhere
-                    // an operator will see it. Best-effort log to the
-                    // PSR LoggerInterface via the container; if even
-                    // that fails (boot-time logger absent), give up
-                    // silently rather than break the SSE frame.
+                    // Finalize audit write happens-before the terminal
+                    // done event; a failure never propagates out of the
+                    // SSE handler but is still logged best-effort so an
+                    // operator can see a corrupt row or a DB error.
                     try {
                         ($finalize)($runIdLocal, $exit, $cancelled);
                     } catch (\Throwable $finalizeError) {

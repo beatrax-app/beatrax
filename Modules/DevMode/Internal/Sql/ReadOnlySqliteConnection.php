@@ -63,22 +63,15 @@ final readonly class ReadOnlySqliteConnection
             $rows = $connection->select($sql);
             $duration = (int) ((hrtime(true) - $start) / 1_000_000);
         } finally {
-            // Reset PRAGMA so subsequent writes on the same PDO (e.g.
-            // in the testing path where the default + readonly share
-            // the same in-memory connection) can proceed. In the
-            // production path this is a no-op — the readonly_select
-            // sibling has no writes flowing through it. The reset
-            // keeps the testing path correct without weakening the
-            // production guarantee (every execute() re-arms PRAGMA
-            // query_only = 1 before reading).
+            // Reset PRAGMA so subsequent writes on the same PDO (e.g. the
+            // testing path where default + readonly share one in-memory
+            // connection) can proceed; every execute() re-arms PRAGMA
+            // query_only = 1 before reading, so this is a no-op in prod.
             $pdo->exec('PRAGMA query_only = 0');
-            // Restore the previous max-execution-time so the wall-
-            // clock cap is scoped strictly to this read. Without
-            // restoring, the cap would persist for the remainder of
-            // the request lifecycle (or test process) and silently
-            // cap unrelated work. Pass 0 if there was no prior limit
-            // (PHP CLI default) so the process becomes unlimited
-            // again.
+            // Restore the previous max-execution-time so the wall-clock
+            // cap stays scoped to this read rather than persisting for
+            // the rest of the request; 0 means "no prior limit" (CLI
+            // default), which makes the process unlimited again.
             $this->wallClock->apply($previousLimit);
         }
 

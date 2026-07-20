@@ -152,18 +152,10 @@ final class SqlPanelPage extends Component
         AuditWriter $audit,
         SchemaSnapshot $schema,
     ): void {
-        // The schema-viewer Browse button feeds SELECT * FROM <table>
-        // LIMIT 100 through the same SQL pipeline so every browse
-        // writes an audit row + observes the query_only=1 + wall-clock
-        // cap.
-        //
-        // Defense-in-depth: even though the table value originates in
-        // the Blade-rendered SchemaSnapshot output and the identifier
-        // is double-quoted with the SQLite escape rules, assert the
-        // submitted name is on the live schema allow-list before
-        // building the SELECT. A tampered Livewire payload that
-        // smuggles an off-schema name still gets rejected before the
-        // SELECT ever reaches the engine.
+        // Browse feeds SELECT * FROM <table> LIMIT 100 through the same
+        // pipeline. Assert the name is on the live schema allow-list
+        // first, so a tampered payload smuggling an off-schema name is
+        // rejected before the SELECT ever reaches the engine.
         $allowedNames = array_column($schema->all(), 'name');
         if (! in_array($table, $allowedNames, true)) {
             $this->resetResultState();

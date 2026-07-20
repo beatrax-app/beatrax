@@ -57,7 +57,6 @@ final class ConfigFlattener
 
                     continue;
                 }
-                // Recurse into the nested associative array.
                 $flat = array_merge($flat, $this->flatten($value, $key));
 
                 continue;

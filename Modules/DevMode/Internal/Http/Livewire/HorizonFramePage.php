@@ -13,11 +13,10 @@ use Livewire\Component;
  * `/dev/horizon` — thin Livewire wrapper that renders an iframe
  * pointing at the package-provided Horizon dashboard.
  *
- * Route conditionally registered per D-38 two-signal guard:
+ * Route conditionally registered behind a two-signal guard:
  *   - `config('app.dev_mode') === true` (env-pinned).
  *   - `class_exists(\Laravel\Horizon\HorizonServiceProvider::class)`
- *     (Horizon is `require-dev` per Phase 14 D-03; absent in shipped
- *     `--no-dev` bundles).
+ *     (Horizon is `require-dev`; absent in shipped `--no-dev` bundles).
  *
  * When either signal is false the route never registers; the
  * dev-shell sidebar's `Route::has('dev.horizon')` check then drops

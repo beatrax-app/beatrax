@@ -106,13 +106,10 @@ final readonly class CommandSpawner
             outPath: $outPath,
         );
 
-        // Eager audit row — written with exit_code=null + finished_at=null so
-        // the /dev/artisan timeline reflects the spawn immediately rather
-        // than waiting for someone to open the SSE stream. {@see
-        // FinalizeRunAudit} updates the same row in place (located via
-        // properties.run_id) when the stream's done event fires; the
-        // RunCard's live-stream attaches to the SSE for any row whose
-        // exit_code is still null.
+        // Eager audit row (exit_code=null, finished_at=null) so the
+        // timeline reflects the spawn immediately. FinalizeRunAudit
+        // updates this same row in place via properties.run_id when the
+        // stream's done event fires.
         $this->audit->recordCommandRun(
             command: $command,
             args: $args,
@@ -162,17 +159,12 @@ final readonly class CommandSpawner
         $invocation = implode(' ', $parts);
         $redirect = '> '.escapeshellarg($outPath).' 2>&1';
 
-        // Plain bash background detach: `<cmd> > out 2>&1 < /dev/null &
-        // echo $!`. The `&` puts the child in the background; the
-        // closed stdin (`< /dev/null`) prevents SIGHUP propagation
-        // when the parent HTTP request exits. `setsid` would also
-        // work for proper session leadership but is not part of
-        // macOS' default toolchain (the target platform per the
-        // project's local-only constraint). `echo $!` then prints
-        // the backgrounded child's PID so the parent captures it.
+        // Plain bash background detach: `&` puts the child in the
+        // background; the closed stdin (`< /dev/null`) prevents SIGHUP
+        // propagation when the parent HTTP request exits. `setsid` would
+        // also work but isn't part of macOS' default toolchain.
         $detach = $invocation.' '.$redirect.' < /dev/null &';
 
-        // Capture and emit the child PID via $!.
         return 'bash -c '.escapeshellarg($detach.' echo $!');
     }
 
@@ -226,11 +218,9 @@ final readonly class CommandSpawner
         $escaped = escapeshellarg($stringValue);
 
         if ($isOption) {
-            // `--name=value` packs both halves into a single shell-safe
-            // token. The entire `name=value` string is escapeshellarg'd
-            // as one unit so the resulting argv item reaches artisan
-            // intact (`--name=value`), not split or doubled by a
-            // mid-string quote.
+            // The entire `name=value` string is escapeshellarg'd as one
+            // unit so the resulting argv item reaches artisan intact,
+            // not split or doubled by a mid-string quote.
             return [escapeshellarg($argSpec->name.'='.$stringValue)];
         }
 
@@ -248,7 +238,7 @@ final readonly class CommandSpawner
         $cwd = UserDataPathService::projectPath();
 
         $process = Process::fromShellCommandline($shellCommand, $cwd);
-        $process->setTimeout(5.0); // The wrapper exits in milliseconds.
+        $process->setTimeout(5.0);
         $process->run();
 
         if (! $process->isSuccessful()) {

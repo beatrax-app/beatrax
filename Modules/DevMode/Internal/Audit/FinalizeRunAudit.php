@@ -35,6 +35,8 @@ final readonly class FinalizeRunAudit
      *  the cap consumes meaningful content). */
     private const READ_BYTES = 32_768;
 
+    private const CANCELLED_SIGTERM_EXIT_CODE = -15;
+
     public function __construct(
         private AuditWriter $audit,
         private RunRegistry $registry,
@@ -54,26 +56,19 @@ final readonly class FinalizeRunAudit
 
         $finishedAt = $record->finishedAt ?? $this->clock->now();
 
-        // Cancelled runs surface in `properties.cancelled=true` (and
-        // a negative exit_code if no real exit was recorded) so the
-        // audit row is a single canonical row per run, not two rows.
-        // The audit-log table's `description` stays
-        // AuditEvent::CommandExecuted regardless of cancel — the
-        // CommandCancelled enum case exists for future per-cancel
-        // bookkeeping but not for this row.
+        // Cancelled runs surface via `properties.cancelled=true` (and
+        // a negative exit_code when none was recorded), keeping one
+        // canonical audit row per run. The audit description stays
+        // AuditEvent::CommandExecuted regardless of cancel status.
         $effectiveExit = $exitCode;
         if ($cancelled && $effectiveExit === null) {
-            $effectiveExit = -15; // negative SIGTERM number convention
+            $effectiveExit = self::CANCELLED_SIGTERM_EXIT_CODE;
         }
 
-        // Update path — CommandSpawner now writes an eager audit row
-        // with exit_code=null at spawn time, so finalize is a
-        // properties-merge on the existing row located by run_id.
-        // Falls through to the legacy append-only path for any run
-        // whose eager row never made it (concrete AuditWriter binding
-        // missing, in-flight migration, etc.) so the audit trail
-        // still captures the fact-of-run rather than silently
-        // dropping it.
+        // CommandSpawner writes an eager audit row with exit_code=null
+        // at spawn time; finalize merges properties onto that row via
+        // run_id. Falls through to the legacy append-only path when no
+        // eager row exists, so the fact-of-run is never silently lost.
         $updated = $this->audit->finalizeCommandRun(
             runId: $runId,
             finishedAt: $finishedAt,
