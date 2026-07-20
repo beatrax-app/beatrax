@@ -25,16 +25,7 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Right-rail Livewire SFC mounted inside `ForecastPage` when a saved
- * scenario is active. Surfaces the scenario header (name + Rename +
- * Delete) + the mutation list + the five-option Add chooser + per-kind
- * inline form. The Wave 4 surface covers the four CRUD verbs against
- * the scenario itself plus the five Public Actions against its
- * mutations.
- *
- * Service collaborators arrive as parameters on action methods +
- * `render()` (constructor injection is banned on Livewire `Component`
- * subclasses by phpstan-strict-rules).
+ * @link ../../../../../.docs/features/forecasting/architecture.md
  */
 final class ScenarioEditorSidebar extends Component
 {
@@ -45,18 +36,11 @@ final class ScenarioEditorSidebar extends Component
     public ?string $scenarioDescription = null;
 
     /**
-     * Hydrated list of the scenario's mutations. Indexed list of
-     * ScenarioMutationDto-shaped arrays — the typed payload subclasses
-     * survive through the JSON cast at read time.
-     *
      * @var list<array<string, mixed>>
      */
     public array $mutations = [];
 
     /**
-     * Per-user approved series catalog for the cancel / amount-change /
-     * shift forms' series dropdown. Each entry: `[id, name]`.
-     *
      * @var list<array{id: int, name: string}>
      */
     public array $availableSeries = [];
@@ -65,15 +49,9 @@ final class ScenarioEditorSidebar extends Component
 
     public bool $addingMutation = false;
 
-    /**
-     * Active kind: 'cancel_series' | 'add_one_off' | 'add_recurring' |
-     * 'change_series_amount' | 'shift_series_date' | null.
-     */
     public ?string $selectedKind = null;
 
     /**
-     * Bound per-kind form state. Indexed by field name.
-     *
      * @var array<string, mixed>
      */
     public array $form = [];
@@ -166,7 +144,6 @@ final class ScenarioEditorSidebar extends Component
     {
         $this->editingMutationId = $mutationId;
         $this->formError = null;
-        // Pre-populate the form from the existing mutation payload.
         foreach ($this->mutations as $m) {
             if (($m['id'] ?? null) !== $mutationId) {
                 continue;
@@ -236,7 +213,6 @@ final class ScenarioEditorSidebar extends Component
         try {
             ($action)($mutationId, $currentUser->user());
         } catch (NotFoundHttpException) {
-            // Already gone — ignore.
         }
         $this->refreshMutations($scenarioQuery, $currentUser);
         $this->dispatch('toast', message: 'Mutation removed. Undo');
@@ -300,7 +276,6 @@ final class ScenarioEditorSidebar extends Component
         try {
             ($action)($this->scenarioId, $currentUser->user());
         } catch (NotFoundHttpException) {
-            // Already gone — clear state.
         }
         $this->confirmingDeleteScenario = null;
         $this->dispatch('toast', message: 'Scenario deleted.');
@@ -313,7 +288,6 @@ final class ScenarioEditorSidebar extends Component
         CurrentUser $currentUser,
         RecurringSeriesQuery $seriesQuery,
     ): View {
-        // Populate the series catalog (used by cancel / change / shift forms).
         $this->availableSeries = [];
         foreach ($seriesQuery->allApprovedForUser($currentUser->user()) as $s) {
             $this->availableSeries[] = [

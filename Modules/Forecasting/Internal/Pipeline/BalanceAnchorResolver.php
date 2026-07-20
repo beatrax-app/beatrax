@@ -13,31 +13,7 @@ use Modules\Ledger\Models\Account;
 use stdClass;
 
 /**
- * Resolves the per-account opening-balance anchor for a projection run.
- *
- * The resolver routes by `accounts.kind` to the most authoritative
- * starting point available:
- *
- *   - `asn` → most recent `statement_summaries.closing_balance_minor`
- *   - `ics_card` → most recent `card_statements` "open balance" (the
- *     remaining amount owed; surfaced as a SIGNED running-balance
- *     position so the projection math composes cleanly)
- *   - `paypal` or any other kind → `accounts.opening_balance_minor`
- *     when the user entered one; otherwise the fallback below
- *
- * Fallback (used when no statement / user-input anchor is available):
- * the resolver sums every existing transaction on the account from
- * scratch (`asOf=1970-01-01`). The UI surfaces this case with the
- * "Opening balance not set" banner so the user knows the projection's
- * starting point is approximated.
- *
- * The returned `BalanceAnchorDto.source` label is the audit ribbon's
- * input — `asn_statement_summary`, `ics_card_statement`,
- * `user_input_opening_balance`, or `sum_of_transactions`.
- *
- * Cross-user 404: a missing or cross-user account raises
- * `Illuminate\Database\Eloquent\ModelNotFoundException`, which the HTTP
- * kernel converts to a 404 (Phase 5 cross-user 404 precedent).
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class BalanceAnchorResolver
 {
@@ -79,11 +55,8 @@ final readonly class BalanceAnchorResolver
 
         // For ICS card accounts with no statement AND no user-input
         // opening balance, default to zero rather than summing every
-        // historical transaction. A card account with no statement
-        // and no anchor is treated as "starts fresh from zero" so
-        // the projection reflects only the future outflows it adds.
-        // Summing transactions would double-count the historical
-        // billing events the projection is about to re-emit forward.
+        // historical transaction — summing would double-count the
+        // historical billing events the projection is about to re-emit.
         if ($kind === 'ics_card') {
             return new BalanceAnchorDto(
                 accountId: $accountId,
@@ -144,11 +117,9 @@ final readonly class BalanceAnchorResolver
         }
 
         /** @var stdClass $row */
-        // `card_statements.open_balance_minor` is the absolute amount
-        // still owed on the card (positive). The signed running-balance
-        // representation a per-account forecast tracks is the user's
-        // position relative to the card vendor: they OWE the open
-        // balance, so the position is the negative of that figure.
+        // `open_balance_minor` is the absolute amount still owed
+        // (positive); the signed running-balance position is negated
+        // since the user OWES that amount to the card vendor.
         $openBalance = self::toInt($row->open_balance_minor);
         $signedAnchor = -$openBalance;
 

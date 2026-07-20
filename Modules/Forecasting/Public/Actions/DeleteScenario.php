@@ -11,16 +11,7 @@ use Modules\Forecasting\Public\Events\ScenarioDeleted;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Hard-deletes a saved scenario. The Wave 1 schema's FK
- * cascade-on-delete wipes the scenario's mutations, runs, and
- * shortfall-window rows atomically — this Action therefore only
- * deletes the parent row + dispatches the event.
- *
- * Cross-user invocation raises `NotFoundHttpException` via the
- * `(id, user_id)` guard. Idempotent re-invocation against a missing
- * row also raises `NotFoundHttpException` (no silent no-op — the
- * caller is expected to refresh its view of the world before
- * deleting).
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class DeleteScenario
 {

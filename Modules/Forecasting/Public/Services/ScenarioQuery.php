@@ -14,22 +14,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationDto;
 use stdClass;
 
 /**
- * Public read API over `forecast_scenarios` and
- * `forecast_scenario_mutations`. Every method scopes by `user_id` and
- * returns Spatie LaravelData DTOs so the /forecast scenario picker
- * and Wave 4's CRUD panel read a single canonical shape.
- *
- * `forUser` LEFT JOINs the mutations table to populate the per-row
- * `mutationCount` field. This JOIN is between two Forecasting-owned
- * tables only — it does NOT violate the
- * `noScenarioMutationsJoinedToTransactionQueries` invariant, which
- * guards joins onto the transaction substrate
- * (`transactions`, `recurring_series_occurrences`, `chain_links`,
- * `card_statements`).
- *
- * `mutationsFor` loads through the Eloquent model so the typed
- * `ScenarioMutationPayloadCast` runs and the per-kind payload subclass
- * is hydrated correctly.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ScenarioQuery
 {

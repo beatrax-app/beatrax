@@ -13,18 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
 
 /**
- * Persists a new what-if scenario for the caller.
- *
- * Validates the name (non-empty, <=120 chars) and wraps the INSERT in
- * a DB transaction. The (user_id, name) UNIQUE constraint from the
- * Wave 1 migrations raises a `QueryException` on duplicate names; the
- * Action catches it and rethrows as `InvalidArgumentException` with
- * the user-facing copy `A scenario with that name already exists.` so
- * the Livewire layer can render the inline error without parsing the
- * SQL state.
- *
- * Dispatches `ScenarioCreated` after a successful insert and returns
- * the new scenario id.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class CreateScenario
 {

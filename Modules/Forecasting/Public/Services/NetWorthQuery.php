@@ -14,18 +14,7 @@ use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
- * Net-worth roll-up across all of a user's accounts. Each account's current
- * balance is the same anchor the forecast uses as "today's balance"
- * (BalanceAnchorResolver), which is already sign-correct — bank/PayPal balances
- * are positive, a credit card's is negative (amount owed) — so net worth is
- * simply the sum, no per-kind sign juggling.
- *
- * Multi-currency: non-EUR accounts are converted to the user's base currency
- * via ExchangeRateService (D-01/D-08). Each account line keeps its own
- * original currency (D-02). When no rate exists for a pair, that account is
- * excluded from the total and flagged via `accountsWithoutRate`/
- * `hasExcludedAccounts` (D-07 no-rate fallback). `paypal_funding` is an
- * internal routing construct excluded from the roll-up entirely.
+ * @see BalanceAnchorResolver
  */
 final class NetWorthQuery
 {
@@ -60,19 +49,16 @@ final class NetWorthQuery
             $anchor = $this->anchor->forAccount($accountId, $user);
             $kind = is_string($account->kind) ? $account->kind : '';
 
-            // Convert to base currency via ExchangeRateService (D-08). Run the
-            // conversion first so the account line can carry the real rate /
-            // source / as-of (UI-SPEC §5.2/§5.4) — not just the native amount.
+            // Run the conversion first so the account line can carry the
+            // real rate/source/as-of — not just the native amount.
             $money = Money::ofMinor($anchor->openingBalanceMinor, $anchor->currency);
             $result = $this->fx->convertToBase($money, $baseCurrency);
 
-            // No rate available — result currency ≠ base currency (D-07). The
-            // line is still emitted (the breakdown shows it with a no-rate
-            // note) but it carries no base equivalent and is left out of total.
+            // No rate available — result currency stays native. The line
+            // is still emitted (the breakdown shows a no-rate note) but
+            // carries no base equivalent and is left out of the total.
             $rateAvailable = $result->converted->currency() === $baseCurrency;
 
-            // Each line keeps its own original currency (D-02) and, when a rate
-            // was available, the converted base equivalent + rate metadata.
             $lines[] = new AccountBalanceLine(
                 accountId: $accountId,
                 name: is_string($account->name) ? $account->name : '',
@@ -98,7 +84,9 @@ final class NetWorthQuery
 
             $total += $result->converted->toMinor();
 
-            // Track FX metadata from the latest non-passthrough conversion (D-08)
+            // Track FX metadata from the latest non-passthrough conversion
+            // only — a passthrough (already-base-currency) line carries no
+            // rate/source/as-of worth surfacing.
             if (! $result->isPassthrough) {
                 $hasStaleRates = $hasStaleRates || $result->isStale;
 

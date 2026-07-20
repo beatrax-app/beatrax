@@ -7,17 +7,7 @@ namespace Modules\Forecasting\Public\Dto\ScenarioMutationPayload;
 use InvalidArgumentException;
 
 /**
- * Mutation payload: shift the next due date of a recurring series to
- * a new ISO date. The `scope` field distinguishes between shifting
- * only the next occurrence (`next`) or every subsequent occurrence
- * inside the horizon (`all_subsequent`). The downstream projector
- * inspects the scope to decide whether to keep the original cadence
- * for occurrences past the first shifted one.
- *
- * The constructor validates `scope` is one of the two allowed
- * literals; a typo like 'next_only' would have silently fallen
- * through to `next` (shifting only the first occurrence) even when
- * the user picked "all subsequent".
+ * @see ScenarioMutationPayload
  */
 final class ShiftSeriesDatePayload extends ScenarioMutationPayload
 {
@@ -28,6 +18,9 @@ final class ShiftSeriesDatePayload extends ScenarioMutationPayload
         public readonly string $newNextDate,
         public readonly string $scope,
     ) {
+        // A typo like 'next_only' would otherwise silently fall through
+        // to 'next' (shifting only the first occurrence) even when the
+        // user picked "all subsequent".
         if (! in_array($scope, self::ALLOWED_SCOPES, true)) {
             throw new InvalidArgumentException(
                 "ShiftSeriesDatePayload.scope must be one of: 'next' | 'all_subsequent'; got '{$scope}'."

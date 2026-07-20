@@ -16,31 +16,7 @@ use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Per-account opening-balance + as-of-date inline editor for the
- * `/settings` Forecasting section.
- *
- * Mounts inside each account row in the Forecasting section. The
- * editor is INLINE (no popover wrapper) — unlike AccountBufferEditor
- * which is popover-style for the /forecast chart header. The Save
- * button on the parent SettingsPage drives the persistence; this
- * component dispatches `forecast-settings:saved` so the parent can
- * stitch the per-account commits together.
- *
- * Soft-warning flow:
- *   1. User edits the opening balance + as-of date.
- *   2. Save invokes SetAccountOpeningBalance with `allowDivergence=false`.
- *   3. If divergence > €500 the Action throws
- *      `OpeningBalanceDivergenceWarning`; the editor catches it,
- *      pops the soft-warning banner, and keeps the form open with
- *      `divergenceDiffMinor` set.
- *   4. The user clicks `Use my number` to commit with
- *      `allowDivergence=true`, OR clicks `Use beatrax's number` to
- *      replace the input with the computed sum-of-transactions and
- *      manually re-save.
- *
- * Constructor-injection is banned on Livewire `Component` subclasses
- * by phpstan-strict-rules; collaborators arrive on mount / save /
- * useBeatraxsNumber / useMyNumber / render via parameter DI.
+ * @link ../../../../../.docs/features/forecasting/architecture.md
  */
 final class OpeningBalanceEditor extends Component
 {
@@ -80,7 +56,10 @@ final class OpeningBalanceEditor extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
     ): void {
-        // Cross-user safety: refuse to mount with another user's account id.
+        // Cross-user safety: refuse to mount with another user's account id
+        // — the query below scopes the lookup to the current user, so a
+        // tampered accountId prop resolves to no row and throws 404
+        // instead of leaking another user's opening balance.
         $row = $db->connection()->table('accounts')
             ->where('id', $accountId)
             ->where('user_id', $currentUser->user()->id)
@@ -199,12 +178,6 @@ final class OpeningBalanceEditor extends Component
         ]);
     }
 
-    /**
-     * Parse the user input (locale-aware "500,00" / "500.00" / "500"
-     * including a negative sign for credit-card / overdrawn accounts)
-     * to BIGINT minor units. Returns false on any non-numeric or empty
-     * input.
-     */
     private function parseInputToMinor(string $input): int|false
     {
         if (trim($input) === '') {

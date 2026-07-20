@@ -12,17 +12,7 @@ use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Launchpad — Phase 9 drift-alert "Model cancel" chip target.
- *
- * Looks up the alert + its underlying recurring series (both
- * cross-user-scoped), creates a new scenario named `Cancel {series_name}`,
- * and seeds a single `cancel_series` mutation against that series. The
- * two Public Action invocations are wrapped in a single DB transaction
- * so a partial scenario-with-no-mutation never persists.
- *
- * Returns the new scenario id; the caller redirects to
- * `/forecast?scenarioId={id}` so the user lands inside the pre-seeded
- * what-if view.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class CreateCancellationScenarioForAlert
 {

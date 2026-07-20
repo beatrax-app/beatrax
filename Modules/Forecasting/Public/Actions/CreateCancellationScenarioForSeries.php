@@ -12,17 +12,7 @@ use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Launchpad — Phase 8 recurring-series-detail "Model cancellation"
- * dropdown target.
- *
- * Looks up the series (cross-user-scoped), creates a new scenario
- * named `Cancel {series_name}`, and seeds a single `cancel_series`
- * mutation. CreateScenario + AddScenarioMutation are wrapped in a
- * single DB transaction so a partial scenario-with-no-mutation never
- * persists.
- *
- * Returns the new scenario id; the caller redirects to
- * `/forecast?scenarioId={id}`.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class CreateCancellationScenarioForSeries
 {

@@ -15,37 +15,13 @@ use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Public Action that persists the per-account opening balance + as-of
- * date.
- *
- * Mirrors `SetAccountForecastBuffer`:
- *   - Cross-user 404 via `(account_id, user_id)` guard — raises
- *     `NotFoundHttpException` when the account does not belong to the
- *     caller.
- *   - Server-side validation: when an opening balance is provided, the
- *     as-of date is mandatory and must parse to a valid ISO date that
- *     is not in the future.
- *   - Soft-warning: when the entered opening balance diverges from the
- *     sum of imported transactions on the account up to the as-of date
- *     by more than €500 (50000 minor units), the Action raises
- *     `OpeningBalanceDivergenceWarning`. The caller catches the
- *     exception, surfaces the warning UI, and re-invokes with
- *     `$allowDivergence=true` to commit anyway.
- *   - Write happens inside a single DB transaction. On success the
- *     three baseline projection horizons (30 / 60 / 90) are dispatched
- *     so the chart re-renders against the new anchor.
- *
- * `$openingBalanceMinor === null` clears both columns (no opening
- * balance configured for the account); the soft-warning check is
- * skipped in the clear-path.
+ * @see SetAccountForecastBuffer
  */
 final class SetAccountOpeningBalance
 {
-    /**
-     * Diff threshold above which the Action raises
-     * `OpeningBalanceDivergenceWarning` instead of silently committing.
-     * 50_000 minor units = €500.
-     */
+    // 50_000 minor units = €500 — the diff threshold above which this
+    // Action raises OpeningBalanceDivergenceWarning instead of silently
+    // committing the user-entered opening balance.
     public const DIVERGENCE_WARNING_THRESHOLD_MINOR = 50_000;
 
     public function __construct(
@@ -121,13 +97,8 @@ final class SetAccountOpeningBalance
         }
     }
 
-    /**
-     * Compute the sum of imported transactions on the account up to a
-     * given as-of date. Exposed publicly so the
-     * `OpeningBalanceEditor` Livewire SFC can populate the
-     * "Use beatrax's number" chip with the computed value without
-     * re-invoking the full Action.
-     */
+    // Exposed publicly so OpeningBalanceEditor can populate the "Use
+    // beatrax's number" chip without re-invoking the full Action.
     public function sumOfTransactionsForAccount(int $accountId, User $user, string $asOfDate): int
     {
         return (int) $this->db->connection()->table('transactions')

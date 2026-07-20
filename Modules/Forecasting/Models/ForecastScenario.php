@@ -13,13 +13,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Forecasting\Database\Factories\ForecastScenarioFactory;
 
 /**
- * Eloquent model for the forecast_scenarios table — one row models one
- * named saved what-if scenario for a user.
- *
- * Scenarios are strictly analytical containers; they never JOIN onto
- * the transaction substrate (enforced by the
- * noScenarioMutationsJoinedToTransactionQueries arch test on the
- * mutations table, and by convention on this table).
+ * @link ../../../.docs/features/forecasting/architecture.md
  *
  * @property int $id
  * @property int $user_id

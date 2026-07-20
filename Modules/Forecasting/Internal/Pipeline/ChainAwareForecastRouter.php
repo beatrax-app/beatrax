@@ -11,53 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Wave 3 chain-aware contribution router.
- *
- * Sits between `RangeProjector` (emits per-occurrence contributions in
- * their native account / currency) and `DailyFold` (combines
- * contributions per day into a running balance + spread). Rewrites the
- * `accountId` field on contributions whose underlying series is
- * chain-resolved to a funder account, and SYNTHESISES a new
- * contribution for the upcoming ICS bulk-iDEAL settlement on the
- * funder's debit date.
- *
- * Algorithm — chain-aware contribution routing:
- *
- *   1. For each contribution, look up `ChainLinkQuery::confirmedAndDeterministicForSeries`.
- *      When the series has at least one confirmed or deterministic
- *      chain link, the contribution's `accountId` is rewritten to the
- *      funder account id. The point/low/high values are preserved —
- *      the funder is the one whose balance dips.
- *   2. Regardless of per-series chain links, synthesise the next ICS
- *      bulk-iDEAL settlement contribution on the ASN funder account
- *      via `CardStatementQuery::nextSettlementForUser`. The synthesised
- *      contribution lands on the funder account id the DTO already
- *      carries (resolved via the most-recent confirmed
- *      `ics_bulk_settle` chain_link).
- *   3. De-duplicate against the SPECIFIC chain-routed ICS contributions
- *      moved onto the funder account in step 1 that collide with the
- *      synthesised settlement's (account, date) tuple. The dedup is
- *      tightly scoped — only contributions whose seriesId was routed
- *      onto the funder by step 1 are eligible for removal. Unrelated
- *      recurring series (e.g. a salary inflow, a Netflix outflow) that
- *      project an occurrence on the settlement date are preserved
- *      verbatim so the daily fold sums them alongside the synthesised
- *      settlement.
- *   4. When `$viewByFunder=true`, the router collapses per-series
- *      contributions onto a single per-day-per-account aggregate so the
- *      downstream chart shows ONE line per funder account instead of
- *      N series-tagged lines. The aggregation runs after steps 1–3,
- *      so chain-resolved series and the synthesised ICS settlement are
- *      already on the funder account by the time collapse begins.
- *
- * FX conversion does NOT happen here (RESEARCH Pitfall 6). Each
- * contribution is left in its original currency; `DailyFold` applies
- * the per-contribution `fxRateUsed` to convert to the account's
- * default currency at fold time.
- *
- * Pure routing — no DB writes. Reads cross-module Public services
- * (`ChainLinkQuery` + `CardStatementQuery`) so the
- * `crossModuleAccessGoesThroughPublic` arch invariant stays green.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final readonly class ChainAwareForecastRouter
 {
@@ -81,11 +35,10 @@ final readonly class ChainAwareForecastRouter
         $funderBySeries = [];
 
         $routed = [];
-        // Set of seriesId values whose contributions were rewritten in
-        // step 1 onto a funder account. Step 3 uses this to scope the
-        // dedup tightly to chain-routed series only — recurring series
-        // with no chain link whose occurrence happens to land on the
-        // settlement date are preserved.
+        // Set of seriesId values rewritten onto a funder account below;
+        // the dedup step scopes to these so a recurring series with no
+        // chain link that happens to land on the settlement date is
+        // preserved rather than deduplicated away.
         /** @var array<int, true> $chainRoutedSeriesIds */
         $chainRoutedSeriesIds = [];
         foreach ($contributions as $contribution) {
@@ -136,15 +89,10 @@ final readonly class ChainAwareForecastRouter
                     accountId: $nextSettlement->accountId,
                 );
 
-                // Scoped dedup: drop ONLY the contributions that were
-                // chain-routed onto the funder in step 1 and now collide
-                // with the synthesised settlement's (account, date)
-                // tuple. The synthesised next-settlement amount is the
-                // authoritative source for those rewritten series. Any
-                // OTHER contribution sharing the (account, date) tuple
-                // (an unrelated recurring series whose occurrence
-                // happens to land on the settlement day) survives, so
-                // the daily fold sums it alongside the settlement.
+                // Scoped dedup: drop ONLY the contributions chain-routed
+                // onto the funder above that now collide with the
+                // synthesised settlement's (account, date) tuple. Any
+                // OTHER contribution sharing that tuple survives untouched.
                 $dedup = [];
                 $dueKey = $synth->accountId.'|'.$dueDate->toDateString();
                 foreach ($routed as $c) {
@@ -170,25 +118,11 @@ final readonly class ChainAwareForecastRouter
         return $routed;
     }
 
+    // Assumes contributions sharing a (accountId, date) tuple are already
+    // in the funder account's default currency; no conversion happens
+    // here, that stays at the daily-fold boundary. `fxRateUsed`/`seriesId`
+    // are set to null/0 on the merged entry to mark it as an aggregate.
     /**
-     * Collapse per-series contributions onto a single per-day-per-account
-     * aggregate. The chain-resolution + ICS-bulk-iDEAL synthesis has
-     * already routed each contribution onto its funder account by the
-     * time this method runs; this aggregator merely sums every
-     * contribution sharing a `(accountId, date)` tuple into one entry
-     * per tuple so the downstream chart renders ONE line per account.
-     *
-     * Sign + currency / fxRateUsed handling: the collapse assumes
-     * contributions sharing a (accountId, date) tuple are already in the
-     * funder account's default currency by the time the daily fold
-     * consumes them. Wave 5 does NOT inject currency conversion here —
-     * that stays at the daily-fold boundary; this aggregator preserves
-     * the currency of the first contribution at each tuple and sets
-     * `fxRateUsed` and `seriesId` to null/0 to mark the entry as the
-     * aggregate. The daily fold's quadrature math composes correctly
-     * because the per-tuple sum is exactly what a per-funder chart
-     * requires.
-     *
      * @param  list<ForecastContribution>  $contributions
      * @return list<ForecastContribution>
      */

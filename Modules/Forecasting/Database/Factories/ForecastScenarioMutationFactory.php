@@ -13,14 +13,6 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPay
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
 
 /**
- * Eloquent factory for the forecast_scenario_mutations table.
- *
- * Defaults to a `cancel_series` mutation with seriesId=42. State
- * factories cover all five kinds and pair the `kind` column with a
- * matching payload subclass so the typed `ScenarioMutationPayloadCast`
- * round-trips cleanly without raising the kind/payload mismatch
- * exception.
- *
  * @extends Factory<ForecastScenarioMutation>
  */
 final class ForecastScenarioMutationFactory extends Factory

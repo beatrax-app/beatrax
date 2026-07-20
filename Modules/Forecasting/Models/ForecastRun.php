@@ -11,22 +11,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Forecasting\Database\Factories\ForecastRunFactory;
+use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 
 /**
- * Eloquent model for the forecast_runs audit table — one row per
- * ProjectForecastJob dispatch.
- *
- * The `status` column is mutated exclusively by
- * `Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine`.
- * Allowed statuses: `pending`, `running`, `complete`, `failed`. The
- * state-machine class is the sole writer of this column; other module
- * code reads the row but never UPDATEs status.
- *
- * `user_id` is non-nullable (every run maps to exactly one user,
- * mirroring the chain_resolution_runs precedent).
- *
- * `scenario_id` is nullable: NULL = baseline run; non-NULL = scenario
- * run.
+ * @see ForecastRunStateMachine
  *
  * @property int $id
  * @property int $user_id

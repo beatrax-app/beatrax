@@ -7,40 +7,16 @@ namespace Modules\Forecasting\Internal\Support;
 use InvalidArgumentException;
 
 /**
- * Locale-aware money input parser shared by every Forecasting Livewire
- * surface that accepts a free-text amount field.
- *
- * The heuristic is "last-separator wins":
- *
- *   - "12.50"     → 1250  (US-style decimal, dot is the only separator)
- *   - "12,50"     → 1250  (NL-style decimal, comma is the only separator)
- *   - "1,234.56"  → 123456 (US thousands + decimal; dot is the last → decimal)
- *   - "1.234,56"  → 123456 (NL thousands + decimal; comma is the last → decimal)
- *   - "1234"      → 123400
- *   - " 1 234,56" → 123456 (spaces stripped)
- *   - "-12,50"    → -1250 (sign optional unless `$allowNegative` is false)
- *
- * Returns the value in minor units (cents) as a `int`. Throws
- * `InvalidArgumentException` on empty / non-numeric input, or on a
- * negative value when `$allowNegative` is false (e.g. a buffer amount).
- *
- * Centralised in this helper so the four Livewire components that take
- * a money input (AccountBufferEditor, OpeningBalanceEditor,
- * ScenarioEditorSidebar, ModelWhatIfDropdown) stop diverging — the
- * earlier inline implementation in two of them silently 100×-multiplied
- * any dot-decimal input because the dot was being stripped as a
- * thousands separator unconditionally.
+ * @link ../../../../.docs/features/forecasting/architecture.md
  */
 final class AmountStringParser
 {
     /**
-     * Parse a user-typed amount into minor units. Throws on invalid
-     * input. `$allowNegative=false` rejects negative numbers (used by
-     * the buffer editor, where a negative buffer is meaningless).
-     *
-     * `$requireNonZero=true` rejects zero (used by the model-what-if
-     * dropdown, where a "new amount" of zero is treated as a cancel
-     * mutation and the dropdown enforces a positive value).
+     * @param  bool  $allowNegative  false rejects negative numbers (used by
+     *                               the buffer editor, where a negative buffer is meaningless)
+     * @param  bool  $requireNonZero  true rejects zero (used by the
+     *                                model-what-if dropdown, where a zero "new amount" is treated as
+     *                                a cancel mutation and the dropdown enforces a positive value)
      */
     public static function toMinor(string $input, bool $allowNegative = true, bool $requireNonZero = false): int
     {
@@ -57,7 +33,6 @@ final class AmountStringParser
             $trimmed = ltrim(substr($trimmed, 1));
         }
 
-        // Strip whitespace (forgiving of "1 234,56" style inputs).
         $normalised = str_replace([' '], '', $trimmed);
         $commaPos = strrpos($normalised, ',');
         $dotPos = strrpos($normalised, '.');
@@ -72,7 +47,6 @@ final class AmountStringParser
                 $normalised = str_replace(',', '', $normalised);
             }
         } elseif ($commaPos !== false) {
-            // Only commas present — treat as the decimal mark.
             $normalised = str_replace(',', '.', $normalised);
         }
         // Else: only dots (or none). Leave dots in place so "12.50"

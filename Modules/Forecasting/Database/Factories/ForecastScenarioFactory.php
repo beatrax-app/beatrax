@@ -8,12 +8,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Forecasting\Models\ForecastScenario;
 
 /**
- * Eloquent factory for the forecast_scenarios table.
- *
- * Defaults to a null user_id; callers override before persisting. The
- * UNIQUE(user_id, name) constraint means the scenario name uses a
- * faker token so concurrent factory calls do not collide.
- *
  * @extends Factory<ForecastScenario>
  */
 final class ForecastScenarioFactory extends Factory

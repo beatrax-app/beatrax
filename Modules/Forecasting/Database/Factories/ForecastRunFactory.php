@@ -9,18 +9,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Forecasting\Models\ForecastRun;
 
 /**
- * Eloquent factory for the forecast_runs audit table.
- *
- * Defaults to a `pending` run for horizon=30 days with no scenario
- * (baseline run). State factories walk the lifecycle:
- *   - pending() — the default; row reserved before dispatch
- *   - running() — the worker began handle()
- *   - complete() — success terminal
- *   - failed() — final retry exhausted terminal
- *
- * `user_id` defaults to 1 because the column is non-nullable; callers
- * override before persisting.
- *
  * @extends Factory<ForecastRun>
  */
 final class ForecastRunFactory extends Factory
