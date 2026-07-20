@@ -17,22 +17,7 @@ use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Services\PatternGeneralizer;
 
 /**
- * Click-italic rename popover. The italic raw-description span in the
- * import preview row dispatches `rename-counterparty:open` carrying
- * the raw description + the row index; this component listens, opens
- * a Flux modal anchored to the row, and on save persists a
- * merchant_aliases row + optionally a categorization_rules row, then
- * dispatches `rename-counterparty:saved` so the parent wizard can
- * update the affected row in place without re-running the importer.
- *
- * Mounted once at the bottom of the upload-wizard / preview-wizard
- * blade — a single instance handles every row's rename flow because
- * the modal is identity-less (only one rename is in progress at a
- * time).
- *
- * Livewire components forbid constructor DI per the strict-rules
- * ruleset, so every collaborator arrives as a method argument on the
- * action that needs it.
+ * @link ../../../../../.docs/features/import/architecture.md#rename-counterparty-popover
  */
 final class RenameCounterpartyPopover extends Component
 {

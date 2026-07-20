@@ -10,35 +10,15 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Payment-type hinter specialised for ASN bank CSV exports
- * (`source_format = 'asn-csv'`).
- *
- * Inspects the canonical row's `description` for the Dutch lexemes ASN
- * embeds in every CSV row's description column: `Betaalautomaat` for
- * physical POS terminals, `Geldautomaat` for ATM withdrawals, `iDEAL`
- * and `Online betaling` for online card-not-present payments, `Incasso`
- * and `Automatische incasso` for direct debits, and `Overboeking` /
- * `SEPA Credit Transfer` for transfers. Each lexeme matches via
- * `mb_strpos` against the casefold description so accent + case
- * variants from different ASN export generations resolve identically.
- *
- * Returns `null` when the row did not originate from an ASN CSV import
- * or when none of the lexemes appears in the description. A non-null
- * `PaymentTypeHint` carries the matched keyword (lowercased) as
- * `sourceHint` so the classifier's structured log surfaces which
- * lexeme triggered the verdict.
- *
- * Pure / stateless / singleton-safe — no constructor dependencies.
+ * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
 final class AsnCsvPaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'asn-csv';
 
+    // Order is deliberate: more specific lexemes appear first so
+    // `automatische incasso` wins over `incasso` when both match.
     /**
-     * Casefold-lowercase keyword → (`PaymentType`, confidence) mapping.
-     * The order is deliberate: more specific lexemes appear first so
-     * `automatische incasso` wins over `incasso` when both match.
-     *
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */
     private const KEYWORDS = [

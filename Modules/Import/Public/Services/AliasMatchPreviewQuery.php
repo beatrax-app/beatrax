@@ -9,26 +9,7 @@ use Modules\Import\Public\Dto\AliasMatchPreviewResultDto;
 use stdClass;
 
 /**
- * Read-only "test against my transactions" probe. Given a candidate
- * generalized pattern and a user id, walks the most-recent 500
- * transactions for that user and returns the total match count plus
- * the first five matched rows.
- *
- * The query is bounded by design: the consumer is a debounced live
- * input in Settings → Aliases (the rename popover preview line) and a
- * full-history scan on every keystroke would saturate SQLite WAL
- * contention. The 500-row window captures the recent statement-data
- * the user would visually verify against; an unmatched-by-recent
- * pattern is shown as `total: 0` which the consumer renders calmly.
- *
- * Pattern matching runs in PHP via `mb_strpos` / `mb_strtolower` —
- * never SQL LIKE — to mirror the RuleEvaluator defence: a user-
- * authored pattern never enters the SQL string. The query is
- * read-only; the service never issues an UPDATE or DELETE.
- *
- * Patterns under three characters are rejected with an explanatory
- * empty result. The threshold avoids the degenerate case where a one-
- * or two-character pattern matches thousands of unrelated rows.
+ * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
  */
 final class AliasMatchPreviewQuery
 {

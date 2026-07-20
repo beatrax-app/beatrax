@@ -7,17 +7,10 @@ namespace Modules\Import\Public\Exceptions;
 use RuntimeException;
 use Throwable;
 
-/**
- * Thrown when ConfirmImport finds the preview cache entry present but
- * malformed: the key exists, but the payload is not the expected JSON
- * string, or its JSON does not decode into the expected DTO shape.
- *
- * This is distinct from `PreviewExpiredException` (cache key absent /
- * TTL elapsed) so the wizard can render a more specific message ("the
- * cached preview is unreadable — please re-upload") and an operator
- * inspecting the logs can tell a routine TTL eviction apart from a
- * cache-backend regression.
- */
+// Thrown when the preview cache key exists but the payload is malformed
+// (not the expected JSON string, or doesn't decode into the expected
+// DTO shape) — distinct from PreviewExpiredException (key absent / TTL
+// elapsed) so a routine eviction is never confused with a cache regression.
 final class PreviewCacheCorruptedException extends RuntimeException
 {
     public function __construct(

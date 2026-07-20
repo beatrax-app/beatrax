@@ -45,59 +45,14 @@ use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Import\Public\Services\PatternGeneralizer;
 
 /**
- * Wires the Import module:
- *
- *  - RunsImports → RunImport: orchestrates preview phase.
- *  - ConfirmsImports → ConfirmImport: replays the cached canonical rows
- *    through Ledger's RecordsTransactions and applies pending enrichments
- *    inside the same DB transaction.
- *  - NamesAccounts → AccountNamer: persists Account rows for unknown IBANs
- *    when the user supplies a name inline in the wizard.
- *  - AppliesEnrichments → ApplyEnrichments: writes stronger source_ref
- *    values onto existing transactions and appends provenance entries to
- *    `enriched_from` for cross-format re-imports.
- *  - ImportPipeline + PreviewCache are singletons; the pipeline holds the
- *    stateless three-stage chain, the cache wraps Laravel's cache repository
- *    with the JSON-only DTO round-trip used by PreviewCache.
- *  - The five per-source `PaymentTypeHinter` implementations plus the
- *    universal `DescriptionKeywordFallbackHinter` are bound under the
- *    `import.payment_type_hinter` container tag so the
- *    `PaymentTypeClassifierStage` collects them via `app->tagged(...)`
- *    without ever naming a concrete FQN. Adding a future hinter is one
- *    edit (append to `PAYMENT_TYPE_HINTER_FQNS`) plus shipping the class
- *    — the classifier stage and pipeline binding stay untouched.
- *    `class_exists()` gates every singleton + tag call so a missing
- *    class does not abort container resolution.
- *  - The four per-source `DetectsStartingBalance` implementations are
- *    bound under the `starting-balance.detector` container tag so the
- *    starting-balance aggregator (consumed by the first-import wizard
- *    step) collects them via `app->tagged(...)` using the same
- *    discovery pattern as the payment-type hinters. Adding a future
- *    detector is one edit (append to `STARTING_BALANCE_DETECTOR_FQNS`)
- *    plus shipping the class — the aggregator and any consumers stay
- *    untouched. `class_exists()` gates every singleton + tag call so a
- *    missing class does not abort container resolution.
- *  - ResolvesKnownCounterpartyIban → KnownCounterpartyIbanResolver
- *    bridges the real institution IBAN that appears on the ASN side
- *    of a cross-account hop (PayPal Luxembourg, ICS at ABN AMRO) to
- *    the user's own synthetic-IBAN account of the matching kind.
- *    The `SeedDefaultKnownCounterpartyIbans` listener subscribes to
- *    the `UserInstalled` event so a freshly installed user receives
- *    the two seeded institution-IBAN aliases (PayPal Luxembourg →
- *    paypal kind, ICS at ABN AMRO → ics_card kind) automatically.
+ * @link ../../../.docs/features/import/architecture.md#module-boundary
  */
 final class ImportServiceProvider extends ServiceProvider
 {
-    /**
-     * Per-source `PaymentTypeHinter` FQNs registered under the
-     * `import.payment_type_hinter` container tag. The source-specific
-     * hinters lead so their higher-confidence verdicts win over the
-     * fallback's; the fallback is LAST so the registry test's
-     * "fallback is last" invariant holds and so ties resolve through
-     * the documented registration-order rule. A missing class skips
-     * its binding gracefully via the `class_exists()` guard, mirroring
-     * the `ReceiptsServiceProvider` tag-loop pattern.
-     */
+    // Source-specific hinters lead so their higher-confidence verdicts
+    // win; the fallback is LAST so the registry test's "fallback is
+    // last" invariant holds. A missing class skips its binding via
+    // class_exists(), mirroring ReceiptsServiceProvider's tag loop.
     private const PAYMENT_TYPE_HINTER_FQNS = [
         'Modules\\Import\\Internal\\Parsers\\Banking\\Camt053PaymentTypeHinter',
         'Modules\\Import\\Internal\\Parsers\\Banking\\Mt940PaymentTypeHinter',
@@ -107,17 +62,9 @@ final class ImportServiceProvider extends ServiceProvider
         'Modules\\Import\\Internal\\Parsers\\DescriptionKeywordFallbackHinter',
     ];
 
-    /**
-     * Per-source `DetectsStartingBalance` FQNs registered under the
-     * `starting-balance.detector` container tag. Order matches the
-     * documented detector priority used by the registry test —
-     * CAMT.053 first (canonical opening balance), MT940 next
-     * (legacy fallback), ICS PDF (consumer-portal statements),
-     * PayPal CSV last (always declines, returns an empty list).
-     * A missing class skips its binding gracefully via the
-     * `class_exists()` guard, mirroring the payment-type-hinter
-     * tag loop.
-     */
+    // Order matches the documented detector priority: CAMT.053 first
+    // (canonical), MT940 next (legacy fallback), ICS PDF, PayPal CSV
+    // last (always declines). Same class_exists() guard as above.
     private const STARTING_BALANCE_DETECTOR_FQNS = [
         'Modules\\Import\\Internal\\Detectors\\Camt053StartingBalanceDetector',
         'Modules\\Import\\Internal\\Detectors\\Mt940StartingBalanceDetector',

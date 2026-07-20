@@ -13,58 +13,17 @@ use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
 use Modules\Import\Public\Dto\PreviewRowDto;
 
 /**
- * Read-side projection driving the consolidated preview surface the
- * FirstImportStep renders after every connector step has stashed its
- * own ImportRun ids. The wizard hands `build()` the union of all
- * stashed ids; the query enforces three boundary rules and groups
- * the survivors into per-source sections backed by the in-memory
- * PreviewCache.
- *
- * Boundary rules (every input id is filtered before any cache read):
- *
- *   1. User-scope — only ImportRuns owned by `$user` survive. A
- *      tampered wizard_progress payload that points at a sibling
- *      user's ImportRun never reaches the cache lookup.
- *      (cross-user tampered-payload mitigation.)
- *   2. Stale window — runs whose `created_at` is older than the
- *      `STALE_WINDOW_DAYS` cutoff are dropped. A forgotten browser
- *      tab whose connector step preview expired weeks ago never
- *      replays last month's data.
- *   3. Already-confirmed — runs whose `status` is `confirmed` are
- *      dropped. Refreshes and back-button navigations cannot
- *      surface an already-committed run on the commit-everything
- *      review screen.
- *
- * Surviving ids are grouped by `source_format` and the cached preview
- * rows for every contributing run are concatenated into the section's
- * `sampleRows` (capped at `SAMPLE_ROW_LIMIT`). `totalRows` counts the
- * NEW-disposition rows the section will insert when the user commits.
- * The batch-level `dedupedTotalCount` and `alreadyImportedCount` are
- * the summed NEW / DUPLICATE counts across every section, used by the
- * commit button label and the reassurance footer.
- *
- * A section emits status `ready` whenever the cache returned at least
- * one row, `empty` when every contributing run returned an empty
- * preview (legitimate — all rows were already in the ledger), and
- * `error` when one or more contributing runs cached `null` (the
- * preview window elapsed before the user reached the FirstImportStep).
+ * @link ../../../../.docs/features/import/architecture.md#consolidated-preview-multi-run-commit
  */
 final readonly class BuildConsolidatedPreviewQuery
 {
-    /**
-     * Number of days an unconfirmed ImportRun stays eligible for
-     * inclusion in the consolidated preview. After this window the
-     * row is dropped at the query boundary — the cache TTL on the
-     * underlying preview is shorter (30 minutes) so the run already
-     * has no rows by the time the day cutoff matters, but applying
-     * the filter at the query layer keeps the contract explicit.
-     */
+    // The underlying preview cache TTL (30 min) already empties the row
+    // set well before this day-level window matters; filtering here too
+    // keeps the contract explicit at the query layer.
     public const int STALE_WINDOW_DAYS = 14;
 
-    /**
-     * Maximum number of `sampleRows` per section. Mirrors the
-     * existing AliasMatchPreviewQuery five-row UI cap.
-     */
+    // Mirrors the existing AliasMatchPreviewQuery five-row UI cap for
+    // the number of sampleRows rendered per section.
     public const int SAMPLE_ROW_LIMIT = 5;
 
     public function __construct(
@@ -74,10 +33,6 @@ final readonly class BuildConsolidatedPreviewQuery
     ) {}
 
     /**
-     * Resolve the supplied ImportRun ids into a per-source-format
-     * batch, applying the user-scope + stale + already-confirmed
-     * filters described in the class doc.
-     *
      * @param  list<int>  $importRunIds
      * @param  array<string, int>  $sectionLimitOverrides  Per-`source_format`
      *                                                     override of the default `SAMPLE_ROW_LIMIT` (5); absent sections keep
@@ -138,11 +93,6 @@ final readonly class BuildConsolidatedPreviewQuery
     }
 
     /**
-     * Run the three boundary filters in one query: drop ids that do
-     * not belong to `$user`, that are older than the stale window,
-     * or that are already confirmed. Returns the surviving rows in
-     * the original input order keyed on `id` + `source_format`.
-     *
      * @param  list<int>  $importRunIds
      * @return list<array{id: int, source_format: string}>
      */
@@ -181,18 +131,9 @@ final readonly class BuildConsolidatedPreviewQuery
         return $ordered;
     }
 
+    // All counts are produced from a single cache read per run,
+    // eliminating the TTL-expiry race a second read would introduce.
     /**
-     * Build one section for the given source format. Concatenates the
-     * cached preview rows across every contributing run, counts NEW +
-     * ENRICHED dispositions for `totalRows` (both statuses result in
-     * a write when the user commits: NEW inserts, ENRICHED updates),
-     * counts DUPLICATE dispositions for the returned `$duplicateCount`,
-     * takes the first `SAMPLE_ROW_LIMIT` rows (or `$override` rows when
-     * the caller supplied a positive per-section override) for
-     * `sampleRows`, and derives the section status from cache hits.
-     * All counts are produced from a single cache read per run,
-     * eliminating the TTL-expiry race a second read would introduce.
-     *
      * @param  list<int>  $importRunIds
      * @param  ?int  $override  When non-null and positive, replaces the
      *                          default `SAMPLE_ROW_LIMIT` slice size for this section only.
@@ -243,10 +184,6 @@ final readonly class BuildConsolidatedPreviewQuery
     }
 
     /**
-     * `error` when any contributing run's preview cache returned
-     * null; `empty` when every preview cached zero rows; `ready`
-     * otherwise.
-     *
      * @param  list<PreviewRowDto>  $allRows
      */
     private function resolveSectionStatus(bool $hasCacheMiss, array $allRows): string

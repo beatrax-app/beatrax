@@ -10,45 +10,16 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Payment-type hinter for CAMT.053 ISO 20022 exports
- * (`source_format = 'camt053'`).
- *
- * Keys off the authoritative `BkTxCd` (Bank Transaction Code) tuple
- * the CAMT.053 adapter persists into `rawPayload['sepa']['btc']` —
- * `domain` (e.g. `PMNT`), `family` (e.g. `CCRD`), `subFamily`
- * (e.g. `POSD`). These three codes carry the official ISO20022
- * meaning of the entry and resolve `PaymentType` without any
- * description-keyword guesswork:
- *
- *  - `PMNT-CCRD-POSD` (Card payment, POS terminal) → Pin
- *  - `PMNT-IDDT-ESDD` / `PMNT-IDDT-PMDD` (Direct debit) → DirectDebit
- *  - `PMNT-ICDT-ESCT` (SEPA credit transfer initiated) → Transfer
- *  - `PMNT-RCDT-ESCT` (SEPA credit transfer received) → Transfer
- *
- * When the BkTxCd tuple is missing OR carries a code outside this
- * recognised list, the hinter falls back to the same Dutch lexeme
- * scan as the CSV / MT940 hinters — CAMT entries carry the same
- * narrative text in their `additionalTransactionInformation` /
- * remittance fields, which the adapter merges into the canonical
- * `description`.
- *
- * Returns `null` when the row did not originate from a CAMT.053
- * import or when neither the structured code lookup nor the
- * description keyword scan finds a match.
- *
- * Pure / stateless / singleton-safe — no constructor dependencies.
+ * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
 final class Camt053PaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'camt053';
 
+    // Tuple key is domain|family|subFamily; matches are exact — partial
+    // tuples aren't supported since ISO20022 defines meaning at the
+    // full triple-code level.
     /**
-     * Structured BkTxCd tuple → (`PaymentType`, confidence) mapping.
-     * The tuple key is `domain|family|subFamily`. Matches are
-     * exact; partial-tuple matches are intentionally not supported
-     * because the ISO20022 spec defines the meaning at the full
-     * triple-code level.
-     *
      * @var array<string, array{type: PaymentType, confidence: int, sourceHint: string}>
      */
     private const BTC_MAP = [
@@ -61,11 +32,10 @@ final class Camt053PaymentTypeHinter implements PaymentTypeHinter
         'PMNT|RCDT|ESCT' => ['type' => PaymentType::Transfer, 'confidence' => 95, 'sourceHint' => 'btc:PMNT-RCDT-ESCT'],
     ];
 
+    // Fallback when BkTxCd is missing/unrecognised; mirrors the CSV/
+    // MT940 hinters since CAMT carries the same narrative text merged
+    // into the description.
     /**
-     * Fallback keyword set when BkTxCd is missing or unrecognised.
-     * Mirrors the CSV / MT940 hinters because CAMT entries carry
-     * the same Dutch narrative text in the merged description.
-     *
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */
     private const KEYWORDS = [

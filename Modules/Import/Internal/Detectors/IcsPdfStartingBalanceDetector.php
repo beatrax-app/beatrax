@@ -10,20 +10,7 @@ use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
 
 /**
- * Starting-balance detector specialised for Mijn ICS consumer-portal
- * PDF statement imports (`source_format = 'ics-pdf'`).
- *
- * Reads the `statement_summaries.opening_balance_minor` +
- * `opening_balance_date` columns the ICS PDF parser writes from the
- * per-statement opening-balance row inside every monthly PDF. When
- * the user has multiple ICS PDF statements for the same card, the
- * earliest `opening_balance_date` per account wins so the candidate
- * carries the genuine first-of-record balance.
- *
- * The query is explicitly user-scoped on both `statement_summaries`
- * and `import_runs` so worker contexts that bypass the
- * `BelongsToUser` Eloquent global scope cannot accidentally leak
- * one user's opening balance into another user's wizard.
+ * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
  */
 final class IcsPdfStartingBalanceDetector implements DetectsStartingBalance
 {
@@ -94,11 +81,8 @@ final class IcsPdfStartingBalanceDetector implements DetectsStartingBalance
         return $out;
     }
 
-    /**
-     * Strip the time component from the source `dateTime` column so the
-     * candidate carries an ISO date (`YYYY-MM-DD`) ready for the
-     * `accounts.starting_balance_date` `date` write target.
-     */
+    // Strips the time component so the candidate carries an ISO date
+    // ready for the accounts.starting_balance_date `date` write target.
     private static function dateOnly(string $raw): string
     {
         $spacePos = strpos($raw, ' ');

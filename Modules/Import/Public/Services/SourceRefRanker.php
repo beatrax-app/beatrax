@@ -4,33 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Services;
 
-/**
- * Canonical source-format strength ranking shared by every site that
- * needs to compare an incoming reference against a stored reference for
- * cross-format dedup.
- *
- * The rule is: rank a present reference by the format that produced it
- * (CAMT.053 > MT940 > CSV > anything else), and rank a NULL or empty
- * reference at zero so an absent reference never beats a present one.
- *
- * Centralising the rank lets the preview-time classifier
- * (FingerprintStage) and the write-time enrichment applier
- * (ApplyEnrichments) agree on the ordering, which is what closes the
- * preview-then-confirm TOCTOU window where a parallel run could already
- * have stored a stronger ref between the two phases.
- */
+// Ranks a present reference by the format that produced it (CAMT.053 >
+// MT940 > CSV > anything else); NULL/empty ranks zero. Centralising
+// this lets FingerprintStage and ApplyEnrichments agree on the
+// ordering, closing the preview-then-confirm TOCTOU window.
 final class SourceRefRanker
 {
     /**
-     * Source-format slugs that represent an email-receipt-derived
-     * canonical row. The first-conflict toast flow only triggers when
-     * an enrichment is sourced from a receipt format; a CSV-vs-MT940
-     * enrichment is a silent ENRICHED path with no user-visible
-     * conflict prompt.
-     *
-     * Centralising the list here means any future per-sender matchers
-     * share one source of truth for "is this row a receipt?".
-     *
      * @var list<string>
      */
     private const RECEIPT_FORMATS = ['paypal-receipt', 'ics-receipt', 'google-play-receipt'];

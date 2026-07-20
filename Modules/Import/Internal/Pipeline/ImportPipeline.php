@@ -33,24 +33,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Orchestrates the per-row stages (parse → normalize → classify
- * transaction type → classify payment type → apply auto-category →
- * fingerprint) into one preview payload. Returns a tuple of:
- *
- *  - `rows`: per-source-row PreviewRowDto for the wizard table
- *    (NEW / DUPLICATE / ENRICHED / ERROR per row).
- *  - `canonical`: list of CanonicalTransaction rows that survived the
- *    pipeline AND are not duplicates or enrichments — this is what the
- *    ConfirmImport action eventually replays through RecordsTransactions.
- *  - `enrichments`: list of PendingEnrichment work-items the ConfirmImport
- *    action applies via the AppliesEnrichments contract; each one
- *    UPDATE-s an existing transactions row with a stronger source_ref
- *    and appends a provenance entry to `enriched_from`.
- *  - `unknownIbans`: deduplicated list of UnknownIban prompts the wizard
- *    must render before the user can confirm.
- *
- * Per-row errors are caught here and converted to ERROR-status PreviewRowDtos
- * so a single bad row never aborts the whole preview.
+ * @link ../../../../.docs/architecture/ingestion-pipeline.md
  */
 final class ImportPipeline
 {
@@ -101,18 +84,7 @@ final class ImportPipeline
     }
 
     /**
-     * Generator-driven counterpart to `preview()` for callers with no local
-     * file to parse (e.g. Modules\OpenBanking's remote fetch, via the
-     * Public `RunsImports::runFromRemoteFetch()` contract). Feeds the
-     * caller-supplied `Generator<SourceTransactionDto>` into the SAME
-     * shared per-row body `preview()` uses, so cross-source fingerprint
-     * dedup and the consolidated preview are inherited unchanged.
-     *
-     * Deliberately does NOT call `persistStatementMetadata()` — a fetched
-     * balance is a point-in-time reading, not an opening/closing
-     * statement pair, so it does not map onto `StatementSummaryData`'s
-     * CAMT-shaped fields. Balance/last-sync surfacing belongs on the
-     * OpenBanking module's own connection metadata, not this seam.
+     * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
      *
      * @param  Generator<int, SourceTransactionDto>  $sourceRows
      * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>}
@@ -129,14 +101,11 @@ final class ImportPipeline
         ];
     }
 
+    // Shared per-row body both preview() and previewFromGenerator() feed:
+    // resolve account -> Normalize -> ClassifyTransactionType ->
+    // PaymentTypeClassifier -> auto-category -> ResolveCounterparties ->
+    // FingerprintStage -> build PreviewRowDto -> append.
     /**
-     * The shared per-row body both `preview()` and `previewFromGenerator()`
-     * feed: resolve account → NormalizeStage → ClassifyTransactionType →
-     * PaymentTypeClassifier → applyAutoCategory → ResolveCounterparties →
-     * FingerprintStage-classify → build PreviewRowDto → append. Both the
-     * inner (per-row) and outer (whole-loop) error tiers are preserved
-     * verbatim from the original `preview()` implementation.
-     *
      * @param  iterable<int, SourceTransactionDto>  $sourceRows
      * @return array{rows: list<PreviewRowDto>, canonical: list<CanonicalTransaction>, enrichments: list<PendingEnrichment>, unknownIbans: list<UnknownIban>, lastResolvedAccountId: ?int}
      */
@@ -307,11 +276,7 @@ final class ImportPipeline
     }
 
     /**
-     * Asks the adapter for any statement-level metadata captured during the
-     * preview parse and persists it via the injected writer. Skipped when
-     * the adapter returns null (CSV path) or when no account was resolved
-     * during the parse loop (all-unknown-IBAN paths can't carry a
-     * statement summary because there is no account_id FK to attach it to).
+     * @link ../../../../.docs/architecture/ingestion-pipeline.md#statement-metadata-side-channel
      */
     private function persistStatementMetadata(string $sourceFormat, int $importRunId, ?int $accountId, User $user): void
     {
@@ -337,12 +302,9 @@ final class ImportPipeline
         );
     }
 
-    /**
-     * Collapses a possibly-empty / whitespace-only description string into
-     * a `null` so the preview view's null-coalescing fallback chain
-     * (`name → iban → description → "—"`) doesn't render an empty span when
-     * the source row carried a description field that was actually blank.
-     */
+    // Blank -> null so the preview view's null-coalescing fallback
+    // chain (name -> iban -> description -> "—") never renders an
+    // empty span for a source row with a whitespace-only description.
     private static function trimToNull(?string $value): ?string
     {
         if ($value === null) {

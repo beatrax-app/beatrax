@@ -10,33 +10,7 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Post-parse classifier that resolves the `PaymentType` for every
- * canonical row by consulting every container-tagged
- * `PaymentTypeHinter` and choosing the highest-confidence verdict.
- *
- * Walks `$this->hinters` in registration order, asking each for a
- * `PaymentTypeHint`. Source-specific hinters return `null` for rows
- * that did not originate from their source; the universal
- * description-keyword fallback inspects every row and always emits a
- * low-confidence verdict when any keyword matches.
- *
- * The winner is the hint with the highest `confidence` value; ties
- * resolve by hinter registration order (the earlier-registered
- * hinter wins). When every hinter declines, the stage falls back to
- * `PaymentType::Unknown` so the canonical row's `paymentType` is
- * never null after this stage runs.
- *
- * `run()` returns a NEW `CanonicalTransaction` via the immutable
- * `withPaymentType()` wither — the stage never mutates its inputs.
- *
- * Pure / stateless: the stage holds no per-call state and is bound
- * as a singleton. The classifier emits no per-row log line — the
- * resolved verdict lives on the returned `CanonicalTransaction`'s
- * `paymentType` property and survives into the PreviewRowDto, so
- * downstream observers (the preview UI, tests, the audit log
- * surface) read it from the data path rather than from log scrape.
- * A 500-row import therefore produces zero classifier log lines,
- * keeping `/dev/logs` tailable for the developer.
+ * @link ../../../../../.docs/architecture/ingestion-pipeline.md#5-payment-type-classification-paymenttypeclassifierstage
  */
 final class PaymentTypeClassifierStage
 {

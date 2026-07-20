@@ -16,39 +16,7 @@ use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
- * Parses an uploaded YAML alias bundle, diffs it against the current
- * user's `merchant_aliases` table, and (on confirm) applies the chosen
- * conflict resolutions to the table.
- *
- * Security posture for the parse step:
- *
- *   - Parsing runs with `Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE`, which
- *     refuses YAML constructs that would try to instantiate PHP objects
- *     (the `!php/object` tag and friends). This is the single mitigation
- *     against the YAML-deserialisation-to-RCE class of attack covered by
- *     ASVS V10.
- *   - Top-level shape is strictly validated: the document must be an
- *     array with an `entries` key holding a list. Anything else throws
- *     `InvalidArgumentException` with a user-facing message; the
- *     Livewire layer catches that and renders an inline error without
- *     ever writing to the database.
- *
- * Diff semantics. Each parsed entry is classified against the user's
- * existing aliases:
- *
- *   - `new`        — no existing alias has the same `pattern`.
- *   - `unchanged`  — an existing alias has the same `pattern` AND the
- *                    same `friendly_name`.
- *   - `conflicts`  — an existing alias has the same `pattern` but a
- *                    different `friendly_name`. The Livewire UI offers
- *                    the user a per-conflict 'keep' / 'replace' choice;
- *                    the `apply()` step branches on that choice.
- *
- * `apply()` runs the writes inside a single transaction. Unknown
- * conflict-resolution actions (anything other than 'replace') fall
- * through to the safe default 'keep' — a tampered action key from a
- * forged Livewire payload cannot silently replace the user's existing
- * alias.
+ * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
  */
 final class AliasYamlImporter
 {
@@ -60,11 +28,6 @@ final class AliasYamlImporter
     ) {}
 
     /**
-     * Parses an uploaded YAML document into a list of immutable
-     * `CorpusEntryDto` values. Throws `InvalidArgumentException` on any
-     * malformed input — including invalid YAML, a missing `entries`
-     * key, or per-entry shape violations.
-     *
      * @return list<CorpusEntryDto>
      */
     public function parse(string $yamlContent): array
@@ -133,26 +96,6 @@ final class AliasYamlImporter
     }
 
     /**
-     * Classifies each parsed entry against the user's current
-     * `merchant_aliases` rows.
-     *
-     * Uses the raw query builder (via the injected `DatabaseManager`)
-     * rather than the Eloquent Builder so the project's
-     * phpstan-strict-rules `staticMethod.dynamicCall` rule doesn't
-     * flag the chained methods.
-     *
-     * Classification rules:
-     *   - `new`        — no existing alias shares the `pattern`.
-     *   - `unchanged`  — an existing alias shares the `pattern` AND
-     *                    the `friendly_name` AND the
-     *                    `generalized_pattern`. Round-tripping an
-     *                    untouched YAML export lands every row here.
-     *   - `conflicts`  — an existing alias shares the `pattern` but
-     *                    differs on `friendly_name` OR
-     *                    `generalized_pattern`. The Livewire UI
-     *                    surfaces both fields so the user can pick
-     *                    keep / replace knowingly.
-     *
      * @param  list<CorpusEntryDto>  $entries
      * @return array{new: list<CorpusEntryDto>, unchanged: list<CorpusEntryDto>, conflicts: list<array{entry: CorpusEntryDto, existing_name: string, existing_generalized_pattern: string}>}
      */
@@ -194,14 +137,6 @@ final class AliasYamlImporter
     }
 
     /**
-     * Commits the entries to the user's `merchant_aliases` table.
-     *
-     * `$conflictResolutions` maps `pattern => 'keep' | 'replace'`. Any
-     * unknown action falls through to 'keep' (the safe default).
-     * Returns the number of rows actually changed (inserted +
-     * updated). Wraps the writes in a single transaction so a mid-way
-     * failure rolls back cleanly.
-     *
      * @param  list<CorpusEntryDto>  $entries
      * @param  array<string, string>  $conflictResolutions
      */
@@ -259,11 +194,6 @@ final class AliasYamlImporter
     }
 
     /**
-     * Loads the user's current alias rows as a `pattern => {
-     * friendly_name, generalized_pattern }` map for diff/apply. Uses
-     * the raw query builder per the project's
-     * `staticMethod.dynamicCall` convention.
-     *
      * @return array<string, array{friendly_name: string, generalized_pattern: string}>
      */
     private function loadExistingByPattern(User $user): array

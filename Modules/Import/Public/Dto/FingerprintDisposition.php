@@ -7,20 +7,7 @@ namespace Modules\Import\Public\Dto;
 use Spatie\LaravelData\Data;
 
 /**
- * Discriminated outcome of looking up an incoming canonical transaction's
- * fingerprint against the existing transactions table.
- *
- * Three concrete variants:
- *  - NewRowDisposition    — no existing row; the canonical will be
- *                           inserted by the recorder.
- *  - DuplicateDisposition — a row already exists and the incoming
- *                           source_ref is no stronger; the canonical is
- *                           discarded.
- *  - EnrichedDisposition  — a row already exists but the incoming
- *                           source_ref is stronger (EndToEndId beats
- *                           everything); the existing row will be
- *                           UPDATE-d to write the new source_ref and
- *                           append a provenance entry to enriched_from.
+ * @link ../../../../.docs/architecture/ingestion-pipeline.md#8-fingerprint-fingerprintstage
  */
 abstract class FingerprintDisposition extends Data
 {

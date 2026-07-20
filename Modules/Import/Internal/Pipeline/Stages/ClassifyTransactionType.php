@@ -13,61 +13,7 @@ use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Pipeline stage that resolves a canonical row's `type` from the
- * combination of source-adapter pre-classification, the user's account
- * graph, and the PayPal event-type map. Sits between NormalizeStage and
- * FingerprintStage; runs once per canonical row before the row is
- * fingerprinted or persisted.
- *
- * The stage is a pure pre-load transformer: it never queries the
- * `transactions` table, never mutates `pair_transaction_id`, and never
- * re-types rows the adapter already classified as `refund` / `fee` /
- * `adjustment`.
- *
- * Algorithm:
- *
- *   1. Preserve already-classified rows. `refund` / `fee` / `adjustment`
- *      come back unchanged — they are pre-classified by the adapter
- *      (PayPal Refund event type, ASN refund mapper) and downstream
- *      pair-detection has no opinion on them.
- *
- *   2. Cross-account-IBAN check (universal across source formats). When
- *      `$tx->counterpartyIban` is non-null the stage consults the alias
- *      bridge first (Arm A — `ResolvesKnownCounterpartyIban` maps real
- *      institution IBANs such as PayPal SARL Luxembourg's
- *      `LU89751000135104200E` or ICS at ABN AMRO's
- *      `NL08ABNA0526650664` to the user's own synthetic-IBAN account of
- *      the matching kind). If the alias arm resolves an account that
- *      differs from the row's own account, the row is a transfer leg.
- *      Falling back to Arm B — literal own-account-IBAN equality —
- *      catches bank-to-bank transfers between two of the user's
- *      Account.iban rows that share the same literal IBAN convention
- *      (e.g. two ASN accounts). Sign-of-amount picks the direction:
- *      negative → transfer_out, positive → transfer_in. Both arms
- *      filter by `$user->id` so a counterparty IBAN that happens to
- *      belong to a different user's account never triggers a flip.
- *
- *   3. PayPal source-format event-type map. Fires when
- *      `rawPayload.format === 'paypal-csv'`. Reads the FIRST event's
- *      `type` from `rawPayload.events`, looks up via
- *      `PaypalCsvEventTypeMap::transactionType()`, and applies the
- *      resulting `Transaction::TYPES` value if it doesn't collide with a
- *      transfer (step 2 takes precedence — a PayPal General Withdrawal
- *      whose counterparty IBAN matches a known own ASN account becomes
- *      `transfer_out` regardless). An unmapped parent event type catches
- *      the typed exception and falls through to step 4.
- *
- *   4. Subtractive income rule. Positive amount AND type not in
- *      {transfer_in, transfer_out, refund, fee} → income. Cheap and
- *      deterministic; counterparty-heuristic salary detection is a
- *      future concern.
- *
- *   5. Default. Return the row unchanged so NormalizeStage's amount-sign
- *      default (negative → expense) survives.
- *
- * Cross-user safety: every Account lookup filters on `$user->id`. The
- * stage is a single read against `accounts`; it does NOT query
- * `transactions` — listener-side concerns stay listener-side.
+ * @link ../../../../../.docs/architecture/ingestion-pipeline.md#4-transaction-type-classification-classifytransactiontype
  */
 final class ClassifyTransactionType
 {

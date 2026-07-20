@@ -40,6 +40,17 @@ The pipeline refuses any CSV import without an explicit `BankCsvFormatHint`
 reliably, and that guard lives at the public-contract boundary so even
 programmatic callers can't skip it.
 
+For the `eml`/`mbox` formats, `ParseStage` instead drives the receipt path:
+it reads the file bytes and hands them to `RecordReceipt`, which persists a
+`file_imports` row, stores the `.eml` on disk, runs the matcher dispatch,
+and transitions the row status. On a `parsed` outcome the stage bridges the
+resulting `ParsedReceiptDto` to a `SourceTransactionDto` via
+`ReceiptSourceAdapter`; `skipped`/`unmatched` outcomes yield nothing. The
+`mbox` arm iterates the archive via `MboxIterator` and runs the same
+per-message flow for each contained message. The `User` is required only
+for these receipt arms (to scope the `file_imports` row per-user); the
+CSV/CAMT/MT940/PDF arms ignore it.
+
 ### 2. Account resolution
 
 For each `SourceRow`, the pipeline asks the injected `AccountResolver` to
@@ -59,24 +70,68 @@ stage — other modules MAY invoke it directly. It converts the
 parser-specific `SourceRow` into a `CanonicalTransaction` DTO carrying
 booked-at, amount (`brick/money` per [ADR 0009](../adr/0009-brick-money-multi-currency.md)),
 currency, counterparty name + IBAN, raw description, account FK, and user
-FK.
+FK, via four steps:
+
+1. Normalises the counterparty name through `FingerprintComposer`
+   (lowercase, diacritic strip, punctuation collapse, 80-char truncate).
+2. Substitutes the literal `_no_counterparty` sentinel when the
+   counterparty name is null/empty/punctuation-only — the composite
+   UNIQUE on `transactions` requires NOT NULL to catch duplicates that
+   lack a usable name.
+3. Maps the amount sign to `Transaction.type` (positive → income,
+   negative → expense, zero → adjustment); future transfer-pair
+   detection overrides this for matched cross-account flows.
+4. Substitutes the native amount + currency into the settled pair when
+   the source DTO omits `settledAmountMinor`/`settledCurrency` (every
+   EUR-native row). When the source supplies a different settled
+   currency, the canonical row carries both legs verbatim AND derives
+   `fxRateUsed = settled / native` via `Brick\Math\BigDecimal` at scale 8
+   with HALF_UP rounding — float arithmetic is forbidden on the money
+   path since the `decimal(18,8)` column requires exact precision.
 
 ### 4. Transaction-type classification (`ClassifyTransactionType`)
 
 Sets the `transaction_type` enum (`income`, `expense`, `transfer`) based on
 amount sign plus contextual signals from the source format. Income is a
 first-class type, not a "negative expense" — this matters for cash-flow
-forecasting downstream.
+forecasting downstream. `ClassifyTransactionType` is a pure pre-load
+transformer — it never queries `transactions` and never re-types rows the
+adapter already classified as `refund`/`fee`/`adjustment`. Its algorithm:
+
+1. Preserve already-classified rows (`refund`/`fee`/`adjustment` pass
+   through unchanged).
+2. Two-arm cross-account-IBAN check, both scoped by `$user->id`: the alias
+   bridge (Arm A, `ResolvesKnownCounterpartyIban`) maps real institution
+   IBANs (PayPal Luxembourg, ICS at ABN AMRO) to the user's synthetic-IBAN
+   account; the literal own-IBAN match (Arm B) catches transfers between
+   two of the user's own accounts. Either arm firing sets
+   `transfer_out`/`transfer_in` by amount sign.
+3. PayPal source-format event-type map (`PaypalCsvEventTypeMap`) — reads
+   the first event's `type` from `rawPayload.events` and maps it to a
+   `Transaction::TYPES` value, unless step 2 already flagged a transfer.
+   An unmapped parent event type falls through to step 4 (a genuinely
+   unknown PayPal event is a user-data condition, not a bug — the adapter
+   already raises a typed exception for anything genuinely unmappable at
+   parse time).
+4. Subtractive income rule: positive amount AND type not already one of
+   `transfer_in`/`transfer_out`/`refund`/`fee` → `income`.
+5. Default: leave `NormalizeStage`'s amount-sign-derived type untouched.
 
 ### 5. Payment-type classification (`PaymentTypeClassifierStage`)
 
 Sets the `payment_type` enum (`ideal`, `direct_debit`, `card_payment`,
 `transfer`, `paypal`, ...) using the per-adapter `*Hinter` classes registered
-in `Modules/Import/Internal/Parsers/`. The
+in `Modules/Import/Internal/Parsers/` (see
+[Payment-type hinters](../features/import/architecture.md#payment-type-hinters)
+for the per-source lexeme/code tables). The
 [`paymentTypeHinterContract`](#) arch invariant requires every `*Hinter`
 class under `Modules/Import/Internal/Parsers/` to implement the
 `PaymentTypeHinter` contract, which is what makes this stage's plug-in
-extension point safe.
+extension point safe. The stage is pure/stateless and bound as a
+singleton; it emits no per-row log line — the resolved verdict lives on
+the returned `CanonicalTransaction`'s `paymentType` property and survives
+into the `PreviewRowDto`, so a 500-row import produces zero classifier log
+lines and keeps `/dev/logs` tailable.
 
 ### 6. Auto-category (`AppliesAutoCategory`)
 
@@ -118,6 +173,30 @@ The classification yields a `PreviewRowDto` per source row plus three
 output lists — `canonical` (NEW rows ready to insert), `enrichments`
 (UPDATE work items), and `unknownIbans` (deduplicated account-resolution
 prompts).
+
+`FingerprintStage`'s fingerprint lookup filters explicitly by `user_id`
+(rather than relying on `BelongsToUser`'s global scope, which falls
+through to "no scope" in unauthenticated CLI/queue/test contexts), so a
+fingerprint owned by a different user can never mark the current user's
+preview row as a duplicate or get enriched. Ranking is delegated to
+`SourceRefRanker` so the preview-time classifier and the write-time
+`ApplyEnrichments` share one canonical ordering — this is what closes the
+preview-then-confirm TOCTOU window. Statement-vs-statement collisions
+(both sides a bank-statement format) always drop as DUPLICATE without
+upgrading `source_ref` — re-importing the same period as CAMT.053 after
+CSV must not silently re-flag every row ENRICHED; receipt-driven
+enrichment (at least one side a receipt format) is unaffected.
+
+When the disposition is ENRICHED, the stage additionally fetches the
+existing row's `counterparty_name`/`description`/`currency`/`amount_minor`
+and compares them to the incoming row (case-insensitive for strings,
+uppercase for currency, exact-int for amount), recording any disagreement
+on `EnrichedDisposition::$conflictingFields` for `ApplyEnrichments` to
+resolve per the user's `receipt_conflict_resolution` policy. Because
+`counterparty_name`/`description` are ciphertext at rest for an encrypted
+user, the stored value is decrypted before this compare — otherwise
+ciphertext could never equal the incoming plaintext and every
+receipt-vs-statement re-import would register a false-positive conflict.
 
 ## Preview vs Confirm
 

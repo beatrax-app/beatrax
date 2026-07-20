@@ -18,35 +18,16 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Step 1 of the wizard. The user picks an issuer (ASN / ICS / PayPal)
- * and a format for that issuer, then uploads a statement file (CSV,
- * CAMT.053 XML, MT940, ICS PDF, or PayPal Activity Download CSV). On
- * submit, the file is staged via Livewire's temporary upload directory,
- * the importer runs the preview phase (copying the upload to a stable
- * app-owned path on the way through), and the user is redirected to
- * /imports/{id}/preview.
- *
- * Two cascading selects drive the page: changing `$issuer` rebuilds the
- * Format select options via `availableFormats()` and resets
- * `$sourceFormat` to the first valid leaf for the new issuer. The leaf
- * `sourceFormat` value is the wire format consumed by HeaderSniffer,
- * SourceAdapterRegistry, and the per-source-format adapters; the issuer
- * field exists only to drive the picker UX.
- *
- * The 10 MB ceiling matches the typical maximum ASN statement export size
- * and is well above a Mijn ICS monthly PDF (~100 KB); the `messages()`
- * overrides surface user-readable strings for the validation failures.
+ * @link ../../../../../.docs/features/import/architecture.md#upload-wizard
  */
 final class UploadWizard extends Component
 {
     use WithFileUploads;
 
+    // Drives the `in:` validator; the same wire-level format key the
+    // HeaderSniffer and downstream adapters dispatch on. A new format
+    // only needs to be added in one place.
     /**
-     * Stable format identifiers offered in the cascade's Format select.
-     * The same list drives the `in:` validator and is the wire-level
-     * format key that downstream adapters and the HeaderSniffer dispatch
-     * on. A new format only needs to be added in one place.
-     *
      * @var list<string>
      */
     public const SUPPORTED_FORMATS = [
@@ -64,13 +45,9 @@ final class UploadWizard extends Component
         'ing-nl-csv',
     ];
 
+    // Enforces the issuer/sourceFormat cross-product inside rules() (a
+    // mismatched pair fails the leaf-validator before ParseStage runs).
     /**
-     * Issuer / sourceFormat pairings the wizard accepts. Used inside
-     * `rules()` to enforce that the cross-product is meaningful (e.g.
-     * `issuer='email-file'` paired with `sourceFormat='asn-csv'`
-     * fails the leaf-validator before ParseStage ever runs). New
-     * issuer + format pairs land here once.
-     *
      * @var array<string, list<string>>
      */
     private const ISSUER_FORMAT_MAP = [
@@ -83,32 +60,14 @@ final class UploadWizard extends Component
 
     public ?TemporaryUploadedFile $file = null;
 
-    /**
-     * One-shot error surfaced inline below the upload form when the
-     * importer raises a parse-time exception (sniff mismatch, unsupported
-     * PayPal language, unreadable file, etc.) before the wizard can hand
-     * off to the preview screen. Cleared on every fresh submit() so a
-     * second attempt with a different file does not retain the stale
-     * message.
-     *
-     * The matching stack trace is also written to the Laravel log via
-     * the injected LoggerInterface so the failure is visible on
-     * /dev/logs — the user-reported "silent failure" symptom was that
-     * the Livewire generic-error toast surfaced no actionable detail
-     * AND no log line surfaced the cause. The error message stored here
-     * is intentionally human-readable (typed-exception subclasses carry
-     * a user-facing message; generic Throwables fall back to a stable
-     * "Could not process this file." copy with the exception class
-     * appended for triage).
-     */
+    // One-shot parse-time error surfaced below the upload form; cleared
+    // on every fresh submit(). See architecture.md#upload-wizard for the
+    // human-readable-message + full-trace-logging contract.
     public ?string $uploadError = null;
 
-    /**
-     * Issuer driver for the cascading picker. Mounted with the most
-     * common path (ASN); changing the issuer rebuilds `availableFormats()`
-     * and resets `$sourceFormat` to that issuer's first leaf via
-     * `updatedIssuer()`.
-     */
+    // Mounted with the most common path (ASN); changing the issuer
+    // rebuilds availableFormats() and resets $sourceFormat via
+    // updatedIssuer().
     #[Validate('required|in:asn,ics,paypal,email-file,other-bank')]
     public string $issuer = 'asn';
 
@@ -136,13 +95,9 @@ final class UploadWizard extends Component
         ];
     }
 
-    /**
-     * Returns the closure that enforces the cross-product validation:
-     * `sourceFormat` must be in the issuer's allow-list. Without this
-     * rule the validator would accept any leaf with any issuer, so an
-     * `issuer='email-file' + sourceFormat='asn-csv'` pair would pass
-     * the dumb `in:` rule and only fail downstream at ParseStage.
-     */
+    // Enforces sourceFormat is in the issuer's allow-list — without it,
+    // the bare `in:` rule would accept any leaf with any issuer and only
+    // fail downstream at ParseStage.
     private function issuerFormatRule(): \Closure
     {
         return function (string $attribute, mixed $value, \Closure $fail): void {
@@ -168,12 +123,10 @@ final class UploadWizard extends Component
         ];
     }
 
+    // Labels are locked by the UI design contract and not derived from
+    // the leaf key, so a future format-key rename can't silently drift
+    // the visible option text.
     /**
-     * Returns the Format select options for the current issuer. Labels are
-     * locked by the UI design contract and not derived from the leaf key
-     * so a future format-key rename does not silently drift the visible
-     * option text.
-     *
      * @return list<array{value: string, label: string}>
      */
     public function availableFormats(): array
@@ -203,16 +156,10 @@ final class UploadWizard extends Component
         };
     }
 
-    /**
-     * Livewire updated-hook for the issuer property. Resets
-     * `$sourceFormat` to the first leaf of the new issuer so the Format
-     * select never holds a stale value from the previously-chosen issuer
-     * (e.g. switching from ICS back to ASN must move sourceFormat off
-     * 'ics-pdf' onto 'asn-csv'). Without this reset, a defensive
-     * `in:asn-csv,camt053,mt940,ics-pdf` validator would still
-     * accept the stale composite but the picker would visually disagree
-     * with the submitted value.
-     */
+    // Resets $sourceFormat to the new issuer's first leaf so the Format
+    // select never holds a stale value (e.g. ICS -> ASN must move off
+    // 'ics-pdf') — otherwise the picker would visually disagree with
+    // the submitted value even though a defensive `in:` rule still passes.
     public function updatedIssuer(): void
     {
         $first = $this->availableFormats()[0] ?? null;
@@ -287,14 +234,10 @@ final class UploadWizard extends Component
         return $views->make('import::livewire.upload-wizard');
     }
 
-    /**
-     * Sanitises an uploaded filename to a safe `[A-Za-z0-9_-]+\.<ext>` shape.
-     * The user-supplied original name is never used to construct disk paths
-     * directly — path traversal characters are stripped here before any
-     * filesystem operation sees the value. The extension is picked from the
-     * declared source format so a CAMT XML upload is not silently renamed to
-     * `<name>.csv` on its way into stable storage.
-     */
+    // Sanitises to a safe `[A-Za-z0-9_-]+\.<ext>` shape — the original
+    // name is never used to construct disk paths directly, so path-
+    // traversal characters are stripped before any filesystem op sees
+    // it. Extension comes from the declared source format, not the name.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

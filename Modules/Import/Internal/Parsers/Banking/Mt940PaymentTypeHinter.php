@@ -10,31 +10,15 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Payment-type hinter for MT940 narrative exports
- * (`source_format = 'mt940'`).
- *
- * The MT940 Tag :86: narrative carries the same Dutch lexemes as the
- * the CSV description column — `Betaalautomaat` / `Geldautomaat` for
- * POS / ATM, `iDEAL` for online card-not-present, `Incasso` /
- * `SEPA Direct Debit` for direct debits, and `Overboeking` /
- * `SEPA Credit Transfer` for transfers. The keyword set is therefore
- * identical to the CSV hinter; only the source-format gate differs.
- *
- * Returns `null` when the row did not originate from an MT940 import
- * or when none of the lexemes appears in the description.
- *
- * Pure / stateless / singleton-safe — no constructor dependencies.
+ * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
 final class Mt940PaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'mt940';
 
+    // Mirrors AsnCsvPaymentTypeHinter::KEYWORDS verbatim — the MT940
+    // :86: narrative emits the same lexemes as the CSV description.
     /**
-     * Casefold-lowercase keyword → (`PaymentType`, confidence) mapping.
-     * Mirrors `AsnCsvPaymentTypeHinter::KEYWORDS` because the MT940
-     * narrative emits the same lexemes a bank places in its CSV
-     * description column.
-     *
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */
     private const KEYWORDS = [

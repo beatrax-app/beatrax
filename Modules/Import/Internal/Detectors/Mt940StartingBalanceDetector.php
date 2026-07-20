@@ -10,27 +10,7 @@ use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
 
 /**
- * Starting-balance detector specialised for ASN MT940 statement
- * imports (`source_format = 'mt940'`).
- *
- * Reads the `statement_summaries.opening_balance_minor` +
- * `opening_balance_date` columns that the MT940 parser writes from
- * every `:60F:` field on every imported statement. When the user
- * has multiple MT940 statements for the same account, the earliest
- * `opening_balance_date` per account wins so the candidate carries
- * the genuine first-of-record balance — not a later forward-rolled
- * estimate.
- *
- * The aggregator's tie-break rule prefers CAMT.053 over MT940 on a
- * date tie because CAMT carries an explicit `<OpngBal>` element
- * while MT940's `:60F:` is sometimes a re-computed running total —
- * see `DetectStartingBalancesQuery` for the conflict-resolution
- * semantics.
- *
- * The query is explicitly user-scoped on both `statement_summaries`
- * and `import_runs` so worker contexts that bypass the
- * `BelongsToUser` Eloquent global scope cannot accidentally leak
- * one user's opening balance into another user's wizard.
+ * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
  */
 final class Mt940StartingBalanceDetector implements DetectsStartingBalance
 {
@@ -101,11 +81,8 @@ final class Mt940StartingBalanceDetector implements DetectsStartingBalance
         return $out;
     }
 
-    /**
-     * Strip the time component from the source `dateTime` column so the
-     * candidate carries an ISO date (`YYYY-MM-DD`) ready for the
-     * `accounts.starting_balance_date` `date` write target.
-     */
+    // Strips the time component so the candidate carries an ISO date
+    // ready for the accounts.starting_balance_date `date` write target.
     private static function dateOnly(string $raw): string
     {
         $spacePos = strpos($raw, ' ');

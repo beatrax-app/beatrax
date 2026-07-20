@@ -17,57 +17,13 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 
 /**
- * Applies pending cross-format enrichments produced by the import
- * pipeline. Each enrichment is wrapped in a per-row DB transaction with
- * `lockForUpdate()` so two concurrent imports targeting the same row's
- * source_ref either serialise or short-circuit on a rank re-evaluation
- * rather than racing on the UPDATE.
- *
- * Rank re-evaluation at write time:
- *  - The stored source_ref is read again inside the locked transaction
- *    and re-ranked against the incoming PendingEnrichment via
- *    `SourceRefRanker`. If the stored ref now outranks (or ties) the
- *    incoming ref, the enrichment is dropped as a no-op so a cached
- *    weaker reference can never overwrite a freshly-stored stronger one.
- *
- * The enriched_from JSON column accumulates a full append-only
- * provenance trail. Every successful application appends one entry of
- * the shape:
- *
- *     ['format' => string, 'ran_at' => string, 'import_run_id' => int, 'added' => list<string>]
- *
- * The row's source_ref is overwritten with the stronger incoming
- * reference. Caller scoping by user is enforced inside the UPDATE so a
- * forged PendingEnrichment whose existingTransactionId belongs to
- * another user resolves zero rows and is silently dropped.
- *
- * Receipt-conflict branch: when PendingEnrichment.conflictingFields
- * is non-empty AND the source format is a receipt format AND the
- * user's receipt_conflict_resolution is still `unset`, the action
- * INSERTs a row into pending_enrichment_conflicts for each
- * conflicting field and dispatches ReceiptConflictDetected (the
- * toast surfaces the choice). When the policy is `prefer_receipt`
- * the incoming values land silently in the same UPDATE; when
- * `prefer_first_write` the stored values are kept and only the
- * source_ref enrichment proceeds.
- *
- * Cross-user / cross-instance safety: the user policy is read into
- * a method-local variable per __invoke() call — never cached on the
- * action instance. The action is bound as a singleton in the
- * service provider; an instance-level cache would leak across users
- * on the same queue-worker process, violating the cross-user
- * isolation invariant.
+ * @link ../../../../.docs/features/import/architecture.md#applying-enrichments
  */
 final class ApplyEnrichments implements AppliesEnrichments
 {
-    /**
-     * Whitelist of `conflictingFields` keys that may flow through as
-     * literal SQL column names on the `transactions` UPDATE. Mirrors
-     * the four field names emitted by `FingerprintStage::detectConflicts`.
-     * Any other key is dropped silently before reaching the SQL
-     * builder so a poisoned preview cache or a future producer drift
-     * cannot turn an array key into an arbitrary column name.
-     */
+    // Mirrors FingerprintStage::detectConflicts()'s four field names;
+    // any other key is dropped before reaching the SQL builder so a
+    // poisoned cache or producer drift can't inject an arbitrary column.
     private const ALLOWED_CONFLICT_FIELDS = ['counterparty_name', 'description', 'currency', 'amount_minor'];
 
     public function __construct(
@@ -176,23 +132,6 @@ final class ApplyEnrichments implements AppliesEnrichments
     }
 
     /**
-     * Returns the column-name → value map of per-field updates that
-     * should land in the same UPDATE statement as the source_ref
-     * change. For the `unset` policy on a receipt-format enrichment
-     * with non-empty conflictingFields, this method:
-     *  - INSERTs one pending_enrichment_conflicts row per field
-     *  - dispatches ReceiptConflictDetected per field
-     *  - SKIPS the per-field write (returns no per-field updates)
-     *
-     * For `prefer_receipt`: returns the incoming values keyed by
-     * column name so the caller's UPDATE applies them silently.
-     * For `prefer_first_write`: returns an empty map so the stored
-     * value is preserved.
-     *
-     * For non-receipt formats OR an empty conflictingFields map:
-     * returns an empty map — the pre-Wave-3 behaviour (pure
-     * source_ref enrichment) is preserved.
-     *
      * @return array<string, mixed>
      */
     private function resolveFieldConflicts(PendingEnrichment $enrichment, User $user, string $userPolicy): array
@@ -225,20 +164,10 @@ final class ApplyEnrichments implements AppliesEnrichments
         return [];
     }
 
-    /**
-     * INSERTs one pending_enrichment_conflicts row per conflicting
-     * field + dispatches one ReceiptConflictDetected event per field.
-     * The (user_id, transaction_id, field_name) UNIQUE constraint on
-     * the table makes re-import idempotent — the second import upserts
-     * via insertOrIgnore so no duplicate pending rows accumulate.
-     *
-     * Plaintext-only persistence: `$values['stored']` arrives here ALREADY
-     * DECRYPTED — `FingerprintStage::detectConflicts()` is the sole producer
-     * of `conflictingFields` and decrypts the stored `counterparty_name`/
-     * `description` before ever populating the map. So `stored_value` and
-     * the dispatched event's `csvValue` below carry plaintext, never
-     * ciphertext, without any further decrypt step here.
-     */
+    // The (user_id, transaction_id, field_name) UNIQUE constraint makes
+    // re-import idempotent via insertOrIgnore. See
+    // architecture.md#applying-enrichments for the plaintext-persistence
+    // guarantee.
     private function holdConflicts(PendingEnrichment $enrichment, User $user): void
     {
         $connection = $this->db->connection();
@@ -280,23 +209,6 @@ final class ApplyEnrichments implements AppliesEnrichments
     }
 
     /**
-     * Build the per-field update map for the prefer_receipt policy:
-     * the incoming value lands on each conflicting column. Field names
-     * outside `ALLOWED_CONFLICT_FIELDS` are dropped so a corrupted
-     * cache row cannot inject an unintended column name into the
-     * UPDATE.
-     *
-     * Encrypt-incoming-before-update: the incoming value is a fresh
-     * plaintext string (parsed straight off the receipt), so it must be
-     * encrypted
-     * before it lands in the `transactions` UPDATE for an encrypted
-     * user — otherwise plaintext is re-introduced into an at-rest-
-     * encrypted column. `encryptAttrs()` only touches string-valued,
-     * `SensitiveFieldRegistry`-listed columns (counterparty_name/
-     * description), so `currency`/`amount_minor` pass through
-     * untouched, and it is a documented no-op pass-through for a
-     * non-encrypted user.
-     *
      * @return array<string, mixed>
      */
     private function extractIncomingValues(PendingEnrichment $enrichment, User $user): array

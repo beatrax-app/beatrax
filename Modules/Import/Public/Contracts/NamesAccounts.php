@@ -7,9 +7,7 @@ namespace Modules\Import\Public\Contracts;
 use Modules\Core\Models\User;
 
 /**
- * Creates an Account row for an unknown IBAN encountered during preview.
- * The wizard invokes this contract when the user supplies a name for a
- * counterparty that does not yet exist in the user's `accounts` table.
+ * @link ../../../../.docs/features/import/architecture.md#module-boundary
  */
 interface NamesAccounts
 {
