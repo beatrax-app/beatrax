@@ -165,6 +165,18 @@ const ISOLATION_ROUTE_ALLOW_LIST = [
     // transaction, account, or recurring data.
     'auth.lock',
     // (Plan 07-05 moved tax.index to ISOLATION_ROUTE_COVERED — real probe below)
+    // Phase 19 — Enable Banking OAuth plumbing. Both are redirect-only
+    // verbs that render no list of foreign rows: `connect` builds a
+    // user-scoped consent URL and `redirect()->away()`s to the bank;
+    // `callback` consumes the user-bound CSRF `state` (single-use, hash_equals,
+    // user-id-bound — proven by OpenBankingConsentDanceTest / the 19 state
+    // repository tests) and redirects to the settings page. Neither surfaces
+    // another user's data, so they are allow-listed rather than probed (a real
+    // probe would require mocking the outbound EB HTTP client for no isolation
+    // signal). The data-bearing settings surface they feed IS probed —
+    // see settings.open-banking in ISOLATION_ROUTE_COVERED.
+    'oauth.open-banking.connect',
+    'oauth.open-banking.callback',
 ];
 
 /**
@@ -251,6 +263,15 @@ const ISOLATION_ROUTE_COVERED = [
     // (InitialSyncPuller::progress()). Probed below (closes the gap
     // 15-05-SUMMARY.md logged as deferred to a later plan).
     'mobile.setup',
+    // Phase 18 — Notifications inbox. NotificationInbox lists the acting
+    // user's own `notifications` rows (user_id-scoped read); genuinely bears
+    // user-scoped data, so probed below rather than allow-listed.
+    'notifications.index',
+    // Phase 19 — Open-banking settings surface. OpenBankingSettingsPage renders
+    // OpenBankingConnectionQuery::current() for the acting user (user_id-scoped;
+    // WR-05/19-11). It bears user-scoped connection data (institution / bank
+    // display name / consent), so probed below.
+    'settings.open-banking',
 ];
 
 function xuiUser(string $username, bool $developer = false): User
@@ -1151,6 +1172,54 @@ it('does not restore the owner saved report definition when the partner opens it
         ->get('/reports?report='.$ownerReportId)
         ->assertOk()
         ->assertDontSee('Owner Secret Builder Report');
+});
+
+it('does not bleed the owner notification into the partner /notifications inbox (Phase 18, notifications.index)', function (): void {
+    // Raw plaintext insert into the (encryption-registered) notifications
+    // columns, mirroring xuiTransaction's approach — no encryption session is
+    // active for these fixtures, so columns store/read as plaintext. The
+    // partner's inbox query is user_id-scoped, so the owner's row must never
+    // render in the partner's response.
+    $this->db->connection()->table('notifications')->insert([
+        'id' => 'xui-owner-notif-'.bin2hex(random_bytes(6)),
+        'user_id' => $this->owner->id,
+        'state' => 'open',
+        'title' => 'Owner Secret Notification Title',
+        'body' => 'Owner secret notification body',
+        'trigger_type' => 'reminder',
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/notifications')
+        ->assertOk()
+        ->assertDontSee('Owner Secret Notification Title');
+});
+
+it('does not bleed the owner open-banking connection into the partner settings surface (Phase 19, settings.open-banking)', function (): void {
+    // OpenBankingConnectionQuery::current() filters by the acting user id, so
+    // the partner (who has no connection of their own) must see the off-state
+    // and never the owner's distinctive bank display name. A broken user-id
+    // filter would surface the owner's row here.
+    $this->db->connection()->table('open_banking_connections')->insert([
+        'user_id' => $this->owner->id,
+        'institution_id' => 'ASNBNL21',
+        'account_uid' => 'xui-owner-acc-uid',
+        'bank_display_name' => 'Owner Secret Bank Name',
+        'enabled' => true,
+        'consent_expires_at' => '2027-01-01 00:00:00',
+        'last_successful_sync_at' => null,
+        'last_attempt_at' => null,
+        'last_attempt_status' => null,
+        'created_at' => '2026-05-19 00:00:00',
+        'updated_at' => '2026-05-19 00:00:00',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/settings/open-banking')
+        ->assertOk()
+        ->assertDontSee('Owner Secret Bank Name');
 });
 
 it('covers or allow-lists every auth-gated GET route — regression guard', function (): void {
