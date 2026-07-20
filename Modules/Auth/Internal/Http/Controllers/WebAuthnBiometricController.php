@@ -114,6 +114,7 @@ final class WebAuthnBiometricController
         BiometricDeviceStore $store,
         PlatformDetector $detector,
         Session $session,
+        LockStateManager $lockState,
     ): JsonResponse {
         $user = $currentUser->user();
 
@@ -121,8 +122,10 @@ final class WebAuthnBiometricController
         $credentialResponse = $request->json()->all();
 
         // Retrieve the live data key from the session (must be unlocked).
-        $dataKey = $session->get(LockStateManager::DATA_KEY_SESSION);
-        if (! is_string($dataKey)) {
+        // Goes through the custodian so the enrolled biometric wraps the
+        // real key bytes, not the opaque custody handle, on native bundles.
+        $dataKey = $lockState->heldKey($session);
+        if ($dataKey === null) {
             return new JsonResponse(['enrolled' => false, 'error' => 'Session not unlocked.'], 403);
         }
 

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Providers;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 
 /**
  * Single-owner provider for the Mobile module.
@@ -56,16 +59,47 @@ final class MobileServiceProvider extends ServiceProvider
         // Plan 06: biometric-unlock native bridge.
         $this->singletonIfExists('Modules\Mobile\Internal\Identity\BiometricUnlockBridge');
 
+        // Cold-start biometric unlock vault (enclave-gated data-key recovery).
+        $this->singletonIfExists('Modules\Mobile\Internal\Identity\BiometricKeyVault');
+
+        // Cold-start biometric enrollment / disable orchestration.
+        $this->singletonIfExists('Modules\Mobile\Internal\Identity\ColdStartEnrollmentService');
+
         // Plan 07: QR-scan native bridge.
         $this->singletonIfExists('Modules\Mobile\Internal\Pairing\QrScanBridge');
 
         // Plan 09: mobile background-pull artisan command (also registered
         // in boot() via $this->commands([...]) once it exists).
         $this->singletonIfExists('Modules\Mobile\Commands\MobilePullCommand');
+
+        // At-rest key custody on the on-device runtime: route the unlocked
+        // data key through the iOS Keychain / Android Keystore
+        // (nativephp/mobile-secure-storage) instead of the plaintext session
+        // copy, overriding the Auth NullKeyCustodian default. Guarded on the
+        // mobile-runtime signal + facade availability (the plugin lives only
+        // in mobile-app/vendor) so the repo-root toolchain and the desktop
+        // bundle keep their own custody bindings. The custodian itself
+        // re-checks the same guard, so a mis-resolution degrades to
+        // pass-through rather than erroring.
+        if (class_exists('Native\Mobile\Facades\SecureStorage') && getenv('NATIVEPHP_PLATFORM') !== false) {
+            $this->app->singleton(
+                KeyCustodian::class,
+                SecureStorageKeyCustodian::class,
+            );
+        }
     }
 
-    public function boot(): void
+    public function boot(Dispatcher $events): void
     {
+        // Cold-start biometric: invalidate the enclave blob if the app-lock
+        // data key ever rotates (oldKek !== newKek). Runtime FQCN strings +
+        // class_exists guard keep this provider clean before the class ships,
+        // mirroring SyncServiceProvider's RewrapGdkOnPassphraseChange wiring.
+        $clearListener = 'Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation';
+        if (class_exists($clearListener)) {
+            $events->listen('Modules\Auth\Public\Events\AppLockPassphraseChanged', [$clearListener, 'handle']);
+        }
+
         if (is_dir(__DIR__.'/../Database/Migrations')) {
             $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         }
@@ -99,6 +133,7 @@ final class MobileServiceProvider extends ServiceProvider
                 'mobile.setup-progress-screen' => 'SetupProgressScreen',
                 'mobile.sync-screen' => 'SyncScreen',
                 'mobile.welcome-screen' => 'MobileWelcomeScreen',
+                'mobile.cold-start-biometric-settings-section' => 'ColdStartBiometricSettingsSection',
             ];
 
             foreach ($components as $tag => $class) {

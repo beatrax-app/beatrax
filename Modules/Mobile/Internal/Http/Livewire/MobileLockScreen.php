@@ -9,11 +9,13 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 
 /**
@@ -83,6 +85,7 @@ final class MobileLockScreen extends Component
         CurrentUser $currentUser,
         MobileLockGateway $gateway,
         BiometricUnlockBridge $bridge,
+        BiometricKeyVault $vault,
         Request $request,
     ): void {
         $user = $currentUser->user();
@@ -93,10 +96,20 @@ final class MobileLockScreen extends Component
         // via the Public gateway.
         $this->biometricLabel = $gateway->biometricLabel($ua);
 
-        // Show the biometric trigger only when the user has at least one
-        // armed enrolled credential AND the native bridge itself reports
-        // the mobile runtime signal present right now.
-        $this->biometricAvailable = $gateway->hasArmedBiometricCredential($user->id) && $bridge->isAvailable();
+        // The biometric trigger shows when EITHER:
+        //  - the warm re-lock path is available: an armed WebAuthn-style
+        //    credential + the native bridge (existing behaviour), OR
+        //  - cold-start unlock is ready: the enclave vault is available, the
+        //    user has enrolled a cold-start blob, AND the PIN floor is not due
+        //    (biometric alone may unlock only inside the floor window; when the
+        //    floor is overdue the PIN pad is the only option and using it
+        //    refreshes the floor).
+        $coldStartReady = $vault->isAvailable()
+            && $gateway->isColdStartEnrolled($user->id)
+            && ! $gateway->pinFloorDue($user->id);
+
+        $this->biometricAvailable = ($gateway->hasArmedBiometricCredential($user->id) && $bridge->isAvailable())
+            || $coldStartReady;
     }
 
     // -------------------------------------------------------------------------
@@ -167,24 +180,92 @@ final class MobileLockScreen extends Component
     public function biometricPrompt(
         BiometricUnlockBridge $bridge,
         AppLockKeyService $keyService,
+        BiometricKeyVault $vault,
+        MobileLockGateway $gateway,
+        CurrentUser $currentUser,
         Session $session,
         UrlGenerator $urls,
     ): void {
-        if (! $bridge->prompt()) {
-            // T-15-14/T-15-15: a false/aborted biometric NEVER releases the
-            // key — no state change. The PIN pad stays visible underneath
-            // as the always-available fallback.
+        // Warm re-lock: the session still holds the data key. No enclave read
+        // happens, so the (bypassable) bridge bool prompt is the right gate —
+        // it confirms the holder before letting them back through. A false /
+        // aborted bridge prompt releases nothing (T-15-14/T-15-15).
+        if ($keyService->release($session) !== null) {
+            if ($bridge->prompt()) {
+                $this->redirectToIntendedUrl($session, $urls);
+            }
+
             return;
         }
 
-        if ($keyService->release($session) === null) {
-            // The session genuinely has no data key yet — biometric alone
-            // cannot derive one (LOCK-04's cryptographic root is the PIN).
-            // Fall through silently; the PIN pad completes the unlock.
+        // Cold start (no session key). Enforce the enrollment + PIN-floor gates
+        // AT THE UNLOCK BOUNDARY, not just in mount()'s visibility flag — every
+        // Livewire method is client-invokable regardless of what rendered, and
+        // biometricAvailable is an OR that can be true via the warm-credential
+        // clause even when cold-start is stale/floor-overdue. Refusing here:
+        //  - not enrolled (or stale after an app-lock re-provision that reset
+        //    the flag) → never admit a dead enclave blob wrapping an old key;
+        //  - PIN floor overdue → force the periodic PIN re-auth.
+        if (! $gateway->isColdStartEnrolled($currentUser->id()) || $gateway->pinFloorDue($currentUser->id())) {
             return;
         }
 
-        $this->redirectToIntendedUrl($session, $urls);
+        // The enclave-gated vault IS the biometric gate. Do NOT also fire the
+        // bridge prompt — that would be a second, redundant, bypassable prompt
+        // that could falsely block a recover the enclave itself would allow.
+        // recover() yields a key only after the OS releases the enclave entry
+        // for a live biometric.
+        $result = $vault->recover();
+        if ($result->isRecovered() && $result->dataKey !== null) {
+            // Unlock AND stamp last_activity_at so the idle-timeout middleware
+            // does not immediately re-lock this (usually long-idle) cold start.
+            $gateway->unlockWithRecoveredKey($currentUser->id(), $result->dataKey, $session);
+            $this->redirectToIntendedUrl($session, $urls);
+        }
+
+        // canceled / failed / missing / unavailable / pending_async: no state
+        // change — the always-visible PIN pad completes the unlock. On Android,
+        // recover() returns pending_async and the outcome arrives via the
+        // onColdStartRecovered / onColdStartFailed event handlers below.
+    }
+
+    /**
+     * Android async completion: the native BiometricPrompt has already
+     * authenticated and stashed the decrypted blob in a transient native slot,
+     * then emitted a bare `cold-start-recovered` signal (NO key over the JS
+     * bridge). Collect the blob PHP-side via completePendingRecover() and admit
+     * on success. Nothing to admit → fall through to the PIN pad.
+     */
+    #[On('cold-start-recovered')]
+    public function onColdStartRecovered(
+        BiometricKeyVault $vault,
+        MobileLockGateway $gateway,
+        CurrentUser $currentUser,
+        Session $session,
+        UrlGenerator $urls,
+    ): void {
+        // Same unlock-boundary gates as the synchronous cold-start path: a
+        // stale (flag-reset) enrollment or an overdue PIN floor must not admit,
+        // even though the native prompt already ran.
+        if (! $gateway->isColdStartEnrolled($currentUser->id()) || $gateway->pinFloorDue($currentUser->id())) {
+            return;
+        }
+
+        $result = $vault->completePendingRecover();
+        if ($result->isRecovered() && $result->dataKey !== null) {
+            $gateway->unlockWithRecoveredKey($currentUser->id(), $result->dataKey, $session);
+            $this->redirectToIntendedUrl($session, $urls);
+        }
+    }
+
+    /**
+     * Android async biometric failed / aborted — no state change; the
+     * always-visible PIN pad remains the fallback (T-15-14/T-15-15).
+     */
+    #[On('cold-start-failed')]
+    public function onColdStartFailed(): void
+    {
+        // Intentionally no-op: a failed/aborted biometric never releases a key.
     }
 
     // -------------------------------------------------------------------------

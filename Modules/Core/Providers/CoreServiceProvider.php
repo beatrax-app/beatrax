@@ -28,9 +28,11 @@ use Modules\Core\Models\User as CoreUser;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Services\CurrentUserService;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\NavCountsService;
+use Modules\Core\Public\Services\PassthroughSecretShield;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
@@ -55,6 +57,12 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->register(HealthCheckServiceProvider::class);
         $this->app->singleton(Clock::class, SystemClock::class);
         $this->app->bind(CurrentUser::class, CurrentUserService::class);
+
+        // At-rest keychain shielding for persisted secrets (biometric wrap
+        // blob, OAuth tokens). Defaults to the pass-through shield (no
+        // behaviour change); the Desktop provider overrides this on its
+        // bundle to add the Electron safeStorage layer.
+        $this->app->singleton(SecretShield::class, PassthroughSecretShield::class);
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(AcknowledgeSystemAlert::class);
 
