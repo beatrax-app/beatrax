@@ -30,7 +30,7 @@ use Throwable;
  *   - XChaCha20-Poly1305 uses a full 256-bit key (KEY_BITS below). Grover's
  *     algorithm gives only a quadratic speed-up, so the effective security is
  *     128 bits post-quantum — NIST's top category, the same footing on which
- *     AES-256 is considered quantum-safe.
+ *     AES256 is considered quantum-safe.
  *   - Argon2id is a memory-hard KDF, so quantum brute-forcing of the passphrase
  *     is bounded by RAM, not just compute.
  * A post-quantum KEM (ML-KEM / Kyber) is intentionally NOT used: it would only
@@ -168,7 +168,6 @@ final class BackupEncryptor
             }
 
             if (! $sawFinal) {
-                // The stream ended without the FINAL tag — the file was truncated.
                 throw new RuntimeException('Decryption failed — the backup is truncated.');
             }
         } catch (Throwable $e) {

@@ -10,7 +10,7 @@ use Carbon\CarbonImmutable;
  * Verified update manifest descriptor — the value
  * `ElectronUpdateChannel::poll()` returns once a fetched manifest has
  * passed Ed25519 signature verification AND its declared binary hash
- * is ready for the SHA-512 download check.
+ * is ready for the SHA512 download check.
  *
  * Every field originates from inside the (now-trusted) manifest body;
  * the DTO carries the values forward to whoever raises the

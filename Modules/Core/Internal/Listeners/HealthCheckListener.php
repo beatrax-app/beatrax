@@ -78,12 +78,10 @@ final class HealthCheckListener
             return;
         }
 
-        // SQLite's `useCurrent()` / CURRENT_TIMESTAMP writes the column
-        // in UTC. CarbonImmutable::now() returns the app's configured
-        // timezone (usually Europe/Amsterdam). Convert the cutoff to
-        // UTC before serialising into the recency query so the
-        // comparison happens in the same wall-clock frame as the
-        // stored value.
+        // SQLite's `useCurrent()` / CURRENT_TIMESTAMP writes the column in
+        // UTC, while CarbonImmutable::now() returns the app's configured
+        // timezone. Convert the cutoff to UTC before serialising into the
+        // recency query so the comparison uses the same wall-clock frame.
         $cutoff = $this->clock->now()->subHour()->setTimezone('UTC');
 
         if ($journalMode !== 'wal') {

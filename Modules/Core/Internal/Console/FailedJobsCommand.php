@@ -63,12 +63,10 @@ final class FailedJobsCommand extends Command
             return self::FAILURE;
         }
 
-        // `--older-than` has a default of `30d` so the option always
-        // resolves to a string, but Larastan reports the return type as
-        // `string|null` because Symfony's Option API permits NULL when
-        // an option carries no default. Coalesce defensively so the
-        // grammar message still names the rejected token cleanly when
-        // a future signature change drops the default.
+        // `--older-than` has a default of `30d` so the option always resolves
+        // to a string, but Larastan reports `string|null` since Symfony's
+        // Option API permits NULL when an option carries no default. Coalesce
+        // defensively so the grammar message still names the rejected token.
         $token = $this->option('older-than') ?? '';
         try {
             $cutoff = $this->duration->subFromNow($token, $this->clock->now());

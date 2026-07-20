@@ -49,15 +49,10 @@ final class UserDataPathService
 
     public static function databaseFile(): string
     {
-        // NativePHP mobile: base_path() is the app BUNDLE (app_storage/laravel),
-        // which is wiped + re-shipped on every app update AND ships a populated
-        // dev database.sqlite (the /database/database.sqlite build-exclude does
-        // not match through the mobile-app/database -> ../database symlink).
-        // Using it would (a) leak dev/financial data into every install and
-        // (b) keep a fresh phone from ever being empty, so onboarding/pairing
-        // never fires. Target the sibling NativePHP PERSISTED store instead:
-        // empty on a genuine fresh install (pm clear wipes it too) and retained
-        // across app updates — the correct home for on-device user data.
+        // NativePHP mobile: base_path() is the wiped-and-reshipped app BUNDLE
+        // with a populated dev database.sqlite, so using it would leak dev
+        // data and defeat the fresh-install onboarding gate. Target the
+        // sibling NativePHP PERSISTED store instead — empty on a fresh install.
         if (self::isMobileRuntime()) {
             return dirname(self::projectRoot())
                 .DIRECTORY_SEPARATOR.'persisted_data'
@@ -269,8 +264,6 @@ final class UserDataPathService
             ? $base
             : $base.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
     }
-
-    // --- Instance surface for DI consumers ---------------------------------
 
     public function databasePath(): string
     {

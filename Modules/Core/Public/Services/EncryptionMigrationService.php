@@ -17,33 +17,29 @@ use RuntimeException;
 use Throwable;
 
 /**
- * D-09: the one-time, backup-first, atomic, rollback-on-failure migration
+ * The one-time, backup-first, atomic, rollback-on-failure migration
  * that turns EXISTING plaintext history into GDK ciphertext the moment
  * encryption is first enabled for a user (sync-enable OR single-device
- * opt-in). CRYPT-01 must hold for history retained forever, not just for
- * new writes going forward (those are already covered by the Plan 03
- * op-log write hook and the Plan 04 direct-write hook) — this service is
+ * opt-in). The at-rest guarantee must hold for history retained forever,
+ * not just for new writes going forward (those are already covered by the
+ * op-log write hook and the direct-write hook) — this service is
  * the ONE place that closes the gap for rows written BEFORE encryption
  * was ever turned on.
  *
  * ## Module boundary (`beatrax.boundary`, `app/PhpStan/Rules/BoundaryRule.php`)
  *
- * 14-06-PLAN.md's own `<interfaces>` block names `GdkKeyringService`,
- * `OpLogFieldCrypto`, and `SensitiveFieldRegistry` — all
- * `Modules\Sync\Internal\Crypto\*` — as this service's contract. The
+ * `GdkKeyringService`, `OpLogFieldCrypto`, and `SensitiveFieldRegistry` —
+ * all `Modules\Sync\Internal\Crypto\*` — are this service's real contract. The
  * project's custom PHPStan boundary rule forbids Core from importing
  * anything outside `Modules\Sync\Public\*`/`Modules\Sync\Models\*`
  * (CLAUDE.md: "Cross-module access goes through public service classes or
  * events; no module reaches into another's models or internals" — a hard
- * constraint that takes precedence over the plan's literal interfaces
- * text). `Modules\Sync\Public\Services\EncryptionMigrationSupport` (added
- * alongside this file, Rule 2 — missing critical functionality: the plan's
- * own interfaces were literally unbuildable without it) is the minimal
- * Public wrapper that closes the gap: every raw GDK key byte and the
+ * constraint). `Modules\Sync\Public\Services\EncryptionMigrationSupport` is
+ * the minimal Public wrapper that closes the gap: every raw GDK key byte and the
  * `GdkEpoch` DTO itself stay fully inside Sync; this service only ever
  * sees plain integers (epoch ids) and ciphertext strings.
  *
- * ## Atomicity mechanism (Claude's Discretion per D-09)
+ * ## Atomicity mechanism
  *
  * The WHOLE encrypt pass (GDK epoch generation + every op-log/projection
  * row write) runs inside ONE outer `DatabaseManager::transaction()` — a
@@ -59,7 +55,7 @@ use Throwable;
  * whole pass — the "batches over the forever-retained history" must-have
  * is about processing shape, not about splitting the atomicity boundary.
  *
- * ## D-10: the file-vs-DB atomicity window (residual, now closed)
+ * ## The file-vs-DB atomicity window (residual, now closed)
  *
  * The DB rollback above covers every ROW this pass writes, but the
  * epoch-1 GDK keyring is also a FILESYSTEM write
@@ -69,7 +65,7 @@ use Throwable;
  * renamed into place — the keyring file) from INSIDE the transaction
  * closure below; a later chunk throw would then roll back
  * `current_epoch` to null while the epoch-1 keyring file still existed
- * on disk, half-encrypted-state-by-a-different-name (T-14.1-05). This is
+ * on disk, a half-encrypted state under a different name. This is
  * closed by splitting epoch generation into `stageFirstEpoch()` (writes
  * `current_epoch` inside the transaction, encrypts the keyring to a
  * `.tmp` sibling but does NOT rename it) and `finalizeStagedEpoch()`
@@ -79,22 +75,20 @@ use Throwable;
  * already makes `current_epoch` null again regardless.
  *
  * On top of the transaction, a pre-migration `BackupEncryptor` snapshot
- * (D-09's literal "backup-first" requirement) is taken BEFORE the
+ * (the literal "backup-first" requirement) is taken BEFORE the
  * transaction even opens — i.e. before the GDK epoch is even generated,
- * which is stricter than the plan's own prose order (generate-then-
- * snapshot) and is the most conservative reading of "no row is ever
+ * which is the most conservative reading of "no row is ever
  * touched before the safety net exists". On a forced failure, the
  * snapshot is explicitly decrypted and its captured pre-migration values
  * are written back — genuine defense-in-depth on top of (not instead of)
- * the transaction rollback, satisfying the plan's literal
- * "on ANY throw, restore from the pre-migration snapshot
- * (BackupEncryptor::decrypt) and re-throw" instruction independently.
+ * the transaction rollback: on ANY throw, restore from the pre-migration
+ * snapshot (`BackupEncryptor::decrypt`) and re-throw.
  *
  * ## Row-level idempotency (resumable, never double-encrypts)
  *
  * `op_log_entries` rows are skipped once `gdk_epoch` is non-null (the
- * column IS the per-row "already encrypted" marker, exactly as the plan
- * suggests). Projection columns (`transactions`/`counterparties`) have no
+ * column IS the per-row "already encrypted" marker). Projection columns
+ * (`transactions`/`counterparties`) have no
  * such column, so each candidate value is first tried against
  * `EncryptionMigrationSupport::alreadyEncryptedProjectionValue()` — a real
  * AEAD verification under the current epoch + the exact AD it would have
@@ -104,17 +98,17 @@ use Throwable;
  * ## App-lock-locked handling
  *
  * `migrate()` requires the app-lock KEK (`AppLockKeyService::release()`).
- * When it is unavailable, NO row is ever touched — this is not a D-09
+ * When it is unavailable, NO row is ever touched — this is not a
  * "forced failure requiring rollback" (nothing was started), so `migrate()`
  * does not throw: it clears any stale `migration_in_progress` flag left by
  * a prior crashed attempt (so a locked app-lock can never leave a
  * confusing half-flagged state hanging around) and returns quietly. The
- * real "enable encryption" flow (Plan 09) already requires an unlocked
- * app-lock as a precondition (D-07), so this path is a defensive
+ * real "enable encryption" flow already requires an unlocked
+ * app-lock as a precondition, so this path is a defensive
  * degenerate case, not the primary UX.
  *
  * NOTE: intentionally NOT `final` — `EncryptionMigrationRollbackTest`'s
- * forced-failure proof (14-06-PLAN.md Task 2) subclasses this service to
+ * forced-failure proof subclasses this service to
  * override `afterChunkProcessed()`, mirroring
  * `Modules\Auth\Public\Services\AppLockKeyService`'s own "intentionally NOT
  * final... a thin seam subclassing could not violate any invariant"
@@ -133,23 +127,22 @@ class EncryptionMigrationService
     private const PROGRESS_TTL_SECONDS = 3600;
 
     /**
-     * D-02b sensitive projection columns, scoped to the tables THIS
-     * migration's projection pass covers (transactions/counterparties —
-     * 14-06-PLAN.md's own action text names only these two). Mirrors
-     * `RecordTransactions`'s own established precedent of restating its
+     * Sensitive projection columns, scoped to the tables THIS
+     * migration's projection pass covers (transactions/counterparties).
+     * Mirrors `RecordTransactions`'s own established precedent of restating its
      * scoped column subset inline (its docblock enumerates the same 4 of
      * the 5 transactions columns) rather than reaching the Internal
      * `SensitiveFieldRegistry` for this table-scoped lookup — the op-log
-     * pass below, which must cover every D-02b table (not just these two),
+     * pass below, which must cover every sensitive-field table (not just these two),
      * uses `EncryptionMigrationSupport::isSensitive()` (the Public
      * passthrough to the real registry) as ITS source of truth instead.
      *
-     * `tax_transaction_tags.note`/`transaction_splits.note` ARE covered here
-     * (D-08, 14.1-03-PLAN.md): 14.1-02 landed the write-side encrypt hooks
+     * `tax_transaction_tags.note`/`transaction_splits.note` ARE covered here:
+     * the write-side encrypt hooks landed
      * for both columns (`Modules\Tax\Public\Actions\TagTransaction`,
      * `Modules\Ledger\Public\Actions\SaveTransactionSplit`), so a one-time
      * sweep of their PRE-EXISTING plaintext rows (written before those
-     * hooks landed) is now required for CRYPT-01 to hold for history
+     * hooks landed) is now required for the at-rest guarantee to hold for history
      * retained forever, not just for new writes going forward — the exact
      * same reasoning this class's own docblock gives for every other
      * projection column. Both tables carry `user_id`+`note`
@@ -195,19 +188,10 @@ class EncryptionMigrationService
 
         try {
             if ($currentEpochId !== null) {
-                // WR-01: `current_epoch` being set does NOT prove the keyring
-                // file actually holds a key for it. A CR-01-class crash in the
-                // commit→finalize window (or a never-finalized staged file) can
-                // leave `current_epoch` set with no usable key — a state the old
-                // unconditional early-return reported as "already enabled,
-                // nothing to do" forever, silently disabling every future
-                // sensitive write while the UI still showed "On". When the
-                // app-lock is unlocked, verify the keyring can resolve the
-                // recorded epoch; if it cannot, surface a distinct error rather
-                // than reporting success, so the stranded state is observable
-                // (and can drive the retry affordance) instead of permanent and
-                // invisible. When the app-lock is locked we cannot verify now —
-                // defer to a later unlocked call rather than false-alarm.
+                // `current_epoch` set does NOT prove the keyring holds a
+                // usable key — a crash in the commit-then-finalize window
+                // can strand it, silently disabling sensitive writes. Verify
+                // when unlocked; when locked, defer rather than false-alarm.
                 if ($kek !== null) {
                     /** @var EncryptionMigrationSupport $support */
                     $support = $this->container->make(EncryptionMigrationSupport::class);
@@ -215,7 +199,7 @@ class EncryptionMigrationService
                         throw new RuntimeException(
                             "Encryption is recorded as enabled for user {$userId} "
                             ."(current_epoch={$currentEpochId}) but the GDK keyring holds no key "
-                            .'for that epoch — a stranded post-commit finalize state (CR-01). The '
+                            .'for that epoch — a stranded post-commit finalize state. The '
                             .'keyring file must be finalized/restored before sensitive writes resume.',
                         );
                     }
@@ -240,8 +224,8 @@ class EncryptionMigrationService
 
     /**
      * Whether at-rest encryption is currently ON for $userId on this device
-     * (`current_epoch` set). Read-only helper for callers (e.g. the Plan 09
-     * Devices & Sync UI, the D-10 Change-PIN flash) that only need the
+     * (`current_epoch` set). Read-only helper for callers (e.g. the
+     * Devices & Sync UI, the Change-PIN flash) that only need the
      * boolean state and must not reach into `Modules\Sync\Internal\*` to get
      * it — this Core Public service already owns the `sync_encryption_state`
      * read via {@see loadState()}/{@see currentEpochId()}.
@@ -273,20 +257,19 @@ class EncryptionMigrationService
     {
         $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
 
-        // D-09 backup-first: snapshot the pre-migration plaintext BEFORE
+        // Backup-first: snapshot the pre-migration plaintext BEFORE
         // the transaction even opens — before the GDK epoch exists, before
         // any row is touched.
         $snapshotPath = $this->takeSnapshot($userId, $connection, $kek);
 
-        // D-10: $support is constructed OUTSIDE the transaction closure (not
-        // inline as before) so the SAME instance is reachable both inside
-        // the closure (to stage the epoch + encrypt rows) and after it
-        // returns (to finalize the staged keyring file — only once the SQL
+        // $support is constructed OUTSIDE the transaction closure so the SAME
+        // instance is reachable both inside (to stage + encrypt) and after it
+        // returns (to finalize the staged keyring file, only once the SQL
         // transaction has actually committed).
         /** @var EncryptionMigrationSupport $support */
         $support = $this->container->make(EncryptionMigrationSupport::class);
 
-        // Phase 1: the encrypt pass + `current_epoch` write, all inside one
+        // First: the encrypt pass + `current_epoch` write, all inside one
         // SQL transaction. A throw HERE means the transaction rolled back every
         // DB write — plaintext is intact, no epoch was committed — so the
         // snapshot restore + staged-file discard are the correct response.
@@ -294,7 +277,7 @@ class EncryptionMigrationService
             $connection->transaction(function () use ($userId, $session, $connection, $support): void {
                 $this->setMigrationInProgress($connection, $userId, true);
 
-                // D-10: stages (does not finalize) the epoch-1 keyring file;
+                // Stages (does not finalize) the epoch-1 keyring file;
                 // `current_epoch` IS written here, inside this transaction.
                 $support->stageFirstEpoch($userId, $session);
 
@@ -304,8 +287,6 @@ class EncryptionMigrationService
                 $this->encryptOpLogEntries($connection, $userId, $support, $total, $processed);
                 $this->encryptProjectionTable($connection, $userId, 'transactions', $support, $total, $processed);
                 $this->encryptProjectionTable($connection, $userId, 'counterparties', $support, $total, $processed);
-                // D-08 backfill sweep: pre-existing plaintext note rows
-                // written before the 14.1-02 write-side encrypt hooks landed.
                 $this->encryptProjectionTable($connection, $userId, 'tax_transaction_tags', $support, $total, $processed);
                 $this->encryptProjectionTable($connection, $userId, 'transaction_splits', $support, $total, $processed);
 
@@ -314,12 +295,8 @@ class EncryptionMigrationService
         } catch (Throwable $e) {
             // In-transaction failure: transaction() already rolled back every
             // DB write (including `current_epoch`). Discard the un-finalized
-            // staged `.tmp` and restore plaintext from the snapshot (WR-09:
-            // the restore is itself all-or-nothing). This restore branch is
-            // ONLY reached for genuine rollbacks — never for a post-commit
-            // finalize failure (see Phase 2 below), because restoring plaintext
-            // while `current_epoch` stays committed is the exact CR-01
-            // corruption.
+            // staged `.tmp` and restore plaintext — only reached for genuine
+            // rollbacks, never post-commit (which would corrupt the epoch).
             $support->discardStagedEpoch();
             $this->restoreFromSnapshot($snapshotPath, $kek, $connection);
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
@@ -327,15 +304,10 @@ class EncryptionMigrationService
             throw $e;
         }
 
-        // Phase 2: the SQL transaction has COMMITTED — `current_epoch=1` is
-        // durable and the rows are ciphertext. From here a failure must NOT
-        // restore plaintext (that would leave `current_epoch` set over
-        // plaintext rows = CR-01 corruption). Finalize (rename-into-place) the
-        // staged epoch-1 keyring file. On failure, GdkKeyringService keeps the
-        // staged `.tmp` (it no longer @unlinks it — CR-01), so a re-entry via
-        // migrate()'s WR-01 reconcile can recover; surface a DISTINCT error so
-        // the post-commit failure is observable rather than masquerading as a
-        // rolled-back attempt.
+        // Now: the SQL transaction has COMMITTED, so a failure here must NOT
+        // restore plaintext (that would leave a committed epoch over
+        // plaintext rows). Finalize the staged epoch-1 keyring file instead;
+        // on failure a re-entry via migrate() can recover.
         try {
             $support->finalizeStagedEpoch();
         } catch (Throwable $e) {
@@ -351,18 +323,17 @@ class EncryptionMigrationService
             );
         }
 
-        // WR-02: on success the pre-migration plaintext snapshot (a full
-        // KEK-wrapped copy of every sensitive value in the clear) is no longer
-        // needed — delete it so it does not survive on disk indefinitely and
-        // defeat the at-rest guarantee (it is wrapped only under the
-        // migration-time KEK, so a later passphrase rewrap would not cover it).
+        // On success the pre-migration plaintext snapshot (a full KEK-wrapped
+        // copy of every sensitive value in the clear) is no longer needed —
+        // delete it so it does not survive on disk indefinitely (it is
+        // wrapped only under the migration-time KEK, not a later passphrase rewrap).
         @unlink($snapshotPath);
 
         $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 100, self::PROGRESS_TTL_SECONDS);
     }
 
     /**
-     * Test-only extension seam (14-06-PLAN.md Task 2's forced-failure
+     * Test-only extension seam (the forced-failure
      * proof): called once after each bounded chunk of rows is processed,
      * INSIDE the outer migration transaction. A test subclass overrides
      * this to throw after a chosen number of rows, proving the whole-pass
@@ -373,12 +344,7 @@ class EncryptionMigrationService
      * observably true at the injected-failure point. Production behavior
      * is a no-op.
      */
-    protected function afterChunkProcessed(int $userId, int $rowsProcessedSoFar): void
-    {
-        // no-op in production
-    }
-
-    // --- op_log_entries pass -------------------------------------------
+    protected function afterChunkProcessed(int $userId, int $rowsProcessedSoFar): void {}
 
     private function encryptOpLogEntries(
         ConnectionInterface $connection,
@@ -430,8 +396,6 @@ class EncryptionMigrationService
                 $this->afterChunkProcessed($userId, $processed);
             }, 'id');
     }
-
-    // --- transactions / counterparties projection-column pass -----------
 
     private function encryptProjectionTable(
         ConnectionInterface $connection,
@@ -493,7 +457,6 @@ class EncryptionMigrationService
 
         $transactions = $connection->table('transactions')->where('user_id', $userId)->count();
         $counterparties = $connection->table('counterparties')->where('user_id', $userId)->count();
-        // D-08 backfill sweep tables.
         $taxTags = $connection->table('tax_transaction_tags')->where('user_id', $userId)->count();
         $splits = $connection->table('transaction_splits')->where('user_id', $userId)->count();
 
@@ -505,8 +468,6 @@ class EncryptionMigrationService
         $percent = (int) min(99, floor(($processed / max(1, $total)) * 100));
         $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, $percent, self::PROGRESS_TTL_SECONDS);
     }
-
-    // --- sync_encryption_state bookkeeping -------------------------------
 
     private function setMigrationInProgress(ConnectionInterface $connection, int $userId, bool $inProgress): void
     {
@@ -593,8 +554,6 @@ class EncryptionMigrationService
         return (bool) $value;
     }
 
-    // --- backup-first snapshot + restore ---------------------------------
-
     /**
      * Serialize every candidate row's CURRENT (pre-migration) sensitive
      * values into one JSON payload and encrypt it via `BackupEncryptor`
@@ -618,7 +577,7 @@ class EncryptionMigrationService
                 ->all(),
             'transactions' => $this->captureRows($connection, 'transactions', $userId),
             'counterparties' => $this->captureRows($connection, 'counterparties', $userId),
-            // D-08 backfill sweep tables — must be in the pre-migration
+            // These backfill-sweep tables must be in the pre-migration
             // snapshot too so a restore after a forced failure covers them.
             'tax_transaction_tags' => $this->captureRows($connection, 'tax_transaction_tags', $userId),
             'transaction_splits' => $this->captureRows($connection, 'transaction_splits', $userId),
@@ -687,19 +646,15 @@ class EncryptionMigrationService
         if (! is_array($payload)) {
             // The snapshot itself could not be restored — the transaction
             // rollback already reverted every DB write this pass made, so
-            // there is nothing left to repair. Do not throw here: the
-            // ORIGINAL failure is what the caller must see (re-thrown by
-            // runMigration()).
+            // there is nothing left to repair. Do not throw: the ORIGINAL
+            // failure is what the caller must see (re-thrown by the caller).
             return;
         }
 
-        // WR-09: wrap every restore write in ONE transaction so the restore is
-        // all-or-nothing. Without it, a throw partway (DB error / one bad row)
-        // left some rows restored to plaintext and others as-is — a
-        // partially-restored mixed state — before the original exception was
-        // rethrown. This method is only invoked on a genuine rollback (see
-        // runMigration Phase 1), so restoring plaintext here never contradicts
-        // a committed epoch.
+        // Wrap every restore write in ONE transaction so the restore is
+        // all-or-nothing — without it, a throw partway (DB error / one bad
+        // row) would leave a partially-restored mixed state. This method is
+        // only invoked on a genuine rollback, so it never contradicts a committed epoch.
         $connection->transaction(function () use ($connection, $payload): void {
             /** @var list<array<string, mixed>> $opLogRows */
             $opLogRows = is_array($payload['op_log_entries'] ?? null) ? $payload['op_log_entries'] : [];

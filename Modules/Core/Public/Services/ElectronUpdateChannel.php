@@ -19,12 +19,12 @@ use SodiumException;
  * surface the SystemAlertsBanner subscribes to.
  *
  * Trust posture: with no OS-level code signing on any shipped
- * platform, Ed25519 manifest signing + SHA-512 binary verification
+ * platform, Ed25519 manifest signing + SHA512 binary verification
  * are the SOLE binary-integrity signals between a tampered GitHub-
  * Releases asset and a malicious binary running on a user's machine.
  * Every fetched manifest is verified against the publisher public key
  * embedded in the config file BEFORE any system_alerts row is raised;
- * every downloaded binary is hashed against the SHA-512 value the
+ * every downloaded binary is hashed against the SHA512 value the
  * (now-trusted) manifest declared BEFORE the install handoff fires.
  *
  * Public/private key generation runs once via
@@ -37,8 +37,8 @@ use SodiumException;
 final readonly class ElectronUpdateChannel
 {
     /**
-     * 30-day staleness threshold for the `update.stale` banner kind
-     * (per D-22). Hardcoded — no per-user configuration knob.
+     * 30-day staleness threshold for the `update.stale` banner kind.
+     * Hardcoded — no per-user configuration knob.
      */
     private const STALE_THRESHOLD_DAYS = 30;
 
@@ -158,7 +158,7 @@ final readonly class ElectronUpdateChannel
     }
 
     /**
-     * Verifies the SHA-512 hash of a downloaded binary against the
+     * Verifies the SHA512 hash of a downloaded binary against the
      * value declared in the (already Ed25519-verified) manifest.
      *
      * Comparison uses `hash_equals` for a constant-time check so a
@@ -166,7 +166,7 @@ final readonly class ElectronUpdateChannel
      *
      * @param  string  $binaryPath  Absolute path to the downloaded
      *                              binary on disk.
-     * @param  string  $expectedSha512Hex  128-hex-char SHA-512 digest
+     * @param  string  $expectedSha512Hex  128-hex-char SHA512 digest
      *                                     from the verified manifest.
      */
     public function verifyBinary(string $binaryPath, string $expectedSha512Hex): bool

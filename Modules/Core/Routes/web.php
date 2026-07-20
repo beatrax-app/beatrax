@@ -12,12 +12,10 @@ use Modules\Core\Public\Controllers\HealthController;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 
-// Auth-free liveness probe. Registered outside the `web` middleware group
-// so the `EnsureDatabaseReady` first-launch gate (appended to `web` in
-// `bootstrap/app.php`) does not redirect pre-migration probes to the
-// setup route. External callers reach this endpoint over localhost only;
-// the response shape is a fixed four-key JSON object with no timestamp
-// so equality assertions remain stable across calls.
+// Auth-free liveness probe, registered outside the `web` middleware group so
+// the `EnsureDatabaseReady` first-launch gate does not redirect pre-migration
+// probes to the setup route. The response is a fixed four-key JSON object
+// with no timestamp, so equality assertions remain stable across calls.
 Route::get('/health', HealthController::class)->name('core.health');
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
@@ -40,15 +38,9 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
     Route::view('/settings', 'core::settings')->name('settings');
 
-    // "Where is my data?" — the user-facing privacy page that
-    // surfaces the resolved on-disk paths through
-    // UserDataPathService and gates the export-everything CTA on
-    // the authenticated user's is_developer flag. The wrapper
-    // Blade view (`core::help.data-locations`) `@extends`
-    // `layouts.app` and mounts the `core.help-data-locations`
-    // Livewire component — mirrors the `dashboard` view's wiring
-    // shape (Blade `@extends` + `@section('content')` + inline
-    // `@livewire(...)`) so the authenticated chrome resolves
-    // through the same code path.
+    // "Where is my data?" — the user-facing privacy page surfacing on-disk
+    // paths via UserDataPathService, gated on is_developer for the export-
+    // everything CTA. The wrapper Blade mirrors the dashboard view's
+    // @extends + @section + @livewire wiring shape.
     Route::view('/help/data-locations', 'core::help.data-locations')->name('core.help.data-locations');
 });

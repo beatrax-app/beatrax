@@ -29,7 +29,7 @@ use Modules\Search\Public\Services\FtsHealthCheck;
  *    they matter for dev workflows: composer install, sqlite3 CLI
  *    inspection, npm run build)
  *  - WalModeProbe / SynchronousModeProbe / BackupFreshnessProbe (the
- *    three Phase 11-03 SQLite-substrate probes)
+ *    three SQLite-substrate probes)
  *
  * `ext-imap` is reported separately (info-only) because the project
  * uses the pure-PHP `webklex/php-imap`; the extension's presence is
@@ -90,11 +90,10 @@ final class DoctorCommand extends Command
             $this->reportProbe($probe, $result, $blockers, $warnings);
         }
 
-        // FtsHealthCheck is optional (null when the Search module is absent or
-        // class_exists() guard has not yet activated it). It lives in Search Public,
-        // so DoctorCommand (Core Internal) can import it without violating the
-        // arch boundary. We create the ProbeResult here so FtsHealthCheck itself
-        // never needs to import Core Internal types (BoundaryArchTest D-24 / T-08-05).
+        // FtsHealthCheck is optional (null when the Search module is absent
+        // or the class_exists() guard has not yet activated it). It lives in
+        // Search Public, so DoctorCommand (Core Internal) can import it; the
+        // ProbeResult is built here so FtsHealthCheck stays boundary-clean.
         if ($this->ftsHealth !== null) {
             $ftsResult = new ProbeResult($this->ftsHealth->severity(), $this->ftsHealth->message());
             $this->line(sprintf('%-24s %-8s %s', $this->ftsHealth->label(), $ftsResult->severity, $ftsResult->message));
@@ -106,11 +105,9 @@ final class DoctorCommand extends Command
         }
 
         // ext-imap is reported separately as informational-only — the
-        // project uses pure-PHP webklex/php-imap so the native
-        // extension's presence is neither required nor forbidden.
-        // Folding this into the Probe severity model would invent a
-        // fourth severity ("info"); keeping it inline preserves the
-        // three-bucket Probe contract (ok / warning / critical).
+        // project uses pure-PHP webklex/php-imap, so the extension's
+        // presence is neither required nor forbidden. Folding it into the
+        // Probe severity model would invent a fourth ("info") bucket.
         $loaded = in_array('imap', get_loaded_extensions(), true);
         $this->line(sprintf(
             '%-24s %-8s %s',

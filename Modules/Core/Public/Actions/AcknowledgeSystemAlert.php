@@ -64,16 +64,10 @@ final class AcknowledgeSystemAlert
             throw new NotFoundHttpException('System alert not found.');
         }
 
-        // Bypass the BelongsToUser global UserScope so system-wide
-        // rows (`user_id IS NULL`) are reachable for the
-        // mutation hand-off. The raw `table()` predicate above already
-        // enforced the "owned-by-user OR system-wide" access rule, so
-        // skipping the scope here is purely a query-builder concern,
-        // not a security carve-out. Without this, an authenticated
-        // user could not dismiss a system-wide alert (e.g. the
-        // banner's `backup_corrupt` row) because the scope filters
-        // `where('user_id', $currentUser->id())` and a NULL user_id
-        // never matches.
+        // Bypass the BelongsToUser global UserScope so system-wide rows
+        // (`user_id IS NULL`) are reachable — the raw `table()` predicate
+        // above already enforced "owned-by-user OR system-wide" access, so
+        // this is a query-builder concern, not a security carve-out.
         /** @var SystemAlert $alert */
         $alert = SystemAlert::withoutGlobalScopes()->findOrFail($alertId);
 

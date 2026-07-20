@@ -55,10 +55,12 @@ final class RestoreEncryptedBackup
             //    anything touches the live database.
             $this->encryptor->decrypt($encryptedPath, $decryptedPath, $passphrase);
 
-            // 2. Prove it is a sound SQLite database before trusting it.
+            // 2. Prove it is a sound SQLite database before trusting it —
+            //    integrity_check must return exactly ['ok'].
             $this->assertIntegrity($decryptedPath);
 
-            // 3. Pre-restore snapshot of the CURRENT database (recoverable rollback).
+            // 3. Pre-restore snapshot of the CURRENT database, so the prior
+            //    state is always recoverable if the swap goes wrong.
             $snapshotPath = $this->snapshotCurrent();
 
             // 4. Swap: drop the live connection, copy the verified file over the
@@ -87,7 +89,8 @@ final class RestoreEncryptedBackup
         $snapshotPath = $dir.'/pre-restore-'.$stamp.'.sqlite';
         $escaped = str_replace("'", "''", $snapshotPath);
 
-        // VACUUM INTO must not run inside a transaction.
+        // VACUUM INTO must not run inside a transaction — SQLite refuses it,
+        // so this statement runs standalone, outside any DB transaction.
         $this->db->connection('sqlite')->statement("VACUUM INTO '{$escaped}'");
         @chmod($snapshotPath, 0600);
 

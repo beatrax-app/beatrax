@@ -107,10 +107,9 @@ final class RestoreDatabaseCommand extends Command
 
         try {
             // --confirm gate: non-TTY callers MUST pass --confirm or the
-            // command refuses. Interactive TTY sessions get a y/N prompt
-            // (default "no"). The TTY check uses stream_isatty(STDIN);
-            // CI runners and the test harness are non-TTY so the
-            // refusal path triggers deterministically.
+            // command refuses; interactive TTY sessions get a y/N prompt
+            // (default "no"). The TTY check uses stream_isatty(STDIN), so
+            // CI runners and the test harness hit the refusal deterministically.
             if ($this->option('confirm') !== true) {
                 if (! (defined('STDIN') && @stream_isatty(STDIN))) {
                     $this->error('Non-interactive context — pass --confirm to proceed.');
@@ -172,13 +171,10 @@ final class RestoreDatabaseCommand extends Command
                 return self::FAILURE;
             }
 
-            // Post-swap integrity check via the framework's connection
-            // (NOT a fresh PDO) so the SqliteOptimizationsProvider's
-            // ConnectionEstablished listener fires against the new file
-            // and re-applies WAL + synchronous immediately. `scalar()`
-            // pulls the first column of the first row — PRAGMA
-            // integrity_check returns `ok` (single row, single column)
-            // on success and one or more diagnostic strings otherwise.
+            // Post-swap integrity check via the framework's connection (NOT
+            // a fresh PDO) so SqliteOptimizationsProvider's
+            // ConnectionEstablished listener re-applies WAL + synchronous.
+            // `scalar()` returns `ok` on success, diagnostics otherwise.
             $rawIntegrity = $this->db->connection('sqlite')->scalar('PRAGMA integrity_check');
             $integrityValue = is_string($rawIntegrity) ? $rawIntegrity : '';
             if ($integrityValue !== 'ok') {
@@ -199,12 +195,10 @@ final class RestoreDatabaseCommand extends Command
 
             return self::SUCCESS;
         } finally {
-            // Bring the app back up ONLY when (a) this command brought
-            // it down AND (b) the post-swap critical-failure branch did
-            // NOT explicitly set $leaveDown = true. A throw before the
-            // post-swap branch still releases maintenance mode — better
-            // a single up-roundtrip after a transient failure than a
-            // user locked out of an otherwise-healthy app.
+            // Bring the app back up ONLY when (a) this command brought it
+            // down AND (b) the post-swap failure branch did NOT set
+            // $leaveDown. A throw before that branch still releases
+            // maintenance mode — safer than locking out a healthy app.
             if ($broughtDown && ! $leaveDown) {
                 $this->artisan->call('up');
             }
