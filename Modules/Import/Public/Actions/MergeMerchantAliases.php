@@ -12,29 +12,7 @@ use Modules\Import\Models\MerchantAlias;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Public action that consolidates two or more `merchant_aliases` rows
- * into a single surviving row. The Settings → Aliases bulk-merge UI
- * funnels every merge through this action so the user-scoped row
- * loading + `merged_from` provenance write + cascade delete live in
- * one place.
- *
- * Ownership boundary: the action verifies that EVERY id passed via
- * `$aliasIds` belongs to `$user`. A mismatch (e.g. a tampered Livewire
- * payload that includes another user's id) throws NotFoundHttpException
- * — a 404 surface rather than a 403 so the response shape stays
- * consistent with the rest of the application's cross-user posture.
- *
- * Surviving-row selection: the lowest id wins. The remaining rows are
- * marked as "absorbed" and their `(pattern, generalized_pattern,
- * friendly_name)` triple is appended into the survivor's `merged_from`
- * JSON column alongside an ISO 8601 timestamp produced by the injected
- * `DateFactory` (constructor-DI, never the global `now()` helper). The
- * absorbed rows are deleted in the same DB transaction so the merge is
- * atomic: a failure mid-way leaves the table exactly as it was.
- *
- * Both writes (UPDATE on the survivor + DELETE on the absorbed) run
- * through the injected `DatabaseManager::transaction()` closure; the
- * closure returns the refreshed survivor model.
+ * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
  */
 final class MergeMerchantAliases
 {
@@ -162,13 +140,8 @@ final class MergeMerchantAliases
         return $surviving;
     }
 
-    /**
-     * Convert any byte sequence to valid UTF8 by replacing invalid
-     * bytes with the Unicode substitution character. Keeps the
-     * merged_from JSON encode infallible even for raw bank-statement
-     * descriptions that occasionally include non-UTF8 bytes from
-     * legacy encodings.
-     */
+    // Replaces invalid bytes with the Unicode substitution character so
+    // json_encode() stays infallible for legacy-encoded descriptions.
     private static function coerceUtf8(string $value): string
     {
         if ($value === '' || mb_check_encoding($value, 'UTF-8')) {

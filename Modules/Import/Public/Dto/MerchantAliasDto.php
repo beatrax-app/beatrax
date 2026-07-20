@@ -7,21 +7,9 @@ namespace Modules\Import\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * Public DTO that wraps one row of the per-user merchant_aliases table.
- *
- * The DTO is the cross-module read shape: the rename popover emits it
- * after a save, the Settings → Aliases page consumes it for its row
- * cards, and the resolver test suites use it to assert state. Carrying
- * the `generalizedPattern` alongside `pattern` lets every consumer
- * render the auto-generalize preview line without rerunning the
- * PatternGeneralizer service.
- *
- * `mergedFrom` carries the bulk-merge provenance: a list of
- * `{id, pattern, friendly_name, merged_at}` triples preserved on the
- * surviving row after a Settings → Aliases merge action. Null on every
- * non-merged row.
- */
+// Cross-module read shape for one merchant_aliases row. `mergedFrom` is
+// a list of {id, pattern, friendly_name, merged_at} triples preserved
+// on the survivor after a bulk-merge action; null on non-merged rows.
 final class MerchantAliasDto extends Data
 {
     /**

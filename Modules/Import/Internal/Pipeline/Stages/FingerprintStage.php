@@ -15,60 +15,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Computes and inspects the SHA256 fingerprint of a canonical row, then
- * decides whether the incoming row is a brand-new insert, a pure
- * duplicate, or an ENRICHMENT of an existing row.
- *
- * `classify()` is the single decision point. It looks up the v3
- * fingerprint in the `transactions` table (scoped to the current user)
- * and picks a FingerprintDisposition variant:
- *
- *  - NewRowDisposition    — no existing row with this fingerprint.
- *  - DuplicateDisposition — fingerprint match where BOTH sides are
- *                           bank-statement formats (asn-csv,
- *                           camt053, mt940, ics-pdf,
- *                           paypal-csv). Same transaction re-imported
- *                           from a different statement-format export
- *                           drops as a duplicate without upgrading
- *                           source_ref. Also returned when at least one
- *                           side is a receipt format but the incoming
- *                           source_ref is no stronger than the stored
- *                           one.
- *  - EnrichedDisposition  — fingerprint match where AT LEAST ONE side
- *                           is a receipt format (paypal-receipt /
- *                           ics-receipt / google-play-receipt) AND the
- *                           incoming source_ref is strictly stronger.
- *                           The existing row is UPDATE-d with the new
- *                           source_ref and a provenance entry is
- *                           appended to `enriched_from`. The receipt-
- *                           side data (clean merchant name, line items)
- *                           is the legitimate enrichment surface;
- *                           statement-vs-statement re-imports are NOT
- *                           a legitimate enrichment site under the
- *                           policy locked here.
- *
- * Ranking is delegated to `SourceRefRanker` so the preview-time
- * classifier and the write-time enrichment applier share a single
- * canonical ordering. Receipt-format identification is delegated to
- * `SourceRefRanker::isReceiptFormat()` so the same list of receipt
- * formats drives every code path that branches on receipt-vs-statement.
- *
- * The lookup explicitly filters by `user_id` (rather than relying on
- * BelongsToUser's global scope, which falls through to "no scope" in
- * unauthenticated CLI / queue / test contexts) so a fingerprint owned by
- * a different user never marks the current user's preview row as a
- * duplicate or enriches another user's row.
- *
- * Field-conflict detection: when the disposition is ENRICHED, the
- * classifier additionally fetches the existing row's counterparty_name
- * / description / currency / amount_minor and compares them to the
- * incoming canonical row. Each field where BOTH sides have a non-null
- * value AND the values disagree (with field-appropriate normalization
- * — case-insensitive for strings, uppercase for currency, exact-int
- * for amount_minor) is recorded on the EnrichedDisposition's
- * conflictingFields map. ApplyEnrichments reads the map at write time
- * and resolves the conflict per the user's
- * receipt_conflict_resolution policy.
+ * @link ../../../../../.docs/architecture/ingestion-pipeline.md#8-fingerprint-fingerprintstage
  */
 final class FingerprintStage
 {
@@ -136,29 +83,7 @@ final class FingerprintStage
     }
 
     /**
-     * Returns a map of column-name → {stored, incoming} for every
-     * field where the existing row's value disagrees with the incoming
-     * row's. Fields where either side is null are skipped — the
-     * "conflict" semantic requires both sides to assert a value.
-     *
-     * Normalisation per field:
-     *  - counterparty_name, description: trimmed + mb_strtolower compare
-     *    (Unicode-safe; whitespace + case differences are not real
-     *    conflicts at the user-visible level).
-     *  - currency: uppercase compare (USD === usd is not a conflict).
-     *  - amount_minor: exact int compare.
-     *
-     * Decrypt-before-compare: `counterparty_name`/`description` are
-     * ciphertext at rest for an
-     * encrypted user, so the stored value is decrypted before the
-     * `stringsDiffer()` compare — otherwise ciphertext can never equal
-     * the incoming plaintext and every receipt-vs-statement re-import
-     * would register a false-positive conflict. The DECRYPTED value is
-     * what lands in `conflictingFields['stored']` so nothing downstream
-     * (persisted JSON, event payload, toast UI) ever sees ciphertext.
-     * `decryptValue()` is a documented no-op pass-through for a
-     * non-encrypted user (or a genuinely plaintext legacy value), so
-     * this call is safe unconditionally.
+     * @link ../../../../../.docs/architecture/ingestion-pipeline.md#8-fingerprint-fingerprintstage
      *
      * @return array<string, array{stored: mixed, incoming: mixed}>
      */
@@ -201,10 +126,6 @@ final class FingerprintStage
         return $map;
     }
 
-    /**
-     * True when two strings differ after trim + Unicode-safe casefold.
-     * Used for the soft text-field conflict comparison.
-     */
     private static function stringsDiffer(string $a, string $b): bool
     {
         return mb_strtolower(trim($a)) !== mb_strtolower(trim($b));

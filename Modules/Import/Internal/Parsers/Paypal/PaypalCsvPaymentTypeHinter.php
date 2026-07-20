@@ -10,54 +10,15 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Payment-type hinter specialised for PayPal Activity Download CSV
- * exports (`source_format = 'paypal-csv'`).
- *
- * Keys off the canonical row's `rawPayload['events']` manifest the
- * `PaypalCsvAdapter` builds at parse time: the first event's `type`
- * field carries the authoritative PayPal event type (e.g.
- * `Express Checkout-betaling`, `Algemene valutaomrekening`,
- * `Bankstorting naar PP-rekening`). The hinter maps observed event
- * types — and a small forward-compatibility set of English literals
- * PayPal often leaves un-localised — to `PaymentType`.
- *
- * Recognised NL event types (current observed corpus):
- *
- *  - `Vooraf goedgekeurde betaling – rekening betaald door gebruiker` → Online
- *  - `Express Checkout-betaling` → Online
- *  - `Algemene valutaomrekening` → Fee (fx conversion is the only
- *    canonical row PayPal emits for a settled FX leg)
- *
- * Recognised EN forward-compatibility event types:
- *
- *  - `Payment Sent` / `Subscription Payment` / `Recurring Payment Sent`
- *    / `Pre-approved Payment` → Online
- *  - `Refund` / `Refund Sent` / `Cancelled Payment` → Refund
- *  - `Fee` / `Service Fee` / `PayPal Fee` → Fee
- *  - `User Initiated Withdrawal` / `General Withdrawal` /
- *    `Bank Deposit to PP Account` → Transfer
- *
- * Event types outside this allow-list return `null` so the
- * description-keyword fallback can take a shot. The adapter raises a
- * typed exception for genuinely-unmappable events at parse time so an
- * unmapped event here is by design forward-compatible noise rather
- * than a silent classification miss.
- *
- * Returns `null` when the row did not originate from a PayPal CSV
- * import or when no recognised event type appears in the manifest.
- *
- * Pure / stateless / singleton-safe — no constructor dependencies.
+ * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
 final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'paypal-csv';
 
+    // Matched case-insensitively on the lower-cased event-type literal
+    // so casing variants between NL/EN exports resolve identically.
     /**
-     * Event-type string → (`PaymentType`, confidence) mapping. Match
-     * is done case-insensitively on the lower-cased event-type
-     * literal so casing variants between NL / EN exports resolve
-     * identically.
-     *
      * @var array<string, array{type: PaymentType, confidence: int}>
      */
     private const EVENT_TYPES = [
@@ -114,12 +75,8 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
         );
     }
 
-    /**
-     * Pulls the first event-type string from the PayPal manifest the
-     * adapter persists into `rawPayload['events'][0]['type']`. Returns
-     * null when the structure is missing or malformed — the classifier
-     * then falls through to the description-keyword fallback.
-     */
+    // Null when the manifest structure is missing/malformed — the
+    // classifier then falls through to the description-keyword fallback.
     private function extractFirstEventType(CanonicalTransaction $tx): ?string
     {
         $rawPayload = $tx->rawPayload;

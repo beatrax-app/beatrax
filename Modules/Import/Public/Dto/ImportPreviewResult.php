@@ -7,12 +7,7 @@ namespace Modules\Import\Public\Dto;
 use Spatie\LaravelData\Data;
 
 /**
- * Outcome of the preview phase. `accountsToName` is non-empty when at least
- * one source row references an IBAN the user has not yet linked to an
- * Account — the wizard renders an inline naming prompt before showing the
- * preview table. `enrichedCount` summarises preview rows whose status is
- * `enriched` so the wizard can render a four-state count line before the
- * user confirms.
+ * @link ../../../../.docs/architecture/ingestion-pipeline.md#preview-vs-confirm
  */
 final class ImportPreviewResult extends Data
 {

@@ -21,25 +21,7 @@ use Modules\Ledger\Models\ImportRun;
 use RuntimeException;
 
 /**
- * Preview action — the first half of the wizard's two-step ceremony.
- *
- * Flow:
- *  1. Hash the local file (SHA256). If the user already imported a file
- *     with the same hash AND that import landed (status='confirmed'),
- *     short-circuit with an empty preview — the file-layer idempotency
- *     guard backed by the UNIQUE `(user_id, sha256)` index on import_runs.
- *  2. Copy the upload into the app-owned `storage/app/imports/` folder so
- *     a stable, app-owned path is persisted on the ImportRun row. The
- *     Livewire temporary upload directory is garbage-collected after 24h
- *     and cleared by the OS on `/tmp` rotation, so it cannot be referenced
- *     later (e.g. by inline account naming after a coffee break).
- *  3. Otherwise create (or reuse) an ImportRun row with status='previewed'
- *     so the wizard has a stable id to reference.
- *  4. Run the ImportPipeline (parse → normalize → fingerprint) and cache
- *     the canonical batch under that import run id for the Confirm step.
- *
- * `runAndConfirm` is the test/CLI convenience that drives both halves in
- * one call.
+ * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
  */
 final class RunImport implements RunsImports
 {
@@ -136,13 +118,10 @@ final class RunImport implements RunsImports
         return $previewResult;
     }
 
-    /**
-     * Copies the upload to a deterministic, app-owned location keyed by the
-     * user id and the file's SHA256. The same file uploaded twice resolves
-     * to the same on-disk path; a no-op overwrite keeps the path stable. The
-     * file extension matches the declared source format so the stored copy
-     * round-trips through the format-specific HeaderSniffer on re-read.
-     */
+    // The same file uploaded twice resolves to the same on-disk path (a
+    // no-op overwrite keeps it stable); the extension matches the
+    // declared source format so the stored copy round-trips through
+    // the format-specific HeaderSniffer on re-read.
     private function copyToStableLocation(string $sourcePath, User $user, string $sha, string $sourceFormat): string
     {
         $disk = $this->storage->disk(self::STORAGE_DISK);
@@ -181,24 +160,7 @@ final class RunImport implements RunsImports
     }
 
     /**
-     * Mirrors `runFromUpload()`'s shape for a remote-fetch caller (e.g.
-     * `Modules\OpenBanking`'s Enable Banking adapter) with no local file
-     * to hash and copy:
-     *
-     *  1. Dedup at the `ImportRun` grain on `$idempotencyKey` instead of a
-     *     file SHA256 (there is no file — see the contract's docblock for
-     *     the deterministic-window-key requirement).
-     *  2. Create-or-reuse an `ImportRun` row with `status='previewed'`.
-     *     `raw_file_path` has no real file to point at, so it carries a
-     *     synthetic, deterministic marker derived from the same key —
-     *     stable across re-fetches of the same window, distinct across
-     *     windows, and never mistaken for a real on-disk path.
-     *  3. Run `ImportPipeline::previewFromGenerator()` (not `preview()`) —
-     *     the generator-driven counterpart that skips
-     *     `persistStatementMetadata()` (no CAMT-shaped statement summary
-     *     for a point-in-time OB balance).
-     *  4. Count enriched rows, wrap in `ImportPreviewResult`, cache via
-     *     `PreviewCache::put()` — identical to the upload path.
+     * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
      *
      * @param  Generator<int, SourceTransactionDto>  $sourceRows
      */
@@ -275,25 +237,17 @@ final class RunImport implements RunsImports
         return $previewResult;
     }
 
-    /**
-     * `raw_file_path` is a required, non-nullable column with no FK to
-     * storage — it is a plain audit string. There is no on-disk file for a
-     * remote fetch, so this carries a marker that is deterministic (same
-     * key -> same marker, matching the row-reuse behaviour above) and is
-     * unambiguously not a real filesystem path.
-     */
+    // Deterministic (same key -> same marker) and unambiguously not a
+    // real filesystem path — raw_file_path is a required, non-nullable
+    // plain audit string with no FK to storage.
     private function syntheticRawFilePath(string $idempotencyKey): string
     {
         return sprintf('open-banking://%s', $idempotencyKey);
     }
 
-    /**
-     * Reset a reused `ImportRun` row's audit fields for a fresh preview
-     * attempt — shared by the normal reuse branch and the
-     * unique-violation race-recovery path. `$stablePath` is null for the
-     * remote-fetch path (its synthetic `raw_file_path` marker is left
-     * unchanged); non-null for the upload path.
-     */
+    // $stablePath is null for the remote-fetch path (its synthetic
+    // raw_file_path marker is left unchanged); non-null for the upload
+    // path.
     private function resetPreviewedRun(ImportRun $run, string $sourceFormat, ?string $stablePath): ImportRun
     {
         $attributes = [
@@ -315,12 +269,9 @@ final class RunImport implements RunsImports
         return $run;
     }
 
-    /**
-     * Re-read the row a concurrent preview just committed under the same
-     * `(user_id, sha256)` unique key after our own INSERT lost the race.
-     * The row must exist — the violation proves it was committed — so a
-     * null here is a genuine, unexpected invariant break.
-     */
+    // The row must exist — the UniqueConstraintViolationException that
+    // led here proves it was committed — so a null result is a genuine,
+    // unexpected invariant break.
     private function reReadAfterRace(User $user, string $sha256): ImportRun
     {
         /** @var ImportRun|null $raced */

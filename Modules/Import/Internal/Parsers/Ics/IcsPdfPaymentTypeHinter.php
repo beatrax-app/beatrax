@@ -10,46 +10,16 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Payment-type hinter specialised for Mijn ICS consumer-portal monthly
- * statement PDFs (`source_format = 'ics-pdf'`).
- *
- * The Mijn ICS PDF carries no per-row transaction-type column — every
- * ICS card row is functionally an online or POS card payment, so the
- * hinter inspects the canonical row's `description` for the small set
- * of distinctive Dutch CAPS tokens the ICS layout actually emits:
- *
- *  - `KOSTEN KASOPNAME` (cash-withdrawal fee row) → Fee
- *  - `GELDMAAT` (ATM withdrawal merchant) → Pin
- *  - `IDEAL BETALING` (iDEAL payment confirmation row) → Online
- *  - `INCASSO` (direct-debit settlement row) → DirectDebit
- *
- * Rows whose description matches none of the tokens above return
- * `null` so the description-keyword fallback can take a shot at the
- * row at its own confidence; if that also declines, the classifier
- * resolves to `PaymentType::Unknown`. This matches the
- * "decline returns null" contract used by AsnCsv / AsnMt940 /
- * PaypalCsv hinters so every source has a uniform residual path.
- *
- * The token match is case-insensitive (`mb_strpos` after
- * `mb_strtolower`) so future ICS layout-engine changes that re-case
- * the column text continue to resolve identically.
- *
- * Returns `null` when the row did not originate from an ICS PDF
- * import.
- *
- * Pure / stateless / singleton-safe — no constructor dependencies.
+ * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
 final class IcsPdfPaymentTypeHinter implements PaymentTypeHinter
 {
     private const SOURCE_FORMAT = 'ics-pdf';
 
+    // Order is deliberate: `kosten kasopname` precedes the bare
+    // `geldmaat` token so the per-withdrawal fee row classifies as Fee
+    // rather than Pin even though both lexemes appear nearby on the page.
     /**
-     * Casefold-lowercase keyword → (`PaymentType`, confidence) mapping
-     * matching the Mijn ICS consumer-portal layout. The order is
-     * deliberate: `kosten kasopname` precedes the bare `geldmaat`
-     * token so the per-withdrawal fee row classifies as Fee rather
-     * than Pin even though both lexemes appear nearby on the page.
-     *
      * @var list<array{keyword: string, type: PaymentType, confidence: int}>
      */
     private const KEYWORDS = [

@@ -7,24 +7,10 @@ namespace Modules\Import\Database\Seeders\Demo;
 use Modules\Core\Models\User;
 use Modules\Import\Models\MerchantAlias;
 
-/**
- * Materialises three additional `merchant_aliases` rows for the
- * primary demo user so the alias-resolution path exercises a few
- * extra raw-statement-description rewrites beyond the 24-row baseline
- * that DemoCounterpartiesSeeder seeds as a side-effect of its
- * resolver invocation.
- *
- * Each row models a recognisable raw description pattern a user
- * would normally curate by hand through `Settings → Aliases`:
- *
- *   - "PYPL *EZPORT BV" → "EZ-Port BV (PayPal)"
- *   - "ALBERT HEIJN 1234" → "Albert Heijn"
- *   - "GOOGLE *YOUTUBE PREMIUM" → "YouTube Premium"
- *
- * Idempotency: `updateOrCreate` keyed on `(user_id, pattern)` matches
- * the existing UNIQUE on `merchant_aliases` so a re-run reuses the
- * existing row.
- */
+// Materialises three additional merchant_aliases rows for the primary
+// demo user (beyond DemoCounterpartiesSeeder's 24-row baseline).
+// Idempotent via updateOrCreate keyed on (user_id, pattern), matching
+// the table's existing UNIQUE constraint.
 final class DemoMerchantAliasesSeeder
 {
     /**

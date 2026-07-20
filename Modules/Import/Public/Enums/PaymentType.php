@@ -4,19 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Enums;
 
-/**
- * Closed enumeration of the eight possible values a transactions row's
- * `payment_type` column can carry. The schema-level paired BEFORE
- * INSERT / BEFORE UPDATE trigger on `transactions.payment_type` rejects
- * any value outside this set; the Eloquent layer casts the column to
- * this enum so consumer code resolves chip rendering data through the
- * enum's own `chipLabel()` and `chipClass()` methods rather than
- * duplicating the glyph-and-word mapping at every render site.
- *
- * `Unknown` is the safe default applied to every existing row at
- * migration time and to every newly-imported row whose hinters cannot
- * agree on a value.
- */
+// A schema-level BEFORE INSERT/UPDATE trigger on transactions.payment_type
+// rejects any value outside this set. `Unknown` is the safe default for
+// every existing row at migration time and every import whose hinters
+// can't agree on a value.
 enum PaymentType: string
 {
     case Pin = 'pin';
@@ -28,13 +19,9 @@ enum PaymentType: string
     case Refund = 'refund';
     case Unknown = 'unknown';
 
-    /**
-     * Glyph + word rendered inside the `.ptype-chip` UI primitive on the
-     * import preview row, the `/transactions` list, and the
-     * `/community/mystery-merchants` triage cards. Kept inside the enum
-     * so the legend bar copy in the import preview matches the chip
-     * copy on every row.
-     */
+    // Kept inside the enum so the import preview's legend bar copy
+    // matches the chip copy on every row (also rendered on /transactions
+    // and /community/mystery-merchants).
     public function chipLabel(): string
     {
         return match ($this) {
@@ -49,13 +36,8 @@ enum PaymentType: string
         };
     }
 
-    /**
-     * CSS modifier appended to the `.ptype-chip` class to drive the
-     * sketch-locked color mapping (PIN-violet, online-blue,
-     * transfer-muted, dd-amber, cash-dark-amber, plus the fee / refund /
-     * unknown extensions). Returned as a bare modifier (e.g. `pin`,
-     * `dd`) so consumers build the full class via `.ptype-chip.{class}`.
-     */
+    // Bare modifier (e.g. `pin`, `dd`); consumers build the full class
+    // via `.ptype-chip.{class}` to drive the sketch-locked color mapping.
     public function chipClass(): string
     {
         return match ($this) {

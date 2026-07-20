@@ -10,11 +10,9 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\ImportRun;
 
-/**
- * Step 3 of the wizard. A read-only summary screen that surfaces the
- * canonical "Imported {N} transactions · skipped {M} duplicates" line
- * from the ImportRun row.
- */
+// Step 3 of the wizard: a read-only summary screen that surfaces the
+// canonical "Imported {N} transactions · skipped {M} duplicates" line
+// from the ImportRun row.
 final class ImportResults extends Component
 {
     public int $importRunId = 0;

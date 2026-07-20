@@ -12,29 +12,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 /**
- * Converts a SourceTransactionDto into a CanonicalTransaction:
- *
- * 1. Normalises the counterparty name through FingerprintComposer (lowercase,
- *    diacritic strip, punctuation collapse, 80-char truncate).
- * 2. Substitutes the literal `_no_counterparty` sentinel when the
- *    counterparty name is null / empty / punctuation-only — the composite
- *    UNIQUE on transactions requires NOT NULL to catch duplicates that
- *    lack a usable name.
- * 3. Maps the amount sign to Transaction.type: positive → income,
- *    negative → expense, zero → adjustment. Future transfer-pair detection
- *    overrides this mapping for matched cross-account flows.
- * 4. Substitutes the native amount + currency into the settled pair when
- *    the source DTO omits `settledAmountMinor` / `settledCurrency` (every
- *    EUR-native row). When the source supplies a different settled
- *    currency (foreign-currency rows), the canonical row carries both
- *    legs verbatim AND derives `fxRateUsed = settled / native` via
- *    `Brick\Math\BigDecimal` at scale 8 with HALF_UP rounding. Float
- *    arithmetic is forbidden on the money path — the decimal(18,8)
- *    column requires exact precision.
- *
- * The `sourceFormat` is supplied by the orchestrating pipeline so each
- * adapter's rows persist with its own format string for audit, rather than
- * inheriting a single hard-coded literal.
+ * @link ../../../../.docs/architecture/ingestion-pipeline.md#3-normalize-normalizestage
  */
 final class NormalizeStage
 {

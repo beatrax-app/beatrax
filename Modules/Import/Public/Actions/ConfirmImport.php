@@ -20,75 +20,7 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 
 /**
- * Confirms a previewed import. Loads the cached canonical batch and the
- * cached pending-enrichments list, then:
- *
- *  1. Replays the canonical batch through `RecordsTransactions` (which
- *     silently drops fingerprint duplicates and counts them).
- *  2. Applies the pending-enrichments via `AppliesEnrichments` (which
- *     UPDATEs each existing transactions row with a stronger source_ref
- *     and appends a provenance entry to `enriched_from`).
- *  3. Updates the ImportRun row with the inserted / duplicate / enriched
- *     / error counts and flips `status` to `confirmed`.
- *
- * Bounded recorder + atomic enrichment/status flip (deliberately NOT one
- * giant transaction): a full-year confirm must not run as a single
- * unbounded DB transaction. The recorder therefore runs OUTSIDE any
- * transaction so its bounded per-chunk commits (idempotent via the
- * transaction fingerprint) stay independent and the year-sized batch never
- * collapses into one unbounded transaction. Only the enrichments + the
- * ImportRun status flip + the result assembly are wrapped in ONE
- * `DB::transaction()`, so a committed `confirmed` status ALWAYS implies the
- * enrichment writes for this attempt fully landed.
- *
- * Consequence: a crash mid-confirm can leave recorder rows committed while
- * the run keeps its previous status (the enrichment/status transaction
- * rolled back). Re-running is safe:
- *  - the recorder dedups already-committed rows via their fingerprint
- *    (`insertOrIgnore`), landing only the remainder;
- *  - the enrichment transaction re-applies cleanly — any enrichment writes
- *    from the failed attempt were rolled back with the un-flipped status,
- *    so the replay re-runs them from a clean slate inside a fresh
- *    transaction (and `AppliesEnrichments`'s own per-row rank/exact-ref
- *    short-circuits make even a partial-then-replay sequence a no-op for
- *    already-applied rows).
- * The status flip is atomic with the enrichment writes, and the fan-out
- * dispatch runs only after that transaction has committed.
- *
- * AFTER the transaction commits the action runs a two-stage post-commit
- * block. Re-confirms (status='confirmed' short-circuit above) skip the
- * block entirely.
- *
- *   Stage A — always runs when `$dispatchChain` is true, regardless
- *   of the recorder counts:
- *     1. `UpsertsCardStatements::upsertForImportRun(...)` promotes
- *        every ICS-kind `statement_summaries` row written under this
- *        import_run into a `card_statements` row (positive
- *        open_balance, state=open). The upsert is idempotent — its
- *        UNIQUE constraint is keyed by
- *        (user_id, account_id, period_start, period_end) so re-
- *        running for an all-fingerprint-duplicates import produces
- *        zero inserts, and re-running after a manually-deleted
- *        card_statements row recovers it. Decoupling from the
- *        inserted/enriched gate is what makes that recovery
- *        possible.
- *
- *   Stage B — gated on `$result->inserted > 0 || $result->enriched > 0`
- *   because the chain resolver + recurring sweep have nothing to do
- *   when no canonical rows changed:
- *     2. A `pending` `chain_resolution_runs` row is inserted so the
- *        wizard's wire:poll has a row to display on its first tick.
- *     3. `ResolveChainLinksJob` is dispatched for the chain resolver.
- *     4. `DispatchesRecurringDetection` is invoked for the recurring
- *        series sweep.
- *
- * Dispatching INSIDE the closure would let the queue worker pick up
- * the job before SQLite commits, letting it read stale state.
- *
- * Re-confirming an already-confirmed run returns a zero-action result
- * built from the persisted counts, so a refresh/back-button in the
- * wizard cannot double-import or double-enrich. The early-return
- * path skips the post-commit block entirely (no upsert, no dispatch).
+ * @link ../../../../.docs/architecture/ingestion-pipeline.md#confirm-bounded-recorder-and-post-commit-dispatch
  */
 final class ConfirmImport implements ConfirmsImports
 {

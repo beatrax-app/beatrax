@@ -17,27 +17,10 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 use RuntimeException;
 
 /**
- * Thin orchestration wrapper around source-format parsing.
- *
- * For the CSV / CAMT / MT940 / PDF formats this stage hands the
- * declared format string to the SourceAdapterRegistry and yields the
- * matching adapter's lazy stream of SourceTransactionDto rows.
- *
- * For the `eml` / `mbox` formats this stage drives the receipt path:
- * read the file bytes, hand them to `RecordReceipt` which persists a
- * `file_imports` row, stores the .eml on disk, runs the matcher
- * dispatch, and transitions the row status. On a `parsed` outcome
- * the stage bridges the `ParsedReceiptDto` to a SourceTransactionDto
- * via `ReceiptSourceAdapter`; skipped / unmatched outcomes yield
- * nothing. The mbox arm iterates the archive through `MboxIterator`
- * and runs the same per-message flow for each contained message.
- *
- * The User is required for the receipt arms so the file_imports row
- * can be scoped per-user; CSV / CAMT / MT940 / PDF arms ignore it.
+ * @link ../../../../../.docs/architecture/ingestion-pipeline.md#1-parse-parsestage
  */
 final class ParseStage
 {
-    /** Wire-format keys routed through the receipt path. */
     private const RECEIPT_FORMATS = ['eml', 'mbox'];
 
     public function __construct(

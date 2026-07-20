@@ -27,170 +27,67 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 /**
- * The power-user surface at `/settings/aliases` — the consolidated
- * editor + bulk-merge + YAML export/import view over the per-user
- * `merchant_aliases` table.
- *
- * The per-row rename UX (the click-italic flow at preview time) lives
- * in `RenameCounterpartyPopover`; this page is the place users go when
- * they want to see, edit, merge, export, or import their accumulated
- * aliases without going through a fresh statement import.
- *
- * Feature surface:
- *
- *   - Paginated list (25/page) of the user's `merchant_aliases` rows
- *     with read-only `pattern`, editable `generalized_pattern`, and a
- *     live "Test against my transactions" preview pane (400ms debounce,
- *     bounded 500-row scan, LIMIT 5 + COUNT).
- *   - Per-row Save / Delete actions (both 404-not-403 on cross-user
- *     attempts).
- *   - Checkbox bulk-merge: select ≥2 rows → confirm dialog prefills
- *     `friendly_name` + LCP of the patterns → MergeMerchantAliases
- *     preserves `merged_from` provenance.
- *   - YAML export: downloads `aliases.yaml` in the community-corpus
- *     schema so a round-trip (export → import → diff) yields no
- *     changes.
- *   - YAML import: file upload (extensions:yaml,yml, max:1024 KB) →
- *     parse + diff (new / unchanged / conflicts) → conflict-resolution
- *     UI (keep / replace) → commit.
- *
- * Strict-rules posture:
- *   - Constructor-DI is forbidden on Livewire Component subclasses;
- *     every collaborator arrives as a method parameter on the action
- *     that needs it.
- *   - Forbidden global helpers (`abort`, `response`, `now`, `redirect`,
- *     `auth`, `request`, `event`) are NEVER used — concrete contracts
- *     are method-DI'd instead.
- *   - Every read / write that touches `merchant_aliases` carries an
- *     explicit `where('user_id', $currentUser->user()->id)`; the
- *     ownership guard is structural, not advisory.
- *   - Cross-user attempts hit `NotFoundHttpException` (404-not-403).
+ * @link ../../../../../.docs/features/import/architecture.md#merchant-aliases
  */
 #[Layout('layouts.app')]
 final class AliasesSettingsPage extends Component
 {
     use WithFileUploads;
 
-    /**
-     * Per-page row count for the aliases table. The table is dense so
-     * 25/page keeps the page footprint manageable on a laptop screen
-     * without forcing the user into a long scroll.
-     */
     public int $perPage = 25;
 
-    /**
-     * Identifier of the alias row currently in inline-edit mode. `0`
-     * means no row is being edited; otherwise the row's primary key.
-     * Stored as int rather than ?int so the Blade can branch on a
-     * single typed comparison without nullability handling.
-     */
+    // 0 = no row in edit mode; stored as int (not ?int) so the Blade
+    // template can branch on a single typed comparison.
     public int $editingId = 0;
 
-    /**
-     * The current value of the inline-edited `generalized_pattern`.
-     * Bound via `wire:model.live.debounce.400ms` so each accepted
-     * change fires `updatedEditingPattern()` which in turn runs the
-     * "Test against my transactions" preview probe.
-     */
+    // Bound via wire:model.live.debounce.400ms; each accepted change
+    // fires updatedEditingPattern() to run the live preview probe.
     public string $editingPattern = '';
 
     /**
-     * Result envelope of the most recent live preview probe stored as
-     * a primitive-only array shape so Livewire's wire payload
-     * round-tripping survives. Empty array outside an active edit;
-     * populated on every accepted update of `editingPattern`.
-     *
-     * Shape:
-     *   - `total` (int)
-     *   - `first5` (list<array{description, counterparty_name, booked_at}>)
-     *   - `emptyMessage` (?string)
-     *
      * @var array{total: int, first5: list<array{description: string, counterparty_name: string, booked_at: string}>, emptyMessage: ?string}|array{}
      */
     public array $previewResult = [];
 
+    // "Merge selected" enables only when ≥2 unique ids are selected (the
+    // LCP service itself rejects size-1 inputs; this is the UI gate).
     /**
-     * Selected row ids for the bulk-merge dialog. The page enables the
-     * "Merge selected" action only when the array carries at least two
-     * unique ids (the LCP service itself rejects size-1 inputs, but
-     * surfacing the gate in the UI prevents the empty dialog).
-     *
      * @var list<int>
      */
     public array $selectedIds = [];
 
-    /**
-     * Bulk-merge confirm-dialog visibility flag.
-     */
     public bool $showMergeModal = false;
 
-    /**
-     * Bulk-merge confirm-dialog: the consolidated friendly name. The
-     * dialog initialises this with the first selected row's existing
-     * friendly name, but the user can edit before confirming.
-     */
+    // Prefilled from the first selected row's existing friendly name;
+    // the user can edit before confirming.
     public string $mergeFriendlyName = '';
 
-    /**
-     * Bulk-merge confirm-dialog: the prefilled longest-common-prefix
-     * of the selected rows' `generalized_pattern` values. Stays an
-     * empty string when the LCP service rejects the set (no 4-char
-     * shared prefix); the dialog then forces the user to type a
-     * pattern manually before the Confirm button enables.
-     */
+    // Prefilled LCP of the selected rows' generalized_pattern; stays
+    // empty when the LCP service rejects the set (no 4-char shared
+    // prefix), forcing the user to type a pattern manually.
     public string $mergeGeneralizedPattern = '';
 
-    /**
-     * Inline flash message surfaced beneath the page header after a
-     * Save / Delete / Merge / Import succeeds. Cleared on the next
-     * action.
-     */
     public string $flashMessage = '';
 
-    /**
-     * Pending YAML upload. `WithFileUploads` populates this property
-     * from the file input; `parseUpload()` reads the temp file via
-     * `getRealPath()` and pipes the body into AliasYamlImporter.
-     */
+    // Populated by WithFileUploads from the file input; parseUpload()
+    // reads it via getRealPath() into AliasYamlImporter.
     public ?TemporaryUploadedFile $importFile = null;
 
     /**
-     * Diff payload of the most recent YAML upload — stored as a
-     * primitive-only array shape so Livewire's wire payload
-     * round-tripping survives. Empty array outside an active import.
-     *
-     * Shape (each `entry` is the CorpusEntryDto flattened into a
-     * primitive-only mapping that `confirmImport` rehydrates):
-     *
-     *   new:        list<array{pattern,generalized_pattern,name,category,region,contributor}>
-     *   unchanged:  list<array{pattern,generalized_pattern,name,category,region,contributor}>
-     *   conflicts:  list<array{entry: array{...}, existing_name: string, existing_generalized_pattern: string}>
-     *
      * @var array{new?: list<array<string, mixed>>, unchanged?: list<array<string, mixed>>, conflicts?: list<array{entry: array<string, mixed>, existing_name: string, existing_generalized_pattern: string}>}
      */
     public array $importDiff = [];
 
+    // Populated by parseUpload() with 'keep' defaults; the conflict
+    // preview UI binds each select to a key on this array.
     /**
-     * Per-conflict resolution map: `pattern => 'keep' | 'replace'`.
-     * Populated by `parseUpload()` with 'keep' defaults; the conflict
-     * preview UI binds each select to a key on this array.
-     *
      * @var array<string, string>
      */
     public array $conflictResolutions = [];
 
-    /**
-     * Inline error surfaced beneath the file input when the uploaded
-     * YAML fails to parse. Cleared on every fresh `parseUpload()`.
-     */
     public string $importError = '';
 
     /**
-     * Livewire validation rules. The file-size cap is in KB
-     * (matching Livewire's `max` rule semantics); the extensions
-     * allow-list is `.yaml` / `.yml` only, matching the community-
-     * corpus filename convention.
-     *
      * @return array<string, list<string>>
      */
     public function rules(): array
@@ -200,13 +97,6 @@ final class AliasesSettingsPage extends Component
         ];
     }
 
-    /**
-     * Enters inline-edit mode for the given alias row.
-     *
-     * Loads the row's current `generalized_pattern` into the editing
-     * buffer + clears any prior preview result so the side pane is
-     * empty until the user types.
-     */
     public function startEdit(int $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
     {
         $row = $db->connection()
@@ -228,10 +118,6 @@ final class AliasesSettingsPage extends Component
         $this->previewResult = [];
     }
 
-    /**
-     * Cancels inline-edit mode without persisting the change. Clears
-     * the preview pane.
-     */
     public function cancelEdit(): void
     {
         $this->editingId = 0;
@@ -239,17 +125,10 @@ final class AliasesSettingsPage extends Component
         $this->previewResult = [];
     }
 
-    /**
-     * Livewire `updated*` hook for `editingPattern`. Fires on every
-     * accepted (debounced) update of the inline-edit input.
-     *
-     * The 400ms debounce + 500-row scan cap together bound the cost of
-     * the live preview so a noisy keystroke stream cannot launch a
-     * near-unbounded LIKE-style scan against the user's history.
-     * Patterns shorter than three characters are short-circuited at
-     * the DTO layer (`withoutMatches(...)`) so the side pane shows a
-     * calm explanatory line instead of running the scan at all.
-     */
+    // 400ms debounce + 500-row scan cap bound the cost of the live
+    // preview so a noisy keystroke stream can't launch a near-unbounded
+    // scan; patterns <3 chars short-circuit via withoutMatches() before
+    // the scan runs at all.
     public function updatedEditingPattern(AliasMatchPreviewQuery $previewQuery, CurrentUser $currentUser): void
     {
         $value = trim($this->editingPattern);
@@ -280,12 +159,6 @@ final class AliasesSettingsPage extends Component
         ];
     }
 
-    /**
-     * Persists the inline-edited `generalized_pattern` to the row.
-     * Always re-fetches the row with `where('user_id', current)` so a
-     * tampered Livewire payload pointing at another user's id hits the
-     * 404-not-403 boundary rather than silently mutating that row.
-     */
     public function saveAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
     {
         $value = trim($this->editingPattern);
@@ -323,10 +196,6 @@ final class AliasesSettingsPage extends Component
         $this->flashMessage = 'Alias updated.';
     }
 
-    /**
-     * Deletes the alias row. User-scoped — cross-user attempts hit
-     * 404-not-403 via NotFoundHttpException.
-     */
     public function deleteAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
     {
         // The where('user_id', current) clause is the structural
@@ -352,14 +221,6 @@ final class AliasesSettingsPage extends Component
         $this->flashMessage = 'Alias deleted.';
     }
 
-    /**
-     * Opens the bulk-merge confirm dialog. Loads the selected rows
-     * user-scoped, computes the LCP of their generalized patterns, and
-     * prefills the dialog inputs. The LCP service refuses to surface a
-     * 1-3 char prefix; in that case the dialog opens with an empty
-     * `mergeGeneralizedPattern` and the user must type a longer
-     * pattern before Confirm enables.
-     */
     public function openMergeModal(LongestCommonPrefix $lcp, CurrentUser $currentUser, DatabaseManager $db): void
     {
         $uniqueIds = array_values(array_unique(array_map('intval', $this->selectedIds)));
@@ -412,9 +273,6 @@ final class AliasesSettingsPage extends Component
         $this->showMergeModal = true;
     }
 
-    /**
-     * Cancels the bulk-merge dialog without writing anything.
-     */
     public function cancelMerge(): void
     {
         $this->showMergeModal = false;
@@ -422,13 +280,6 @@ final class AliasesSettingsPage extends Component
         $this->mergeFriendlyName = '';
     }
 
-    /**
-     * Commits the bulk-merge via MergeMerchantAliases. On failure
-     * (cross-user id, validation error) the dialog clears + a calm
-     * flash surfaces the cause without crashing the page. The
-     * structural ownership guard is the action's user-scoped row
-     * loader; the flash is only the UI surface.
-     */
     public function confirmMerge(MergeMerchantAliases $merge, CurrentUser $currentUser, LoggerInterface $logger): void
     {
         $friendly = trim($this->mergeFriendlyName);
@@ -467,11 +318,8 @@ final class AliasesSettingsPage extends Component
         $this->flashMessage = 'Aliases merged.';
     }
 
-    /**
-     * Streams the user's aliases as a downloadable `aliases.yaml`. The
-     * ResponseFactory is method-DI'd so the page never hits the global
-     * `response()` helper (rule C-1).
-     */
+    // ResponseFactory is method-DI'd so the page never hits the global
+    // response() helper.
     public function exportYaml(
         AliasYamlExporter $exporter,
         CurrentUser $currentUser,
@@ -488,11 +336,6 @@ final class AliasesSettingsPage extends Component
         );
     }
 
-    /**
-     * Parses the uploaded YAML file + computes the diff against the
-     * user's current `merchant_aliases` table. Populates `$importDiff`
-     * and seeds `$conflictResolutions` with safe 'keep' defaults.
-     */
     public function parseUpload(AliasYamlImporter $importer, CurrentUser $currentUser): void
     {
         $this->validate();
@@ -549,9 +392,6 @@ final class AliasesSettingsPage extends Component
     }
 
     /**
-     * Flattens a CorpusEntryDto into a primitive-only array so the
-     * importDiff property survives Livewire's wire round-trip.
-     *
      * @return array{pattern: string, generalized_pattern: string, name: string, category: ?string, region: ?string, contributor: string}
      */
     private function flattenEntry(CorpusEntryDto $entry): array
@@ -566,11 +406,6 @@ final class AliasesSettingsPage extends Component
         ];
     }
 
-    /**
-     * Commits the diffed entries to the user's `merchant_aliases`
-     * table — both the new rows and the conflict rows whose resolution
-     * the user set to 'replace'. Clears the import state.
-     */
     public function confirmImport(AliasYamlImporter $importer, CurrentUser $currentUser): void
     {
         $newFlat = $this->importDiff['new'] ?? [];
@@ -604,29 +439,19 @@ final class AliasesSettingsPage extends Component
         $this->resetImportState();
     }
 
-    /**
-     * Cancels the import preview without writing anything.
-     */
     public function cancelImport(): void
     {
         $this->resetImportState();
     }
 
-    /**
-     * Clears the post-write flash message — bound to the toast's
-     * dismiss handler.
-     */
     public function clearFlash(): void
     {
         $this->flashMessage = '';
     }
 
-    /**
-     * Renders the aliases list paginated 25/page. Every query is
-     * user-scoped via the injected CurrentUser; the pattern column is
-     * loaded so the inline-edit panel can show the immutable raw
-     * description alongside the editable generalized pattern.
-     */
+    // `pattern` is loaded (read-only) so the inline-edit panel can show
+    // the immutable raw description alongside the editable
+    // generalized_pattern.
     public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
     {
         $userId = $currentUser->user()->id;

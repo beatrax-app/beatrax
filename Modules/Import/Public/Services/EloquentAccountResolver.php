@@ -9,12 +9,9 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ledger\Models\Account;
 
-/**
- * Resolves an IBAN to an Account row scoped to a specific user. The RunImport
- * action constructs this resolver per-import-run with the authenticated user
- * bound; the Ingestion adapters call `resolve()` once per source row so the
- * wizard can branch on unknown IBANs before the user confirms the import.
- */
+// RunImport constructs this per-import-run with the authenticated user
+// bound; Ingestion adapters call resolve() once per source row so the
+// wizard can branch on unknown IBANs before the user confirms.
 final class EloquentAccountResolver implements AccountResolver
 {
     public function __construct(private readonly User $user) {}

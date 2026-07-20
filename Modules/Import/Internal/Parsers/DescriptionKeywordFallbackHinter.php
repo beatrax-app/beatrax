@@ -10,38 +10,16 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
- * Universal last-resort `PaymentType` hinter. Runs against every
- * canonical row regardless of source format and inspects the
- * description for the Dutch / English payment-type lexemes the
- * source-specific hinters key off.
- *
- * The fallback exists so a future ingestion path (Google Play
- * receipt, EmailScan match, a bank export the adapter set doesn't
- * yet cover) still produces a non-Unknown chip whenever the
- * description carries a recognisable lexeme. Confidence is fixed at
- * 40 — below every source-specific hinter — so the fallback only
- * wins when no source-specific hinter returned a verdict.
- *
- * Returns `null` when the description is missing OR carries none of
- * the recognised lexemes; the classifier then falls back to
- * `PaymentType::Unknown`.
- *
- * Registration order matters for tie-breaking: this hinter MUST be
- * the LAST entry in `ImportServiceProvider::PAYMENT_TYPE_HINTER_FQNS`
- * so the registry test's "fallback is last" invariant holds.
- *
- * Pure / stateless / singleton-safe — no constructor dependencies.
+ * @link ../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
 final class DescriptionKeywordFallbackHinter implements PaymentTypeHinter
 {
     private const CONFIDENCE = 40;
 
+    // Specific lexemes (`automatische incasso`) precede their shorter
+    // super-strings (`incasso`) so the longer match wins when both
+    // appear in the same description.
     /**
-     * Casefold-lowercase keyword → `PaymentType` mapping. Specific
-     * lexemes (`automatische incasso`) precede their shorter
-     * super-strings (`incasso`) so the longer match wins when both
-     * lexemes appear in the same description.
-     *
      * @var list<array{keyword: string, type: PaymentType}>
      */
     private const KEYWORDS = [
