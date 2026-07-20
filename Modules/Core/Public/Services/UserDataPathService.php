@@ -7,37 +7,17 @@ namespace Modules\Core\Public\Services;
 use InvalidArgumentException;
 
 /**
- * Single source of truth for every filesystem path the app reads or writes.
- *
- * This class is the sole sanctioned caller of the `base_path()` helper in
- * production code — every other filesystem path resolves through one of the
- * accessors below, never through the raw `database_path()` / `storage_path()`
- * / `base_path()` helpers, so a packaged build can retarget the storage root.
- *
- * When the `NATIVEPHP_STORAGE_PATH` environment variable is set it becomes
- * the storage root (a packaged desktop build); when it is absent every
- * accessor falls back to the project-rooted paths used in local development.
- * The environment variable is read with `getenv()` — not Laravel's `env()`
- * helper — because `getenv()` is unconditional at every boot stage, which is
- * what makes the static accessors safe to call from `config/*.php` files
- * that are evaluated before the container exists.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class UserDataPathService
 {
-    /**
-     * Project root used as the local-development fallback. `base_path()` is
-     * the one sanctioned raw helper call in the whole codebase — this class
-     * is the arch-test allow-list of size one.
-     */
+    // `base_path()` is the one sanctioned raw helper call in the whole
+    // codebase — this class is the arch-test allow-list of size one.
     private static function projectRoot(): string
     {
         return base_path();
     }
 
-    /**
-     * Storage root. When `NATIVEPHP_STORAGE_PATH` is set it IS the root (a
-     * packaged build); absent → project-rooted `storage/` (local dev).
-     */
     private static function storageRoot(): string
     {
         $native = getenv('NATIVEPHP_STORAGE_PATH');
@@ -68,20 +48,8 @@ final class UserDataPathService
         return $databaseDir.DIRECTORY_SEPARATOR.'database.sqlite';
     }
 
-    /**
-     * The NativePHP mobile runtime signal (`ios`/`android`), or `null` when
-     * absent (local dev, desktop, or a plain web request).
-     *
-     * Per 15-SPIKE-FINDINGS.md (Spike B, run on a real iPhone): NativePHP
-     * mobile does NOT set `NATIVEPHP_STORAGE_PATH` — that env var stays
-     * unset on-device. Instead NativePHP mobile retargets `base_path()`
-     * itself into the app-sandbox container, so every accessor above
-     * already resolves inside the sandbox with no dedicated mobile branch.
-     * `NATIVEPHP_PLATFORM` is the reliable on-device signal; this accessor
-     * exists so callers (the mobile boot-reconciliation hook) can detect
-     * the mobile runtime WITHOUT introducing a `NATIVEPHP_STORAGE_PATH`
-     * branch here — deliberately read-only, no path derives from it.
-     */
+    // Read-only signal (no path derives from it) so callers — e.g. the
+    // mobile boot-reconciliation hook — can detect the mobile runtime.
     public static function platform(): ?string
     {
         $platform = getenv('NATIVEPHP_PLATFORM');
@@ -89,24 +57,10 @@ final class UserDataPathService
         return is_string($platform) && $platform !== '' ? $platform : null;
     }
 
-    /**
-     * True on the NativePHP mobile runtime.
-     *
-     * `platform()` (`getenv('NATIVEPHP_PLATFORM')`) is the primary signal, but
-     * it is NOT reliably visible at per-request config-load in NativePHP's
-     * PERSISTENT runtime — the env is present when the `->booted()` hook fires
-     * yet reads back null when `config/*.php` is re-evaluated per request (the
-     * persistent runtime re-bootstraps config each request). Since
-     * `config/database.php` resolves `databaseFile()` per request, a
-     * platform-only check silently fell back to the app-BUNDLE database path
-     * on-device — re-shipping/using the dev database.sqlite (data leak) and
-     * defeating the fresh-install onboarding gate. Detect the runtime
-     * STRUCTURALLY as a fallback: NativePHP mobile relocates `base_path()` into
-     * `<app_storage>/laravel` and provisions a sibling `persisted_data` store
-     * (created by the native layer before the PHP runtime serves a request),
-     * so the sibling dir existing is a request-load-stable mobile signal that
-     * never matches on desktop/host.
-     */
+    // platform() alone is unreliable at per-request config-load in
+    // NativePHP's persistent runtime (see architecture.md), so this falls
+    // back to a structural check: the sibling persisted_data directory
+    // NativePHP mobile provisions never exists on desktop/host.
     private static function isMobileRuntime(): bool
     {
         if (self::platform() !== null) {
@@ -124,8 +78,6 @@ final class UserDataPathService
     }
 
     /**
-     * Join a trusted relative sub-path onto the storage `app/` directory.
-     *
      * @throws InvalidArgumentException when `$relative` contains a `..`
      *                                  path-traversal segment
      */
@@ -153,35 +105,19 @@ final class UserDataPathService
         return self::appPath('backups');
     }
 
-    /**
-     * Daily-rolling log file path. `config/logging.php` reads this so the
-     * Monolog daily handler writes under the user-data storage root —
-     * never under the project-shipped storage tree — which keeps a
-     * packaged build's logs co-located with the per-user database
-     * file and respects the NATIVEPHP_STORAGE_PATH retarget. The
-     * Dev Console's log tailer reads the same accessor so the
-     * panel sees the same file Monolog writes.
-     */
+    // `config/logging.php` reads this so Monolog's daily handler writes
+    // under the user-data storage root (respecting NATIVEPHP_STORAGE_PATH),
+    // never the project-shipped storage tree. The Dev Console log tailer
+    // reads the same accessor so the panel sees the same file Monolog writes.
     public static function logsFile(): string
     {
         return self::storageRoot().DIRECTORY_SEPARATOR.'logs'.DIRECTORY_SEPARATOR.'laravel.log';
     }
 
-    /**
-     * The actual on-disk path of today's daily-rotated log file.
-     * Laravel's RotatingFileHandler takes the logsFile() path and
-     * rewrites the filename to `laravel-YYYY-MM-DD.log` per the
-     * file's basename. The Dev Console log tailer reads this
-     * method to discover the file Monolog is currently writing
-     * into; rotation detection (inode/size shrinkage) is handled
-     * by the SSE controller's tail loop, but the initial open +
-     * the daily roll-over to the next day's file resolve through
-     * the same accessor.
-     *
-     * `$date` defaults to today (UTC-rounded clock); passing an explicit
-     * `DateTimeInterface` lets the tailer's "open yesterday's file" and
-     * "follow the rollover into tomorrow" paths share the same accessor.
-     */
+    // Laravel's RotatingFileHandler rewrites logsFile()'s filename to
+    // `laravel-YYYY-MM-DD.log`. `$date` defaults to today, so the tailer's
+    // "open yesterday" / "follow the rollover into tomorrow" paths can pass
+    // an explicit date through the same accessor Monolog itself resolves.
     public static function dailyLogFile(?\DateTimeInterface $date = null): string
     {
         $date ??= new \DateTimeImmutable;
@@ -193,13 +129,8 @@ final class UserDataPathService
         return $dir.DIRECTORY_SEPARATOR.$name.'-'.$date->format('Y-m-d').($ext !== '' ? '.'.$ext : '');
     }
 
-    /**
-     * Directory that holds the rolling laravel-YYYY-MM-DD.log
-     * files. The Dev Console log tailer uses this to enumerate
-     * observed channel names (when listing available log days) and
-     * to compute sibling files for the rotation-detection re-open
-     * path.
-     */
+    // The Dev Console log tailer uses this to enumerate observed channel
+    // names and to compute sibling files for the rotation-detection re-open.
     public static function logsDirectory(): string
     {
         return dirname(self::logsFile());
@@ -219,28 +150,22 @@ final class UserDataPathService
             : $base.DIRECTORY_SEPARATOR.ltrim($sub, '/\\');
     }
 
-    /**
-     * Module code root. Always project-rooted — module code ships inside the
-     * application bundle, never under the user-data storage root.
-     */
+    // Always project-rooted — module code ships inside the application
+    // bundle, never under the user-data storage root.
     public static function modulesPath(): string
     {
         return self::projectRoot().DIRECTORY_SEPARATOR.'Modules';
     }
 
-    /**
-     * Framework migration directory. Always project-rooted — migrations are
-     * code, not user data.
-     */
+    // Always project-rooted — migrations are code, not user data, unlike
+    // most of this class's other accessors.
     public static function migrationsPath(): string
     {
         return self::projectRoot().DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'migrations';
     }
 
-    /**
-     * Public asset directory. Always project-rooted — `public/` serves
-     * assets shipped with the bundle, not user data.
-     */
+    // Always project-rooted — `public/` serves assets shipped with the
+    // bundle, not user data.
     public static function publicPath(string $relative = ''): string
     {
         $base = self::projectRoot().DIRECTORY_SEPARATOR.'public';
@@ -250,12 +175,9 @@ final class UserDataPathService
             : $base.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
     }
 
-    /**
-     * Join a relative path onto the project root. For project-rooted code and
-     * configuration paths (vendor scan globs, the module-statuses file) that
-     * have no dedicated accessor — these ship inside the bundle, never under
-     * the user-data storage root.
-     */
+    // For project-rooted code and configuration paths (vendor scan globs,
+    // the module-statuses file) with no dedicated accessor — these ship
+    // inside the bundle, never under the user-data storage root.
     public static function projectPath(string $relative = ''): string
     {
         $base = self::projectRoot();

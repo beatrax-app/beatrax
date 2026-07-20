@@ -10,12 +10,10 @@ use Illuminate\Database\Eloquent\Scope;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 
+// Unauthenticated contexts (install bootstrap, tests without `actingAs`)
+// make `$this->currentUser->id()` throw — the scope falls through cleanly
+// in that case so queries return rows regardless, rather than 500ing.
 /**
- * Global Eloquent scope that filters domain models by the current user's id.
- * Resolves the user through the injected `CurrentUser` contract; in
- * unauthenticated contexts (install bootstrap, tests without `actingAs`) the
- * scope falls through cleanly so queries return rows regardless.
- *
  * @implements Scope<Model>
  */
 final class UserScope implements Scope

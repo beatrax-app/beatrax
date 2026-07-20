@@ -18,18 +18,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 /**
- * Settings → Data & backup: produce a passphrase-encrypted snapshot of the
- * SQLite database and stream it to the browser as a download.
- *
- * The snapshot is taken with `VACUUM INTO` (a consistent copy, like db:backup),
- * encrypted in place with BackupEncryptor (quantum-safe Argon2id +
- * XChaCha20-Poly1305), and the plaintext temp is deleted before the encrypted
- * file is sent. The passphrase never persists — it is cleared after each run
- * and is the only thing that can decrypt the file, so losing it means the
- * backup is unrecoverable (stated in the UI).
- *
- * SQLite-only: the encrypted-download flow targets the single-file desktop
- * build; on a server (Postgres/MySQL) the section is hidden.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class EncryptedBackupDownload extends Component
 {
@@ -118,12 +107,9 @@ final class EncryptedBackupDownload extends Component
         ]);
     }
 
-    /**
-     * True when the default connection is SQLite — the single-file desktop
-     * build. Checks the driver (not the connection name) so the in-memory test
-     * connection and a real sqlite file both qualify, while a server's
-     * Postgres/MySQL default does not.
-     */
+    // Checks the driver (not the connection name) so the in-memory test
+    // connection and a real sqlite file both qualify, while a server's
+    // Postgres/MySQL default does not.
     private function isSqliteBuild(Repository $config): bool
     {
         $default = $config->get('database.default');

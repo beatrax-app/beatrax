@@ -17,66 +17,24 @@ use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Position\Public\Services\PositionQuery;
 
 /**
- * The `/` landing page. Renders the "this period at a glance" dashboard:
- * three KPI tiles (In / Out / Net), the top-spending categories list with
- * thin progress bars, and the recent transactions table.
- *
- * Period navigation: `previousPeriod()` / `nextPeriod()` step the
- * window by one calendar period; `today()` returns to the current
- * period. The Blade exposes left / right arrow buttons and an Alpine.js
- * keyboard listener (←, →, t) so users can sweep across months without
- * leaving the keyboard.
- *
- * First-run handling is decided at the route layer — the `/` handler
- * checks `isFirstRun` via the same query service and redirects to
- * `/imports/new` before this component mounts. That keeps the redirect
- * a single HTTP hop (no Livewire round-trip) and matches the project's
- * overall preference for handling lifecycle decisions at the controller
- * level.
- *
- * Service collaborators arrive as parameters on each action method (the
- * strict-rules ruleset bans property-based constructor injection on
- * Livewire Component subclasses).
- *
- * `$periodStartStr` is a client-controlled string. It is always resolved
- * through `resolvePeriod()` which validates the YYYY-MM-DD shape and
- * silently falls back to the current period on any non-matching input,
- * so a malformed value from the wire payload never reaches
- * `CarbonImmutable::parse` and 500s the page.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class Dashboard extends Component
 {
     private const PERIOD_DATE_FORMAT = 'Y-m-d';
 
-    /**
-     * Anchor date (Y-m-d) that pins the displayed period. Null = current.
-     */
+    // Anchor date (Y-m-d) that pins the displayed period, client-controlled
+    // via the wire payload. Null = current period.
     public ?string $periodStartStr = null;
 
-    /**
-     * Whether the dashboard surfaces the persistent failed-job toast.
-     *
-     * Set by `refreshFailedChainResolution()` — populated on initial
-     * mount via `render()` and then refreshed via `wire:poll.5s`. The
-     * source of truth is the `chain_resolution_runs` audit table
-     * filtered by exact `user_id` match (issue #1 + #8 fix — replaces
-     * an earlier draft's substring `payload LIKE '%userId:N%'` query
-     * against `failed_jobs`, which leaks across users with id
-     * prefixes like 1 vs 11).
-     */
+    // Source of truth is chain_resolution_runs filtered by exact user_id
+    // match (see architecture.md) — set by refreshFailedChainResolution(),
+    // populated on initial mount then refreshed via wire:poll.5s.
     public bool $failedChainResolutionExists = false;
 
-    /**
-     * Mirror flag for the persistent reauth toast dismissal.
-     *
-     * The source of truth is the session key
-     * `reauth_toast_dismissed_at` (written by dismissReauthToast() via
-     * the injected Session contract). The Livewire property exists so
-     * the Blade can branch on a single property reference rather than
-     * re-reading the session on every render; the property is
-     * synchronised from the session at render time, so the dismissal
-     * survives across page loads in the same session.
-     */
+    // Mirrors the session key reauth_toast_dismissed_at so the Blade can
+    // branch on a single property rather than re-reading the session on
+    // every render; synchronised from the session at render time.
     public bool $reauthToastDismissed = false;
 
     public function previousPeriod(PeriodQuery $periods): void
@@ -96,16 +54,9 @@ final class Dashboard extends Component
         $this->periodStartStr = null;
     }
 
-    /**
-     * `wire:poll.5s` target on the dashboard Blade. Reads the
-     * `chain_resolution_runs` audit table filtered by exact
-     * `user_id` match. Never reads `failed_jobs.payload` with a
-     * substring `LIKE` (issue #1 + #8 lock — prevents the user_id=1
-     * vs user_id=11 cross-user false-positive). Latest "failed" row
-     * for this user surfaces the persistent toast; when the
-     * row is cleared from the audit table (e.g. user retried via
-     * `/horizon/failed`) the toast hides on the next poll.
-     */
+    // wire:poll.5s target. Latest "failed" row for this user surfaces the
+    // persistent toast; when the row is cleared (e.g. retried via
+    // /horizon/failed) the toast hides on the next poll.
     public function refreshFailedChainResolution(
         DatabaseManager $db,
         CurrentUser $currentUser,
@@ -118,22 +69,9 @@ final class Dashboard extends Component
             ->exists();
     }
 
-    /**
-     * Mark the persistent reauth toast as dismissed for the rest of
-     * this session.
-     *
-     * Writes a session-scoped timestamp (`reauth_toast_dismissed_at`)
-     * so a refresh in the same browser tab keeps the toast hidden.
-     * The toast auto-disappears once every inbox returns to a non-
-     * needs_reauth state ($reauthInboxCount == 0 inside the Blade
-     * guard), so this dismiss is "for the rest of this session" — a
-     * fresh login resets the session and the toast re-surfaces if
-     * any inbox is still needs_reauth.
-     *
-     * DI-only: takes Session + Clock as method parameters (Livewire
-     * banishes constructor DI on Component subclasses; the strict-
-     * rules ruleset).
-     */
+    // Writes a session-scoped timestamp so a refresh in the same tab keeps
+    // the toast hidden; a fresh login resets the session and the toast
+    // re-surfaces if any inbox is still needs_reauth.
     public function dismissReauthToast(
         Session $session,
         Clock $clock,
@@ -196,20 +134,14 @@ final class Dashboard extends Component
             'emailScanHealth' => $emailScanHealth,
             'reauthInboxCount' => $reauthInboxCount,
             'reauthToastDismissed' => $this->reauthToastDismissed,
-            // The failed-chain-resolution toast is gated on the
-            // calling user's is_developer flag. Non-developers see
-            // no Horizon-style queue messaging here; their channel
-            // is the existing SystemAlertsBanner.
+            // Non-developers see no Horizon-style queue messaging here —
+            // their channel is the existing SystemAlertsBanner.
             'isDeveloper' => $user->is_developer === true,
         ]);
     }
 
-    /**
-     * Resolves the displayed period. Validates `$periodStartStr` strictly
-     * against `Y-m-d`; on any mismatch or parse failure, falls back to
-     * the current period and clears the property so the bad value cannot
-     * survive the round-trip.
-     */
+    // On any mismatch or parse failure, falls back to the current period and
+    // clears the property so the bad value cannot survive the round-trip.
     private function resolvePeriod(PeriodQuery $periods): Period
     {
         if ($this->periodStartStr === null) {

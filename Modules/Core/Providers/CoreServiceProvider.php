@@ -39,14 +39,7 @@ use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UserDataPathService;
 
 /**
- * Wires the Core module: registers the SQLite pragma listener, binds the
- * public Clock + CurrentUser contracts, loads migrations, routes, and
- * views, and registers the install + doctor artisan commands. It also
- * aliases `App\Models\User` to the canonical `Modules\Core\Models\User`
- * so framework consumers expecting the default Laravel namespace
- * (`auth.providers.users.model` in `config/auth.php`, the
- * Tests\TestCase typed reference, and Laravel's notification routing)
- * resolve the same class as the module-namespaced model.
+ * @link ../../../.docs/features/core/architecture.md
  */
 final class CoreServiceProvider extends ServiceProvider
 {

@@ -17,44 +17,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Restores the live SQLite database from a backup file with three
- * load-bearing safety rails:
- *  1. Maintenance mode: refuses to run unless the app is already down
- *     OR `--force-maintenance` is passed. Maintenance mode short-
- *     circuits HTTP traffic AND causes Horizon workers to pause
- *     processing — both required so the database swap happens against
- *     a quiet system.
- *  2. Explicit `--confirm` flag: non-TTY callers (CI, scripts, agents)
- *     never proceed without it; interactive TTY sessions get a y/N
- *     prompt. The prompt's default is "no".
- *  3. Pre-swap PRAGMA integrity_check on the source file via a fresh
- *     PDO. Catching a corrupt source BEFORE the swap is the load-
- *     bearing safety property — a post-swap discovery would leave the
- *     user in a half-broken state.
- *
- * Before the file copy, the command automatically writes a `VACUUM
- * INTO`-driven snapshot of the CURRENT live DB to a
- * `pre-restore-YYYY-MM-DD-HHMMSS.sqlite` file inside the backups
- * directory at chmod 0600. This pre-restore snapshot is exempt from the
- * regular retention pruner (the BackupRetentionPolicy passes the
- * `pre-restore-*` prefix through unchanged).
- *
- * After the swap, `PRAGMA integrity_check` runs once more on the now-
- * live DB via the framework's `DatabaseManager::connection()` (NOT a
- * fresh PDO) so the `SqliteOptimizationsProvider`'s
- * `ConnectionEstablished` listener fires against the swapped-in file
- * and re-applies `journal_mode=WAL` + `synchronous=NORMAL`. A failure
- * here records a critical `system_alerts(backup_corrupt)` row, keeps
- * maintenance mode ON (even when this command brought it down),
- * leaves the pre-restore snapshot on disk, and returns FAILURE — so
- * the operator notices, manually inspects, and restores from the
- * snapshot if needed.
- *
- * No Laravel facade is imported or called; every dependency is
- * constructor-DI'd, including `UserDataPathService`, which resolves the
- * maintenance-mode down marker under the framework directory and the
- * backups directory. `BackupDatabaseCommand` injects the same service,
- * so the contract is uniform across the pair.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class RestoreDatabaseCommand extends Command
 {
@@ -206,8 +169,7 @@ final class RestoreDatabaseCommand extends Command
     }
 
     /**
-     * Returns the absolute path to the live SQLite database. Throws if
-     * the configured connection is not sqlite.
+     * @throws RuntimeException when the configured connection is not sqlite
      */
     private function resolveLivePath(): string
     {
@@ -224,12 +186,8 @@ final class RestoreDatabaseCommand extends Command
         return $path;
     }
 
-    /**
-     * Returns the absolute path of the backups directory (resolved
-     * through `UserDataPathService`), creating it with mode 0755 on
-     * first access. Shape mirrors `BackupDatabaseCommand::backupsDir()`
-     * so both commands depend on the same injected service.
-     */
+    // Shape mirrors BackupDatabaseCommand::backupsDir() so both commands
+    // depend on the same injected UserDataPathService.
     private function backupsDirectory(): string
     {
         $backupsPath = $this->paths->backups();
@@ -242,10 +200,6 @@ final class RestoreDatabaseCommand extends Command
     }
 
     /**
-     * Reads `PRAGMA integrity_check` via a freshly-opened PDO. Returns
-     * the column values as `list<string>`; the canonical success case
-     * is `['ok']`.
-     *
      * @return list<string>
      */
     private function readIntegrityCheckFreshPdo(string $sqlitePath): array
@@ -268,11 +222,6 @@ final class RestoreDatabaseCommand extends Command
     }
 
     /**
-     * Records a critical `system_alerts(backup_corrupt)` row for a
-     * mid-swap or post-swap failure. The metadata captures which phase
-     * tripped so the operator can correlate the alert with the on-disk
-     * state.
-     *
      * @param  array<string, scalar|null>  $extra
      */
     private function recordRestoreFailureAlert(string $sourcePath, string $livePath, string $preRestorePath, array $extra): void

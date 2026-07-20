@@ -15,30 +15,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Boot-time SQLite PRAGMA drift listener. On the FIRST `sqlite`
- * `ConnectionEstablished` event in the process, reads
- * `PRAGMA journal_mode` and `PRAGMA synchronous`. If either value
- * drifts from the documented defaults (WAL active + synchronous=1
- * NORMAL), writes a system-wide `system_alerts` row at warning
- * severity AND emits a structured log warning. The persistent
- * banner picks the row up on the next dashboard render.
- *
- * Two-layer de-duplication:
- *  1. `BootProbeState` (container singleton) gates re-firing within
- *     the same process — once the listener has done its work, the
- *     flag suppresses additional ConnectionEstablished events.
- *  2. 1-hour recency window against existing unacknowledged rows of
- *     the same kind suppresses cross-process duplicates so booting
- *     the app 100x in an hour produces at most one row per kind.
- *
- * The listener NEVER throws — every IO/SQL touchpoint sits inside a
- * try/catch. A misconfigured PRAGMA must not lock the user out of
- * the app; the persistent banner is the recovery path.
- *
- * Lives as a dedicated invokable class so the
- * `HealthCheckServiceProvider::boot()` body shrinks to a single
- * `$events->listen()` call and the listener body is testable in
- * isolation via constructor DI rather than reflection-on-closure.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class HealthCheckListener
 {
@@ -106,18 +83,6 @@ final class HealthCheckListener
     }
 
     /**
-     * Writes a `system_alerts` row at warning severity IF no
-     * unacknowledged row of the same kind already exists within the
-     * cutoff window. The recency-check query uses the raw Query
-     * Builder rather than Eloquent — the project's
-     * larastan-strict-rules profile rejects chained Eloquent\Builder
-     * calls (whereNull / where / exists) after Model::query(). The
-     * write itself uses Eloquent so the timestamp casts + fillable
-     * filtering apply.
-     *
-     * Every IO touchpoint is wrapped in try/catch so a write failure
-     * logs + continues instead of halting boot.
-     *
      * @param  array<string, scalar|null>  $metadata
      */
     private function recordDriftAlert(

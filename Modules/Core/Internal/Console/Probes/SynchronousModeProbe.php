@@ -8,15 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Throwable;
 
 /**
- * Reads `PRAGMA synchronous` on the framework's default SQLite
- * connection and asserts it equals integer `1` (= `NORMAL`). The
- * SQLite synchronous levels are `OFF=0`, `NORMAL=1`, `FULL=2`,
- * `EXTRA=3`; the project locks `NORMAL` for the WAL + single-user
- * substrate per `config/database.php`.
- *
- * Mirrors `WalModeProbe` line-for-line except it returns the integer
- * level in `metadata.current_level`. The PRAGMA read is wrapped in
- * try/catch so the probe never throws.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class SynchronousModeProbe implements Probe
 {

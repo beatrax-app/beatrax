@@ -10,26 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Refuses any request whose `SERVER_ADDR` is not a loopback address. Throws a
- * 404 NotFoundHttpException so the application never advertises its existence
- * to non-loopback callers.
- *
- * SECURITY NOTE: requests without `SERVER_ADDR` pass through. This is what
- * keeps CLI invocations and Pest fixtures (which do not populate the var
- * unless explicitly told to) running, but it also means a production listener
- * MUST always set `SERVER_ADDR` for the loopback guard to be effective.
- * Most web servers (nginx, Apache) do this by default; a custom php-fpm dispatcher
- * may not.
- *
- * Loopback detection accepts:
- *   - the IPv4 loopback range 127.0.0.0/8 (any 127.x.x.x address)
- *   - the IPv6 loopback `::1`
- *   - the IPv4-mapped-IPv6 form `::ffff:127.x.x.x` and its compressed
- *     equivalents (`::ffff:7f00:1`, etc.) — common on dual-stack Linux
- *     listeners and Docker bridges.
- *
- * Comparison is performed on the binary form returned by `inet_pton` so
- * textual representation variants normalise correctly.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class LoopbackOnly
 {

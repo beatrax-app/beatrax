@@ -18,37 +18,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Produces a consistent SQLite backup of the live application database
- * via `VACUUM INTO`, validates the output with `PRAGMA integrity_check`,
- * and applies the retention sweep (7 newest dailies + 4 most-recent
- * Sundays). Each successful run writes a `.meta.json` sidecar at chmod
- * 600 capturing the source PRAGMA data_version, so a follow-up call
- * without --force can smart-skip when no commits happened since the
- * last backup.
- *
- * The command is constructor-DI'd with `DatabaseManager`, `Filesystem`,
- * `Clock`, `Repository`, the retention policy, and `UserDataPathService`,
- * which resolves the backups directory. No Laravel facade is imported or
- * called.
- *
- * Critical mechanics worth calling out:
- *  - `PRAGMA data_version` is connection-local with a per-connection
- *    cache. The smart-skip path opens a FRESH PDO against the source
- *    file to read the value rather than the Laravel-managed pool, so
- *    a stale cached value cannot mask a real write.
- *  - `VACUUM INTO` MUST NOT run inside a transaction (SQLite refuses).
- *    The statement runs outside any `->transaction(...)` block.
- *  - `VACUUM INTO` writes the destination file via SQLite's `open(2)`,
- *    bypassing PHP's umask. The command immediately calls
- *    `Filesystem::chmod(0o600)` on the output to recover the secret
- *    file convention.
- *  - The post-VACUUM integrity check uses a SECOND fresh PDO against
- *    the destination file so the result is not muddied by the
- *    Laravel-pool connection cache.
- *  - When VACUUM INTO itself throws (corrupt source), the catch arm
- *    bridges to the same corrupt-path failure surface the integrity-
- *    check branch uses: write a critical `system_alerts(backup_corrupt)`
- *    row, leave any partial output under `.suspect`, return FAILURE.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class BackupDatabaseCommand extends Command
 {
@@ -206,8 +176,7 @@ final class BackupDatabaseCommand extends Command
     }
 
     /**
-     * Returns the absolute path to the live SQLite database. Throws if
-     * the default connection is not configured as sqlite.
+     * @throws RuntimeException when the default connection is not sqlite
      */
     private function livePath(): string
     {
@@ -224,10 +193,6 @@ final class BackupDatabaseCommand extends Command
         return $path;
     }
 
-    /**
-     * Returns the absolute path of the backups directory, creating it
-     * with mode 0755 on first access.
-     */
     private function backupsDir(): string
     {
         $backupsPath = $this->paths->backups();
@@ -239,10 +204,8 @@ final class BackupDatabaseCommand extends Command
         return $backupsPath;
     }
 
-    /**
-     * Reads `PRAGMA data_version` via a fresh PDO connection so the
-     * value is not muddied by the Laravel pool's per-connection cache.
-     */
+    // Uses a fresh PDO connection so the value is not muddied by the
+    // Laravel pool's per-connection cache.
     private function readDataVersion(string $sqlitePath): int
     {
         $pdo = new PDO('sqlite:'.$sqlitePath, options: [
@@ -257,12 +220,9 @@ final class BackupDatabaseCommand extends Command
         return is_numeric($value) ? (int) $value : 0;
     }
 
+    // Uses a freshly-opened PDO against the destination file. On success
+    // the list is exactly ['ok']; on failure it holds diagnostic strings.
     /**
-     * Returns the result of `PRAGMA integrity_check` against a freshly
-     * opened PDO against the destination file. On success the list is
-     * exactly `['ok']`; on failure the list contains one or more
-     * diagnostic strings.
-     *
      * @return list<string>
      */
     private function readIntegrityCheck(string $sqlitePath): array
@@ -284,21 +244,10 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
-    /**
-     * Smart-skip predicate: returns true when the most-recent backup's
-     * sidecar `.meta.json` carries the same `data_version` as the live
-     * DB. Missing sidecars / unreadable JSON / missing data_version
-     * keys all fall through to "not skippable" — the safer default.
-     *
-     * `glob()` is documented to return `array|false` — `false` on
-     * permission errors or an unreadable directory. The `(array) false`
-     * cast that previously bridged the return into the empty-check path
-     * yields `[false]`, NOT `[]`, which subtly subverted the check.
-     * The explicit `=== false` guard below is the only thing keeping
-     * an unreadable backups directory from being misread as "has a
-     * candidate sidecar" — load-bearing because a wrong skip would
-     * silently write no backup at all.
-     */
+    // Smart-skip predicate: true when the most-recent sidecar carries the
+    // same data_version as the live DB. Missing/unreadable sidecars fall
+    // through to "not skippable" — the explicit `=== false` guard on glob()
+    // is load-bearing: a wrong skip would silently write no backup at all.
     private function isSkippable(string $backupsDir, int $liveDataVersion): bool
     {
         $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.meta.json');
@@ -327,21 +276,10 @@ final class BackupDatabaseCommand extends Command
         return is_int($stored) && $stored === $liveDataVersion;
     }
 
-    /**
-     * Writes the sidecar `.meta.json` atomically with chmod 0600. The
-     * umask + tmp + rename + chmod dance mirrors
-     * OAuthSecretsRepository::writeAtomic so the file is born with
-     * mode 0600 and the rename is atomic on the same filesystem.
-     *
-     * Each I/O step has its return value checked: a `file_put_contents`
-     * disk-full failure, a `chmod` permission-denied, or a `rename`
-     * cross-device failure now raises a `RuntimeException` instead of
-     * silently leaving the operator with a half-written or
-     * group/world-readable sidecar. The exception travels up to the
-     * `handle()` call site, which catches it (see writeSidecar's caller)
-     * and converts it to the same corrupt-path system_alerts row the
-     * other catch arms produce.
-     */
+    // Atomic write: umask + tmp + rename + chmod mirrors
+    // OAuthSecretsRepository::writeAtomic. Every I/O step's return value is
+    // checked, so a disk-full/permission/cross-device failure raises instead
+    // of silently leaving a half-written or group/world-readable sidecar.
     private function writeSidecar(string $destination, int $dataVersion, string $startedAt, string $completedAt): void
     {
         $sidecar = $destination.'.meta.json';
@@ -378,14 +316,9 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
-    /**
-     * Deletes any matching `beatrax-YYYY-MM-DD-HHMMSS.sqlite` files
-     * the retention policy did NOT keep. `.suspect`, `pre-restore-*`,
-     * and `.meta.json` files are never deleted — the policy passes
-     * non-matching basenames through unchanged so the caller's filter
-     * naturally preserves them. The sidecar of a pruned daily IS
-     * deleted alongside the daily so the directory stays consistent.
-     */
+    // Deletes matching daily .sqlite files the retention policy did NOT
+    // keep; .suspect/pre-restore-*/.meta.json pass through untouched. The
+    // sidecar of a pruned daily is deleted alongside it for consistency.
     private function pruneRetention(string $backupsDir): void
     {
         $entries = $this->files->files($backupsDir);
@@ -414,19 +347,11 @@ final class BackupDatabaseCommand extends Command
         }
     }
 
+    // Inserts a critical, system-wide (user_id NULL) system_alerts row.
+    // $suspectPath is nullable: only the post-VACUUM integrity-check branch
+    // produces an on-disk .suspect file; other corrupt-path branches pass
+    // null since no file exists for the operator to look at.
     /**
-     * Inserts a critical `system_alerts` row capturing the corrupt-path
-     * failure. `user_id` is NULL because the alert is system-wide — the
-     * operational banner surfaces it to whichever user reaches the
-     * dashboard next.
-     *
-     * `$suspectPath` is nullable: only the post-VACUUM integrity-check
-     * branch produces an on-disk `.suspect` file the operator can
-     * inspect. The other corrupt-path branches (PDOException during
-     * PRAGMA data_version, VACUUM INTO produced no output, chmod
-     * failure with immediate delete) pass `null` so the message and
-     * metadata reflect that no file exists for the operator to look at.
-     *
      * @param  array<string, mixed>  $metadata
      */
     private function recordCorruptAlert(string $destination, ?string $suspectPath, array $metadata): void

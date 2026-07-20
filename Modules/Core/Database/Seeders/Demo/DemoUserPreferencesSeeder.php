@@ -7,18 +7,10 @@ namespace Modules\Core\Database\Seeders\Demo;
 use Modules\Core\Models\User;
 use Modules\Core\Models\UserPreference;
 
-/**
- * Materialises one `user_preferences` row per demo user — the
- * foundation table the 17-04a migration created. Domain modules add
- * their own preference columns onto this single-row store via
- * additive column-add migrations; the demo seeder lands the baseline
- * row so the user_preferences read path always finds it on a fresh
- * demo install and downstream module preference reads never have to
- * branch on "row may not yet exist".
- *
- * Idempotency: the `(user_id)` UNIQUE on `user_preferences` keys the
- * upsert so a re-run reuses the existing row.
- */
+// Materialises one `user_preferences` row per demo user so downstream module
+// preference reads never have to branch on "row may not yet exist". The
+// `(user_id)` UNIQUE constraint keys the upsert so a re-run reuses the
+// existing row rather than duplicating it.
 final class DemoUserPreferencesSeeder
 {
     /**

@@ -16,40 +16,10 @@ use Modules\Core\Public\Services\NavCountsService;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 
 /**
- * Persistent left sidebar. Rendered from
- * `layouts/app.blade.php` within an `@auth` guard so unauthenticated
- * pages (login, error pages) do not see it.
- *
- * Replaces the previous TopNav horizontal row with a sectioned,
- * fixed-width sidebar (248px in the main app). Section labels group
- * sibling nav items into THIS MONTH / MONEY / INGESTION / SETTINGS so
- * navigation is scannable at a glance.
- *
- * The Dev block at the foot is gated server-side on
- * `users.is_developer` — non-developers do NOT receive the dashed
- * container in the rendered HTML. The block carries a pulsing
- * emerald `.dot-live` dot, an "Open Dev Console" link with a `⌘.`
- * kbd hint, and a "Queue {N} · Worker {N}s ago" live row driven by
- * a wire:poll.5s sub-tree.
- *
- * Queue-count choice: jobs.count() (pending only). Failed jobs
- * already surface in the dashboard toast and the dedicated
- * /dev/queue/failed tab, so "Queue {N}" in the sidebar reads as
- * "work waiting to be done". The composite count
- * jobs + failed_jobs would conflate two distinct operational
- * signals (work-in-progress vs work-that-failed).
- *
- * The account caption reads "developer · local" for developers and
- * "local" otherwise — the only place in the chrome that reveals the
- * caller's developer status to themselves.
- *
- * Active-link highlighting reads the current path from the injected
- * `Request` rather than the `request()` helper so the component stays
- * clean under the project's DI-only invariant.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class AppSidebar extends Component
 {
-    /** Cache key the queue-worker heartbeat producer writes. */
     private const HEARTBEAT_CACHE_KEY = 'dev_mode.queue_worker_heartbeat';
 
     public function render(
@@ -71,8 +41,8 @@ final class AppSidebar extends Component
         $queueCount = 0;
         $workerSecondsAgo = null;
         if ($isDeveloper) {
-            // jobs.count() — see class docblock for the
-            // pending-only-not-composite rationale.
+            // Pending-only — see architecture.md for why not jobs+failed_jobs,
+            // the count deliberately excludes already-failed rows.
             $queueCount = $db->connection()->table('jobs')->count();
 
             $heartbeatRaw = $cache->get(self::HEARTBEAT_CACHE_KEY);
@@ -98,11 +68,8 @@ final class AppSidebar extends Component
         ]);
     }
 
-    /**
-     * First alphanumeric character of the username, uppercased. Falls
-     * back to "?" when the username is empty (defensive — schema
-     * forbids empty usernames). Drives the gradient `.avatar` initial.
-     */
+    // Falls back to "?" when empty (defensive — schema forbids empty
+    // usernames). Drives the gradient .avatar initial.
     private function initialFor(string $username): string
     {
         $trimmed = ltrim($username);

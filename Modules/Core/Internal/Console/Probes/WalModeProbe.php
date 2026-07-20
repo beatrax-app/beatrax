@@ -8,15 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Throwable;
 
 /**
- * Reads `PRAGMA journal_mode` on the framework's default SQLite
- * connection and asserts it equals `wal` (case-insensitive). Drift
- * surfaces as a `warning`-severity probe result; the
- * `HealthCheckServiceProvider` owns the matching `system_alerts` row
- * write (so probe + boot-time listener cooperate without double-
- * counting).
- *
- * The PRAGMA read is wrapped in try/catch — a missing-file or PDO
- * error returns a `critical` `ProbeResult` rather than throwing.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class WalModeProbe implements Probe
 {

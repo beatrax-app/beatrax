@@ -9,58 +9,21 @@ use SodiumException;
 use Throwable;
 
 /**
- * Passphrase-based encryption for database backups, so a backup that leaves the
- * machine (external drive, cloud, email) is unreadable without the passphrase.
- *
- * Format (`beatrax-encrypted-backup-1`): the file is a self-describing header
- * followed by a libsodium secretstream (XChaCha20-Poly1305) — an authenticated,
- * chunked AEAD stream, so the whole file never has to sit in memory and any
- * tampering or truncation is detected at decrypt time. The 32-byte stream key
- * is derived from the passphrase with Argon2id (`sodium_crypto_pwhash`); the
- * random salt and the exact Argon2id ops/mem limits are stored in the header so
- * a future, stronger default can still decrypt today's backups.
- *
- *   MAGIC(8) | salt(16) | opslimit(uint32 LE) | memlimit(uint64 LE) | stream-header(24) | AEAD chunks…
- *
- * QUANTUM SAFETY. This scheme is post-quantum secure by construction because it
- * is PURELY SYMMETRIC — there is no public-key/asymmetric step anywhere, so
- * Shor's algorithm (which breaks RSA/ECC/DH key exchange) has nothing to
- * attack. The two primitives that ARE used both retain their strength against a
- * quantum adversary:
- *   - XChaCha20-Poly1305 uses a full 256-bit key (KEY_BITS below). Grover's
- *     algorithm gives only a quadratic speed-up, so the effective security is
- *     128 bits post-quantum — NIST's top category, the same footing on which
- *     AES256 is considered quantum-safe.
- *   - Argon2id is a memory-hard KDF, so quantum brute-forcing of the passphrase
- *     is bounded by RAM, not just compute.
- * A post-quantum KEM (ML-KEM / Kyber) is intentionally NOT used: it would only
- * matter if we encrypted to a recipient public key, which we never do — the key
- * is derived from the user's passphrase. Use a strong passphrase: the passphrase
- * entropy is the real floor here, not the cipher.
- *
- * A wrong passphrase, a flipped byte, or a truncated file all surface as a
- * thrown exception rather than silent garbage — the caller must treat any
- * exception as "do not trust this restore".
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class BackupEncryptor
 {
     private const MAGIC = 'BTRXENC1';
 
-    /** Plaintext bytes per AEAD chunk (64 KiB). */
     private const CHUNK_SIZE = 65536;
 
-    /**
-     * Upper bound on the Argon2id work factor accepted from a file header.
-     * The header is unauthenticated and read BEFORE the key is derived, so an
-     * unbounded opslimit/memlimit would be a pre-auth DoS (hang / OOM). 10 ops
-     * is well above any sane setting (SENSITIVE = 4); the mem cap is libsodium's
-     * own SENSITIVE tier (1 GiB).
-     */
+    // The header is unauthenticated and read BEFORE the key is derived, so an
+    // unbounded opslimit/memlimit would be a pre-auth DoS (hang / OOM). 10 ops
+    // is well above any sane setting (SENSITIVE = 4); the mem cap is
+    // libsodium's own SENSITIVE tier (1 GiB).
     private const MAX_OPSLIMIT = 10;
 
     /**
-     * Encrypt $plainPath into $encPath using $passphrase. Overwrites $encPath.
-     *
      * @throws RuntimeException on I/O failure
      * @throws SodiumException on a crypto failure (should not happen for valid input)
      */
@@ -110,10 +73,7 @@ final class BackupEncryptor
     }
 
     /**
-     * Decrypt $encPath into $plainPath using $passphrase. Overwrites $plainPath.
-     * Throws on a wrong passphrase, tampering, truncation, or a bad header.
-     *
-     * @throws RuntimeException
+     * @throws RuntimeException on a wrong passphrase, tampering, truncation, or a bad header
      */
     public function decrypt(string $encPath, string $plainPath, string $passphrase): void
     {

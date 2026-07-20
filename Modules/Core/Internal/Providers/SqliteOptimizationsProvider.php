@@ -9,10 +9,7 @@ use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Applies the WAL + `synchronous=NORMAL` + `busy_timeout` + foreign-key
- * pragmas to every newly opened SQLite connection. Listens to Laravel's
- * `ConnectionEstablished` event so the pragmas are applied without relying
- * on a facade or a helper. Skips connections whose driver is not `sqlite`.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class SqliteOptimizationsProvider extends ServiceProvider
 {

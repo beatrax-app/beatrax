@@ -17,29 +17,7 @@ use Modules\Core\Internal\Console\Probes\WalModeProbe;
 use Modules\Search\Public\Services\FtsHealthCheck;
 
 /**
- * Runs the beatrax operational doctor: a homogeneous iteration over
- * every registered `Probe` (tool-version checks + SQLite-substrate
- * health + backup freshness). Each probe contributes one line to the
- * output table and one severity bucket to the exit-code aggregator.
- *
- * Probes:
- *  - PhpVersionProbe (BLOCKER if < 8.5 — matches composer.json + CI matrix)
- *  - ComposerVersionProbe / SqliteCliVersionProbe / NodeVersionProbe
- *    (warning if missing — none are runtime-fatal for the dashboard,
- *    they matter for dev workflows: composer install, sqlite3 CLI
- *    inspection, npm run build)
- *  - WalModeProbe / SynchronousModeProbe / BackupFreshnessProbe (the
- *    three SQLite-substrate probes)
- *
- * `ext-imap` is reported separately (info-only) because the project
- * uses the pure-PHP `webklex/php-imap`; the extension's presence is
- * neither required nor forbidden and folds awkwardly into the
- * severity bucket model.
- *
- * Exit codes:
- *   0 — every probe returned `ok` (or `info` for ext-imap)
- *   1 — one or more `warning` probes
- *   2 — at least one `critical` probe
+ * @link ../../../../.docs/features/core/architecture.md
  */
 final class DoctorCommand extends Command
 {
@@ -136,9 +114,6 @@ final class DoctorCommand extends Command
     }
 
     /**
-     * Print one probe row and bump the exit-code accumulator arrays per
-     * the existing severity convention.
-     *
      * @param  list<string>  $blockers
      * @param  list<string>  $warnings
      */

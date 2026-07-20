@@ -14,35 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Events\UserInstalled;
 
 /**
- * Idempotent first-run setup for the local-only single-user app:
- *
- * 1. Refuses to run when the SQLite database path is inside a cloud-sync
- *    folder (iCloud Drive / OneDrive / Dropbox / Mobile Documents).
- * 2. Runs pending migrations.
- * 3. Creates User id=1 if absent. Re-running with the same username does
- *    NOT update the password — a dedicated reset-password command will
- *    land in a later operational-hardening phase.
- * 4. Always dispatches `UserInstalled` for the resolved user (whether
- *    newly created or pre-existing). Listeners (`SeedDefaultCategoryTree`,
- *    other module-local install hooks) are required to be idempotent, so
- *    re-running install heals any seeded reference data that went missing
- *    between the user's original install and a fresh listener wire-up
- *    (e.g. the default category tree shipping in a module that wasn't
- *    loaded when User id=1 was first created).
- *
- * The `--launchd` mode is a separate code path: it installs three
- * macOS LaunchAgent plists from `deploy/launchd/*.plist` to
- * `~/Library/LaunchAgents/`, substituting `{{ABS_PHP_BINARY}}` (the
- * PHP_BINARY constant from the currently-running interpreter) and
- * `{{ABS_PROJECT_ROOT}}` (the project's base path) at install time
- * so the resulting plists carry the user's actual paths — not
- * placeholders. The Redis plist is OPTIONAL; pass `--without-redis`
- * when Docker Desktop auto-starts the container on login.
- *
- * The `bootstrapPlist()` helper is `protected` (not private) so the
- * InstallLaunchdCommandTest can subclass + override it to capture
- * what would be passed to `launchctl bootstrap` without actually
- * invoking it on the developer's real machine.
+ * @link ../../../../.docs/features/core/architecture.md
  */
 class InstallCommand extends Command
 {
@@ -57,13 +29,11 @@ class InstallCommand extends Command
     /** @var string */
     protected $description = 'Idempotent first-run setup: validate DB path, run migrations, create or re-confirm the single user, and re-dispatch UserInstalled so seed listeners can heal missing reference data. Pass --launchd to install macOS background workers.';
 
+    // Matched case-insensitively against the resolved real path before any
+    // file IO runs. Combines per-vendor product names with the canonical
+    // macOS Monterey+ mountpoint `Library/CloudStorage`, which catches every
+    // cloud provider Apple registers with the system.
     /**
-     * Path tokens that indicate a cloud-sync folder. Matched case-insensitively
-     * against the resolved real path of the SQLite database before any file IO
-     * runs. The list combines per-vendor product names with the canonical
-     * macOS Monterey+ mountpoint `Library/CloudStorage` which catches every
-     * cloud provider Apple registers with the system.
-     *
      * @var list<string>
      */
     private const CLOUD_SYNC_TOKENS = [
@@ -180,12 +150,9 @@ class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Returns the smallest id in the `users` table, or null when the table
-     * is empty. Uses the raw query builder so the lookup stays out of the
-     * Eloquent global-scope path (`UserScope` filters by authenticated user
-     * id, which is meaningless during a console install run).
-     */
+    // Uses the raw query builder so the lookup stays out of the Eloquent
+    // global-scope path (UserScope filters by authenticated user id, which
+    // is meaningless during a console install run).
     private static function resolveExistingUserId(DatabaseManager $db): ?int
     {
         $row = $db->connection()
@@ -203,13 +170,10 @@ class InstallCommand extends Command
         return is_numeric($value) ? (int) $value : null;
     }
 
-    /**
-     * Resolves the database file path through `realpath` so symlink targets
-     * are detected. When the database file does not yet exist on disk (first
-     * install), falls back to the parent directory's real path. When even
-     * that fails (path is entirely synthetic), returns the original input so
-     * the token scan still gets a chance against the raw string.
-     */
+    // Resolves through `realpath` so symlink targets are detected. When the
+    // database file does not yet exist (first install), falls back to the
+    // parent directory's real path; when even that fails, returns the
+    // original input so the token scan still gets a chance against it.
     private static function resolveRealPath(string $path): string
     {
         if ($path === '') {
@@ -230,10 +194,6 @@ class InstallCommand extends Command
         return $path;
     }
 
-    /**
-     * Reads a string-valued option, falling back to an interactive prompt when
-     * the option was not supplied.
-     */
     private function resolveStringInput(string $option, string $prompt, bool $secret = false): string
     {
         $value = $this->option($option);
@@ -245,10 +205,6 @@ class InstallCommand extends Command
         return is_string($value) ? $value : '';
     }
 
-    /**
-     * Reads the period-start-day option (or prompts for it) and clamps the
-     * value into the valid 1..28 window.
-     */
     private function resolvePeriodStartDay(): int
     {
         $raw = $this->option('period-start-day');
@@ -262,23 +218,10 @@ class InstallCommand extends Command
         return max(1, min(28, $day));
     }
 
-    /**
-     * Install macOS LaunchAgent plists for Horizon + scheduler +
-     * (optional) Redis. Refuses to run on non-Darwin hosts — the
-     * plists are macOS-only.
-     *
-     * For each plist:
-     *  1. Read the template from `deploy/launchd/com.beatrax.{name}.plist`.
-     *  2. Substitute `{{ABS_PHP_BINARY}}` (PHP_BINARY) +
-     *     `{{ABS_PROJECT_ROOT}}` (Application::basePath()) in the contents.
-     *  3. Ensure ~/Library/LaunchAgents/ exists (chmod 700 on first
-     *     create — restricts read access to the user).
-     *  4. Write the rendered plist to `~/Library/LaunchAgents/`.
-     *  5. Bootstrap via `launchctl bootstrap gui/{uid}` so launchd
-     *     picks up the change without needing a reboot. The bootstrap
-     *     call is funnelled through `bootstrapPlist()` so tests can
-     *     stub it.
-     */
+    // Refuses to run on non-Darwin hosts. For each plist: read the template,
+    // substitute {{ABS_PHP_BINARY}}/{{ABS_PROJECT_ROOT}}, ensure
+    // ~/Library/LaunchAgents/ exists (chmod 700), write it, then bootstrap
+    // via bootstrapPlist() (funnelled through a seam so tests can stub it).
     private function installLaunchdPlists(): int
     {
         if (PHP_OS_FAMILY !== 'Darwin') {
@@ -336,26 +279,17 @@ class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Resolve the LaunchAgents directory path. Extracted so tests can
-     * override + redirect into a sandbox without mutating the
-     * developer's real ~/Library/LaunchAgents.
-     */
+    // Extracted so tests can override + redirect into a sandbox without
+    // mutating the developer's real ~/Library/LaunchAgents.
     protected function resolveLaunchAgentsDir(string $home): string
     {
         return $home.'/Library/LaunchAgents';
     }
 
-    /**
-     * Invoke `launchctl bootstrap gui/{uid} {plistPath}` and return
-     * its exit code. Extracted so tests can override to capture the
-     * intended bootstrap target without actually mutating the
-     * developer's running launchd.
-     *
-     * Returns the launchctl exit code (0 on success; non-zero is
-     * surfaced as a warning, not a hard failure, because launchctl
-     * exits non-zero for "already loaded" which is fine on re-install).
-     */
+    // Extracted so tests can override to capture the intended bootstrap
+    // target without mutating the developer's running launchd. Non-zero is
+    // surfaced as a warning, not a hard failure — launchctl exits non-zero
+    // for "already loaded", which is fine on re-install.
     protected function bootstrapPlist(int $uid, string $plistPath): int
     {
         $cmd = 'launchctl bootstrap gui/'.$uid.' '.escapeshellarg($plistPath);
@@ -365,14 +299,10 @@ class InstallCommand extends Command
         return $exitCode;
     }
 
-    /**
-     * Resolve the current real user id. posix_getuid() is missing on
-     * Windows; the launchd path is Darwin-only so the function is
-     * available wherever this method is reached, but the safety
-     * fallback returns 0 (root) which makes the resulting launchctl
-     * call fail visibly rather than silently writing to the wrong
-     * user's launchd.
-     */
+    // posix_getuid() is missing on Windows; the launchd path is Darwin-only
+    // so it's available wherever this is reached, but the fallback returns 0
+    // (root) so a missing function fails the launchctl call visibly rather
+    // than silently writing to the wrong user's launchd.
     private static function resolveCurrentUid(): int
     {
         if (function_exists('posix_getuid')) {

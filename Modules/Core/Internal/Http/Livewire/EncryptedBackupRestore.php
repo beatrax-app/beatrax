@@ -14,14 +14,7 @@ use Modules\Core\Public\Services\RestoreEncryptedBackup;
 use RuntimeException;
 
 /**
- * Settings → Data & backup: restore the database from a passphrase-encrypted
- * backup. The destructive swap sits behind a gate — the user must upload the
- * file, enter the passphrase, AND type the confirmation phrase — and the
- * RestoreEncryptedBackup service only swaps the live DB after the upload
- * decrypts and passes an integrity check, taking a pre-restore snapshot first.
- *
- * SQLite-only (the desktop build); hidden on a server database, where restore
- * belongs to the DB's own tooling.
+ * @link ../../../../../.docs/features/core/architecture.md
  */
 final class EncryptedBackupRestore extends Component
 {
