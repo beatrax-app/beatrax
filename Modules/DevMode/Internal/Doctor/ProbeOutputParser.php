@@ -4,28 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Doctor;
 
+// Pure parser for `beatrax:doctor`'s stdout: one line per probe in
+// sprintf('%-24s %-8s %s', $label, $severity, $message) format, mapping
+// severity ok/warning/critical/info to pass/warn/fail/info. Skips the
+// banner, divider, blank, and summary lines.
 /**
- * Pure parser for `beatrax:doctor`'s stdout.
- *
- * The DoctorCommand emits one line per probe in
- * sprintf('%-24s %-8s %s', $label, $severity, $message) format. The
- * severity column is one of:
- *
- *   - `ok`        → mapped to `pass` (emerald check)
- *   - `warning`   → mapped to `warn` (amber)
- *   - `critical`  → mapped to `fail` (rose X)
- *   - `info`      → kept as `info` (distinct severity bucket for
- *                   informational rows like the ext-imap status)
- *
- * The parser SKIPS the banner / divider / summary lines:
- *   - The first two header lines ("beatrax:doctor" + "-----------------")
- *   - Blank lines
- *   - The final summary like "All checks passed." / "N warning(s)." /
- *     "N blocker(s)…"
- *
- * Pure-PHP / no IO / no DI — the test seeds a representative output
- * string and asserts the returned list.
- *
  * @phpstan-type ProbeRow array{status: 'pass'|'warn'|'fail'|'info', label: string, detail: string}
  */
 final class ProbeOutputParser
@@ -56,9 +39,6 @@ final class ProbeOutputParser
     }
 
     /**
-     * Attempt to parse a single line into a ProbeRow. Returns null when
-     * the line is a banner / divider / summary / blank.
-     *
      * @return ProbeRow|null
      */
     private function parseLine(string $line): ?array

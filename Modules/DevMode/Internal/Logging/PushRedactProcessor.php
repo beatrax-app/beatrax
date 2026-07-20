@@ -10,28 +10,7 @@ use Monolog\Handler\ProcessableHandlerInterface;
 use Monolog\Logger as MonologLogger;
 
 /**
- * Laravel-style "tap class" — registered into the `tap` array of a
- * logging channel inside config/logging.php. Laravel resolves the
- * tap class on every channel boot and invokes `__invoke($logger)`
- * so the channel's Monolog handlers can be decorated AFTER they are
- * constructed by the channel driver.
- *
- * This tap resolves {@see RedactSecretsProcessor} from the container
- * and pushes it onto every handler of the tapped channel so every
- * record that flows through the channel passes through the OAuth
- * scrub-set + Bearer + JWT scrub BEFORE the formatter writes the
- * line to disk.
- *
- * Container resolution (rather than `new RedactSecretsProcessor`)
- * keeps the binding's constructor dependencies invisible to this
- * tap class: a future change to the processor's DI chain requires
- * no edit here or in config/logging.php.
- *
- * Laravel instantiates tap classes with `new $tap()` (per
- * Illuminate\\Log\\LogManager::tap), so the constructor MUST accept
- * no required arguments. Container access goes through
- * Container::getInstance()->make(...) rather than the app() global
- * helper to honour the project's DI-only rule.
+ * @link ../../../../.docs/features/dev-mode/architecture.md
  */
 final class PushRedactProcessor
 {

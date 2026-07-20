@@ -8,45 +8,20 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
 /**
- * Reads the tail of today's daily Laravel log file and folds the
- * raw lines into structured entries matching the Laravel format
- *
- *   [YYYY-MM-DD HH:MM:SS] channel.SEVERITY: message body
- *
- * Continuation lines (stack-trace rows, JSON payload tails) fold
- * into the preceding entry's message. The visible message is
- * truncated to {@see EXCERPT_MAX} characters for compact dashboard
- * rendering. Every returned message is re-run through the on-stream
- * {@see RedactSecretsProcessor} as defense-in-depth on top of the
- * on-write Monolog tap.
- *
- * Each entry carries an `href` pre-filtered deep-link to /dev/logs
- * (severity + contains query params) so the operator can drill from
- * a dashboard row into the live tailer with the matching context.
+ * @link ../../../../.docs/features/dev-mode/architecture.md
  */
 final readonly class RecentLogEntriesReader
 {
-    /**
-     * Truncate the message excerpt at this length so the dashboard
-     * row stays single-line. The href carries the untruncated start
-     * of the message so the deep-link's `contains` filter still
-     * matches the source line.
-     */
+    // The href carries the untruncated start of the message so the
+    // deep-link's `contains` filter still matches the source line even
+    // after the visible excerpt is truncated to this length.
     private const int EXCERPT_MAX = 160;
 
-    /**
-     * Maximum length of the `contains` value carried in the deep-link
-     * href so the URL stays reasonable for tooltip / right-click
-     * affordances.
-     */
     private const int HREF_CONTAINS_MAX = 80;
 
-    /**
-     * Cap the raw-line read so a malformed daily log file (single
-     * 50 MB line) does not stall the dashboard render. The dashboard
-     * widget only needs the tail; 200 lines is generous headroom for
-     * folding even verbose stack-trace continuations into 5 entries.
-     */
+    // Caps the raw-line read so a malformed daily log file (single 50 MB
+    // line) can't stall the dashboard render; the widget only needs the
+    // tail, and 200 lines is generous headroom for folding stack traces.
     private const int LINE_READ_CAP = 200;
 
     public function __construct(
@@ -54,10 +29,6 @@ final readonly class RecentLogEntriesReader
     ) {}
 
     /**
-     * Return the most recent N structured log entries from today's
-     * daily file. Empty array when the file is missing, unreadable,
-     * or contains zero parseable entries.
-     *
      * @return list<array{timestamp: string, severity: string, channel: string, message: string, href: string}>
      */
     public function recent(int $limit): array
@@ -120,11 +91,9 @@ final readonly class RecentLogEntriesReader
         return $out;
     }
 
+    // Returns null when the line does not match the standard format —
+    // the caller treats those as continuation lines.
     /**
-     * Parse one Laravel daily-log line into its components. Returns
-     * null when the line does not match the standard format — the
-     * caller treats those as continuation lines.
-     *
      * @return ?array{timestamp: string, severity: string, channel: string, message: string}
      */
     private function parseLine(string $raw): ?array
@@ -142,10 +111,6 @@ final readonly class RecentLogEntriesReader
     }
 
     /**
-     * Truncate a string to `max` characters. Multi-line input is
-     * collapsed to a single line first so the dashboard row stays
-     * one line tall.
-     *
      * @param  bool  $appendEllipsis  When true, replace the final
      *                                character on truncation with
      *                                '…' so the user-facing excerpt

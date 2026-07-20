@@ -7,15 +7,11 @@ namespace Modules\DevMode\Public\Models;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 
+// Read-only for Dev Console consumers, one row per job that exhausted
+// all retry attempts. The queue worker writes via
+// FailedJobProviderInterface; the inspector surfaces rows + lets a
+// developer call forget(uuid) or re-dispatch via QueueActions::retryFailed.
 /**
- * Eloquent model for the framework-managed `failed_jobs` table — one
- * row per job that exhausted all retry attempts.
- *
- * Read-only for Dev Console consumers. The queue worker writes via
- * FailedJobProviderInterface implementations; the inspector page
- * surfaces rows + lets a developer call `forget(uuid)` or re-dispatch
- * the payload via QueueActions::retryFailed.
- *
  * @property int $id
  * @property string $uuid
  * @property string $connection
@@ -29,11 +25,9 @@ final class FailedJob extends Model
     /** @var string|null */
     protected $table = 'failed_jobs';
 
+    // The framework migration provides `failed_at` (via useCurrent());
+    // there is no `updated_at` column, so auto-timestamps would mismatch.
     /**
-     * The framework migration provides `failed_at` (filled via
-     * `useCurrent()`); there is no `updated_at` column. Disable
-     * Eloquent's auto-timestamps to avoid the migration mismatch.
-     *
      * @var bool
      */
     public $timestamps = false;

@@ -15,46 +15,7 @@ use RuntimeException;
 use Symfony\Component\Process\Process;
 
 /**
- * Spawns a whitelisted artisan command via the spawn-then-tail
- * architecture: the HTTP request that calls start() returns within
- * milliseconds while the artisan child runs detached and writes
- * stdout/stderr into a per-run tmp file the SSE stream controller
- * tails for the browser.
- *
- * The spawn step:
- *   1. Generates a UUID run_id.
- *   2. Computes outPath = storage/app/dev_mode/runs/{runId}.out via
- *      {@see UserDataPathService::appPath()}. Every storage path
- *      flows through that service so a NativePHP retarget is honoured.
- *   3. Ensures the parent directory exists with mode 0700 (developer-
- *      only). The audit pipeline copies tmp-file contents into the
- *      audit log with redaction; the raw file stays restrictive on
- *      disk regardless.
- *   4. Resolves the CommandSpec via DevCommandRegistry::find() so an
- *      off-whitelist name throws InvalidArgumentException BEFORE a
- *      Process is constructed. NEVER-EXPOSED commands such as
- *      migrate / migrate:rollback / db:seed are absent from the
- *      registry and never reach the shell.
- *   5. Builds a bash invocation that escapes every component via
- *      escapeshellarg, redirects stdout + stderr into the tmp file,
- *      detaches with `&`, and prints `$!` so the parent captures the
- *      child PID. The bash wrapper is the standard pattern for
- *      capturing a backgrounded process's PID; Symfony Process'
- *      built-in start() loses it under shell-redirect detach.
- *   6. Stores (run_id, pid, command, args, started_at,
- *      callerUserId, tier, outPath) in RunRegistry under
- *      dev_mode.run.{runId}.
- *   7. Returns the run_id — the spawning HTTP request returns
- *      immediately because the child is detached.
- *
- * Injection resistance is three guards deep:
- *   - The command name comes from DevCommandRegistry::find();
- *     arbitrary user-supplied names are rejected before assembly.
- *   - Every arg value is wrapped with escapeshellarg before reaching
- *     the shell.
- *   - The controllers validate every arg through Laravel's
- *     validate() against the ArgSpec::$rules list before this method
- *     is reached.
+ * @link ../../../../.docs/features/dev-mode/architecture.md
  */
 final readonly class CommandSpawner
 {
@@ -126,16 +87,10 @@ final readonly class CommandSpawner
         return $runId;
     }
 
+    // Every interpolated value is escapeshellarg'd, including $command
+    // (already whitelist-enforced by find()) for belt-and-braces in case
+    // a future registry entry contains a shell metacharacter.
     /**
-     * Builds the bash command that:
-     *   - Runs `php artisan <cmd> <escaped-args> > <outPath> 2>&1 &`
-     *   - Prints `$!` (the backgrounded child's PID) on stdout.
-     *
-     * Every interpolated value is escapeshellarg'd. The whitelist on
-     * `$command` is already enforced by find(); we still escape it
-     * for belt-and-braces in case a future planner registers a name
-     * with a metacharacter (the registry has no such validation).
-     *
      * @param  array<string, mixed>  $args
      */
     private function buildShellCommand(
@@ -168,15 +123,10 @@ final readonly class CommandSpawner
         return 'bash -c '.escapeshellarg($detach.' echo $!');
     }
 
+    // Positional args come first in $spec->argsSchema order; option args
+    // (name begins with `--`) emit as `--name=value`. Boolean args render
+    // as the literal `--name` flag when truthy, omitted otherwise.
     /**
-     * Flattens the args map into Process tokens. Positional args come
-     * first in the order they appear in `$spec->argsSchema`; option
-     * args (those whose ArgSpec::$name begins with `--`) are emitted
-     * as `--name=value`. Every value passes through escapeshellarg.
-     *
-     * Boolean args render as the literal `--name` flag when truthy,
-     * and omitted otherwise (Laravel's native option semantics).
-     *
      * @param  array<string, mixed>  $args
      * @return list<string>
      */
@@ -227,12 +177,8 @@ final readonly class CommandSpawner
         return [$escaped];
     }
 
-    /**
-     * Executes the bash wrapper in the foreground; the wrapper itself
-     * has already detached the child, so this returns within ms with
-     * the child's PID on stdout. The runs dir is the cwd so any
-     * relative-path argument the command needs resolves predictably.
-     */
+    // The bash wrapper has already detached the child, so this returns
+    // within ms with the child's PID on stdout.
     private function spawnDetached(string $shellCommand): int
     {
         $cwd = UserDataPathService::projectPath();
@@ -257,18 +203,10 @@ final readonly class CommandSpawner
         return (int) $pidLine;
     }
 
-    /**
-     * Create the run-tmp directory walk one level at a time so every
-     * intermediate gets mode 0700, not the default 0755 PHP applies
-     * to mkdir(..., recursive: true) intermediates. A shared host
-     * (multi-user macOS) is the threat model: the per-run UUID
-     * filenames inside the dir are otherwise world-readable through
-     * the parent path even though the individual files are 0600.
-     *
-     * The walk preserves the race-safe `mkdir() || is_dir()` pattern
-     * at every level: two concurrent spawns racing the directory
-     * creation both succeed.
-     */
+    // Walks one level at a time so every intermediate gets mode 0700 (not
+    // PHP's default 0755) — on a shared multi-user host the per-run UUID
+    // filenames would otherwise be world-readable through the parent
+    // path. The mkdir()||is_dir() check keeps concurrent spawns race-safe.
     private function ensureRunsDirectory(string $dir): void
     {
         $parent = dirname($dir);

@@ -18,33 +18,7 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Throwable;
 
 /**
- * `/dev/sql` panel — SELECT-only SQL execution + schema viewer.
- *
- * Defense-in-depth pipeline:
- *
- *   1. {@see SelectOnlyValidator}::validate() — parse-time guard via
- *      doctrine/sql-formatter Tokenizer (the single seam — see the
- *      class PHPDoc + the contract test).
- *   2. {@see ReadOnlySqliteConnection}::execute() — execution-time
- *      guard via PRAGMA query_only = 1 + 5-second WallClockCap.
- *   3. AuditWriter::recordSelectQuery() — every successful query
- *      writes a dev_mode_audit row (AuditEvent::SqlSelect).
- *
- * Gating: the page is gated on Dev Mode ON (the route's
- * EnsureDeveloperMode middleware covers that) + the session-scoped
- * Advanced toggle. When Advanced is OFF the page renders but the
- * Run pathway is short-circuited with a banner directing the
- * operator to flip the toggle. No typed-name modal — the parser +
- * PRAGMA + cap are the actual guard.
- *
- * Schema viewer is an inner sidebar of /dev/sql, NOT a separate
- * route. One page, one Livewire component, one sidebar item.
- * Browse-table reuses the same run() pipeline so the audit-row
- * contract is identical.
- *
- * No constructor — Livewire components never receive constructor DI
- * per the project's larastan-strict-rules profile; collaborators
- * arrive via method-DI on render() / action methods.
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 #[Layout('dev::layouts.dev-shell')]
 final class SqlPanelPage extends Component

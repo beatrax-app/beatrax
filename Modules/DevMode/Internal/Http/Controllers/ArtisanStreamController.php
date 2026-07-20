@@ -17,42 +17,12 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * GET /dev/artisan/stream/{runId} — SSE tail of one run's stdout.
- *
- * Resolves the cached RunRecord via RunRegistry::find() and tails
- * the per-run tmp file with the shared {@see FileTailer} primitive.
- * The loop:
- *   - clearstatcache + fseek + fread up to 65 536 bytes per tick.
- *   - Emit `id: <offset>\ndata: {"line":"..."}\n\n` for each chunk.
- *   - {@see ProcessLiveness::isAlive()} liveness check; if the process
- *     is gone, emit `event: done\ndata: {"exit":...}\n\n` and break.
- *     The helper hides the posix-vs-shell_exec fallback so the loop
- *     stays portable across the dev-box and packaged-app PHP runtimes
- *     (the latter ships without ext-posix).
- *   - usleep(150_000) between ticks (~6.7 ticks/s; well under the
- *     SSE per-event budget).
- *
- * Live-stream reconnect: the browser's EventSource auto-reconnects
- * with the Last-Event-ID header equal to the offset of the last
- * delivered event; this controller honors it (along with a `?from=`
- * query-param fallback for manual tests + the run-card's "show
- * output" affordance). A reconnect that sets the offset to the
- * last-seen byte sees ONLY lines emitted after the reconnect point.
- *
- * Cross-user inspection: the controller rejects with 403 when the
- * requesting developer is not the original spawner. A forged runId
- * still produces 404 (records are unguessable UUIDs).
- *
- * Output buffering: we set X-Accel-Buffering: no and ob_flush() +
- * flush() per emitted chunk so Nginx + PHP-FPM do not buffer the
- * stream into useless silence.
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 final readonly class ArtisanStreamController
 {
-    /** Sleep interval between tail ticks. */
     private const TICK_MICROSECONDS = 150_000;
 
-    /** Maximum wall-clock seconds before the stream gracefully closes. */
     private const STREAM_TIMEOUT_SECONDS = 600;
 
     public function __construct(
@@ -192,13 +162,9 @@ final readonly class ArtisanStreamController
         return $response;
     }
 
-    /**
-     * Resolve the starting byte offset. Browser EventSource sends the
-     * Last-Event-ID header on auto-reconnect; tests + the run-card
-     * "show output" affordance use `?from=` as a manual override.
-     * Default 0 — a fresh subscription replays the whole captured
-     * stdout (the tmp file persists for the 24h cache TTL).
-     */
+    // Browser EventSource sends Last-Event-ID on auto-reconnect; tests +
+    // the run-card "show output" affordance use `?from=` as a manual
+    // override. Default 0 replays the whole captured stdout.
     private function resolveStartOffset(Request $request): int
     {
         $lastEventId = $request->header('Last-Event-ID');

@@ -16,63 +16,22 @@ use Modules\DevMode\Public\Dto\ArgSpec;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
 /**
- * Global arg-prompt modal SFC. Mounted once per layout so the
- * `command-args:prompt` Livewire event can open the modal from
- * anywhere — the command palette, the artisan runner's fallback
- * modal, or a future surface that exposes per-command launchers.
- *
- * Renders a Flux flyout with one input per ArgSpec on the targeted
- * CommandSpec. Field types map to native inputs:
- *
- *   - `text`    → `<input type=text>` with placeholder + helpText
- *   - `boolean` → `<input type=checkbox>` (renders as the literal
- *                 `--name` flag downstream when truthy)
- *   - `select`  → `<select>` populated from `$argSpec->options`
- *
- * Required-arg enforcement is three-layered:
- *
- *   - Submit button disabled (and aria-disabled) in the blade while
- *     any required field is empty — pure UX nicety, surfaces the
- *     gate before the click.
- *   - On submit, the component re-checks required-arg presence
- *     server-side and refuses to dispatch the spawn event with an
- *     in-modal error banner.
- *   - The existing pre-spawn guard in
- *     {@see ArtisanRunnerPage::spawn()}
- *     remains the third line of defense for any caller that
- *     bypasses this modal.
- *
- * Hostile DESTRUCTIVE-tier names that somehow arrive on this event
- * (the palette JSON only exposes SAFE rows) are routed back through
- * `triple-gate:open` rather than spawned — defense-in-depth.
- *
- * Method-DI on listeners + render() per the project's larastan-
- * strict-rules profile (no constructor DI on Livewire Component
- * subclasses).
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 final class CommandArgPromptModal extends Component
 {
-    /** Target command name set by the `command-args:prompt` event. */
     public string $command = '';
 
-    /** Tier claimed by the dispatcher; re-verified against the registry on submit. */
     public string $claimedTier = 'safe';
 
+    // Values arrive as strings (Livewire wire:model binds <input> here);
+    // the spawn-time renderArg() in CommandSpawner handles the typed
+    // conversion downstream.
     /**
-     * The form state — keyed by ArgSpec::$name. Public so Livewire
-     * binds <input wire:model="values.<name>"> reactively. Values
-     * arrive as strings; the spawn-time renderArg() in CommandSpawner
-     * handles the typed conversion downstream.
-     *
      * @var array<string, mixed>
      */
     public array $values = [];
 
-    /**
-     * Form-level error banner. Populated when the submit-time
-     * required-arg re-check trips. Cleared on every open + submit
-     * attempt.
-     */
     public string $submitError = '';
 
     /**

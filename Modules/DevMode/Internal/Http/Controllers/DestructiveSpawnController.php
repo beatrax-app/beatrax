@@ -17,38 +17,10 @@ use Modules\DevMode\Public\Dto\CommandSpec;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
-/**
- * POST /dev/artisan/destructive-spawn — DESTRUCTIVE-tier spawn
- * endpoint.
- *
- * The dedicated entry point for DESTRUCTIVE execution. Separate
- * from the SAFE-tier ArtisanSpawnController (which actively rejects
- * DESTRUCTIVE with 403). TripleGateModal calls this controller
- * AFTER its three-gate sweep passes; this controller re-validates
- * all three gates server-side (defense-in-depth) before reaching
- * the spawner.
- *
- * Three gates re-validated:
- *   1. DevModeFlag->isOn()                                     (env)
- *   2. session('dev_mode.advanced') === true                  (session)
- *   3. request body: confirmed_typed === 'beatrax'
- *      (hash_equals)                                          (typed)
- *
- * If ANY gate fails, the controller throws 403. This is the
- * controller-layer mirror of the TripleGateModal's server-side
- * enforcement; a tampered Livewire payload that somehow bypassed
- * the modal still cannot reach the spawner without passing this
- * sweep.
- *
- * On accept, validates the command name is in the DESTRUCTIVE
- * allow-list + validates args against ArgSpec::rules (same
- * three-guard shell-injection discipline as the safe spawner) +
- * calls CommandSpawner::start($command, $args, $userId,
- * 'destructive').
- *
- * Returns {run_id, pid} with HTTP 202 — same shape as the SAFE
- * controller so the runner UI consumes both pathways identically.
- */
+// The dedicated DESTRUCTIVE-tier execution entry point (separate from
+// the SAFE-tier ArtisanSpawnController, which rejects DESTRUCTIVE with
+// 403). Re-validates all three TripleGateModal gates server-side, so a
+// tampered Livewire payload still cannot reach the spawner without them.
 final readonly class DestructiveSpawnController
 {
     public function __construct(

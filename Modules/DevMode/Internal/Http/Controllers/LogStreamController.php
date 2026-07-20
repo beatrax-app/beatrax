@@ -15,46 +15,10 @@ use Modules\DevMode\Internal\Process\FileTailer;
 use SplFileObject;
 
 /**
- * GET /dev/logs/poll — single-shot JSON read of any new bytes in the
- * current daily-rolling Laravel log file
- * (storage/logs/laravel-YYYY-MM-DD.log) past the byte offset the
- * client passes in `?since=`. Defense-in-depth re-applies the
- * {@see RedactSecretsProcessor} to every returned chunk; the on-write
- * Monolog tap is the first layer.
- *
- * Returns immediately (~5-50 ms typical) so the single-threaded PHP
- * built-in server NativePHP uses can move on to the next request.
- * The earlier SSE implementation held the server's only worker for
- * up to STREAM_TIMEOUT_SECONDS, which stalled every other in-app
- * navigation (sidebar clicks, image loads, image preloads) until the
- * stream returned. The client now polls this endpoint every second
- * instead — same perceived UX (~1 s latency for new lines) with no
- * blast-radius on the rest of the app.
- *
- * Rotation detection:
- *   - The response includes the file's current inode. The client
- *     persists that inode across polls; the next request passes it
- *     back in `?inode=`.
- *   - An inode change between the client's last value and the
- *     current file is treated as a rotation: the response sets
- *     `reset = true` and the chunk is read from offset 0.
- *   - A `?since` that lies beyond the current file size is also
- *     treated as a rotation (logrotate copytruncate, day rollover).
- *
- * Path safety: the log file path is computed from
- * {@see UserDataPathService::dailyLogFile()} which respects the
- * NATIVEPHP_STORAGE_PATH retarget AND has no user-controlled input
- * — no LFI surface.
- *
- * GET /dev/logs/context — paired JSON endpoint that returns the
- * ±radius lines surrounding the given absolute line offset
- * (click-to-expand). Offset is clamped to the file's valid line
- * range; radius is clamped 0..MAX_CONTEXT_RADIUS. Same redaction
- * is re-applied to every returned line.
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 final readonly class LogStreamController
 {
-    /** Maximum radius for the context endpoint (bounds a hostile ?radius=). */
     private const MAX_CONTEXT_RADIUS = 50;
 
     public function __construct(
@@ -64,11 +28,9 @@ final readonly class LogStreamController
         private LogFileStats $stats,
     ) {}
 
-    /**
-     * Single-shot poll: read any new bytes past `?since=` (with
-     * rotation detection via `?inode=`), apply redaction, return JSON.
-     * No streaming; no long-running PHP process.
-     */
+    // Single-shot poll: read new bytes past `?since=` (with rotation
+    // detection via `?inode=`), apply redaction, return JSON — no
+    // streaming, no long-running PHP process.
     public function poll(Request $request): JsonResponse
     {
         $payload = $this->validator->make(
@@ -119,14 +81,9 @@ final readonly class LogStreamController
         ]);
     }
 
-    /**
-     * GET /dev/logs/context?date=YYYY-MM-DD&line=N&radius=10
-     *
-     * Returns the requested line and ±radius surrounding lines from
-     * the daily log for the requested date. `radius` clamps to
-     * [0, MAX_CONTEXT_RADIUS]; `line` clamps to [0, lineCount-1] via
-     * SplFileObject natural EOF semantics — no LFI surface.
-     */
+    // Returns the requested line and +/-radius surrounding lines from
+    // the daily log for the requested date; `line` clamps to
+    // [0, lineCount-1] via SplFileObject natural EOF semantics.
     public function context(Request $request): JsonResponse
     {
         $payload = $this->validator->make(
@@ -203,13 +160,9 @@ final readonly class LogStreamController
         ]);
     }
 
-    /**
-     * GET /dev/logs/stats — counts per severity + totals + sizes for
-     * the Log Tailer's chip labels and bottom-strip readout. The page
-     * polls this on a slower cadence (3s) than the main 1s tail poll
-     * so the O(N) file parse cost only fires when the operator is
-     * looking — never per byte.
-     */
+    // The page polls this on a slower cadence (3s) than the main 1s
+    // tail poll so the O(N) file parse cost only fires when the
+    // operator is looking.
     public function stats(): JsonResponse
     {
         $today = $this->stats->forToday();
@@ -232,9 +185,6 @@ final readonly class LogStreamController
         ]);
     }
 
-    /**
-     * Return the file's inode, or null if the file does not exist.
-     */
     private static function inodeOf(string $path): ?int
     {
         clearstatcache(true, $path);
@@ -249,9 +199,6 @@ final readonly class LogStreamController
         return $stat['ino'];
     }
 
-    /**
-     * Return the file's size, or null if the file does not exist.
-     */
     private static function sizeOf(string $path): ?int
     {
         clearstatcache(true, $path);

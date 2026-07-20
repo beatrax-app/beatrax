@@ -7,24 +7,10 @@ namespace Modules\DevMode\Internal\Navigation;
 use Modules\DevMode\Public\Contracts\NavigationRegistry;
 use Modules\DevMode\Public\Dto\NavigationEntry;
 
-/**
- * Concrete NavigationRegistry.
- *
- * Holds the curated list of authenticated app views the command
- * palette can jump to. Built as a final readonly class so the
- * roster is immutable once the singleton resolves — the binding
- * factory inside DevModeServiceProvider::register() passes the full
- * list of NavigationEntry rows (every authenticated nav surface
- * the app exposes, plus the Dev Console sub-routes). Dev rows are
- * tagged with the `dev.` route-name prefix in their id so the
- * palette modal can filter them at JSON-emit time by `is_developer`.
- *
- * Follows the same shape as the concrete-registry wrapper pattern
- * used elsewhere in the codebase: a single immutable list with
- * `all()` as the read accessor. A register() mutator is omitted; if
- * a future cross-module flow needs to register at runtime, swap to
- * a non-readonly variant + a list-accumulating method.
- */
+// Immutable once the singleton resolves — the binding factory inside
+// DevModeServiceProvider::register() passes the full NavigationEntry
+// list. Dev rows are tagged with the `dev.` route-name prefix in their
+// id so the palette modal can filter them at JSON-emit time.
 final readonly class NavigationRegistryImpl implements NavigationRegistry
 {
     /** @var list<NavigationEntry> */

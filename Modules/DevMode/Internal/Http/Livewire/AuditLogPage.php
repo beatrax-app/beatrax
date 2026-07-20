@@ -12,19 +12,10 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-/**
- * `/dev/audit` audit-log page.
- *
- * Lists the most recent dev_mode_audit rows filtered by tier /
- * caller / command, with ?before=<id> cursor pagination for walking
- * back through history. Filters persist via #[Url] for back-button
- * + bookmarks.
- *
- * Table columns:
- *   command (mono) · tier chip · caller username · started_at
- *   diffForHumans · exit_code (rose if non-zero). Hover expands
- *   the row to show stdout/stderr excerpts + args JSON.
- */
+// Lists the most recent dev_mode_audit rows filtered by tier/caller/
+// command, with ?before=<id> cursor pagination. Table columns: command
+// (mono), tier chip, caller username, started_at, exit_code (rose if
+// non-zero); hover expands to show stdout/stderr excerpts + args JSON.
 #[Layout('dev::layouts.dev-shell')]
 final class AuditLogPage extends Component
 {
@@ -37,17 +28,12 @@ final class AuditLogPage extends Component
     #[Url(as: 'command', except: '')]
     public string $commandFilter = '';
 
-    /**
-     * Cursor for backward (older) pagination. When non-null the
-     * render() query is constrained to rows whose id is strictly less
-     * than this value, so successive Older clicks walk backward
-     * through the full audit history without skipping rows that
-     * arrive between requests.
-     */
+    // When non-null, render() constrains rows to id strictly less than
+    // this value, so successive Older clicks walk backward through the
+    // full audit history without skipping rows arriving between requests.
     #[Url(as: 'before', except: null)]
     public ?int $before = null;
 
-    /** Page size — kept in sync with the rendered row count. */
     public const PAGE_SIZE = 50;
 
     public function clearFilters(): void
@@ -58,27 +44,10 @@ final class AuditLogPage extends Component
         $this->before = null;
     }
 
-    /**
-     * Truncate every row from the dev_mode_audit table.
-     *
-     * Wired to the page-level "Clear all" button. The button uses
-     * Alpine `x-on:click` with a `confirm()` gate so the destructive
-     * action never fires from a stray click; this server-side handler
-     * unconditionally executes the truncate when called, trusting the
-     * confirm dialog as the user-facing speed bump.
-     *
-     * Cursor + filter state reset to defaults so the next render shows
-     * the empty-state copy instead of a stale "Older" pager link
-     * pointing at an id that no longer exists.
-     *
-     * Cross-user scope: dev_mode_audit is a shared operational audit
-     * surface (every developer's commands land in the same table); the
-     * /dev/audit page itself is gated by `ensureDeveloperMode`, so only
-     * users with `is_developer = true` reach this surface in the first
-     * place. The truncate intentionally wipes all rows for every
-     * developer — this matches the "Clear all" copy and the user-stated
-     * intent of starting fresh.
-     */
+    // Wired to the "Clear all" button, whose Alpine confirm() gate is
+    // the user-facing speed bump; this handler unconditionally truncates
+    // every developer's rows (dev_mode_audit is shared across all of
+    // them), matching the "Clear all" copy's stated intent.
     public function truncateAll(DatabaseManager $db): void
     {
         $db->connection()->table('dev_mode_audit')->delete();
@@ -89,12 +58,9 @@ final class AuditLogPage extends Component
         $this->before = null;
     }
 
-    /**
-     * Walk one page older by pinning the cursor to the smallest id on
-     * the currently-rendered page. Each click emits a fresh
-     * ?before=<id> URL via the #[Url] binding so the back button
-     * walks the operator forward through the timeline.
-     */
+    // Pins the cursor to the smallest id on the currently-rendered page;
+    // each click emits a fresh ?before=<id> URL so the back button walks
+    // the operator forward through the timeline.
     public function older(int $oldestRenderedId): void
     {
         if ($oldestRenderedId > 0) {
@@ -102,10 +68,8 @@ final class AuditLogPage extends Component
         }
     }
 
-    /**
-     * Walk back to the newest page. Drops the cursor entirely so
-     * render() returns the live top-of-history slice.
-     */
+    // Drops the cursor entirely so render() returns the live
+    // top-of-history slice.
     public function newer(): void
     {
         $this->before = null;

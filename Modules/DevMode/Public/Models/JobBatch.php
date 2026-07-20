@@ -6,19 +6,11 @@ namespace Modules\DevMode\Public\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+// Read-only for Dev Console consumers, one row per dispatched batch
+// (Bus::batch(...)). Writes flow through Illuminate\Bus\BatchRepository
+// injected directly into QueueActions via DI — no facade. The `id`
+// column is a string UUID, so this model overrides the int key type.
 /**
- * Eloquent model for the framework-managed `job_batches` table — one
- * row per dispatched batch (Bus::batch(...) factory).
- *
- * Read-only for Dev Console consumers. Batches in this app are
- * rare today, but the queue inspector exposes cancel /
- * retry-failures / delete affordances so a developer can act on an
- * active batch. Writes flow through Illuminate\\Bus\\BatchRepository
- * injected directly into QueueActions via DI — no facade.
- *
- * The `id` column is a string UUID (primary key); this model overrides
- * the conventional `int` key type.
- *
  * @property string $id
  * @property string $name
  * @property int $total_jobs
@@ -35,10 +27,9 @@ final class JobBatch extends Model
     /** @var string|null */
     protected $table = 'job_batches';
 
+    // The framework writes UUIDs into `id`; suppress Eloquent's
+    // auto-increment expectation.
     /**
-     * The framework writes UUIDs into `id`; suppress Eloquent's
-     * auto-increment expectation.
-     *
      * @var bool
      */
     public $incrementing = false;
@@ -46,10 +37,9 @@ final class JobBatch extends Model
     /** @var string */
     protected $keyType = 'string';
 
+    // Unix-timestamp int columns + JSON columns are written directly by
+    // BatchRepository; Eloquent's auto-managed timestamps don't apply.
     /**
-     * Unix-timestamp int columns + JSON columns are written directly by
-     * BatchRepository; Eloquent's auto-managed timestamps don't apply.
-     *
      * @var bool
      */
     public $timestamps = false;

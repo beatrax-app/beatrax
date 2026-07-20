@@ -15,31 +15,10 @@ use Modules\DevMode\Public\Contracts\AuditWriter;
 use Spatie\Activitylog\Support\ActivityLogger;
 
 /**
- * Concrete AuditWriter that routes every Dev Console audit row
- * through spatie/laravel-activitylog ^5.0 into the dev_mode_audit
- * table. Bound to the AuditWriter contract in DevModeServiceProvider.
- *
- * Constructor DI on:
- *   - CurrentUser           — read the caller for causedBy().
- *   - Clock                 — present-day default for null finishedAt.
- *   - RedactionExcerptCap   — OAuth scrub-set + Bearer + JWT scrub +
- *                             byte cap on every excerpt that lands in
- *                             the `properties` JSON.
- *   - ActivityLogger        — Spatie's bindable logger. The project's
- *                             DI-only rule forbids the activity()
- *                             global helper.
- *
- * Audit row shape — every recordCommandRun() write:
- *   - log_name    = 'dev_mode' (set in config/activitylog.php).
- *   - description = AuditEvent::CommandExecuted->value (taxonomy is
- *                   enum-locked, never a free-form string).
- *   - causer      = the authenticated developer (or callerUserId).
- *   - properties  = {command, args, tier, exit_code, stdout_excerpt,
- *                    error_excerpt, started_at, finished_at, cancelled}.
+ * @link ../../../../.docs/features/dev-mode/architecture.md
  */
 final readonly class SpatieAuditWriter implements AuditWriter
 {
-    /** Custom dev_mode_audit table the package migration creates. */
     private const AUDIT_TABLE = 'dev_mode_audit';
 
     public function __construct(
@@ -174,12 +153,10 @@ final readonly class SpatieAuditWriter implements AuditWriter
         ]);
     }
 
+    // causedBy() accepts the model OR a raw id; prefer the model when the
+    // caller equals the authenticated user so the polymorphic causer
+    // relation resolves directly, otherwise fall back to the integer id.
     /**
-     * Compose the spatie pipeline. `causedBy()` accepts the model OR a
-     * raw id; we prefer the model when the caller user equals the
-     * authenticated user so the polymorphic causer relation resolves
-     * directly, otherwise fall back to the integer id.
-     *
      * @param  array<string, mixed>  $properties
      */
     private function dispatch(AuditEvent $event, int $callerUserId, array $properties): void
@@ -197,14 +174,9 @@ final readonly class SpatieAuditWriter implements AuditWriter
         $logger->log($event->value);
     }
 
-    /**
-     * Returns the User model for the caller. Prefers the authenticated
-     * user when ids match; otherwise looks up the user by id. Returns
-     * null when no matching user exists so spatie's causerResolver
-     * doesn't blow up on a synthetic id (test fixtures, deleted-user
-     * audit rows) — a missing causer is preferable to losing the
-     * audit row entirely.
-     */
+    // Returns null when no matching user exists so spatie's
+    // causerResolver doesn't blow up on a synthetic id (test fixtures,
+    // deleted-user rows) — a missing causer beats losing the audit row.
     private function resolveCauser(int $callerUserId): ?User
     {
         try {

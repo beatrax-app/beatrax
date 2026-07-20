@@ -8,26 +8,10 @@ use Illuminate\Console\Command;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DevMode\Internal\Audit\DevModeActivity;
 
-/**
- * `php artisan beatrax:prune-dev-audit --older-than=Nd` — manual
- * prune of dev_mode_audit rows older than N days.
- *
- * The project policy is "History: full history retained forever" so
- * this command is NOT scheduled. It exists for the operator's
- * manual use only — e.g. after a one-off noisy test that generated
- * thousands of rows.
- *
- * Tier: SAFE — listed in CommandRegistry so the runner's fallback
- * modal can surface it. Any cleanup over the dev_mode surface is
- * SAFE because the runner already gates on the developer role.
- *
- * Validation:
- *   - `--older-than` is required (no default — operator must opt in).
- *   - Must be a positive integer.
- *
- * Deletes via the spatie Activity model's Eloquent query so the
- * dev_mode_audit table override resolves correctly.
- */
+// Manual-only prune (never scheduled — history is retained forever by
+// project policy); SAFE tier since the runner already gates on the
+// developer role. `--older-than` is required, no default, so the
+// operator must explicitly opt in to a cutoff.
 final class PruneDevAuditCommand extends Command
 {
     /** @var string */

@@ -25,37 +25,11 @@ use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
 
 /**
- * `/dev/artisan` runner page.
- *
- * Page composition:
- *   - Header: "Artisan runner" title + primary "⌘K Run a command"
- *     CTA (dispatches `palette:open`).
- *   - Filter chips row: All | Running | Failed | Destructive
- *     (persisted via #[Url] query string for back-button +
- *     bookmarks).
- *   - Worker pre-flight pill: reads cache
- *     `dev_mode.queue_worker_heartbeat` and shows green when fresh
- *     (< now()-60s), muted otherwise.
- *   - Day-section timeline of run-cards.
- *   - Fallback Flux modal exposing SAFE-tier commands ONLY.
- *     DESTRUCTIVE commands are deliberately NOT exposed here to
- *     prevent muscle-memory disasters; first-time DESTRUCTIVE runs
- *     reach the surface via the palette or `php artisan` CLI,
- *     subsequent runs via the timeline's per-row Re-run affordance
- *     which routes through the triple-gate.
- *
- * Method-DI on render() and on the spawn() / rerun() action
- * methods — Livewire components never receive constructor DI per
- * the project's larastan-strict-rules profile.
- *
- * mount() resets `dev_mode.advanced` on first-load-per-session as
- * a belt-and-braces alongside ResetAdvancedToggleOnLogin (see
- * mount()'s inline docblock for the precise gap it covers).
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 #[Layout('dev::layouts.dev-shell')]
 final class ArtisanRunnerPage extends Component
 {
-    /** Filter chip: all | running | failed | destructive. */
     #[Url(as: 'filter', except: 'all')]
     public string $filter = 'all';
 
@@ -91,16 +65,11 @@ final class ArtisanRunnerPage extends Component
         $this->filter = $filter;
     }
 
+    // Looks the command up in the registry, routes DESTRUCTIVE rows to
+    // the triple-gate (defense-in-depth — a hostile client could still
+    // POST a destructive name even though the fallback modal excludes
+    // them), and otherwise spawns the SAFE command directly.
     /**
-     * Fallback-modal SAFE-tier spawn entry point.
-     *
-     * The Blade emits `wire:click="spawn('cache:clear', {})"` for each
-     * SAFE-tier row. This method looks the command up in the registry,
-     * routes DESTRUCTIVE rows to the triple-gate (defense-in-depth —
-     * the registry filter already excludes them from the fallback
-     * modal, but a hostile client could still POST a destructive name),
-     * and otherwise spawns the SAFE command directly.
-     *
      * @param  array<string, mixed>  $args
      */
     public function spawn(
@@ -148,9 +117,6 @@ final class ArtisanRunnerPage extends Component
     }
 
     /**
-     * Return the list of arg labels whose `rules` contain 'required'
-     * and whose value is missing or empty in the supplied args map.
-     *
      * @param  list<ArgSpec>  $schema
      * @param  array<string, mixed>  $args
      * @return list<string>
@@ -171,29 +137,11 @@ final class ArtisanRunnerPage extends Component
         return $missing;
     }
 
+    // Browser-event sink for palette-driven spawns while already on
+    // /dev/artisan (the off-page path routes through mount()'s
+    // ?spawn=<name> instead). Routes through spawn() so the
+    // SAFE-vs-DESTRUCTIVE registry check stays in one place.
     /**
-     * Browser-event sink for palette-driven spawns.
-     *
-     * When the operator is already on /dev/artisan and picks a
-     * SAFE-tier command from the command palette, the client-side
-     * `palette()` Alpine factory in `resources/js/palette.js`
-     * dispatches the `spawn-command` Livewire event with the
-     * resolved name + args + tier. Before this listener existed,
-     * that dispatch had no sink — the palette modal closed and
-     * nothing happened (the user-visible symptom: "executing an
-     * artisan command does nothing, just quits the modal"). The
-     * off-page fallback path (window.location.href to
-     * /dev/artisan?spawn=<name>) routed through mount(), which is
-     * why running the same command from the doctor screen or a
-     * cold-load to /dev/artisan worked while on-page picks did
-     * not.
-     *
-     * Routes through spawn() so the SAFE-vs-DESTRUCTIVE registry
-     * check + the toast-on-unknown path stay in one place. The
-     * payload's `args` and `tier` are reserved for future palette
-     * shapes that pre-fill an arg form — today the palette only
-     * dispatches SAFE-tier names with no args.
-     *
      * @param  array<string, mixed>  $args
      */
     #[On('spawn-command')]
@@ -214,16 +162,10 @@ final class ArtisanRunnerPage extends Component
         $this->spawn($name, $args, $spawner, $user, $registry);
     }
 
-    /**
-     * Per-row Re-run entry point.
-     *
-     * The audit-log row's id maps 1:1 to a RunRegistry record. A
-     * destructive re-run pops the triple-gate carrying the original
-     * command + args so the operator confirms again; a safe re-run
-     * spawns immediately. Unknown / expired records (24h cache TTL)
-     * silently no-op — the row is still visible on the timeline as a
-     * historical entry but the cache no longer has the spawn payload.
-     */
+    // A destructive re-run pops the triple-gate carrying the original
+    // command + args; a safe re-run spawns immediately. Unknown/expired
+    // records (24h cache TTL) silently no-op — the row stays visible as
+    // history but the cache no longer has the spawn payload.
     public function rerun(
         string $runId,
         RunRegistry $registry,
@@ -363,20 +305,10 @@ final class ArtisanRunnerPage extends Component
         ]);
     }
 
-    /**
-     * Walk pending audit rows (eager-write rows whose finish columns
-     * are still empty) for the current user and finalize any whose
-     * underlying child process has already exited. Caps at 25 rows
-     * per render so a pathological state never blows the budget.
-     *
-     * The lookup matches by `properties.run_id` (the UUID
-     * CommandSpawner generates), which RunRegistry stores under the
-     * same key. A row whose RunRegistry entry has TTL'd (>24h)
-     * stays pending in the timeline — the sweep cannot finalize what
-     * it has no PID for. That degenerates gracefully into "running"
-     * UI for a stale row, which is preferable to silently writing a
-     * finish marker we can't justify.
-     */
+    // Caps at 25 rows per render. A row whose RunRegistry entry has
+    // TTL'd (>24h) stays pending in the timeline — the sweep cannot
+    // finalize what it has no PID for, so it degenerates gracefully
+    // into "running" UI rather than writing an unjustified finish marker.
     private function sweepPendingRuns(
         DatabaseManager $db,
         int $userId,

@@ -17,28 +17,7 @@ use Modules\DevMode\Internal\System\ConfigFlattener;
 use Throwable;
 
 /**
- * `/dev/system` env + effective-config snapshot.
- *
- * Renders the full operational fact sheet a developer needs when
- * debugging install state:
- *
- *   - PHP: version / sapi / php.ini path / extension list.
- *   - SQLite: 4 key PRAGMAs (journal_mode, synchronous, cache_size,
- *     page_size) + DB file path via
- *     {@see UserDataPathService::databaseFile()} + file size
- *     (best-effort).
- *   - Laravel: version, env, debug, locale, timezone.
- *   - Paths: base / app / storage / config / cache.
- *   - Env: filtered to BEATRAX_*, NATIVEPHP_*, APP_KEY — passed
- *     through {@see ConfigFlattener::redactSecretSuffixes()} so
- *     APP_KEY masks while BEATRAX_DEV_MODE renders plainly.
- *   - Runtime: NativePHP version (if installed) via
- *     InstalledVersions::getPrettyVersion(); host OS via php_uname.
- *   - Effective config: config()->all() → flatten + redact via the
- *     same denylist.
- *
- * Method-DI on render() — Livewire components never receive
- * constructor DI per the project's larastan-strict-rules profile.
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 #[Layout('dev::layouts.dev-shell')]
 final class SystemSnapshotPage extends Component
@@ -151,13 +130,10 @@ final class SystemSnapshotPage extends Component
         ];
     }
 
+    // Routes through UserDataPathService (never base_path()/storage_path()
+    // directly) so the raw-path-helpers-outside-the-service-only arch
+    // invariant stays clean.
     /**
-     * Path facts route through {@see UserDataPathService} so the
-     * arch invariant (raw-path-helpers-outside-the-service-only) stays
-     * clean. The 'base' / 'storage' / 'config' tokens are derived
-     * from the storage root (NATIVEPHP_STORAGE_PATH-aware) or the
-     * project root, never via base_path() / storage_path() directly.
-     *
      * @return array<string, string>
      */
     private function pathFacts(): array
@@ -172,11 +148,9 @@ final class SystemSnapshotPage extends Component
         ];
     }
 
+    // Other env vars are intentionally excluded — the snapshot is the
+    // project's operational facts, not a full environment dump.
     /**
-     * Collect every BEATRAX_* / NATIVEPHP_* / APP_KEY env var. Other
-     * env vars are intentionally excluded — the snapshot is the
-     * project's operational facts, not a full environment dump.
-     *
      * @return array<string, string>
      */
     private function envFacts(): array

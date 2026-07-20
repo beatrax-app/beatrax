@@ -8,15 +8,9 @@ use InvalidArgumentException;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 
-/**
- * Null-shape DevCommandRegistry concrete.
- *
- * Returns empty SAFE and DESTRUCTIVE lists; find($name) always
- * throws. Exists as a fallback so consumer code can resolve the
- * contract from the container without bound() guards when the real
- * roster (DevModeServiceProvider's CommandRegistry binding) has not
- * been wired — e.g. in ad-hoc unit tests.
- */
+// Fallback so consumer code can resolve the contract without bound()
+// guards when the real CommandRegistry binding has not been wired
+// (ad-hoc tests); find($name) always throws.
 final class NullDevCommandRegistry implements DevCommandRegistry
 {
     /**

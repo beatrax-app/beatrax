@@ -63,36 +63,7 @@ use Modules\EmailScan\Models\OAuthSecret;
 use Spatie\Activitylog\Support\ActivityLogger;
 
 /**
- * Wires the DevMode module.
- *
- * register() binds the four Public contracts to their runtime
- * concretes:
- *
- *   - DevCommandRegistry → CommandRegistry — hard-coded SAFE +
- *     DESTRUCTIVE allow-lists; NEVER-EXPOSED commands (migrate,
- *     migrate:rollback, db:seed) are deliberately absent.
- *   - NavigationRegistry → NavigationRegistryImpl — every
- *     authenticated nav surface + the Dev Console sub-routes; dev
- *     rows filtered at JSON-emit time by `is_developer`.
- *   - AppActionRegistry → AppActionRegistryImpl — the curated list
- *     of named app actions the command palette can fire.
- *   - AuditWriter → SpatieAuditWriter — routes audit rows through
- *     spatie/laravel-activitylog into the dev_mode_audit table.
- *
- * Default null shapes for the registry contracts (NullAppActionRegistry,
- * NullDevCommandRegistry, NullNavigationRegistry, NullAuditWriter) are
- * available as fallbacks for ad-hoc unit tests that don't boot the
- * full provider.
- *
- * boot() registers the `ensureDeveloperMode` middleware alias (the
- * sole gate on `/dev/*`), loads the module's migrations + routes +
- * views, registers the dev-shell-mounted Livewire components, and
- * conditionally registers the Horizon iframe route when both
- * config('app.dev_mode') is true AND the Horizon package's
- * ServiceProvider class is present.
- *
- * No facade calls anywhere in this provider; the Router and Config
- * collaborators are method-injected via the framework's container.
+ * @link ../../../.docs/features/dev-mode/architecture.md
  */
 final class DevModeServiceProvider extends ServiceProvider
 {
@@ -312,15 +283,10 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(NavigationRegistry::class, static function (Application $app): NavigationRegistryImpl {
             $router = $app->make(Router::class);
 
-            /**
-             * Resolve a route name to a relative URL, or null when the
-             * route is absent in the current bundle (Horizon iframe,
-             * optional sub-features). Catches Laravel's
-             * RouteNotFoundException so the registry stays well-defined
-             * across every load order — tests that boot the framework
-             * without the full DevMode route group still receive the
-             * main-app entries.
-             */
+            // Resolves a route name to a relative URL, or null when the
+            // route is absent in the current bundle (Horizon iframe,
+            // optional sub-features), so the registry stays well-defined
+            // across every load order.
             $resolve = static function (string $name) use ($router): ?string {
                 if (! $router->getRoutes()->hasNamedRoute($name)) {
                     return null;

@@ -19,54 +19,17 @@ use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 
 /**
- * Dev Console overview page.
- *
- * Primary visual anchor: the theme-locked dark `.console-pane`
- * (fixed #0b1220 bg / #f1f5f9 text regardless of theme).
- * Three-column head:
- *   - Worker heartbeat (read from cache key
- *     {@see WriteWorkerHeartbeat::CACHE_KEY}, rendered as
- *     "Ns ago · ttl 60s" when fresh; "NOT RUNNING" when stale or
- *     missing).
- *   - Queue counts (pending / failed / active batches via raw query
- *     builder; the rendering Blade uses the same data-testid
- *     markers downstream tests assert against).
- *   - Last command (most recent dev_mode_audit row, mono rendering).
- *
- * Console-pane tail: the last {@see RECENT_LOG_ENTRIES_LIMIT}
- * structured entries from today's rolling daily log file, parsed by
- * {@see RecentLogEntriesReader} (continuation lines fold into the
- * preceding entry; messages scrubbed by the same
- * RedactSecretsProcessor the on-write Monolog tap + on-stream log
- * tailer apply). Each row links to /dev/logs pre-filtered to the
- * row's severity + first words of the message.
- *
- * Recent-runs card: the calling developer's last 5 dev_mode_audit
- * rows; each row's link href encodes `?command=<encoded>` so a
- * click jumps to /dev/audit pre-filtered to the command in
- * question.
- *
- * Open-alerts card: SystemAlertQuery::active() against the current
- * user — un-acknowledged system_alerts rows scoped to the
- * caller-or-system-wide cohort.
- *
- * No constructor — Livewire components never receive constructor
- * DI per the project's larastan-strict-rules profile; collaborators
- * arrive as method-DI on render().
+ * @link ../../../../../.docs/features/dev-mode/architecture.md
  */
 #[Layout('dev::layouts.dev-shell')]
 final class DevOverviewPage extends Component
 {
-    /** Empty-state copy for the recent-runs rail. */
     private const string RECENT_RUNS_EMPTY = 'No runs yet. Press ⌘K to run a command.';
 
-    /** Empty-state copy for the open-alerts rail. */
     private const string OPEN_ALERTS_EMPTY = 'No open alerts.';
 
-    /** Recent log entries cap — 5 rows on the console-pane tail. */
     private const int RECENT_LOG_ENTRIES_LIMIT = 5;
 
-    /** Recent-runs cap — 5 rows on the rail. */
     private const int RECENT_RUNS_LIMIT = 5;
 
     public function render(
@@ -94,10 +57,6 @@ final class DevOverviewPage extends Component
     }
 
     /**
-     * Heartbeat reader. Returns either a "Ns ago · ttl 60s" string
-     * (cache populated + timestamp parseable) or null (cache empty,
-     * stale, or unparseable — the Blade renders the NOT RUNNING pill).
-     *
      * @return array{label: string, secondsAgo: ?int}
      */
     private function resolveWorkerHeartbeat(CacheRepository $cache, CarbonImmutable $now): array
@@ -119,9 +78,6 @@ final class DevOverviewPage extends Component
     }
 
     /**
-     * Queue depth counts via the raw query builder (matches the
-     * shape QueueInspectorPage uses for larastan-strict compatibility).
-     *
      * @return array{pending: int, failed: int, batches: int}
      */
     private function resolveQueueCounts(DatabaseManager $db): array
@@ -136,10 +92,8 @@ final class DevOverviewPage extends Component
         ];
     }
 
-    /**
-     * Latest dev_mode_audit row (any user) — surfaces the "last
-     * command" cell of the console-pane head.
-     */
+    // Latest dev_mode_audit row (any user) — surfaces the "last command"
+    // cell of the console-pane head.
     private function resolveLastCommand(DatabaseManager $db): ?string
     {
         $row = $db->connection()->table('dev_mode_audit')
@@ -180,11 +134,9 @@ final class DevOverviewPage extends Component
         return $normalised;
     }
 
+    // The rendered link href encodes ?command=<urlencoded> so clicks
+    // navigate to /dev/audit pre-scoped.
     /**
-     * Last 5 dev_mode_audit rows belonging to the calling developer.
-     * The rendered link href encodes the `?command=<urlencoded>` query
-     * pre-filter so clicks navigate to /dev/audit pre-scoped.
-     *
      * @return list<array{command: string, tier: string, exitCode: ?int, createdAt: ?string, href: string}>
      */
     private function resolveRecentRuns(DatabaseManager $db, User $user): array
