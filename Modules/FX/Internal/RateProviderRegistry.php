@@ -11,23 +11,7 @@ use Modules\FX\Public\Exceptions\AllProvidersFailed;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
 /**
- * Priority-ordered rate provider registry with a simple cache-backed circuit-breaker.
- *
- * Mirrors `Modules\Receipts\Internal\MatcherRegistry` exactly:
- *  - `private readonly array $providers` sorted by `priority()` DESC at injection time.
- *  - `supportedKeys()` mirrors the Receipts pattern verbatim.
- *  - `fetchCurrentRates()` replaces `dispatch()` and annotates the result with
- *    the winning provider's key.
- *
- * Circuit-breaker (D-05):
- *  - Each provider's failure count is persisted in the Laravel cache under the key
- *    `fx.circuit.{key}.failures`.
- *  - A provider with >= 3 cached failures is skipped (circuit open) for 6 hours.
- *  - On success the counter is reset (circuit closed).
- *
- * If every provider in the chain fails (or is circuit-open), `AllProvidersFailed`
- * is thrown. Callers that need a safe result should catch it and fall back to the
- * passthrough / original-currency path (D-07).
+ * @link ../../../.docs/features/fx/architecture.md
  */
 final class RateProviderRegistry
 {
@@ -40,9 +24,6 @@ final class RateProviderRegistry
     ) {}
 
     /**
-     * Try each provider in priority order, skipping those whose circuit is open.
-     * Returns the first successful result annotated with the provider's key.
-     *
      * @return array{date: string, rates: array<string, string>, provider: string}
      *
      * @throws AllProvidersFailed when every provider is exhausted or circuit-broken.
@@ -98,7 +79,6 @@ final class RateProviderRegistry
         $current = self::toInt($this->cache->get($cacheKey, 0));
 
         if ($current === 0) {
-            // First failure in this window — anchor the 6h circuit window here.
             $this->cache->put($cacheKey, 1, CarbonImmutable::now()->addHours(6));
 
             return;
