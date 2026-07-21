@@ -42,6 +42,27 @@ What the module explicitly does NOT do:
   from `Import`, `MerchantNameResolver` from `Import`. The resolver is
   the orchestrator, not the matcher set.
 
+## Data model notes
+
+The allowed `type` values (`merchant`, `personal`, `bank`, `government`,
+`self_account`, `unknown`) are enforced by paired BEFORE INSERT / BEFORE
+UPDATE OF type triggers on the `counterparties` table, so a typo in the
+application layer fails loud at the DB boundary rather than landing a
+silently-broken row. `self_account` is part of the trigger set even
+though the resolver never actually writes a row of that type. The
+`metadata` JSON cast carries per-type opaque payload (e.g. the
+`subcategory => 'fee'` flag on bank-fee rows, bridge provenance on
+known-counterparty-IBAN rows) so type-aware profile pages render
+without a second lookup.
+
+Cross-user defense in depth: every production read/write carries an
+explicit `where('user_id', ...)` filter through the raw query builder.
+The `BelongsToUser` global scope on the `Counterparty` model is a
+secondary guard that only fires when an Eloquent query reaches the
+model inside an HTTP-bound request — it does not fire under queue
+workers, console commands, or model-factory paths. Any new query path
+must carry its own explicit filter regardless of the trait.
+
 ## Module boundary
 
 `Public/` exposes the cross-module surface:
@@ -84,6 +105,14 @@ The per-module arch invariant `noReachIntoCounterpartiesInternal`
 forbids any other module from importing
 `Modules\Counterparties\Internal\*`.
 
+`CounterpartiesServiceProvider` binds both Public contracts as
+singletons, loads migrations + the `counterparties::` view namespace,
+registers the `counterparties` Blade component namespace so the
+anonymous components under `Resources/views/components/*.blade.php`
+are addressable as `<x-counterparties::type-chip />` etc., and
+registers the three Livewire pages the routes file's class-string
+bindings resolve against.
+
 ## Key services + events
 
 - `CounterpartyResolverService::resolve` — walks the chain:
@@ -107,6 +136,31 @@ forbids any other module from importing
      `type='bank'` with `metadata.subcategory='fee'`.
   7. **Unresolved** — `type='unknown'`; IBAN preserved for triage.
 
+  Step 2's bridge contract returns the user's own `Account` (it was
+  designed for Chains' account-routing), so the resolver reads the
+  `known_counterparty_ibans.notes` column directly for a display name
+  rather than widening that contract. Step 4's personal-IBAN heuristic
+  validates any structurally valid SEPA IBAN (mod-97 checksum + the
+  country's BBAN length via `jschaedl/iban-validation`, not just Dutch
+  IBANs) paired with a name that fails the small-business marker list
+  (`BV`, `NV`, `LTD`, `GMBH`, and similar legal-entity suffixes).
+
+  Slug strategy: kebab-cased display name with per-user collision
+  suffixing (`bol`, `bol-2`, `bol-3`, …). The DB-layer UNIQUE on
+  `(user_id, slug)` plus the suffix-walk guarantees no two rows for the
+  same user share a slug; the walk decrypts a candidate row's stored
+  `display_name` (rotation-safe, try-every-epoch) before the identity
+  comparison, since a naive ciphertext comparison would treat every
+  already-resolved counterparty as "taken by a different name" on
+  every re-import and fragment one merchant across `bol`, `bol-2`, …
+  forever.
+
+  Cross-user posture: every raw query carries an explicit
+  `where('user_id', $user->id)` filter. The `BelongsToUser` global
+  scope on the `Counterparty` model only fires under an HTTP-bound
+  request; the resolver also runs from import/queue/console contexts
+  where the scope is silent, so the explicit filter is load-bearing.
+
 - `ResolveCounterpartyStage::run` — delegates to the resolver and
   stamps the FK on the canonical transaction via
   `withCounterpartyId()`. No-op when the resolver returns `null` or
@@ -122,6 +176,109 @@ forbids any other module from importing
 - `CounterpartyResolved` event — fired by the resolver on every
   upsert. The event-emission discipline keeps the resolver loosely
   coupled to any future surface that wants to react.
+
+## Profile query cross-user 404 contract
+
+`CounterpartyProfileQuery::bySlug()` returns null when a slug is
+unknown or belongs to a different user, and the route resolver maps
+that to a `404`, never a `403` — no signal is emitted that the slug
+exists in another user's set. The explicit `where('user_id', ...)`
+filter on the raw query is the primary scope; `BelongsToUser` is a
+defense-in-depth secondary check. The DTO's `iban` field IS populated
+even for personal counterparties; every rendering path branches on the
+user's explicit Show-IBAN click before echoing it.
+
+## Index query aggregation
+
+`CounterpartyIndexQuery::forUser()` computes each card/list-row's
+12-month total, per-month average, and 12-bar sparkline via SQL
+`GROUP BY`/`SUM` so per-render cost stays bounded regardless of import
+history depth. Rows are read via the raw query builder rather than
+Eloquent, so the explicit `where('user_id', ...)` filter is the
+load-bearing scope (`BelongsToUser` only fires under HTTP-bound
+Eloquent surfaces). `CounterpartyIndexRow` carries no `iban` field at
+all — the personal-type privacy default extends to the index DTO shape
+itself, not just a null value.
+
+## Triage keyboard shortcuts
+
+`CounterpartyTriage` (`/counterparties/triage`) is a focused single-card
+queue with keyboard-first ergonomics:
+
+| Key | Action |
+|---|---|
+| `Y` | Accept current suggestion + advance |
+| `N` | Reject suggestion + focus manual-label section |
+| `S` | Skip for now (re-queues at end of session) |
+| `→` | Next unknown |
+| `Esc` | Close triage (return to `/counterparties`) |
+
+`CounterpartyTriageQueue::suggestionFor()` walks up to 20 recent
+transaction descriptions through `MerchantNameResolver` and tallies
+matches: `high` confidence at ≥80% agreeing on the same merchant,
+`medium` at ≥60%, `low` for at least one match below that. Null when no
+description resolves to a known merchant. `TriageSuggestion::$confidence`
+(`high`/`medium`/`low`) drives the
+banner copy verbatim: `✨ Looks like **{name}** — confidence high`,
+`✨ Maybe **{name}** — confidence medium`, or `Pattern match: **{name}**
+— confidence low. Verify before linking.` `$reasoning` is the
+load-bearing sub-line rationale — the suggestion is never rendered
+without it.
+
+The bindings respect the input carve-out in
+`resources/views/layouts/app.blade.php`: when focus is inside an
+`INPUT` / `TEXTAREA` / `contentEditable` element, keys go to the field,
+not the handler — the view layer attaches listeners on the wire root
+with Alpine focus-state tracking. Progress copy renders as
+`{seen} of {total} · {percent} % · ~{minutes} min remaining`.
+
+## Garbage collector — encryption-aware orphan predicate
+
+`CounterpartyGarbageCollectorJob` runs daily per user
+(`ShouldBeUniqueUntilProcessing` keyed on `"{userId}"`, `tries=3`,
+`backoff=[60,300,900]`, lock via `LockStore::forUniqueJobs()`) and
+prunes `counterparties` rows that are orphans by a two-key check: no
+transaction has linked to the row within 365 days AND no
+`merchant_aliases` row anchors it via `friendly_name =
+counterparties.merchant_name`. A row survives if either key holds — a
+merchant-alias anchor survives a quiet year, and recent activity
+survives an alias rename. The prune runs inside a single DB
+transaction; `transactions.counterparty_id` is NULLed for every
+referencing row before the `DELETE`, so history is never lost (the FK
+carries no cascade, by design — see `add_counterparty_id_to_transactions`).
+Every clause is scoped by an explicit `user_id`; the job never touches
+another user's rows.
+
+`counterparties.merchant_name` is a `SensitiveFieldRegistry` encrypted
+column, but the job's sole dispatch origin is the daily
+`counterparties.gc` scheduler tick — a queue worker with no live
+Session, and therefore never an app-lock KEK. The orphan predicate's
+`merchant_name IS NOT NULL` half (a raw-SQL `whereColumn` equality
+against the always-plaintext `merchant_aliases.friendly_name`) cannot
+be evaluated as-is once encrypted, since AEAD ciphertext never
+byte-equals plaintext. `handle()` therefore branches three ways for
+that half:
+
+- **Not encrypted** — the original raw-SQL equality runs unchanged.
+- **Encrypted with a KEK available** (kept symmetric with
+  `DetectRecurringSeriesJob`'s pattern for a future request-bound
+  dispatch origin; never true for today's sole daemon origin) —
+  candidates are loaded and `SensitiveColumnCodec::decryptValue()`
+  decrypts each row's `merchant_name` in PHP for comparison against the
+  user's alias `friendly_name` set (mirrors
+  `FingerprintStage::detectConflicts()`'s decrypt-before-compare
+  template). Any candidate whose decrypt fails is skipped rather than
+  compared, since a failed decrypt returning raw ciphertext would
+  never match plaintext and would wrongly prune an alias-protected row
+  — preserve-data-on-uncertainty, never a wrongful prune.
+- **Encrypted with no KEK** — the half is skipped entirely and a
+  warning naming the user and the skipped-row count is logged; those
+  candidates are re-evaluated on a future run with an available KEK.
+
+The `merchant_name IS NULL` half of the predicate is always
+plaintext-safe (`SensitiveColumnCodec::encryptAttrs()` only encrypts
+string values, so a NULL merchant_name is never turned into
+ciphertext) and prunes unconditionally regardless of encryption state.
 
 ## Data flow
 
@@ -159,6 +316,17 @@ GET /counterparties/{slug}
             → per-type Blade partial (bank / merchant / personal /
               government / self / unknown)
             → recent-activity tab, chain-summary, IBAN row
+
+Routes target Blade wrapper views (`counterparties::index` /
+`profile` / `triage`) that `@extends` the project's `layouts.app`, then
+inline the matching Livewire component — Livewire 4's `#[Layout]`
+attribute targets an `<x-layouts.app>` Blade-component shape that
+doesn't match the project's `@extends` convention, so the wrapper view
+sidesteps the mismatch. Route order is load-bearing: the literal
+`/counterparties/triage` registers before the `/counterparties/{slug}`
+placeholder so the router matches it first — reversing the order would
+route `/triage` into the profile page with `slug = "triage"` and 404
+for any user who doesn't happen to own a counterparty slugged `triage`.
 
 GET /counterparties/triage
   → CounterpartyTriage Livewire SFC
