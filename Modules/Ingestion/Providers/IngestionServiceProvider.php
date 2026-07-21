@@ -18,14 +18,7 @@ use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 
 /**
- * Wires the Ingestion module.
- *
- * - HeaderSniffer is a stateless singleton injected into the upload wizard
- *   for pre-parse validation.
- * - SourceAdapterRegistry maps stable format identifiers to their adapter
- *   implementation. Adapters are NOT auto-detected from file content — the
- *   user declares the source format up front. New source formats are added
- *   to the registry map alongside their adapter class.
+ * @link ../../../.docs/features/ingestion/architecture.md
  */
 final class IngestionServiceProvider extends ServiceProvider
 {

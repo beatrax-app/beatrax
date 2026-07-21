@@ -7,31 +7,11 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 use Modules\Ingestion\Internal\Adapters\Banking\Dto\Mt940Narrative;
 
 /**
- * Parses a single `:86:` narrative body into a typed `Mt940Narrative`
- * value object.
- *
- * Two shapes are accepted:
- *
- *  1. Structured: starts with a 3-digit GVC posting code, followed by
- *     `?NN`-prefixed subfields. Counterparty name comes from `?32` (with
- *     `?33` appended), counterparty IBAN comes from `?31` (or the IBAN
- *     GVC keyword as a fallback), and the purpose subfields `?20–?29`
- *     plus `?60–?65` are concatenated and scanned for SEPA GVC keywords.
- *
- *  2. Unstructured: free text with no leading GVC code or `?NN` markers.
- *     The full body becomes `description`; every other field stays null.
- *
- * GVC keywords are paired delimiters of the form `KEYWORD+value` (the
- * value runs until the next `+KEYWORD+` boundary or end of buffer). `BIC`
- * is the one exception — it uses a trailing space convention, so its
- * value comes between `BIC ` and the next `+`.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Mt940Tag86Parser
 {
     /**
-     * SEPA GVC keywords the parser surfaces from the purpose subfields.
-     * The order matters only for the scan regex.
-     *
      * @var list<string>
      */
     private const GVC_KEYWORDS = [
@@ -94,11 +74,6 @@ final class Mt940Tag86Parser
     }
 
     /**
-     * Splits the `?NN`-delimited body into a map keyed by integer subfield
-     * code. The lexer may have joined continuation lines with `\n`; those
-     * are preserved when they sit inside a subfield value and treated as
-     * boundary-transparent when they sit between subfields.
-     *
      * @return array<int, string>
      */
     private function splitSubfields(string $body): array
@@ -126,8 +101,6 @@ final class Mt940Tag86Parser
     }
 
     /**
-     * Concatenates the subfield values in declaration order.
-     *
      * @param  array<int, string>  $subfields
      * @param  list<int>  $codes
      */
@@ -146,10 +119,9 @@ final class Mt940Tag86Parser
         return implode('', $pieces);
     }
 
+    // General GVC form is KEYWORD+value; BIC is the one exception, using a
+    // trailing-space convention (BIC<SPACE>value) instead of a leading +.
     /**
-     * Scans a buffer for SEPA GVC keywords. The general form is
-     * `KEYWORD+value` separated by `+`; `BIC` uses `BIC<SPACE>value`.
-     *
      * @return array<string, ?string>
      */
     private function extractGvcKeywords(?string $buffer): array
@@ -172,7 +144,8 @@ final class Mt940Tag86Parser
             }
         }
 
-        // BIC uses the trailing-space convention.
+        // BIC uses the trailing-space convention rather than the general
+        // KEYWORD+value form the other keywords follow.
         if (preg_match('/BIC (.+?)(?=\+(?:'.$keywordAlternation.')\+|BIC |$)/', $buffer, $bicMatch) === 1) {
             $out['BIC'] = trim($bicMatch[1]) === '' ? null : trim($bicMatch[1]);
         }
@@ -180,10 +153,6 @@ final class Mt940Tag86Parser
         return $out;
     }
 
-    /**
-     * Strips known GVC keyword markers from a description buffer so the
-     * resulting free text is read-only narrative.
-     */
     private function stripGvcMarkers(?string $buffer): ?string
     {
         if ($buffer === null) {

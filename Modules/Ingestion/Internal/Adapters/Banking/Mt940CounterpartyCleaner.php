@@ -5,17 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 /**
- * Pre-normalises an MT940 counterparty name before it reaches the shared
- * `FingerprintComposer::normalize` step. Strips MT940-specific noise that
- * the shared normaliser does not know about — leading GVC posting codes,
- * leading 4-char transaction-type codes, embedded BIC codes, and the
- * `/REMI/`, `/NAME/`, `/IBAN/`, `/BIC/`, GVC-keyword `/`-markers that
- * SEPA narrative occasionally folds into the name field.
- *
- * Returns a whitespace-collapsed string; case folding and diacritic
- * stripping stay in the shared normaliser so the same logical
- * counterparty resolves to the same canonical key across CSV, CAMT, and
- * MT940 imports.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Mt940CounterpartyCleaner
 {

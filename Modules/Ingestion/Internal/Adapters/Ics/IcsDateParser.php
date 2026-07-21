@@ -8,37 +8,19 @@ use Carbon\CarbonImmutable;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 /**
- * Parses ICS PDF date cells into a startOfDay `CarbonImmutable`.
- *
- * The startOfDay normalisation matches the project-wide
- * FingerprintComposer v3 day-precision invariant established by the
- * ASN CSV / CAMT.053 / MT940 adapters, so cross-format dedup hashes
- * remain comparable.
- *
- * Supported shapes (drawn from the Mijn ICS consumer-portal statement
- * fixture record):
- *
- *   - `12-04-2026`     → 2026-04-12 00:00:00
- *   - `15 februari 2026` → 2026-02-15 00:00:00   (full Dutch month name)
- *   - `12 apr 2026`    → 2026-04-12 00:00:00     (`j M Y` w/ Dutch abbrev)
- *   - `5 mei 2026`     → 2026-05-05 00:00:00
- *
- * Transaction-line shapes lack a year (`23 jan.` / `01 feb.`); the
- * adapter resolves the year from the surrounding statement header
- * before invoking this parser, so this parser only ever sees fully-
- * qualified strings.
- *
- * Stateless; no global locale mutation.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class IcsDateParser
 {
-    /** @var array<string, int> Dutch month abbreviations / full names → 1-12. */
+    /** @var array<string, int> */
     private const NL_MONTHS = [
-        // Abbreviations (without the trailing period that ICS prints).
+        // Abbreviations, stored without the trailing period ICS prints
+        // (the parser strips it before lookup).
         'jan' => 1, 'feb' => 2, 'mrt' => 3, 'apr' => 4,
         'mei' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8,
         'sep' => 9, 'okt' => 10, 'nov' => 11, 'dec' => 12,
-        // Full names (statement-header shape).
+        // Full names, as seen in the statement-header date rather than the
+        // transaction-line date columns.
         'januari' => 1, 'februari' => 2, 'maart' => 3, 'april' => 4,
         'juni' => 6, 'juli' => 7, 'augustus' => 8,
         'september' => 9, 'oktober' => 10, 'november' => 11, 'december' => 12,
@@ -46,18 +28,17 @@ final class IcsDateParser
 
     public function parse(string $raw): CarbonImmutable
     {
-        // Remove the trailing period that ICS prints after abbreviated
-        // month names (`23 jan.`, `01 feb.`) so the token-form regex
-        // below normalises across `jan` and `jan.` shapes. This also
-        // catches the middle-of-string `jan.` in a fully-qualified
-        // `23 jan. 2026` string emitted by some statement variants.
+        // Remove the trailing period ICS prints after abbreviated month
+        // names ("23 jan.") so the regex below normalises across both
+        // shapes, including mid-string in a fully-qualified "23 jan. 2026".
         $trimmed = trim(strtolower($raw));
         $trimmed = preg_replace('/([a-z]+)\./', '$1', $trimmed);
         if ($trimmed === null || $trimmed === '') {
             throw new InvalidAmountException('Empty date string.');
         }
 
-        // Shape A: dd-mm-yyyy
+        // Shape A: dd-mm-yyyy, as used in the transaction-line date columns
+        // once the adapter has resolved the year.
         if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $trimmed, $m) === 1) {
             $parsed = CarbonImmutable::createFromFormat(
                 '!d-m-Y',
@@ -71,7 +52,8 @@ final class IcsDateParser
             return $parsed->startOfDay();
         }
 
-        // Shape B: `j M Y` / `j MMMM Y` with Dutch month abbreviations or full names.
+        // Shape B: day + Dutch month name (abbreviated or full) + year, as
+        // used in the statement-header date.
         if (preg_match('/^(\d{1,2})\s+([a-z]+)\s+(\d{4})$/', $trimmed, $m) === 1) {
             $month = self::NL_MONTHS[$m[2]] ?? null;
             if ($month === null) {

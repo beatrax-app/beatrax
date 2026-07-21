@@ -10,42 +10,14 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 use Throwable;
 
 /**
- * Parses a single `:61:` statement-line body into a typed
- * `Mt940StatementLine` value object. The amount is converted to signed
- * integer minor units via the reused `BankAmountParser` (integer regex,
- * no float coercion).
- *
- * Reads the extended customer-reference variant: up to 34 chars
- * before the optional `//bankref` separator (the SWIFT-standard variant
- * caps at 16).
- *
- * Status mapping → amount sign:
- *   C  → positive (credit)
- *   D  → negative (debit)
- *   RC → negative (reversal of credit, treated as debit-like)
- *   RD → positive (reversal of debit, treated as credit-like)
- *
- * Date handling:
- *  - The value date (YYMMDD) is mandatory; the two-digit year is mapped
- *    to a four-digit calendar year via the SWIFT sliding-window rule
- *    (closest year within +/-50 of "now") so the parser stays correct
- *    past the year 2100.
- *  - The optional entry date (MMDD, no year) inherits the value-date
- *    year, except that when the entry month is later than the value
- *    month the entry date is rolled back one calendar year — the
- *    standard SWIFT year-boundary convention for late-December entries
- *    on early-January value dates.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Mt940Tag61Parser
 {
-    /**
-     * Greedy regex over the `:61:` body. Mirrors the extended dialect:
-     * mandatory value date (YYMMDD), optional entry date (MMDD), status,
-     * optional funds-code letter, comma-decimal amount, optional 4-char
-     * transaction-type code, optional 34-char customer reference, and an
-     * optional `//`-prefixed 16-char bank reference. An optional newline
-     * + 34-char extra-details trailer is recognised but not yet wired.
-     */
+    // Greedy regex over the extended :61: dialect: mandatory value date
+    // (YYMMDD), optional entry date (MMDD), status, optional funds-code,
+    // comma-decimal amount, optional transaction-type + 34-char customer
+    // reference + //-prefixed bank reference (full field map in the doc).
     private const REGEX = '/^'
         .'(?P<year>\d{2})(?P<month>\d{2})(?P<day>\d{2})'
         .'(?:(?P<entry_month>\d{2})(?P<entry_day>\d{2}))?'
@@ -105,13 +77,8 @@ final class Mt940Tag61Parser
         );
     }
 
-    /**
-     * Converts an MT940 comma-decimal amount (e.g. "1234,56" or "1234")
-     * to integer minor units via the reused `BankAmountParser`. MT940
-     * sometimes omits the fractional part for whole amounts; the helper
-     * normalises to a two-digit period-decimal before delegating so the
-     * shared integer parser sees its expected shape.
-     */
+    // MT940 sometimes omits the fractional part for whole amounts; normalise
+    // to a two-digit period-decimal before delegating to BankAmountParser.
     private function parseAmountToMinor(string $raw): int
     {
         $normalised = str_replace(',', '.', $raw);
@@ -142,12 +109,9 @@ final class Mt940Tag61Parser
         return $parsed;
     }
 
-    /**
-     * Resolves an MT940 two-digit year (YY) to its four-digit calendar year
-     * using the SWIFT sliding-window convention: pick the closest year
-     * within +/-50 of "now" so the parser keeps working past the year 2100
-     * without a code change.
-     */
+    // SWIFT sliding-window convention: picks the closest four-digit year
+    // within +/-50 of "now" so the parser keeps working past 2100 without
+    // a code change.
     private function resolveSwiftYear(int $yy): int
     {
         $today = CarbonImmutable::now();

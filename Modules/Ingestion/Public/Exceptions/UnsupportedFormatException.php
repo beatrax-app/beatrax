@@ -6,8 +6,6 @@ namespace Modules\Ingestion\Public\Exceptions;
 
 use RuntimeException;
 
-/**
- * Thrown by SourceAdapterRegistry when no adapter is registered for the
- * declared format string (e.g. 'mt940' while only 'asn-csv' is wired).
- */
+// Thrown by SourceAdapterRegistry when no adapter is registered for the
+// declared format string.
 final class UnsupportedFormatException extends RuntimeException {}

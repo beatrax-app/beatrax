@@ -30,38 +30,7 @@ use Money\Money;
 use Throwable;
 
 /**
- * Streaming-by-row parser for CAMT.053 (ISO 20022 bank-to-customer
- * statement) XML export. Delegates the file-level unmarshal to genkgo/camt,
- * then walks every Statement -> Entry -> TransactionDetail and yields one
- * SourceTransactionDto per TxDtls (batch entries are split into N rows).
- *
- * Reference policy:
- *  - `sourceRef` is the TxDtls EndToEndId when present, NULL otherwise.
- *    Weaker SEPA refs (AcctSvcrRef, InstrId, TxId, MsgId, MandateId) are
- *    NEVER promoted to sourceRef — they live verbatim under
- *    `rawPayload['sepa']` so downstream chain resolution can read them
- *    without re-parsing the XML.
- *
- * Booking-date normalisation:
- *  - When `<BookgDt>` carries a date-only element, the second-precision
- *    `bookedAt` field is zeroed to `00:00:00`. This matches the CSV
- *    adapter's `startOfDay()` semantics so a CSV row and a CAMT entry
- *    representing the same logical transaction produce identical
- *    FingerprintComposer v3 hashes.
- *  - An `<Ntry>` that carries neither `<BookgDt>` nor `<ValDt>` is rejected
- *    as a parse error so the fingerprint is never derived from the wall
- *    clock; this preserves the idempotency contract on re-imports.
- *
- * Security:
- *  - Before any Reader construction, `libxml_set_external_entity_loader(null)`
- *    disables every SYSTEM / PUBLIC entity reference resolution for the
- *    duration of the parse, mitigating XXE attacks regardless of the
- *    underlying PHP / libxml defaults.
- *
- * Money handling:
- *  - genkgo/camt exposes amounts as `Money\Money` (moneyphp/money). The
- *    adapter converts to integer minor units at the boundary; `Money\Money`
- *    types are not allowed to escape into the Public DTO surface.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Camt053Adapter implements SourceAdapter
 {
@@ -77,11 +46,9 @@ final class Camt053Adapter implements SourceAdapter
     }
 
     /**
-     * Returns the statement-level metadata captured during the most recent
-     * `parse()` run. The `importRunId` and `accountId` are zeroed
-     * placeholders at this point — the pipeline overrides both via the
-     * DTO's `withImportRunId()` / `withAccountId()` helpers before invoking
-     * the writer.
+     * @return ?StatementSummaryData the most recent parse() run's metadata,
+     *                               with importRunId/accountId as zeroed placeholders the pipeline
+     *                               overrides via withImportRunId()/withAccountId()
      */
     public function statementMetadata(): ?StatementSummaryData
     {
@@ -154,11 +121,9 @@ final class Camt053Adapter implements SourceAdapter
             entryCount: $entryCount,
             extras: [
                 'statementId' => $stmt->getId(),
-                // Normalise the bank-provided creation timestamp to UTC
-                // so the same logical statement produces identical extras
-                // JSON regardless of the export host's local timezone (and
-                // regardless of DST shifts that would otherwise toggle the
-                // offset between `+01:00` and `+02:00`).
+                // Normalise to UTC so the same logical statement produces
+                // identical extras JSON regardless of the export host's
+                // local timezone or DST offset.
                 'createdOn' => $stmt->getCreatedOn()
                     ->setTimezone(new DateTimeZone('UTC'))
                     ->format('Y-m-d\TH:i:s\Z'),
@@ -177,21 +142,15 @@ final class Camt053Adapter implements SourceAdapter
         return null;
     }
 
-    /**
-     * Hardens libxml and delegates the unmarshal to genkgo/camt. Errors from
-     * the library (malformed XML, unknown CAMT.053 sub-version) are re-thrown
-     * as InvalidAmountException so the upload pipeline can surface them as a
-     * single per-file ERROR preview row.
-     */
+    // Hardens libxml before delegating the unmarshal to genkgo/camt; a
+    // library parse error is re-thrown as InvalidAmountException so the
+    // upload pipeline surfaces it as a single per-file ERROR preview row.
     private function readMessage(string $localPath): Message
     {
-        // Install an external-entity loader that allows local-filesystem reads
-        // (needed for the CAMT.053 XSD files genkgo/camt ships in
-        // `vendor/genkgo/camt/assets/`) but rejects every remote URI scheme.
-        // The CAMT.053 XSDs reference each other by relative path so the
-        // loader must let those through; an attacker-controlled
-        // `<!ENTITY xxe SYSTEM "http://…">` reference is denied at the
-        // loader boundary regardless of PHP / libxml defaults.
+        // XXE mitigation: allow local-filesystem entity reads only (the
+        // CAMT.053 XSDs genkgo/camt ships reference each other by relative
+        // path) and deny every remote URI scheme, regardless of libxml
+        // defaults (full rationale in the Ingestion architecture doc).
         libxml_set_external_entity_loader(
             static function (?string $publicId, ?string $systemId, array $context): ?string {
                 if ($systemId === null) {
@@ -211,13 +170,10 @@ final class Camt053Adapter implements SourceAdapter
 
         $previousErrorState = libxml_use_internal_errors(true);
         try {
-            // XSD validation is disabled deliberately. The CAMT.053 XSDs
-            // genkgo/camt ships are pedantic and would reject any synthetic
-            // test fragment or future format extension that adds an unforeseen
-            // optional element. Structural correctness is enforced by the
-            // sniffer's namespace match plus the downstream IBAN / amount
-            // validators inside genkgo/camt's decoder; security against XXE
-            // is enforced by the external-entity loader installed above.
+            // XSD validation disabled deliberately — genkgo/camt's XSDs are
+            // pedantic and would reject unforeseen optional elements; the
+            // sniffer + downstream IBAN/amount validators enforce structure,
+            // and the entity loader above enforces XXE safety.
             $config = Config::getDefault();
             $config->disableXsdValidation();
             $reader = new Reader($config);
@@ -284,11 +240,8 @@ final class Camt053Adapter implements SourceAdapter
         }
         $value = $entry->getValueDate() ?? $booking;
 
-        // Banks export the BookgDt as a date-only element on every row in the
-        // empirical corpus; the matching CSV adapter zeroes the time so the
-        // FingerprintComposer v3 hash agrees between the two formats. Force
-        // 00:00:00 here so a midnight-shifted timestamp never sneaks in via
-        // a future BookgDtTm-precision change.
+        // Force 00:00:00 so this agrees with the CSV adapter's zeroed time
+        // (matching fingerprint hashes) even if BookgDt ever gains precision.
         $bookedAt = CarbonImmutable::instance($booking)->startOfDay();
 
         return new SourceTransactionDto(
@@ -307,11 +260,8 @@ final class Camt053Adapter implements SourceAdapter
         );
     }
 
-    /**
-     * Converts a moneyphp/money amount string into integer minor units. The
-     * library returns the minor count as a numeric string ("399" for €3.99),
-     * so the cast is exact for any value that fits in PHP_INT_MAX.
-     */
+    // moneyphp/money returns the minor count as a numeric string ("399" for
+    // €3.99); the cast is exact for any value under PHP_INT_MAX.
     private function moneyToMinor(Money $money): int
     {
         return (int) $money->getAmount();
@@ -327,13 +277,10 @@ final class Camt053Adapter implements SourceAdapter
         return $account->getIdentification();
     }
 
+    // Outbound DBIT -> counterparty is the Creditor; inbound CRDT ->
+    // counterparty is the Debtor; falls back to the first related party of
+    // any type when the directional match is absent.
     /**
-     * Walks the TxDtls related-party list and returns the counterparty pair
-     * appropriate for the entry's credit/debit direction. For an outbound
-     * DBIT entry, the counterparty is the Creditor; for an inbound CRDT
-     * entry, the counterparty is the Debtor. Falls back to the first related
-     * party of any type when the directional match is absent.
-     *
      * @return array{0: ?string, 1: ?string} [counterparty name, counterparty IBAN]
      */
     private function extractCounterparty(?EntryTransactionDetail $txDtls, ?string $cdi): array
@@ -387,19 +334,10 @@ final class Camt053Adapter implements SourceAdapter
         return null;
     }
 
-    /**
-     * Concatenates the TxDtls unstructured remittance blocks into a single
-     * whitespace-collapsed description string. Returns null when no
-     * unstructured block is present.
-     *
-     * A TxDtls that carries only structured remittance (`<Strd>` rather
-     * than `<Ustrd>`) yields null. The canonical unstructured-blocks API
-     * is the only path consulted; the library's deprecated
-     * `getMessage()` fallback would silently stringify structured data
-     * and produce indistinguishable output for "no remittance" vs
-     * "structured-only remittance", which masks data that downstream
-     * resolution may legitimately need to handle differently.
-     */
+    // Only the canonical unstructured-blocks API is consulted (never the
+    // deprecated getMessage() fallback, which would stringify structured
+    // <Strd> remittance and mask "no remittance" vs "structured-only" from
+    // downstream resolution). A structured-only TxDtls yields null.
     private function extractRemittance(?EntryTransactionDetail $txDtls): ?string
     {
         if ($txDtls === null) {
@@ -431,10 +369,6 @@ final class Camt053Adapter implements SourceAdapter
     }
 
     /**
-     * Builds the `rawPayload['sepa']` fragment carrying every secondary
-     * reference observed on the entry + TxDtls. Downstream chain
-     * resolution reads these directly without re-parsing the source XML.
-     *
      * @return array{sepa: array<string, mixed>}
      */
     private function serialiseSepaFragment(Entry $entry, ?EntryTransactionDetail $txDtls, ?string $msgId): array

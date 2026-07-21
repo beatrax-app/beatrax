@@ -8,39 +8,18 @@ use Generator;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 /**
- * Streaming line-by-line tokenizer for MT940 statement files. Yields
- * `(tag, content)` tuples in stream order; the consumer is responsible for
- * pairing tags into transactions.
- *
- * Edge cases handled by the lexer:
- *  - SWIFT block-1 envelope `{1:...}{2:...}{4: ... -}` — block-4 contents
- *    are extracted and tokenized when the file head opens with `{`.
- *  - CRLF line endings — carriage returns are stripped at line-split;
- *    line-feed inside a continuation buffer is preserved so the consumer
- *    can re-scan `?NN` subfields across line boundaries.
- *  - Lone `-` end-of-message marker — flushes the current tag.
- *  - Trailing tag at EOF without a final `-` — flushed unconditionally.
- *  - Multi-statement files — every `:20:`-block contributes its tags in
- *    stream order; the adapter handles partitioning into statements.
- *
- * Bounded reads (defensive against pathological inputs):
- *  - Total line count is capped at `MAX_LINE_COUNT`. The wizard's
- *    `max:10240` rule already bounds input bytes; this guards against a
- *    crafted file whose every byte is a newline.
- *  - Each line is read with a `stream_get_line` length cap of
- *    `MAX_BUFFER_BYTES + 1` so a single pathologically long line cannot
- *    allocate hundreds of MB before the tag-buffer check fires. A line
- *    that exceeds the cap is rejected immediately.
- *  - Each tag buffer is capped at `MAX_BUFFER_BYTES`. Real `:86:`
- *    narratives never exceed a few hundred bytes per tag.
- *
- * Both caps raise `InvalidAmountException` with a user-readable message so
- * the upload wizard surfaces a fast error instead of a hung worker.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Mt940Lexer
 {
+    // Defensive against pathological inputs: bounds total line count against
+    // a file whose every byte is a newline (the upload wizard's max:10240
+    // rule bounds bytes, not lines).
     private const MAX_LINE_COUNT = 100_000;
 
+    // Caps a single tag buffer; real :86: narratives never exceed a few
+    // hundred bytes. Also used as the stream_get_line length cap so one
+    // pathologically long line can't allocate before this check fires.
     private const MAX_BUFFER_BYTES = 16_384;
 
     private const TAG_LINE_REGEX = '/^:(\d{2}[A-Z]?):(.*)$/';

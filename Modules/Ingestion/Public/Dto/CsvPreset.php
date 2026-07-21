@@ -5,21 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Public\Dto;
 
 /**
- * Declarative description of one bank's / fintech's CSV export: the dialect
- * (delimiter, encoding, header), how to read each canonical field from a
- * named column, and how the amount + its sign are encoded. A single
- * GenericCsvAdapter is parameterised by one of these, so adding a new bank
- * is data, not code.
- *
- * Columns are addressed by HEADER NAME (the file must have a header row);
- * the GenericCsvAdapter reads league/csv records associatively.
- *
- * Amount strategies:
- *   - SIGNED:       one column carries a signed number (N26, Revolut, Wise).
- *   - DEBIT_CREDIT: separate debit + credit columns, each unsigned; the one
- *                   that is non-empty determines the sign (many DE banks).
- *   - INDICATOR:    an unsigned amount column plus a direction column whose
- *                   value equals `debitIndicator` for outgoing (ING NL "Af").
+ * @link ../../../../.docs/features/ingestion/architecture.md
  */
 final class CsvPreset
 {
@@ -66,12 +52,9 @@ final class CsvPreset
         public readonly array $acceptedStates = [],
     ) {}
 
-    /**
-     * Canonical form for comparing a header cell, tolerant of the minor
-     * spelling differences banks ship: lower-cased and stripped of all
-     * whitespace, so `Naam / Omschrijving` == `Naam/Omschrijving` and
-     * `MutatieSoort` == `Mutatiesoort`.
-     */
+    // Lower-cased and stripped of all whitespace, so minor spelling
+    // differences between banks compare equal ("Naam / Omschrijving" ==
+    // "Naam/Omschrijving").
     public static function normaliseHeader(string $header): string
     {
         $lowered = mb_strtolower(trim($header));

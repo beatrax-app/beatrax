@@ -18,18 +18,7 @@ use Modules\Receipts\Public\Pipeline\EmlHeaderProfile;
 use Modules\Receipts\Public\Pipeline\MboxHeaderProfile;
 
 /**
- * Validates that a local file matches a declared source format before any
- * adapter starts parsing. Inspects the first 8 KB of bytes, the file
- * extension, the CSV header row, and (for the XML formats) the document
- * namespace URI.
- *
- * A leading UTF-8 BOM is stripped before parsing so files exported through
- * tools that prepend one (Excel, some browser downloads) sniff cleanly
- * rather than failing the header-signature compare with the BOM bytes
- * silently glued to the first column name.
- *
- * The exception messages are user-facing — the upload wizard renders them
- * verbatim.
+ * @link ../../../../.docs/features/ingestion/architecture.md
  */
 final class HeaderSniffer
 {
@@ -37,12 +26,9 @@ final class HeaderSniffer
 
     private const UTF8_BOM = "\xEF\xBB\xBF";
 
-    /**
-     * In production the container injects the singleton CsvPresetRegistry; the
-     * default exists only so a manually-constructed sniffer (tests, ad-hoc
-     * scripts) still resolves presets. Presets are static, so the fresh
-     * instance is behaviourally identical to the singleton.
-     */
+    // The default arg exists only so a manually-constructed sniffer (tests,
+    // ad-hoc scripts) still resolves presets without the container; presets
+    // are static, so a fresh instance behaves identically to the singleton.
     public function __construct(
         private readonly CsvPresetRegistry $presets = new CsvPresetRegistry,
     ) {}
@@ -90,13 +76,8 @@ final class HeaderSniffer
         return $this->sniffPresetCsv($preset, $localPath, $head);
     }
 
-    /**
-     * Validates a bundled bank/fintech CSV preset: a `.csv` extension and a
-     * header row containing every cell in the preset's header signature
-     * (order-independent, so a bank reordering optional columns still
-     * sniffs). The message names the bank so the wizard can tell the user
-     * exactly which export it expected.
-     */
+    // Header-signature check is order-independent, so a bank reordering
+    // optional columns still sniffs.
     private function sniffPresetCsv(CsvPreset $preset, string $path, string $head): SniffResult
     {
         if (preg_match('/\.csv$/i', $path) !== 1) {
@@ -135,13 +116,8 @@ final class HeaderSniffer
         );
     }
 
-    /**
-     * Validates that the path looks like a single RFC 822 `.eml`
-     * message — `.eml` extension AND a recognised header anchor
-     * (`Return-Path:`, `Received:`, `From:`, or `Message-ID:`) in the
-     * first 8 KB. The header check rejects a renamed `.eml` upload of
-     * an unrelated text file before the zbateson parser is invoked.
-     */
+    // The header-anchor check rejects a renamed .eml upload of an unrelated
+    // text file before the zbateson parser is invoked.
     private function sniffEml(string $path, string $head): SniffResult
     {
         if (preg_match('/\.eml$/i', $path) !== 1) {
@@ -165,13 +141,8 @@ final class HeaderSniffer
         );
     }
 
-    /**
-     * Validates that the path looks like an mboxrd archive — `.mbox`
-     * extension AND a literal `From ` (note trailing space) at the
-     * very start of the file. The prefix check rejects a renamed
-     * `.mbox` upload of a single-message `.eml` (which would lack the
-     * `From ` envelope prefix) before MboxIterator is invoked.
-     */
+    // The literal "From " envelope-prefix check rejects a renamed .mbox
+    // upload of a single-message .eml before MboxIterator is invoked.
     private function sniffMbox(string $path, string $head): SniffResult
     {
         if (preg_match('/\.mbox$/i', $path) !== 1) {
@@ -195,32 +166,10 @@ final class HeaderSniffer
         );
     }
 
-    /**
-     * Validates that the path looks like a PayPal `Rapport Transactiegegevens`
-     * (Transaction Details Report) CSV — `.csv` extension AND a header
-     * row whose token set matches one of the registered language profiles.
-     *
-     * Unlike `sniffAsnCsv()`, this method does NOT enforce a fixed
-     * column count: PayPal exports vary in column count across language
-     * profiles and across export-format revisions. The header-token
-     * signature (a discriminator subset of the locale's expected
-     * columns) is sufficient to distinguish a per-event PayPal CSV
-     * from any other CSV.
-     *
-     * Two failure modes carry typed exceptions so the wizard can render
-     * a specific user-facing message rather than a generic sniff
-     * mismatch:
-     *
-     *  - `UnsupportedPaypalCsvShapeException` when the first cell is one
-     *    of the `Saldorapport` (Balance Reconciliation Report) record-
-     *    type tokens (`RH`, `RD`, `RF`). That export is in scope as a
-     *    PayPal CSV but has a completely different column shape, so the
-     *    user gets an actionable hint to re-download the per-transaction
-     *    Rapport Transactiegegevens instead.
-     *  - `UnsupportedPaypalCsvLanguageException` when the header tokens
-     *    match the per-event shape but no registered language profile
-     *    recognises them ("supported locales: nl").
-     */
+    // Unlike sniffAsnCsv(), no fixed column count is enforced since PayPal
+    // varies column count across language/format revisions; two typed
+    // exceptions (Saldorapport-shape, unmatched-language) let the wizard
+    // render a specific message.
     private function sniffPaypalCsv(string $path, string $head): SniffResult
     {
         if (preg_match('/\.csv$/i', $path) !== 1) {
@@ -236,14 +185,10 @@ final class HeaderSniffer
 
         $columns = str_getcsv($firstLine, PaypalCsvLanguageProfile::DELIMITER, '"', '');
 
-        // Reject the Saldorapport (Balance Reconciliation Report) export
-        // before the language-profile check. Saldorapport rows are
-        // prefixed by record-type tokens (`RH` = Report Header,
-        // `RD` = Report Data header, `RF` = Report Footer) which never
-        // appear as a column name in Rapport Transactiegegevens.
-        // Detecting that prefix lets us surface a precise "download the
-        // right export" hint instead of the confusing "language profile
-        // not supported" fallback.
+        // Reject the Saldorapport export before the language-profile check:
+        // its RH/RD/RF record-type prefixes never appear as a column name
+        // in Rapport Transactiegegevens, so detecting them yields a precise
+        // "download the right export" hint instead of a confusing fallback.
         $firstCell = trim($columns[0] ?? '');
         if (in_array($firstCell, ['RH', 'RD', 'RF'], strict: true)) {
             throw new UnsupportedPaypalCsvShapeException(
@@ -252,12 +197,9 @@ final class HeaderSniffer
                 .'open the custom statements view, switch to the Betalingen tab, and pick Rapport Transactiegegevens.'
             );
         }
-        // Trim each token so the language-profile detection compares
-        // against the verbatim header tokens regardless of stray
-        // whitespace (`"Bruto "` / `"Kosten "` ship with a trailing
-        // space inside the quoted cell in the empirical NL export; the
-        // language signature lists them without the trailing space and
-        // tolerates either shape).
+        // Trim stray whitespace before comparison — the NL export ships
+        // some headers with a trailing space inside the quoted cell, and
+        // the language signature tolerates either shape.
         $columns = array_map(static fn (?string $c): string => trim($c ?? ''), $columns);
 
         $profile = PaypalCsvLanguageProfile::detect($columns);
@@ -278,12 +220,8 @@ final class HeaderSniffer
         );
     }
 
-    /**
-     * Validates that the path looks like an ICS PDF export — `.pdf`
-     * extension AND a literal `%PDF-` prefix in the first five bytes of
-     * the file. The magic-byte check rejects a renamed `.pdf` upload of
-     * a completely different file type before pdftotext is invoked.
-     */
+    // The magic-byte check rejects a renamed .pdf upload of a completely
+    // different file type before pdftotext is invoked.
     private function sniffIcsPdf(string $path, string $head): SniffResult
     {
         if (preg_match('/\.pdf$/i', $path) !== 1) {
@@ -307,12 +245,6 @@ final class HeaderSniffer
         );
     }
 
-    /**
-     * Validates that the path looks like an MT940 export — `.sta`, `.mt940`,
-     * `.940`, or `.txt` extension AND a `:20:` Transaction Reference Number
-     * tag at the start of the body (after stripping any optional SWIFT
-     * block-1 envelope `{1:...}{2:...}{4: ... -}`).
-     */
     private function sniffMt940(string $path, string $head): SniffResult
     {
         if (preg_match('/\.(sta|mt940|940|txt)$/i', $path) !== 1) {
@@ -338,11 +270,6 @@ final class HeaderSniffer
         );
     }
 
-    /**
-     * Returns the contents of an MT940 SWIFT block-4 envelope when present,
-     * otherwise the head text unchanged. Used by the sniffer to look past
-     * the wrapper for the `:20:` signature tag.
-     */
     private function stripSwiftEnvelope(string $head): string
     {
         if (preg_match(Mt940HeaderProfile::SWIFT_ENVELOPE_REGEX, $head, $matches) === 1) {
@@ -352,13 +279,9 @@ final class HeaderSniffer
         return $head;
     }
 
-    /**
-     * Validates that the path looks like a CAMT.053 XML export — `.xml`
-     * extension AND a CAMT.053 family namespace URI inside the document
-     * head. The CAMT.052 / 054 sister families fail loudly so the user
-     * gets a clear "wrong family" message rather than a cryptic parser
-     * error 50 KB into the file.
-     */
+    // The CAMT.052/054 sister families fail loudly here so the user gets a
+    // clear "wrong family" message rather than a cryptic parser error deep
+    // into the file.
     private function sniffCamt053(string $path, string $head): SniffResult
     {
         if (preg_match('/\.xml$/i', $path) !== 1) {

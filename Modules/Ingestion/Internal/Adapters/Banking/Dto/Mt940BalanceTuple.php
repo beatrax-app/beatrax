@@ -7,12 +7,7 @@ namespace Modules\Ingestion\Internal\Adapters\Banking\Dto;
 use Carbon\CarbonImmutable;
 
 /**
- * Decoded `:60F:` / `:62F:` balance tag content — signed integer minor
- * amount, currency, and balance date. Used by `Mt940Adapter` to
- * populate the statement-summary metadata.
- *
- * Lives under `Internal/` because the shape is parser-implementation
- * detail.
+ * @link ../../../../../../.docs/features/ingestion/architecture.md
  */
 final readonly class Mt940BalanceTuple
 {

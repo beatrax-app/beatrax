@@ -7,24 +7,14 @@ namespace Modules\Ingestion\Internal\Adapters\Banking;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 /**
- * Pure parser that converts a bank amount cell into signed integer minor
- * units. The amount format is period-decimal with two fractional digits
- * and an optional single leading sign — e.g. "-12.34", "0.29", "1234567.89".
- *
- * The parser is integer-only by construction: the regex captures the whole
- * and fractional groups and combines them via
- * `($whole * 100 + $fractional) * $sign`. No `(float)`, no `round()`, no
- * `intval` of a float. That is the reason "0.29" returns exactly 29 instead
- * of the silent 28 that `(int)((float) '0.29' * 100)` would produce on
- * 64-bit IEEE-754.
- *
- * Only leading and trailing whitespace is trimmed. Internal whitespace
- * (between the sign and the digits, or anywhere inside the digit run) is
- * rejected — those shapes never appear in a real bank export and accepting
- * them would silently merge accidentally-concatenated cells.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class BankAmountParser
 {
+    // Integer-only by construction: whole + fractional groups combine via
+    // ($whole * 100 + $fractional) * $sign, never a float cast — this is
+    // why "0.29" returns exactly 29 rather than the silent 28 that
+    // (int)((float) '0.29' * 100) would produce under 64-bit floating point.
     public function parseMinor(string $raw): int
     {
         $normalized = trim($raw);

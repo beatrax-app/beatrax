@@ -8,13 +8,7 @@ use Modules\Ingestion\Public\Contracts\SourceAdapter;
 use Modules\Ingestion\Public\Exceptions\UnsupportedFormatException;
 
 /**
- * Map of stable format identifier → SourceAdapter. The Import pipeline
- * injects this registry to look up the right adapter for whatever the user
- * declared at upload time.
- *
- * Adapters are NOT auto-detected from file content — the user declares the
- * source format up front in the upload wizard. HeaderSniffer then validates
- * the file matches that declared format.
+ * @link ../../../../.docs/features/ingestion/architecture.md
  */
 final class SourceAdapterRegistry
 {
