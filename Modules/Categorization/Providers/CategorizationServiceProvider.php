@@ -34,27 +34,7 @@ use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Events\UserInstalled;
 
 /**
- * Wires the Categorization module:
- *
- * - binds the `AssignsCategory` public contract to its `AssignCategory`
- *   default implementation (routes writes through Ledger's
- *   `UpdatesTransactionCategory`).
- * - registers `UncategorizedTriageQuery` as a stateless singleton.
- * - listens for `UserInstalled` and runs two seeders in order:
- *   `SeedDefaultCategoryTree` (global default categories,
- *   `user_id = NULL`) followed by `SeedDefaultCategorizationRules`
- *   (per-user universal-merchant rule set keyed off the just-seeded
- *   categories). The category tree precedes the rule seeder so every
- *   rule's category slug resolves at insert time.
- * - registers the two Livewire components rendered on `/uncategorized`
- *   and inside the `/transactions` rows.
- * - listens on the Ledger `Category` and Counterparties `Counterparty`
- *   models' `eloquent.deleting` wildcard events and deactivates any
- *   rule whose `rule_actions.payload` references the deleted row
- *   (D-03's app-level referential-integrity replacement for the FK
- *   cascade a JSON payload cannot carry — see
- *   `DeactivateRulesOnReferentDelete`).
- * - loads migrations, routes, and views.
+ * @link ../../../.docs/features/categorization/architecture.md
  */
 final class CategorizationServiceProvider extends ServiceProvider
 {
@@ -71,9 +51,6 @@ final class CategorizationServiceProvider extends ServiceProvider
         $this->app->singleton(CreateCategorizationRule::class);
         $this->app->singleton(UpdateCategorizationRule::class);
         $this->app->singleton(DeleteCategorizationRule::class);
-        // MerchantMemoryWriter is stateless; binding it as a singleton
-        // avoids a fresh container resolution per TransactionCategorized
-        // dispatch and matches the binding pattern other listeners use.
         $this->app->singleton(MerchantMemoryWriter::class);
         $this->app->singleton(DefaultCategorizationRuleSeeder::class);
         $this->app->singleton(DeactivateRulesOnReferentDelete::class);
@@ -90,14 +67,10 @@ final class CategorizationServiceProvider extends ServiceProvider
         $events->listen(UserInstalled::class, SeedDefaultCategorizationRules::class);
         $events->listen(TransactionCategorized::class, [MerchantMemoryWriter::class, 'handle']);
 
-        // D-03 referential-integrity guard (RESEARCH.md Pitfall 2 /
-        // T-13.4-09): rule_actions.payload embeds category_id/
-        // counterparty_id as opaque JSON with no FK. Neither the Ledger
-        // nor the Counterparties module exposes a Public delete action or
-        // delete event today, so this listens on the framework's own
-        // `eloquent.deleting: {FQCN}` wildcard event name (a plain
-        // string — no Ledger/Counterparties model class is imported here)
-        // rather than reaching into either module's internals.
+        // rule_actions.payload embeds category_id/counterparty_id as
+        // opaque JSON with no FK, so this listens on the framework's own
+        // `eloquent.deleting: {FQCN}` wildcard event name (a plain string
+        // — no Ledger/Counterparties model class is imported here).
         $events->listen('eloquent.deleting: Modules\Ledger\Models\Category', [DeactivateRulesOnReferentDelete::class, 'handleCategoryDeleting']);
         $events->listen('eloquent.deleting: Modules\Counterparties\Models\Counterparty', [DeactivateRulesOnReferentDelete::class, 'handleCounterpartyDeleting']);
 

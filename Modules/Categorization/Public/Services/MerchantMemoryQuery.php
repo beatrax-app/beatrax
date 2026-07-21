@@ -11,30 +11,10 @@ use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\MerchantMemoryDto;
 use Modules\Core\Models\User;
 
-/**
- * Read-side projection of merchant_memories. Used by the correction-
- * divergence drawer panel ("Auto-categorized from merchant history"),
- * as a reference query for RuleEvaluator (which inlines the same JOIN
- * shape for the hot-path import lookup), and as the batch read API
- * downstream analytical modules call to decorate row sets with the
- * user-assigned category for a counterparty.
- *
- * Every read scopes by `user_id` so a foreign user's memory never
- * surfaces.
- *
- * `latestForCounterpartyNormalized` JOINs the merchants table on
- * (user_id, normalized_name) because CanonicalTransaction +
- * transactions carry no merchant_id column — merchant identity is
- * derived from counterparty_normalized at query time. The merchants
- * table enforces UNIQUE (user_id, normalized_name) so the join yields
- * at most one merchant row per normalized_name.
- *
- * `forCounterpartiesNormalized` is the bulk variant — it accepts a
- * list of normalized counterparty names and returns one row per name
- * via a single SQL query (whereIn on the normalized_name JOIN). Missing
- * names are simply absent from the returned map so callers can default
- * via the `??` operator.
- */
+// Joins the merchants table on (user_id, normalized_name) because
+// CanonicalTransaction + transactions carry no merchant_id column —
+// merchant identity is derived from counterparty_normalized at query
+// time. merchants enforces UNIQUE(user_id, normalized_name).
 final readonly class MerchantMemoryQuery
 {
     public function __construct(private DatabaseManager $db) {}
@@ -78,14 +58,10 @@ final readonly class MerchantMemoryQuery
         );
     }
 
+    // Names with no memory row are omitted from the returned map (no
+    // nulled placeholder). Executes a single SQL query regardless of
+    // input list size.
     /**
-     * Bulk read variant — returns a map of normalized counterparty name
-     * to MerchantMemoryDto for the given user. Names with no memory row
-     * are omitted from the returned map (no nulled placeholder). Empty
-     * strings in the input list are skipped.
-     *
-     * Executes a single SQL query regardless of input list size.
-     *
      * @param  list<string>  $counterpartyNormalizedList
      * @return array<string, MerchantMemoryDto>
      */
@@ -119,11 +95,9 @@ final readonly class MerchantMemoryQuery
                 ? $row->normalized_name
                 : null;
             if ($normalized === null || isset($map[$normalized])) {
-                // `orderByDesc(occurrence_count)` makes the first row per
-                // name the winner; subsequent rows for the same name are
-                // shadow entries (different category_id with lower count)
-                // and are dropped on purpose so the returned shape stays
-                // one-DTO-per-name.
+                // orderByDesc(occurrence_count) makes the first row per
+                // name the winner; subsequent rows are shadow entries
+                // dropped on purpose so the shape stays one-DTO-per-name.
                 continue;
             }
 

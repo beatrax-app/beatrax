@@ -11,44 +11,7 @@ use Modules\Ledger\Models\Category;
 use Psr\Log\LoggerInterface;
 
 /**
- * Idempotent per-user seeder that installs the universal-merchant
- * categorization rule set on a fresh `beatrax:install`.
- *
- * Per-user because `RuleEvaluator` scopes its rule pull by
- * `where('user_id', $userId)` with no NULL fallback — a global rule
- * (`user_id IS NULL`) would never fire. The fixture
- * (`default-categorization-rules.php`) carries every rule definition;
- * this seeder maps each rule's category slug to the corresponding
- * `categories.id` row in the global default tree
- * (`categories.user_id IS NULL`, seeded by `DefaultCategoryTreeSeeder`)
- * and creates each rule as one `CategorizationRule` parent
- * (`combinator = 'all'`, gap-numbered `priority`, `active = true`) plus
- * one `rule_conditions` row (`field`/`op`/`value_type = 'string'`/
- * `value`) and one `rule_actions` row (`type = 'category'`,
- * `payload = {category_id}`) — the new normalized shape (13.4-01,
- * D-01/D-02/D-03).
- *
- * Idempotency: re-running the seeder must not create duplicate rules.
- * Since the UNIQUE(user_id, field, match, value) constraint that
- * enforced this at the DB layer moved off the parent table with the
- * flat columns, idempotency is now checked explicitly — a rule
- * "already exists" when this user owns a CategorizationRule with a
- * matching rule_conditions row (field/op/value_type/value). When found,
- * the row is skipped entirely, preserving that existing rule's
- * `hits_count`/`active`/`priority` exactly as
- * `firstOrCreate` did before: a future refactor that reset those
- * columns would erase real usage data, and the test suite locks that
- * semantic.
- *
- * Defensive slug lookup: if the fixture references a category slug that
- * does not resolve at seed time (a stale fixture row whose slug was
- * removed from the default tree), the seeder logs a warning and skips
- * that single row — it never aborts the whole seed. Onboarding stays
- * resilient to fixture drift.
- *
- * Not extending `Illuminate\Database\Seeder` deliberately: this seeder
- * is a service called from a listener, never from `db:seed`. Skipping
- * the framework base class keeps the constructor DI-clean.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class DefaultCategorizationRuleSeeder
 {

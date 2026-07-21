@@ -13,16 +13,9 @@ use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 
-/**
- * Drops into each row of the `/transactions` list (and any other surface
- * that needs in-place categorization). The Blade view renders a
- * `<select wire:model.live="categoryId">`; the Livewire `updatedCategoryId`
- * hook fires the AssignsCategory action through the public contract so
- * Ledger remains the only mutator of `transactions.category_id`.
- *
- * Constructor-free Livewire component; services arrive as parameters on
- * the relevant action / render methods.
- */
+// The Blade view renders a <select wire:model.live="categoryId">; the
+// updatedCategoryId hook fires the AssignsCategory action through the
+// public contract so Ledger remains the only mutator of category_id.
 final class InlineCategoryPicker extends Component
 {
     public int $transactionId = 0;
@@ -43,12 +36,10 @@ final class InlineCategoryPicker extends Component
     ): void {
         $user = $currentUser->user();
 
-        // D-08 reconciled lock: warn-first, no write — mirrors
-        // TransactionDetail::reclassifyCategory (WR-01). The <select> is
-        // wire:model.live-bound, so Livewire has already flipped $categoryId
-        // to the new value before this hook runs; revert it to the
-        // persisted value so the row doesn't show a phantom selection that
-        // was never saved.
+        // Reconciled lock: warn-first, no write. The <select> is
+        // wire:model.live-bound, so Livewire has already flipped
+        // $categoryId before this hook runs; revert to the persisted
+        // value so the row doesn't show a phantom unsaved selection.
         if ($status->isReconciled($user->id, $this->transactionId)) {
             $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
 

@@ -8,17 +8,7 @@ use Illuminate\Database\Seeder;
 use Modules\Ledger\Models\Category;
 
 /**
- * Idempotent default category tree for a fresh beatrax install. Categories
- * are seeded with `user_id = NULL` so they act as the shared starting set
- * for every user (single-user app today; partner-sharing in v2). Uses
- * `updateOrCreate` keyed by `(slug, user_id = NULL)` so the lookup only
- * matches the global default-tree row — never a per-user override that
- * happens to share the same slug. Re-running the seeder is safe: it
- * never produces duplicates and never demotes a user-owned category to
- * global.
- *
- * The tree is a Dutch-aware default set: 13 top-level sections with 17
- * leaves under Income / Housing / Transport / Insurance / Subscriptions.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class DefaultCategoryTreeSeeder extends Seeder
 {

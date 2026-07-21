@@ -9,29 +9,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 
-/**
- * Materialises five `merchant_memories` rows for the primary demo
- * user so the auto-categorization audit trail surface and the
- * MerchantMemoryQuery hot path have data to render.
- *
- * `merchant_memories.merchant_id` is FK-constrained to `merchants`,
- * so the seeder first upserts a per-user `merchants` row keyed on
- * `(user_id, normalized_name)` and then attaches a memory row keyed
- * on `(user_id, merchant_id, category_id)`. Both tables are accessed
- * via the injected `DatabaseManager` query builder because no
- * Eloquent model lives in the project for either table — the
- * production write paths are inside Ledger's normalize stage and the
- * Categorization MerchantMemoryWriter listener.
- *
- * Category resolution: each memory row points at a global default
- * category seeded by `DefaultCategoryTreeSeeder`; the demo command
- * invokes that seeder before reaching this step, so the FK target is
- * guaranteed.
- *
- * Idempotency: the merchants `(user_id, normalized_name)` UNIQUE and
- * the merchant_memories `(user_id, merchant_id, category_id)` UNIQUE
- * key the upserts via `updateOrInsert`.
- */
+// merchant_memories.merchant_id is FK-constrained to merchants, so this
+// first upserts a per-user merchants row keyed on (user_id,
+// normalized_name), then attaches a memory row. Both tables are accessed
+// via the raw query builder — neither has an Eloquent model in the project.
 final class DemoMerchantMemorySeeder
 {
     /**

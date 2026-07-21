@@ -14,45 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Public action that inserts one `categorization_rules` parent row
- * plus its `rule_conditions` / `rule_actions` child rows (D-01/D-02/
- * D-03), atomically inside a single DB transaction. This action is
- * the sole permissible write path from the UI / API into these three
- * tables — the models themselves are fillable but every call site
- * routes through this action so the op x value_type matrix + payload
- * ownership validation stays in one place.
- *
- * Validation contract (every check below runs BEFORE any write):
- *   - At least one condition and at least one action MUST be supplied
- *     (`ValidationException`, Copywriting-Contract messages — a rule
- *     with zero conditions or zero actions violates the D-06
- *     structural invariant).
- *   - `$combinator` MUST be `'all'` or `'any'`.
- *   - Every condition's (`op`, `value_type`) pair MUST be inside the
- *     validity matrix (Req 1 / D-02 Pitfall 6): `string` conditions
- *     only support `contains`/`equals`/`starts_with`; `amount`
- *     conditions only support `>`/`<`/`between`/`equals`; `date`
- *     conditions only support `before`/`after`/`between`. `op =
- *     'between'` additionally requires a non-null `value2`.
- *   - `field` (meaningful only when `value_type = 'string'`) MUST be
- *     one of `merchant`/`description`/`counterparty` — mirrors the
- *     DB-layer allow-list trigger; the PHP-side check gives a clearer
- *     error message than a raw SQLite trigger abort. `amount`/`date`
- *     conditions still require a valid (if unused) `field` value at
- *     the DB layer — a placeholder (`'merchant'`) is stored when the
- *     caller omits it.
- *   - Every action's embedded payload id (`category_id`,
- *     `counterparty_id`, `deduction_category_id`) MUST refer to a row
- *     visible to the caller (T-13.4-07 / Req 2 / D-03 FLAG) — this is
- *     the security seam for every id embedded in a `rule_actions`
- *     JSON `payload`, since the payload carries no FK. A miss throws
- *     `InvalidArgumentException`.
- *
- * Duplicate-rule mitigation: retained for parity with the legacy
- * single-condition schema even though the redesigned tables carry no
- * UNIQUE constraint today (Pitfall-free defensive net) — a
- * `QueryException` is still translated into a `ValidationException`
- * rather than surfacing a raw SQL error to the UI.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class CreateCategorizationRule
 {
@@ -73,16 +35,9 @@ final class CreateCategorizationRule
 
     private const DUPLICATE_MESSAGE = 'A rule with this field, match, and value already exists. Edit the existing rule instead.';
 
-    /**
-     * An `amount`-value_type condition's `value`/`value2` MUST already
-     * be a signed integer minor-unit string (the same units as
-     * `settledAmountMinor`/`RuleEngine::toIntValue()`) by the time it
-     * reaches this action — `RuleFormModal::conditionPayload()` performs
-     * the Euro-decimal -> minor-unit scaling before calling here (CR-01).
-     * This pattern rejects a caller (direct-action/DevTools call) that
-     * skips that conversion and passes a raw decimal Euro string instead
-     * of silently truncating it at match time.
-     */
+    // Rejects a caller that skips the Euro-decimal -> minor-unit scaling
+    // RuleFormModal::conditionPayload() normally performs, instead of
+    // silently truncating a raw decimal Euro string at match time.
     private const AMOUNT_VALUE_PATTERN = '/^-?\d+$/';
 
     public function __construct(
@@ -90,12 +45,10 @@ final class CreateCategorizationRule
         private readonly Clock $clock,
     ) {}
 
+    // $conditions/$actions are untrusted, caller-supplied arrays; every
+    // element is validated field-by-field before use, never assumed to
+    // already conform to a shape.
     /**
-     * `$conditions`/`$actions` are untrusted, caller-supplied arrays
-     * (a Livewire form's repeater payload, or a direct-action /
-     * DevTools call) — every element is validated field-by-field
-     * before use, never assumed to already conform to a shape.
-     *
      * @param  list<array<string, mixed>>  $conditions
      * @param  list<array<string, mixed>>  $actions
      */
@@ -290,11 +243,9 @@ final class CreateCategorizationRule
         ];
     }
 
+    // Discards the value entirely (empty array) unless it already is a
+    // string-keyed array — never partially trusts a mixed-keyed array.
     /**
-     * Coerces an arbitrary (untrusted) value into a string-keyed array,
-     * discarding it entirely (empty array) unless it already is one —
-     * never partially trusts a mixed-keyed array.
-     *
      * @return array<string, mixed>
      */
     private static function toStringKeyedArray(mixed $value): array
@@ -408,12 +359,8 @@ final class CreateCategorizationRule
             || str_contains($message, 'duplicate key value');
     }
 
-    /**
-     * Verifies the supplied category is visible to the caller
-     * (global default or owned). Throws InvalidArgumentException on
-     * miss — the security seam for a `category`-type action payload's
-     * embedded `category_id` (T-13.4-07).
-     */
+    // The IDOR seam for a `category`-type action payload's embedded
+    // category_id: global default or user-owned only.
     private static function assertCategoryVisible(
         DatabaseManager $db,
         int $categoryId,
@@ -433,15 +380,9 @@ final class CreateCategorizationRule
         }
     }
 
-    /**
-     * Verifies the supplied counterparty belongs to the caller —
-     * mirrors `TransactionDetail::reassignCounterparty`'s `cpExists`
-     * check. Counterparties carry no global/null-user_id rows, so
-     * this is a plain `user_id` equality scope (no whereNull branch).
-     * Throws InvalidArgumentException on miss — the security seam for
-     * a `counterparty`-type action payload's embedded
-     * `counterparty_id` (T-13.4-07).
-     */
+    // The IDOR seam for a `counterparty`-type action payload's embedded
+    // counterparty_id. Counterparties carry no global/null-user_id rows,
+    // so this is a plain user_id equality scope.
     private static function assertCounterpartyVisible(
         DatabaseManager $db,
         int $counterpartyId,
@@ -459,14 +400,8 @@ final class CreateCategorizationRule
         }
     }
 
-    /**
-     * Verifies the supplied deduction category belongs to the caller —
-     * mirrors `TagTransaction::execute`'s `catExists` check (plain
-     * `user_id` equality, no global-corpus fallback). Throws
-     * InvalidArgumentException on miss — the security seam for a
-     * `tax_tag`-type action payload's embedded
-     * `deduction_category_id` (T-13.4-07).
-     */
+    // The IDOR seam for a `tax_tag`-type action payload's embedded
+    // deduction_category_id (plain user_id equality, no global fallback).
     private static function assertDeductionCategoryVisible(
         DatabaseManager $db,
         int $deductionCategoryId,

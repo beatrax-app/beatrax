@@ -7,24 +7,11 @@ namespace Modules\Categorization\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+// `payload` is a type-specific JSON shape: category {category_id},
+// counterparty {counterparty_id}, note {text, mode: set|append}, tax_tag
+// {deduction_category_id, year?}. `position` orders multi-action
+// application; `type` is DB-trigger-enforced against an allow-list.
 /**
- * Eloquent model for the `rule_actions` table — one row per action a
- * `CategorizationRule` parent performs when its conditions match
- * (D-03). A rule can carry multiple actions; `position` orders their
- * application.
- *
- * `payload` is a type-specific JSON shape:
- *
- *   category:     {category_id}
- *   counterparty: {counterparty_id}
- *   note:         {text, mode: set|append}
- *   tax_tag:      {deduction_category_id, year?}
- *
- * `type` is enforced via a paired BEFORE INSERT / BEFORE UPDATE
- * allow-list trigger on `rule_actions` — a typo in the action layer
- * fails loud at the DB boundary rather than landing a silently-broken
- * action.
- *
  * @property int $id
  * @property int $rule_id
  * @property int $position

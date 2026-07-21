@@ -17,31 +17,10 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * Read-side projection of `categorization_rules` + its `rule_conditions`
- * / `rule_actions` children (D-01/D-02/D-03) for the /rules page +
- * future correction-divergence drawer panel. Every read scopes by
- * `user_id` so a cross-user rule never surfaces in the current user's
- * UI.
- *
- * Rules are pulled `priority asc, id asc` — the same deterministic
- * order `RuleEngine::match()` executes them in (Req 3), so the
- * `/rules` table visually *is* the execution order.
- *
- * Category-path breadcrumbs and counterparty display names are
- * resolved via two small batched lookups (never per-row, never inside
- * a Cartesian-product join against the two child tables) keyed off
- * the `category_id`/`counterparty_id` embedded in each `category`/
- * `counterparty`-type action's JSON `payload` — mirrors
- * `CategoryOptionsQuery`'s visibility rule (a category row is visible
- * when its `user_id` is null (seeded default tree) OR matches the
- * user); counterparties have no global/null-user_id rows, so their
- * lookup is a plain `user_id` scope.
- *
- * DTOs are constructed only here, at the Public read boundary — never
- * inside `RuleEngine`'s per-transaction hot loop, which stays on raw
- * `DatabaseManager` query-builder rows (RESEARCH.md Pattern 2).
- */
+// Rules are pulled `priority asc, id asc` — the same deterministic order
+// RuleEngine::match() executes them in, so the /rules table visually IS
+// the execution order. DTOs are constructed only here, at the Public read
+// boundary — never inside RuleEngine's per-transaction hot loop.
 final readonly class CategorizationRuleQuery
 {
     public function __construct(
@@ -245,8 +224,8 @@ final readonly class CategorizationRuleQuery
         $out = [];
         foreach ($rows as $row) {
             $stored = is_string($row->display_name ?? null) ? $row->display_name : '';
-            // D-06 (14.1-10) read-side decrypt — pass-through no-op when
-            // encryption is not enabled for this user.
+            // Read-side decrypt — pass-through no-op when encryption is
+            // not enabled for this user.
             $out[self::toInt($row->id)] = $stored === ''
                 ? ''
                 : $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, $this->session)['value'];
@@ -304,11 +283,9 @@ final readonly class CategorizationRuleQuery
         return self::toStringKeyedArray($raw);
     }
 
+    // Discards the value entirely (empty array) unless it already is a
+    // string-keyed array — never partially trusts a mixed-keyed array.
     /**
-     * Coerces an arbitrary decoded-JSON value into a string-keyed
-     * array, discarding it entirely (empty array) unless it already is
-     * one — never partially trusts a mixed-keyed array.
-     *
      * @return array<string, mixed>
      */
     private static function toStringKeyedArray(mixed $value): array

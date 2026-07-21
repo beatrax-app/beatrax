@@ -8,24 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// Read paths inside RuleEvaluator + CategorizationRuleQuery use the raw
+// query builder with an explicit `where('user_id', ...)` scope so the
+// unauthenticated-context fallthrough (CLI/queue/test) cannot leak a
+// foreign user's rule; BelongsToUser is the secondary Eloquent guard.
 /**
- * Eloquent model for the categorization_rules table — the parent half
- * of the multi-condition/multi-action rules engine (D-01). A rule's
- * matchable conditions live in `rule_conditions` and its effects live
- * in `rule_actions`; the parent row only carries evaluation metadata:
- * `priority` (evaluation order), `combinator` ('all' | 'any' — how
- * this rule's conditions combine), `active`, `notes`, `hits_count`.
- *
- * The model uses BelongsToUser so global scope queries via Eloquent
- * automatically filter by the authenticated user. Read paths inside
- * RuleEvaluator + CategorizationRuleQuery use the raw query builder
- * with an explicit `where('user_id', ...)` scope so the
- * unauthenticated-context fallthrough (CLI / queue / test contexts
- * with no auth guard bound) cannot leak a foreign user's rule.
- *
- * `combinator` is enforced via paired BEFORE INSERT / BEFORE UPDATE
- * triggers on categorization_rules; a typo in the action layer fails
- * loud at the DB boundary rather than landing a silently-broken rule.
+ * @link ../../../.docs/features/categorization/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
