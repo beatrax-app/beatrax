@@ -17,35 +17,7 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use stdClass;
 
 /**
- * Hourly scheduled sweep that flips `drift_alerts` rows from
- * `state='snoozed'` to `state='open'` once their `snoozed_until` has
- * elapsed.
- *
- * Companion to the query-time conditional on `DriftAlertQuery::openForUser`
- * (and the related `openCountForUser` / `totalOpenAnnualizedImpactForUser`
- * aggregates) — those reads widen their state filter to include
- * `state='snoozed' AND snoozed_until <= now()` so the count + sum stay
- * honest between sweeps. The audit row is written exclusively by this
- * sweep: the query-time conditional is a read-side projection, never
- * a write.
- *
- * Runs hourly via `routes/console.php` (a scheduler entry named
- * `drift-alerts.revive-snoozes`). The sweep is global (no `user_id`
- * scope) — alerts may belong to any user; revival is purely a
- * timer-driven transition, the user-id is preserved on the audit row
- * via the state machine's read of the alert's owning user.
- *
- * Retries on transient failure: `tries=3` with exponential backoff
- * (60s / 5min / 15min). Each individual transition is idempotent at
- * the state-machine level, so retrying a partially-completed sweep is
- * safe.
- *
- * Concurrent user actions: if a user acknowledges, dismisses, or
- * re-snoozes a candidate row between the SELECT scan and the
- * state-machine call, the state-machine transaction will see the new
- * state under its row lock and raise `InvalidStateTransitionException`.
- * The sweep catches that exception per-row and skips silently so a
- * single mid-sweep user action cannot fail the entire job.
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
 {

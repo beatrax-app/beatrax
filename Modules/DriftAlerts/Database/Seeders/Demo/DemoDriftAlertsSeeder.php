@@ -11,55 +11,17 @@ use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Models\DriftAlertTransition;
 use Modules\Ledger\Models\Transaction;
 
-/**
- * Materialises a representative drift-alert dataset for the primary
- * demo user so the dashboard's drift-alert banner, the /drift review
- * surface, and the per-series drill-in chart all have data to render:
- *
- *   - One `open` alert with a large `annualized_impact_minor` so the
- *     dashboard banner classifies it as the most prominent tier
- *     (Spotify going from €10.99 → €14.99 = +€48/year impact)
- *   - One `open` alert with a smaller annualized impact (Sport City
- *     going from €25 → €27.50 = +€30/year impact)
- *   - One `acknowledged` alert (Netflix prior price change the user
- *     already reviewed and accepted)
- *   - One `dismissed_cancelled` alert (the NordVPN drift alert the
- *     user dismissed when they cancelled the underlying series)
- *
- * Plus two `drift_alert_transitions` rows narrating the
- * open→acknowledged and open→dismissed_cancelled flips so the audit
- * trail surface has data to render.
- *
- * The `latest_occurrence_id` FK is NOT NULL on `drift_alerts`, so the
- * seeder first upserts a `recurring_series_occurrences` row per target
- * series (each pointing to one of the existing demo transactions for
- * that subscription) and then references that occurrence id from the
- * drift alert. The seeder picks the most recent demo transaction
- * matching the series' detected name as the observation anchor.
- *
- * Idempotency: the UNIQUE `(recurring_series_id, latest_occurrence_id)`
- * on `drift_alerts` keys the upsert; occurrences are upserted via the
- * `(recurring_series_id, transaction_id)` UNIQUE. Transition rows are
- * upserted via the application-keyed
- * `(drift_alert_id, from_state, to_state)` triple — sufficient because
- * the demo set carries one transition per (alert, flip) pair.
- *
- * State mutations on existing rows route through
- * `DriftAlertStateMachine`; the seeder lands alerts already in the
- * target state via `create()` (the boundary arch test only blocks
- * `DriftAlert::query()->update(['state' => …])`, not initial inserts).
- */
+// The latest_occurrence_id FK is NOT NULL on drift_alerts, so the seeder
+// first upserts a recurring_series_occurrences row per target series and
+// then references that occurrence id. Alerts land already in the target
+// state via create() — the boundary arch test only blocks direct updates.
 final class DemoDriftAlertsSeeder
 {
-    /**
-     * Per-alert demo configuration. `seriesClusterKey` resolves to the
-     * existing demo recurring series; `txDescription` selects the
-     * underlying transaction the occurrence row anchors to. Amounts
-     * are signed minor units; expense direction means the delta should
-     * be negative to model "you are paying more than baseline".
-     *
-     * @var list<array{seriesClusterKey: string, txDescription: string, state: string, direction: string, baselineMinor: int, latestMinor: int, deltaMinor: int, annualMinor: int, thresholdPercent: int, ageDays: int, actionedAgeDays: ?int}>
-     */
+    // seriesClusterKey resolves to the existing demo recurring series;
+    // txDescription selects the underlying transaction the occurrence row
+    // anchors to. Amounts are signed minor units; expense direction means
+    // the delta should be negative to model "paying more than baseline".
+    /** @var list<array{seriesClusterKey: string, txDescription: string, state: string, direction: string, baselineMinor: int, latestMinor: int, deltaMinor: int, annualMinor: int, thresholdPercent: int, ageDays: int, actionedAgeDays: ?int}> */
     private const ALERTS = [
         [
             'seriesClusterKey' => 'demo:spotify:monthly:1099',
@@ -115,13 +77,9 @@ final class DemoDriftAlertsSeeder
         ],
     ];
 
-    /**
-     * Lifecycle transitions narrating the moments alerts left the
-     * `open` state. Keyed by `seriesClusterKey` so the application
-     * resolves alert ids deterministically at seed time.
-     *
-     * @var list<array{seriesClusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}>
-     */
+    // Keyed by seriesClusterKey so the application resolves alert ids
+    // deterministically at seed time.
+    /** @var list<array{seriesClusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}> */
     private const TRANSITIONS = [
         [
             'seriesClusterKey' => 'demo:netflix:monthly:1499',
@@ -221,14 +179,9 @@ final class DemoDriftAlertsSeeder
         ]);
     }
 
-    /**
-     * Look up a recurring_series row by `(user_id, cluster_key)` via
-     * the query builder rather than the RecurringSeries Eloquent
-     * model. The DriftAlerts module's `noRecurringSeriesWrites`
-     * boundary arch test bans any RecurringSeries::* identifier inside
-     * the DriftAlerts source tree — even for read access — so the
-     * lookup goes through the raw query builder.
-     */
+    // Uses the query builder rather than the RecurringSeries Eloquent
+    // model — the boundary arch test bans any RecurringSeries::* identifier
+    // inside the DriftAlerts source tree, even for read access.
     private function lookupSeriesId(User $user, string $clusterKey): ?int
     {
         $row = $this->db->connection()
@@ -244,13 +197,9 @@ final class DemoDriftAlertsSeeder
         return (int) $row->id;
     }
 
-    /**
-     * Idempotent upsert of a recurring_series_occurrences row keyed on
-     * `(recurring_series_id, transaction_id)`. The drift alert's
-     * NOT NULL latest_occurrence_id FK requires this row to exist.
-     * Uses the query builder rather than the RecurringSeriesOccurrence
-     * Eloquent model to keep the DriftAlerts boundary arch test green.
-     */
+    // Idempotent upsert keyed on (recurring_series_id, transaction_id) via
+    // the query builder rather than the RecurringSeriesOccurrence Eloquent
+    // model, to keep the DriftAlerts boundary arch test green.
     private function ensureOccurrence(User $user, int $seriesId, Transaction $tx): int
     {
         $connection = $this->db->connection();

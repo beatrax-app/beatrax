@@ -11,14 +11,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 
 /**
- * `/drift/watch` page — the Subscription Drift Watch overview. Ranks the
- * user's approved subscriptions by how much their price has crept up since the
- * first observed charge, with a sparkline per row and a deep link into the
- * existing series-detail chart. The subscription-centric companion to the
- * alert-centric `/drift` page.
- *
- * Read-only: service collaborators arrive as render() parameters (constructor
- * injection is banned on Livewire Component subclasses by phpstan-strict-rules).
+ * @link ../../../../../.docs/features/drift-alerts/architecture.md
  */
 final class SubscriptionDriftWatchPage extends Component
 {

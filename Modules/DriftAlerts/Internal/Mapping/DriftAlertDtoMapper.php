@@ -11,15 +11,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 /**
- * Shared hydrator for `drift_alerts` rows → `DriftAlertDto`.
- *
- * Static-only: no constructor dependencies. The mapper does not read
- * services or touch the DB; it is pure-data transformation.
- *
- * The caller passes the series's display name (resolved at the query
- * layer from `recurring_series.display_name_override` or `detected_name`)
- * and the optional EUR-equivalent in minor units (null when the
- * original currency is already EUR or when no FX shadow is available).
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class DriftAlertDtoMapper
 {
@@ -45,10 +37,8 @@ final class DriftAlertDtoMapper
             $eurEquivalent = Money::ofMinor($eurEquivalentMinor, 'EUR');
         }
 
-        // The schema marks `detected_at` non-null, but a corrupted row
-        // could surface here as null or non-string. Fail loud with an
-        // identifying message rather than letting Carbon raise a
-        // bare InvalidFormatException out of an unscoped parse('').
+        // Fail loud (see the class @link) rather than letting Carbon raise
+        // a bare InvalidFormatException out of an unscoped parse('').
         $rawDetected = $row->detected_at ?? null;
         if (! is_string($rawDetected) || $rawDetected === '') {
             $rowId = isset($row->id) && is_numeric($row->id) ? (string) $row->id : '?';

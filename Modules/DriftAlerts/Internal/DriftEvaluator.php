@@ -13,25 +13,7 @@ use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
- * Drift detection math.
- *
- * Reads the last two occurrences of an approved or cadence-changed
- * recurring series via Modules\Recurring\Public\Services\RecurringSeriesQuery,
- * computes a signed delta in the series's original currency, applies the
- * effective drift threshold (per-series override beats user global beats
- * the hard 5% floor), guards against divide-by-zero on a prior amount of
- * zero, and INSERTs one drift_alerts row when the ratio crosses the
- * threshold.
- *
- * Idempotency is enforced by the UNIQUE(recurring_series_id,
- * latest_occurrence_id) index on drift_alerts; re-running the evaluator
- * against the same (series, occurrence) pair is silently caught at the
- * QueryException boundary and treated as a no-op.
- *
- * Every cross-module read of recurring_series goes through the
- * RecurringSeriesQuery Public service surface — the evaluator never
- * imports Modules\Recurring\Internal, Modules\Recurring\Models, or
- * runs a raw SELECT against the recurring_series table.
+ * @link ../../../.docs/features/drift-alerts/architecture.md
  */
 final readonly class DriftEvaluator
 {
@@ -120,23 +102,10 @@ final readonly class DriftEvaluator
     }
 
     /**
-     * Resolve the effective drift threshold for a given (series, user)
-     * pair: a per-series override wins; otherwise the user-global
-     * setting wins; otherwise the hard 5% default applies.
-     *
-     * The three sources map onto three distinct `threshold_source`
-     * labels so the audit row + renderer can distinguish them:
-     *   - `series_override` — the user set a per-series override.
-     *   - `global`          — the user set a non-zero user-level value.
-     *   - `default`         — neither override nor user value applied;
-     *                         the hard 5% floor took effect.
-     *
-     * The per-series override is read through
-     * `RecurringSeriesQuery::driftThresholdForSeries` so every
-     * cross-module read of `recurring_series` flows through Recurring's
-     * Public service surface.
-     *
-     * @return array{percent: int, source: string}
+     * @return array{percent: int, source: string} effective threshold for a (series, user)
+     *                                             pair — per-series override beats user-global beats the hard 5% default; source is
+     *                                             one of series_override/global/default so the audit row and renderer can distinguish
+     *                                             them
      */
     private function effectiveThresholdPercent(int $recurringSeriesId, User $user): array
     {
@@ -154,14 +123,9 @@ final readonly class DriftEvaluator
     }
 
     /**
-     * Maps a recurring cadence onto its calendar-year multiplier:
-     * weekly => 52, monthly => 12, quarterly => 4, yearly => 1.
-     *
-     * Returns 0 for any other cadence (including 'irregular') so callers
-     * can short-circuit before computing a meaningless annualized
-     * impact. The weekly=>52 multiplier stays consistent with the
-     * monthly-equivalent ladder used elsewhere (52/12 weekly conversion)
-     * at the integer level.
+     * @return int calendar-year multiplier for the cadence (weekly=52, monthly=12,
+     *             quarterly=4, yearly=1), or 0 for any other cadence (including 'irregular') so
+     *             callers can short-circuit before computing a meaningless annualized impact
      */
     private function cadenceMultiplierForYear(string $cadence): int
     {

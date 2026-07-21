@@ -13,19 +13,7 @@ use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Records the user's intent that the underlying recurring series was
- * cancelled outside the app. The drift_alerts row transitions to
- * `dismissed_cancelled`; the recurring_series row stays unchanged
- * (enforced by `noRecurringSeriesWritesFromDriftAlerts` arch test).
- *
- * Idempotent when already dismissed. Cross-user invocation raises
- * NotFoundHttpException. Dispatches `DriftAlertDismissedCancelled` so
- * downstream listeners can exclude the series from their own
- * projections without re-reading the drift_alerts row.
- *
- * Transition reason is `user_dismissed_cancelled` (distinct from the
- * acknowledge action's `user_action`) so the audit trail can separate
- * "reviewed and accepted" from "I cancelled this series."
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class DismissDriftAlertAsCancelled
 {

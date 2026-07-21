@@ -15,36 +15,7 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 
 /**
- * Public read API over `drift_alerts`. Every method scopes by
- * `user_id` and returns Spatie-Data DTOs so the drift page, the
- * dashboard tile, and downstream module listeners read a single
- * canonical shape.
- *
- * Cross-user reads return an empty list (or zero on count aggregates);
- * cross-user 404s are surfaced at the Public Action layer.
- *
- * Cursor pagination is keyed strictly on `id DESC`. The single-column
- * cursor stays monotone: `drift_alerts.id` is a SQLite autoincrementing
- * surrogate, so newer alerts always have larger ids. Ordering and
- * filtering by id alone keeps the cursor consistent when multiple alerts
- * share an exact `detected_at` second (the revival sweep and the
- * detector listener can each batch several writes inside a single
- * scheduler tick).
- *
- * `totalOpenAnnualizedImpactForUser` returns a SUM aggregate in
- * original-currency-minor units. When alerts span multiple currencies
- * the headline arithmetic is the responsibility of the renderer; the
- * tile presents the absolute magnitude in EUR. The SUM is in the
- * original-currency minor units — an EUR FX join is out of scope for
- * this query.
- *
- * `groupedBySeriesForUser` returns a map from `recurring_series_id` to
- * the list of open alerts in that series — used by the /drift Open
- * tab's grouped-by-series collapsible header.
- *
- * Cross-module reads of `recurring_series` (display name, state)
- * are delegated to `RecurringSeriesQuery` so the DriftAlerts module
- * never issues a raw SELECT against another module's table.
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final readonly class DriftAlertQuery
 {
@@ -55,20 +26,8 @@ final readonly class DriftAlertQuery
     ) {}
 
     /**
-     * Open alerts. The state filter is widened to include rows in
-     * `state='snoozed'` whose `snoozed_until` has elapsed: the hourly
-     * `RevivedExpiredDriftSnoozesJob` flips those rows back to
-     * `state='open'` and writes an audit transition, but between
-     * sweeps the count + the listing must already reflect the user-
-     * visible "this is open again" reality. The two paths produce the
-     * same set; the sweep is the durable write, the query is the
-     * fresh read.
-     *
-     * Sort: `id DESC`. Cursor pagination filters strictly on `id`
-     * so paging stays consistent even when multiple alerts share an
-     * exact `detected_at` second.
-     *
-     * @return list<DriftAlertDto>
+     * @return list<DriftAlertDto> open alerts, sorted id DESC (see the class @link's
+     *                             open-tab compound filter note)
      */
     public function openForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
@@ -76,9 +35,7 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * Acknowledged alerts (state='acknowledged').
-     *
-     * @return list<DriftAlertDto>
+     * @return list<DriftAlertDto> acknowledged alerts (state='acknowledged')
      */
     public function historyForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
@@ -86,19 +43,13 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * Dismissed alerts (state='dismissed_cancelled').
-     *
-     * @return list<DriftAlertDto>
+     * @return list<DriftAlertDto> dismissed alerts (state='dismissed_cancelled')
      */
     public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
         return $this->scoped($user, ['dismissed_cancelled'], $cursorId, $limit);
     }
 
-    /**
-     * Count of open alerts for the user. Used by the top-nav badge
-     * composer and the dashboard "Drift alerts" tile.
-     */
     public function openCountForUser(User $user): int
     {
         return $this->db->connection()->table('drift_alerts')
@@ -108,13 +59,8 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * SUM of `annualized_impact_minor` across open EXPENSE-direction
-     * alerts in original-currency-minor units. The dashboard tile
-     * renders the absolute magnitude in EUR as its "potential
-     * annualized cost" headline, so the rollup must stay scoped to
-     * expenses — folding an income raise's positive delta into the
-     * same headline would conflate "subscriptions going up" with
-     * "salary going up" under the single up-arrow tile chrome.
+     * @return int SUM of annualized_impact_minor across open EXPENSE-direction alerts in
+     *             original-currency-minor units (see the class @link for why expense-only)
      */
     public function totalOpenAnnualizedImpactForUser(User $user): int
     {
@@ -126,17 +72,10 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * Resolve the underlying recurring_series.state for each id in the
-     * supplied list, scoped to the user. Used by the /drift renderer
-     * to surface the "Cadence flipped — also showing in /recurring/review"
-     * meta line on rows whose underlying series is in cadence_changed.
-     *
-     * Delegates to RecurringSeriesQuery so the read flows through the
-     * Recurring module's Public service surface instead of a raw
-     * cross-module SELECT.
-     *
      * @param  list<int>  $seriesIds
-     * @return array<int, string>
+     * @return array<int, string> recurring_series.state per id, scoped to the user. Used
+     *                            by the /drift renderer to surface the "Cadence flipped" meta line; delegates to
+     *                            RecurringSeriesQuery instead of a raw cross-module SELECT
      */
     public function seriesStatesForUser(User $user, array $seriesIds): array
     {
@@ -144,14 +83,9 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * Open alerts grouped by `recurring_series_id`. Series order
-     * follows the newest alert in each group (descending). Within a
-     * group, alerts sort by `id DESC` — `drift_alerts.id` is a
-     * monotonically-increasing surrogate so newer alerts always have
-     * larger ids, even when several rows share an exact `detected_at`
-     * second.
-     *
-     * @return array<int, list<DriftAlertDto>>
+     * @return array<int, list<DriftAlertDto>> open alerts grouped by recurring_series_id.
+     *                                         Series order follows the newest alert in each group (descending); within a group,
+     *                                         alerts sort by id DESC
      */
     public function groupedBySeriesForUser(User $user): array
     {
@@ -202,12 +136,7 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * Open-tab projection. Applies the "state='open' OR (state='snoozed'
-     * AND snoozed_until <= now())" compound filter so snoozed-but-
-     * expired rows surface immediately, before the next hourly revival
-     * sweep writes the audit transition.
-     *
-     * @return list<DriftAlertDto>
+     * @return list<DriftAlertDto> open-tab projection via applyOpenStateFilter()
      */
     private function scopedOpen(User $user, ?int $cursorId, int $limit): array
     {
@@ -246,14 +175,10 @@ final readonly class DriftAlertQuery
         return $result;
     }
 
-    /**
-     * Apply the open-tab state filter onto a query builder: rows in
-     * `state='open'`, plus rows in `state='snoozed'` whose
-     * `snoozed_until` has elapsed. The conditional clause sits inside a
-     * single `where(function (...) { ... })` group so chaining with
-     * other predicates (user_id scope, cursor pagination) reads as
-     * intended.
-     */
+    // Rows in state='open', plus state='snoozed' rows whose snoozed_until
+    // has elapsed. The clause sits inside one where(function...) group so
+    // chaining with other predicates (user_id scope, cursor pagination)
+    // reads as intended.
     private function applyOpenStateFilter(Builder $query): void
     {
         $now = $this->clock->now()->toDateTimeString();
@@ -266,12 +191,9 @@ final readonly class DriftAlertQuery
     }
 
     /**
-     * Delegates to RecurringSeriesQuery so every cross-module read of
-     * the recurring_series table flows through Recurring's Public
-     * service surface.
-     *
      * @param  array<int|string, mixed>  $seriesIds
-     * @return array<int, string>
+     * @return array<int, string> delegates to RecurringSeriesQuery so every cross-module
+     *                            read of recurring_series flows through Recurring's Public service surface
      */
     private function loadSeriesDisplayNames(User $user, array $seriesIds): array
     {

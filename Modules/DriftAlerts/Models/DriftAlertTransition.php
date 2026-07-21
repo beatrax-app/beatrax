@@ -12,18 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\DriftAlerts\Database\Factories\DriftAlertTransitionFactory;
 
+// Append-only audit trail produced by DriftAlertStateMachine. actor is
+// either `user` (drift page acknowledge/snooze/dismiss-as-cancelled) or
+// `detector` (snooze-expiry revival flip back to open).
+
 /**
- * Eloquent model for the drift_alert_transitions table — the
- * append-only audit trail produced by `DriftAlertStateMachine`.
- *
- * One row per state transition. `actor` is either `user` (drift page
- * acknowledge / snooze / dismiss-as-cancelled affordance) or
- * `detector` (snooze-expiry revival flip back to `open`).
- * `transition_reason` is the structured code (`user_action`,
- * `user_dismissed_cancelled`, `detector_opened`,
- * `detector_revived_snooze`) that downstream surfaces narrate to
- * the user.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $drift_alert_id

@@ -15,23 +15,12 @@ use Modules\DriftAlerts\Database\Factories\DriftAlertFactory;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesOccurrence;
 
+// latest_occurrence_id points back into recurring_series_occurrences —
+// paired with recurring_series_id it is the idempotency seam that lets
+// DetectDriftAlertsJob re-run against the same (series, occurrence) pair
+// without producing duplicate alerts.
+
 /**
- * Eloquent model for the drift_alerts table — one row models one
- * detected drift event for a single approved / cadence-changed
- * recurring series.
- *
- * The `state` column is mutated exclusively by
- * `Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine`;
- * the schema-level trigger pair plus the
- * `noOtherDriftAlertStateMutator` BoundaryArchTest invariant enforce
- * the sole-mutator contract.
- *
- * `latest_occurrence_id` points back into the
- * recurring_series_occurrences table — paired with `recurring_series_id`
- * it is the idempotency seam that lets `DetectDriftAlertsJob` re-run
- * against the same (series, occurrence) pair without producing
- * duplicate alerts.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $recurring_series_id

@@ -7,14 +7,11 @@ namespace Modules\DriftAlerts\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\DriftAlerts\Models\DriftAlertTransition;
 
+// The default state encodes a "user acknowledged an open alert"
+// transition. Callers can override from_state/to_state/transition_reason/
+// actor for the snooze/dismiss/revive shapes.
+
 /**
- * Eloquent factory for the drift_alert_transitions audit table.
- *
- * The default state encodes a "user acknowledged an open alert"
- * transition. Callers can override `from_state` / `to_state` /
- * `transition_reason` / `actor` for the snooze / dismiss / revive
- * shapes.
- *
  * @extends Factory<DriftAlertTransition>
  */
 final class DriftAlertTransitionFactory extends Factory
