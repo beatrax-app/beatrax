@@ -6,21 +6,15 @@ namespace Modules\DriftAlerts\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * One row on the Subscription Drift Watch overview: an approved recurring
- * expense series (a subscription) with the price it started at, the price it
- * charges now, the cumulative drift between them, and a sparkline of every
- * observed amount in between.
- *
- * `deltaMinor` is latest − baseline (positive = crept up); `deltaPercent` is
- * that as a fraction of the baseline × 100. `points` is the chronological
- * amount history (oldest first) for the sparkline. `hasOpenAlert` flags
- * subscriptions with an unresolved drift alert so the row can deep-link to it.
- */
 final class SubscriptionDriftRow extends Data
 {
     /**
-     * @param  list<array{date: string, amount_minor: int}>  $points
+     * @param  int  $deltaMinor  latest minus baseline (positive = crept up)
+     * @param  float  $deltaPercent  $deltaMinor as a fraction of the baseline x 100
+     * @param  list<array{date: string, amount_minor: int}>  $points  chronological amount
+     *                                                                history (oldest first) for the sparkline
+     * @param  bool  $hasOpenAlert  true when an unresolved drift alert exists, so the row can
+     *                              deep-link to it
      */
     public function __construct(
         public readonly int $seriesId,

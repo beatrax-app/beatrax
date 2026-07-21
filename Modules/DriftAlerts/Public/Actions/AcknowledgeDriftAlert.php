@@ -13,19 +13,7 @@ use Modules\DriftAlerts\Public\Events\DriftAlertAcknowledged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Acknowledges an open (or snoozed) drift_alerts row — the user has
- * reviewed the price drift and no further action is required.
- * Idempotent when the alert is already acknowledged (silent no-op).
- * Cross-user invocation raises NotFoundHttpException via the
- * `(id, user_id)` guard.
- *
- * The state machine writes the new state + `actioned_at` audit
- * timestamp inside the same row-locked transaction as the
- * drift_alert_transitions row insert.
- *
- * Acknowledging closes only the alert that was acted on; it has no
- * special effect on future drift detection. If the price stabilises
- * no further alert fires; if it drifts again a fresh alert opens.
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class AcknowledgeDriftAlert
 {

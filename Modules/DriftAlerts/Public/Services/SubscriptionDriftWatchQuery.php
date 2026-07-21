@@ -10,27 +10,12 @@ use Modules\DriftAlerts\Public\Dto\SubscriptionDriftRow;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
- * Builds the Subscription Drift Watch overview: every approved recurring
- * EXPENSE series (subscription) that has at least two observed amounts, with
- * its baseline → latest price, the cumulative drift, and the amount-history
- * sparkline. Sorted by the largest € increase first so the subscriptions that
- * crept up the most surface at the top.
- *
- * This is the subscription-centric counterpart to the alert-centric /drift
- * page: it reuses the Recurring module's occurrence history
- * (RecurringSeriesQuery::amountTrendForSeries) and the DriftAlerts open-alert
- * rows, rather than introducing a new history store.
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class SubscriptionDriftWatchQuery
 {
-    /**
-     * Point ceiling for the amount trend. The drift watch reports the price
-     * change since the FIRST charge ("since you started tracking it"), so it
-     * must read the full occurrence history — not the 24-point default the
-     * series-detail chart uses, which would make the baseline the oldest of
-     * only the last 24 charges. 600 covers any realistic subscription lifetime
-     * (50 years monthly / 11 years weekly).
-     */
+    // Covers any realistic subscription lifetime (50 years monthly / 11
+    // years weekly) — see the class @link for why the full history is read.
     private const FULL_HISTORY_POINTS = 600;
 
     public function __construct(
@@ -54,7 +39,6 @@ final class SubscriptionDriftWatchQuery
             $trend = $this->series->amountTrendForSeries($dto->seriesId, $user, self::FULL_HISTORY_POINTS);
             $points = $trend->points;
             if (count($points) < 2) {
-                // A single observation can't have drifted yet.
                 continue;
             }
 

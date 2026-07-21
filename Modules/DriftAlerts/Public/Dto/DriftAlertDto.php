@@ -8,30 +8,20 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * Read-side projection of a single drift_alerts row for the drift page,
- * the dashboard badge composer, and any future drill-in surface.
- *
- * `baselineAmount`, `latestAmount`, `delta`, and `annualizedImpact` are
- * all denominated in the recurring series's original transaction
- * currency (preserved verbatim on `drift_alerts.currency`).
- * `eurEquivalent` is null when the original currency is already EUR;
- * otherwise it carries the settled-EUR amount the renderer uses for
- * the dashboard sidebar's monthly fixed-payments total so the figure
- * sums cleanly across mixed currencies.
- *
- * `displayName` is resolved at the query layer — the underlying
- * recurring_series row may carry a user-supplied
- * `display_name_override`, or the renderer may compose the name from
- * the detector's `detected_name`. The DTO stores the already-resolved
- * string so call sites do not have to repeat the override fallback.
- *
- * `thresholdPercentUsed` + `thresholdSource` are captured at alert-
- * open time so subsequent changes to the user-global or per-series
- * thresholds never rewrite the historical audit trail.
- */
 final class DriftAlertDto extends Data
 {
+    /**
+     * @param  string  $displayName  resolved at the query layer (user-supplied
+     *                               display_name_override, or composed from detected_name) so call sites don't repeat
+     *                               the override fallback
+     * @param  Money  $baselineAmount  denominated in the recurring series's original
+     *                                 transaction currency (drift_alerts.currency), like $latestAmount/$delta/$annualizedImpact
+     * @param  Money|null  $eurEquivalent  null when the original currency is already EUR;
+     *                                     otherwise the settled-EUR amount the renderer uses for the dashboard sidebar's
+     *                                     monthly fixed-payments total
+     * @param  int  $thresholdPercentUsed  captured at alert-open time so later changes to the
+     *                                     user-global or per-series threshold never rewrite the historical audit trail
+     */
     public function __construct(
         public readonly int $driftAlertId,
         public readonly int $recurringSeriesId,

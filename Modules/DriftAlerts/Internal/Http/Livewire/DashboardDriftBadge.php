@@ -10,15 +10,8 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 
-/**
- * Inline dashboard "Drift alerts" count tile. Reads through
- * `DriftAlertQuery::openCountForUser` + `totalOpenAnnualizedImpactForUser`
- * for the current user; renders no chrome when `openCount === 0` so the
- * dashboard collapses gracefully on a quiet day.
- *
- * Method-parameter DI on `render()` — constructor injection is banned
- * on Livewire `Component` subclasses by phpstan-strict-rules.
- */
+// Method-parameter DI on render() — constructor injection is banned on
+// Livewire Component subclasses.
 final class DashboardDriftBadge extends Component
 {
     public function render(

@@ -27,29 +27,12 @@ use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
-/**
- * Wires the Drift Alerts module.
- *
- * register() binds the stateless in-tree services as singletons (state
- * machine, detector, queries, Public Actions). Queued jobs and Livewire
- * components are intentionally NOT bound as singletons — jobs are
- * serialised/unserialised by the queue worker and Livewire components
- * are instantiated per-request by `LivewireManager`, so both bypass the
- * container's singleton cache by design.
- *
- * boot() conditionally loads the module's migrations, routes, and views,
- * registers the three Livewire SFCs (DriftPage, DashboardDriftBadge,
- * DriftThresholdEditor), wires the detector listener to the Recurring
- * metrics-refreshed event, and installs the top-nav badge composer via
- * `registerTopNavBadgeComposer()`. The badge composer injects
- * `driftOpenCount` into `core::livewire.top-nav` through the
- * ViewFactoryContract — the global `view()` helper is forbidden by
- * project convention.
- *
- * The dashboard drift count badge is rendered directly via the
- * `@livewire('drift-alerts.dashboard-drift-badge')` directive on the
- * dashboard view, so the provider does not register a composer for it.
- */
+// Queued jobs and Livewire components are intentionally NOT bound as
+// singletons — both are instantiated per-use and bypass the container's
+// singleton cache by design.
+
+// The dashboard drift badge renders via @livewire() directly, so this
+// provider registers no composer for it.
 final class DriftAlertsServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -87,13 +70,10 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         $this->registerTopNavBadgeComposer();
     }
 
-    /**
-     * Subscribe the drift detector to the Recurring module's
-     * per-series metrics-refreshed event. The listener queues the
-     * `DetectDriftAlertsJob` for the affected `(user, series)` pair;
-     * the job is `ShouldBeUniqueUntilProcessing` so concurrent
-     * triggers collapse safely.
-     */
+    // Subscribes the drift detector to Recurring's per-series
+    // metrics-refreshed event; the listener queues a
+    // ShouldBeUniqueUntilProcessing DetectDriftAlertsJob so concurrent
+    // triggers collapse safely.
     private function registerListener(Dispatcher $events): void
     {
         $events->listen(
@@ -102,22 +82,10 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         );
     }
 
-    /**
-     * Inject the top-nav `Drift` open-alert count into
-     * `core::livewire.top-nav` via the View Factory contract.
-     *
-     * The contract is resolved through `$this->app->make()` to keep
-     * the DI-only invariant visible at the call site; the global
-     * `view()` helper is forbidden in module code.
-     *
-     * The composer fires once per top-nav render. A boot-scoped memo
-     * (the `$cache` array captured by reference inside the closure)
-     * collapses repeated renders within a single boot cycle to a
-     * single COUNT query — relevant when a Livewire roundtrip
-     * re-emits the nav as part of the same response. Under traditional
-     * FPM, `boot()` runs once per request, so the memo is effectively
-     * request-scoped.
-     */
+    // Resolved through $this->app->make() to keep the DI-only invariant
+    // visible; the global view() helper is forbidden. The $cache array
+    // captured by reference collapses repeated renders within a single
+    // boot cycle to one COUNT query per user.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;

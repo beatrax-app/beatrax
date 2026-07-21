@@ -92,6 +92,228 @@ What the module explicitly does NOT do:
 - **Internal/Http/Livewire/** — `DriftPage` (`/drift`),
   `DashboardDriftBadge`, `DriftThresholdEditor`.
 
+## `DriftAlertQuery` read contract
+
+Public read API over `drift_alerts`. Every method scopes by `user_id` and
+returns Spatie-Data DTOs so the drift page, the dashboard tile, and
+downstream module listeners read a single canonical shape. Cross-user
+reads return an empty list (or zero on count aggregates); cross-user 404s
+are surfaced at the Public Action layer.
+
+Cursor pagination is keyed strictly on `id DESC` — `drift_alerts.id` is a
+SQLite autoincrementing surrogate, so newer alerts always have larger ids,
+which keeps the cursor consistent when multiple alerts share an exact
+`detected_at` second (the revival sweep and the detector listener can each
+batch several writes inside a single scheduler tick).
+
+The open-tab projection (`openForUser`, `openCountForUser`,
+`totalOpenAnnualizedImpactForUser`, `groupedBySeriesForUser`) applies a
+compound filter — `state='open' OR (state='snoozed' AND snoozed_until <=
+now())` — so snoozed-but-expired rows surface immediately, before the
+next hourly `RevivedExpiredDriftSnoozesJob` sweep writes the audit
+transition. The two paths produce the same eventual set; the sweep is the
+durable write, the query is the fresh read.
+
+`totalOpenAnnualizedImpactForUser` SUMs `annualized_impact_minor` across
+open EXPENSE-direction alerts only, in original-currency-minor units —
+the dashboard tile's "potential annualized cost" headline must stay
+scoped to expenses, since folding an income raise's positive delta into
+the same headline would conflate "subscriptions going up" with "salary
+going up" under one up-arrow tile. Cross-module reads of `recurring_series`
+(display name, state) are delegated to `RecurringSeriesQuery` so
+`DriftAlerts` never issues a raw SELECT against another module's table.
+
+## `CancellationImpactQuery`, `SavingsInsightsQuery`, `SubscriptionDriftWatchQuery`
+
+**`CancellationImpactQuery`** projects savings if the user cancels a
+recurring series, computed from `recurring_series.monthly_equivalent_minor`
+exposed via `RecurringSeriesQuery` (cross-module access is exclusively
+through that Public surface so `noRecurringSeriesWritesFromDriftAlerts`
+and broader boundary discipline stay green). The returned currency is the
+series's original currency (`recurring_series.latest_currency`), not
+necessarily EUR — a USD-billed series (Google Play, cross-currency ICS
+settlements) returns USD savings; the renderer owns any EUR shadow it
+surfaces alongside the original-currency primary line. Cancellation
+savings are expressed as positive amounts (cancelling a recurring expense
+reduces outflow) even though the underlying `RecurringSeriesDto` stores
+`monthlyEquivalent` as a signed Money (negative for expenses, positive
+for incomes) — this query takes the absolute amount so the "save €X/yr"
+copy reads naturally for both the common expense case and the rare
+income-series case. Returns `null` for a cross-user or missing series.
+
+**`SavingsInsightsQuery`** builds the "You could save here" suggestions:
+each approved recurring subscription pairs with the most actionable
+support-resource link, chosen by priority — (1) `cheaper`: the corpus has
+a cheaper-plan/student/retention page; (2) `cancel`: the price has
+drifted up (an open drift alert exists) and the corpus has a
+cancellation page; (3) `review`: an ongoing charge at or above the EUR
+review floor with a cancellation page. One suggestion per subscription,
+dismissible via a stable persisted key, ranked by monthly cost — purely
+informational, beatrax surfaces the official link and never acts on the
+user's behalf. `forUser()` is cached per user so the dashboard card
+doesn't re-run the resolution fan-out on every render; the cache is
+invalidated on `dismiss()` and also expires within the TTL so new
+subscriptions/drift surface without a manual refresh.
+
+**`SubscriptionDriftWatchQuery`** builds the Subscription Drift Watch
+overview: every approved recurring EXPENSE series with at least two
+observed amounts, with its baseline → latest price, the cumulative
+drift, and the amount-history sparkline, sorted by the largest euro
+increase first. It is the subscription-centric counterpart to the
+alert-centric `/drift` page, reusing `RecurringSeriesQuery::amountTrendForSeries`
+and the `DriftAlerts` open-alert rows rather than introducing a new
+history store. It reads the full occurrence history (a 600-point ceiling
+covers any realistic subscription lifetime — 50 years monthly / 11 years
+weekly) rather than the 24-point default the series-detail chart uses,
+since the drift watch reports the price change since the *first* charge,
+not just the most recent 24.
+
+## `DriftPage` — the unified alerts home
+
+`/drift` hosts a top-level TYPE switch ("Subscription drift" | "Unusual
+charges") that selects which alert stream is shown; under it the same
+three lifecycle tabs (Open / History / Dismissed) apply to whichever
+type is active. The drift stream reads `DriftAlertQuery`; the anomaly
+stream reads the `Anomaly` module's Public `AnomalyAlertQuery` — a
+sanctioned Public crossing, since the page is owned by `DriftAlerts` but
+composes `Anomaly`'s read surface exactly as it already composes
+`Recurring`'s series query. Per-row drift actions: Acknowledge / Snooze
+(1w / 1m / 3m popover) / "I cancelled this". Per-row anomaly actions:
+Acknowledge / Snooze / Mark as expected (creates a suppression rule and
+emits an "Undo" toast) / Dismiss. Every action dispatches a toast on
+success.
+
+`modelCancelInForecast()` invokes the `Forecasting` Public Action that
+atomically creates a new scenario pre-seeded with a `cancel_series`
+mutation for the alert's underlying series, then redirects to
+`/forecast?scenarioId={new}`. The `drift_alerts` row itself is not
+modified — modelling is non-destructive; the user can still dismiss or
+acknowledge later.
+
+Both the drift and anomaly snooze handlers independently re-validate the
+snooze target server-side (bounding it to `(now, now+6mo]`) even though
+the popover only ever emits one of three server-computed targets — this
+is defence in depth against a tampered Livewire payload, on top of the
+Public Action's own server-side bound.
+
+## Write-action security & idempotency contracts
+
+Every Public write action in `DriftAlerts` shares the same defensive
+shape: cross-user 404 (never 403) via an explicit `where('id',
+$alertId)->where('user_id', $user->id)` predicate; idempotent no-op when
+the target state (or, for snooze, the exact target timestamp) already
+matches; and every state write goes through `DriftAlertStateMachine`,
+which stamps `actioned_at` (or `snoozed_until`) via the same
+`$extraColumns` mechanism so the state flip and the companion timestamp
+land inside one row-locked transaction and audit row.
+
+`DismissDriftAlertAsCancelled` never writes `recurring_series` — enforced
+by the `noRecurringSeriesWritesFromDriftAlerts` arch test — and uses the
+distinct transition reason `user_dismissed_cancelled` (vs.
+`AcknowledgeDriftAlert`'s `user_action`) so the audit trail can separate
+"reviewed and accepted" from "I cancelled this series". It dispatches
+`DriftAlertDismissedCancelled` carrying `recurringSeriesId` so downstream
+listeners can exclude the series from their own projections without
+re-reading the row. `SnoozeDriftAlert` compares snooze idempotency via
+Unix timestamps (`getTimestamp()`) rather than formatted datetime strings,
+since the stored `snoozed_until` casts in the app timezone while the
+caller's timestamp may carry a different offset from its ISO source —
+comparing epoch seconds keeps the check timezone-independent.
+
+## `DriftThresholdEditor` per-series threshold popover
+
+Mounts inline on both the `/drift` grouped-by-series headers and
+`/recurring/series/{id}` — the same component drives both surfaces so the
+popover chrome stays consistent. The save path delegates to the
+Recurring-side `SetDriftThresholdForSeries` Public Action; `DriftAlerts`
+itself never writes to `recurring_series`, keeping the
+`noRecurringSeriesWritesFromDriftAlerts` invariant green without an
+exemption list. `currentValue === null` means "use the user-global
+default" — the popover's "Use global default" option saves `null` back.
+
+## Job concurrency contracts
+
+**`DetectDriftAlertsJob`** — per-(user, series) drift evaluation,
+dispatched by `EvaluateDriftOnMetricsRefreshed` after each `Recurring`
+sweep refreshes a series's metric columns. `ShouldBeUniqueUntilProcessing`
+keyed on `uniqueId() = "{userId}:{seriesId}"` collapses any concurrent
+(scheduled-tick + on-demand-redetect) trigger pair into a single queued
+job per (user, series); the lock releases the moment a worker begins
+`handle()`. `handle()` hands off to `DriftEvaluator`, which owns all of
+the math, persistence, and `DriftAlertOpened` dispatch.
+
+**`EmitSavingsPromptsJob`** — per-user push of the existing savings
+insights, deliberately the smallest of the proactive triggers since it
+computes nothing: reads `SavingsInsightsQuery::forUser($user)` (the same
+read `SavingsInsightsCard` uses) and dispatches one `SavingsPromptDue`
+event per returned insight. `forUser()` already excludes any insight the
+user has dismissed, so this job must not re-filter — a second filter here
+would let the notification surface and the card silently drift apart on
+what is "live". Clones `SafetyNetAnomalySweepJob`'s per-user job shape and
+`CounterpartyGarbageCollectorJob`'s `ShouldBeUniqueUntilProcessing` triad.
+The job holds one `int $userId` and never batches across users (the
+global `UserScope` does not fire in queue/console context, and
+`SavingsInsightsQuery` is already user-scoped by its own discipline). No
+transaction wraps the dispatch loop — each `SavingsPromptDue` dispatch is
+independent of any DB write here.
+
+**`RevivedExpiredDriftSnoozesJob`** — hourly scheduled sweep that flips
+`drift_alerts` rows from `snoozed` to `open` once `snoozed_until` has
+elapsed. This is the durable-write companion to `DriftAlertQuery`'s
+query-time conditional (which widens its state filter so counts/sums
+stay honest between sweeps) — the audit row is written exclusively by
+this sweep; the query-time conditional is read-only. The sweep is global
+(no `user_id` scope; alerts may belong to any user, and the user id is
+preserved on the audit row via the state machine's read of the alert's
+owning user). Each transition is idempotent at the state-machine level,
+so retrying a partially-completed sweep on transient failure is safe. If
+a user acknowledges, dismisses, or re-snoozes a candidate row between the
+SELECT scan and the state-machine call, the state-machine transaction
+sees the new state under its row lock and raises
+`InvalidStateTransitionException`; the sweep catches that per-row and
+skips silently so a single mid-sweep user action cannot fail the whole job.
+
+## `DriftAlertStateMachine` contract
+
+The single legal mutator of `drift_alerts.state` and the sole inserter
+into `drift_alert_transitions`. Other module code may UPDATE non-state
+columns (the evaluator refreshes `latest_amount_minor` /
+`annualized_impact_minor` / `detected_at` on a revival flip; the snooze
+action sets `snoozed_until` alongside the state flip via `$extraColumns`).
+The sole-mutator contract is enforced at three layers: static analysis
+(the `noOtherDriftAlertStateMutator` arch test rejects any non-allowed
+file writing to `drift_alerts.state`), runtime (`ALLOWED_TRANSITIONS`
+throws `InvalidStateTransitionException` on illegal targets), and
+database (SQLite triggers ABORT on out-of-enum state values even when an
+arbitrary code path bypasses this class). `acknowledged` and
+`dismissed_cancelled` are terminal states (empty target arrays in
+`ALLOWED_TRANSITIONS`).
+
+`transition()` mirrors `RecurringSeriesStateMachine`: opens a
+transaction, sets `PRAGMA busy_timeout = 5000`, takes a row lock
+(`lockForUpdate()`), validates against `ALLOWED_TRANSITIONS`, writes the
+new state + `updated_at`, and inserts exactly one
+`drift_alert_transitions` row carrying the full audit metadata. Two
+concurrent detectors that briefly contend on the same alert row serialise
+rather than fail. `toIntOrNull()` silently degrades a corrupted/zero/
+negative `user_id` to `null` on the audit-row FK so the transition
+contract ("write exactly one `drift_alert_transitions` row per legal
+state flip") stays resilient against a corrupted source row — callers
+that need to detect the corruption can inspect the resulting
+`drift_alert_transitions.user_id IS NULL` row; a test locks this
+swallow-to-null semantic so a future refactor cannot quietly change it
+into a throw. `InvalidStateTransitionException` is caught separately from
+a generic `RuntimeException` so the queued evaluator job and the
+drift-page actions can distinguish a rejected transition (programming or
+race condition) from a row that vanished mid-flight (a transient cascade
+delete from a missing `recurring_series` row).
+
+`DriftAlertDtoMapper::hydrate()` fails loud with an identifying message
+when `detected_at` is missing/non-string on a row (the schema marks it
+non-null, but a corrupted row could still surface here), rather than
+letting Carbon raise a bare `InvalidFormatException` out of an unscoped
+`parse('')`.
+
 ## Key services + events
 
 - `DriftEvaluator::evaluate($seriesId, $user)` — the math. Reads

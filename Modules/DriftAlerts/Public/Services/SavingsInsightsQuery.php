@@ -16,25 +16,12 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
- * Builds the "You could save here" suggestions: each approved recurring
- * subscription is paired with the most actionable link the support-resource
- * corpus offers for it, chosen by priority —
- *
- *   1. cheaper  — the corpus has a cheaper-plan / student / retention page
- *   2. cancel   — the subscription's price has drifted up (an open drift alert)
- *                 and the corpus has a cancellation page
- *   3. review   — an ongoing charge (>= REVIEW_FLOOR / month) with a cancel page
- *
- * One suggestion per subscription, dismissible (persisted by stable key),
- * ranked by monthly cost. Purely informational — we surface the official link,
- * we never act on the user's behalf. Every read is user-scoped.
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class SavingsInsightsQuery
 {
-    /** EUR-minor monthly spend below which a "review" nudge is suppressed. */
     private const REVIEW_FLOOR = 500;
 
-    /** Cache TTL for a user's computed insights (seconds). */
     private const CACHE_TTL = 600;
 
     public function __construct(
@@ -47,11 +34,8 @@ final class SavingsInsightsQuery
     ) {}
 
     /**
-     * Cached per user so the dashboard card does not re-run the resolution fan-out
-     * on every render; the cache is invalidated on dismiss() and expires within
-     * CACHE_TTL so new subscriptions / drift surface without a manual refresh.
-     *
-     * @return list<SavingsInsight>
+     * @return list<SavingsInsight> cached per user (see the class @link) — invalidated on
+     *                              dismiss() and expires within CACHE_TTL
      */
     public function forUser(User $user): array
     {

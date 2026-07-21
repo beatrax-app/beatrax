@@ -8,19 +8,12 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\DriftAlerts\Models\DriftAlert;
 
+// The default state mirrors a 15% monthly expense drift (EUR 9.99 to
+// 11.49). Callers must override the three FK columns (user_id,
+// recurring_series_id, latest_occurrence_id) — the schema constraints
+// reject the factory defaults of null.
+
 /**
- * Eloquent factory for the drift_alerts table.
- *
- * The default state mirrors a 15% monthly expense drift (€9.99 →
- * €11.49, +€1.80 delta, +€21.60 annualized at the ×12 monthly
- * multiplier). State factories cover the four lifecycle phases:
- * open() (the default), acknowledged(), snoozed($until), and
- * dismissedCancelled().
- *
- * Callers must override the three FK columns (`user_id`,
- * `recurring_series_id`, `latest_occurrence_id`) — the schema
- * constraints reject the factory defaults of `null`.
- *
  * @extends Factory<DriftAlert>
  */
 final class DriftAlertFactory extends Factory
@@ -50,11 +43,8 @@ final class DriftAlertFactory extends Factory
         ];
     }
 
-    /**
-     * State factory: an open alert. This is the default state but the
-     * helper is kept symmetric with the three terminal states below
-     * so call sites read explicitly.
-     */
+    // Default state, but kept symmetric with the three terminal states
+    // below so call sites read explicitly.
     public function open(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -64,11 +54,8 @@ final class DriftAlertFactory extends Factory
         ]);
     }
 
-    /**
-     * State factory: an acknowledged alert. The user reviewed it and
-     * dismissed the alert without recording any further intent. Sets
-     * `actioned_at` to a point inside the default detection window.
-     */
+    // The user reviewed it and dismissed the alert without recording any
+    // further intent.
     public function acknowledged(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -78,11 +65,8 @@ final class DriftAlertFactory extends Factory
         ]);
     }
 
-    /**
-     * State factory: a snoozed alert. Caller supplies the
-     * `snoozed_until` timestamp explicitly — the revival sweep flips
-     * the row back to `open` once the timestamp is in the past.
-     */
+    // Caller supplies snoozed_until explicitly — the revival sweep flips
+    // the row back to open once the timestamp is in the past.
     public function snoozed(CarbonImmutable $until): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -92,13 +76,8 @@ final class DriftAlertFactory extends Factory
         ]);
     }
 
-    /**
-     * State factory: a dismissed-as-cancelled alert. Records the
-     * user's intent that the underlying recurring series was
-     * cancelled outside the app; downstream phases consume the
-     * `DriftAlertDismissedCancelled` event emitted by the
-     * corresponding Public Action.
-     */
+    // Records the user's intent that the underlying recurring series was
+    // cancelled outside the app.
     public function dismissedCancelled(): self
     {
         return $this->state(fn (array $attributes): array => [

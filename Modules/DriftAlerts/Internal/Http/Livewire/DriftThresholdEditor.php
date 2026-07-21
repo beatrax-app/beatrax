@@ -12,25 +12,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 
 /**
- * Per-series drift threshold override popover. Mounts inline on /drift
- * grouped-by-series headers and on /recurring/series/{id}; the same
- * component drives both surfaces so the popover chrome stays
- * consistent.
- *
- * The save path delegates to the Recurring-side
- * `SetDriftThresholdForSeries` Public Action — DriftAlerts itself never
- * writes to recurring_series, keeping the
- * `noRecurringSeriesWritesFromDriftAlerts` invariant green without an
- * exemption list.
- *
- * Constructor-injection is banned on Livewire `Component` subclasses by
- * phpstan-strict-rules; service collaborators arrive as method
- * parameters on `mount()`, `save()`, and `render()`.
- *
- * `currentValue === null` means "use the user-global default" — the
- * popover's "Use global default" option saves null back. The popover
- * displays "5 (global)" or the user-global value when no series-level
- * override is active; the popover trigger label adapts accordingly.
+ * @link ../../../../../.docs/features/drift-alerts/architecture.md
  */
 final class DriftThresholdEditor extends Component
 {
@@ -62,13 +44,10 @@ final class DriftThresholdEditor extends Component
 
     public function save(int|string $newValue, CurrentUser $currentUser, SetDriftThresholdForSeries $action): void
     {
-        // Validate the inbound value before reaching the Public Action.
-        // The action carries its own whitelist (raises
-        // InvalidArgumentException on a non-allowed value) but a
-        // tampered Livewire payload that PHP-coerces to 0 (e.g. the
-        // string "abc") would surface that exception as a noisy
-        // user-facing error. Silently reject anything outside the
-        // popover's allowed set instead.
+        // The Public Action carries its own whitelist (raises
+        // InvalidArgumentException on a non-allowed value), but a tampered
+        // payload that PHP-coerces to 0 would surface that as a noisy
+        // user-facing error — silently reject it here instead.
         if ($newValue === 'global') {
             $effective = null;
         } elseif (is_int($newValue) || ctype_digit($newValue)) {

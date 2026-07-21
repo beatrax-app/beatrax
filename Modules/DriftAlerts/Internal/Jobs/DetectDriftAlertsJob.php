@@ -16,26 +16,7 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 
 /**
- * Per-(user, series) drift evaluation. Dispatched by
- * EvaluateDriftOnMetricsRefreshed after each Recurring sweep refreshes
- * a series's metric columns.
- *
- * Concurrency contract:
- *  - ShouldBeUniqueUntilProcessing keyed on uniqueId() = "{userId}:{seriesId}"
- *    collapses any concurrent (scheduled-tick + on-demand-redetect)
- *    trigger pair into a single queued job per (user, series). The
- *    lock releases the moment a worker begins handle().
- *  - tries = 3 + backoff = [60, 300, 900] keeps a transient queue or
- *    DB hiccup from final-failing the evaluation without two retries.
- *
- * Queue-uniqueness lock resolution is delegated to the shared
- * Modules\Core\Public\Support\LockStore helper: uniqueVia() returns
- * LockStore::forUniqueJobs(), which resolves the cache store named by
- * config('cache.locks_store').
- *
- * handle() resolves the User via firstOrFail (mirrors
- * DetectRecurringSeriesJob) and hands off to DriftEvaluator which
- * owns all of the math + persistence + DriftAlertOpened dispatch.
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class DetectDriftAlertsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {

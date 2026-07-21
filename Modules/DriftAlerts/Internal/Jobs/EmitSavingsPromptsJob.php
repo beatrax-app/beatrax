@@ -18,26 +18,7 @@ use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
 
 /**
- * Per-user push of the EXISTING SEED-010 savings insights (Req 7) —
- * deliberately the smallest of the four proactive triggers, because it
- * computes nothing. Reads `SavingsInsightsQuery::forUser($user)` — the same
- * read `SavingsInsightsCard` uses — and dispatches one `SavingsPromptDue`
- * event per returned insight. `forUser()` already excludes any insight the
- * user has dismissed, so this job MUST NOT re-filter: a second filter here
- * would let the notification surface and the card silently drift apart on
- * what is "live" (T-18-31).
- *
- * Clones `SafetyNetAnomalySweepJob`'s per-user job shape and
- * `CounterpartyGarbageCollectorJob`'s `ShouldBeUniqueUntilProcessing` triad
- * verbatim.
- *
- * Explicit user scoping (T-18-29 / D-25): the job holds one `int $userId`
- * and never batches across users — `BelongsToUser`'s `UserScope` global
- * scope does not fire in queue/console context, and `SavingsInsightsQuery`
- * is already user-scoped by its own discipline.
- *
- * No transaction wraps the dispatch loop (D-28 / WR-06) — each
- * `SavingsPromptDue` dispatch is independent of any DB write here.
+ * @link ../../../../.docs/features/drift-alerts/architecture.md
  */
 final class EmitSavingsPromptsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {

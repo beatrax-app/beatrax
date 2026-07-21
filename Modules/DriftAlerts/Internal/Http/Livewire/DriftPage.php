@@ -27,45 +27,20 @@ use Modules\DriftAlerts\Public\Services\DriftAlertQuery;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
 
 /**
- * `/drift` page — the unified alerts home (D-02). A top-level TYPE
- * switch ("Subscription drift" | "Unusual charges") selects which alert
- * stream is shown; under it the same three lifecycle tabs
- * (Open / History / Dismissed) apply to whichever type is active.
- *
- * The drift stream reads `DriftAlertQuery`; the anomaly stream reads the
- * Anomaly module's Public `AnomalyAlertQuery` (a sanctioned Public
- * crossing — the page is owned by DriftAlerts but composes Anomaly's
- * read surface, exactly as it already composes Recurring's series query).
- *
- * Per-row drift actions: Acknowledge / Snooze (1w / 1m / 3m popover) /
- * "I cancelled this". Per-row anomaly actions: Acknowledge / Snooze /
- * Mark as expected (creates a suppression rule + emits the "Undo" toast)
- * / Dismiss. Every action dispatches a toast on success.
- *
- * Service collaborators arrive as parameters on action methods and
- * `render()`. Constructor injection is banned on Livewire `Component`
- * subclasses by phpstan-strict-rules.
+ * @link ../../../../../.docs/features/drift-alerts/architecture.md
  */
 final class DriftPage extends Component
 {
-    /**
-     * Active tab. Three values: open (default) / history / dismissed.
-     * Persisted via #[Url] so back-button and bookmarks behave.
-     */
+    // open (default) / history / dismissed, persisted via #[Url] so
+    // back-button and bookmarks behave.
     #[Url(as: 'tab', except: 'open')]
     public string $tab = 'open';
 
-    /**
-     * Active alert type. `drift` (default — preserves existing
-     * bookmarks) or `anomaly`. Persisted via #[Url] so `?type=anomaly`
-     * deep-links the Unusual charges view.
-     */
+    // drift (default, preserves existing bookmarks) or anomaly, persisted
+    // via #[Url] so ?type=anomaly deep-links the Unusual charges view.
     #[Url(as: 'type', except: 'drift')]
     public string $type = 'drift';
 
-    /**
-     * Cursor: previous page's tail drift_alerts.id. Null = first page.
-     */
     public ?int $cursorId = null;
 
     public function setTab(string $tab): void
@@ -94,13 +69,10 @@ final class DriftPage extends Component
 
     public function snoozeAnomaly(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeAnomalyAlert $action, Clock $clock): void
     {
-        // The snooze popover only ever emits the three server-computed
-        // targets (1 week, 1 month, 3 months). A tampered Livewire
-        // payload could deliver an arbitrary ISO8601 string — bound the
-        // accepted range here so a past or unbounded-future timestamp
-        // never reaches the action. (The action itself ALSO enforces the
-        // (now, now+6mo] bound server-side, T-09-10; this is defence in
-        // depth that keeps the UI from dispatching a doomed request.)
+        // Bound the accepted range here (see the class @link) so a tampered
+        // Livewire payload with a past or unbounded-future timestamp never
+        // reaches the action — defence in depth on top of the action's own
+        // server-side bound.
         try {
             $until = CarbonImmutable::parse($untilIso);
         } catch (\Throwable) {
@@ -131,16 +103,16 @@ final class DriftPage extends Component
 
         if ($ruleWritten) {
             // The "Undo" affordance re-opens the anomaly and deletes the
-            // suppression rule the dismissal just created (D-18).
+            // suppression rule the dismissal just created.
             $this->dispatch('toast', message: 'Suppression rule added — Undo', undo: 'undoAnomalySuppression', undoArg: $alertId);
 
             return;
         }
 
-        // CR-01: no suppression rule could be written (the charge amount is
+        // No suppression rule could be written (the charge amount is
         // unresolvable, e.g. its transaction was deleted). The dismissal
-        // still stands — surface that honestly rather than promising a mute
-        // + an Undo that would delete nothing.
+        // still stands — surface that honestly rather than promising a
+        // mute + an Undo that would delete nothing.
         $this->dispatch('toast', message: 'Dismissed as expected');
     }
 
@@ -158,11 +130,9 @@ final class DriftPage extends Component
 
     public function snooze(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeDriftAlert $action, Clock $clock): void
     {
-        // The snooze popover only ever emits the three server-computed
-        // targets (1 week, 1 month, 3 months) from $snoozeTargets. A
-        // tampered Livewire payload could deliver an arbitrary ISO8601
-        // string — bound the accepted range so a past timestamp or an
-        // unbounded future timestamp can never reach the action.
+        // Bound the accepted range here (see the class @link) so a tampered
+        // Livewire payload can never reach the action with a past or
+        // unbounded-future timestamp.
         try {
             $until = CarbonImmutable::parse($untilIso);
         } catch (\Throwable) {
@@ -187,14 +157,6 @@ final class DriftPage extends Component
         $this->dispatch('toast', message: 'Dismissed as cancelled');
     }
 
-    /**
-     * Phase 10 launchpad — invoke the Forecasting Public Action that
-     * atomically creates a new scenario pre-seeded with a
-     * `cancel_series` mutation for the alert's underlying series, then
-     * redirect to `/forecast?scenarioId={new}`. The drift_alerts row
-     * itself is NOT modified — modelling is non-destructive; the user
-     * can still dismiss or acknowledge later.
-     */
     public function modelCancelInForecast(
         int $alertId,
         CurrentUser $currentUser,
@@ -238,7 +200,6 @@ final class DriftPage extends Component
                 'tab' => $this->tab,
                 'anomalyRows' => $anomalyRows,
                 'snoozeTargets' => $snoozeTargets,
-                // Drift-only collaborators the shared view guards on `type`.
                 'rows' => [],
                 'grouped' => [],
                 'seriesStates' => [],
@@ -257,7 +218,6 @@ final class DriftPage extends Component
             default => $query->openForUser($user, $this->cursorId),
         };
 
-        // Grouped-by-series view is only meaningful on the Open tab.
         $grouped = $this->tab === 'open' ? $query->groupedBySeriesForUser($user) : [];
 
         // Series states are surfaced to the renderer so the
@@ -274,15 +234,10 @@ final class DriftPage extends Component
         }
         $seriesStates = $seriesIds === [] ? [] : $query->seriesStatesForUser($user, $seriesIds);
 
-        // CancellationImpactQuery hand-off: one DTO per distinct series
-        // id rendered on the page. The map keys on recurringSeriesId so
-        // the partial pulls the projection inline without a per-row
-        // query. Cross-user / missing series rows are silently absent
-        // from the result — the partial guards every interpolation
-        // behind `@if ($cancellationImpact !== null)`. The batched
-        // `forSeriesIds` call collapses what would otherwise be N
-        // separate queries (one per distinct series id) into a single
-        // SELECT.
+        // One CancellationImpactDto per distinct series id, keyed on
+        // recurringSeriesId so the partial pulls the projection inline
+        // without a per-row query — the batched forSeriesIds() call
+        // collapses what would otherwise be N separate SELECTs into one.
         $uniqueSeriesIds = array_values(array_unique($seriesIds));
         /** @var array<int, CancellationImpactDto> $impactBySeriesId */
         $impactBySeriesId = $uniqueSeriesIds === []
