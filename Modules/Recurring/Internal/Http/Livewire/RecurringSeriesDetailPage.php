@@ -14,28 +14,10 @@ use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * `/recurring/series/{id}` drill-in page. Renders the amount-over-time
- * ApexCharts visualisation (native-currency primary + EUR shadow when
- * the native currency is not EUR) plus the full per-occurrence table
- * linking each row to its underlying transaction.
- *
- * Constructor-injection is banned on Livewire `Component` subclasses by
- * phpstan-strict-rules; collaborators arrive as method parameters on
- * `mount()`, action methods, and `render()` — the same shape every
- * other Livewire SFC in this module follows.
- *
- * Public state:
- *  - `seriesId` — route-bound integer; the mount-time cross-user 404
- *    is the load-bearing guard.
- *  - `showAllPoints` — when true the chart re-renders with the full
- *    occurrence set instead of the 24-point default; flipped via the
- *    `toggleAllPoints` action.
- *
- * Cross-user 404 is enforced at `mount()` time by re-loading the
- * series through the Public read API and throwing
- * NotFoundHttpException when the lookup misses for the current user.
- */
+// Constructor injection is banned on Livewire Component subclasses, so
+// collaborators arrive as method parameters on mount(), action methods,
+// and render(). Cross-user 404 is enforced at mount() time by re-loading
+// the series and throwing NotFoundHttpException when the lookup misses.
 final class RecurringSeriesDetailPage extends Component
 {
     public int $seriesId = 0;
@@ -56,13 +38,8 @@ final class RecurringSeriesDetailPage extends Component
         $this->showAllPoints = ! $this->showAllPoints;
     }
 
-    /**
-     * Delegate to the EditRecurringSeriesVarianceTolerance Public
-     * Action. The action enforces the cross-user 404 + whitelist; the
-     * SFC dispatches a small toast on success. Tolerance changes are
-     * not destructive (the user can simply pick another value), so no
-     * Undo affordance is wired.
-     */
+    // Tolerance changes are not destructive (the user can simply pick
+    // another value), so no Undo affordance is wired on this toast.
     public function editVarianceTolerance(
         int $newTolerancePercent,
         CurrentUser $currentUser,
@@ -89,7 +66,6 @@ final class RecurringSeriesDetailPage extends Component
         $trend = $query->amountTrendForSeries($this->seriesId, $user, $maxPoints);
         $apexOptions = $this->buildApexOptions($trend);
 
-        // Deep link to the counterparty this series belongs to (if resolved).
         $counterpartyId = $query->counterpartyIdForSeries($this->seriesId, $user);
         $counterpartyLink = $counterpartyId !== null
             ? $counterparties->identityForId($user, $counterpartyId)
@@ -110,17 +86,13 @@ final class RecurringSeriesDetailPage extends Component
     }
 
     /**
-     * Compose the ApexCharts option object the Blade view injects via
-     * `@json`. The native-currency line is always present; an EUR
-     * shadow series is appended when any point carries a non-null
-     * `eur_amount_minor`.
+     * @return array<string, mixed> ApexCharts option object the Blade view injects via
      *
-     * Amount values are converted from minor units to floats so the
-     * client-side chart can format them through its own y-axis
-     * formatter. Negative expense amounts stay negative — ApexCharts
-     * renders below-zero lines without extra config.
-     *
-     * @return array<string, mixed>
+     *     @json. The native-currency line is always present; an EUR shadow series is
+     *     appended when any point carries a non-null eur_amount_minor. Amount values convert
+     *     from minor units to floats so the client-side y-axis formatter renders them;
+     *     negative expense amounts stay negative (ApexCharts renders below-zero lines
+     *     without extra config)
      */
     private function buildApexOptions(RecurringSeriesAmountTrendDto $trend): array
     {

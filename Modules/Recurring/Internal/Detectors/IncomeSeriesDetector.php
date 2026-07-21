@@ -12,7 +12,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
-use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
@@ -22,56 +21,13 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
+// counterparty_iban is a SensitiveFieldRegistry-listed column: under an
+// encrypted user it is random-nonce ciphertext that differs per row for
+// the same logical IBAN, so clustering on the raw value would scatter
+// every income row and silently detect nothing — see the class @link.
+
 /**
- * Income-side recurring series detector.
- *
- * Reads transactions of type `income` inside the user's
- * `recurring_detection_window_months` look-back window. Filters out
- * any row below `recurring_income_min_amount_minor` (default
- * 200000 minor units = €2000) so small refunds and cashbacks never
- * pollute the income-series surface.
- *
- * Clusters rows by counterparty IBAN first — when the IBAN is non-null
- * and non-empty the cluster key is the IBAN; otherwise the detector
- * falls back to `counterparty_normalized`. The currency token is
- * carried alongside so a same-employer EUR + USD inflow splits into
- * two distinct series per the original-currency clustering rule.
- *
- * Cluster keys are composed with `direction='income'` so the
- * `(user_id, direction, cluster_key, latest_currency)` UNIQUE constraint
- * holds independently from any expense cluster on the same counterparty.
- *
- * Rejected income series stay rejected — a `state='rejected'` row is
- * never re-prompted even when a new clustered run would otherwise
- * promote it. Cadence-flip detection on approved rows mirrors the
- * expense detector: state machine transition + RecurringSeriesCadenceFlipped
- * event.
- *
- * Occurrence rows land via INSERT-OR-IGNORE on the
- * `(recurring_series_id, transaction_id)` UNIQUE constraint so re-runs
- * of the sweep do not duplicate the per-occurrence ledger.
- *
- * **CRYPT-01 (14.1-08, D-06):** `counterparty_iban` is a
- * `SensitiveFieldRegistry`-listed column — at rest under an encrypted
- * user it is random-nonce ciphertext that differs per row even for the
- * SAME logical IBAN, so clustering on the raw stored value would
- * scatter every income row into its own one-row, sub-threshold group
- * and silently detect nothing. `$session` (optional — see below) is
- * decrypted-through via {@see SensitiveColumnCodec::decryptValue()}
- * BEFORE the value participates in cluster-key derivation. The codec
- * call is itself a documented no-op pass-through for a plaintext
- * (pre-encryption or never-encrypted) value, so passing a session is
- * always safe.
- *
- * The `$session` parameter is deliberately optional and NOT part of
- * the {@see SeriesDetector} contract (PHP permits an implementing
- * method to add extra default-valued parameters without breaking
- * interface conformance) — {@see DetectRecurringSeriesJob}
- * is the ONLY caller that knows which dispatch origin it is running
- * under (in-request `dispatchSync`, KEK present, vs the KEK-less
- * scheduled daemon) and decides whether to pass a session at all;
- * every OTHER caller resolving this class through the generic
- * `SeriesDetector` interface still compiles and runs unchanged.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class IncomeSeriesDetector implements SeriesDetector
 {
@@ -139,9 +95,9 @@ final class IncomeSeriesDetector implements SeriesDetector
             $counterparty = self::toStringNullable($row->counterparty_normalized);
             $iban = self::toStringNullable($row->counterparty_iban);
             if ($iban !== '' && $session !== null) {
-                // CRYPT-01: decrypt BEFORE the value becomes the cluster
-                // key — a no-op pass-through when the value is already
-                // plaintext (not encrypted / no epoch verifies).
+                // Decrypt BEFORE the value becomes the cluster key — a
+                // no-op pass-through when the value is already plaintext
+                // (not encrypted / no epoch verifies).
                 $iban = $this->codec->decryptValue('transactions', 'counterparty_iban', $iban, $user->id, $session)['value'];
             }
             $currency = self::toStringNullable($row->currency);
@@ -149,22 +105,10 @@ final class IncomeSeriesDetector implements SeriesDetector
                 continue;
             }
 
-            // IBAN-primary cluster key with normalized-description
-            // fallback. An IBAN identifies the upstream payer
-            // (employer, freelance client) more stably than the free-
-            // form description — banks rewrite the description text
-            // over time but the SEPA IBAN is constant.
-            //
-            // WR-17 (knowingly-accepted plaintext derivative): this decrypted
-            // IBAN is persisted verbatim into the unencrypted
-            // `recurring_series.cluster_counterparty_key` below as a DETERMINISTIC
-            // lookup key. Random-nonce ciphertext cannot serve as a stable WHERE
-            // key, so this column is deliberately kept plaintext and recorded as
-            // a reviewed exception in SensitiveFieldRegistry's DEFERRED list. A
-            // future hardening replaces it with a keyed HMAC / blind-index
-            // (deterministic-but-non-reversible), which requires a stable key
-            // source AND a migration of existing cluster keys to avoid splitting
-            // series — deferred rather than done silently here.
+            // IBAN-primary cluster key, normalized-description fallback: an
+            // IBAN identifies the upstream payer more stably than the
+            // free-form description (banks rewrite it; the SEPA IBAN is
+            // constant). See the class @link for the plaintext-derivative note.
             $counterpartyKey = $iban !== '' ? $iban : $counterparty;
             if ($counterpartyKey === '') {
                 continue;
@@ -229,13 +173,9 @@ final class IncomeSeriesDetector implements SeriesDetector
             ->where('latest_currency', $currency)
             ->first();
 
-        // Cadence-flip fallback: when `cluster_key` misses because the
-        // cadence band has flipped, look up by the persisted
-        // counterparty key (IBAN when present, otherwise the
-        // normalized counterparty description). Keying on the
-        // counterparty identifier (not on detected_name) is what
-        // keeps two payroll providers that share a normalized display
-        // string from collapsing into one another.
+        // Cadence-flip fallback keyed on the counterparty identifier (not
+        // detected_name) — keeps two payroll providers that share a
+        // normalized display string from collapsing into one another.
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
@@ -270,24 +210,18 @@ final class IncomeSeriesDetector implements SeriesDetector
         }
 
         if ($existing->state === 'rejected') {
-            // Rejection covers the entire (counterparty, currency)
-            // pair — every cadence variant. The lookup hits via
-            // cluster_counterparty_key + latest_currency, so a
-            // freshly-clustering quarterly pattern for an income
-            // source the user previously rejected at a monthly
-            // cadence is intentionally suppressed. The user
-            // un-rejects from the review queue to bring the
-            // counterparty back; partial cadence-only un-rejection
-            // is not supported.
+            // Rejection covers the whole (counterparty, currency) pair
+            // across every cadence variant, so a freshly-clustering
+            // quarterly pattern for an income source rejected at a
+            // monthly cadence is intentionally suppressed too.
             return;
         }
 
         if ($existing->state === 'snoozed') {
-            // Snooze is a "hide for now" affordance; refreshing the
-            // metrics in the background would surface a different
-            // amount than the one the user paused on. The
-            // snooze-expiry pass on the next sweep flips snoozed →
-            // pending and the next normal refresh then runs.
+            // Refreshing metrics in the background would surface a
+            // different amount than the one the user paused on; the
+            // next sweep's snooze-expiry pass flips snoozed -> pending
+            // first, and normal refresh resumes after that.
             return;
         }
 

@@ -16,46 +16,24 @@ use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
 
 /**
- * Public read API over `recurring_series`. Every method scopes by
- * `user_id` and returns Spatie-Data DTOs so the review page, the
- * fixed-payments view, the dashboard tile, and downstream module
- * listeners read a single canonical shape.
- *
- * Cross-user reads return an empty list or `null`; cross-user 404s
- * are surfaced at the Public Action layer (mirrors the Chains
- * precedent — query services stay silent so caller policy stays
- * caller-side).
- *
- * Cursor pagination on `id` matches the chains-side review queue.
- * `approvedForUser` orders by `monthly_equivalent_minor DESC` then
- * `id DESC` so the dashboard tile + fixed-payments view consume a
- * stable, "largest first" projection; its cursor is a composite of
- * the cursor row's `(monthly_equivalent_minor, id)` so subsequent
- * pages follow the primary sort instead of an id-only window.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final readonly class RecurringSeriesQuery
 {
     public function __construct(private DatabaseManager $db) {}
 
     /**
-     * Series whose state is exactly `pending` — never `cadence_changed`.
-     * The review page surfaces cadence-flipped rows on a dedicated tab
-     * via `cadenceChangedForUser`, so widening this projection would
-     * double-count those rows in both the Pending tab and the Cadence-
-     * changed tab.
-     *
-     * @return list<RecurringSeriesDto>
+     * @return list<RecurringSeriesDto> strictly `pending` rows only, never `cadence_changed`
+     *                                  (the review page surfaces those on their own dedicated tab via cadenceChangedForUser,
+     *                                  so widening this projection would double-count them across both tabs)
      */
     public function pendingForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
         return $this->scoped($user, ['pending'], $cursorId, $limit, 'id');
     }
 
-    /**
-     * Count of strictly-pending rows, mirroring `pendingForUser`. The
-     * top-nav badge composer reads this; the cadence-changed tab has
-     * its own queue and is intentionally NOT folded in.
-     */
+    // Mirrors pendingForUser's strict scope: the cadence-changed tab has its
+    // own queue and is intentionally NOT folded into this count.
     public function pendingCountForUser(User $user): int
     {
         return $this->db->connection()->table('recurring_series')
@@ -104,15 +82,10 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Single-purpose lookup that returns the per-series drift threshold
-     * override (`recurring_series.drift_threshold_percent`) for one
-     * (series, user) pair. Owners outside the Recurring module call
-     * this instead of running a raw SELECT against the table directly,
-     * keeping every cross-module read of recurring_series funnelled
-     * through this Public service class.
-     *
-     * Returns `null` when the series is missing, cross-user, or has no
-     * override set.
+     * @return int|null the drift_threshold_percent override for one (series, user) pair,
+     *                  null when the series is missing, cross-user, or has no override set. Callers outside
+     *                  Recurring use this instead of a raw SELECT, keeping every cross-module read
+     *                  funnelled through this Public service
      */
     public function driftThresholdForSeries(int $seriesId, User $user): ?int
     {
@@ -129,16 +102,10 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Resolve the underlying `recurring_series.state` for each id in
-     * `$seriesIds` belonging to `$user`. Used by readers that want to
-     * surface a cross-reference hint (for example "this series is in
-     * state='cadence_changed'") without depending on a raw SELECT
-     * against another module's table.
-     *
-     * Missing or cross-user ids are silently absent from the result.
-     *
      * @param  array<int|string, mixed>  $seriesIds
-     * @return array<int, string>
+     * @return array<int, string> recurring_series.state per id, for readers that want a
+     *                            cross-reference hint without a raw SELECT against another module's table.
+     *                            Missing or cross-user ids are silently absent from the result
      */
     public function statesForSeriesIds(array $seriesIds, User $user): array
     {
@@ -169,13 +136,9 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Resolve the display name for each id in `$seriesIds` belonging
-     * to `$user`. Prefers `display_name_override` when set, falls back
-     * to `detected_name` otherwise. Missing or cross-user ids are
-     * silently absent from the result.
-     *
      * @param  array<int|string, mixed>  $seriesIds
-     * @return array<int, string>
+     * @return array<int, string> display_name_override when set, else detected_name.
+     *                            Missing or cross-user ids are silently absent from the result
      */
     public function displayNamesForSeriesIds(array $seriesIds, User $user): array
     {
@@ -210,18 +173,11 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Batched variant of `forSeries` — fetch every series row in
-     * `$seriesIds` belonging to `$user` in a single SELECT and return
-     * a `series_id => RecurringSeriesDto` map. Missing or cross-user
-     * ids are silently absent from the result.
-     *
-     * Callers that need a per-series projection (cancellation impact,
-     * display-name hydration, threshold lookup) for a list of ids on
-     * a single page render reach for this method instead of looping
-     * over `forSeries`, which would issue N queries.
-     *
      * @param  array<int|string, mixed>  $seriesIds
-     * @return array<int, RecurringSeriesDto>
+     * @return array<int, RecurringSeriesDto> batched variant of forSeries() in a single
+     *                                        SELECT — callers needing a per-series projection for a list of ids on one page
+     *                                        render use this instead of looping forSeries(), which would issue N queries.
+     *                                        Missing or cross-user ids are silently absent from the result
      */
     public function forSeriesIds(array $seriesIds, User $user): array
     {
@@ -252,10 +208,8 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Every observation row that contributed to the cluster, ordered by
-     * `observed_at DESC`. Cross-user lookups return an empty list.
-     *
-     * @return list<RecurringOccurrenceDto>
+     * @return list<RecurringOccurrenceDto> every observation row that contributed to the
+     *                                      cluster, ordered by observed_at DESC. Cross-user lookups return an empty list
      */
     public function occurrencesForSeries(int $seriesId, User $user): array
     {
@@ -294,26 +248,16 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Recurring-series membership for a batch of transaction ids. A
-     * transaction is "on a recurring series" iff a
-     * `recurring_series_occurrences` row carries its `transaction_id`
-     * (user-scoped). Returns a `transaction_id => bool` map covering every
-     * id passed in (ids with no occurrence row map to `false`).
-     *
-     * The Anomaly module's duplicate-charge detector consumes this Public
-     * method to exclude a near-twin pair where both sides are members of an
-     * approved recurring series (D-10) — a legit fortnightly/weekly
-     * subscription that happened to land twice in the duplicate window is
-     * not a real duplicate. Going through this Public surface keeps the
-     * `recurring_series_occurrences` table owned by Recurring; Anomaly never
-     * raw-joins it.
-     *
-     * Cross-user safe: the single batched query carries an explicit
-     * `where('user_id', ...)` (the global scope does not fire under
-     * queue/console where the evaluator runs).
-     *
      * @param  array<int|string, mixed>  $transactionIds
-     * @return array<int, bool>
+     * @return array<int, bool> transaction_id => bool, true iff a recurring_series_occurrences
+     *                          row carries that transaction_id (user-scoped); ids with no occurrence row map to
+     *                          false. The Anomaly module's duplicate-charge detector consumes this to exclude a
+     *                          near-twin pair where both sides belong to an approved recurring series — a legit
+     *                          fortnightly/weekly subscription landing twice in the duplicate window is not a real
+     *                          duplicate. Going through this Public surface keeps recurring_series_occurrences owned
+     *                          by Recurring; Anomaly never raw-joins it. Cross-user safe: the batched query carries
+     *                          an explicit where('user_id', ...) since the global scope does not fire under
+     *                          queue/console where the evaluator runs
      */
     public function seriesMembershipForTransactionIds(array $transactionIds, User $user): array
     {
@@ -349,11 +293,10 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * The counterparty this series belongs to — the most frequent
-     * `transactions.counterparty_id` across the series' occurrences, or null
-     * when none of the occurrences resolved to a counterparty. Lets the series
-     * detail page deep-link to the counterparty profile. Cross-user safe (the
-     * occurrences are scoped to the user).
+     * @return int|null the most frequent transactions.counterparty_id across the series'
+     *                  occurrences, or null when none resolved to a counterparty. Lets the series detail
+     *                  page deep-link to the counterparty profile. Cross-user safe (occurrences are
+     *                  scoped to the user)
      */
     public function counterpartyIdForSeries(int $seriesId, User $user): ?int
     {
@@ -377,19 +320,12 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Batched variant of `counterpartyIdForSeries` — resolve the most
-     * frequent `transactions.counterparty_id` per series for every id in
-     * `$seriesIds` in a single grouped query. Series whose occurrences
-     * never resolved to a counterparty are silently absent from the
-     * result map. Cross-user safe (occurrences are scoped to the user).
-     *
-     * Callers that need the counterparty for a list of series on a single
-     * page render (the calendar's entry map) reach for this method instead
-     * of looping over `counterpartyIdForSeries`, which would issue N
-     * queries.
-     *
      * @param  array<int|string, mixed>  $seriesIds
-     * @return array<int, int>
+     * @return array<int, int> batched variant of counterpartyIdForSeries() in a single
+     *                         grouped query — callers needing the counterparty for a list of series on one page
+     *                         render (the calendar's entry map) use this instead of looping, which would issue
+     *                         N queries. Series whose occurrences never resolved to a counterparty are silently
+     *                         absent from the result. Cross-user safe (occurrences are scoped to the user)
      */
     public function counterpartyIdsForSeriesIds(array $seriesIds, User $user): array
     {
@@ -435,11 +371,9 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * The approved / cadence-changed recurring series whose occurrences belong
-     * to the given counterparty — powers the "Recurring" card on a counterparty
-     * profile. Cross-user safe (every join is scoped to the user).
-     *
-     * @return array<int, RecurringSeriesDto>
+     * @return array<int, RecurringSeriesDto> approved / cadence-changed recurring series
+     *                                        whose occurrences belong to the given counterparty — powers the "Recurring" card
+     *                                        on a counterparty profile. Cross-user safe (every join is scoped to the user)
      */
     public function approvedSeriesForCounterparty(int $counterpartyId, User $user): array
     {
@@ -462,15 +396,11 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Build the amount-over-time payload for the drill-in chart.
-     *
-     * Returns up to `$maxPoints` data points sorted oldest-to-newest so
-     * the ApexCharts datetime axis renders left-to-right. Each point
-     * carries the native-currency amount plus the settled-EUR amount;
-     * `eur_amount_minor` is `null` when the observation is already in
-     * EUR (no shadow series needed).
-     *
-     * Cross-user lookups return an empty payload.
+     * @return RecurringSeriesAmountTrendDto up to $maxPoints data points sorted
+     *                                       oldest-to-newest so the ApexCharts datetime axis renders left-to-right. Each point
+     *                                       carries the native-currency amount plus the settled-EUR amount; eur_amount_minor is
+     *                                       null when the observation is already in EUR (no shadow series needed). Cross-user
+     *                                       lookups return an empty payload
      */
     public function amountTrendForSeries(int $seriesId, User $user, int $maxPoints = 24): RecurringSeriesAmountTrendDto
     {
@@ -490,11 +420,10 @@ final readonly class RecurringSeriesQuery
         /** @var stdClass $seriesRow */
         $currency = self::toString($seriesRow->latest_currency);
         if ($currency === '') {
-            // Schema guarantees latest_currency is non-null + 3 chars.
-            // An empty value here means the row is corrupt or the
-            // detector wrote a malformed insert. Return an empty
-            // payload rather than fabricating an EUR label that
-            // would mislead the chart axis.
+            // Schema guarantees latest_currency is non-null + 3 chars; an
+            // empty value here means the row is corrupt or the detector
+            // wrote a malformed insert. Return an empty payload rather than
+            // fabricating an EUR label that would mislead the chart axis.
             return new RecurringSeriesAmountTrendDto(
                 seriesId: $seriesId,
                 currency: '',
@@ -571,12 +500,10 @@ final readonly class RecurringSeriesQuery
 
         if ($cursorId !== null) {
             if ($primarySort === 'monthly_equivalent_minor') {
-                // Composite cursor: the next page is every row whose
-                // monthly_equivalent_minor is strictly smaller than the
-                // cursor row's, plus the rows whose equivalent ties the
-                // cursor but whose id sorts lower. Anything else would
-                // skip rows or repeat them when the cursor row's
-                // equivalent has neighbours that share its value.
+                // Composite cursor: the next page is every row whose value is
+                // strictly smaller than the cursor row's, plus rows that tie
+                // the cursor but whose id sorts lower — otherwise rows are
+                // skipped or repeated when neighbours share the same value.
                 $cursorRow = $this->db->connection()->table('recurring_series')
                     ->where('id', $cursorId)
                     ->first(['monthly_equivalent_minor']);
@@ -606,20 +533,12 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Returns every approved (and cadence_changed) recurring series
-     * row for the user — unpaged. Forecasting's projection pipeline
-     * needs the full set in a single read; the paged
-     * `approvedForUser` projection is sized for the review surface's
-     * 26-row pages, not for a batch computation that walks every
-     * series the user has approved.
-     *
-     * `cadence_changed` rows are included because they still
-     * represent an approved recurring pattern from the user's
-     * perspective — only the cadence reclassification is pending
-     * the user's re-confirmation. Excluding them would silently drop
-     * series from the forecast band the moment they flip.
-     *
-     * @return list<RecurringSeriesDto>
+     * @return list<RecurringSeriesDto> every approved (and cadence_changed) row, unpaged —
+     *                                  Forecasting's projection pipeline needs the full set in one read; the paged
+     *                                  approvedForUser() is sized for the review surface's pages, not a batch walk.
+     *                                  cadence_changed rows are included because they still represent an approved pattern
+     *                                  from the user's perspective (only the cadence reclassification awaits
+     *                                  re-confirmation); excluding them would silently drop series from the forecast band
      */
     public function allApprovedForUser(User $user): array
     {
@@ -640,21 +559,14 @@ final readonly class RecurringSeriesQuery
     }
 
     /**
-     * Resolve the originating account_id for each id in `$seriesIds`
-     * belonging to `$user`. The mapping is derived from the most-
-     * recent `recurring_series_occurrences` row per series and the
-     * `transactions.account_id` it points at — the recurring_series
-     * row itself does not carry an account column.
-     *
-     * Series with zero occurrences fall back to the user's
-     * alphabetically-first owned account (single-account users
-     * unambiguously resolve; multi-account users get the best-effort
-     * mapping until the detector starts emitting occurrences for the
-     * series). Missing or cross-user series ids are silently absent
-     * from the result map.
-     *
      * @param  array<int|string, mixed>  $seriesIds
-     * @return array<int, int>
+     * @return array<int, int> originating account_id per id, derived from the most-recent
+     *                         recurring_series_occurrences row per series and the transactions.account_id it
+     *                         points at (recurring_series itself carries no account column). Series with zero
+     *                         occurrences fall back to the user's alphabetically-first owned account
+     *                         (single-account users resolve unambiguously; multi-account users get a best-effort
+     *                         mapping until the detector emits occurrences). Missing or cross-user ids are
+     *                         silently absent from the result
      */
     public function accountIdsForSeriesIds(array $seriesIds, User $user): array
     {

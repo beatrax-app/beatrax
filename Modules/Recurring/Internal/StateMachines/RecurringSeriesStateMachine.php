@@ -11,44 +11,15 @@ use Modules\Recurring\Models\RecurringSeries;
 use RuntimeException;
 
 /**
- * The single legal mutator of `recurring_series.state` and the sole
- * inserter into `recurring_series_transitions`. Every other write path
- * in the Recurring module touches only non-state columns (the
- * detectors refresh latest amount, monthly equivalent, next-expected-
- * charge, funding-chain link, snoozed_until — never the state column).
- *
- * The `noOtherRecurringSeriesStateMutator` arch invariant under
- * `tests/Contracts/BoundaryArchTest.php` enforces this contract at the
- * static-analysis level; the schema-level BEFORE INSERT / BEFORE
- * UPDATE triggers on `recurring_series` enforce it at the database
- * level.
- *
- * Public surface:
- *
- *  - `transition(RecurringSeries $series, string $toState, string $reason, string $actor, ?string $notes)` —
- *    validates the requested target against ALLOWED_TRANSITIONS, opens
- *    a DB transaction, sets `PRAGMA busy_timeout = 5000`, takes a row
- *    lock on the series, writes the new state + updated_at, and
- *    inserts one row in recurring_series_transitions carrying the full
- *    audit metadata. Throws `InvalidStateTransitionException` for an
- *    illegal target, `InvalidArgumentException` for an unknown actor,
- *    and `RuntimeException` when the series row is missing.
- *
- * SQLite contention guard: every transition opens a transaction, sets
- * `PRAGMA busy_timeout = 5000`, and reads the row via
- * `lockForUpdate()`. Two concurrent sweep jobs that briefly contend on
- * the same series row therefore serialise rather than fail.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class RecurringSeriesStateMachine
 {
-    /**
-     * Per-state allowed-target map. A transition not present in this
-     * map raises InvalidStateTransitionException — there is no
-     * "any state → any state" escape hatch and no same-state re-entry
-     * (idempotent no-ops live in Public Actions, never here).
-     *
-     * @var array<string, list<string>>
-     */
+    // Per-state allowed-target map. A transition not present here raises
+    // InvalidStateTransitionException — no "any state -> any state" escape
+    // hatch, no same-state re-entry (idempotent no-ops live in Public
+    // Actions, never here).
+    /** @var array<string, list<string>> */
     private const ALLOWED_TRANSITIONS = [
         'pending' => ['approved', 'rejected', 'snoozed'],
         'approved' => ['cadence_changed', 'rejected'],

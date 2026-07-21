@@ -8,25 +8,16 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * Read-side projection of a single recurring_series row for the review
- * surface, the fixed-payments view, and the drill-in detail page.
- *
- * `latestAmount` is denominated in the original transaction currency;
- * `eurEquivalent` is null when the original already is EUR and
- * carries the settled-EUR amount otherwise (Google Play in USD, ICS
- * cross-currency settlements). `monthlyEquivalent` is always EUR so
- * the dashboard "this month" total sums cleanly across mixed
- * currencies.
- *
- * `displayName()` returns the user-supplied override when set and
- * falls back to the detector-emitted `detectedName`. Read-site
- * formatters always go through this helper so a future override path
- * (the review surface's "Rename series" affordance) lights up without
- * touching the DTO's call sites.
- */
 final class RecurringSeriesDto extends Data
 {
+    /**
+     * @param  Money  $latestAmount  denominated in the original transaction currency
+     * @param  Money|null  $eurEquivalent  null when the original amount is already EUR;
+     *                                     otherwise the settled-EUR amount (Google Play in USD, ICS cross-currency settlements)
+     * @param  Money  $monthlyEquivalent  always EUR so the dashboard "this month" total sums
+     *                                    cleanly across mixed currencies
+     * @param  string|null  $displayNameOverride  user-supplied override; see displayName()
+     */
     public function __construct(
         public readonly int $seriesId,
         public readonly string $direction,

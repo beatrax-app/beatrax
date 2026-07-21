@@ -10,25 +10,12 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+// null clears the override so the series falls back to the user-global
+// setting (which itself falls back to the hard 5% default at the
+// DriftEvaluator's effective-threshold resolution).
+
 /**
- * Persists the per-series drift threshold override. The write is a
- * metric-style column update (never transitions state) so the
- * `noOtherRecurringSeriesStateMutator` invariant stays green. Lives on
- * the Recurring side of the boundary so the
- * `noRecurringSeriesWritesFromDriftAlerts` invariant stays green — the
- * DriftAlerts Livewire editor calls this action via method-parameter
- * DI; DriftAlerts retains zero direct writes to recurring_series.
- *
- * `$thresholdPercent === null` clears the override so the series falls
- * back to the user-global setting (which itself falls back to the hard
- * 5% default at the DriftEvaluator's effective-threshold resolution).
- *
- * Allowed values mirror the popover's six options (1 / 2 / 5 / 10 / 25
- * / 50) plus null. Any other integer raises InvalidArgumentException so
- * a tampered Livewire payload cannot smuggle an arbitrary percent onto
- * the row. Cross-user invocation raises NotFoundHttpException via the
- * WHERE-user_id predicate. Idempotent no-op when the new value equals
- * the current one.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class SetDriftThresholdForSeries
 {

@@ -9,16 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// Append-only audit trail produced by RecurringSeriesStateMachine. actor
+// is either `user` (review-surface promotion/rejection/snooze) or
+// `detector` (cadence flip after a new occurrence lands).
+
 /**
- * Eloquent model for the recurring_series_transitions table — the
- * append-only audit trail produced by `RecurringSeriesStateMachine`.
- *
- * One row per state transition. `actor` is either `user` (review-
- * surface promotion / rejection / snooze) or `detector` (cadence flip
- * after a new occurrence lands). `transition_reason` is the structured
- * code (e.g. `user_action`, `detector_cadence_flip`, `detector_promoted`,
- * `snooze_expired`) that downstream surfaces narrate to the user.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $recurring_series_id

@@ -9,21 +9,10 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
 
-/**
- * Shared hydrator for `recurring_series` rows → `RecurringSeriesDto`.
- *
- * RecurringSeriesQuery and FixedPaymentsViewQuery used to carry
- * near-identical `toDto` methods; bugs found in one (e.g. the
- * eur-equivalent currency mis-label when `latest_currency` is empty)
- * had to be fixed twice. The chain-link resolution differs between
- * the two callsites — RecurringSeriesQuery reads the raw column,
- * FixedPaymentsViewQuery applies an occurrence-walk fallback — so
- * the chain link id is the only field the caller resolves
- * separately and supplies to the mapper.
- *
- * Static-only: no constructor dependencies. The mapper does not read
- * services or touch the DB; it is pure-data transformation.
- */
+// Shared hydrator so RecurringSeriesQuery and FixedPaymentsViewQuery don't
+// each carry a near-identical toDto() that must be bugfixed twice. Chain-
+// link resolution differs per caller (raw column vs. occurrence-walk
+// fallback), so it's the one field the caller resolves and supplies.
 final class RecurringSeriesDtoMapper
 {
     /**

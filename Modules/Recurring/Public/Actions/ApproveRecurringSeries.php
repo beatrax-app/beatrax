@@ -12,15 +12,7 @@ use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Promotes a recurring_series row from pending / cadence_changed /
- * snoozed to approved. Idempotent when the series is already
- * approved (silent no-op). Cross-user invocation raises
- * NotFoundHttpException (404) via the `(id, user_id)` guard, same
- * defensive pattern Chains + Categorization Public actions use.
- *
- * Dispatches `RecurringSeriesApproved` once the state machine commits
- * the transition; the audit row inside `recurring_series_transitions`
- * is written by the state machine in the same DB transaction.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class ApproveRecurringSeries
 {

@@ -7,20 +7,15 @@ namespace Modules\Recurring\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * Read-side projection of the "next expected charge" hint surfaced on
- * each recurring-series row.
- *
- * `nextExpectedAt` is null when the cadence is irregular or the series
- * does not have enough history to extrapolate. `confidenceLow` flips
- * true when the observed-interval standard deviation exceeds the
- * detector's stability threshold; surfaces render the value with a
- * calmer treatment in that case (no countdown, no chip). `stddevDays`
- * is exposed so a developer-mode debug view can show the underlying
- * inter-arrival jitter.
- */
 final class NextExpectedChargeDto extends Data
 {
+    /**
+     * @param  CarbonImmutable|null  $nextExpectedAt  null when the cadence is irregular or the
+     *                                                series lacks enough history to extrapolate
+     * @param  bool  $confidenceLow  true when the observed-interval standard deviation exceeds the
+     *                               detector's stability threshold; surfaces render a calmer treatment (no countdown, no chip)
+     * @param  int  $stddevDays  underlying inter-arrival jitter, for a developer-mode debug view
+     */
     public function __construct(
         public readonly ?CarbonImmutable $nextExpectedAt,
         public readonly string $cadence,

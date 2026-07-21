@@ -7,23 +7,7 @@ namespace Modules\Recurring\Internal;
 use Carbon\CarbonImmutable;
 
 /**
- * Stateless cadence-class inferrer over a sorted-ascending list of
- * occurrence timestamps. Returns the snap-band cadence (weekly /
- * monthly / quarterly / yearly / irregular), the median interval in
- * days, a projected next-expected-at timestamp, a low-confidence
- * signal flagged when the interval stddev exceeds five days, and the
- * missed-occurrence count.
- *
- * Snap bands cover the four canonical billing cadences personal-
- * finance recurring subscriptions land on; intervals outside every
- * band classify as `irregular` so the detector skips the cluster
- * instead of producing a spurious "every 46 days" suggestion.
- *
- * Missed-interval tolerance keeps a stable subscription unfragmented
- * when one provider gap (bank holiday, mid-month billing skew) opens
- * a larger-than-normal interval. Any interval above
- * `1.8 × provisional_median` is excluded from the refined median pass
- * and counted as a missed period.
+ * @link ../../../.docs/features/recurring/architecture.md
  */
 final class CadenceInferrer
 {
@@ -119,14 +103,9 @@ final class CadenceInferrer
         $stddev = self::stddev($filtered);
         $confidenceLow = $stddev > self::CONFIDENCE_LOW_STDDEV_THRESHOLD;
 
-        // Snap on the provisional median so a noisy cluster with one
-        // genuinely-out-of-band outlier (e.g. gym charges with no
-        // underlying recurring pattern) is classified `irregular`
-        // rather than rescued into a band by the missed-interval
-        // filter. The refined median feeds the next_expected_at
-        // projection because the filtered series better approximates
-        // the underlying cadence once a clearly-missed period is
-        // discounted.
+        // Snap on the provisional (not refined) median — see the class
+        // @link doc for why a noisy one-outlier cluster must classify
+        // `irregular` rather than get rescued by the missed-interval filter.
         $cadence = self::snapToBand($provisionalMedian);
 
         $nextExpectedAt = null;

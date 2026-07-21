@@ -12,15 +12,7 @@ use Modules\Recurring\Models\RecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Updates per-series variance tolerance. Metric-style write — never
- * transitions state — so `noOtherRecurringSeriesStateMutator` stays
- * green. Cross-user 404 via the WHERE-user_id predicate. Idempotent
- * no-op when the new value equals the current one.
- *
- * Allowed values are whitelisted to `10 / 25 / 50` per the UI's fixed
- * dropdown options. Any other value raises `InvalidArgumentException`
- * so a tampered Livewire payload cannot smuggle an arbitrary percent
- * onto the row.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class EditRecurringSeriesVarianceTolerance
 {

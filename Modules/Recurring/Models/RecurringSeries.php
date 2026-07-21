@@ -12,20 +12,7 @@ use Modules\Chains\Models\ChainLink;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Eloquent model for the recurring_series table — the unified detector
- * output covering both expense and income recurring patterns.
- *
- * The `direction` enum (`expense` | `income`) lets a single detector
- * code path serve both sides. The `state` column is mutated exclusively
- * by `RecurringSeriesStateMachine`; the schema-level trigger pair plus
- * the BoundaryArchTest invariant `noOtherRecurringSeriesStateMutator`
- * enforce that contract.
- *
- * `latest_funding_chain_link_id` is the optional pointer back into the
- * funding-chain ledger so the review surface can render "funded by
- * PayPal · backed by ASN" hints alongside the series row. The link is
- * nullable on delete: a removed chain_link nulls the pointer here
- * rather than removing the series.
+ * @link ../../../.docs/features/recurring/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
@@ -91,13 +78,10 @@ final class RecurringSeries extends Model
 
     protected static function booted(): void
     {
-        // Default `cluster_counterparty_key` to `detected_name` when a
-        // caller (typically a test fixture) doesn't supply it. The
-        // detector code paths always set the column explicitly, so this
-        // hook is exercised only by direct Eloquent inserts that
-        // pre-date the column. Keeping the fallback here means existing
-        // fixtures continue to round-trip through the detector's
-        // existing-tolerance and cadence-flip fallback lookups.
+        // Default cluster_counterparty_key to detected_name when a caller
+        // (typically a test fixture) doesn't supply it — detector code
+        // paths always set the column explicitly, so this hook only fires
+        // for direct Eloquent inserts that pre-date the column.
         self::saving(static function (self $series): void {
             if ($series->cluster_counterparty_key === null) {
                 $series->cluster_counterparty_key = $series->detected_name;
