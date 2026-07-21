@@ -8,22 +8,7 @@ use Modules\Community\Models\CommunityMerchantMapping;
 use Modules\Core\Models\User;
 
 /**
- * Materialises three `community_merchant_mappings` rows for the
- * primary demo user so the crowd-merchant identification path on the
- * import preview and the `/community/mystery-merchants` page both
- * have data to render against.
- *
- * Each row is a per-user override (`user_id = $primary->id`) carrying
- * a recognisable Dutch retail pattern that does NOT collide with the
- * bundled global corpus rows seeded at install time — the
- * `(user_id, pattern)` UNIQUE allows the same pattern to coexist
- * between a global row and a per-user row, and the demo seeder leans
- * into that to exercise the per-user override branch of the
- * resolver.
- *
- * Idempotency: `updateOrCreate` keyed on `(user_id, pattern)` matches
- * the UNIQUE on the community_merchant_mappings table so a second
- * seed run reuses the existing row.
+ * @link ../../../../../.docs/features/community/architecture.md
  */
 final class DemoCommunityMappingsSeeder
 {

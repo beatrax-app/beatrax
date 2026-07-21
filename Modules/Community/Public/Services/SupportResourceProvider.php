@@ -8,19 +8,7 @@ use Modules\Community\Internal\Corpus\CorpusYamlReader;
 use Modules\Community\Public\Dto\SupportResource;
 
 /**
- * Loads the bundled support-resource corpus (`resources/corpus/support/*.yaml`)
- * and looks resources up by counterparty name + type for the profile page.
- *
- * Matching is name-based and tolerant of the legal-entity noise real
- * counterparty names carry ("Spotify AB", "Netflix International BV"): both the
- * resource name and the queried name are reduced to a lower-cased WORD LIST
- * (legal suffixes like BV/NV/Inc/AB dropped, punctuation split out), and a
- * resource matches when its words are a leading prefix of the counterparty's
- * words. Word-level (not substring) prefixing is deliberate: it lets "Netflix"
- * match "Netflix International BV" without letting "Apple" match "Applebee's",
- * and keeps "Albert Heijn Premium" from matching a plain "Albert Heijn" grocery
- * charge. The longest (most specific) matching resource wins. Read once and
- * memoised.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class SupportResourceProvider
 {
@@ -131,14 +119,13 @@ final class SupportResourceProvider
     }
 
     /**
-     * Like str() but only accepts an http(s) URL, so a malformed or
-     * non-http(s) corpus value (e.g. a `javascript:` scheme) can never reach a
-     * consumer as a clickable href — validated once at the corpus boundary.
-     *
      * @param  array<int|string, mixed>  $array
      */
     private static function url(array $array, string $key): ?string
     {
+        // Unlike str(), only an http(s) value passes — a malformed or
+        // non-http(s) corpus value (e.g. a `javascript:` scheme) can never
+        // reach a consumer as a clickable href.
         $value = self::str($array, $key);
         if ($value === null) {
             return null;
@@ -148,14 +135,13 @@ final class SupportResourceProvider
     }
 
     /**
-     * Lower-cased word list with legal-entity suffixes dropped. Brand words
-     * (Premium / Plus) are intentionally NOT stripped — they distinguish a
-     * subscription tier from the base brand (e.g. "Albert Heijn Premium").
-     *
      * @return list<string>
      */
     private function words(string $name): array
     {
+        // Brand words (Premium / Plus) are intentionally NOT stripped below —
+        // they distinguish a subscription tier from the base brand (e.g.
+        // "Albert Heijn Premium" vs plain "Albert Heijn").
         $lowered = mb_strtolower(trim($name));
         $stripped = preg_replace('/\b(b\.?v\.?|n\.?v\.?|inc|ltd|gmbh|ab|sa|plc)\b/u', ' ', $lowered) ?? $lowered;
         preg_match_all('/[\p{L}\p{N}]+/u', $stripped, $matches);

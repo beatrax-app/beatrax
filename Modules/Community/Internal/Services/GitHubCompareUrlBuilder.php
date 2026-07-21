@@ -8,26 +8,7 @@ use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Community\Public\Dto\SuggestMappingDto;
 
 /**
- * Builds the GitHub Compare URL the SuggestMappingModal launches in
- * the system browser when the user submits a suggested mapping. The
- * URL takes the canonical shape:
- *
- *   {base}...{branchSlug}?expand=1&body={url-encoded-yaml-entry}
- *
- * `{base}` is `config('community.github_compare_base')` so the repo
- * destination can be flipped at the public-release boundary via the
- * `BEATRAX_GITHUB_COMPARE_BASE` env var without a code change.
- *
- * `{branchSlug}` is a deterministic hash of the pattern field so a
- * given mapping always lands on the same proposed branch — the user
- * can iterate on a single suggestion (the Compare URL stays the same
- * across sessions) without polluting the upstream repo's branch list.
- *
- * `{body}` is a url-encoded snippet of YAML the user can paste-and-
- * commit into the corpus file via the GitHub PR composer. All user-
- * supplied fields are wrapped in YAML double-quotes with embedded
- * quotes escaped so a name like `"Bob's Burgers"` round-trips
- * cleanly.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class GitHubCompareUrlBuilder
 {
@@ -60,16 +41,12 @@ final class GitHubCompareUrlBuilder
         return $base.'...'.$branch.'?expand=1&body='.rawurlencode($body);
     }
 
-    /**
-     * Escape a string for inclusion inside a YAML double-quoted scalar.
-     * YAML 1.2 double-quoted strings recognise the C-style escape
-     * sequences `\\`, `\"`, `\n`, `\t`, `\r`. A raw bank-statement
-     * description that has picked up a stray newline or tab needs to be
-     * encoded as the escape sequence rather than included verbatim, or
-     * GitHub's PR composer rejects the YAML on submit.
-     */
     private function quoteYaml(string $value): string
     {
+        // YAML 1.2 double-quoted strings recognise the C-style escapes below;
+        // a raw description with a stray newline/tab must be encoded as the
+        // escape sequence rather than included verbatim, or GitHub's PR
+        // composer rejects the YAML on submit.
         $escaped = strtr($value, [
             '\\' => '\\\\',
             '"' => '\\"',

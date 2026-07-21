@@ -12,33 +12,10 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Reads the bundled merchant corpus from the per-country YAML files under
- * `resources/corpus/merchants/<country>.yaml` (via the shared
- * CorpusYamlReader), validates each entry, computes the generalized pattern
- * via PatternGeneralizer, and returns a list of CorpusEntryDto rows for the
- * SeedCommunityCorpus listener to upsert into the
- * `community_merchant_mappings` table. The country code is inferred from
- * each file's name and used as the default region; `contributor` defaults
- * to "beatrax-bot" when omitted.
- *
- * Failure modes are tolerated per-file and per-entry, never globally:
- *
- *   - A missing merchants directory yields an empty list and a warning.
- *   - A missing or malformed YAML file (handled by CorpusYamlReader) yields
- *     an empty entry list and a warning; the other country files still load
- *     and the seed is not aborted.
- *   - An individual entry that lacks `pattern` or `name` is logged at
- *     `warning` and dropped from the returned list.
- *   - An entry whose `category` is non-null but matches no row in the
- *     `categories` table is logged at `warning` and INCLUDED verbatim
- *     (graceful degradation — the consumer renders the unresolved category
- *     as a plain string).
- *   - A `regex:` pattern is stored verbatim and NOT generalized; it is
- *     matched at lookup time by CorpusPatternMatcher via the regex scan.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class CorpusLoader
 {
-    /** Default provenance for a bundled corpus entry that omits `contributor`. */
     private const DEFAULT_CONTRIBUTOR = 'beatrax-bot';
 
     public function __construct(
@@ -49,12 +26,6 @@ final class CorpusLoader
     ) {}
 
     /**
-     * Load every bundled merchant corpus file under
-     * `resources/corpus/merchants/<country>.yaml`. Each file's country code
-     * is inferred from its filename (`de.yaml` → `DE`, `eu.yaml` → `EU`) and
-     * applied as the default region for its entries; an entry may still set
-     * its own `region`. Files are walked in sorted order for determinism.
-     *
      * @return list<CorpusEntryDto>
      */
     public function loadBundled(): array
@@ -88,17 +59,14 @@ final class CorpusLoader
         return $entries;
     }
 
-    /** Max width of the `region` column on community_merchant_mappings. */
     private const REGION_MAX = 8;
 
-    /**
-     * Derive the region code from a corpus filename (`de.yaml` → `DE`). A
-     * filename longer than the region column is not a valid ISO code, so it
-     * is dropped to an empty region (with a warning) rather than overflowing
-     * the column and making a strict DB driver reject the whole file's rows.
-     */
     private function regionFromFilename(string $file): string
     {
+        // A filename longer than the region column is not a valid ISO code,
+        // so it is dropped to an empty region (with a warning) rather than
+        // overflowing the column and making a strict DB driver reject the
+        // whole file's rows.
         $region = strtoupper(pathinfo($file, PATHINFO_FILENAME));
         if (mb_strlen($region) > self::REGION_MAX) {
             $this->logger->warning('CorpusLoader: corpus filename is not a valid region code; region left empty.', [

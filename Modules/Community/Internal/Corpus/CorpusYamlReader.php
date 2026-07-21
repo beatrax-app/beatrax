@@ -12,15 +12,7 @@ use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
 /**
- * Shared filesystem + YAML access for the bundled corpus, used by both
- * CorpusLoader (merchant corpus) and ClassificationRuleProvider
- * (government / bank-fee rules). Centralising it keeps path resolution and
- * the YAML threat-model (PARSE_EXCEPTION_ON_INVALID_TYPE — no native-tag
- * object instantiation) in one place instead of two divergent copies.
- *
- * All failures are tolerated and logged at warning level, never thrown: a
- * missing or malformed file yields an empty entry list so one bad file can
- * never abort a corpus load.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class CorpusYamlReader
 {
@@ -30,17 +22,12 @@ final class CorpusYamlReader
         private readonly Application $app,
     ) {}
 
-    /**
-     * Resolve a configured corpus path (relative to the app root) to an
-     * absolute path. The `community.app_root` config override lets a test
-     * point the loader at a temporary fixture directory.
-     *
-     * Empty config falls back to $default; an empty result means "no path
-     * configured" (the caller skips) — this is the single, shared meaning
-     * of an empty corpus path across every consumer.
-     */
     public function resolve(string $configKey, string $default = ''): string
     {
+        // An empty result means "no path configured" (the caller skips) —
+        // the single, shared meaning of an empty corpus path across every
+        // consumer; `community.app_root` lets a test override the root with
+        // a temporary fixture directory.
         $configured = $this->stringConfig($configKey);
         if ($configured === '') {
             $configured = $default;
@@ -62,10 +49,6 @@ final class CorpusYamlReader
     }
 
     /**
-     * Read the `entries:` list from a corpus YAML file as raw mappings.
-     * Returns an empty list (with a warning) when the file is missing,
-     * unparseable, or has no `entries:` root.
-     *
      * @return list<array<int|string, mixed>>
      */
     public function readEntries(string $path): array

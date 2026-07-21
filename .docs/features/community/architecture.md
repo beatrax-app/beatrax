@@ -162,3 +162,159 @@ ImportPipeline.preview
   → if hit: preview row offers the corpus name as a suggestion
             (user accepts explicitly during confirm)
 ```
+
+## Corpus support layers
+
+`CorpusYamlReader` (`Internal/Corpus/`) is the shared filesystem + YAML access
+layer both `CorpusLoader` and `ClassificationRuleProvider` sit on top of, so
+path resolution and the YAML threat model (`PARSE_EXCEPTION_ON_INVALID_TYPE`
+— no native-tag object instantiation) live in one place rather than two
+divergent copies. Every failure — missing file, malformed YAML, no `entries:`
+root — is tolerated and logged at `warning`, never thrown; one bad file can
+never abort the whole corpus load. `resolve()` supports a `community.app_root`
+config override so a test can point the loader at a fixture directory, and
+treats an empty result as "no path configured" uniformly across every
+consumer.
+
+`ClassificationRuleProvider` loads the bundled, non-user-contributable
+government-agency and bank-fee keyword rules from
+`resources/corpus/<type>/<country>.yaml`, backing the `MerchantNameResolver`'s
+government and bank-fee classification steps. Splitting these out of hardcoded
+PHP constants lets a contributor add another country's rules — including
+`regex:` patterns — by dropping in a YAML file, no code change. Each file's
+country is inferred from its filename; results are memoised per-type for the
+life of the (singleton) instance.
+
+`CorpusPatternMatcher` distinguishes two pattern kinds by an optional
+`regex:` prefix: a literal pattern is a case-insensitive substring test
+(`mb_stripos`); a `regex:` pattern strips the prefix, wraps the remaining PCRE
+body in `#...#i`, and tests it against the whole haystack. A malformed regex
+never throws — `@preg_match` failure is logged once at `warning` and treated
+as a non-match, so one bad corpus row can never abort an import or a resolver
+pass.
+
+`SupportResourceProvider` loads `resources/corpus/support/*.yaml` and matches
+counterparty names against the "where do I get help / cancel / save money"
+corpus for the profile page. Matching is word-based, not substring: both the
+resource name and the queried name are reduced to a lower-cased word list
+with legal-entity suffixes (BV/NV/Inc/AB/…) dropped, and a resource matches
+when its words are a leading prefix of the counterparty's words — so
+"Netflix" matches "Netflix International BV" without letting "Apple" match
+"Applebee's". The longest (most specific) matching resource wins. Brand
+words like "Premium" are deliberately NOT stripped, since they distinguish a
+subscription tier from the base brand. `SupportResource::mailtoHref()`
+refuses to build a `mailto:` link when the stored recipient carries `?`, `&`,
+or whitespace/CR/LF — defence against header/recipient injection into the
+pre-filled cancellation email.
+
+## Read-side query mechanics
+
+`CommunityCorpusQuery` (consumed by `MerchantNameResolver`'s community-tail
+fallback steps, the mystery-merchants stats strip, and the suggest-mapping
+dedup check) exposes three lookup methods against the global corpus tier
+(`user_id IS NULL`): `lookupExact()` (verbatim pattern match), `lookupGeneralized()`
+(substring match against `generalized_pattern`, walked in PHP via `mb_strpos`
+— never SQL `LIKE` — so a malicious YAML entry carries no SQL-wildcard
+injection surface), and `lookupRegex()` (delegates to `CorpusPatternMatcher`
+for rows whose pattern carries the `regex:` prefix — the `like 'regex:%'`
+operand is a fixed constant, never a corpus value, so this SQL `LIKE` carries
+no injection surface of its own). Each scan is capped (1000 rows generalized,
+500 rows regex) as defence-in-depth against the bundled corpus growing far
+beyond its current size.
+
+## Settings, triage, and the suggest flow
+
+`SharedListSettingsPanel` renders the three Settings toggles: "Use the shared
+merchant list" (gates whether `MerchantNameResolver` consults the community
+tier), "Offer to contribute" (gates the triage row's CTA), and "Update the
+shared list on app updates" — the third toggle ships disabled: its handler is
+an intentional no-op that writes nothing to `users.community_settings`,
+protecting the column from a forged Livewire call while the live-update
+mechanism itself waits on a future app update. Toggle state lives in the
+`users.community_settings` JSON column, read/written directly rather than
+through a separate settings model.
+
+`HelpOthersTriageButton` is gated SERVER-SIDE on the same
+`offerToContribute` toggle — when off, `render()` returns an empty view so
+the CTA is structurally absent from the DOM, not merely CSS-hidden. Structural
+absence is the mitigation for the unauthorized-contribution threat: a
+client-side-hidden control would still be DOM-reachable and dispatchable.
+Clicking it dispatches `suggest-mapping:open` with the row's verbatim raw
+description so the single globally-mounted `SuggestMappingModal` opens
+prefilled.
+
+`SuggestMappingModal` is mounted once at the layout level so `suggest-mapping:open`
+can open it from anywhere (the triage CTA, a mystery card, the Settings
+"Browse mystery merchants" link). On submit it builds a `SuggestMappingDto`
+(region defaults to `'NL'` since the bundled corpus targets Dutch banks; the
+modal's dropdown lets the user override), resolves the Compare URL via
+`GitHubCompareUrlBuilder`, and hands it to `OpenExternalUrlAction`; if that
+action throws (e.g. a tampered config value pointing at a non-allow-listed
+host), the modal stays open with the error rendered inline rather than losing
+the user's typed input. Only on a successful launch does it dispatch
+`MysteryMerchantSubmitted` (carrying the user id + verbatim submitted
+pattern) — never on the failure branch — so a listener can trust the event
+to mean "the system browser actually opened."
+
+`SupportResource` (the support/cancel/help corpus entry rendered on the
+counterparty profile) has every field optional — a profile renders only the
+links that exist; merchant entries lean on cancel/support/cheaper + an
+optional pre-written cancellation email, government entries lean on
+help/apply/rights + a phone number.
+
+## `OpenExternalUrlAction` defence-in-depth
+
+Every URL passed to `OpenExternalUrlAction` is validated through two gates
+before it reaches the `Shell` contract. The first gate rejects any non-HTTPS
+URL (`http://`, `javascript:`, `file://`, or any scheme `filter_var`'s
+validator accepts but is not a web fetch). The second restricts the host to
+an allow-list — currently only `github.com`, since the sole outbound surface
+this module introduces is the Compare URL `GitHubCompareUrlBuilder` produces.
+Outside the live NativePHP runtime the container resolves `Shell` to the
+in-module `NoOpShell` fallback, which logs the would-be URL and does nothing
+else; feature tests bind a `ShellFake` to assert intent without launching a
+real browser.
+
+## Demo seeding
+
+`DemoCommunityMappingsSeeder` materialises three per-user override rows
+(`user_id = $primary->id`) for the primary demo user, deliberately choosing
+patterns that do NOT collide with the bundled global corpus — the
+`(user_id, pattern)` UNIQUE lets a global row and a per-user row share the
+same pattern, and the seeder exercises that per-user-override branch of the
+resolver on purpose. It is idempotent via `updateOrCreate` keyed on
+`(user_id, pattern)`, matching the table's UNIQUE constraint.
+
+## NativePHP Shell binding
+
+`CommunityServiceProvider::boot()` force-rebinds `Native\Desktop\Contracts\Shell`
+to `NoOpShell` whenever the app is not running inside the live NativePHP
+desktop runtime. This is necessary because NativePHP's own
+`NativeServiceProvider` unconditionally binds the real `Shell` during its
+`register()` phase (`packageRegistered`), so this module's own `register()`-time
+`! bound()` guard never wins once the package is installed — outside the
+live desktop runtime that real implementation POSTs to the Electron bridge on
+`localhost:4000`, which isn't running, and every `openExternal()` call would
+throw a `ConnectionException`. Doing the rebind in `boot()` guarantees it wins
+regardless of provider registration order, and is safe because nothing
+resolves `Shell` during boot — only at request/click time.
+
+## The `community_merchant_mappings` table
+
+Rows with `user_id IS NULL` are global corpus entries seeded from the bundled
+YAML at install time; rows with a non-null `user_id` are per-user overrides
+where the user supplied their own friendly name for a pattern. The
+`BelongsToUser` trait is intentionally NOT applied to the model — global rows
+must remain readable regardless of the authenticated user, and per-user
+override reads filter explicitly at the call site instead (mirrors
+`SystemAlert`'s identical global-vs-scoped shape).
+
+## Mystery-merchants stats
+
+`MysteryMerchantsPage::render()` scans up to 2,000 of the user's most recent
+transactions, groups every description the `MerchantNameResolver` cannot
+identify, and renders the top 24 by occurrence count as mystery cards. The
+stats strip's `contributorCount` KPI is currently a hardcoded zero — there is
+no contribution-tracking listener on `MysteryMerchantSubmitted` yet — so the
+slot renders consistently with its eventual real value rather than being
+omitted.

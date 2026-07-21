@@ -25,22 +25,7 @@ use Modules\Core\Public\Events\UserInstalled;
 use Native\Desktop\Contracts\Shell as ShellContract;
 
 /**
- * Wires the Community module:
- *
- *  - registers the corpus loader, the community-tier read-only query,
- *    and the GitHub Compare URL builder as singletons.
- *  - binds the OpenExternalUrlAction so the SuggestMappingModal can
- *    DI it through its `submit()` method.
- *  - binds `Native\Desktop\Contracts\Shell` to the in-module NoOpShell
- *    fallback if no other module has already bound the contract.
- *    NativePHP's NativeServiceProvider binds the real implementation
- *    inside the desktop runtime; this binding only takes effect when
- *    the bundle runs outside that runtime (local dev mode, CI tests).
- *  - listens for `UserInstalled` and runs the SeedCommunityCorpus
- *    listener, mirroring SeedDefaultCategoryTree's idempotent posture.
- *  - loads the migration that creates `community_merchant_mappings`,
- *    the module's routes file, and the `community::` Blade view
- *    namespace.
+ * @link ../../../.docs/features/community/architecture.md
  */
 final class CommunityServiceProvider extends ServiceProvider
 {
@@ -78,16 +63,10 @@ final class CommunityServiceProvider extends ServiceProvider
 
         $events->listen(UserInstalled::class, SeedCommunityCorpus::class);
 
-        // NativePHP's NativeServiceProvider unconditionally binds the real
-        // Shell during registration (packageRegistered), so the register()
-        // `! bound()` fallback above never wins when the package is installed.
-        // Outside the live desktop runtime (php artisan serve, CI, tests) that
-        // real implementation POSTs to the Electron bridge on localhost:4000,
-        // which isn't running — every openExternal() throws a
-        // ConnectionException (cURL error 7). Force the NoOp fallback whenever
-        // we are NOT inside the NativePHP runtime. Done in boot() so it wins
-        // regardless of provider registration order; nothing resolves Shell
-        // during boot (it is only used at request/click time).
+        // Force the NoOp fallback outside the live NativePHP runtime — see the
+        // module architecture doc's "NativePHP Shell binding" section for why
+        // this must be re-asserted in boot() rather than left to register()'s
+        // `! bound()` guard.
         if (! (bool) $this->app->make('config')->get('nativephp-internal.running', false)) {
             $this->app->singleton(ShellContract::class, NoOpShell::class);
         }

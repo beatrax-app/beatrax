@@ -7,15 +7,7 @@ namespace Modules\Community\Public\Dto;
 use Spatie\LaravelData\Data;
 
 /**
- * Optional, fixed-value "where do I get help / cancel / save money" resources
- * for one counterparty (a merchant or a government agency), loaded from the
- * bundled `resources/corpus/support/<country>.yaml` corpus and rendered on the
- * counterparty profile.
- *
- * Every field is optional — a profile renders only the links that exist.
- * Merchant entries lean on cancel/support/cheaper + an optional pre-written
- * cancellation email (rendered as a one-click `mailto:`); government entries
- * lean on help/apply/rights + a phone number.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class SupportResource extends Data
 {
@@ -47,10 +39,6 @@ final class SupportResource extends Data
             || $this->cancelEmailTo !== null;
     }
 
-    /**
-     * A `mailto:` href with the pre-written cancellation request pre-filled, or
-     * null when this resource has no cancellation-by-email channel.
-     */
     public function mailtoHref(): ?string
     {
         if ($this->cancelEmailTo === null) {

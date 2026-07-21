@@ -11,20 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Per-row "Help others identify this" CTA mounted inside each triage
- * row. Gated SERVER-SIDE on the user's
- * `community_settings.offerToContribute` toggle — when off, the render
- * method returns an empty view so the CTA is structurally absent from
- * the DOM (not just CSS-hidden). Structural absence is the mitigation
- * for the unauthorized-contribution threat: a client-side hidden
- * control would still be DOM-reachable and dispatchable.
- *
- * Clicking the CTA dispatches `suggest-mapping:open` with the row's
- * verbatim raw description so the globally-mounted
- * SuggestMappingModal opens with the pattern prefilled.
- *
- * Service collaborators arrive as parameters on action methods — never
- * via constructor injection.
+ * @link ../../../../../.docs/features/community/architecture.md
  */
 final class HelpOthersTriageButton extends Component
 {

@@ -9,21 +9,7 @@ use Modules\Community\Public\Dto\ClassificationRule;
 use Psr\Log\LoggerInterface;
 
 /**
- * Loads the bundled, fixed classification rules — government agencies and
- * bank-fee keywords — from the per-country YAML files under
- * `resources/corpus/<type>/<country>.yaml`.
- *
- * These rules are NOT user-contributable (unlike the merchant corpus, which
- * lives in the database); they ship with the app and back the resolver's
- * government (step 5) and bank-fee (step 6) classification steps. Splitting
- * them out of hardcoded PHP constants lets a contributor add another
- * country's tax agency or fee wording — including `regex:` patterns — by
- * dropping a YAML file in, with no code change.
- *
- * Each file's country is inferred from its filename (`de.yaml` → `DE`,
- * `eu.yaml` → `EU`). Results are memoised for the life of the instance; the
- * service is registered as a singleton in CommunityServiceProvider so the
- * cache is shared across the request/worker.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class ClassificationRuleProvider
 {

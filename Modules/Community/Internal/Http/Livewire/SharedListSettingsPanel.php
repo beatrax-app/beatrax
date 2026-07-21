@@ -12,22 +12,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Settings → Shared merchant list panel. Renders three toggles per
- * UI-SPEC: "Use the shared merchant list" (controls whether the
- * MerchantNameResolver consults the community-tier corpus), "Offer to
- * contribute" (controls whether the Triage row's
- * `Help others identify this` CTA appears), and "Update the shared
- * list on app updates" (disabled no-op until the live-update mechanism
- * ships — the inline note is version-agnostic).
- *
- * Toggle state is persisted in `users.community_settings`, the JSON
- * column on the users table. The Eloquent model casts the column
- * to a PHP array; reads and writes go through `$user->community_settings`
- * directly rather than through a separate UserSettings model.
- *
- * Service collaborators arrive as parameters on action methods — never
- * via constructor injection. The strict-rules ruleset banishes
- * constructor-DI from Livewire components.
+ * @link ../../../../../.docs/features/community/architecture.md
  */
 final class SharedListSettingsPanel extends Component
 {
@@ -67,17 +52,12 @@ final class SharedListSettingsPanel extends Component
         $this->dispatch('shared-list-settings:saved');
     }
 
-    /**
-     * Toggle 3 ships disabled in this phase: the live-update
-     * mechanism activates with a future app update, so the handler
-     * intentionally writes nothing to `users.community_settings`. The
-     * disabled attribute on the rendered checkbox is the user-facing
-     * speed bump; this method is a defensive no-op that protects the
-     * column from a forged Livewire call.
-     */
     public function toggleUpdateOnAppUpdates(): void
     {
-        // No-op by design.
+        // The live-update mechanism does not exist yet, so this handler is a
+        // defensive no-op that protects `users.community_settings` from a
+        // forged Livewire call — the disabled checkbox is the user-facing
+        // speed bump, this is the server-side one.
     }
 
     public function render(ViewFactory $views, CommunityCorpusQuery $corpus): View

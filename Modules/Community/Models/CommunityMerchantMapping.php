@@ -8,17 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Eloquent model for the community_merchant_mappings table — the
- * bundled corpus of crowd-sourced merchant identifications consulted
- * by the import preview and the `/community/mystery-merchants` page.
- *
- * Rows with `user_id IS NULL` are global corpus entries seeded from
- * the bundled YAML file at install time; rows with a non-null
- * `user_id` are per-user overrides where the user supplied their own
- * friendly name for a pattern. The BelongsToUser trait is
- * intentionally NOT applied — global rows must remain readable
- * regardless of the authenticated user, and per-user override reads
- * filter explicitly at the call site (mirrors `SystemAlert`).
+ * @link ../../../.docs/features/community/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
