@@ -23,78 +23,30 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Wizard step 2 — connect the user's bank statement.
- *
- * Renders three format chips (CAMT.053 recommended, MT940, CSV) as a
- * single radio group above a drop zone. CAMT.053 and MT940 are
- * self-describing — picking either one keeps the drop zone interactive.
- * CSV is ambiguous (every bank exports its own dialect), so picking
- * the CSV chip reveals a follow-on chip row {ASN, ING} and disables the
- * drop zone until the user names the bank. The disabled state is the
- * user-visible surface of the server-side validation guard that
- * refuses a CSV submit without an accompanying bank-format hint.
- *
- * Submission delegates to `Modules\Import\Public\Contracts\RunsImports`
- * — the same pipeline the standalone `/imports` UploadWizard uses. The
- * CSV branch carries the picked bank-format hint through the
- * `runFromUpload` 5th parameter so the pipeline dispatches the right
- * adapter without re-sniffing the file. On success this step stashes
- * the returned ImportRun id into `wizard_progress.data['bank_import_run_id']`
- * so the consolidated preview screen can read it back, then dispatches
- * `wizard.step.completed` so the SetupWizard parent advances.
- *
- * Skipping marks the row `skipped` via `wizard.step.skipped`. The user
- * can come back to import later from Settings.
- *
- * Per the project DI-only rule, every collaborator is method-DI'd onto
- * `submit()` (Livewire forbids constructor DI on Component subclasses);
- * no `redirect()` / `now()` / `event()` global helpers are called.
+ * @link ../../../../../../.docs/features/onboarding/architecture.md
  */
 final class ConnectBankStep extends Component
 {
     use WithFileUploads;
 
-    /**
-     * The format leaves the wizard ships to the importer. The CSV
-     * branch is the only one that needs a follow-on bank-format pick
-     * — the other two formats are self-describing.
-     *
-     * @var list<string>
-     */
+    // Only the CSV variants need a follow-on bank-format pick; CAMT.053
+    // and MT940 are self-describing.
+    /** @var list<string> */
     private const SUPPORTED_FORMATS = ['camt053', 'mt940', 'asn-csv', 'ing-csv'];
 
-    /**
-     * Allowed values for the follow-on bank-format chip row that only
-     * renders when the user picks the CSV format chip.
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     private const SUPPORTED_BANK_FORMAT_HINTS = ['asn-csv', 'ing-csv'];
 
     public ?TemporaryUploadedFile $file = null;
 
-    /**
-     * One-shot human-readable parse-time error surfaced inline below
-     * the drop-zone when `RunsImports::runFromUpload()` throws. Cleared
-     * on every fresh submit so a retry with a different file does not
-     * keep the stale message.
-     */
+    // Cleared on every fresh submit so a retry does not keep a stale
+    // message.
     public ?string $uploadError = null;
 
-    /**
-     * The leaf format key the wizard ships to the importer. Mounted on
-     * CAMT.053 — the recommended default — and updated by the chip-row
-     * `wire:click` handlers. The validator's `in:` rule guards against
-     * a property-tampered client value.
-     */
     public string $selectedFormat = 'camt053';
 
-    /**
-     * Bank-format pick the follow-on row stores when the user is on
-     * the CSV branch. Stays null until the user picks one of
-     * {ASN, ING}; submit() refuses to proceed while it is null AND
-     * `selectedFormat` is a CSV variant.
-     */
+    // Stays null until the user picks a CSV bank; submit() refuses to
+    // proceed while null and selectedFormat is a CSV variant.
     public ?string $selectedBankFormatHint = null;
 
     /**
@@ -121,12 +73,6 @@ final class ConnectBankStep extends Component
         ];
     }
 
-    /**
-     * Server-side handler invoked by the format-chip row. Clears the
-     * follow-on bank-format pick whenever the user switches away from
-     * a CSV format so the gated drop zone state resets cleanly on a
-     * back-and-forth chip selection.
-     */
     public function setFormat(string $format): void
     {
         if (! in_array($format, self::SUPPORTED_FORMATS, strict: true)) {
@@ -140,32 +86,16 @@ final class ConnectBankStep extends Component
         }
     }
 
-    /**
-     * Whether the drop zone should be marked `aria-disabled="true"`.
-     * True only on the CSV branch with no bank-format pick yet — the
-     * UX surface of the server-side guard that refuses a CSV submit
-     * without a bank-format hint.
-     */
+    // True only on the CSV branch with no bank-format pick yet — the UX
+    // surface of the server-side guard below.
     public function isDropZoneGated(): bool
     {
         return $this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null;
     }
 
-    /**
-     * Runs the statement through the shared import preview pipeline.
-     * Mirrors UploadWizard::submit() — same validator shape, same
-     * Throwable catch-all, same logger payload — but on success stashes
-     * the resulting ImportRun id into `wizard_progress.data` for the
-     * consolidated preview screen and dispatches
-     * `wizard.step.completed` so the SetupWizard parent advances the
-     * wizard state.
-     *
-     * The CSV branch carries the follow-on bank-format pick into the
-     * importer; the pipeline rejects a CSV import without one at the
-     * public-contract boundary as a backstop guard. Picking a CSV
-     * format without naming the bank is also rejected by this method's
-     * server-side validator before any pipeline call.
-     */
+    // Mirrors UploadWizard::submit() (validator shape, Throwable
+    // catch-all, logger payload); on success stashes the ImportRun id
+    // into wizard_progress.data and dispatches wizard.step.completed.
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -180,12 +110,9 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        // Server-side guard: CSV imports must be accompanied by a
-        // bank-format pick. The validator's `in:` rule on
-        // `selectedFormat` and `selectedBankFormatHint` can permit a
-        // (CSV, null) combination on its own — this is the load-bearing
-        // check that catches a tampered request before any pipeline
-        // call.
+        // Load-bearing check: the validator's in: rule alone can permit a
+        // (CSV, null) combination, so this catches a tampered request
+        // before any pipeline call.
         if ($this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null) {
             $this->addError('selectedBankFormatHint', 'Pick which bank exported your CSV before continuing.');
 
@@ -215,15 +142,8 @@ final class ConnectBankStep extends Component
             return;
         }
 
-        // If the parsed statement contained any IBANs the user does not
-        // yet have an account for, auto-create those accounts so the
-        // preview rows resolve against a known account on step 5. Bank
-        // statements report the real account IBAN (one per file in the
-        // CAMT.053 / MT940 / CSV cases); without a matching `accounts`
-        // row, every row resolves to UnknownAccount, gets status 'error',
-        // and the consolidated commit surface shows "0 ROWS" even though
-        // the rows are visible. After creation, re-preview the file so
-        // the cache reflects the now-resolvable account.
+        // Auto-creates accounts for any unknown IBAN and re-previews —
+        // see architecture.md for why this is necessary.
         if ($result->accountsToName !== []) {
             $bankLabel = $this->bankLabelFor($this->selectedFormat, $this->selectedBankFormatHint);
 
@@ -293,17 +213,11 @@ final class ConnectBankStep extends Component
         $this->dispatch('wizard.step.completed');
     }
 
-    /**
-     * Best-effort human-readable account label derived from the picked
-     * format. Used as the default `accounts.name` for auto-created bank
-     * accounts; the user can rename it later from Settings.
-     */
     private function bankLabelFor(string $sourceFormat, ?string $bankFormatHint): string
     {
-        // The label is later concatenated into "We detected your {label}
-        // account started at" — keep "bank" / "ASN" / "ING" only,
-        // never the literal word "account", so the sentence reads
-        // naturally without duplication.
+        // Concatenated later into "We detected your {label} account
+        // started at" — keep "bank"/"ASN"/"ING" only, never the literal
+        // word "account", to avoid duplication.
         return match ($sourceFormat) {
             'camt053', 'mt940', 'asn-csv' => 'ASN bank',
             'ing-csv' => 'ING bank',
@@ -315,12 +229,8 @@ final class ConnectBankStep extends Component
         };
     }
 
-    /**
-     * Produce a unique-by-user `accounts.slug` for the auto-created
-     * account. The schema's `unique(user_id, slug)` constraint means
-     * adding the IBAN tail keeps multiple bank accounts under one user
-     * from colliding.
-     */
+    // Adding the IBAN tail keeps multiple bank accounts under one user
+    // from colliding on the unique(user_id, slug) constraint.
     private function slugFor(string $label, string $iban): string
     {
         $tail = strtolower(substr($iban, -6));
@@ -328,11 +238,6 @@ final class ConnectBankStep extends Component
         return Str::slug($label).'-'.$tail;
     }
 
-    /**
-     * Marks this step `skipped` at the parent. The user can still come
-     * back to /setup-wizard and pick up the bank connector — the
-     * wizard_progress row stays in place; only its status changes.
-     */
     public function skip(): void
     {
         $this->dispatch('wizard.step.skipped');
@@ -343,12 +248,10 @@ final class ConnectBankStep extends Component
         return $views->make('onboarding::livewire.steps.connect-bank-step');
     }
 
-    /**
-     * Strips path-traversal characters out of the user-supplied filename
-     * before it touches any filesystem path. The extension follows the
-     * declared source format so the stored copy round-trips through the
-     * format-specific HeaderSniffer on re-read.
-     */
+    // Strips path-traversal characters before the filename touches any
+    // filesystem path; the extension follows the declared source format
+    // so the stored copy round-trips through the format-specific
+    // HeaderSniffer on re-read.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);
@@ -364,11 +267,6 @@ final class ConnectBankStep extends Component
         return $stemPart.$extension;
     }
 
-    /**
-     * Whether the given format key is one of the ambiguous CSV
-     * dialects that needs a follow-on bank-format pick before the
-     * drop zone unlocks.
-     */
     private function isCsvFormat(string $format): bool
     {
         return in_array($format, self::SUPPORTED_BANK_FORMAT_HINTS, strict: true);

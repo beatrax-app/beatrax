@@ -21,61 +21,23 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Wizard step 3 — connect the user's ICS credit card. ICS Cards's
- * consumer portal (Mijn ICS) only exports monthly PDF statements; the
- * user typically downloads several months at once so the step accepts
- * an array of PDF uploads and runs each through the importer in a
- * single submit pass.
- *
- * Submission delegates per-file to `RunsImports::runFromUpload()` with
- * the leaf format key `ics-pdf` — the same path `Modules/Import`'s
- * IcsPdfAdapter consumes. Each successful preview lands one
- * `ImportRun` row; the resulting ids are merged into
- * `wizard_progress.data['card_import_run_ids']` as a deduplicated
- * array so the consolidated preview screen can read them back.
- *
- * A per-file parse failure is logged (with capped stack trace) but
- * does not abort the submit — the loop continues to the next file so
- * one bad PDF doesn't waste the rest of the upload. Once every file
- * has been attempted, the step dispatches `wizard.step.completed` if
- * at least one file landed an ImportRun; otherwise it surfaces an
- * inline error and stays on the step.
- *
- * Per the project DI-only rule, every collaborator is method-DI'd on
- * `submit()`; no global helpers are called.
+ * @link ../../../../../../.docs/features/onboarding/architecture.md
  */
 final class ConnectCardStep extends Component
 {
     use WithFileUploads;
 
-    /**
-     * Synthetic IBAN literal IcsPdfAdapter uses for all ICS card rows.
-     * Mirrors `IcsPdfAdapter::ICS_OWN_IBAN` — kept in sync by the
-     * architecture test `ics_pdf_adapter_own_iban_matches_connect_card_step`.
-     */
+    // Mirrors IcsPdfAdapter::ICS_OWN_IBAN — kept in sync by the arch test
+    // ics_pdf_adapter_own_iban_matches_connect_card_step.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
-    /**
-     * The leaf format key the ICS step ships. Constant — ICS Cards
-     * exports PDF only.
-     */
     public string $selectedFormat = 'ics-pdf';
 
-    /**
-     * The PDF uploads queued for this submit. Bound to a
-     * `<input type="file" multiple>` via `wire:model="statements"`;
-     * each entry is a Livewire-staged TemporaryUploadedFile.
-     *
-     * @var array<int, TemporaryUploadedFile>
-     */
+    /** @var array<int, TemporaryUploadedFile> */
     public array $statements = [];
 
-    /**
-     * One-shot human-readable parse-time error surfaced inline below
-     * the drop-zone when EVERY queued file failed to land an
-     * ImportRun. A mixed-result submit (some succeeded, some failed)
-     * still dispatches `wizard.step.completed`.
-     */
+    // Surfaced only when every queued file failed; a mixed-result submit
+    // still dispatches wizard.step.completed.
     public ?string $uploadError = null;
 
     /**
@@ -103,10 +65,6 @@ final class ConnectCardStep extends Component
         ];
     }
 
-    /**
-     * Removes one statement from the upload queue without re-uploading
-     * the rest. Bound from the per-file chip's `×` button.
-     */
     public function removeStatement(int $index): void
     {
         if (! array_key_exists($index, $this->statements)) {
@@ -117,17 +75,8 @@ final class ConnectCardStep extends Component
         $this->statements = array_values($this->statements);
     }
 
-    /**
-     * Runs every queued PDF through the shared import preview
-     * pipeline. Per-file errors are logged (with capped stack traces)
-     * but do not abort the submit — the loop continues to the next
-     * file so a single bad statement doesn't waste the upload.
-     *
-     * On at least one success the step stashes the resulting ImportRun
-     * ids into `wizard_progress.data['card_import_run_ids']` and
-     * dispatches `wizard.step.completed`. On total failure (every file
-     * threw) the step surfaces the first failure's message inline.
-     */
+    // Per-file errors are logged but don't abort the submit — the loop
+    // continues so a single bad statement doesn't waste the rest.
     public function submit(
         RunsImports $importer,
         CurrentUser $currentUser,
@@ -177,18 +126,10 @@ final class ConnectCardStep extends Component
             return;
         }
 
-        // If the user has no ICS card account yet, auto-create one so
-        // the ICS PDF rows resolve against a known account. The
-        // IcsPdfAdapter uses the synthetic IBAN 'ICS-CARD' for every
-        // row; without a matching account the import preview treats every
-        // row as an unknown-IBAN error and the statement_summaries writer
-        // never fires — which means the starting-balance detector can find
-        // nothing on step 5. After creation, re-preview each ImportRun
-        // from its stable stored path so the preview cache and
-        // statement_summaries rows are populated against the new account.
-        // Raw Query Builder used instead of Account::query()->exists() to
-        // satisfy PHPStan strict-rules staticMethod.dynamicCall — same
-        // pattern as TransactionDetail and UpdateTransactionCategory.
+        // Auto-creates the ICS account + re-previews when missing — see
+        // architecture.md for why. Raw query builder (not
+        // Account::query()->exists()) to satisfy PHPStan strict-rules
+        // staticMethod.dynamicCall.
         $hasIcsAccount = $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
@@ -269,10 +210,8 @@ final class ConnectCardStep extends Component
         return $views->make('onboarding::livewire.steps.connect-card-step');
     }
 
-    /**
-     * Strips path-traversal characters and locks the extension to .pdf
-     * (the only format the ICS step accepts).
-     */
+    // Strips path-traversal characters and locks the extension to .pdf,
+    // the only format the ICS step accepts.
     private function sanitiseFilename(string $original): string
     {
         $stem = pathinfo($original, PATHINFO_FILENAME);

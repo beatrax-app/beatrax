@@ -7,19 +7,9 @@ namespace Modules\Onboarding\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 
-/**
- * Public read-only view over a user's wizard_progress rows. Returns a
- * deterministic 6-entry array keyed by step_key in registry order so
- * the SetupWizard's progress-dots strip can render without re-querying
- * or re-sorting per dot. Missing rows fall back to a `pending` /
- * `null` payload so a partially-seeded user still renders a coherent
- * progress strip rather than rendering nothing.
- *
- * Query explicitly filters by `user_id` per the multi-user-readiness
- * rule; never trusts the BelongsToUser global scope, which falls
- * through to "no scope" under non-HTTP contexts (queue workers,
- * artisan commands, listener tests).
- */
+// Returns one entry per registry step keyed by step_key in registry
+// order, falling back to pending/null for a missing row so a
+// partially-seeded user still renders a coherent progress strip.
 final readonly class WizardProgressQuery
 {
     public function __construct(
