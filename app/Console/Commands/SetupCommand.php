@@ -17,16 +17,10 @@ use function Laravel\Prompts\password;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
-/**
- * Interactive environment setup for a server deployment. Walks a self-hoster
- * through writing `.env` (app URL, an application key, and a database
- * connection — SQLite for the desktop build, or Postgres / MySQL / MariaDB
- * for a server), verifies the database is reachable, and offers to hand off
- * to `beatrax:install` (migrations + the single user account).
- *
- * Idempotent and re-runnable: existing `.env` values are offered as the
- * prompt defaults, so running it again only changes what you re-enter.
- */
+// Walks a self-hoster through writing .env (app URL, an application key,
+// a database connection), verifies the database is reachable, and offers
+// to hand off to beatrax:install. Idempotent and re-runnable: existing
+// .env values are offered as the prompt defaults.
 final class SetupCommand extends Command
 {
     protected $signature = 'beatrax:setup';
@@ -148,10 +142,9 @@ final class SetupCommand extends Command
         ];
     }
 
+    // Best-effort reachability check. A fresh deploy may not have created
+    // the database yet, so a failure is a warning, not a hard stop.
     /**
-     * Best-effort reachability check. A fresh deploy may not have created the
-     * database yet, so a failure is a warning, not a hard stop.
-     *
      * @param  array<string, string>  $env
      */
     private function verifyDatabase(string $driver, array $env): void
@@ -178,8 +171,6 @@ final class SetupCommand extends Command
     }
 
     /**
-     * Upsert each KEY=value into .env, preserving the rest of the file.
-     *
      * @param  array<string, string>  $values
      */
     private function writeEnvValues(array $values): void
@@ -219,7 +210,8 @@ final class SetupCommand extends Command
             return '';
         }
 
-        // No quoting needed for simple values.
+        // No quoting needed when the value has no shell/dotenv-special
+        // characters.
         if (preg_match('/[\s#"\'$\\\\]/', $value) === 0) {
             return $value;
         }
