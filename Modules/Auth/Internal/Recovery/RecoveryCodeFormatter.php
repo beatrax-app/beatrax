@@ -4,15 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Recovery;
 
-/**
- * Builds the plaintext `.txt` artefact a user downloads from the
- * recovery-codes display ceremony.
- *
- * The body is the recovery codes joined by newlines — one code per line,
- * with no header row and no trailing newline. The filename is derived
- * from the owning username, lowercased so the file is stable regardless
- * of how the username was originally typed.
- */
+// Filename is derived from the owning username, lowercased so it stays
+// stable regardless of how the username was originally typed.
 final class RecoveryCodeFormatter
 {
     /**

@@ -53,19 +53,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 
 /**
- * Service provider for the Auth module.
- *
- * Loads the module's migrations, web/console routes, and views, registers
- * the Fortify service provider that wires the username-based
- * authentication pipeline, binds the sign-in / sign-out / recovery-code /
- * password-reset actions, and registers the Livewire pages of the
- * authentication surface.
- *
- * Two middleware run on every authenticated route:
- *   1. AppLockMiddleware — the app-lock gate (D-01 server-authoritative).
- *      Also registered as Livewire persistent middleware so /livewire/update
- *      requests re-run the gate (T-05-06 bypass prevention).
- *   2. ForcePasswordChangeMiddleware — password-change enforcement.
+ * @link ../../../.docs/features/auth/architecture.md
  */
 final class AuthServiceProvider extends ServiceProvider
 {
@@ -90,7 +78,6 @@ final class AuthServiceProvider extends ServiceProvider
         // to route the key through the OS keychain / Keystore.
         $this->app->singleton(KeyCustodian::class, NullKeyCustodian::class);
 
-        // App-lock infrastructure singletons (05-02).
         $this->app->singleton(PinHasher::class);
         $this->app->singleton(AppLockKdf::class);
         $this->app->singleton(AppLockKeyWrap::class);
@@ -101,7 +88,6 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->singleton(PinVerificationService::class);
         $this->app->singleton(AppLockProvisioner::class);
 
-        // Biometric singletons (05-05).
         $this->app->singleton(BiometricDeviceStore::class);
         $this->app->singleton(PlatformDetector::class);
         $this->app->singleton(WebAuthnBiometricService::class);
@@ -125,8 +111,8 @@ final class AuthServiceProvider extends ServiceProvider
         $router->aliasMiddleware('first-user-only', FirstUserOnlyMiddleware::class);
         $router->aliasMiddleware('developer', RequireDeveloperMiddleware::class);
 
-        // Gate every authenticated route behind the app-lock screen (D-01).
-        // The middleware exempts auth.lock + logout to prevent redirect loops.
+        // Gates every authenticated route behind the app-lock screen; the
+        // middleware exempts auth.lock + logout to prevent redirect loops.
         $router->pushMiddlewareToGroup('auth', AppLockMiddleware::class);
 
         // Enforce the forced-password-change flag on every authenticated
@@ -140,8 +126,8 @@ final class AuthServiceProvider extends ServiceProvider
         // rejects guests before the module middleware run.
         $router->prependMiddlewareToGroup('auth', Authenticate::class);
 
-        // Re-run the lock gate on every Livewire component update request so
-        // a locked session cannot bypass the gate via /livewire/update (T-05-06).
+        // Re-runs the lock gate on every Livewire component update request
+        // so a locked session cannot bypass the gate via /livewire/update.
         $livewire->addPersistentMiddleware(AppLockMiddleware::class);
 
         $livewire->component('auth.login-page', LoginPage::class);
@@ -155,10 +141,6 @@ final class AuthServiceProvider extends ServiceProvider
         $livewire->component('auth.lock-screen', LockScreen::class);
         $livewire->component('auth.app-lock-settings-section', AppLockSettingsSection::class);
 
-        // LOCK-04 dev-console probe (D-19): mounted on the dev overview page
-        // behind the `developer` middleware (T-05-27). Shows released/withheld
-        // with a truncated SHA-256 fingerprint to prove key presence without
-        // disclosing key material.
         $livewire->component('auth.app-lock-key-probe', AppLockKeyProbe::class);
     }
 }

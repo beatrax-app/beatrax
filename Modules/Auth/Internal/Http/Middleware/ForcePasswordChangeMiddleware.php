@@ -11,21 +11,11 @@ use Illuminate\Http\Request;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Enforces the force_password_change_at_next_login flag.
- *
- * When an authenticated user carries the flag, every request is
- * redirected to the change-password page until they replace their
- * password. The change-password page itself and the logout route are
- * exempt by route name so the user can complete the change or sign out
- * without being trapped in a redirect loop.
- *
- * The current user is read through the CurrentUser contract — the DI
- * seam — never the Auth facade or the auth() helper.
- */
 final readonly class ForcePasswordChangeMiddleware
 {
-    /** @var list<string> */
+    /**
+     * @var list<string>
+     */
     private const ALLOWED_ROUTE_NAMES = ['auth.change-password', 'logout'];
 
     public function __construct(

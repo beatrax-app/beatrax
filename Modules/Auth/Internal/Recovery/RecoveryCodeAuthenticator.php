@@ -11,31 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Shared verification core for account recovery by code.
- *
- * `verify()` takes a typed username and recovery code, finds the user,
- * and matches the code against that user's unused `user_recovery_codes`
- * rows. The lookup, the per-row hash comparison, and the `used_at` stamp
- * all run inside one transaction with the candidate rows held under
- * `lockForUpdate()`: a concurrent redemption of the same code blocks on
- * the row lock rather than racing, so a code can be consumed exactly
- * once.
- *
- * The recovery codes are bcrypt-hashed at issue time as the formatted
- * five-group hyphenated string (`AAAA-BBBB-CCCC-DDDD-EEEE`). The typed
- * input may arrive lowercase or with stray separators, so it is first
- * normalised to the bare twenty characters and then re-formatted into
- * that identical hyphenated shape before `Hasher::check`.
- *
- * Every attempt — a match or any failure — writes a `system_alerts`
- * audit row: `auth.recovery_code_consumed` (severity `warning`) on
- * success, `auth.recovery_code_failed` (severity `critical`) on failure.
- * A failure against an unknown username carries a null `user_id`.
- *
- * On a match the matched `User` is returned; on any failure `verify()`
- * returns null and never throws — the caller decides how to surface the
- * generic "username and code do not match" message without revealing
- * whether the username existed.
+ * @link ../../../../.docs/features/auth/architecture.md
  */
 final class RecoveryCodeAuthenticator
 {
@@ -95,10 +71,8 @@ final class RecoveryCodeAuthenticator
         return $result;
     }
 
-    /**
-     * Re-inserts a hyphen every four characters so the normalised bare
-     * code is compared in the same shape it was hashed in.
-     */
+    // Re-inserts a hyphen every four characters so the normalised bare
+    // code is compared in the same shape it was hashed in.
     private function reformat(string $bareCode): string
     {
         $groups = str_split($bareCode, self::GROUP_LENGTH);

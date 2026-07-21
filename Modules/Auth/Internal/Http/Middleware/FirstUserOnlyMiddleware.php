@@ -10,16 +10,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Restricts a route to the bootstrap window before the first account is
- * created.
- *
- * The signup ceremony only exists while the device has no users. Once a
- * user row exists the route this middleware guards is no longer a real
- * surface, so the middleware throws a 404 rather than a 403 — a prober
- * cannot distinguish "signup never existed here" from "signup is now
- * closed".
- */
+// Throws a 404 rather than a 403 once a user row exists, so a prober
+// cannot distinguish "signup never existed here" from "signup is now closed".
 final readonly class FirstUserOnlyMiddleware
 {
     public function __construct(private DatabaseManager $db) {}
