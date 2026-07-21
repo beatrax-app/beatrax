@@ -10,15 +10,10 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use stdClass;
 
-/**
- * Public read API over known_senders.
- *
- * Returns the user's curated sender list — both system-shipped seeds
- * (user_id IS NULL, source='system') and per-user additions
- * (user_id = $user->id, source='user'). System rows surface first so
- * the calling matcher registry sees the seeded sender patterns before
- * any user overrides.
- */
+// Public read API over known_senders: returns the user's curated
+// sender list, both system-shipped seeds (user_id IS NULL) and
+// per-user additions, with system rows surfaced first so the calling
+// matcher registry sees seeded patterns before any user overrides.
 final class KnownSenderQuery
 {
     public function __construct(private readonly DatabaseManager $db) {}

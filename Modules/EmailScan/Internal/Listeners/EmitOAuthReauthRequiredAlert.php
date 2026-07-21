@@ -11,24 +11,12 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 
 /**
- * Writes a one-time "re-authorize Gmail and Microsoft" warning to the
- * system_alerts table after OAuth secrets move to per-user storage.
- *
- * The signal that a move happened is the presence of the renamed
- * rollback file email-oauth.json.pre-phase-12.bak. When that file
- * exists and the current user has no oauth_secrets rows yet, the user
- * has not re-authorized any provider — so a warning is surfaced once.
- *
- * The check is cheap to skip: when the .bak file is absent it returns
- * immediately. A de-dup guard ensures a second invocation does not add
- * a duplicate un-acknowledged row, so it is safe to call on every
- * authenticated request.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class EmitOAuthReauthRequiredAlert
 {
     private const REAUTH_KIND = 'oauth.reauth_required';
 
-    /** Bare filename of the rollback artefact inside the secrets directory. */
     private const BACKUP_FILENAME = 'email-oauth.json.pre-phase-12.bak';
 
     private const MESSAGE = 'OAuth secrets moved to per-user storage. Re-authorize Gmail and Microsoft to resume email scanning. The old secrets file was renamed to email-oauth.json.pre-phase-12.bak for rollback.';
@@ -46,7 +34,6 @@ final class EmitOAuthReauthRequiredAlert
             return;
         }
 
-        // Cheap pre-check: no rollback artefact means no move happened.
         $backupPath = $this->paths->secrets().DIRECTORY_SEPARATOR.self::BACKUP_FILENAME;
         if (! $this->files->exists($backupPath)) {
             return;
@@ -55,12 +42,9 @@ final class EmitOAuthReauthRequiredAlert
         $userId = $this->currentUser->id();
         $connection = $this->db->connection();
 
-        // The raw Query Builder exists() calls are used instead of
-        // Eloquent's Model::query()->exists() to clear PHPStan
-        // strict-rules staticMethod.dynamicCall — the same pattern as
-        // TransactionDetail's transaction-visibility pre-check.
-
-        // The user has already re-authorized at least one provider.
+        // Raw Query Builder exists() calls, not Eloquent's
+        // Model::query()->exists(), to clear PHPStan strict-rules
+        // staticMethod.dynamicCall.
         $hasSecrets = $connection->table('oauth_secrets')
             ->where('user_id', $userId)
             ->exists();
@@ -68,7 +52,6 @@ final class EmitOAuthReauthRequiredAlert
             return;
         }
 
-        // De-dup: an un-acknowledged warning is already on the banner.
         $alreadyAlerted = $connection->table('system_alerts')
             ->where('user_id', $userId)
             ->where('kind', self::REAUTH_KIND)

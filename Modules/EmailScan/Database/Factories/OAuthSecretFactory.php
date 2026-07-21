@@ -10,14 +10,6 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Models\OAuthSecret;
 
 /**
- * Test-fixture factory for OAuthSecret rows.
- *
- * Each generated row picks a provider from the allowed enum
- * ('gmail' or 'microsoft') and, unless a `user_id` is supplied, a
- * newly created owning user. `client_secret` and `tokens_blob` are
- * plaintext here; the model's `encrypted` cast handles encryption on
- * write.
- *
  * @extends Factory<OAuthSecret>
  */
 final class OAuthSecretFactory extends Factory
@@ -31,6 +23,9 @@ final class OAuthSecretFactory extends Factory
         $providers = ['gmail', 'microsoft'];
         $provider = $providers[array_rand($providers)];
 
+        // client_secret and tokens_blob are plaintext here; OAuthSecret's
+        // encrypted cast performs the actual encryption on write, so
+        // fixtures never need to fabricate ciphertext.
         return [
             'user_id' => fn (): int => User::query()->create([
                 'username' => 'oauth-'.Str::lower(Str::random(12)),

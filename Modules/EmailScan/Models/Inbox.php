@@ -8,15 +8,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// Carries the per-user backfill window plus the JSON progress payload
+// the background fetcher updates as it walks history. Credentials
+// live exclusively in the chmod-600 JSON repository on disk — no
+// column of this model carries any secret.
 /**
- * Eloquent model for the inboxes table — one row per OAuth-connected
- * mail account (Gmail or Microsoft 365).
- *
- * Carries the per-user backfill window plus the JSON progress payload
- * the background fetcher updates as it walks history. Credentials for
- * the account live exclusively in the chmod-600 JSON repository on
- * disk; no column of this model carries any secret.
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $provider

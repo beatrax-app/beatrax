@@ -41,50 +41,16 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 /**
- * Wires the EmailScan module.
- *
- * register() declares singleton bindings for the Public read services
- * (InboxQuery, KnownSenderQuery, InboxMessageQuery, InboxesBadgeCount,
- * OAuthSecretsRepository) and the Internal OAuth surface
- * (GoogleOAuthProvider, MicrosoftOAuthProvider, OAuthStateRepository).
- * All collaborators are stateless and singleton-safe.
- *
- * boot() conditionally loads migrations / routes / views and registers
- * the /inboxes Livewire SFC + the OAuth-client wizard modal SFC + the
- * backfill-window modal SFC, plus the top-nav badge View Factory
- * composer.
- *
- * Failed-job lifecycle: each of BackfillInboxJob + IncrementalScanJob
- * defines its own `failed(Throwable, InboxScanStateMachine)` method;
- * Laravel resolves the InboxScanStateMachine via container DI and
- * the job flips its own inbox_scan_state.status to 'error' with the
- * truncated exception message. The state machine remains the sole
- * mutator of the status column (BoundaryArchTest invariant). Per-job
- * failed() hooks tie failure handling to the typed job class itself,
- * which keeps the lookup independent of Laravel's serialised-payload
- * format.
- *
- * The queued jobs' `uniqueVia()` callbacks resolve their lock store
- * through `Modules\Core\Public\Support\LockStore::forUniqueJobs()`,
- * the single sanctioned `Cache` facade caller (BoundaryArchTest
- * carve-out).
+ * @link ../../../.docs/features/email-scan/architecture.md
  */
 final class EmailScanServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // The `email-scan` config (with the OAUTH_LOOPBACK_PORT
-        // env-var override) lives at config/email-scan.php at the
-        // project root so it is picked up by Laravel's automatic
-        // config-directory loader. Keeping the env() call inside
-        // config/ ensures `config:cache` resolves the value at cache
-        // time instead of returning null at runtime.
-
         $this->app->singleton(InboxMessageQuery::class);
         $this->app->singleton(OAuthSecretsRepository::class);
         $this->app->singleton(LoopbackRedirectUri::class);
 
-        // OAuth surface + Public read services.
         $this->app->singleton(GoogleOAuthProvider::class);
         $this->app->singleton(MicrosoftOAuthProvider::class);
         $this->app->singleton(OAuthStateRepository::class);
@@ -114,20 +80,16 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->app->singleton(EmitOAuthReauthRequiredAlert::class);
         $this->app->singleton(RaiseReconsentAlertOnTokenFailure::class);
 
-        // Req 14 (D-14/D-15): the ICS "statement ready" nudge detector +
-        // its companion system-known-sender seeder.
         $this->app->singleton(DetectIcsStatementReadyJob::class);
         $this->app->singleton(IcsStatementSenderSeeder::class);
     }
 
     public function boot(LivewireManager $livewire, EventsDispatcher $events): void
     {
-        // Per-event listener wiring: a refreshed-token failure inside
-        // GmailApiClient / GraphApiClient raises InboxTokenFailed, which
+        // A refreshed-token failure raises InboxTokenFailed, which
         // RaiseReconsentAlertOnTokenFailure picks up to write a single
-        // de-duped system_alerts row of kind oauth_reconsent_required.
-        // The SystemAlertsBanner then renders the row with a Reconnect
-        // link routing back through `/inboxes?reconnect={inbox_id}`.
+        // de-duped system_alerts row the SystemAlertsBanner renders
+        // with a Reconnect link back through /inboxes?reconnect={id}.
         $events->listen(InboxTokenFailed::class, RaiseReconsentAlertOnTokenFailure::class);
 
         if (is_dir(__DIR__.'/../Database/Migrations')) {
@@ -150,28 +112,10 @@ final class EmailScanServiceProvider extends ServiceProvider
         $this->registerTopNavBadgeComposer();
     }
 
-    /**
-     * Inject the top-nav "Inboxes" badge integer into the
-     * `core::livewire.top-nav` view via the View Factory contract.
-     *
-     * Mirrors ChainsServiceProvider::registerTopNavBadgeComposer
-     * (issue #12 fix in Phase 5): resolves the View Factory contract
-     * through `$this->app->make()` so the CLAUDE.md DI-only invariant
-     * stays visible at the call site — the `view()` global helper is
-     * never used.
-     *
-     * The composer fires only when the view is actually rendered —
-     * meaning at most once per HTTP request that surfaces the top-nav.
-     * Each composer invocation reads `CurrentUser` per-request (never
-     * caches across requests) and runs a single InboxesBadgeCount query
-     * (one COUNT on discovered_senders + one COUNT on inbox_scan_state,
-     * both filtered by user_id).
-     *
-     * The same composer runs the EmitOAuthReauthRequiredAlert listener:
-     * it is the per-request hook closest to "the user is looking at the
-     * app", and the listener's own .bak-file pre-check plus de-dup guard
-     * keep it a no-op on every request after the first.
-     */
+    // Injects the top-nav "Inboxes" badge integer into
+    // core::livewire.top-nav via the View Factory contract (mirrors
+    // ChainsServiceProvider's equivalent composer) and also runs the
+    // EmitOAuthReauthRequiredAlert listener on the same per-request hook.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;

@@ -7,21 +7,10 @@ namespace Modules\EmailScan\Public\Dto;
 use DateTimeImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * In-memory carrier for the persistent + freshly-refreshed token pair
- * the OAuth secrets repository hands back when the background scanner
- * needs to call the provider on behalf of a connected inbox.
- *
- * The persistent half (the long-lived rotation token + scope +
- * expires_at) lives in the chmod-600 JSON repository on disk; the
- * volatile half (the cached short-lived token) may be null when the
- * repository has not yet refreshed it. Callers always treat the
- * volatile field as a hint — when null or near-expiry they request a
- * fresh refresh via the OAuth provider, which writes the new pair
- * back through the repository's rotate() method.
- *
- * The DTO is pure data — no methods beyond the constructor.
- */
+// In-memory carrier for the persistent + freshly-refreshed token pair
+// OAuthSecretsRepository hands back. The persistent half lives in the
+// chmod-600 JSON repository; the volatile accessToken may be null and
+// is always treated as a hint, refreshed near-expiry via rotate().
 final class InboxCredentials extends Data
 {
     public function __construct(

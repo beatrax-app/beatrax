@@ -9,19 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// The lightweight DB index over the raw .eml blobs persisted on disk.
+// (inbox_id, provider_message_id) is UNIQUE so a re-fetch is a no-op
+// via insertOrIgnore; sender + subject are captured at fetch time so
+// the parser never re-opens the .eml just to filter.
 /**
- * Eloquent model for the inbox_messages table — the lightweight DB
- * index that sits over the raw .eml blobs persisted on disk.
- *
- * One row per fetched message. (inbox_id, provider_message_id) is
- * UNIQUE so a re-fetch of the same message id is a no-op via
- * insertOrIgnore. Sender + subject are captured at fetch time so the
- * downstream parser does not need to re-open the .eml just to filter
- * by sender.
- *
- * The `status` column is the lifecycle handoff to the parser stage;
- * Phase 6's fetcher only ever writes 'fetched'.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $inbox_id

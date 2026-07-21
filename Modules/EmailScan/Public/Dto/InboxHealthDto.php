@@ -7,19 +7,10 @@ namespace Modules\EmailScan\Public\Dto;
 use DateTimeImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * Single-inbox health snapshot served to the /inboxes page table and
- * (via the dashboard tile aggregator) the at-a-glance status surface.
- *
- * Mirrors the joined shape of inboxes + inbox_scan_state with
- * resolved scalars: the timestamp + status come from inbox_scan_state;
- * the email + provider + backfill window come from inboxes; the
- * optional backfill counters carry the JSON progress payload's
- * fetched_count + total_estimated when an active backfill is in
- * flight. Both backfill counters are null when no backfill is
- * currently running so the UI can branch on absence rather than on
- * sentinel zero values.
- */
+// Single-inbox health snapshot for the /inboxes table and the
+// dashboard tile aggregator: mirrors the joined inboxes +
+// inbox_scan_state shape, with the backfill counters null (not zero)
+// when no backfill is currently running so the UI branches on absence.
 final class InboxHealthDto extends Data
 {
     public function __construct(

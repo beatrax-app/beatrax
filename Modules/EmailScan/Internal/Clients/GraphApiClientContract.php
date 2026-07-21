@@ -7,61 +7,11 @@ namespace Modules\EmailScan\Internal\Clients;
 use DateTimeImmutable;
 
 /**
- * Contract for the Microsoft Graph API client.
- *
- * Mirrors the test-seam pattern established by `GmailApiClientContract`:
- * the production `GraphApiClient` wraps live Graph HTTP calls; the
- * Wave 0 `FakeGraphApiClient` replays synthesised JSON fixtures.
- * Both implement this interface so background-job tests can rebind the
- * contract to the Fake via `$this->app->instance(...)` without any
- * production code path knowing the difference.
- *
- * Error sentinels participate in the contract:
- *
- *  - `RateLimitedException` is thrown when Graph responds with HTTP 429
- *    (`TooManyRequests`). `retryAfterSeconds` carries the value of the
- *    `Retry-After` response header so the caller can transition the
- *    inbox state and let the queue worker reschedule with the right
- *    back-off envelope.
- *
- *  - `CursorExpiredException` is thrown by `deltaPage()` when Graph
- *    returns HTTP 410 / `syncStateNotFound`. The caller falls back to
- *    a date-bounded re-baseline rather than treating it as a hard
- *    error.
- *
- *  - Token payloads (refresh tokens, access tokens, bearer headers)
- *    never appear in any thrown exception message — implementations
- *    strip them before re-throwing as one of the typed sentinels above.
- *
- * Method contract details (mirrors what the production wrapper does
- * against `https://graph.microsoft.com/v1.0/...`):
- *
- *  - `listSenderMessagesPaged` issues
- *    `GET /me/messages?$filter=(from/emailAddress/address eq 'a' or ...) and receivedDateTime ge {windowStart}&$orderby=receivedDateTime desc&$top=100&$select=id,from,subject,receivedDateTime`
- *    on the first page and follows the `@odata.nextLink` URL verbatim
- *    on subsequent pages.
- *
- *  - `getRawMessage` issues `GET /me/messages/{id}/$value` which
- *    returns the raw RFC 822 byte stream directly (unlike Gmail which
- *    returns a base64url-encoded `raw` field).
- *
- *  - `deltaPage` issues
- *    `GET /me/mailFolders/inbox/messages/delta?$filter=receivedDateTime ge {now}`
- *    on the baseline call (when `$deltaLink === null`) and follows
- *    the prior `@odata.deltaLink` URL verbatim on incremental walks.
- *
- *  - `listDiscoveryCandidatesPaged` is reserved for the discovery
- *    plan; current implementations return an empty page so any caller
- *    wiring against the contract compiles without exercising live
- *    keyword search.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 interface GraphApiClientContract
 {
     /**
-     * Backfill walk over Graph messages restricted to the configured
-     * sender allow-list + a receivedDateTime lower bound. Paged at 100
-     * messages per call via `@odata.nextLink`.
-     *
      * @param  list<string>  $senderPatterns
      * @return array{messages: list<array<string, mixed>>, nextLink: ?string}
      */
@@ -72,59 +22,14 @@ interface GraphApiClientContract
         ?string $nextLink,
     ): array;
 
-    /**
-     * Fetch the raw RFC 822 byte stream for one message. Graph's
-     * `/$value` endpoint returns the bytes directly with no transport
-     * wrapper — production callers persist the response verbatim into
-     * the .eml blob store.
-     */
     public function getRawMessage(int $inboxId, string $providerMessageId): string;
 
     /**
-     * Establish or walk the Graph `$delta` cursor.
-     *
-     * When `$deltaLink === null` the call is the post-backfill baseline
-     * — it returns an empty `value` plus the first `@odata.deltaLink`
-     * which the caller persists into `inbox_scan_state.last_delta_link`
-     * for the incremental-scan plan to walk from. The lower-bound
-     * `receivedDateTime` floor used in the baseline filter defaults to
-     * the wall-clock now from the implementation's injected Clock; the
-     * caller can pin a specific anchor via `$sinceOverride` to close
-     * the multi-hour-backfill race window — messages arriving between
-     * walk-start and baseline-establish would otherwise be skipped on
-     * both the walk and the incremental cursor.
-     *
-     * When `$deltaLink !== null` the implementation follows the URL
-     * verbatim (the cursor token + filter are embedded in the URL by
-     * Graph). The `$sinceOverride` parameter is ignored on the walk
-     * branch — the filter is already locked into the deltaLink URL.
-     * On 410 / `syncStateNotFound` the implementation throws
-     * `CursorExpiredException::graph()`.
-     *
      * @return array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}
      */
     public function deltaPage(int $inboxId, ?string $deltaLink, ?DateTimeImmutable $sinceOverride = null): array;
 
     /**
-     * Daily-discovery query: walks `/me/messages?$search="subject:(receipt OR ...)"&$top=100&$select=id,from,subject,receivedDateTime`
-     * on the first page and follows `@odata.nextLink` verbatim on
-     * subsequent pages.
-     *
-     * Graph's OData `$filter` does NOT support `contains` against the
-     * subject field, so the implementation uses `$search` instead.
-     * `$search` is mutually exclusive with `$orderby` (Graph rejects
-     * the combination); the implementation deliberately omits
-     * `$orderby` to stay within the documented compatibility envelope
-     * (see https://learn.microsoft.com/en-us/graph/search-query-parameter).
-     *
-     * Graph's `$search` also has no server-side from-address exclusion
-     * filter; the implementation applies the exclude list client-side
-     * before returning the page.
-     *
-     * The Wave 0 Fake replays a synthesised fixture; sender metadata
-     * lives inline on each entry so the caller does NOT need to fetch
-     * the raw `.eml` body to populate `discovered_senders`.
-     *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
      * @return array{messages: list<array<string, mixed>>, nextLink: ?string}

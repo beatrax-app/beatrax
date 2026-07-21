@@ -21,44 +21,7 @@ use Modules\EmailScan\Public\Events\IcsStatementReady;
 use stdClass;
 
 /**
- * Per-user metadata-only detector for the ICS "statement ready" nudge
- * (Req 14, D-14/D-15).
- *
- * Mirrors `Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob`'s
- * per-user query shape, but its ENTIRE input surface is
- * `inbox_messages.sender_email`/`.subject` — it never resolves an `.eml`
- * path via `EmlBlobStore`, never reads message bytes, and structurally
- * cannot parse transaction data (Req 14's "never parses the email body"
- * is enforced simply by this class never importing anything body-shaped).
- *
- * Deliberately status-agnostic (no `WHERE status = ...` clause):
- * `Modules\Receipts\Internal\Matchers\IcsReceiptMatcher::canHandle()`
- * already claims every `ics.nl`/`icscards.nl` sender for its own
- * independent, hourly receipt-parsing pass, and will likely have flipped
- * a co-matched row's `status` to `'unmatched'` by the time this job runs
- * (19-RESEARCH.md Architecture Patterns §7's "critical finding"). Gating
- * on status would silently miss the exact rows this detector cares about
- * — the two jobs are independent hourly-cadence consumers of the same
- * table with no ordering guarantee between them, and that co-claim is
- * expected and harmless.
- *
- * Sender-domain match is EXACT-equality on the domain part (never
- * substring), mirroring `IcsReceiptMatcher::canHandle()`'s spoofing
- * defence (T-19-16-02) — `ics.nl.attacker.example` must not match.
- *
- * No new "already nudged" bookkeeping lives on the EmailScan side: a
- * matching row dispatches `IcsStatementReady` on every tick this job
- * runs, and `Modules\Notifications\Internal\Support\NotificationWriter`'s
- * `insertOrIgnore` on the deterministic `(userId, triggerType, subjectKey,
- * occurrence='Y-m-d')` key absorbs the repeats into a single persisted
- * notification per statement-arrival-DAY (WR-12/D-15) — the SAME idempotency
- * seam every other trigger listener in this codebase already relies on, so
- * no second dedup mechanism is introduced here.
- *
- * Sender allow-list + subject pattern are read from the tunable
- * `email-scan.ics_statement_ready` config block (no real ICS
- * statement-ready email sample exists — Open Question 1) — correctable
- * without a redeploy once a real sample surfaces during UAT.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -67,14 +30,9 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
     use Queueable;
     use SerializesModels;
 
-    /** Retry attempts before final failure. */
     public int $tries = 3;
 
-    /**
-     * Exponential backoff in seconds.
-     *
-     * @var array<int, int>
-     */
+    /** @var array<int, int> */
     public array $backoff = [60, 300, 900];
 
     public function __construct(public readonly int $userId) {}
@@ -101,7 +59,6 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
         $pattern = is_string($patternRaw) ? $patternRaw : '';
 
         if ($domains === [] || $pattern === '') {
-            // Tunable pattern not configured — nothing to detect against.
             return;
         }
 
@@ -142,10 +99,9 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
                 continue;
             }
 
-            // WR-13: one malformed internal_date must not abort the whole
-            // per-user sweep (and re-fail every $tries retry). Skip the row
-            // on an unparseable date, matching the is_numeric/is_string
-            // guard style above.
+            // One malformed internal_date must not abort the whole
+            // per-user sweep; skip the row on an unparseable date,
+            // matching the is_numeric/is_string guard style above.
             try {
                 $internalDate = CarbonImmutable::parse($internalDateRaw);
             } catch (InvalidFormatException) {

@@ -23,28 +23,7 @@ use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Invokable controller routed at GET /oauth/callback/{provider} —
- * handles the IdP redirect for both the gmail and microsoft providers.
- *
- * Verifies the CSRF state AND the originating-user binding (the state
- * carries the user_id that initiated the consent dance; the consume
- * step rejects the callback unless the current authenticated user
- * matches), exchanges the authorization code for an access + refresh
- * token via the provider wrapper selected by match($provider),
- * persists the inbox row pair + chmod-600 credentials atomically (DB
- * insert first, secret write second, with a compensating delete that
- * rolls back the inbox rows if the credential write fails or the
- * provider returned no refresh token), and redirects to /inboxes with
- * a flash that auto-opens the backfill window modal.
- *
- * The redirect URI is recomputed server-side from the same config
- * value the connect controller used so the value matches the IdP's
- * stored redirect URI exactly. A mismatch here would surface as a
- * provider rejection at token-exchange time, not a state failure.
- *
- * Provider errors at the consent screen (e.g. user canceled) arrive
- * via the `error` query parameter and are handled before the state
- * is consumed.
+ * @link ../../../../../.docs/features/email-scan/architecture.md
  */
 final class OAuthCallbackController
 {
@@ -80,12 +59,10 @@ final class OAuthCallbackController
                 ->with('oauth_canceled', $message);
         }
 
-        // Resolve the current user BEFORE consuming the state so the
-        // consume call can verify the state's stored user_id matches.
-        // A mismatch (or an unauthenticated callback that somehow lands
-        // here) tears down the flow with InvalidStateException — the
-        // inbox must only ever attach to the user who initiated the
-        // consent dance.
+        // Resolve the current user before consuming the state, so the
+        // consume call can verify the state's stored user_id matches —
+        // a mismatch tears down the flow with InvalidStateException,
+        // since the inbox must only attach to the initiating user.
         $user = $this->currentUser->user();
         $userId = $user->id;
 
@@ -125,10 +102,8 @@ final class OAuthCallbackController
 
         // Refuse to persist a brand-new inbox without a refresh token —
         // the next IncrementalScanJob would mark it needs_reauth on
-        // first run, leaving the user with a permanently-broken row.
-        // For Google this typically means the consent screen is still
-        // in "Testing" status (refresh tokens expire after 7 days);
-        // surface a flash so the user can fix it before retrying.
+        // first run. For Google this typically means the consent
+        // screen is still in "Testing" status; surface a flash instead.
         if ($existingInboxId === 0 && ($refreshToken === null || $refreshToken === '')) {
             return $this->redirector
                 ->route('inboxes.index')
@@ -185,15 +160,10 @@ final class OAuthCallbackController
             return $newId;
         });
 
-        // The chmod-600 JSON write happens AFTER the DB commit because
-        // the inbox id is only assigned by insertGetId(). A failure of
-        // the secret write therefore needs an explicit compensating
-        // rollback of the rows we just inserted, otherwise the user
-        // ends up with an inbox row that points at no credentials and
-        // every subsequent IncrementalScanJob marks it needs_reauth on
-        // sight. The new-inbox branch deletes both rows on failure;
-        // the reconnect branch surfaces a flash but cannot rewind a
-        // prior refresh token Google has already invalidated.
+        // The chmod-600 JSON write happens after the DB commit, since
+        // the inbox id is only assigned by insertGetId(); a write
+        // failure on the new-inbox branch deletes both just-inserted
+        // rows, while the reconnect branch just surfaces a flash.
         try {
             if ($existingInboxId > 0) {
                 if ($refreshToken !== null) {
@@ -241,11 +211,9 @@ final class OAuthCallbackController
                 ->with('oauth_failed', $e->getMessage());
         }
 
-        // Clear any active oauth_reconsent_required banner row for this
-        // inbox so the SystemAlertsBanner stops surfacing the Reconnect
-        // prompt the moment the dance completes. The acknowledge is
-        // per-user scoped — a forged callback for another user's inbox
-        // is already rejected upstream by the state-binding check.
+        // Clears any active oauth_reconsent_required banner row for
+        // this inbox so the SystemAlertsBanner stops surfacing the
+        // Reconnect prompt the moment the dance completes.
         $this->acknowledgeReconsentAlerts($userId, $inboxId);
 
         $redirect = $this->redirector
@@ -263,15 +231,9 @@ final class OAuthCallbackController
         return $redirect;
     }
 
-    /**
-     * Acknowledge every active oauth_reconsent_required system_alerts
-     * row scoped to (user_id, inbox_id). Acknowledgement is idempotent
-     * — already-acknowledged rows are skipped by the WHERE predicate.
-     * The acknowledge uses a single UPDATE rather than the per-row
-     * AcknowledgeSystemAlert action because there is no need for the
-     * per-row idempotent return value at this scale; the controller
-     * holds the authoritative server-side success signal.
-     */
+    // Acknowledges every active oauth_reconsent_required system_alerts
+    // row scoped to (user_id, inbox_id) via a single UPDATE, skipping
+    // already-acknowledged rows through the WHERE predicate.
     private function acknowledgeReconsentAlerts(int $userId, int $inboxId): void
     {
         $now = $this->clock->now()->toDateTimeString();

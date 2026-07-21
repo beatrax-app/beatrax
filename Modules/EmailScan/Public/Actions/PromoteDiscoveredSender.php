@@ -9,27 +9,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Public action: promote a discovered_senders candidate into the
- * user's known_senders allow-list and transition the discovered row
- * to state='added'.
- *
- * Cross-user 404 invariant: the lookup is scoped to (id, user_id);
- * a row that belongs to another user raises NotFoundHttpException so
- * a forged senderId in the wire payload cannot leak the existence of
- * another user's discovered row.
- *
- * Idempotency: a row already in state='added' or 'dismissed' is a
- * silent no-op. Re-promoting an already-promoted sender does NOT
- * insert a duplicate known_senders row and does not raise.
- *
- * Transaction shape: the insert + the state transition wrap in a
- * single DB transaction with PRAGMA busy_timeout=5000 + lockForUpdate
- * on the discovered_senders row. SQLite's lockForUpdate is a syntactic
- * no-op (single writer), but the busy_timeout is the load-bearing
- * fence that serialises concurrent Promote / Dismiss calls against
- * the same row.
- */
+// Promotes a discovered_senders candidate into known_senders and
+// transitions the row to state='added'. Cross-user 404 via the (id,
+// user_id) scoped lookup; idempotent (already added/dismissed is a
+// silent no-op) via one busy_timeout-fenced transaction.
 final class PromoteDiscoveredSender
 {
     public function __construct(
@@ -55,7 +38,6 @@ final class PromoteDiscoveredSender
 
             $rawState = is_string($row->state ?? null) ? $row->state : '';
             if ($rawState !== 'candidate') {
-                // Idempotent — already promoted or dismissed; do nothing.
                 return;
             }
 

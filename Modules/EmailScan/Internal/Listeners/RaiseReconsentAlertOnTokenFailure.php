@@ -12,26 +12,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Writes a single un-acknowledged `system_alerts` row of kind
- * `oauth_reconsent_required` whenever an inbox's OAuth token refresh
- * raises `InboxTokenFailed`.
- *
- * Dedup pattern: at most one active (un-acknowledged) row per
- * (user_id, inbox_id) — once the user re-consents, the modal hands the
- * alert id back to `InboxesPage::acknowledgeReconnect` which stamps
- * `acknowledged_at` via the existing AcknowledgeSystemAlert action;
- * the next failure (if any) creates a fresh row because the existence
- * check filters on `acknowledged_at IS NULL`.
- *
- * Dedup query uses SQLite's `json_extract` against the `metadata`
- * column — the local dev SQLite is 3.45 so the function is available. A
- * Throwable from the extracted-column predicate falls through to a
- * LIKE-based form so a slightly older runtime still dedups correctly.
- *
- * Token text NEVER appears in the row: the metadata blob carries only
- * the integer inbox_id + the short provider string; the `message`
- * column is a static "Reconnect your Gmail" / "Reconnect your Outlook"
- * literal chosen from the provider field. ASVS V7 holds.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class RaiseReconsentAlertOnTokenFailure
 {
@@ -69,10 +50,8 @@ final class RaiseReconsentAlertOnTokenFailure
                 ],
             ]);
         } catch (Throwable $e) {
-            // Defence-in-depth — the listener must never throw upward
-            // because the upstream caller is mid-error-recovery already.
-            // Log at warning level so the failure stays visible without
-            // a second alert flood.
+            // Defence-in-depth: the listener must never throw upward,
+            // since the upstream caller is mid-error-recovery already.
             $this->logger->warning(
                 'RaiseReconsentAlertOnTokenFailure failed to persist alert row',
                 [
@@ -84,16 +63,10 @@ final class RaiseReconsentAlertOnTokenFailure
         }
     }
 
-    /**
-     * Existence check for an active (un-acknowledged) re-consent alert
-     * scoped to the given user + inbox. Returns true when a row already
-     * exists so the listener can no-op.
-     *
-     * Prefers the precise `json_extract(metadata, '$.inbox_id')` form;
-     * falls back to a LIKE form if the extracted-column predicate
-     * throws on an older SQLite where the JSON1 extension is not
-     * compiled in.
-     */
+    // Existence check for an active (un-acknowledged) re-consent alert
+    // scoped to the user + inbox, preferring json_extract and falling
+    // back to LIKE when the extracted-column predicate throws on an
+    // older SQLite without the JSON1 extension compiled in.
     private function alreadyAlerted(int $userId, int $inboxId): bool
     {
         $baseQuery = $this->baseDedupQuery($userId);
@@ -103,14 +76,10 @@ final class RaiseReconsentAlertOnTokenFailure
                 ->whereRaw("json_extract(metadata, '$.inbox_id') = ?", [$inboxId])
                 ->exists();
         } catch (Throwable) {
-            // Fallback — match the JSON-encoded fragment
-            // `"inbox_id":N` inside the raw column text. SQLite LIKE
-            // does not support character classes, so we anchor the
-            // trailing boundary by OR-ing two literal needles: one
-            // ending in `,` (when other JSON keys follow) and one
-            // ending in `}` (when inbox_id is the last key in the
-            // object). Without this `inbox_id=1` would falsely match
-            // `inbox_id=10`, `inbox_id=11`, `inbox_id=123`.
+            // Fallback: matches the JSON fragment "inbox_id":N inside
+            // the raw column text, anchoring the trailing boundary
+            // with two needles (comma- and brace-terminated) since
+            // SQLite LIKE has no character classes to bound the digits.
             $withComma = '%"inbox_id":'.$inboxId.',%';
             $withBrace = '%"inbox_id":'.$inboxId.'}%';
 
@@ -123,11 +92,9 @@ final class RaiseReconsentAlertOnTokenFailure
         }
     }
 
-    /**
-     * Shared per-user predicate filtered to active re-consent rows. The
-     * second-pass LIKE-fallback call re-builds the query because Laravel
-     * builders are not safe to reuse across `where` re-additions.
-     */
+    // Shared per-user predicate filtered to active re-consent rows;
+    // the LIKE-fallback call re-builds the query since Laravel
+    // builders aren't safe to reuse across where re-additions.
     private function baseDedupQuery(int $userId): Builder
     {
         return $this->db->connection()

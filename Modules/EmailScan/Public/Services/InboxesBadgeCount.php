@@ -8,21 +8,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * Top-nav "Inboxes" badge feed.
- *
- * Sums two counts the user needs to act on: (a) discovered-sender
- * candidates awaiting review (above the panel's promotion threshold —
- * 2 occurrences within 90 days) and (b) inboxes that need re-auth
- * because the OAuth refresh-token chain broke.
- *
- * Plan 09 amends the candidates count to apply the same 2/90 threshold
- * the panel uses (DiscoveredSenderQuery::MIN_OCCURRENCES = 2,
- * WITHIN_DAYS = 90). Without that, the badge would surface single-shot
- * senders that never appear in the panel — clicking the link would
- * land on an "no discoveries" surface and the badge would never
- * decrement. Matching the threshold keeps badge and panel in lockstep.
- */
+// Top-nav "Inboxes" badge feed: sums discovered-sender candidates
+// awaiting review (matching DiscoveredSenderQuery's MIN_OCCURRENCES/
+// WITHIN_DAYS threshold, so the badge never surfaces a single-shot
+// sender absent from the panel) plus inboxes needing re-auth.
 final class InboxesBadgeCount
 {
     public function __construct(

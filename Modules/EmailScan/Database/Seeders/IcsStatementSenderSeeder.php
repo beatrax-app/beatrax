@@ -10,30 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds the system `known_senders` row(s) that let `IncrementalScanJob`
- * actually FETCH the ICS "statement ready" email in the first place (Req
- * 14, D-14/D-15).
- *
- * `known_senders` already carries a system row for `@ics.nl` — seeded by
- * that table's own creation migration for the ICS *receipts* sender — but
- * NOT for `icscards.nl`, the second domain
- * `Modules\Receipts\Internal\Matchers\IcsReceiptMatcher::ICS_DOMAINS`
- * already claims for receipt parsing. Without a `known_senders` row for
- * whichever domain the statement-ready email actually arrives from, the
- * message never lands in `inbox_messages` at all and
- * `DetectIcsStatementReadyJob` has nothing to detect.
- *
- * Reads the sender allow-list from the SAME tunable config block the
- * detector job reads (`email-scan.ics_statement_ready.sender_domains`) so
- * a config-only correction (Open Question 1) also updates which sender
- * the primary fetch filter watches for — one source of truth, not two
- * that can drift.
- *
- * Idempotent via an existence check (not an `upsert()`): `known_senders`'s
- * `UNIQUE(user_id, email_pattern)` index does not fire for NULL `user_id`
- * on SQLite (NULL != NULL in unique-index matching), so a naive upsert on
- * that index would insert a duplicate system row on every re-run instead
- * of updating the existing one.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class IcsStatementSenderSeeder extends Seeder
 {
@@ -59,6 +36,10 @@ final class IcsStatementSenderSeeder extends Seeder
 
             $pattern = '@'.$domain;
 
+            // Existence check, not upsert(): known_senders'
+            // UNIQUE(user_id, email_pattern) index does not fire for a
+            // NULL user_id on SQLite, so a naive upsert on that index
+            // would insert a duplicate system row on every re-run.
             $exists = $connection->table('known_senders')
                 ->whereNull('user_id')
                 ->where('email_pattern', $pattern)

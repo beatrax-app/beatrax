@@ -21,32 +21,7 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 
 /**
- * Production wrapper over google/apiclient's Gmail service.
- *
- * Mirrors the public method shape FakeGmailApiClient surfaces in
- * Wave 0 so test wiring can swap a Fake instance into the container
- * without any contract drift. Each call rebuilds a Google client
- * around a freshly-refreshed access token (refresh-if-near-expiry
- * happens transparently inside ensureFreshAccessToken) so a stale
- * cached token never reaches the wire.
- *
- * Error mapping:
- *
- *  - `users.messages.list` / `users.messages.get` / `users.history.list`
- *    rate-limit reasons (`rateLimitExceeded` / `userRateLimitExceeded`
- *    / `dailyLimitExceeded`) become RateLimitedException so the
- *    caller can transition the inbox state and let Horizon retry.
- *  - `users.history.list` returning HTTP 404 means the historyId is
- *    older than the ~7-day Gmail retention window — surfaced as
- *    CursorExpiredException so the caller falls back to a date-
- *    bounded re-scan.
- *  - Token payloads never appear in any thrown exception message —
- *    the catch block re-throws with provider error strings only.
- *
- * Discovery surface (`listDiscoveryCandidates`) is part of the
- * contract but its production body lands in a later plan; this
- * client returns an empty page so the discovery loop is inert
- * until the matcher phase wires the real keyword query.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class GmailApiClient implements GmailApiClientContract
 {
@@ -58,17 +33,11 @@ final class GmailApiClient implements GmailApiClientContract
         private readonly DatabaseManager $db,
     ) {}
 
+    // users.messages.list with q='from:(<a> OR <b> OR ...)' and a
+    // 100-message page size; a non-null $windowStart also carries
+    // Gmail's after: operator so the cursor-expiry fallback walk is
+    // bounded to the last_scan_at-minus-7-days window the caller passes.
     /**
-     * `users.messages.list` with `q='from:(<a> OR <b> OR ...)'` and a
-     * 100-message page size — the fetcher walks pages until
-     * nextPageToken is null.
-     *
-     * When `$windowStart` is non-null, the q-string also carries
-     * Gmail's `after:` operator (unix-timestamp form for sub-day
-     * precision) so the IncrementalScanJob's cursor-expiry fallback
-     * walk is bounded to the last_scan_at-minus-7-days window the
-     * caller passes in.
-     *
      * @param  list<string>  $senderPatterns
      * @return array{messages: list<array{id: string, threadId: string}>, nextPageToken: ?string, historyId: ?string, resultSizeEstimate: int}
      */
@@ -122,11 +91,9 @@ final class GmailApiClient implements GmailApiClientContract
         ];
     }
 
-    /**
-     * `users.messages.get?format=raw`. Returns the RFC 822 byte
-     * stream — Gmail's `raw` field is base64url-encoded, so this
-     * method decodes before returning.
-     */
+    // users.messages.get?format=raw. Gmail's raw field is
+    // base64url-encoded, so this method decodes before returning the
+    // RFC 822 byte stream.
     public function getRawMessage(int $inboxId, string $providerMessageId): string
     {
         $resource = $this->messagesResource($inboxId);
@@ -139,11 +106,10 @@ final class GmailApiClient implements GmailApiClientContract
         return self::base64UrlDecode($msg->getRaw());
     }
 
+    // users.history.list. Returns the slice of history entries after
+    // the given startHistoryId so the caller can replay
+    // messagesAdded/messagesDeleted since the cursor was set.
     /**
-     * `users.history.list`. Returns the slice of history entries
-     * after the given startHistoryId so the caller can replay
-     * messagesAdded / messagesDeleted since the cursor was set.
-     *
      * @return array{history: list<array<string, mixed>>, historyId: ?string}
      */
     public function listHistory(int $inboxId, string $startHistoryId): array
@@ -173,19 +139,11 @@ final class GmailApiClient implements GmailApiClientContract
         ];
     }
 
+    // Daily-discovery query: users.messages.list with a broad
+    // subject:(...) keyword filter minus the known-sender -from:(...)
+    // allow-list, paged at 100. Each list entry fetches headers only
+    // via format=metadata so no .eml body byte is ever persisted here.
     /**
-     * Daily-discovery query: `users.messages.list` with a broad
-     * `subject:(...)` keyword filter minus the `-from:(...)` allow-list
-     * of senders the caller already knows about, paged at 100. For
-     * every list-entry the implementation fetches headers ONLY via
-     * `users.messages.get?format=metadata&metadataHeaders=['From','Date']`
-     * so the response carries the parsed sender + date without ever
-     * persisting a `.eml` body byte.
-     *
-     * The discovery surface deliberately does NOT call getRawMessage —
-     * the `format=metadata` fetch is the discovery-loop invariant
-     * (D-121: NO .eml blobs from discovery).
-     *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
      * @return array{messages: list<array<string, mixed>>, nextPageToken: ?string}
@@ -198,10 +156,9 @@ final class GmailApiClient implements GmailApiClientContract
     ): array {
         $resource = $this->messagesResource($inboxId);
 
-        // Build the broad keyword subject filter. Each keyword is
-        // wrapped in double quotes so Gmail treats it as an exact-phrase
-        // match (avoids partial-word hits like "invoice" matching
-        // "invoiceless"). Inner double quotes inside a keyword are
+        // Each keyword is wrapped in double quotes so Gmail treats it
+        // as an exact-phrase match (avoids partial-word hits like
+        // "invoice" matching "invoiceless"); inner double quotes are
         // backslash-escaped per Gmail's query-string conventions.
         $quotedKeywords = array_map(
             static fn (string $k): string => '"'.str_replace('"', '\\"', $k).'"',
@@ -210,11 +167,10 @@ final class GmailApiClient implements GmailApiClientContract
         $q = 'subject:('.implode(' OR ', $quotedKeywords).')';
 
         if ($excludeSenders !== []) {
-            // Strip operator-significant characters from each exclude
-            // pattern so a hostile/malformed sender string cannot break
-            // the query. Gmail's exclude syntax is `-from:(...)` with
-            // OR-joined entries; parentheses and the literal token "OR"
-            // would otherwise be interpreted as query operators.
+            // Strip operator-significant characters so a malformed
+            // sender string cannot break the query: Gmail's exclude
+            // syntax is -from:(...) with OR-joined entries, and stray
+            // parentheses or a literal "OR" would read as an operator.
             $safeExcludes = array_map(
                 static fn (string $s): string => str_replace(['(', ')', ' OR '], '', $s),
                 $excludeSenders,
@@ -295,12 +251,9 @@ final class GmailApiClient implements GmailApiClientContract
         ];
     }
 
-    /**
-     * Build a Gmail UsersMessages resource bound to a freshly-
-     * refreshed access token. Each public method calls into this
-     * so a token rotation between two calls is picked up
-     * transparently.
-     */
+    // Builds a Gmail UsersMessages resource bound to a
+    // freshly-refreshed access token, so a token rotation between two
+    // calls is picked up transparently.
     private function messagesResource(int $inboxId): UsersMessages
     {
         $gmail = $this->makeGmailService($inboxId);
@@ -339,11 +292,9 @@ final class GmailApiClient implements GmailApiClientContract
         return new GmailService($client);
     }
 
-    /**
-     * Return a non-expired access token for the inbox, refreshing
-     * via the OAuth provider when the cached token is missing or
-     * within 60 seconds of its stamped expiry.
-     */
+    // Returns a non-expired access token for the inbox, refreshing via
+    // the OAuth provider when the cached token is missing or within
+    // 60 seconds of its stamped expiry.
     private function ensureFreshAccessToken(int $inboxId): string
     {
         $creds = $this->secrets->loadInbox($inboxId);
@@ -370,14 +321,10 @@ final class GmailApiClient implements GmailApiClientContract
             try {
                 $fresh = $this->oauth->refreshAccessToken($creds->refreshToken);
             } catch (InvalidGrantException $e) {
-                // GoogleOAuthProvider maps `invalid_grant` /
-                // `consent_required` IdentityProviderException responses
-                // into this typed sentinel BEFORE the league client's
-                // raw exception reaches us — the catch sits on the
-                // module's own sentinel, not on a generic Throwable, so
-                // legitimate non-OAuth failures (network errors, JSON
-                // decode failures, scope drift) keep their original
-                // exception class and propagate unchanged.
+                // GoogleOAuthProvider maps invalid_grant/consent_required
+                // responses into this typed sentinel before the league
+                // client's raw exception reaches us, so non-OAuth
+                // failures keep their original exception class.
                 throw $this->raiseReconsentRequired($inboxId, $e);
             }
             $this->secrets->rotateRefreshToken(
@@ -393,15 +340,9 @@ final class GmailApiClient implements GmailApiClientContract
         return $cachedAccessToken;
     }
 
-    /**
-     * Dispatch InboxTokenFailed so the SystemAlertsBanner can surface a
-     * re-consent prompt, then return a typed ReconsentRequiredException
-     * for the caller to throw. The (user_id, inbox_id, provider) tuple
-     * resolves through a single per-inbox row read on the existing
-     * inboxes table — the load-bearing identifier the listener needs
-     * for de-dup is the inbox id; the row's user_id pins the alert to
-     * the correct authenticated user.
-     */
+    // Dispatches InboxTokenFailed so the SystemAlertsBanner can surface
+    // a re-consent prompt, then returns a typed
+    // ReconsentRequiredException for the caller to throw.
     private function raiseReconsentRequired(int $inboxId, InvalidGrantException $cause): ReconsentRequiredException
     {
         $userId = $this->lookupInboxUserId($inboxId);
@@ -419,14 +360,10 @@ final class GmailApiClient implements GmailApiClientContract
         );
     }
 
-    /**
-     * Resolve the owning user_id for an inbox row. Returns 0 when the
-     * row is missing or the column is non-integer — the listener
-     * tolerates the synthetic 0 (no row will dedup against it) so the
-     * caller's error-recovery path is preserved even if the inbox
-     * record was deleted between the scan kick-off and the failed
-     * refresh.
-     */
+    // Resolves the owning user_id for an inbox row. Returns 0 when
+    // the row is missing or the column is non-integer, so the
+    // caller's error-recovery path survives even if the inbox record
+    // was deleted between the scan kick-off and the failed refresh.
     private function lookupInboxUserId(int $inboxId): int
     {
         $value = $this->db->connection()
@@ -437,13 +374,9 @@ final class GmailApiClient implements GmailApiClientContract
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    /**
-     * Translate a Google\Service\Exception into the typed sentinels
-     * the rest of the module catches. Quota-related reasons become
-     * RateLimitedException; every other case rethrows the original
-     * exception unchanged (callers higher up wrap it in the per-
-     * inbox state-machine error transition).
-     */
+    // Translates a Google\Service\Exception into the typed sentinels
+    // the rest of the module catches; every non-quota case rethrows
+    // the original exception unchanged.
     private function mapRateLimit(GoogleServiceException $e): GoogleServiceException|RateLimitedException
     {
         $errors = $e->getErrors();
@@ -462,11 +395,8 @@ final class GmailApiClient implements GmailApiClientContract
         return $e;
     }
 
-    /**
-     * Decode Gmail's `raw` field. Gmail returns base64url with no
-     * padding; this method re-adds the padding before calling
-     * base64_decode.
-     */
+    // Decodes Gmail's raw field. Gmail returns base64url with no
+    // padding, so this method re-adds it before calling base64_decode.
     private static function base64UrlDecode(string $value): string
     {
         $padded = $value.str_repeat('=', (4 - strlen($value) % 4) % 4);
@@ -480,14 +410,10 @@ final class GmailApiClient implements GmailApiClientContract
         return $decoded;
     }
 
-    /**
-     * Convert Gmail's internalDate (milliseconds-since-epoch string)
-     * into an ISO 8601 / RFC 3339 UTC string. Falls back to the
-     * current time when the upstream value is missing or unparseable —
-     * the discovery loop only uses internalDate to populate the
-     * `last_seen_at` column for ordering, not for any settlement
-     * arithmetic, so a fallback to "now" is safe.
-     */
+    // Converts Gmail's internalDate (milliseconds-since-epoch string)
+    // into an ISO 8601/RFC 3339 UTC string, falling back to the
+    // current time when the value is missing or unparseable — safe
+    // because the discovery loop only orders by this, never settles on it.
     private static function internalDateMsToIso(mixed $internalDateMs): string
     {
         if (! is_numeric($internalDateMs)) {
@@ -498,13 +424,11 @@ final class GmailApiClient implements GmailApiClientContract
         return gmdate('Y-m-d\TH:i:s\Z', $seconds);
     }
 
+    // Parses an RFC 822 From header value into a [address, name] pair,
+    // accepting both "Name" <addr@example.com> and bare addr@example.com
+    // forms. The address is lowercased so downstream callers can
+    // compare without re-normalising; the name is null when absent.
     /**
-     * Parse an RFC 822 From header value into a `[address, name]` pair.
-     * Accepts both `"Name" <addr@example.com>` and bare `addr@example.com`
-     * forms. The address is lowercased so downstream callers can
-     * compare without re-normalising; the name is null when no
-     * display-name is present.
-     *
      * @return array{0: string, 1: ?string}
      */
     private static function parseFromHeader(string $rawValue): array
@@ -514,7 +438,6 @@ final class GmailApiClient implements GmailApiClientContract
             return ['', null];
         }
 
-        // `"Name" <addr@example.com>` or `Name <addr@example.com>`
         if (preg_match('/^(?<name>.*?)\s*<(?<addr>[^>]+)>\s*$/u', $trimmed, $matches) === 1) {
             $name = trim($matches['name'], " \t\n\r\0\x0B\"");
             $addr = strtolower(trim($matches['addr']));
@@ -522,7 +445,6 @@ final class GmailApiClient implements GmailApiClientContract
             return [$addr, $name !== '' ? $name : null];
         }
 
-        // Bare `addr@example.com`
         $addr = strtolower($trimmed);
 
         return [$addr, null];

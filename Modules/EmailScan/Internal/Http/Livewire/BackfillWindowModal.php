@@ -16,29 +16,7 @@ use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Flux modal SFC for the backfill window picker.
- *
- * Auto-opens once after the OAuth callback redirect via the
- * `backfill-window:open` Livewire event (the InboxesPage mount()
- * hook reads the `open_backfill_modal` session flash and dispatches
- * the event). Re-opens via the inline [Edit] link on every inbox
- * row in the connected-inboxes table.
- *
- * Body shape: a single 1-12 month slider (default 3) plus a
- * Confirm button. Submit clamps the value to [1, 12] defensively,
- * persists the new backfill_window_months on the inbox row, and
- * dispatches BackfillInboxJob through the injected Bus contract.
- *
- * Cross-user 404 invariant: every read + write against the
- * inboxes row scopes to the current user via `where('user_id',
- * $user->id)`. A foreign id never returns 404-able existence
- * information; the controller layer translates the null into a
- * Symfony NotFoundHttpException so the response is identical to a
- * missing-inbox case.
- *
- * Service collaborators arrive as parameters on action methods +
- * the render() method — constructor injection is banned on
- * Livewire components by the strict-rules plugin.
+ * @link ../../../../../.docs/features/email-scan/architecture.md
  */
 final class BackfillWindowModal extends Component
 {
