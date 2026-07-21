@@ -12,20 +12,9 @@ use Modules\Core\Models\User;
 use Modules\Receipts\Public\Dto\FileImportDto;
 use stdClass;
 
-/**
- * Public read-side query over `file_imports`.
- *
- * Streams rows per-user via the query builder's `cursor()` so
- * downstream consumers (the matcher backlog walker, the wizard
- * preview drawer) can iterate large drop histories without
- * materialising the full set in memory. Each row is mapped to a
- * `FileImportDto` lazily inside the generator.
- *
- * `forUser(User)` returns a list of FileImportDto for the wizard
- * preview row; `latestForStatus(User, string)` is the generator
- * shape mirroring `InboxMessageQuery::forStatus()` so the matcher
- * consumer can unify both surfaces behind a single iteration loop.
- */
+// Public read-side query over file_imports. latestForStatus() streams
+// per-user via cursor() so a large drop history never materialises
+// fully in memory, mirroring InboxMessageQuery::forStatus().
 final readonly class FileImportQuery
 {
     private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];

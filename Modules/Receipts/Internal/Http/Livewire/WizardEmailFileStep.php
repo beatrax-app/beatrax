@@ -8,17 +8,10 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
-/**
- * Step component for the /imports wizard "Email file" arm.
- *
- * The wizard's main flow lives on the shared UploadWizard component;
- * SUPPORTED_FORMATS, validation, and submit accept the `email-file`
- * issuer plus the `eml`/`mbox` leaf formats without a separate page.
- * This SFC is registered with Livewire as a thin shell so deeper
- * wizard customisation (e.g. a per-file matcher-preview before
- * upload) has a stable component to live on without requiring a
- * wizard architecture rewrite.
- */
+// A thin shell registered with Livewire so future per-file
+// matcher-preview customisation has a stable component to live on —
+// the shared UploadWizard already handles the email-file arm's
+// validation and submit.
 final class WizardEmailFileStep extends Component
 {
     public function render(ViewFactory $views): View

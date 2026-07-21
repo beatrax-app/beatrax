@@ -10,30 +10,10 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
-/**
- * Materialises a representative receipts demo dataset for the
- * primary demo user so both the receipts surface and the
- * conflict-resolution path render with data on a fresh demo install:
- *
- *   - 2 `file_imports` rows modelling dropped .eml receipt files (one
- *     PayPal receipt, one ICS card statement) with mock matcher_key
- *     attribution and `status = 'parsed'` lifecycle stamps
- *   - 1 `pending_enrichment_conflicts` row attached to an existing
- *     demo transaction so the conflict-resolution toast renders
- *
- * Receipts module has no Eloquent Models/ surface (the table is
- * accessed via Public/Services/FileImportQuery and FileImportDto), so
- * the seeder writes via the query builder through the injected
- * `DatabaseManager`. The pending_enrichment_conflicts table is owned
- * by the Categorization module; same pattern applies.
- *
- * Idempotency: file_imports uses `(user_id, provider_message_id)`
- * UNIQUE for keying; pending_enrichment_conflicts uses
- * `(user_id, transaction_id, field_name)` UNIQUE. Both upserts skip
- * existing rows via a SELECT-then-INSERT shape because neither table
- * has a Laravel-side `updateOrInsert` invariant the seeder needs to
- * preserve, and the demo set never mutates an existing row's payload.
- */
+// Materialises 2 file_imports rows (a PayPal + an ICS mock drop) and 1
+// pending_enrichment_conflicts row so both the receipts surface and the
+// conflict-resolution toast render with data on a fresh demo install.
+// Idempotent via the same UNIQUE keys the production writers use.
 final class DemoReceiptsSeeder
 {
     public function __construct(
@@ -176,8 +156,9 @@ final class DemoReceiptsSeeder
             'user_id' => $user->id,
             'transaction_id' => $tx->id,
             'field_name' => $fieldName,
-            // Match the production producer (ApplyEnrichments): both columns
-            // hold a JSON-encoded scalar, which the resolution action decodes.
+            // Matches the production producer (ApplyEnrichments): both
+            // columns hold a JSON-encoded scalar, decoded by the
+            // resolution action.
             'stored_value' => json_encode($storedValue, JSON_THROW_ON_ERROR),
             'incoming_value' => json_encode($incomingValue, JSON_THROW_ON_ERROR),
             'incoming_source_format' => 'eml-receipt',

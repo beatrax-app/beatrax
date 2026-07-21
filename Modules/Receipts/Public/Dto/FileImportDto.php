@@ -7,12 +7,6 @@ namespace Modules\Receipts\Public\Dto;
 use DateTimeImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * Read-side projection of a single `file_imports` row.
- *
- * Consumed by the wizard preview row + the future drawer that lists
- * file-dropped messages with their current matcher outcome.
- */
 final class FileImportDto extends Data
 {
     public function __construct(
