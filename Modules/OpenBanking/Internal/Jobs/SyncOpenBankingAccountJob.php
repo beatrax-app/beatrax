@@ -22,39 +22,7 @@ use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Throwable;
 
 /**
- * Per-connection scheduler + "Sync now" fetch target (D-13). Role-matches
- * `Modules\Receipts\Internal\Jobs\ProcessFetchedInboxMessagesJob`
- * (19-PATTERNS.md): a thin per-row job whose real work lives in a Public
- * service (`OpenBankingFetchService`), with `ShouldBeUniqueUntilProcessing`
- * keyed on the row id so a second dispatch for the SAME connection cannot
- * race a still-running one.
- *
- * Two-timestamp accounting (RESEARCH.md Pitfall 5 — the load-bearing
- * invariant this job exists to protect): `last_successful_sync_at` is
- * written ONLY in the success branch, never in a `finally`. Every attempt
- * (success or failure) writes `last_attempt_at` + `last_attempt_status`,
- * so a failing scheduled sync is visible independently of "when did data
- * last actually refresh" (Req 7's "never present stale data as fresh").
- *
- * Defensive re-check on pickup (RESEARCH.md §6 / `IncrementalScanJob`'s
- * "Early exit #1" — the same crash-between-dispatch-and-pickup race that
- * docblock documents): the scheduler's `open-banking.daily-sync`
- * enumeration query (a later wave) already filters
- * `WHERE enabled AND consent_expires_at > now()`, but a race where the
- * user disables OB or the consent expires while this job sits queued must
- * still no-op here — NO fetch attempt and NO timestamp write at all for a
- * disabled/expired connection (Req 9 acceptance).
- *
- * Consent-failure detection mirrors `IncrementalScanJob`'s
- * `InvalidGrantException` branch: a 401/403 from Enable Banking
- * (`EnableBankingHttpClient::mapErrorResponse()`'s `"HTTP {status}"`
- * message fragment — no typed exception exists for this distinction yet,
- * so the message is inspected) is TERMINAL for this attempt (retrying
- * cannot succeed until the user redoes the full re-link dance) and
- * dispatches `OpenBankingConsentFailed` for 19-06's alert listener. Any
- * other failure (network, parse, DB) rethrows so the queue's `tries`/
- * `backoff` retry envelope applies, matching every other job's
- * generic-Throwable branch in this codebase.
+ * @link ../../../../.docs/features/open-banking/architecture.md
  */
 final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -63,14 +31,9 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
     use Queueable;
     use SerializesModels;
 
-    /** Retry attempts before final failure. */
     public int $tries = 3;
 
-    /**
-     * Exponential backoff in seconds.
-     *
-     * @var array<int, int>
-     */
+    /** @var array<int, int> */
     public array $backoff = [60, 300, 900];
 
     public function __construct(public readonly int $connectionId) {}
@@ -102,9 +65,9 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
             ->first();
 
         if ($connection === null) {
-            // Connection was deleted between dispatch and worker pickup —
-            // silently exit so the queue does not retry forever against a
-            // row that no longer exists.
+            // Deleted between dispatch and worker pickup — silently exit so
+            // the queue does not retry forever against a row that no longer
+            // exists.
             return;
         }
 
@@ -115,9 +78,8 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
             && CarbonImmutable::parse($consentExpiresAtRaw)->isFuture();
 
         if (! $enabled || ! $consentValid) {
-            // Early exit — mirrors IncrementalScanJob's needs_reauth
-            // early exit: no provider call, no timestamp write, for a
-            // connection that is off or whose consent has expired.
+            // No provider call, no timestamp write, for a connection that
+            // is off or whose consent has expired.
             return;
         }
 
@@ -154,10 +116,9 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
                 ->table('open_banking_connections')
                 ->where('id', $this->connectionId)
                 ->update([
-                    // Deliberately NOT included: last_successful_sync_at.
-                    // A failed attempt must never advance the freshness
-                    // signal — this is the single invariant this job
-                    // exists to protect (RESEARCH.md Pitfall 5).
+                    // Deliberately not included: last_successful_sync_at —
+                    // a failed attempt must never advance the freshness
+                    // signal.
                     'last_attempt_at' => $now,
                     'last_attempt_status' => $isConsentFailure ? 'consent_failed' : 'error',
                     'updated_at' => $now,
@@ -172,8 +133,7 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
 
                 // Terminal — do not rethrow. Retrying an expired/revoked
                 // consent cannot succeed until the user redoes the full
-                // re-link dance (same rationale as IncrementalScanJob's
-                // InvalidGrantException branch).
+                // re-link dance.
                 return;
             }
 
@@ -181,15 +141,10 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
         }
     }
 
-    /**
-     * No typed exception distinguishes a 401/403 consent failure from
-     * any other Enable Banking error today — `EnableBankingHttpClient::
-     * mapErrorResponse()` embeds the HTTP status in a generic
-     * `RuntimeException` message (`"... returned HTTP {status} — ..."`).
-     * Inspecting the message is the narrowest fix available without
-     * widening this plan's file scope to introduce a new typed
-     * exception across the HTTP client boundary.
-     */
+    // No typed exception distinguishes a 401/403 consent failure from any
+    // other Enable Banking error yet — the HTTP client embeds the status in
+    // a generic RuntimeException message, so inspecting it is the narrowest
+    // available signal.
     private static function isConsentFailure(Throwable $e): bool
     {
         $message = $e->getMessage();

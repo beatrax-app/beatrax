@@ -19,39 +19,12 @@ use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
 use RuntimeException;
 
 /**
- * Invokable controller routed at GET /oauth/callback/open-banking —
- * handles the bank/aggregator redirect after SCA, mirroring
- * `Modules\EmailScan\Internal\Http\Controllers\OAuthCallbackController`'s
- * guard chain (provider-error -> CSRF-state -> no-code) and its
- * DB-then-secret compensating-rollback shape, adapted for Enable
- * Banking's two-step `/auth` -> `/sessions` exchange (there is no
- * refresh-token concept; the session is valid until the `access.
- * valid_until` requested at `/auth` time).
- *
- * Verifies the CSRF state AND the originating-user binding via
- * `OpenBankingStateRepository::consumeState()` before exchanging the
- * authorization `code` for a `session_id` via `EnableBankingHttpClient::
- * createSession()`. Persists `session_id` + consent expiry + the
- * previously-resolved bank SCA host to the secrets file, and non-secret
- * metadata (institution_id, account_uid, consent_expires_at,
- * last_successful_sync_at, last_attempt_at, enabled) to
- * `open_banking_connections` — `account_uid` is the FIRST entry of the
- * session response's `accounts[]` list (19-09 carried gap: nothing
- * persisted this before), resolved via `EnableBankingHttpClient::
- * accountUidFrom()` so `OpenBankingFetchService` has a value to thread
- * into `RemoteSourceAdapter::fetch()`. A secrets-write failure after a
- * NEW row insert compensating-rolls-back
- * that row (T-19-05-03); an existing-row update (re-link) surfaces a
- * flash instead of rewinding, mirroring OAuthCallbackController's
- * identical trade-off for its reconnect branch (the prior consent may
- * already be superseded by this attempt).
+ * @link ../../../../../.docs/features/open-banking/architecture.md
  */
 final class OpenBankingCallbackController
 {
-    /**
-     * Kept in sync with the identically-named constant on
-     * `OpenBankingConnectController` (see that class's docblock).
-     */
+    // Kept in sync with the identically-named constant on
+    // OpenBankingConnectController.
     private const CONSENT_VALID_FOR_DAYS = 180;
 
     public function __construct(
@@ -78,9 +51,8 @@ final class OpenBankingCallbackController
                 ->with('open_banking_canceled', $message);
         }
 
-        // Resolve the current user BEFORE consuming the state so the
-        // consume call can verify the state's stored user_id matches —
-        // same ordering rationale as OAuthCallbackController.
+        // Resolve the current user before consuming the state so the
+        // consume call can verify the state's stored user_id matches.
         $userId = $this->currentUser->id();
 
         $stateParamRaw = $request->query('state');
@@ -120,10 +92,8 @@ final class OpenBankingCallbackController
         }
 
         // Not gated (unlike sessionId above): a missing accounts[] entry
-        // does not invalidate the completed consent — it only means a
-        // later fetch attempt (OpenBankingFetchService) has nothing to
-        // sync against yet, which that service reports with its own
-        // explicit error rather than blocking the callback here.
+        // does not invalidate the completed consent — a later fetch
+        // attempt reports its own explicit error instead.
         $accountUid = $this->client->accountUidFrom($session);
 
         $institutionId = $credentials->institutionId;
@@ -139,11 +109,9 @@ final class OpenBankingCallbackController
         $existingId = ($existingRow !== null && is_numeric($existingRow->id)) ? (int) $existingRow->id : null;
         $isNew = $existingId === null;
 
-        // WR-04: snapshot the pre-update values so the re-link (update)
-        // path can restore them if the secrets write below fails —
-        // otherwise the row would advertise a fresh 180-day consent + new
-        // account_uid while open-banking.json still holds the old/absent
-        // session_id.
+        // Snapshot the pre-update values so the re-link (update) path can
+        // restore them if the secrets write below fails — otherwise the row
+        // would advertise a fresh consent the secrets file cannot back.
         $priorConsentExpiresAt = ($existingRow !== null && is_string($existingRow->consent_expires_at))
             ? $existingRow->consent_expires_at
             : null;
@@ -189,9 +157,8 @@ final class OpenBankingCallbackController
             ]);
         });
 
-        // The chmod-600 JSON write happens AFTER the DB commit for the
-        // same reason OAuthCallbackController's does: a failure here
-        // needs an explicit compensating rollback of the row we just
+        // The chmod-600 JSON write happens after the DB commit: a failure
+        // here needs an explicit compensating rollback of the row just
         // inserted, otherwise the user ends up with a connection row
         // pointing at no session material.
         try {
@@ -219,7 +186,7 @@ final class OpenBankingCallbackController
                     return;
                 }
 
-                // WR-04: re-link path — roll the row back to its pre-update
+                // Re-link path — roll the row back to its pre-update
                 // consent_expires_at/account_uid so it never advertises a
                 // fresh consent the secrets file cannot back.
                 $connection->table('open_banking_connections')

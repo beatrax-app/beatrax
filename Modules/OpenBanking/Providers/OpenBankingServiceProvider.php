@@ -24,31 +24,7 @@ use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 /**
- * Wires the OpenBanking module.
- *
- * register() declares singleton bindings for the consent-dance
- * collaborators (19-05): the file-backed secrets repository, the SSRF-
- * guarded Enable Banking HTTP client + its JWT signer, and the
- * per-flow CSRF state repository the connect/callback controllers
- * consume. All are stateless and singleton-safe (each request reads
- * fresh state from disk/session rather than caching in memory).
- * 19-06 adds the never-throw reconsent-alert listener.
- *
- * boot() conditionally loads migrations / routes / views — the
- * project-wide convention every module provider in this codebase
- * carries (cloned from `Modules\Position\Providers\PositionServiceProvider`).
- * 19-06 additionally registers the onboarding wizard's Livewire SFC and
- * the `OpenBankingConsentFailed` -> `RaiseOpenBankingReconsentAlert`
- * event wiring (single-owner: no other file in this module registers
- * that listener), mirroring `EmailScanServiceProvider::boot()`'s
- * identical `InboxTokenFailed` wiring. 19-09 additionally binds
- * `RemoteSourceAdapter` to the concrete `EnableBankingSourceAdapter` —
- * the dependency `OpenBankingFetchService` (and, transitively,
- * `SyncOpenBankingAccountJob`) resolves through the interface —
- * and registers `OpenBankingFetchService` as a singleton (stateless:
- * every call reads fresh connection/credential state). 19-11 additionally
- * registers `OpenBankingConnectionQuery` (stateless read service) and the
- * `/settings/open-banking` page + Settings entry row Livewire components.
+ * @link ../../../.docs/features/open-banking/architecture.md
  */
 final class OpenBankingServiceProvider extends ServiceProvider
 {

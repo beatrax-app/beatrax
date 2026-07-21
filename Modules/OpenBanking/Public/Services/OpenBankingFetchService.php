@@ -19,52 +19,13 @@ use Modules\OpenBanking\Public\Dto\FetchWindow;
 use RuntimeException;
 
 /**
- * Fetch orchestration: loads a connection's credentials + resolved
- * account uid, builds the deterministic window idempotency key
- * (Pitfall 1, matching `RunsImports::runFromRemoteFetch()`'s documented
- * composition), drives `RemoteSourceAdapter::fetch()` to obtain the
- * generator, and lands it through the SAME `RunsImports::
- * runFromRemoteFetch()` entry point file uploads use — no OpenBanking-only
- * fork of the import pipeline exists.
- *
- * Two call shapes for the two callers this module has:
- *  - `preview()` — a manual "Sync now" surface returns the preview for
- *    the wizard's existing consolidated-preview UI to route, exactly
- *    like an upload does. No ledger write happens until a later
- *    `ConfirmsImports` call.
- *  - `fetchAndConfirm()` — the scheduled daily job (`SyncOpenBankingAccountJob`)
- *    commits automatically via `ConfirmsImports`, since there is no user
- *    in the loop to review a background fetch.
- *
- * `account_uid` (19-09 carried gap from 19-08: `EnableBankingSourceAdapter::
- * fetch()`'s first parameter IS the Enable Banking account uid, but
- * nothing persisted `createSession()`'s `accounts[].uid` before this
- * plan) is read back from the `open_banking_connections` row
- * `OpenBankingCallbackController` now populates. A connection with no
- * resolved account_uid yet cannot be fetched — `buildFetch()` throws a
- * clear `RuntimeException` rather than passing an empty string through
- * to the adapter/HTTP client.
- *
- * Single-live-session guard (19-10 review-gate finding, T-19-10-01):
- * `OpenBankingSecretsRepository` holds exactly ONE Enable Banking
- * session (`session_id` + `institutionId`) at a time — every
- * `EnableBankingHttpClient` call resolves its credentials from that one
- * file, never from the connection row that triggered the fetch. If the
- * user has since (re-)linked a DIFFERENT institution, the secrets
- * file's live session no longer matches an older connection row's
- * `institution_id`. `buildFetch()` compares the two and throws rather
- * than silently pairing one bank's session with another bank's
- * `account_uid`.
+ * @link ../../../../.docs/features/open-banking/architecture.md
  */
 final class OpenBankingFetchService
 {
-    /**
-     * First-ever sync lookback window when `last_successful_sync_at` is
-     * still null. Enable Banking's live transaction window is
-     * documented as ~90-730 days (RESEARCH.md) — 90 is the conservative
-     * end, matching the SPEC's explicit "OB is not a backfill
-     * mechanism" boundary (full-history OB backfill is out of scope).
-     */
+    // Enable Banking's live transaction window is documented as ~90-730
+    // days; 90 is the conservative end, matching this project's explicit
+    // "not a backfill mechanism" boundary for this connector.
     private const INITIAL_LOOKBACK_DAYS = 90;
 
     public function __construct(
@@ -76,10 +37,8 @@ final class OpenBankingFetchService
         private readonly Clock $clock,
     ) {}
 
-    /**
-     * Preview-only: parses/normalizes/fingerprints the fetched window but
-     * does not commit anything to the ledger.
-     */
+    // Preview-only: parses/normalizes/fingerprints the fetched window but
+    // does not commit anything to the ledger.
     public function preview(int $connectionId, User $user): ImportPreviewResult
     {
         [$sourceRows, $idempotencyKey] = $this->buildFetch($connectionId, $user);
@@ -87,10 +46,8 @@ final class OpenBankingFetchService
         return $this->importer->runFromRemoteFetch($sourceRows, $this->adapter->format(), $user, $idempotencyKey);
     }
 
-    /**
-     * Preview immediately followed by confirm — the scheduled/auto-sync
-     * path, which has no user in the loop to review a preview screen.
-     */
+    // Preview immediately followed by confirm — the scheduled/auto-sync
+    // path, which has no user in the loop to review a preview screen.
     public function fetchAndConfirm(int $connectionId, User $user): ImportConfirmResult
     {
         $preview = $this->preview($connectionId, $user);
@@ -115,11 +72,9 @@ final class OpenBankingFetchService
             );
         }
 
-        // WR-11: self-guard on enabled + consent-not-expired, re-loaded
-        // from the row, using the SAME predicate SyncOpenBankingAccountJob::
-        // handle() applies on pickup. syncNow()'s only other gate is the
-        // (now #[Locked]) component props; this makes the fetch service
-        // safe regardless of caller state.
+        // Self-guard on enabled + consent-not-expired, re-loaded from the
+        // row, using the same predicate SyncOpenBankingAccountJob applies on
+        // pickup — makes this service safe regardless of caller state.
         $enabled = (bool) $connection->enabled;
         $consentExpiresAtRaw = $connection->consent_expires_at ?? null;
         $consentValid = is_string($consentExpiresAtRaw)
@@ -151,21 +106,10 @@ final class OpenBankingFetchService
             );
         }
 
-        // The secrets file holds exactly ONE live session (`session_id`
-        // + `institutionId`) at a time — `EnableBankingHttpClient`
-        // resolves its credentials from that single file on every call,
-        // NOT from this connection row. If the user has re-linked a
-        // DIFFERENT institution since this connection's row was created
-        // (e.g. connected ASN, then separately connected SNS without
-        // disconnecting ASN first), the secrets file's session now
-        // belongs to the OTHER institution while this row's `account_uid`
-        // belongs to THIS one. Silently proceeding would send Enable
-        // Banking a request pairing one bank's session with another
-        // bank's account uid — at best a hard EB-side rejection
-        // misreported as this connection's own "consent failed" (feeding
-        // a misleading re-link prompt for the wrong bank), at worst
-        // cross-account data exposure if EB's API were ever lenient about
-        // the mismatch. Fail loudly and specifically instead.
+        // The secrets file holds exactly one live session at a time. If the
+        // user has re-linked a different institution since this row was
+        // created, the session would pair one bank's credentials with
+        // another bank's account_uid — fail loudly rather than proceed.
         if ($credentials->institutionId !== null && $credentials->institutionId !== $institutionId) {
             throw new RuntimeException(
                 "OpenBankingFetchService: connection {$connectionId}'s institution ({$institutionId}) does not "
@@ -178,23 +122,10 @@ final class OpenBankingFetchService
         $window = $this->resolveWindow($connection);
         $idempotencyKey = self::idempotencyKey($institutionId, $accountUid, $window);
 
-        // Materialize the adapter's generator EAGERLY, right here, rather
-        // than handing the raw lazy generator straight to
-        // `RunsImports::runFromRemoteFetch()`. `ImportPipeline::
-        // buildPreviewRows()` wraps its whole per-row loop in a
-        // try/catch(Throwable) that converts ANY exception raised
-        // mid-iteration (a network failure, an HTTP 401/403 consent
-        // failure, a malformed aggregator response) into a single opaque
-        // `PreviewRowDto(status: 'error')` — by design, so a bad upload
-        // still renders a preview screen instead of a 500. That swallow
-        // is correct for the wizard's upload path but would silently hide
-        // every fetch failure from `SyncOpenBankingAccountJob`, which
-        // needs a real, catchable exception to drive its two-timestamp
-        // accounting (`last_successful_sync_at` must never advance on
-        // failure) and its consent-failure -> `OpenBankingConsentFailed`
-        // detection. Iterating here means any adapter/HTTP-level failure
-        // propagates out of THIS method, before the pipeline ever gets a
-        // chance to swallow it.
+        // Materialize the generator eagerly here rather than handing it raw
+        // to the import pipeline, which swallows mid-iteration exceptions
+        // into an opaque per-row error status this service's callers need
+        // as a real, catchable exception.
         $rows = iterator_to_array($this->adapter->fetch($accountUid, $window, $credentials));
 
         /** @var Generator<int, SourceTransactionDto> $sourceRows */
@@ -205,13 +136,9 @@ final class OpenBankingFetchService
         return [$sourceRows, $idempotencyKey];
     }
 
-    /**
-     * `dateFrom` resumes from the last successful sync (so a healthy
-     * daily cadence only ever asks for the new day's rows); a
-     * never-synced connection falls back to `INITIAL_LOOKBACK_DAYS`.
-     * `dateTo` is always "now" — a manual "Sync now" click always wants
-     * the freshest available rows, never a stale cached window.
-     */
+    // dateFrom resumes from the last successful sync (a never-synced
+    // connection falls back to INITIAL_LOOKBACK_DAYS); dateTo is always
+    // "now" so a manual sync always wants the freshest available rows.
     private function resolveWindow(\stdClass $connection): FetchWindow
     {
         $now = $this->clock->now();
@@ -226,13 +153,8 @@ final class OpenBankingFetchService
         return new FetchWindow(dateFrom: $dateFrom, dateTo: $now->startOfDay());
     }
 
-    /**
-     * Matches `RunsImports::runFromRemoteFetch()`'s documented key
-     * composition verbatim: `hash('sha256', "open-banking:{institutionId}:{accountId}:{dateFrom}:{dateTo}")`.
-     * Never derived from wall-clock time beyond the window bounds
-     * themselves — re-fetching the SAME window (e.g. a same-day retried
-     * "Sync now") reuses one `ImportRun` row.
-     */
+    // Never derived from wall-clock time beyond the window bounds
+    // themselves — re-fetching the same window reuses one ImportRun row.
     private static function idempotencyKey(string $institutionId, string $accountUid, FetchWindow $window): string
     {
         return hash('sha256', sprintf(

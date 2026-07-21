@@ -19,49 +19,16 @@ use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
 use RuntimeException;
 
 /**
- * Invokable controller routed at GET /oauth/connect/open-banking —
- * kicks off the Enable Banking consent/SCA dance (D-08), mirroring
- * `Modules\EmailScan\Internal\Http\Controllers\OAuthConnectController`
- * but adapted for Enable Banking's `POST /auth` step (there is exactly
- * one provider, so this controller has no `{provider}` route segment or
- * `match()` dispatch).
- *
- * Gate 0/A2 resolution: Enable Banking's Control Panel requires an
- * HTTPS-only registered redirect URI — unlike EmailScan's gmail/
- * microsoft loopback, which is plain HTTP, this controller requests the
- * `https` variant from the promoted `LoopbackRedirectUri`. Terminating
- * TLS on that loopback listener (a self-signed local certificate) is
- * tracked as deferred follow-up infrastructure work (19-05-SUMMARY.md).
- *
- * The institution id is supplied by the caller (the onboarding wizard's
- * bank-pick step, 19-06) via `?institution_id=...` — never hardcoded
- * (Req 12). The per-flow CSRF `state` is embedded in the redirect_url's
- * own query string (Enable Banking's `/auth` request body has no
- * dedicated `state` field, unlike a standard OAuth2 authorize request —
- * RESEARCH.md Architecture Patterns §3) so it round-trips back to the
- * callback alongside the bank's own `?code=...` append.
- *
- * After `/auth` returns the consent URL, this controller resolves the
- * bank's SCA host from that URL and persists it into the credentials
- * file (D-11/T-19-05-05) so the dynamic SSRF allow-list can validate any
- * later egress to that host.
+ * @link ../../../../../.docs/features/open-banking/architecture.md
  */
 final class OpenBankingConnectController
 {
-    /**
-     * Enable Banking discovers ASPSPs by country; ASN/SNS (this
-     * project's proven targets) are both Dutch banks.
-     */
+    // Enable Banking discovers ASPSPs by country; ASN/SNS (this project's
+    // proven targets) are both Dutch banks.
     private const COUNTRY = 'NL';
 
-    /**
-     * Requested consent validity window (SPEC: PSD2 SCA re-auth is
-     * typically required every 90-180 days); the bank/aggregator caps
-     * this to its own maximum_consent_validity regardless. Kept in sync
-     * with the identically-named constant on
-     * `OpenBankingCallbackController` — centralize via config/open-
-     * banking.php if a third caller ever needs this value.
-     */
+    // Kept in sync with the identically-named constant on
+    // OpenBankingCallbackController.
     private const CONSENT_VALID_FOR_DAYS = 180;
 
     public function __construct(
@@ -126,11 +93,10 @@ final class OpenBankingConnectController
 
         $scaHost = strtolower($scaHost);
 
-        // WR-01: the SCA host is about to be persisted into the egress
-        // allow-list. An aggregator response (or TLS-defeating MITM)
-        // supplying a loopback / link-local / private / bare host must
-        // never widen that allow-list to an internal target — reject it
-        // cleanly before persisting.
+        // The SCA host is about to be persisted into the egress allow-list.
+        // An aggregator response (or TLS-defeating MITM) supplying a
+        // loopback/link-local/private/bare host must never widen that
+        // allow-list to an internal target — reject it before persisting.
         if (! $this->isPublicScaHost($scaHost)) {
             return $this->redirector
                 ->route('settings.open-banking')
@@ -145,10 +111,9 @@ final class OpenBankingConnectController
                 ->with('open_banking_failed', $e->getMessage());
         }
 
-        // WR-02: the consent URL is an outward redirect target. Require
-        // https and that its host matches the SCA host we just resolved
-        // and allow-listed — otherwise fail the flow rather than emit an
-        // unvalidated (potentially open) redirect.
+        // The consent URL is an outward redirect target — require https and
+        // that its host matches the SCA host just resolved and allow-listed,
+        // otherwise fail the flow rather than emit an open redirect.
         $consentScheme = parse_url($consentUrl, PHP_URL_SCHEME);
         $consentHost = parse_url($consentUrl, PHP_URL_HOST);
         if (! is_string($consentScheme) || strtolower($consentScheme) !== 'https'
@@ -161,12 +126,6 @@ final class OpenBankingConnectController
         return $this->redirector->away($consentUrl);
     }
 
-    /**
-     * Merge the resolved bank SCA host + chosen institution id into the
-     * existing application credentials (application_id + private key
-     * PEM are untouched). Guarded by `hasApplication()` above, so
-     * `load()` is expected to return non-null here.
-     */
     private function persistResolvedScaHost(string $scaHost, string $institutionId): void
     {
         $existing = $this->secrets->load();
@@ -185,11 +144,7 @@ final class OpenBankingConnectController
     }
 
     /**
-     * A bank SCA host is only allow-listable if it is a public FQDN.
-     * Refuse `localhost`, bare single-label hostnames, and IP literals
-     * that resolve into loopback / link-local / private / reserved
-     * ranges (WR-01) so the egress allow-list can never be widened to an
-     * internal target.
+     * @link ../../../../../.docs/features/open-banking/architecture.md
      */
     private function isPublicScaHost(string $host): bool
     {
@@ -198,6 +153,7 @@ final class OpenBankingConnectController
         }
 
         // IP literal (v4 or v6): accept only public, non-reserved addresses.
+        // Otherwise require a dotted FQDN, rejecting bare single-label hosts.
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             return filter_var(
                 $host,
@@ -206,7 +162,6 @@ final class OpenBankingConnectController
             ) !== false;
         }
 
-        // Otherwise require a dotted FQDN — reject bare single-label hosts.
         return str_contains($host, '.');
     }
 }

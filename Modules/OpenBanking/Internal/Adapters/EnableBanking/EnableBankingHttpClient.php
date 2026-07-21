@@ -15,45 +15,7 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use RuntimeException;
 
 /**
- * The SOLE HTTP boundary to Enable Banking (D-11 / Req 10 / Req 11).
- *
- * Every outbound request:
- *
- *  - loads the caller's own application credentials ONCE, then checks
- *    the target URL against `assertAllowedUrl()` (https scheme + exact-
- *    host allow-list — the Enable Banking API host, plus the resolved
- *    per-connection bank SCA host once one has been persisted) BEFORE
- *    the RS256 bearer JWT is built or attached (T-19-04-01);
- *  - carries a locally-signed RS256 JWT (`EnableBankingJwtSigner`) built
- *    from that credential's RSA private key — the key itself never
- *    leaves the machine, only the signed token crosses the wire
- *    (T-19-04-03);
- *  - requests AIS-only scope via the typed `EnableBankingAccessScope`
- *    DTO on `/auth` (Req 11, T-19-04-02) — a `payments` key is
- *    structurally impossible.
- *
- * Mirrors `Modules\EmailScan\Internal\Clients\GraphApiClient`'s SSRF
- * guard shape verbatim (verified pattern, 19-PATTERNS.md), adapted for
- * Enable Banking's DYNAMIC allow-list (EB host + resolved bank SCA
- * host) rather than a single static host — `allowedHosts()` is an
- * instance method, not a `private const`.
- *
- * The consent controllers (19-05) and the fetch adapter (Wave 2) both
- * call through this one class — no other class in this module is
- * permitted to construct a Guzzle client against Enable Banking.
- *
- * Deliberately NOT `final`, and `baseUri()`/`makeHttpClient()` are
- * `protected` rather than `private`: unlike GraphApiClient's
- * `deltaLink`/`nextLink` parameters (which let its SSRF test drive an
- * attacker-controlled host straight through a real production method
- * argument), none of this client's public methods accept a caller-
- * supplied URL — every URL is built from `baseUri()`. The dedicated
- * SSRF regression test therefore overrides `baseUri()` (to exercise
- * attacker/look-alike/non-HTTPS/unparseable hosts) and, for the one
- * positive case, `makeHttpClient()` (to swap in a `MockHandler`-backed
- * Guzzle client so the accepted-host path never attempts a real network
- * call) — mirroring the `performRename()` test-override hook already
- * used on `OpenBankingSecretsRepository`.
+ * @link ../../../../../.docs/features/open-banking/architecture.md
  */
 class EnableBankingHttpClient
 {
@@ -64,24 +26,11 @@ class EnableBankingHttpClient
         private readonly EnableBankingJwtSigner $jwtSigner,
     ) {}
 
+    // Named initiateAuth() rather than the more obvious auth(): the shared
+    // BoundaryArchTest's Auth-facade guard bans the literal pattern `auth(`
+    // and would otherwise false-positive-flag this method and its call
+    // site, even though neither touches Laravel's Auth facade.
     /**
-     * POST /auth — kicks off the consent dance. Returns the aggregator's
-     * decoded response (carries the `url` the browser is redirected to
-     * for SCA, plus an `authorization_id`). The AIS-only `access` scope
-     * (Req 11) is built from the typed `EnableBankingAccessScope` DTO,
-     * so a `payments` key can never appear in the request body.
-     *
-     * Named `initiateAuth()` rather than the more obvious `auth()`:
-     * `BoundaryArchTest`'s cross-module Auth-facade/helper guard bans the
-     * literal pattern `auth(` (its lookbehind only excludes `->`/`::`
-     * prefixes, not a `function ` declaration or a `->client->auth(...)`
-     * call site), which would otherwise false-positive-flag this
-     * method's declaration and its one call site in
-     * `OpenBankingConnectController` as an `auth()`-global-helper call
-     * even though neither has anything to do with Laravel's Auth facade
-     * (T-19-07-01 review-gate finding, fixed here rather than weakening
-     * the shared project-wide arch guard).
-     *
      * @return array<string, mixed>
      */
     public function initiateAuth(
@@ -107,12 +56,6 @@ class EnableBankingHttpClient
     }
 
     /**
-     * POST /sessions — exchanges the SCA-redirect `code` for a
-     * `session_id` + the linked `accounts[].uid` list. There is no
-     * refresh-token concept in the EB model; the session stays valid
-     * until the `access.valid_until` the app itself requested at
-     * `/auth` time (capped by the bank's own maximum consent validity).
-     *
      * @return array<string, mixed>
      */
     public function createSession(string $code): array
@@ -120,16 +63,11 @@ class EnableBankingHttpClient
         return $this->postJson('sessions', ['code' => $code]);
     }
 
+    // Isolated here, inside the sole Enable Banking HTTP boundary class,
+    // rather than inline at DB-touching call sites: a guard test asserts no
+    // file referencing DatabaseManager also references a raw credential
+    // field name, so callers use this method instead of indexing directly.
     /**
-     * Extracts the session identifier field from a `createSession()`
-     * response array. Deliberately isolated here — inside the sole
-     * Enable Banking HTTP boundary class — rather than inline at DB-
-     * touching call sites: `OpenBankingSecretsFileGuardTest` (D-07,
-     * 19-03) asserts no file that references `DatabaseManager` also
-     * references a raw credential field name, so
-     * `OpenBankingCallbackController` calls this method instead of
-     * indexing the response array itself (19-05).
-     *
      * @param  array<string, mixed>  $sessionResponse
      */
     public function sessionIdFrom(array $sessionResponse): ?string
@@ -139,20 +77,11 @@ class EnableBankingHttpClient
         return is_string($sessionId) && $sessionId !== '' ? $sessionId : null;
     }
 
+    // A single PSD2 consent can, in principle, cover multiple accounts at
+    // the same bank; this project's connection model tracks only one
+    // account per connection, so the first accounts[] entry is the one
+    // persisted here.
     /**
-     * Extracts the FIRST linked account's `uid` from a `createSession()`
-     * response array — isolated here for the identical D-07 arch-guard
-     * reason `sessionIdFrom()` documents: `OpenBankingCallbackController`
-     * must never index the raw response array itself.
-     *
-     * A single PSD2 consent can, in principle, cover multiple accounts at
-     * the same bank; this project's connection model
-     * (`open_banking_connections` is keyed one row per (user_id,
-     * institution_id), per that migration's docblock) tracks only ONE
-     * account per connection, so the first `accounts[]` entry is the one
-     * `OpenBankingCallbackController` persists. Extending to a
-     * multi-account-per-connection model is out of this method's scope.
-     *
      * @param  array<string, mixed>  $sessionResponse
      */
     public function accountUidFrom(array $sessionResponse): ?string
@@ -173,9 +102,6 @@ class EnableBankingHttpClient
     }
 
     /**
-     * GET /aspsps — institution discovery (Req 12), filtered by
-     * country.
-     *
      * @return array<string, mixed>
      */
     public function aspsps(string $country): array
@@ -183,11 +109,9 @@ class EnableBankingHttpClient
         return $this->getJson('aspsps', ['country' => $country]);
     }
 
+    // Resolves the own-account IBAN, which the /sessions response's bare
+    // uid does not carry directly.
     /**
-     * GET /accounts/{uid} — account details. Resolves the own-account
-     * IBAN the `/sessions` response's bare `uid` does not carry
-     * directly (RESEARCH.md Architecture Patterns §2).
-     *
      * @return array<string, mixed>
      */
     public function accountDetails(string $uid): array
@@ -196,10 +120,6 @@ class EnableBankingHttpClient
     }
 
     /**
-     * GET /accounts/{uid}/transactions — booked + pending rows for the
-     * window. `$continuationKey` follows the aggregator's own opaque
-     * pagination cursor verbatim.
-     *
      * @return array<string, mixed>
      */
     public function transactions(string $uid, FetchWindow $window, ?string $continuationKey = null): array
@@ -215,11 +135,9 @@ class EnableBankingHttpClient
         return $this->getJson('accounts/'.rawurlencode($uid).'/transactions', $query);
     }
 
+    // A point-in-time balance reading, not a statement opening/closing
+    // pair — there is no bounded-period summary to persist alongside it.
     /**
-     * GET /accounts/{uid}/balances — point-in-time balance reading (not
-     * a statement pair; see 19-PATTERNS.md on why this is NOT forced
-     * onto `StatementSummaryData`'s shape).
-     *
      * @return array<string, mixed>
      */
     public function balances(string $uid): array
@@ -227,22 +145,16 @@ class EnableBankingHttpClient
         return $this->getJson('accounts/'.rawurlencode($uid).'/balances');
     }
 
-    /**
-     * Base URI every request is built from. Overridden by the SSRF
-     * regression test to exercise attacker/look-alike/non-HTTPS/
-     * unparseable hosts without touching production URL-building logic.
-     */
+    // Overridden by the SSRF regression test to exercise attacker/look-alike/
+    // non-HTTPS/unparseable hosts without touching production URL-building.
     protected function baseUri(): string
     {
         return 'https://'.self::EB_API_HOST.'/';
     }
 
-    /**
-     * Lazily instantiate a Guzzle client. Overridden by the SSRF
-     * regression test's positive (accepted-host) case to inject a
-     * `MockHandler`-backed client, so that case never attempts a real
-     * network call.
-     */
+    // Overridden by the SSRF regression test's positive (accepted-host) case
+    // to inject a MockHandler-backed client, so that case never attempts a
+    // real network call.
     protected function makeHttpClient(): GuzzleClient
     {
         return new GuzzleClient([
@@ -250,8 +162,8 @@ class EnableBankingHttpClient
             'connect_timeout' => 10,
             // JSON API must not redirect; a 3xx is an error body, not a
             // silent egress. Following redirects would let a Location
-            // target bypass the once-only `assertAllowedUrl()` allow-list
-            // check and downgrade https->http (CR-01 / SSRF guarantee).
+            // target bypass the once-only assertAllowedUrl() allow-list
+            // check and downgrade https to http.
             'allow_redirects' => false,
         ]);
     }
@@ -331,12 +243,7 @@ class EnableBankingHttpClient
     }
 
     /**
-     * Dynamic SSRF allow-list: the static Enable Banking API host, plus
-     * the per-connection resolved bank SCA host once one has been
-     * persisted (only known after a completed `/auth` call). Unlike
-     * `GraphApiClient`'s single static host, this list depends on the
-     * loaded credential, because the bank SCA host varies per user
-     * connection.
+     * @link ../../../../../.docs/features/open-banking/architecture.md
      *
      * @return list<string>
      */
@@ -351,14 +258,10 @@ class EnableBankingHttpClient
         return $hosts;
     }
 
-    /**
-     * SSRF defence — refuse to attach a bearer token to any URL whose
-     * scheme is not https OR whose host is not on the allow-list. Runs
-     * BEFORE the JWT is built/attached on every request (both call
-     * sites load credentials, run this check, and only THEN sign — see
-     * `postJson()`/`getJson()`), including any response-derived
-     * follow-up URL a future caller might construct (T-19-04-01).
-     */
+    // SSRF defence — refuse to attach a bearer token to any URL whose
+    // scheme is not https or whose host is not on the allow-list. Runs
+    // before the JWT is built/attached on every request (both postJson()
+    // and getJson() load credentials, run this check, then sign).
     private function assertAllowedUrl(string $url, OpenBankingCredentials $credentials): void
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
