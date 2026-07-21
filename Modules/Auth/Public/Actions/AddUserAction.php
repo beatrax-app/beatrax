@@ -15,21 +15,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Creates a partner account on behalf of the device owner.
- *
- * The caller must be a developer (the owner); a non-developer caller
- * raises a 404 NotFoundHttpException — never a 403 — so a probing
- * non-developer cannot even confirm the partner-creation surface exists.
- * The route that reaches this action is itself developer-gated; the
- * caller check here is a defensive second layer.
- *
- * The new account is created inside one transaction together with ten
- * hashed recovery codes, so the partner always has a recovery path. It
- * is born with `is_developer = false` and
- * `force_password_change_at_next_login = true`: the owner sets an
- * initial password the partner replaces on first sign-in.
- */
+// The route that reaches this action is itself developer-gated; the
+// caller check here (404, never 403) is a defensive second layer.
 final class AddUserAction
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;
@@ -83,8 +70,6 @@ final class AddUserAction
 
             $now = $this->clock->now();
 
-            // Generate distinct codes so the partner is never code-less and
-            // the unique code_hash index never rejects the insert.
             $codesPlain = [];
             while (count($codesPlain) < self::RECOVERY_CODE_COUNT) {
                 $code = $this->codeGenerator->generate();

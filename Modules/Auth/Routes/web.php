@@ -36,24 +36,20 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         return new RedirectResponse($urls->route('login'));
     })->name('logout');
 
-    // App-lock screen — the calm-slate PIN pad (plan 05-03).
     Route::get('/lock', LockScreen::class)->name('auth.lock');
 
-    // Server-side lock-engage endpoint (Gap A fix, D-17/D-18).
-    // Called by lock.js via fetch(keepalive:true) — with the X-XSRF-TOKEN CSRF
-    // header — when the grace timer expires or the idle threshold is met on an
-    // app page. Returns 204 No Content.
+    // Called by lock.js via fetch(keepalive:true) -- with the X-XSRF-TOKEN
+    // CSRF header -- when the grace timer expires or the idle threshold is
+    // met on an app page.
     Route::post('/lock/engage', LockEngageController::class)->name('auth.lock.engage');
 
-    // Activity heartbeat (WR-04). lock.js POSTs here (throttled, max once per
-    // minute) when the user genuinely interacts. The endpoint body is a no-op:
-    // simply passing through AppLockMiddleware refreshes last_activity_at,
-    // because this is a plain (non-Livewire) request. Livewire update traffic
-    // — including wire:poll — deliberately does NOT count as activity.
+    // lock.js POSTs here (throttled) when the user genuinely interacts.
+    // The body is a no-op: simply passing through AppLockMiddleware
+    // refreshes last_activity_at, since this is a plain (non-Livewire)
+    // request -- Livewire/wire:poll traffic deliberately does not count.
     Route::post('/lock/activity', static fn (): Response => new Response('', 204))
         ->name('auth.lock.activity');
 
-    // Biometric challenge + verify endpoints (plan 05-05 WebAuthn).
     Route::post('/lock/biometric/challenge', [WebAuthnBiometricController::class, 'challenge'])
         ->name('auth.lock.biometric.challenge');
 

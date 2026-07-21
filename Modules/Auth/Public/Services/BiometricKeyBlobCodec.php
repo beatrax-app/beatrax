@@ -7,24 +7,7 @@ namespace Modules\Auth\Public\Services;
 use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 
 /**
- * Public seam that wraps / unwraps a data key into the self-contained
- * "biometric blob" format, so a non-Auth module (the Mobile cold-start
- * biometric vault) can protect the data key with the SAME primitive the
- * desktop WebAuthn path uses, without importing `Modules\Auth\Internal\*`.
- *
- * Blob format (identical to WebAuthnBiometricService's D-14 blob):
- *
- *     [ 32-byte random biometric wrap secret (BWS) ] || [ nonce || ciphertext ]
- *
- * The BWS is the secretbox key; the tail is `AppLockKeyWrap::wrap(dataKey, BWS)`
- * decoded to raw bytes. Storing a fresh random secret alongside the wrapped key
- * (rather than the raw data key) means the enclave-gated entry never holds the
- * data key in plaintext form; recovering it requires both halves of this blob,
- * which only leave the secure enclave after a successful biometric.
- *
- * This class performs NO storage and NO biometric interaction — it is pure
- * crypto glue. The caller stores/reads the blob (the Mobile vault puts it in a
- * biometric-gated Keychain / Keystore entry) and gates the biometric.
+ * @link ../../../../.docs/features/auth/architecture.md
  */
 final class BiometricKeyBlobCodec
 {
@@ -33,10 +16,8 @@ final class BiometricKeyBlobCodec
     ) {}
 
     /**
-     * Wrap a data key into a fresh biometric blob under a new random secret.
-     *
      * @param  string  $dataKey  The raw data-key bytes to protect.
-     * @return string `BWS || nonce||ciphertext` raw bytes.
+     * @return string `secret || nonce||ciphertext` raw bytes.
      */
     public function wrap(string $dataKey): string
     {
@@ -54,10 +35,8 @@ final class BiometricKeyBlobCodec
         return $blob;
     }
 
-    /**
-     * Reverse {@see self::wrap()}: recover the data key from a biometric blob,
-     * or null when the blob is malformed / tampered / not one we produced.
-     */
+    // Reverses wrap(): returns null when the blob is malformed, tampered,
+    // or not one this codec produced.
     public function unwrap(string $blob): ?string
     {
         if (strlen($blob) <= SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {

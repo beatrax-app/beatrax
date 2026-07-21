@@ -19,32 +19,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Events\UserInstalled;
 
 /**
- * Single permissible write path for the first-user signup ceremony.
- *
- * Creates the first account on the device together with ten hashed
- * recovery codes inside one database transaction. The transaction body
- * first issues a no-op write statement to promote the connection to an
- * immediate write lock, then re-checks that no user exists before
- * inserting any row. The write-lock promotion is what makes the guard
- * deterministic: under SQLite WAL a plain `SELECT COUNT` only takes a
- * read snapshot, so two concurrent signups could otherwise both read
- * zero and both insert. With the lock taken up front the second signup
- * blocks until the first commits, then observes the created user and
- * aborts. The first account becomes the owner: its `is_developer` flag
- * is set true.
- *
- * Once the transaction commits, `UserInstalled` is dispatched with the
- * new user's id before the auto-login fires. This is the same event the
- * `beatrax:install` console command emits, so any listener that seeds
- * reference data on first install (e.g. the default category tree)
- * also runs through the GUI signup path used by the bundled
- * native-app first launch.
- *
- * On success the new user is logged in through the active guard and the
- * ten plaintext codes are stashed in the session under
- * `auth.signup.recovery_codes_plain` so the inline display page can show
- * them exactly once. The plaintext is returned alongside the user; it is
- * never persisted in clear form.
+ * @link ../../../../.docs/features/auth/architecture.md
  */
 final class SignupAction
 {
@@ -129,12 +104,9 @@ final class SignupAction
             return ['user' => $user, 'codesPlain' => $codesPlain];
         });
 
-        // Dispatch after the transaction commits — listeners (e.g. the
-        // default-category-tree seeder) must never run for a user that got
-        // rolled back. Dispatched before the auto-login so the listener
-        // chain executes in the same unauthenticated context as the
-        // `beatrax:install` console path, keeping the two install ceremonies
-        // behaviourally interchangeable.
+        // Dispatched after commit (never for a rolled-back user) and before
+        // auto-login, so the listener chain runs in the same unauthenticated
+        // context as the beatrax:install console path.
         $this->events->dispatch(new UserInstalled($result['user']->id));
 
         /** @var StatefulGuard $guard */

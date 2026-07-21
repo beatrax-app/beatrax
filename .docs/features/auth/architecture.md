@@ -379,6 +379,100 @@ own unlock screen back to the desktop/web `auth.lock` route). Biometric
 the session data key, which a locked session never has, so exempting it
 would only widen the locked-session surface for no benefit.
 
+### Cross-module Public seams
+
+**`KeyCustodian`** (`Public/Contracts/KeyCustodian.php`) is the custody
+boundary for the at-rest data key while a session is unlocked. Rather
+than parking the raw key bytes directly in the session payload,
+`LockStateManager` hands the raw key to a `KeyCustodian`, receives an
+opaque handle, and stores only that handle. The handle is deliberately
+storage-model-agnostic so one call-site wiring serves every platform:
+
+- Web/CI (`NullKeyCustodian`, this module) — the handle IS the raw key;
+  `store`/`read` are identity, `forget` a no-op. Byte-for-byte the
+  pre-custodian behaviour (see the Session custody section above).
+- Desktop bundle (`DesktopKeyCustodian`, Desktop module) — the handle is
+  the self-contained Electron `safeStorage` ciphertext of the key; it
+  carries no external state, so `forget` is a no-op.
+- Mobile bundle (`SecureStorageKeyCustodian`, Mobile module) — the raw
+  key is written to the iOS Keychain / Android Keystore and the handle is
+  only a reference token; `forget` MUST delete the backing entry.
+
+An implementation that cannot reach its backing store right now (e.g. an
+early-boot race) MUST degrade gracefully by returning the raw key
+unchanged, matching the pass-through behaviour on web. `read()` returns
+null when the custodian owns a real backing entry but cannot recover the
+key from it (an evicted Keychain entry, ciphertext that no longer
+decrypts) — callers must treat null as "no key held" and fall back to a
+PIN unlock, never as key bytes. Wrap/unwrap of the key under the PIN- or
+password-derived KEK stays entirely inside this module
+(`AppLockKdf`/`AppLockKeyWrap`); a custodian never derives, wraps, or
+unwraps anything, only protects the already-unwrapped key while held.
+
+**`AppLockPassphraseChanged`** (`Public/Events/`) carries the old and new
+app-lock data keys after a successful PIN change so a Sync listener can
+re-wrap the Group Data Key keyring under the new key before `changePin()`
+returns. In this codebase's key-wrap chain the data key itself never
+rotates on a plain PIN change — only the PIN-derived wrap of that
+persistent key changes — so `$oldKek`/`$newKek` are the same raw bytes
+today; the event fires unconditionally anyway so the keyring is
+re-encrypted with a fresh nonce on every passphrase change, and the
+contract stays correct if a future flow ever does rotate the underlying
+key. `$oldKek`/`$newKek` are raw, transient key material that must never
+be logged, serialized, or persisted anywhere beyond this synchronous,
+in-process dispatch; listeners must `sodium_memzero()` their own copies
+once the re-wrap completes. This module has zero compile-time dependency
+on Sync — Sync subscribes to this Auth-owned event from its own listener.
+
+**`AppLockKeyService`** (`Public/Services/`) is the single authorized
+release point for the session-held data key across the module boundary —
+no other module may reach into `LockStateManager` or read the session's
+data-key entry directly. `release()` returns null whenever the session is
+locked or holds no key; `admitDataKey()` is the authorized inverse of
+`withhold()`, used by the mobile cold-start biometric unlock, where the
+key's *provenance* is the trust gate — the only sanctioned caller obtains
+the key from a real secure-enclave recovery, never from a bypassable bare
+boolean prompt. The class is intentionally not `final`: a Sync test
+substitutes a release()-returns-null subclass to exercise a weak-key-window
+guard, and the class has no invariants subclassing could violate.
+
+**`BiometricKeyBlobCodec`** (`Public/Services/`) lets a non-Auth module
+(the Mobile cold-start biometric vault) protect a data key with the same
+primitive the desktop WebAuthn path uses, without importing
+`Modules\Auth\Internal\*`. The blob format is identical to the WebAuthn
+biometric-wrap blob: a fresh 32-byte random secret concatenated with
+`AppLockKeyWrap::wrap($dataKey, $secret)`'s decoded bytes. Storing a fresh
+random secret alongside the wrapped key — rather than the raw data key —
+means the enclave-gated entry never holds the data key in plaintext;
+recovering it requires both halves of the blob, which only leave the
+secure enclave after a successful biometric. This class performs no
+storage and no biometric interaction; it is pure crypto glue.
+
+**`MobileLockGateway`** (`Public/Services/`) is a narrow Public
+read/write surface letting the Mobile module's own lock-screen
+implementation (`MobileLockScreen`, structurally identical to this
+module's `LockScreen`) reuse the exact same PIN-verification and
+biometric-enrollment-check collaborators without duplicating that logic
+into a second module-owned copy — a crypto-logic drift risk — and without
+reaching into `Modules\Auth\Internal\*` directly. Every method here is a
+thin pass-through to an existing Internal collaborator; the `AppLockKeyService`
+key-release path itself stays untouched by this gateway. Two behaviours
+are gateway-specific rather than pure delegation:
+
+- `unlockWithRecoveredKey()` stamps `last_activity_at` alongside admitting
+  the recovered key, because a genuine cold start (app killed/rebooted)
+  almost always exceeds the idle window — without that stamp the very
+  next request would see stale activity, treat the session as
+  idle-expired, and bounce the user straight back to the lock screen,
+  making cold-start unlock useless whenever idle timeout is enabled. The
+  PIN path is immune because `PinVerificationService::verify()` already
+  stamps activity on success; this is the biometric equivalent.
+- `pinFloorDue()` implements a periodic PIN-floor re-auth cadence
+  (default 14 days, tunable) even though biometric is the everyday unlock
+  root on mobile: due when there has never been a PIN unlock, or the last
+  one is older than the floor — a successful PIN unlock refreshes the
+  anchor and clears the floor.
+
 ### Transport notes
 
 - `WebAuthnBiometricController`'s two JSON routes stay inside the standard
