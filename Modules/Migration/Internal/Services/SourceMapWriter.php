@@ -9,30 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * The single read/write path for `migration_source_map` (+ its sibling
- * `migration_import_baseline`) — the PERSISTENT per-entity dedup key D-08/
- * D-09/D-10 requires, and the third leg of Plan 07's 3-way merge (D-11/D-12).
- *
- * `resolve()` answers "has this source entity already been promoted?" — an
- * exact `source_external_id` match is tried first; when the entity carries no
- * stable source id (nullable `source_external_id`), the D-10 natural-key
- * fallback is tried instead, but ONLY among rows that themselves have no
- * `source_external_id` (a natural key is never consulted as a fallback for
- * an entity that DOES carry a stable id — a rename would then wrongly
- * resolve to the OLD natural key instead of surfacing as "field changed").
- *
- * `record()` upserts the map row (idempotent on the composite unique key when
- * `source_external_id` is present; a manual existence check substitutes for
- * the natural-key path because SQLite treats `NULL` as distinct in UNIQUE
- * indexes — a second insert with the same `NULL` source_external_id would
- * otherwise slip past the constraint entirely) and snapshots the supplied
- * `$baselineFields` into `migration_import_baseline` (D-11), one row per
- * field so Plan 07's 3-way merge stays per-field granular (D-13).
- *
- * Every query is a raw `DatabaseManager` query-builder call, explicitly
- * `user_id`-scoped (never a chained dynamic-Eloquent call — PHPStan L10
- * strict `staticMethod.dynamicCall`), matching the `EnvelopeWriter`/
- * `GoalProgressQuery` convention this codebase uses throughout.
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class SourceMapWriter
 {
@@ -41,10 +18,6 @@ final class SourceMapWriter
         private readonly Clock $clock,
     ) {}
 
-    /**
-     * Resolve an already-promoted source entity to its beatrax id, or null
-     * when it has never been promoted for this user/source/entity-type.
-     */
     public function resolve(
         User $user,
         string $sourceProduct,
@@ -85,12 +58,6 @@ final class SourceMapWriter
     }
 
     /**
-     * Upsert the map row for a just-promoted (or just-confirmed-unchanged)
-     * source entity, then snapshot `$baselineFields` (D-11) — one
-     * `migration_import_baseline` row per field, upserted on
-     * (migration_source_map_id, field_name) so a re-import advances the same
-     * row rather than accumulating history.
-     *
      * @param  array<string, string|int|float|bool|null>  $baselineFields
      */
     public function record(
@@ -149,9 +116,6 @@ final class SourceMapWriter
         }
     }
 
-    /**
-     * Upsert one (migration_source_map_id, field_name) baseline row.
-     */
     private function recordBaseline(User $user, int $mapId, string $field, string|int|float|bool|null $value, string $importedAt): void
     {
         $connection = $this->db->connection();

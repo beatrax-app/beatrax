@@ -11,23 +11,7 @@ use Modules\Migration\Public\Dto\MigrationGoalDto;
 use Throwable;
 
 /**
- * Interprets an Actual `categories.goal_def` JSON blob (Open Question 3,
- * RESEARCH.md Assumption A7) — Actual's own goal-template mini-language,
- * NOT the same shape as YNAB's `goal_type`/`goal_target`/`goal_target_month`
- * columns (which don't exist in the CSV export anyway — Summary finding 1).
- *
- * Scoped to the SUPPORTED FLAT SUBSET only: a single target amount with an
- * optional target date (`{"type": "simple"|"target", "amount": <int minor>,
- * "targetDate": <?string ISO date>}`). Any other shape — a multi-step
- * template (`"steps"`), a percentage-of-income schedule, or any other
- * grammar this class does not recognise — returns null so the caller
- * (`ActualParser`) emits an `UnmappedItemDto('extra')` instead of coercing
- * it into a lossy flat approximation (Req 8's "else reported as unmapped,
- * not dropped").
- *
- * `json_decode()` of the source-supplied `goal_def` blob is bounded by byte
- * size and nesting depth (T-13.5-10, Denial of Service) before any decoding
- * is attempted.
+ * @link ../../../../../.docs/features/migration/architecture.md
  */
 final class ActualGoalDefInterpreter
 {
@@ -35,10 +19,6 @@ final class ActualGoalDefInterpreter
 
     private const MAX_JSON_DEPTH = 20;
 
-    /**
-     * Returns a `MigrationGoalDto` for a flat `goal_def`, or null when the
-     * grammar is anything else (non-flat/unsupported).
-     */
     public function interpret(string $categorySourceExternalId, string $categoryName, string $goalDefJson, string $currency): ?MigrationGoalDto
     {
         $decoded = $this->boundedDecode($goalDefJson);
@@ -47,7 +27,7 @@ final class ActualGoalDefInterpreter
         }
 
         // A multi-step template/schedule is explicitly non-flat — never
-        // reduced to a single target (Open Question 3's scope decision).
+        // reduced to a single target.
         if (isset($decoded['steps']) || isset($decoded['schedule'])) {
             return null;
         }

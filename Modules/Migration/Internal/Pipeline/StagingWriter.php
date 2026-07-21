@@ -18,60 +18,16 @@ use Modules\Migration\Public\Dto\MigrationTransactionDto;
 use Modules\Migration\Public\Dto\UnmappedItemDto;
 
 /**
- * Lands a parsed `MigrationBatch` into the seven `migration_staging_*`
- * scratch tables (D-06/D-07) — the ONLY write this class performs; no domain
- * table is ever touched here (Req 11's no-write-before-confirm invariant).
- *
- * The six bounded collections (categories, accounts, payees, budget
- * assignments, goals, already-known-unmapped items) are small enough per
- * format to insert directly. `goals` (`migration_staging_goals`, Plan 06
- * Rule 2 fix) is the persistence path `MigrationBatch::$goals` was missing
- * entirely — without it, a parsed `MigrationGoalDto` had nowhere to land
- * between parse and confirm, making Req 8's goal promotion structurally
- * impossible. `transactions` is the one deliberate exception (D-04/D-05):
- * it streams the batch's lazy `Generator<MigrationTransactionDto>` directly
- * into `migration_staging_transactions` in chunks of `CHUNK_SIZE` rows,
- * mirroring `Modules\Ledger\Public\Actions\RecordTransactions::persistChunk()`'s
- * bounded-write pattern — the generator itself is never collapsed into one
- * in-memory array before being written (Pitfall 4).
- *
- * A split-parent `MigrationTransactionDto` (non-empty `splits`) is flattened
- * into TWO OR MORE staging rows: one parent row (`is_split_parent = true`,
- * `category_source_external_id` NULL — category lives on each leg, never on
- * the parent, matching the DTO's own convention) plus one row per split leg
- * (`is_split_parent = false`, `parent_source_external_id` set to the
- * parent's `source_external_id`, a synthesized leg `source_external_id` of
- * `"{parent source_external_id}/leg-{n}"` since a split leg carries no
- * source-native id of its own). Transfer-pair linkage is carried purely via
- * the `transfer_counterpart_source_external_id` column already on the
- * staging schema — no separate transfer table.
- *
- * Every inserted row carries both `user_id` and `migration_run_id`
- * (denormalized scope columns present on every `migration_staging_*` table).
- * Money fields decompose to `(minor, currency)` column pairs — this phase's
- * importer never computes or fabricates FX (Req 7): `settled_amount_minor`/
- * `settled_currency` mirror `amount_minor`/`currency` verbatim at staging
- * time, exactly the source-currency value, never a base-currency conversion.
- *
- * All writes are parameterized query-builder `insert()` calls — a source
- * row's string content is never interpolated into SQL (T-13.5-13).
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class StagingWriter
 {
-    /**
-     * Maximum rows persisted per `insert()` call against
-     * `migration_staging_transactions` — mirrors `RecordTransactions`'s
-     * `CHUNK_SIZE = 500` convention (Pitfall 4 / D-05).
-     */
     private const CHUNK_SIZE = 500;
 
-    /**
-     * Fallback account `kind` value: neither `Ynab4Parser`/`NynabParser`
-     * (no per-account type signal in either CSV export) nor `ActualParser`
-     * ever populates `MigrationAccountDto::$kind`, but the staging schema's
-     * `kind` column is NOT NULL. This placeholder is staged verbatim and
-     * carries no promotion-time significance beyond satisfying the column.
-     */
+    // Neither Ynab4Parser/NynabParser nor ActualParser ever populates
+    // MigrationAccountDto::$kind, but the staging schema's kind column is
+    // NOT NULL; this placeholder is staged verbatim and carries no
+    // promotion-time significance beyond satisfying the column.
     private const DEFAULT_ACCOUNT_KIND = 'checking';
 
     public function __construct(
@@ -198,17 +154,13 @@ final class StagingWriter
     }
 
     /**
-     * Streams the batch's lazy transaction generator directly into
-     * `migration_staging_transactions` in bounded chunks. Never
-     * materializes the generator into a PHP array (Pitfall 4) — the
-     * `foreach` below iterates it lazily one `MigrationTransactionDto` at a
-     * time, and each DTO's own row(s) are appended to a bounded `$chunk`
-     * buffer that is flushed the moment it reaches `CHUNK_SIZE`.
-     *
      * @param  iterable<int, MigrationTransactionDto>  $transactions
      */
     private function writeTransactions(iterable $transactions, int $migrationRunId, User $user): void
     {
+        // Never materializes the generator into a PHP array — the foreach
+        // below iterates it lazily one DTO at a time, appending each DTO's
+        // row(s) to a bounded $chunk buffer flushed at CHUNK_SIZE.
         $chunk = [];
 
         foreach ($transactions as $dto) {
@@ -227,10 +179,6 @@ final class StagingWriter
     }
 
     /**
-     * Builds the one-or-more staging rows a single `MigrationTransactionDto`
-     * expands to: exactly one row for a plain transaction, or one parent row
-     * plus one row per split leg for a split parent.
-     *
      * @return list<array<string, mixed>>
      */
     private function transactionRows(MigrationTransactionDto $dto, int $migrationRunId, User $user): array

@@ -14,85 +14,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * The 3-way-merge comparator (Req 10, D-11/D-12/D-13 — RESEARCH.md § "3-way
- * merge algorithm", THE authoritative spec; there is no codebase analog).
- *
- * For every entity already staged in a NEWLY-parsed re-import run (`$newRunId`)
- * that ALSO has a persistent `migration_source_map` row from an earlier
- * confirmed import, this reads the three legs of the merge:
- *
- *   S_new = the newly-parsed source value (from `migration_staging_*`)
- *   B     = the baseline value stored at the entity's LAST import
- *           (`migration_import_baseline`)
- *   C     = the CURRENT beatrax value, read fresh from the real domain table
- *
- * and applies the rule verbatim:
- *
- *   S_new == B                 -> skip (source unchanged, neither set)
- *   S_new != B AND C == B      -> apply-set (source changed, beatrax untouched)
- *   S_new != B AND C != B      -> conflict-set (BOTH diverged from baseline)
- *
- * An entity with NO existing `migration_source_map` row is a brand-new source
- * row this resolver does not touch at all — `PromoteStagingToDomain::promote()`
- * 's own per-entity resolve-gate already creates it normally (Req 9
- * idempotency holds unchanged for that path).
- *
- * Scope (mirrors `ThreeWayMergeReconciliationTest`'s own documented scope
- * note): budget-assignment reconciliation is the fully-tested, concretely
- * worked example from RESEARCH.md and is wired end-to-end into
- * `PromoteStagingToDomain`'s skip-list. Category-name, account-name, and
- * transaction-description reconciliation follow the IDENTICAL algorithm
- * against a different entity kind and are implemented for completeness (the
- * plan's own "Per-entity apply()" contract), applied directly by
- * `CheckForUpdates` via a plain table update.
- *
- * Transaction AMOUNT reconciliation (13.5-VERIFICATION.md Req 10 gap-fix)
- * follows the identical algorithm against `transactions.amount_minor`,
- * Money-aware exactly like budget_assignment. It is deliberately restricted
- * to non-split, non-split-parent rows (`is_split_parent = false` AND
- * `parent_source_external_id IS NULL`): a split parent's `amount_minor` is
- * not the invariant `SaveTransactionSplit::save()` actually enforces (that
- * compares leg `settled_amount_minor` against the parent's own
- * `settled_amount_minor`), so reconciling a split parent's native amount
- * independently of its legs would risk a silently inconsistent row — out of
- * this gap-fix's tight scope, left for a future plan. `settled_amount_minor`
- * (the cross-currency settled leg) and the transaction DATE are likewise
- * NOT reconciled here (DOCUMENTED FOLLOW-UP): a date change also shifts the
- * fingerprint tuple's `posted_at`/`booked_at` legs and the
- * `transactions_fingerprint_uq` composite unique index simultaneously,
- * which is materially higher blast radius than a single-column amount swap
- * and was judged out of this gap-fix's tight scope. Transaction date/
- * category-assignment and payee/goal reconciliation remain unimplemented
- * (DOCUMENTED ASSUMPTION carried over from Plan 07): they carry higher blast
- * radius (fingerprint invariants, `GoalWriter` validation) than this plan's
- * test scope justifies; a source-side change to those fields on an
- * already-promoted entity currently falls through unreconciled until a
- * future plan extends this resolver.
- *
- * Money comparisons for `budget_assignment` use `Brick\Money\Money` value
- * equality (currency-aware), not raw int comparison, per this plan's own
- * acceptance criteria — a `MoneyMismatchException` (genuinely different
- * currency between the two legs) is treated as "not equal" rather than
- * bubbling up, since a currency change is itself a value change.
- *
- * All reads are raw `DatabaseManager` query-builder calls, explicitly
- * `user_id`-scoped (never a chained dynamic-Eloquent call — PHPStan L10
- * strict `staticMethod.dynamicCall`), matching `SourceMapWriter`'s/
- * `PreviewSummaryBuilder`'s established discipline.
- *
- * CRYPT-01 / 14.1-AUDIT.md Cluster 4 (T-14.1-14a): `reconcileTransactionDescriptions()`
- * decrypts the LIVE stored `transactions.description` before the equality
- * compare against the plaintext `$baseline` snapshot — the stored value is
- * ciphertext once encryption is enabled for the user, and comparing it raw
- * would register a spurious conflict on every re-run (mirrors
- * `SetTransactionNote`'s decrypt-before-compare fix). Investigation finding:
- * the 14.1-AUDIT.md fix sketch also flagged an "analogous counterparty-name
- * reconciliation earlier in the same file" — no such site exists in this
- * class. `reconcileCategories()`/`reconcileAccounts()` compare a `name`
- * column, but `categories.name`/`accounts.name` are NOT
- * `SensitiveFieldRegistry`-listed (only `counterparties.display_name`/
- * `merchant_name`/`iban` are), so those two methods are correctly
- * unaffected and were left unchanged.
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class ThreeWayMergeResolver
 {
@@ -141,12 +63,12 @@ final class ThreeWayMergeResolver
 
             $map = $this->findMap($user, $sourceProduct, 'budget_assignment', $sourceExternalId);
             if ($map === null) {
-                continue; // brand-new entity — normal promote() creates it.
+                continue;
             }
 
             $baselineRaw = $this->baselineValue($user, self::toInt($map->id), 'budgeted_minor');
             if ($baselineRaw === null) {
-                continue; // no recorded baseline — cannot 3-way merge, leave to the unconditional promote() path.
+                continue;
             }
             $baselineMinor = self::toInt($baselineRaw);
 
@@ -155,8 +77,8 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            // Fresh read of the CURRENT beatrax value (D-06 absence == 0,
-            // mirroring PromoteStagingToDomain's own zero-minor convention).
+            // Fresh read of the CURRENT beatrax value (absence == 0, mirroring
+            // PromoteStagingToDomain's own zero-minor convention).
             $currentValue = $connection->table('envelope_assignments')
                 ->where('user_id', $user->id)
                 ->where('category_id', $categoryId)
@@ -165,7 +87,7 @@ final class ThreeWayMergeResolver
             $currentMinor = self::toInt($currentValue);
 
             if (self::moneyEquals($sNewMinor, $currency, $baselineMinor, $currency)) {
-                continue; // source unchanged since last import.
+                continue;
             }
 
             if (self::moneyEquals($currentMinor, $currency, $baselineMinor, $currency)) {
@@ -334,14 +256,9 @@ final class ThreeWayMergeResolver
             $transactionId = self::toInt($map->beatrax_id);
             $sNew = $row->description !== null ? self::toStr($row->description) : '';
             $currentRaw = $connection->table('transactions')->where('id', $transactionId)->where('user_id', $user->id)->value('description');
-            // CRYPT-01 / T-14.1-14a decrypt-before-compare: the LIVE stored
-            // value is ciphertext under an encrypted user — comparing it
-            // raw against the plaintext $baseline would register a
-            // spurious conflict on every re-run (ciphertext never equals
-            // plaintext). decryptValue() is a documented pass-through
-            // no-op for a plaintext user/legacy value, so this is safe for
-            // both populations. Guarded on is_string so a NULL stored
-            // description is never handed to the codec.
+            // Decrypt-before-compare: the LIVE value is ciphertext under an
+            // encrypted user, so comparing it raw against the plaintext
+            // $baseline would register a spurious conflict on every re-run.
             $current = is_string($currentRaw)
                 ? $this->codec->decryptValue('transactions', 'description', $currentRaw, $user->id, $this->session)['value']
                 : self::toStr($currentRaw);
@@ -372,13 +289,6 @@ final class ThreeWayMergeResolver
     }
 
     /**
-     * Req 10 gap-fix (13.5-VERIFICATION.md): reconciles a plain transaction's
-     * native `amount_minor` — Money-aware, exactly like `budget_assignment`
-     * above. Restricted to non-split rows (see class docblock) to avoid the
-     * split-leg-sum invariant `SaveTransactionSplit::save()` actually
-     * enforces against `settled_amount_minor`, a different column this
-     * method never touches.
-     *
      * @param  list<array{entityType: string, sourceExternalId: string, fields: array<string, string|int|float|bool|null>}>  $applies
      * @param  list<ConflictDto>  $conflicts
      */
@@ -403,7 +313,7 @@ final class ThreeWayMergeResolver
 
             $baselineRaw = $this->baselineValue($user, self::toInt($map->id), 'amount_minor');
             if ($baselineRaw === null) {
-                continue; // no recorded baseline for this field — leave to the unconditional promote() path.
+                continue;
             }
             $baselineMinor = self::toInt($baselineRaw);
 
@@ -425,17 +335,12 @@ final class ThreeWayMergeResolver
             $currentMinor = self::toInt($currentRow->amount_minor);
 
             if (self::moneyEquals($sNewMinor, $sourceCurrency, $baselineMinor, $sourceCurrency)) {
-                continue; // source unchanged since last import.
+                continue;
             }
 
-            // WR-13: tag the baseline leg with the currency the LIVE transaction
-            // is recorded under, not $sourceCurrency. The baseline captured the
-            // prior same-transaction minor amount, so its currency provenance is
-            // $currentCurrency. Tagging it $sourceCurrency made moneyEquals catch
-            // a MoneyMismatchException and return false whenever the live
-            // transaction's currency differed from the incoming source currency,
-            // spuriously flagging a conflict on a currency-stable, amount-stable
-            // row.
+            // The baseline leg is tagged with the currency the LIVE
+            // transaction is recorded under, not $sourceCurrency, which
+            // otherwise made moneyEquals() spuriously flag a conflict.
             if (self::moneyEquals($currentMinor, $currentCurrency, $baselineMinor, $currentCurrency)) {
                 $applies[] = [
                     'entityType' => 'transaction',

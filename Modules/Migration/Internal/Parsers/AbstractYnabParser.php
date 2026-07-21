@@ -28,34 +28,7 @@ use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use Throwable;
 
 /**
- * Shared parsing body for `Ynab4Parser` and `NynabParser`. RESEARCH.md's
- * Format Schemas section identifies exactly ONE confirmed divergence between
- * the two formats — the category-column shape (`YnabCsvColumnMap` handles
- * both) — every other convention (two-CSV export shape, split-memo
- * reconstruction, transfer-payee pairing, cleared codes, amount format) is
- * identical, so both concrete parsers extend this class and differ only in
- * the `format()` string they return.
- *
- * `$extractedPath` is a directory already produced upstream (per
- * `ParsesMigrationSource`'s own contract — extraction is NOT this class's
- * job, see `Support\ZipExtractor`'s docblock); for the YNAB4 loose-folder
- * shape it IS the export root, for nYNAB it is wherever the caller already
- * unzipped the two-CSV export to. Both shapes look identical once extracted:
- * one `*Register.csv` and one `*Budget.csv` file, discovered by suffix glob
- * since the budget-name-prefixed filename is not fixed.
- *
- * No goals/schedules are ever produced here (`goals`/`schedules` collections
- * are always empty) — RESEARCH.md's Summary finding 1 confirms neither
- * export format carries goal or scheduled-transaction data; those are
- * Actual-only (`ActualParser`, Plan 04).
- *
- * `budgetCurrency` defaults to `'EUR'`: neither export format carries a
- * per-row or per-file currency column (RESEARCH.md: "YNAB4/nYNAB are
- * effectively single-currency exports"), so there is no source signal to
- * read a currency FROM — 'EUR' is beatrax's own base currency and the
- * documented fallback for a source with no currency signal at all (distinct
- * from Actual, which DOES carry a budget-file-level currency preference —
- * see `ActualParser`, Plan 04, for Req 7's non-EUR proof).
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 abstract class AbstractYnabParser implements ParsesMigrationSource
 {
@@ -116,17 +89,13 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     }
 
     /**
-     * Locates the export's Register.csv/Budget.csv pair by filename suffix
-     * (the budget-name prefix is user-chosen, not fixed). Missing or
-     * duplicate matches reject the whole file per Req 1's
-     * reject-not-partial contract — this is the FIRST check, before any CSV
-     * parsing is attempted, so a directory with unrelated contents (the
-     * corrupt fixture) fails fast.
-     *
      * @return array{0: string, 1: string}
      */
     private function locateFiles(string $extractedPath): array
     {
+        // Locates the Register.csv/Budget.csv pair by filename suffix (the
+        // budget-name prefix is user-chosen, not fixed) BEFORE any CSV
+        // parsing is attempted, so an unrelated directory fails fast.
         $globbedRegister = glob($extractedPath.'/*Register.csv');
         $registerCandidates = $globbedRegister === false ? [] : $globbedRegister;
         $globbedBudget = glob($extractedPath.'/*Budget.csv');
@@ -145,15 +114,12 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     }
 
     /**
-     * Reads Register.csv into an array of associative string rows (header
-     * name keyed), validating the header BEFORE any record is read — a
-     * missing/renamed column fails loud (Req 1 / Open Q1), never a partial
-     * import.
-     *
      * @return array<int, array<string, string>>
      */
     private function readRegisterRows(string $path, string $format): array
     {
+        // The header is validated BEFORE any record is read, so a
+        // missing/renamed column fails loud, never a partial import.
         $reader = $this->openReader($path, 'Register.csv');
         $this->columnMap->assertRegisterHeader($this->readerHeader($reader, 'Register.csv'), $format);
 
@@ -262,15 +228,13 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     {
         $name = trim($name);
         if ($name === '') {
-            return; // transfer / uncategorized row
+            return;
         }
 
-        // WR-03: materialize the source's Category Group as a real parent
-        // Category (created once per distinct group, before any of its
-        // children — collectCategories() below relies on this ordering, and
+        // Materializes the source's Category Group as a real parent Category
+        // (created once per distinct group, before any of its children —
         // PromoteStagingToDomain::promoteCategories() processes staged rows
-        // in that same order) rather than discarding the group structure and
-        // leaving every migrated category flat/top-level.
+        // in that same order) rather than leaving categories flat/top-level.
         $parentSourceExternalId = null;
         if ($group !== null && trim($group) !== '') {
             $parentSourceExternalId = $this->naturalGroupKey($group);
@@ -316,27 +280,12 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         ));
     }
 
-    /**
-     * CR-01 (13.5 deep review): a bare `'group/'.` prefix is NOT disjoint
-     * from `naturalCategoryKey()`'s own `"{group}/{name}"` shape whenever a
-     * source group is itself literally named "Group" (case-insensitively) —
-     * `naturalGroupKey('Group')` and `naturalCategoryKey('Group', 'x')` both
-     * start with the substring `'group/'`, so a genuinely different group
-     * named e.g. "group" (the leaf half of some OTHER category's key) could
-     * collide with this synthetic parent key and silently misattribute
-     * parentage (see 13.5-REVIEW-DEEP.md CR-01 for the exact colliding
-     * example). Every category key produced by `naturalCategoryKey()` is
-     * unconditionally tagged with the fixed literal prefix `'cat:'` and every
-     * group key produced here with the fixed literal prefix `'grp:'` — since
-     * BOTH prefixes are prepended unconditionally to every key in their
-     * respective space (never derived from `$group`/`$name` content), a
-     * category key can never start with `'grp:'` and a group key can never
-     * start with `'cat:'`, regardless of what any source group or category
-     * happens to be named. This makes the two keyspaces provably disjoint
-     * for every possible input, not just "unlikely to collide in practice".
-     */
     private function naturalGroupKey(string $group): string
     {
+        // The fixed literal prefix 'grp:' is prepended unconditionally here,
+        // never derived from $group content, so a group key can never start
+        // with 'cat:' (naturalCategoryKey()'s own prefix) and vice versa —
+        // the two keyspaces are provably disjoint for every possible input.
         return 'grp:'.mb_strtolower(trim($group));
     }
 
@@ -358,7 +307,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             $seen[$name] = true;
 
             // No stable per-account id exists in either CSV export — the
-            // normalized account name IS the natural-key fallback (D-10).
+            // normalized account name IS the natural-key fallback.
             $accounts->push(new MigrationAccountDto(
                 sourceExternalId: $name,
                 name: $name,
@@ -387,7 +336,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             $seen[$name] = true;
 
             // No stable per-payee id in either CSV export — natural-key
-            // fallback on the display-name string itself (D-10).
+            // fallback on the display-name string itself.
             $payees->push(new MigrationPayeeDto(
                 sourceExternalId: $name,
                 name: $name,
@@ -424,28 +373,19 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         return $assignments;
     }
 
-    /**
-     * WR-07: `AmountStringParser::parse()`'s shared contract (verbatim-
-     * copied from `EnvelopeWriter::parseAmount()`, per this class's own
-     * `$amounts` dependency — Outflow/Inflow-oriented, see IN-02) treats ANY
-     * non-positive result as "no amount" (`null`), which would silently
-     * coerce a genuine negative `Budgeted` value (a manual correction,
-     * however rare in practice for this column) to the SAME `0` a blank or
-     * malformed cell produces — a real, silent data-loss path for the one
-     * column this parser applies to signed money. The sign is detected here
-     * and re-applied to the magnitude-only parse, so a blank/malformed cell
-     * (still `0`, matching the prior contract) is no longer conflated with a
-     * genuine negative value (now preserved).
-     */
     private function parseBudgetedMinor(string $raw): int
     {
+        // AmountStringParser::parse() treats ANY non-positive result as "no
+        // amount" (null), which would silently coerce a genuine negative
+        // Budgeted value to the same 0 a blank/malformed cell produces. The
+        // sign is detected here and re-applied to the magnitude-only parse.
         $trimmed = trim($raw);
         $isNegative = str_starts_with($trimmed, '-');
         $magnitude = $isNegative ? ltrim(substr($trimmed, 1)) : $trimmed;
 
         $minor = $this->amounts->parse($magnitude);
         if ($minor === null) {
-            return 0; // genuinely blank or malformed — matches the prior contract.
+            return 0;
         }
 
         return $isNegative ? -$minor : $minor;
@@ -470,9 +410,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
         $normalisedGroup = $group !== null ? mb_strtolower(trim($group)) : '';
         $normalisedName = mb_strtolower(trim($name));
 
-        // CR-01: 'cat:' is unconditionally prepended to every category key
-        // (see naturalGroupKey()'s docblock for why this makes the two
-        // keyspaces provably disjoint).
+        // 'cat:' is unconditionally prepended to every category key (see
+        // naturalGroupKey() for why this makes the two keyspaces disjoint).
         return 'cat:'.$normalisedGroup.'/'.$normalisedName;
     }
 
@@ -532,7 +471,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             if (isset($rowIndexToSplitGroup[$index])) {
                 $groupId = $rowIndexToSplitGroup[$index];
                 if (isset($emittedGroups[$groupId])) {
-                    continue; // already yielded when this group's first row was reached
+                    continue;
                 }
                 $emittedGroups[$groupId] = true;
 
@@ -609,7 +548,7 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
             postedAt: $this->parseRegisterDate(trim($firstRow['Date'] ?? '')),
             amount: Money::ofMinor($sumMinor, self::BUDGET_CURRENCY),
             payeeSourceExternalId: trim($firstRow['Payee'] ?? '') !== '' ? trim($firstRow['Payee']) : null,
-            categorySourceExternalId: null, // category lives on each leg for a split parent
+            categorySourceExternalId: null,
             description: null,
             clearedStatus: $this->mapClearedStatus(trim($firstRow['Cleared'] ?? '')),
             sourceRowIndex: $firstIndex,
@@ -632,8 +571,8 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
     private function mapClearedStatus(string $flag): string
     {
         // 'C' -> cleared, everything else -> uncleared. YNAB4/nYNAB's
-        // Cleared column never yields 'reconciled' — RESEARCH.md confirms
-        // reconciled status is not exportable from either source.
+        // Cleared column never yields 'reconciled' — that status is not
+        // exportable from either source.
         return mb_strtoupper($flag) === 'C' ? 'cleared' : 'uncleared';
     }
 }

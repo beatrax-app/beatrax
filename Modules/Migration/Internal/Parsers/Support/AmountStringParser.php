@@ -5,19 +5,7 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Parsers\Support;
 
 /**
- * Dutch/plain-decimal amount-string parser for YNAB4/nYNAB CSV cells
- * (`Outflow`/`Inflow`/`Budgeted`). Copied VERBATIM from
- * `Modules\Budgets\Public\Services\EnvelopeWriter::parseAmount()` (identical
- * copies already exist in `BudgetWriter`/`GoalWriter`) per 13.5-PATTERNS.md's
- * "Don't Hand-Roll" table and the plan's own `must_haves` truth — this is
- * NOT re-derived, so any future bugfix to the shared parsing rule should be
- * ported here too.
- *
- * Handles the rightmost `.`/`,` disambiguation (Dutch grouped vs plain
- * decimal), a 12-digit whole-part cap, and returns `null` for a blank,
- * malformed, or non-positive value — matching the source method's contract
- * exactly (`0.00`/empty cells common in YNAB's always-two-column
- * Outflow/Inflow shape must resolve to "no amount", not zero).
+ * @link ../../../../../.docs/features/migration/architecture.md
  */
 final class AmountStringParser
 {

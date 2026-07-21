@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 /**
- * Outcome of one `PromoteStagingToDomain::promote()` call — the per-entity
- * counts `ConfirmMigration` persists onto `migration_runs` (so a re-confirm
- * of an already-confirmed run can return them without re-promoting) and
- * folds into the Public `MigrationConfirmResult`.
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class PromoteResult
 {

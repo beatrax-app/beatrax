@@ -10,35 +10,7 @@ use RuntimeException;
 use ZipArchive;
 
 /**
- * Extracts an uploaded migration-source ZIP (YNAB4/nYNAB/Actual export) into
- * a scoped temp directory under `storage/app/` — never a web-served path
- * (T-13.5-06). Guards against both threats the STRIDE register flags for
- * this component:
- *
- *  - T-13.5-05 (zip-bomb, Denial of Service): every entry's uncompressed
- *    size is read via `ZipArchive::statIndex()` BEFORE any bytes are
- *    written to disk; the running total and the entry count are each capped,
- *    rejecting the archive the moment either cap is exceeded.
- *  - T-13.5-06 (zip-slip, Tampering): every entry name is checked for an
- *    absolute path or a `..` traversal segment before extraction; a single
- *    offending entry rejects the whole archive. Entries carrying a Unix
- *    symlink mode bit (WR-04) are rejected the same way — a symlink's name
- *    itself is not a "name" the traversal check inspects at all, but
- *    `ZipArchive::extractTo()` can materialize it as an actual filesystem
- *    symlink whose target string is attacker-controlled and unconstrained,
- *    which a caller's subsequent `is_file()`/`fopen()` on the extracted path
- *    would silently follow outside the scoped extraction directory.
- *
- * `$maxEntries`/`$maxTotalUncompressedBytes` are constructor-configurable
- * (sane production defaults below) so tests can exercise both caps
- * deterministically without constructing multi-hundred-entry or
- * multi-hundred-megabyte fixtures.
- *
- * Per `ParsesMigrationSource`'s own contract docblock, extraction happens
- * UPSTREAM of the parser seam — `Ynab4Parser`/`NynabParser`/`ActualParser`
- * all receive an already-extracted directory. This class is the Plan 05
- * upload-handling seam (`StartMigrationRun`) that produces that directory
- * from a raw uploaded ZIP; it is not invoked by the parsers themselves.
+ * @link ../../../../../.docs/features/migration/architecture.md
  */
 final class ZipExtractor
 {
@@ -46,10 +18,8 @@ final class ZipExtractor
 
     private const DEFAULT_MAX_TOTAL_UNCOMPRESSED_BYTES = 200 * 1024 * 1024;
 
-    /** POSIX `S_IFMT` mask applied to a Unix external-attribute mode. */
     private const UNIX_MODE_FMT_MASK = 0o170000;
 
-    /** POSIX `S_IFLNK` — a symlink entry. */
     private const UNIX_MODE_SYMLINK = 0o120000;
 
     private ?string $extractedDir = null;
@@ -59,13 +29,10 @@ final class ZipExtractor
         private readonly int $maxTotalUncompressedBytes = self::DEFAULT_MAX_TOTAL_UNCOMPRESSED_BYTES,
     ) {}
 
-    /**
-     * Extracts `$zipPath` into a fresh scoped directory and returns its
-     * absolute path. Throws before writing a single byte if the archive
-     * fails to open, exceeds either cap, or contains a path-traversal entry.
-     */
     public function extract(string $zipPath): string
     {
+        // Throws before writing a single byte if the archive fails to open,
+        // exceeds either cap, or contains a path-traversal/symlink entry.
         $zip = new ZipArchive;
         $opened = $zip->open($zipPath);
         if ($opened !== true) {
@@ -127,12 +94,9 @@ final class ZipExtractor
             throw new RuntimeException("could not create scoped extraction directory '{$targetDir}'");
         }
 
-        // WR-01: track the directory for cleanup() BEFORE calling
-        // extractTo() — if extraction fails partway (disk full, permission
-        // error, a corrupt entry ZipArchive::open() didn't already reject),
-        // the throw below must still leave cleanup() able to find and
-        // remove whatever was partially written, instead of leaking
-        // $targetDir permanently under storage/app/migration-extracts/.
+        // Tracked BEFORE extractTo() runs — if extraction fails partway,
+        // cleanup() must still be able to find and remove whatever was
+        // partially written, rather than leaking $targetDir permanently.
         $this->extractedDir = $targetDir;
 
         $extracted = $zip->extractTo($targetDir);
@@ -145,10 +109,6 @@ final class ZipExtractor
         return $targetDir;
     }
 
-    /**
-     * Removes the directory this instance last extracted into, if any.
-     * Safe to call multiple times / when nothing was extracted.
-     */
     public function cleanup(): void
     {
         if ($this->extractedDir === null || ! is_dir($this->extractedDir)) {
@@ -161,13 +121,11 @@ final class ZipExtractor
         $this->extractedDir = null;
     }
 
-    /**
-     * An entry "escapes" the scoped extraction directory when it is an
-     * absolute path (Unix-rooted or Windows-drive-rooted) or contains a
-     * `..` path-traversal segment anywhere in its normalised path.
-     */
     private function escapesExtractionScope(string $entryName): bool
     {
+        // An entry "escapes" the scoped directory when it is an absolute
+        // path (Unix-rooted or Windows-drive-rooted) or contains a '..'
+        // traversal segment anywhere in its normalised path.
         $normalised = str_replace('\\', '/', $entryName);
         if (str_starts_with($normalised, '/') || preg_match('#^[A-Za-z]:#', $normalised) === 1) {
             return true;
@@ -178,16 +136,12 @@ final class ZipExtractor
         return in_array('..', $segments, true);
     }
 
-    /**
-     * True when this entry's Unix external file-attribute bits mark it as a
-     * symlink (WR-04). Only `ZipArchive::OPSYS_UNIX`-tagged entries carry a
-     * meaningful Unix mode in the upper 16 bits of the external attributes —
-     * an archive built on another OS (e.g. Windows/FAT, `OPSYS_DOS`) never
-     * sets this bit, so this check is a no-op (never a false positive) for
-     * those archives.
-     */
     private function isSymlinkEntry(ZipArchive $zip, int $index): bool
     {
+        // Only OPSYS_UNIX-tagged entries carry a meaningful Unix mode in the
+        // upper 16 bits of the external attributes — an archive built on
+        // another OS never sets this bit, so this check is a no-op (never a
+        // false positive) for those archives.
         $opsys = 0;
         $attr = 0;
         if (! $zip->getExternalAttributesIndex($index, $opsys, $attr)) {

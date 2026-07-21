@@ -5,19 +5,7 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 /**
- * Single stringify/parse boundary for a conflict's local/source/baseline
- * value triple (13.5-HUMAN-UAT.md Test 3c gap-fix). These values are
- * persisted as plain nullable `text` columns on `migration_staging_unmapped_items`
- * so `resolveConflict()`'s "take source" choice can be applied LATER, at
- * Confirm time, rather than needing to be applied (or discarded) the moment
- * a conflict is detected.
- *
- * `toStorage()`/`fromStorage()` intentionally do NOT go through
- * `CheckForUpdates`' human-display formatting (`(none)`/`true`/`false`
- * words) — those are lossy for round-tripping. This codec mirrors
- * `SourceMapWriter::baselineValueToString()`'s plain, round-trippable
- * convention instead, since these columns feed back into the SAME
- * apply/baseline-advance writers `SourceMapWriter` itself calls.
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class ConflictValueCodec
 {
@@ -34,15 +22,11 @@ final class ConflictValueCodec
         };
     }
 
-    /**
-     * Parses a stored value back to the type the field's real writer
-     * expects: an `int` for a minor-unit money field, a `string` otherwise.
-     * A NULL/missing stored value degrades to the type's zero value (`0` /
-     * `''`) rather than null, since every call site immediately hands this
-     * to a writer that expects a concrete scalar.
-     */
     public static function fromStorage(?string $stored, string $fieldName): string|int
     {
+        // A NULL/missing stored value degrades to the type's zero value (0 /
+        // '') rather than null, since every call site immediately hands this
+        // to a writer that expects a concrete scalar.
         if ($stored === null) {
             return self::isMoneyField($fieldName) ? 0 : '';
         }

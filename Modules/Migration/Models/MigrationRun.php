@@ -9,9 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * One migration import attempt (YNAB4/nYNAB/Actual). Parent scope key every
- * `migration_staging_*` row hangs off of; the source-of-truth for a run's
- * lifecycle status (Req 1/11, D-06/D-07).
+ * @link ../../../.docs/features/migration/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
