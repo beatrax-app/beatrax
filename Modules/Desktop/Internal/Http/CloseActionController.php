@@ -10,25 +10,12 @@ use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 use Psr\Log\LoggerInterface;
 
-/**
- * Applies a user-selected close-window choice to the native shell
- * (D-08, JS glue deferred from plan 15-03).
- *
- * The `CloseWindowPrompt` Livewire component dispatches a browser
- * event with the chosen action; the in-layout JS hook
- * (resources/views/layouts/app.blade.php) POSTs the choice here. The
- * controller's only job is allow-list-validation + dispatching to the
- * native facade listener.
- *
- * Allow-list defence-in-depth: the choice is re-validated against
- * `WindowCloseBehavior::CHOICE_*` constants before any facade call —
- * a forged POST cannot reach `App::quit()` or `Window::current()->hide()`
- * with anything other than the sanctioned strings (T-15-22 in the
- * plan 15-03 threat register).
- */
+// Re-validates the choice against WindowCloseBehavior::CHOICE_* before
+// any facade call — a forged POST cannot reach App::quit() or
+// Window::current()->hide() with anything other than the two
+// sanctioned strings.
 final class CloseActionController
 {
-    /** Allow-listed choice strings. */
     private const ALLOWED = [
         WindowCloseBehavior::CHOICE_QUIT,
         WindowCloseBehavior::CHOICE_TRAY,
@@ -43,13 +30,10 @@ final class CloseActionController
     {
         $choice = $request->input('choice');
         if (! is_string($choice) || ! in_array($choice, self::ALLOWED, true)) {
-            // A rejected close-action payload would otherwise be silent:
-            // the in-layout JS hook fires the POST and ignores the
-            // response, so the user would see the X button do nothing
-            // with no operator-side signal. Logging the rejection gives
-            // a future debugging session a single line to look at when
-            // a Livewire event-name typo or a browser-autofill artefact
-            // sneaks a bad payload through to here.
+            // A rejected close-action payload would otherwise be silent
+            // — the JS hook ignores the response, so the user sees no
+            // signal. Logging the rejection gives a future debugging
+            // session a starting point.
             $this->logger->warning(
                 'desktop.close-action received an off-allow-list choice; ignoring.',
                 ['choice' => is_string($choice) ? $choice : gettype($choice)],

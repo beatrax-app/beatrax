@@ -120,10 +120,15 @@ What the module explicitly does NOT do:
   OS-supplied path. Validates extension allow-list, size bound, and
   realpath canonicalisation before raising `FileOpenedFromOs`. A
   rejected path is logged at `warning` and dropped.
-- `DispatchOsNotification` — the OS-notification dispatcher. Each of
-  four in-app domain events maps to one `handle*` method; every method
-  consults `WindowFocusState` first (in-focus = no notification, the
-  in-app `SystemAlertsBanner` handles the visible signal).
+- `DispatchOsNotification` — the sole desktop delivery adapter for the
+  Notifications module's `NotificationDeliverable` event. The
+  Notifications module decides *what* to notify and persists the row
+  first; this one handler decides only *whether/how* to deliver it to
+  the OS: `SuppressionEvaluator::shouldDeliver()` first (per-trigger
+  toggles + quiet hours), then the focus gate (in-focus = no OS toast,
+  the in-app `SystemAlertsBanner`/notification inbox handles it), then
+  the per-device hide-details preference (swaps the real body for a
+  detail-free fallback).
 - `WindowCloseBehavior::decide($user)` — reads
   `users.close_behavior` and returns the choice. The Electron close-
   intercept hook in `NativeAppServiceProvider` calls this and
@@ -177,12 +182,106 @@ User opens a .csv from Finder / Explorer
 The OS-notification dispatch:
 
 ```
-Domain event raised (e.g. TransactionImported)
-  → DispatchOsNotification::handleTransactionImported
-       → WindowFocusState::isFocused?
-            yes → no-op (SystemAlertsBanner handles it visibly)
-            no  → Notification::title(…)->body(…)->deepLink(…)->send()
+Notifications module persists a row + raises NotificationDeliverable
+  → DispatchOsNotification::handleNotificationDeliverable
+       → SuppressionEvaluator::shouldDeliver? (per-trigger + quiet hours)
+            no  → stay quiet (row is already persisted either way)
+            yes → WindowFocusState::isFocused?
+                     yes → no-op (in-app banner/inbox handles it)
+                     no  → Notification::title(…)->message(…)->event(…)->show()
   → user clicks notification
-  → NotificationDeepLink raised with payload
+  → NotificationDeepLink raised with the app-emitted route as payload
   → NavigateOnNotificationDeepLink → Window::current()->url(...)
 ```
+
+The window-close lifecycle (first close only, unless remembered):
+
+```
+User clicks the native X button
+  → NativeAppServiceProvider's close-intercept hook reads
+    WindowCloseBehavior::choiceFor($user)
+       → null  → navigate to /desktop/close-prompt (CloseWindowPrompt)
+                    → user picks Quit or Keep-in-tray, optionally
+                      "remember my choice" (persists close_behavior)
+                    → dispatches close-window-choice
+                    → POST /desktop/close-action (CloseActionController,
+                      re-validates against the {quit, tray} allow-list)
+                    → ApplyCloseWindowChoice::apply()
+                         → App::quit() or Window::current()->hide()
+       → 'quit' / 'tray' → same ApplyCloseWindowChoice path directly
+  → WindowHidden / WindowClosed (either outcome)
+       → LockOnWindowHideOrClose::handle()
+            → AppLockKeyService::withhold() — immediate lock, no grace
+              period; the OS app-switcher snapshot must never show data
+```
+
+Cross-platform OS file-open ingress: macOS delivers `open-file` as a
+native NativePHP event (`HandleNativeOpenFile`); the published Electron
+project extends the same intent to Windows/Linux via cold-start
+`process.argv` parsing and `app.on('second-instance')`, both of which
+POST to `/desktop/file-open` (`FileOpenController`, `['web']`
+middleware only — not `auth`, since a logged-out file-open must still
+reach `PendingFileIntent`). Both entry paths converge on the single
+`FileOpenIntake` validation boundary before `FileOpenedFromOs` fires.
+
+## Key custody (desktop bundle)
+
+`DesktopKeyCustodian` implements the Auth module's `KeyCustodian`
+contract and is bound only when `nativephp-internal.running` is true
+(`DesktopServiceProvider::register()`); on web/CI the pass-through
+`NullKeyCustodian` default applies instead. It holds the already
+Auth-unwrapped session data key at rest via Electron `safeStorage` (OS
+keychain / DPAPI / Keychain Services): `store()` encrypts and returns
+an opaque ciphertext blob, `read()` decrypts it back. When
+`System::canEncrypt()` is false (headless CI, an early-boot race
+before Electron initialises safeStorage) both methods degrade
+gracefully to a pass-through, and the Auth module's own encrypted-
+session custody applies unchanged. `DesktopKeyCustodian` never touches
+`AppLockKeyWrap`/`AppLockKdf` — the wrap/unwrap KDF + secretbox stay
+entirely in the Auth module; this class only protects the key *at
+rest while unlocked*, between the moment Auth unwraps it and a later
+caller retrieving it. `SafeStorageSecretShield` (the `SecretShield`
+contract implementation, same bundle-only gate) delegates to the same
+custodian to shield other persisted secrets (a biometric wrap blob, an
+OAuth token blob) — no second facade-calling class is needed.
+
+`NativeBiometricUnlock` is the sole caller of NativePHP's
+`System::canPromptTouchID()`/`promptTouchID()`. It is registered as a
+singleton but has **no caller yet** — native macOS Touch ID unlock is
+not wired; the lock screen currently offers only the browser-native
+WebAuthn biometric path. Wiring it requires a Desktop→Auth bridge
+(an Auth Public contract bound here) plus a lock-screen affordance
+inside the bundle. This class never imports any `Modules\Auth\*`
+symbol beyond returning a bool — the actual key-release logic (and the
+Touch-ID-bypass mitigation) stays entirely in Auth.
+
+## Known risks
+
+`LockOnWindowHideOrClose` locks the session the instant NativePHP
+fires `WindowHidden`/`WindowClosed`, dispatched from the Electron main
+process over its own internal HTTP channel. This has not been verified
+to always carry the focused window's session cookie — if it does not,
+the request-scoped `Session` this listener withholds against could be
+a *different* (anonymous) session than the one the UI reads, and the
+lock-on-close guarantee would silently not hold. This cannot be
+verified outside a real desktop bundle build (tests share one
+session, so they pass either way). The client-side privacy veil and
+the grace-window server lock still cover the backgrounding case in the
+meantime; confirming — or fixing, via a session-independent per-user
+`locked_at` marker `AppLockMiddleware` could consult instead — is
+open follow-up work before this guarantee is relied on in production.
+
+## First-launch route gate
+
+`EnsureDatabaseReady` exempts a small, deliberate set of route names so
+the pending-migrations / fresh-install redirects can never loop:
+`desktop.setup` / `desktop.welcome` (the gated surfaces themselves),
+`signup` (the ceremony the welcome screen leads into), `setup` (the
+post-signup wizard, reached only once already past welcome), `sw` (the
+service-worker artifact, fetchable before any user exists), and
+`site.webmanifest` / `pwa.icon` (the PWA manifest + icon set the
+browser needs to offer the install affordance pre-login). The
+`livewire.update` suffix exemption is separate: every Livewire
+component update — including the signup form's own submit call — POSTs
+through that one AJAX endpoint, and without the exemption the gate
+would 302 the very request meant to create the first user.
