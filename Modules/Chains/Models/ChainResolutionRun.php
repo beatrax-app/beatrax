@@ -9,16 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Eloquent model for the chain_resolution_runs audit table.
- *
- * One row per chain resolver dispatch. The post-confirm wizard polls
- * this table for "Resolving chains…" status; the dashboard's failed-
- * job toast reads `status='failed'` rows. The table replaces the
- * substring match against `failed_jobs.payload` that earlier drafts
- * relied on.
- *
- * Allowed statuses: `pending`, `running`, `complete`, `failed`. The
- * DB-layer trigger pair enforces the set.
+ * @link ../../../.docs/features/chains/architecture.md
  *
  * @property int $id
  * @property int $user_id

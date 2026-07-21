@@ -19,98 +19,31 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Decomposes the ASN-side `transfer_out` that funds an ICS bulk-iDEAL
- * settlement into the per-expense `chain_links` rows that explain
- * which ICS purchases the bulk settlement actually paid.
+ * @link ../../../../.docs/architecture/chain-resolution.md
  *
- * ## Algorithm
- *
- * The ICS-side leg of an ASN→ICS iDEAL settlement exists ONLY as a
- * statement-level `card_statements` row, not as a per-row transaction:
- * the Mijn ICS PDF does not carry a per-row settlement entry — the
- * bulk settlement only exists on the ASN side as a single
- * `transfer_out` against the ICS institution's IBAN
- * (NL08ABNA0526650664). The resolver therefore iterates the ASN-side
- * `transfer_out` rows directly and uses the alias bridge
- * (`ResolvesKnownCounterpartyIban`) to find the matching ICS account,
- * then matches against the open `card_statements` on that account:
- *
- *   For each unresolved ASN-side `transfer_out` T whose
- *   counterparty_iban resolves via `ResolvesKnownCounterpartyIban` to
- *   an `ics_card`-kind Account A:
- *     1. Find a candidate open / partially_settled `card_statements`
- *        row S on A within ±PERIOD_WINDOW_DAYS of T.posted_at.
- *     2. Pull every `expense` row E inside S's period on A that
- *        doesn't yet carry a confirmed ics_bulk_settle chain_link.
- *     3. Subtract any prior credit carried into S from
- *        `card_statement_credits`.
- *     4. Compute the unaccounted delta:
- *          delta = sum(E.settled) - prior_credits - T.settled_magnitude
- *        (the magnitude is taken because T.settled_amount_minor is
- *        negative on the ASN side — money leaving — while the
- *        algorithm operates in the positive ICS-side sign convention).
- *     5. If |delta| ≤ tolerance — write N confirmed chain_links (one
- *        per E_i) and call the state machine to transition the card
- *        statement. If the resulting state is `overpaid`, emit a
- *        card_statement_credits row of reason='overpayment'.
- *     6. Else — write ONE candidate chain_link with to_transaction_id
- *        NULL and evidence.tolerance_used='exceeded' for the review
- *        queue to surface.
- *
- *   After the main pass, walk every `refund` row that posted inside a
- *   closed (settled / overpaid) statement and chain it back to the
- *   original purchase plus emit a card_statement_credits row of
- *   reason='refund_after_close'. The refund pass stays ICS-side
- *   because the Mijn ICS PDF DOES carry per-row refund entries — only
- *   the bulk-settlement entry is absent from the ICS side.
- *
- * The resolver writes to chain_links, card_statements (via
- * CardStatementStateMachine), and card_statement_credits only. It
- * NEVER mutates `transactions`. The
- * BoundaryArchTest::noResolverWritesTransactions rule binds the
- * invariant at CI time.
- *
- * Cross-user safety (FND-03): every query filters on
- * `->where('user_id', $user->id)` first. A cross-user leak is
- * structurally impossible.
- *
- * Concurrency: this resolver is invoked from ResolveChainLinksJob,
- * which is keyed unique-per-user via ShouldBeUniqueUntilProcessing.
- * Parallel passes for the same user are not possible; parallel passes
- * for different users are safe because every query is user-scoped.
- *
- * CR-03/D-06 (decrypt-then-match — Core Value): `transactions.counterparty_iban`
- * is a `SensitiveFieldRegistry` ciphertext column under encryption.
- * `resolveForUser()`'s `whereNotNull('counterparty_iban')` SQL narrowing
- * stays (null semantics are preserved by the codec), but the value is
- * decrypted before it is handed to {@see ResolvesKnownCounterpartyIban},
- * which resolves it against the plaintext
- * `known_counterparty_ibans.real_iban` column. The candidate set (this
- * user's bank-account `transfer_out` rows not yet carrying a confirmed
- * `ics_bulk_settle` chain_link) is already bounded per user, so no
- * additional decrypt-scan limit is required here.
- *
- * @internal Driven by the ResolveChainLinksJob — not called from
- *           public action classes directly.
+ * @internal Driven by ResolveChainLinksJob — not called from Public
+ *           action classes directly.
  */
 final class IcsSettlementResolver
 {
-    /** Symmetric tolerance arm: ±€5 absolute. (D-97) */
+    // Symmetric tolerance arms: the larger of ±€5 absolute or ±2% of the
+    // statement total decides whether a delta auto-confirms.
     public const AMOUNT_TOLERANCE_MINOR = 500;
 
-    /** Symmetric tolerance arm: ±2% of the statement total. (D-97) */
     public const AMOUNT_TOLERANCE_PERCENT = 2;
 
-    /** Symmetric window for matching transfer.posted_at to statement.period_end. (D-97) */
+    // Symmetric window for matching transfer.posted_at to
+    // statement.period_end.
     public const PERIOD_WINDOW_DAYS = 10;
 
-    /** Floor below which the statement is considered fully settled (±€0.01). (D-95) */
+    // Floor below which the statement is considered fully settled
+    // (±€0.01).
     public const SETTLED_TOLERANCE_MINOR = 1;
 
-    /** Floor confidence applied to exceeded-tolerance candidates. */
+    // Floor/ceiling confidence applied to exceeded-tolerance candidates;
+    // the ceiling must stay below 1.0.
     private const EXCEEDED_CONFIDENCE_FLOOR = 0.6;
 
-    /** Ceiling confidence applied to exceeded-tolerance candidates (must stay < 1.0). */
     private const EXCEEDED_CONFIDENCE_CEILING = 0.99;
 
     public function __construct(
@@ -123,24 +56,16 @@ final class IcsSettlementResolver
         private readonly Session $session,
     ) {}
 
-    /**
-     * Run the bulk-settle decomposition pass for one user.
-     *
-     * The pass is idempotent: re-running produces zero net new
-     * chain_links because (a) the candidate-transfer query filters out
-     * transfers that already carry a confirmed ics_bulk_settle row,
-     * and (b) the ChainLinkInsertHelper's pre-insert pair-uniqueness
-     * guard refuses to duplicate rows for the same (from, to, kind,
-     * user) tuple regardless of state.
-     */
+    // Idempotent: re-running produces zero net new chain_links, because
+    // the candidate query filters out already-confirmed transfers and
+    // ChainLinkInsertHelper's pre-insert guard refuses duplicate
+    // (from, to, kind, user) rows regardless of state.
     public function resolveForUser(User $user): void
     {
         $connection = $this->db->connection();
 
-        // Pick up unresolved ASN-side `transfer_out` rows pointing at
-        // the user's ICS institution IBAN. The left join on chain_links
-        // filters out transfers that already carry a confirmed bulk-
-        // settle row.
+        // The left join on chain_links filters out transfers that already
+        // carry a confirmed bulk-settle row.
         $candidateTransfers = $connection
             ->table('transactions')
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
@@ -168,52 +93,38 @@ final class IcsSettlementResolver
 
         foreach ($candidateTransfers as $transfer) {
             /** @var stdClass $transfer */
-            // D-06/CR-03: counterparty_iban is a SensitiveFieldRegistry
-            // ciphertext column under encryption — decrypt before it is
-            // handed to ResolvesKnownCounterpartyIban, which compares
-            // against the plaintext known_counterparty_ibans.real_iban
-            // column. Pass-through no-op when encryption is not enabled
-            // for this user. The candidate set is already bounded per
-            // user (bank-account transfer_out rows not yet carrying a
-            // confirmed ics_bulk_settle link), so no additional scan
-            // limit is needed here (LOW-MED risk per the audit).
+            // counterparty_iban is an encrypted column; decrypt before
+            // handing it to ResolvesKnownCounterpartyIban, which compares
+            // against the plaintext known_counterparty_ibans.real_iban.
+            // Pass-through no-op when encryption is not enabled for this user.
             $storedCounterpartyIban = self::toString($transfer->counterparty_iban ?? null);
             $counterpartyIban = $storedCounterpartyIban === ''
                 ? ''
                 : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, $this->session)['value'];
             $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
             if ($aliasAccount === null || $aliasAccount->kind !== 'ics_card') {
-                // Not an ASN→ICS hop — skip. Other transfer_out rows
-                // (e.g. bank-to-bank transfers between two of the
-                // user's accounts, ASN→PayPal funding) are not the
-                // bulk-settle pattern and have their own resolvers.
+                // Not an ASN→ICS hop — other transfer_out rows (bank-to-bank,
+                // ASN→PayPal funding) have their own resolvers.
                 continue;
             }
             $this->resolveOne($transfer, $aliasAccount, $user);
         }
 
-        // Refund-after-close pass. Runs after the main pass so any
-        // refund whose chained-back link was just written above gets
-        // skipped here. The refund pass stays ICS-side because the
-        // Mijn ICS PDF DOES carry per-row refund entries.
+        // Runs after the main pass so any refund chained back above is
+        // already skipped here.
         $this->resolveRefundsAfterClose($user);
     }
 
     /**
-     * Locate the candidate statement, build the per-expense link set,
-     * compute the tolerance arm, and either confirm + apply the
-     * settlement or write a single candidate row for the review queue.
-     *
-     * The candidate transfer is an ASN-side `transfer_out` with a
-     * negative `settled_amount_minor` (money leaving the bank); the
-     * algorithm operates in the positive (ICS-side) sign convention,
-     * so the magnitude is taken on entry. The statement lookup runs
-     * against the alias-resolved `ics_card` Account where the
-     * card_statement actually lives, NOT against the ASN account
-     * where the transfer_out sits.
-     *
-     * @param  stdClass  $transfer  Raw row from the candidate-transfer query.
-     * @param  Account  $icsAccount  Alias-resolved ICS account.
+     * @param  stdClass  $transfer  Raw row from the candidate-transfer query;
+     *                              settled_amount_minor is negative (ASN-side
+     *                              money leaving), so the magnitude is taken
+     *                              to match the algorithm's positive sign
+     *                              convention.
+     * @param  Account  $icsAccount  Alias-resolved ICS account — the
+     *                               statement lookup runs against this
+     *                               account, not the ASN account the
+     *                               transfer_out sits on.
      */
     private function resolveOne(stdClass $transfer, Account $icsAccount, User $user): void
     {
@@ -244,16 +155,10 @@ final class IcsSettlementResolver
             $expenseSum += self::toInt($expense->settled_amount_minor ?? null);
         }
 
-        // Sign convention:
-        //   - Expenses are stored as negative settled_amount_minor.
-        //   - The transfer_in's settled_amount_minor is positive (money
-        //     moving INTO the ICS account from ASN).
-        //   - Statement total is negative (money owed).
-        //
-        // delta = -sum(expenses) - prior_credits - transfer
-        //   positive delta = user overpaid (transfer covered more
-        //                    than the outstanding charges)
-        //   negative delta = user underpaid
+        // Expenses and the statement total are negative settled amounts;
+        // $settled above already took the transfer's magnitude. Positive
+        // delta = user overpaid; negative = underpaid — see
+        // chain-resolution.md for the full sign-convention writeup.
         $delta = -$expenseSum - $priorCredits - $settled;
 
         $absStatementTotal = abs($statementTotal);
@@ -290,9 +195,8 @@ final class IcsSettlementResolver
                 ], $user);
             }
 
-            // Drive the state machine — the SINGLE legal mutator of
-            // card_statements.state (D-95). Apply the positive
-            // settlement delta against the open balance.
+            // Drive the state machine — the sole legal mutator of
+            // card_statements.state — with the positive settlement delta.
             $settlement = $this->stateMachine->applySettlement($statementId, $settled, $user);
 
             if ($settlement->newState === 'overpaid') {
@@ -316,9 +220,9 @@ final class IcsSettlementResolver
             return;
         }
 
-        // Exceeded tolerance — surface one candidate row for the
-        // review queue. to_transaction_id is NULL per the Wave 1
-        // schema rule (chain_links_to_transaction_id_check_*).
+        // Exceeded tolerance — surface one candidate row for the review
+        // queue. to_transaction_id stays NULL per the schema's
+        // NULL-endpoint check constraint.
         $confidence = $this->computeExceededConfidence($delta, $statementTotal);
         $this->inserter->insertIfNotExists([
             'from_transaction_id' => $transferId,
@@ -338,11 +242,6 @@ final class IcsSettlementResolver
         ], $user);
     }
 
-    /**
-     * Refund-after-close pass (D-98). Walks every `refund` row that
-     * posted inside an already-closed statement and links it to the
-     * original purchase plus emits a card_statement_credits row.
-     */
     private function resolveRefundsAfterClose(User $user): void
     {
         $connection = $this->db->connection();
@@ -383,10 +282,6 @@ final class IcsSettlementResolver
         }
     }
 
-    /**
-     * Chain one refund back to its original purchase and write the
-     * carry-forward credit.
-     */
     private function resolveOneRefund(stdClass $refund, User $user): void
     {
         $connection = $this->db->connection();
@@ -413,13 +308,9 @@ final class IcsSettlementResolver
             ->first(['id']);
 
         if ($original === null) {
-            // No matching original — skip silently. The review queue
-            // can still display the refund via its evidence shape, but
-            // a chain link with NULL to_transaction_id is reserved for
-            // the exceeded-tolerance ICS bulk-settle case per the
-            // Wave 1 schema trigger. Refund rows without a matching
-            // original simply stay unlinked until the user manually
-            // resolves them in a future wave's review surface.
+            // Skip silently — a NULL to_transaction_id chain_link is
+            // reserved for the exceeded-tolerance ICS bulk-settle case,
+            // so an unmatched refund simply stays unlinked.
             return;
         }
 
@@ -460,11 +351,8 @@ final class IcsSettlementResolver
             ],
         ], $user);
 
-        // Emit the carry-forward credit. abs() ensures the magnitude
-        // is positive regardless of which sign the refund row carries
-        // (ICS refunds are positive in the settled_amount_minor column
-        // because they offset a negative expense, but defensively
-        // abs()-ing keeps the column invariant intact).
+        // abs() defensively normalizes the magnitude regardless of which
+        // sign the refund row's settled_amount_minor carries.
         $now = $this->clock->now()->toDateTimeString();
         $connection->table('card_statement_credits')->insert([
             'user_id' => $user->id,
@@ -477,29 +365,16 @@ final class IcsSettlementResolver
         ]);
     }
 
-    /**
-     * Find the card_statement candidate within ±PERIOD_WINDOW_DAYS of
-     * the transfer's posted_at. Returns the open / partially_settled
-     * statement on the same account whose period_end is closest to
-     * the transfer's posted_at; ties broken by id ascending for
-     * deterministic ordering.
-     *
-     * The amount-tolerance check is intentionally NOT applied here.
-     * The matcher binds the statement by period alone so that
-     * out-of-tolerance transfers still land as exceeded-tolerance
-     * candidate rows for the review queue (per Step 9 of the algorithm
-     * + Test 4 expectations). The tolerance arm is applied in
-     * `resolveOne()` against the COMPUTED delta — that's the signal
-     * the user judges, not the raw statement-total / transfer-amount
-     * difference.
-     */
+    // Binds the statement by period alone, deliberately without an
+    // amount-tolerance check, so out-of-tolerance transfers still land as
+    // exceeded-tolerance candidates; the tolerance arm applies in
+    // resolveOne() against the computed delta instead.
     private function findCandidateStatement(int $accountId, string $postedAt, User $user): ?stdClass
     {
         $connection = $this->db->connection();
 
-        // Compute the period_end window in PHP rather than relying on
-        // SQLite's date() arithmetic — keeps the resolver portable to
-        // other drivers and surfaces the window math in one place.
+        // Computed in PHP rather than SQLite's date() arithmetic — keeps
+        // the resolver portable to other drivers.
         $posted = CarbonImmutable::parse($postedAt);
         $windowStart = $posted->subDays(self::PERIOD_WINDOW_DAYS)->startOfDay()->toDateTimeString();
         $windowEnd = $posted->addDays(self::PERIOD_WINDOW_DAYS)->endOfDay()->toDateTimeString();
@@ -519,15 +394,9 @@ final class IcsSettlementResolver
                 'period_end',
             ]);
 
-        // Compare distances in seconds (Carbon's float-precision diff)
-        // rather than integer days. Integer-day truncation collapsed
-        // sub-day-distinct candidates to the same bucket and let the
-        // SQL orderBy('id') tiebreak pick the older row even when a
-        // newer-id row was actually closer to the transfer's
-        // posted_at. The seconds-precision compare keeps the
-        // closest-period-end semantic precise; PHP_FLOAT_MAX is the
-        // ceiling sentinel so the float comparison stays correct
-        // for the very first row in the loop.
+        // Compares seconds-precision distance rather than integer days —
+        // day-truncation previously let orderBy('id') pick an older row
+        // over one that was actually closer to the transfer's posted_at.
         $best = null;
         $bestDistance = PHP_FLOAT_MAX;
         foreach ($rows as $row) {
@@ -544,9 +413,6 @@ final class IcsSettlementResolver
     }
 
     /**
-     * Pull the per-period expense rows that still lack a confirmed
-     * ics_bulk_settle chain_link.
-     *
      * @return Collection<int, stdClass>
      */
     private function pullExpenses(int $accountId, string $periodStart, string $periodEnd, User $user): Collection
@@ -573,10 +439,8 @@ final class IcsSettlementResolver
             ]);
     }
 
-    /**
-     * Sum of all card_statement_credits.amount_minor rows pointing AT
-     * this statement (i.e. credits already carried forward into it).
-     */
+    // Sum of card_statement_credits.amount_minor rows already carried
+    // forward into this statement.
     private function priorCreditsMinor(int $statementId, User $user): int
     {
         $sum = $this->db->connection()
@@ -588,13 +452,9 @@ final class IcsSettlementResolver
         return self::toInt($sum);
     }
 
-    /**
-     * Degenerate per D-88: ICS bulk-settle signatures hash
-     * (account_iban|period_end) so the auto-promotion counter (Wave 3)
-     * sees them as already-stable patterns. The user's id is folded in
-     * for cross-user isolation when two users happen to hold the same
-     * account.iban literal (e.g. the synthetic 'ICS-CARD' string).
-     */
+    // Hashes (account_iban|period_end) so the auto-promotion counter sees
+    // stable patterns; the user id is folded in for cross-user isolation
+    // when two users share the same account-iban literal.
     private function signatureHash(int $accountId, string $periodEnd, User $user): string
     {
         $iban = $this->db->connection()
@@ -609,10 +469,8 @@ final class IcsSettlementResolver
         );
     }
 
-    /**
-     * Confidence band for exceeded-tolerance candidates: floor at
-     * 0.6, ceiling at 0.99. Larger delta → lower confidence.
-     */
+    // Confidence band for exceeded-tolerance candidates: larger delta
+    // yields lower confidence, floored/ceilinged by the two constants above.
     private function computeExceededConfidence(int $delta, int $statementTotal): float
     {
         $base = abs($statementTotal);
@@ -624,29 +482,20 @@ final class IcsSettlementResolver
         return max(self::EXCEEDED_CONFIDENCE_FLOOR, min(self::EXCEEDED_CONFIDENCE_CEILING, $raw));
     }
 
-    /**
-     * Format a float confidence value as a fixed-precision decimal
-     * string matching the chain_links.confidence column's decimal(4,3)
-     * shape. Avoids floating-point string drift in test assertions.
-     */
+    // Fixed-precision decimal string matching the chain_links.confidence
+    // column's decimal(4,3) shape, avoiding float-string drift in tests.
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');
     }
 
-    /**
-     * Numeric coercion for raw query-builder column values. SQLite
-     * returns scalars as strings via stdClass attributes; the strict-
-     * rules `cast.int` lint stays happy by guarding the int cast.
-     */
+    // SQLite returns scalars as strings via stdClass attributes; this
+    // guards the int cast to keep the strict-rules cast.int lint satisfied.
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    /**
-     * String coercion mirroring `CardStatementStateMachine::toString()`.
-     */
     private static function toString(mixed $value): string
     {
         return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');

@@ -11,24 +11,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Models\Transaction;
 
 /**
- * Eloquent model for the chain_links table — the cross-source funding-
- * chain ledger.
- *
- * One row links a downstream charge (`from_transaction_id`) to its
- * funder (`to_transaction_id`). Allowed kinds: `paypal_funding` and
- * `ics_bulk_settle`. Allowed states: `candidate`, `confirmed`,
- * `rejected`. The DB-layer BEFORE INSERT / BEFORE UPDATE triggers
- * reject any value outside those sets regardless of write path.
- *
- * `evidence` is a JSON column carrying resolver-emitted structured
- * data (signature_hash, tolerance_used, unaccounted_delta_minor,
- * statement_id, ...). Cast as `array` so it round-trips through
- * Eloquent without manual encode/decode at the call site.
- *
- * `confidence` is intentionally left without an explicit cast — the
- * SQLite decimal column returns a string and the strict-rules cast
- * lint stays happy. Callers reading the value cast to (float) at the
- * boundary if a numeric comparison is required.
+ * @link ../../../.docs/architecture/chain-resolution.md
  *
  * @property int $id
  * @property int|null $user_id

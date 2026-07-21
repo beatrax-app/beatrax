@@ -38,6 +38,49 @@ Either way, the result is one `chain_links` row with kind
 ASN-side `transactions.id`. The resolver lives in
 `Modules\Chains\Internal\Resolvers\PaypalFundingResolver`.
 
+### PaypalFundingResolver — the three-arm algorithm
+
+The resolver tries three arms in order per candidate row, taking the
+first that matches:
+
+1. **Deterministic arm.** Inspects the row's raw-payload event tape
+   (the PayPal Activity Download) for `General Withdrawal` /
+   `Bankstorting` / `Transfer to bank` events whose memo cells carry an
+   IBAN matching one of the user's accounts. When an equal-and-opposite
+   `transfer_in` exists on that account within ±`DATE_WINDOW_DAYS` (3),
+   writes a confirmed chain_link with confidence 1.000.
+2. **ASN-direct arm.** Handles the shape where the funding-leg
+   `Bankstorting` row is absent from the PayPal CSV entirely — the
+   user's export ships only outgoing merchant payments, not the
+   SEPA-pull deposits that funded them. Pairs the PayPal expense
+   directly against an ASN-side `transfer_out` whose
+   `counterparty_iban` alias-resolves (via `known_counterparty_ibans`,
+   `target_account_kind = 'paypal'`) to one of the user's PayPal
+   accounts, on equal settled amount within the same date window. Since
+   `counterparty_iban` is encrypted, the query narrows on plaintext
+   dimensions (user/type/amount/date, capped at 20 candidates) and then
+   decrypts + matches each candidate's IBAN against the (small,
+   plaintext) alias set in PHP. Exactly one match → confirmed,
+   confidence 1.000; two or more → candidate, confidence 0.900 (closest
+   by `booked_at` wins, user reviews the ambiguity). An ASN row already
+   cited as the `to` side of another non-rejected `paypal_funding` link
+   is excluded, so two same-day same-amount PayPal expenses can't both
+   claim one ASN debit.
+3. **Fuzzy arm.** When both above miss, scores candidate `transfer_in`
+   rows by a weighted blend of Levenshtein-normalized merchant
+   similarity (0.5) + amount-band similarity (0.3) + date-window
+   similarity (0.2). The best score at or above 0.6 surfaces as a
+   candidate with confidence in `[0.6, 0.99]` — the ceiling is
+   deliberately below 1.0 so the deterministic arm stays the only path
+   to a round-confidence link.
+
+Every arm computes the same `evidence.signature_hash` —
+`sha256(counterparty_normalized|funding-account IBAN)` — so
+`ConfirmChainLink`'s auto-promotion learning loop has one key to count
+confirmations over regardless of which arm produced the match.
+Duplicate writes are blocked by `ChainLinkInsertHelper`'s pre-insert
+guard, which also keeps a user-rejected pair rejected across re-runs.
+
 ### ICS bulk-iDEAL settlement chains
 
 ICS Cards bills the user monthly via a single bulk-iDEAL settlement to
@@ -59,6 +102,73 @@ The chain has one arm here:
 The result is one `chain_links` row with kind `ics_settlement` linking
 the ASN side to the ICS statement; each ICS line carries
 `pair_transaction_id` pointing back to the ASN settlement.
+
+### IcsSettlementResolver — the decomposition algorithm
+
+`Modules\Chains\Internal\Resolvers\IcsSettlementResolver` is the
+concrete implementation (`chain_links.kind = 'ics_bulk_settle'`). The
+ICS-side leg of an ASN→ICS iDEAL settlement exists only as a
+statement-level `card_statements` row — the Mijn ICS PDF carries no
+per-row settlement entry, only a single ASN-side `transfer_out`
+against the ICS institution's IBAN. The resolver therefore iterates
+ASN-side `transfer_out` rows and uses the alias bridge
+(`ResolvesKnownCounterpartyIban`) to find the matching ICS account,
+then matches against that account's open `card_statements`:
+
+For each unresolved ASN-side `transfer_out` T whose `counterparty_iban`
+resolves to an `ics_card`-kind Account A:
+
+1. Find a candidate `open`/`partially_settled` `card_statements` row S
+   on A within ±`PERIOD_WINDOW_DAYS` (10) of T's `posted_at`, choosing
+   the row whose `period_end` is closest by seconds-precision distance
+   (not integer days — day-truncation previously let `orderBy('id')`
+   pick an older row over one that was actually closer).
+2. Pull every `expense` row on A inside S's period that doesn't yet
+   carry a confirmed `ics_bulk_settle` chain_link.
+3. Subtract any prior credit already carried into S from
+   `card_statement_credits`.
+4. Compute the unaccounted delta: `-sum(expenses) - prior_credits -
+   T.settled_magnitude` (expenses and the statement total are negative
+   settled amounts; the transfer's magnitude is taken because it's
+   negative on the ASN side). Positive delta = user overpaid; negative
+   = underpaid.
+5. If `|delta|` is within tolerance (max of ±€5 absolute or ±2% of the
+   statement total) — write one confirmed `chain_links` row per
+   expense and call `CardStatementStateMachine::applySettlement()`. If
+   the resulting state is `overpaid`, emit a `card_statement_credits`
+   row with `reason = 'overpayment'`.
+6. Else — write one **candidate** chain_link with `to_transaction_id`
+   NULL and `evidence.tolerance_used = 'exceeded'` for the review
+   queue; confidence is banded between 0.6 and 0.99, higher when the
+   delta is smaller relative to the statement total.
+
+After the main pass, a second pass walks every `refund` row that
+posted inside an already-closed (`settled`/`overpaid`) statement,
+chains it back to the original purchase (same merchant + opposite-sign
+amount inside the closed period, most-recent wins), and emits a
+`card_statement_credits` row with `reason = 'refund_after_close'`
+carrying forward to the next open statement on the same account. This
+pass stays ICS-side because the Mijn ICS PDF does carry per-row refund
+entries — only the bulk-settlement entry is absent.
+
+`card_statement_credits` rows carry the surplus/refund amounts flowing
+between statements: `from_statement_id` is the source (the one that
+went overpaid or accepted a refund after close); `to_statement_id` is
+the destination, nullable because a surplus may exist before the next
+statement period rolls in — a follow-up resolver pass sets the pointer
+once that statement lands. Only two `reason` values are allowed:
+`overpayment` and `refund_after_close` (a DB-layer trigger pair rejects
+anything else).
+
+Every signature hash is `sha256(account.iban|period_end|user=<id>)` —
+the user id is folded in so two users sharing the same account-iban
+literal (e.g. a synthetic `'ICS-CARD'` placeholder) don't collide on
+the auto-promotion learning-loop counter.
+
+`transactions.counterparty_iban` is an encrypted `SensitiveFieldRegistry`
+column; the resolver decrypts it before handing it to
+`ResolvesKnownCounterpartyIban`, which compares against the plaintext
+`known_counterparty_ibans.real_iban` column.
 
 ## The pair_transaction_id column
 
@@ -86,6 +196,50 @@ which actually permits writing `pair_transaction_id` specifically,
 because that's the column the resolver is allowed to touch. The
 invariant forbids writes to the rest of the row (amount, currency,
 description, etc.), which is what the read-mostly contract is about.
+
+## RetypeByAliasResolver — the wizard-order healing pass
+
+`Modules\Chains\Internal\Resolvers\RetypeByAliasResolver` resolves a
+race in the onboarding flow: when a source file is uploaded before the
+destination-kind account exists (e.g. an ASN CSV uploaded while only
+the `bank`-kind account exists, with the `paypal`-kind account created
+moments later in a later wizard step), the preview-time
+`ClassifyTransactionType` pipeline stage finds the alias row but no
+matching destination Account, so the row falls through to the
+amount-sign default (`expense`/`income`) and that type is persisted
+into the ledger on confirm. Without a healing pass those rows stay
+mis-typed forever and every downstream chain resolver iterates an
+empty set.
+
+The resolver re-applies the classifier's cross-account rule against
+the now-complete account graph, per user: for every `expense`/`income`
+row whose `counterparty_iban` resolves (via `known_counterparty_ibans`)
+to a target account kind belonging to the same user, and that account
+isn't the row's own account, it retypes the row by amount sign
+(`amount_minor < 0` → `transfer_out`, otherwise `transfer_in`). It is
+idempotent (a retyped row leaves the `expense`/`income` set and is
+never a candidate again) and self-healing (a newly added alias retypes
+matching historical rows on the next chain dispatch). It runs before
+the pair-orphan sweep and the two resolvers above, inside
+`ResolveChainLinksJob`, so they iterate the corrected ledger. It never
+touches `pair_transaction_id` — pairing stays the orphan-sweep's job.
+
+Because `counterparty_iban` is encrypted, this can't be one
+correlated-subquery UPDATE (a ciphertext join-equality never matches).
+Instead: load the user's `known_counterparty_ibans` and accounts into
+small in-PHP maps (return early if there are no aliases at all, without
+decrypting a single row); narrow candidate transactions on the same
+cheap plaintext dimensions the original SQL used, via `chunkById()` so
+a large first-run history sweep never holds every row in memory; then
+decrypt each surviving candidate's IBAN once and look it up in the
+in-PHP alias map. Matches are queued and applied via batched raw
+`UPDATE ... WHERE id IN (...)` statements. This resolver is the one
+documented exception to the read-mostly contract's
+`noResolverWritesTransactions` invariant — it retypes
+`transactions.type`, unlike every other Chains resolver, which writes
+only `chain_links`/`card_statements`. It stays on raw SQL rather than
+the fluent query builder specifically so that exception is textually
+distinct from the forbidden shape the arch test greps for.
 
 ## The known-counterparty-IBAN alias bridge
 
@@ -139,6 +293,14 @@ surface in `/chains/triage`; the user confirms or rejects each one. A
 confirmed candidate creates the `chain_links` row AND inserts an alias
 row into `known_counterparty_ibans` so subsequent runs match
 automatically.
+
+`ChainLink::$confidence` is intentionally left without an explicit
+Eloquent cast — the SQLite decimal column returns a string, which
+keeps the strict-rules cast lint satisfied; callers cast to `(float)`
+at the point of use if a numeric comparison is required. `$evidence`
+is cast `array` so resolver-emitted structured data (`signature_hash`,
+`tolerance_used`, `unaccounted_delta_minor`, `statement_id`, ...)
+round-trips through Eloquent without manual encode/decode.
 
 ## The read-mostly contract
 

@@ -11,50 +11,10 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
 
-/**
- * Builds pre-resolved chain examples for the primary demo user so the
- * `/chains` review surface and the `/chains/hints` candidate surface
- * both have data to render against:
- *
- *   1. **PayPal → ASN funding chain.** For each of the three monthly
- *      Bol.com PayPal purchases the demo dataset emits, a
- *      `paypal_funding` ChainLink rows from the downstream Bol.com
- *      expense to the ASN→PayPal top-up that funded it on the same
- *      date. Mirrors the production PayPal funding-chain resolver
- *      output for a "user buys on Bol.com, PayPal pulled from ASN
- *      bank account" flow.
- *
- *   2. **ICS → ASN bulk settlement chain.** For each ICS card
- *      transaction, an `ics_bulk_settle` ChainLink rows from the
- *      downstream ICS expense to the ASN→ICS bulk-settlement
- *      transfer_out posted at the end of the same statement period.
- *      Captures the real-world ICS billing pattern: many small card
- *      charges are paid by one large monthly transfer from the bank
- *      account, and the chain link is how the dashboard rolls the
- *      bulk row's underlying detail back into per-merchant lines.
- *
- *   3. **funded_by_card_hint candidate.** One Coolblue purchase carries
- *      an unresolved hint emitted by the Receipts module's
- *      CreateChainLinkFromHint listener — the downstream expense is
- *      known, the funder card statement transaction is not yet on the
- *      ledger, so `to_transaction_id` rides as NULL while `state =
- *      candidate`. Mirrors the shape `/chains/hints` queries.
- *
- *   4. **refund_of_hint candidate.** One Bol.com refund row carries a
- *      receipt-derived original-order reference hint; the original
- *      purchase has not surfaced on this ledger yet so the hint stays
- *      candidate with `to_transaction_id = NULL`.
- *
- * Idempotency: every link upserts via `updateOrCreate` keyed on the
- * `(user_id, from_transaction_id, kind)` composite — re-running the
- * seeder returns the same chain_links row without issuing a second
- * INSERT. The schema's chain_links_state_check trigger pair enforces
- * `state ∈ {candidate, confirmed, rejected}`; the trigger pair on
- * `kind` enforces `paypal_funding|ics_bulk_settle|funded_by_card_hint|
- * refund_of_hint`. Confirmed demo rows ship as
- * `state = confirmed, resolver = auto`; hint rows ship as
- * `state = candidate, resolver = receipt_hint`.
- */
+// Seeds four chain shapes for /chains and /chains/hints: a paypal_funding
+// link, an ics_bulk_settle link, and one candidate row each for
+// funded_by_card_hint and refund_of_hint (to_transaction_id stays NULL on
+// candidates). Every insert upserts on (user_id, from_transaction_id, kind).
 final class DemoChainsSeeder
 {
     public function __construct(
@@ -81,13 +41,9 @@ final class DemoChainsSeeder
         return $this->countDemoLinks($users);
     }
 
-    /**
-     * Each monthly Bol.com PayPal purchase is funded by the ASN→PayPal
-     * top-up that posted on the same date — the canonical PayPal
-     * funding chain. The seeder finds the (downstream, funder) pair
-     * by description match (the demo transactions use stable
-     * descriptions, so the lookup is deterministic).
-     */
+    // Matches each Bol.com PayPal purchase to the ASN→PayPal top-up posted
+    // the same date by description — the demo transactions use stable
+    // descriptions, so the (downstream, funder) lookup is deterministic.
     private function seedPaypalFundingChain(User $user): void
     {
         $bolPaypalCharges = Transaction::query()
@@ -126,12 +82,9 @@ final class DemoChainsSeeder
         }
     }
 
+    // Settles every ICS card expense in the window against the next
+    // ASN→ICS bulk transfer posted at or after its booking date.
     /**
-     * Every ICS card expense in the window is settled by the next
-     * ASN→ICS bulk transfer that posted at or after its booking.
-     * Builds the `ics_bulk_settle` chain links for every (downstream,
-     * funder) pair the data supports.
-     *
      * @param  array<string, Account>  $userAccounts
      */
     private function seedIcsBulkSettleChain(User $user, array $userAccounts): void
@@ -179,15 +132,9 @@ final class DemoChainsSeeder
         }
     }
 
-    /**
-     * Emit one `funded_by_card_hint` candidate so the /chains/hints
-     * candidate surface has data to render. Picks the Coolblue ICS
-     * card purchase (a recognisable big-ticket row) and emits the
-     * candidate with `to_transaction_id = NULL` — the receipt-derived
-     * hint asserts "this was funded by a card ending in 1234" but the
-     * matching card statement transaction has not yet landed in the
-     * ledger.
-     */
+    // Picks the Coolblue ICS card purchase and emits a funded_by_card_hint
+    // candidate with to_transaction_id = NULL — the receipt-derived hint
+    // names a card but the matching statement transaction has not landed.
     private function seedFundedByCardHintCandidate(User $user): void
     {
         $expense = Transaction::query()
@@ -215,14 +162,9 @@ final class DemoChainsSeeder
         );
     }
 
-    /**
-     * Emit one `refund_of_hint` candidate so the /chains/hints surface
-     * also has a refund-side example. Picks the Bol.com refund row and
-     * emits the candidate with `to_transaction_id = NULL` — the
-     * receipt-derived hint asserts the original-order reference id
-     * `ORD-DEMO-99` but the matching purchase row has not surfaced on
-     * this ledger yet.
-     */
+    // Picks the Bol.com refund row and emits a refund_of_hint candidate
+    // with to_transaction_id = NULL — the receipt-derived hint names an
+    // original-order reference but the matching purchase has not surfaced.
     private function seedRefundOfHintCandidate(User $user): void
     {
         $refund = Transaction::query()
@@ -250,11 +192,9 @@ final class DemoChainsSeeder
         );
     }
 
+    // Iterating in-memory is cheap here because the demo window only
+    // carries three settlements.
     /**
-     * Return the first settlement whose posted_at is at or after the
-     * expense's posted_at. Iterating in-memory is cheap because the
-     * demo window only carries three settlements.
-     *
      * @param  iterable<Transaction>  $settlements
      */
     private function nextSettlementAfter(iterable $settlements, CarbonImmutable $after): ?Transaction
@@ -268,15 +208,10 @@ final class DemoChainsSeeder
         return null;
     }
 
+    // Keys on (user_id, from_transaction_id, kind); the schema has no
+    // UNIQUE on that triple, but the demo seeder only ever produces one
+    // link per cycle, so the tuple is a stable identity key here.
     /**
-     * Idempotent chain-link upsert. Keys on `(user_id,
-     * from_transaction_id, kind)` so a second seed run reuses the
-     * existing row rather than inserting a duplicate. The schema
-     * does not enforce a UNIQUE on that triple — the resolver in
-     * production may produce multiple candidate links per downstream
-     * row — but the demo seeder produces only one per cycle, so the
-     * (downstream, kind) tuple is a stable identity key.
-     *
      * @param  array<string, mixed>  $evidence
      */
     private function upsertChainLink(
@@ -310,14 +245,11 @@ final class DemoChainsSeeder
         ]);
     }
 
+    // Distinct from upsertChainLink: hint candidates legally ride with
+    // to_transaction_id = NULL (the schema's NULL-endpoint guard allows
+    // this for candidate hint kinds) and resolver = receipt_hint, so
+    // /chains/hints can distinguish them from confirmed links.
     /**
-     * Idempotent hint-candidate upsert. Distinct from `upsertChainLink`
-     * because hint candidates legally ride with `to_transaction_id =
-     * NULL` (the schema's NULL-endpoint guard whitelist allows this
-     * specifically for candidate hint kinds) and the resolver string
-     * is `receipt_hint` rather than `auto` so the /chains/hints surface
-     * can distinguish them from confirmed links.
-     *
      * @param  array<string, mixed>  $evidence
      */
     private function upsertHintCandidateLink(

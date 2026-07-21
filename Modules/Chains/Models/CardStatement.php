@@ -12,18 +12,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 
 /**
- * Eloquent model for the card_statements table — the first-class
- * statement lifecycle ledger for ICS-kind accounts.
- *
- * One row per statement period. `total_amount_minor` is the original
- * statement total (negative — money owed) and `open_balance_minor` is
- * the remaining positive amount still to settle. Both columns are
- * mutated by `Modules\Chains\Internal\CardStatementStateMachine` as
- * `ics_bulk_settle` chain_links accumulate.
- *
- * `state` lifecycle: `open` → `partially_settled` → `settled` /
- * `overpaid`. The state machine is the only legal mutator; a
- * BoundaryArchTest invariant blocks any other write path.
+ * @link ../../../.docs/features/chains/architecture.md
  *
  * @property int $id
  * @property int|null $user_id

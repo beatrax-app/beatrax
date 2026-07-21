@@ -14,56 +14,20 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * `/chains/review` page — the batch review surface for
- * `state='candidate'` chain_links across all the user's transactions
- * (CHN-03 / D-86 / D-87).
- *
- * Rows are sorted by `confidence DESC, id DESC` and cursor-paginated
- * via `ChainLinkQuery::candidatesForReview`. Each row renders the
- * from / to counterparties, a `kind_label` ("PayPal funding" /
- * "Bulk iDEAL settlement"), and Confirm + Reject buttons.
- *
- * The Confirm / Reject buttons delegate to the same Public action
- * classes the chain drawer uses (D-86 dual-surface contract):
- * `ConfirmChainLink::__invoke($chainLinkId, $user)` /
- * `RejectChainLink::__invoke($chainLinkId, $user)`. Both raise
- * `NotFoundHttpException` (404) when the target row belongs to a
- * different user — verified by `CrossUserChainLinkIsolationTest`.
- *
- * Auto-promotion hint (D-87): when a row's `confirmsRemaining === 1`
- * (the user has two prior same-signature confirmations and this would
- * be the third), the Blade renders the inline copy
- * "One more confirm and similar links auto-confirm." The hint is the
- * only proactive UX nudge about the learning loop.
- *
- * Service collaborators arrive as parameters on action methods + the
- * `render()` method. Constructor injection is banned on Livewire
- * Component subclasses by phpstan-strict-rules.
+ * @link ../../../../../.docs/features/chains/architecture.md
  */
 final class ChainReviewQueue extends Component
 {
-    /**
-     * Cursor: the previous page's tail `chain_link.id`. Null = first
-     * page. Used in combination with `$cursorConfidence` to keep the
-     * sort stable when multiple rows share the same confidence value.
-     */
+    // Cursor pair: previous page's tail chain_link.id + confidence
+    // (3 decimals, matching the column type). Null on the first page;
+    // paired together so the sort stays stable across ties on confidence.
     public ?int $cursorId = null;
 
-    /**
-     * Cursor: the previous page's tail `confidence` (formatted to 3
-     * decimal places to match the column type). Null = first page.
-     */
     public ?string $cursorConfidence = null;
 
-    /**
-     * Transient error banner. Populated when an action raises the
-     * typed {@see ChainLinkRequiresConcretePartnerException} (the
-     * user tried to confirm or reject a hint-shaped candidate whose
-     * `to_transaction_id` is NULL); the blade view renders this
-     * string in a rose-tinted notice above the queue. A subsequent
-     * confirm/reject call clears it before re-attempting, so the
-     * banner stays scoped to the most recent failure.
-     */
+    // Set when an action raises {@see ChainLinkRequiresConcretePartnerException}
+    // (a hint-shaped candidate with to_transaction_id NULL); cleared before
+    // every subsequent confirm/reject attempt.
     public ?string $actionError = null;
 
     public function confirm(int $chainLinkId, CurrentUser $currentUser, ConfirmChainLink $confirm): void
