@@ -20,60 +20,22 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 
 /**
- * Read-only service that assembles a `list<CalendarDayDto>` for a given
- * user + month. This is the single backend brain of the calendar — Plan 03's
- * Livewire page is a thin renderer over this service's output.
- *
- * Responsibilities (all concentrated here, not in the Livewire component):
- *   - Entry placement: recurring series occurrences on their correct dates (D-01)
- *   - Account-preference resolution: visible/balance account sets (D-02, D-03)
- *   - Irregular-series gate: null-nextExpectedAt excluded (Pitfall 4)
- *   - Combined day-end balance: ForecastQuery sum per date + FX conversion (D-05)
- *   - Computing sentinel: "—" when any balance account's forecast is computing (D-13)
- *   - Past-day reconciliation: isPaid / isMissed from recurring_series_occurrences (D-07, D-08)
- *   - Internal-transfer entries appear but net to zero in combined balance (D-04)
- *   - Cross-user safety: every DB query carries user_id scoping (T-06-02, T-06-03)
- *
- * Security note (T-06-02): the $visibleAccountIds and $balanceAccountIds caller-supplied
- * arrays are ALWAYS intersected against `SELECT id FROM accounts WHERE user_id = ?`
- * before any forUser/forecast call. Foreign account ids are silently dropped.
+ * @link ../../../../.docs/features/calendar/architecture.md
  */
 final readonly class CalendarQuery
 {
-    /**
-     * Cadence → spendable-set membership (D-03).
-     *
-     * CONTEXT D-03 used semantic names ("checking/savings/ICS liability") that map
-     * to these actual provider-code account kinds. The ON set represents accounts
-     * whose balance is included in the "spendable" default view: the accounts the
-     * user actually spends from day-to-day. The OFF set (ICS family) represents
-     * credit-card liability balances that are already reflected on the funding side
-     * (the iDEAL bulk settlement into ASN), so including them would double-count.
-     *
-     * ON kinds  : asn, bank, cash, paypal, paypal_funding
-     * OFF kinds : ics, ics_card, ics_bulk_settle
-     *
-     * @var list<string>
-     */
+    // ON kinds (checking/savings/cash/PayPal) are included in the spendable
+    // balance default; OFF kinds (ICS credit-card family) are excluded since
+    // their liability already shows up via the bulk-iDEAL settlement leg.
     private const array SPENDABLE_KINDS = ['asn', 'bank', 'cash', 'paypal', 'paypal_funding'];
 
-    /**
-     * Tolerance window CAP for past-day paid/missed matching (Pitfall 3).
-     * An occurrence observed within the effective window of the expected
-     * date counts as "paid". Beyond this window the occurrence is unrelated.
-     *
-     * The effective window is clamped per cadence (WR-02) — see
-     * matchWindowDays(): sub-monthly cadences get half their interval
-     * (weekly → ±3 days) so one observed payment can never mark multiple
-     * adjacent expected entries paid; monthly+ keeps the full ±7 cap.
-     */
+    // Tolerance window cap for past-day paid/missed matching; the effective
+    // window is clamped per cadence in matchWindowDays() so one observed
+    // payment can never mark multiple adjacent expected entries paid.
     private const int MATCH_WINDOW_DAYS = 7;
 
-    /**
-     * Forecast horizon to use for balance projections (D-14).
-     * 365 days covers a full calendar year so any month the user navigates to
-     * has balance data available.
-     */
+    // 365 days covers a full calendar year so any month the user navigates
+    // to has balance projection data available.
     private const int FORECAST_HORIZON_DAYS = 365;
 
     public function __construct(
@@ -86,20 +48,8 @@ final readonly class CalendarQuery
     ) {}
 
     /**
-     * Assemble the full calendar grid for the given user + year + month.
-     *
-     * Returns a `list<CalendarDayDto>` covering the display grid — from the
-     * Monday that starts the week containing the 1st of the month to the Sunday
-     * that ends the week containing the last day of the month (full weeks only,
-     * Mon–Sun). Each day carries its entries and balance data.
-     *
-     * Null-vs-array semantics (CR-01): `null` means "never configured" and
-     * resolves to the default set (all accounts visible / spendable balance
-     * set per D-02, D-03). An explicit array — including the empty array —
-     * is taken literally, so "every account deselected" is representable.
-     *
-     * @param  list<int>|null  $visibleAccountIds  IDs of accounts whose series entries appear (null = all, D-02 default)
-     * @param  list<int>|null  $balanceAccountIds  IDs of accounts summed for the balance line (null = spendable default, D-03)
+     * @param  list<int>|null  $visibleAccountIds  IDs of accounts whose series entries appear (null = all)
+     * @param  list<int>|null  $balanceAccountIds  IDs of accounts summed for the balance line (null = spendable default)
      * @return list<CalendarDayDto>
      */
     public function forMonth(
@@ -109,31 +59,27 @@ final readonly class CalendarQuery
         ?array $visibleAccountIds = null,
         ?array $balanceAccountIds = null,
     ): array {
-        // Resolve effective account sets, intersecting against owned accounts (T-06-02).
-        // $effectiveVisible === null means "all accounts visible" (no filter specified).
-        // $effectiveVisible === [] means "no visible accounts" (filter specified but everything dropped).
+        // $effectiveVisible === null means "all accounts visible" (no filter
+        // specified); [] means "no visible accounts" (filter specified but
+        // everything dropped).
         $ownedIds = $this->ownedAccountIds($user);
         $effectiveVisible = $this->resolveVisibleAccountIds($visibleAccountIds, $ownedIds);
         $effectiveBalance = $this->resolveBalanceAccountIds($balanceAccountIds, $ownedIds, $user);
 
-        // Build the display grid: Mon–Sun weeks spanning the month
         $gridDays = $this->buildGridDays($year, $month);
 
-        // Fetch approved series and resolve account IDs (one batch query)
         $allSeries = $this->seriesQuery->allApprovedForUser($user);
         $seriesIds = array_map(static fn ($s): int => $s->seriesId, $allSeries);
         $accountIdForSeries = $seriesIds !== []
             ? $this->seriesQuery->accountIdsForSeriesIds($seriesIds, $user)
             : [];
 
-        // Place entries on grid days
         $now = $this->clock->now();
-        // CarbonImmutable::create() returns CarbonImmutable|null — use parse() on
-        // a formatted date string to guarantee a non-null CarbonImmutable.
+        // CarbonImmutable::create() returns CarbonImmutable|null — parse() on
+        // a formatted date string guarantees a non-null CarbonImmutable.
         $monthStart = CarbonImmutable::parse(sprintf('%04d-%02d-01', $year, $month));
         $monthEnd = $monthStart->endOfMonth();
 
-        // Build entry map: date string => list<CalendarEntryDto>
         $entryMap = $this->buildEntryMap(
             $allSeries,
             $accountIdForSeries,
@@ -143,27 +89,23 @@ final readonly class CalendarQuery
             $user,
         );
 
-        // Build balance map: date string => [sumMinor, isComputing], plus the
-        // FX-converted sum of today's forecast anchors for today's SoD (WR-08)
         ['map' => $balanceMap, 'todayAnchorMinor' => $todayAnchorMinor]
             = $this->buildBalanceMap($effectiveBalance, $user, $year, $month, $monthStart, $monthEnd);
 
-        // Build past-day occurrence set: seriesId => list<string date>
         $occurrenceMap = $this->buildOccurrenceMap($user, $monthStart, $monthEnd);
 
-        // Cadence per series — the paid-match window is cadence-clamped (WR-02)
         $cadenceBySeries = [];
         foreach ($allSeries as $series) {
             $cadenceBySeries[$series->seriesId] = $series->cadence;
         }
 
-        // Assemble CalendarDayDto for each grid day
         $days = [];
-        // SoD chain (WR-08): null until a KNOWN (non-computing) EoD is seen —
-        // a day after a data-less day must report "SoD unknown", not a fake 0.
+        // SoD chain: null until a known (non-computing) EoD is seen — a day
+        // after a data-less day must report "SoD unknown", not a fake 0.
         $prevEod = null;
 
-        // First pass: compute eod map for entire grid (needed for sod chain)
+        // First pass: compute the eod map for the entire grid, needed below
+        // for the sod chain.
         $eodMinorMap = [];
         foreach ($gridDays as $date) {
             $dateStr = $date->toDateString();
@@ -171,14 +113,12 @@ final readonly class CalendarQuery
             $eodMinorMap[$dateStr] = [$sumMinor, $isComputing];
         }
 
-        // Build calendar day DTOs
         $baseCurrency = $user->base_currency;
         foreach ($gridDays as $date) {
             $dateStr = $date->toDateString();
             $isToday = $date->isSameDay($now);
             $isPast = $date->lt($now->startOfDay());
 
-            // Balance data
             [$eodMinor, $isComputing] = $eodMinorMap[$dateStr] ?? [0, true];
 
             // SoD = prior day's EoD when known; today falls back to the
@@ -191,12 +131,10 @@ final readonly class CalendarQuery
 
             $isRisk = ! $isComputing && $eodMinor < 0;
 
-            // Apply past-day paid/missed to entries
             $rawEntries = $entryMap[$dateStr] ?? [];
             $entries = [];
             foreach ($rawEntries as $entry) {
                 if ($isPast) {
-                    // Check if there's an occurrence within the cadence-clamped window (WR-02)
                     $observedDates = $occurrenceMap[$entry->seriesId] ?? [];
                     $windowDays = $this->matchWindowDays($cadenceBySeries[$entry->seriesId] ?? null);
                     $isPaid = $this->hasMatchingOccurrence($date, $observedDates, $windowDays);
@@ -232,7 +170,6 @@ final readonly class CalendarQuery
                 entries: $entries,
             );
 
-            // Only a KNOWN EoD feeds the next day's SoD (WR-08)
             $prevEod = $isComputing ? null : $eodMinor;
         }
 
@@ -244,20 +181,6 @@ final readonly class CalendarQuery
     // -------------------------------------------------------------------------
 
     /**
-     * Build a map of date => list<CalendarEntryDto> for entries falling in the month.
-     *
-     * Gates on the irregular-series rule (Pitfall 4):
-     *   cadence !== 'irregular' || nextExpectedAt !== null
-     *
-     * Account filter: only series whose resolved accountId is in $effectiveVisible.
-     * When $effectiveVisible is null it means "all accounts visible" (D-02 default).
-     * When $effectiveVisible is [] it means no accounts matched the filter → no entries.
-     *
-     * Query budget (WR-01): placement runs first and entirely in memory; all
-     * counterparty/account metadata is then resolved through BATCHED lookups
-     * for the placed series only — at most 5 queries per render, independent
-     * of the number of approved series.
-     *
      * @param  list<RecurringSeriesDto>  $allSeries
      * @param  array<int, int>  $accountIdForSeries
      * @param  list<int>|null  $effectiveVisible  null = all visible; [] = none visible
@@ -271,29 +194,23 @@ final readonly class CalendarQuery
         CarbonImmutable $monthEnd,
         User $user,
     ): array {
-        // First pass: gate + filter the candidate series (in memory).
         /** @var list<array{series: RecurringSeriesDto, accountId: int|null}> $candidates */
         $candidates = [];
         foreach ($allSeries as $series) {
-            // Irregular gate (Pitfall 4): exclude irregular with null nextExpectedAt
             if ($series->cadence === 'irregular' && $series->nextExpectedAt === null) {
                 continue;
             }
 
-            // Resolve account for this series (may be null if no occurrences link it to an account yet)
             $accountId = $accountIdForSeries[$series->seriesId] ?? null;
 
-            // Account visibility filter (D-02).
-            // effectiveVisible === null → "all visible" (D-02 default; no filter specified).
-            // effectiveVisible === []   → "nothing passed the filter" (explicit filter, all dropped).
-            // effectiveVisible is non-empty list → only those account IDs are visible.
+            // effectiveVisible === null means "all visible" (no filter
+            // specified, include even unlinked series); [] means "nothing
+            // passed the filter" (explicit filter, all dropped).
             if ($effectiveVisible !== null) {
-                // Caller specified an explicit filter. Empty means nothing passes.
                 if ($accountId === null || ! in_array($accountId, $effectiveVisible, true)) {
                     continue;
                 }
             }
-            // effectiveVisible === null → all accounts on; include even unlinked series
 
             $candidates[] = ['series' => $series, 'accountId' => $accountId];
         }
@@ -302,13 +219,11 @@ final readonly class CalendarQuery
             return [];
         }
 
-        // Series-inception floors (WR-03): the backward projection must not
-        // fabricate expected occurrences from before the series existed.
+        // The backward projection must not fabricate expected occurrences
+        // from before the series existed.
         $candidateIds = array_map(static fn (array $c): int => $c['series']->seriesId, $candidates);
         $startFloors = $this->seriesStartFloors($candidateIds, $user);
 
-        // Placement (zero further queries). Series that place no dates in the
-        // display month cost nothing further (WR-01).
         /** @var list<array{series: RecurringSeriesDto, accountId: int|null, dates: list<CarbonImmutable>}> $placed */
         $placed = [];
         foreach ($candidates as $candidate) {
@@ -332,16 +247,16 @@ final readonly class CalendarQuery
 
         $placedSeriesIds = array_map(static fn (array $p): int => $p['series']->seriesId, $placed);
 
-        // Batched metadata resolution (WR-01).
-        // Primary counterparty path: occurrences→transactions→counterparty_id.
+        // Primary path: occurrences -> transactions -> counterparty_id.
+        // Series unresolved here fall back to the cluster-key path below.
         $counterpartyIdBySeries = $this->seriesQuery->counterpartyIdsForSeriesIds($placedSeriesIds, $user);
         $identityByCounterpartyId = $this->counterpartyQuery->identitiesForIds(
             $user,
             array_values(array_unique(array_values($counterpartyIdBySeries))),
         );
 
-        // Fallback path (D-16): series with no occurrence-linked counterparty
-        // may still resolve via cluster_counterparty_key == counterparties.slug.
+        // Fallback path: series with no occurrence-linked counterparty may
+        // still resolve via cluster_counterparty_key == counterparties.slug.
         $unresolvedSeriesIds = array_values(array_filter(
             $placedSeriesIds,
             static fn (int $id): bool => ! isset($counterpartyIdBySeries[$id]),
@@ -353,7 +268,6 @@ final readonly class CalendarQuery
             ? $this->counterpartyQuery->idsBySlugs($user, array_values(array_unique(array_values($clusterKeyBySeries))))
             : [];
 
-        // Account display names: one query for the whole owned roster.
         $accountNames = $this->accountNamesForUser($user);
 
         $entryMap = [];
@@ -366,8 +280,6 @@ final readonly class CalendarQuery
             if ($counterpartyId !== null) {
                 $counterpartySlug = $identityByCounterpartyId[$counterpartyId]['slug'] ?? null;
             } else {
-                // Fallback: cluster_counterparty_key as slug, verified against
-                // the user's own counterparties (T-06-02).
                 $clusterKey = $clusterKeyBySeries[$series->seriesId] ?? null;
                 if ($clusterKey !== null && isset($counterpartyIdBySlug[$clusterKey])) {
                     $counterpartyId = $counterpartyIdBySlug[$clusterKey];
@@ -375,7 +287,6 @@ final readonly class CalendarQuery
                 }
             }
 
-            // Account name (empty string when series has no account link)
             $accountName = $accountId !== null ? ($accountNames[$accountId] ?? '') : '';
 
             foreach ($placement['dates'] as $date) {
@@ -402,21 +313,7 @@ final readonly class CalendarQuery
     }
 
     /**
-     * Determine which dates within [monthStart, monthEnd] a series occupies.
-     *
-     * For irregular series (with non-null nextExpectedAt), the single date is
-     * used directly if it falls within the display window — no stepping.
-     *
-     * For regular cadences (weekly, monthly, quarterly, yearly), occurrences
-     * are computed by index from the nextExpectedAt anchor (WR-04) — no
-     * jitter, point-estimate placement only. All dates falling in the
-     * display month are collected, both before and after the anchor.
-     *
-     * Inception bound (WR-03): no expected occurrence is placed before
-     * $seriesStart (the series' first observed occurrence, or created_at as
-     * a fallback, minus a small slack — see seriesStartFloors()). Without
-     * this floor every history month before the series existed rendered a
-     * phantom "Expected — not found" entry.
+     * @link ../../../../.docs/features/calendar/architecture.md
      *
      * @return list<CarbonImmutable>
      */
@@ -428,16 +325,13 @@ final readonly class CalendarQuery
     ): array {
         $next = $series->nextExpectedAt;
         if ($next === null) {
-            // Already gated before calling this method, but guard defensively.
             return [];
         }
 
-        // Inception bound (WR-03): the whole display month predates the series.
         if ($seriesStart !== null && $monthEnd->lt($seriesStart)) {
             return [];
         }
 
-        // Irregular: place exactly once at nextExpectedAt if it's in the window
         if ($series->cadence === 'irregular') {
             if ($next->gte($monthStart) && $next->lte($monthEnd)) {
                 return [$next->startOfDay()];
@@ -446,16 +340,10 @@ final readonly class CalendarQuery
             return [];
         }
 
-        // For regular cadences, find all occurrences in the month by stepping
-        // BY OCCURRENCE INDEX from the anchor (nextExpectedAt) instead of
-        // chaining no-overflow steps (WR-04). Chained stepping permanently
-        // lost an end-of-month anchor after the first short month
-        // (Jan 31 → Feb 28 → Mar 28 → …) and made the backward-then-forward
-        // walk non-invertible (the same bill landed on different days of the
-        // month depending on which month was being viewed). Index stepping
-        // — anchor->addMonthsNoOverflow(k) for k = …,-1,0,1,… — preserves the
-        // day-31 anchor in months that have it and is symmetric in both
-        // directions.
+        // Occurrences are found by stepping by index from the anchor
+        // (anchor->addMonthsNoOverflow(k) for k = …,-1,0,1,…) rather than
+        // chaining no-overflow steps, which permanently loses an end-of-month
+        // anchor after the first short month and is non-invertible.
         $cadence = $series->cadence;
         if (! in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true)) {
             return [];
@@ -464,9 +352,7 @@ final readonly class CalendarQuery
         $anchor = $next->startOfDay();
 
         // Estimate the first occurrence index that could land in the month,
-        // then start one step earlier as a safety margin. The estimate is
-        // exact in month/year units for monthly+; the weekly day-count
-        // estimate tolerates a ±1-day boundary error via the margin.
+        // then start one step earlier as a safety margin.
         $monthsDelta = ($monthStart->year - $anchor->year) * 12 + ($monthStart->month - $anchor->month);
         $deltaDays = (int) floor(($monthStart->getTimestamp() - $anchor->getTimestamp()) / 86400);
         $k = match ($cadence) {
@@ -480,7 +366,7 @@ final readonly class CalendarQuery
         // estimated start until the first date past monthEnd.
         $results = [];
         $iterations = 0;
-        $maxIterations = 60; // safety cap
+        $maxIterations = 60;
 
         while ($iterations < $maxIterations) {
             $iterations++;
@@ -492,7 +378,6 @@ final readonly class CalendarQuery
             if ($occurrence->lt($monthStart)) {
                 continue;
             }
-            // Inception bound (WR-03): skip dates from before the series existed
             if ($seriesStart !== null && $occurrence->lt($seriesStart)) {
                 continue;
             }
@@ -503,13 +388,6 @@ final readonly class CalendarQuery
     }
 
     /**
-     * Batched inception floor per series (WR-03): the earliest observed
-     * occurrence date, falling back to the series row's created_at when no
-     * occurrences exist yet. A slack of MATCH_WINDOW_DAYS is subtracted so
-     * an entry expected slightly BEFORE its first observed payment (e.g.
-     * expected June 1, first paid June 3) is not dropped along with the
-     * genuine pre-inception phantoms.
-     *
      * @param  list<int>  $seriesIds
      * @return array<int, CarbonImmutable>
      */
@@ -521,7 +399,7 @@ final readonly class CalendarQuery
                     ->where('o.user_id', '=', $user->id);
             })
             ->whereIn('s.id', $seriesIds)
-            ->where('s.user_id', $user->id)  // T-06-02: user-scoped
+            ->where('s.user_id', $user->id)
             ->groupBy('s.id', 's.created_at')
             ->selectRaw('s.id as id, s.created_at as created_at, MIN(o.observed_at) as first_observed')
             ->get();
@@ -538,7 +416,7 @@ final readonly class CalendarQuery
                 $raw = self::toString($row->created_at ?? null);
             }
             if ($raw === '') {
-                continue; // no floor derivable — leave the series unbounded
+                continue;
             }
             $map[$seriesId] = CarbonImmutable::parse($raw)
                 ->startOfDay()
@@ -548,11 +426,8 @@ final readonly class CalendarQuery
         return $map;
     }
 
-    /**
-     * The k-th occurrence of a series counted from its anchor date (WR-04).
-     * Negative k steps backward; every index is computed FROM THE ANCHOR so
-     * short months never permanently shift an end-of-month billing day.
-     */
+    // Negative k steps backward; every index is computed from the anchor so
+    // short months never permanently shift an end-of-month billing day.
     private function occurrenceAt(CarbonImmutable $anchor, string $cadence, int $k): ?CarbonImmutable
     {
         return match ($cadence) {
@@ -569,28 +444,7 @@ final readonly class CalendarQuery
     // -------------------------------------------------------------------------
 
     /**
-     * Build a map of date => [eodMinor, isComputing] for balance-included accounts.
-     *
-     * Fetches each account's 365-day ForecastDto ONCE (Pitfall 2 — no per-day re-fetch).
-     * Sums pointMinor per (date, currency) bucket across accounts, then FX-converts
-     * each currency bucket to the user's base reporting currency before summing
-     * (D-05, CR-02). Minor units are never added across currencies.
-     *
-     * Past days (WR-09, D-07): the balance line uses REAL balances up to
-     * (and excluding) today — cumulative `transactions.amount_minor` sums
-     * across the balance accounts, bucketed per currency and FX-converted
-     * like the projection (mirrors ForecastQuery's
-     * resolveAnchorFromTransactionsSum anchor semantics). Past days never
-     * depend on forecast runs, so they stay known even while a projection
-     * is computing.
-     *
-     * Internal-transfer net-neutrality (D-04): because per-account forecasts already
-     * include both legs of an own-account transfer, the combined sum naturally nets them.
-     * No additional deduction is performed.
-     *
-     * Also returns `todayAnchorMinor` (WR-08): the FX-converted sum of each
-     * account's `todayBalanceMinor` forecast anchor — today's start-of-day
-     * balance. Null when no account contributed or any account is computing.
+     * @link ../../../../.docs/features/calendar/architecture.md
      *
      * @param  list<int>  $effectiveBalance
      * @return array{map: array<string, array{0: int, 1: bool}>, todayAnchorMinor: int|null}
@@ -604,7 +458,6 @@ final readonly class CalendarQuery
         CarbonImmutable $monthEnd,
     ): array {
         if ($effectiveBalance === []) {
-            // No balance accounts — return computing sentinel for all days
             $map = [];
             $cursor = $monthStart;
             while ($cursor->lte($monthEnd)) {
@@ -621,35 +474,33 @@ final readonly class CalendarQuery
         $baseCurrency = $user->base_currency;
         $todayAnchorMinor = null;
 
-        // Fetch each account's forecast ONCE (Pitfall 2 — no per-day re-fetch)
+        // Each account's forecast is fetched once here, not re-fetched per
+        // grid day below.
         foreach ($effectiveBalance as $accountId) {
             $dto = $this->forecastQuery->forUser($accountId, self::FORECAST_HORIZON_DAYS, null, $user);
 
             if ($dto->isComputing) {
                 $isComputingAny = true;
 
-                // Don't accumulate computing account's points (they're empty anyway)
                 continue;
             }
 
-            // Today's SoD anchor (WR-08): FX-converted sum of the as-of balances
             $anchorConverted = $this->fxService->convertToBase(
                 Money::ofMinor($dto->todayBalanceMinor, $dto->defaultCurrency),
                 $baseCurrency,
             );
             $todayAnchorMinor = ($todayAnchorMinor ?? 0) + $anchorConverted->converted->toMinor();
 
-            // Sum pointMinor per (date, currency) bucket. Each ForecastPointDto
-            // carries its account's currency — buckets keep currencies separate
-            // so a USD account's points are never added raw to EUR points (CR-02).
+            // Buckets keep currencies separate so a USD account's points are
+            // never added raw to EUR points.
             foreach ($dto->points as $point) {
                 $byDateCurrency[$point->date][$point->currency]
                     = ($byDateCurrency[$point->date][$point->currency] ?? 0) + $point->pointMinor;
             }
         }
 
-        // Build map for the dates we have data for, FX-converting each currency
-        // bucket to the user's base reporting currency before summing (D-05).
+        // Build the map for the dates we have data for, FX-converting each
+        // currency bucket to the user's base reporting currency before summing.
         $map = [];
 
         foreach ($byDateCurrency as $dateStr => $byCurrency) {
@@ -661,8 +512,8 @@ final readonly class CalendarQuery
             $map[$dateStr] = [$totalMinor, $isComputingAny];
         }
 
-        // Fill dates with no forecast data (isComputing = true for missing dates when not computing overall)
-        // If any account is computing, propagate to all days
+        // If any account is computing, propagate the sentinel to every day,
+        // including dates with no forecast data yet.
         if ($isComputingAny) {
             $cur = $monthStart;
             while ($cur->lte($monthEnd)) {
@@ -670,17 +521,15 @@ final readonly class CalendarQuery
                 if (! isset($map[$dateStr])) {
                     $map[$dateStr] = [0, true];
                 } else {
-                    // Override with computing flag
                     $map[$dateStr] = [$map[$dateStr][0], true];
                 }
                 $cur = $cur->addDay();
             }
         }
 
-        // Past-day actuals (WR-09, D-07): overwrite every grid day before
-        // today with the real cumulative balance — actuals are derived from
-        // transactions, not forecast runs, so they also override the
-        // computing fill above.
+        // Overwrite every grid day before today with the real cumulative
+        // balance — actuals are derived from transactions, not forecast
+        // runs, so they also override the computing fill above.
         $today = $this->clock->now()->startOfDay();
         $gridStart = $monthStart->startOfWeek(CarbonImmutable::MONDAY);
         $gridEnd = $monthEnd->startOfDay()->endOfWeek(CarbonImmutable::SUNDAY)->startOfDay();
@@ -688,11 +537,10 @@ final readonly class CalendarQuery
         $pastEnd = $gridEnd->lt($yesterday) ? $gridEnd : $yesterday;
 
         if ($pastEnd->gte($gridStart)) {
-            // Cumulative base per currency: everything before the visible grid.
             /** @var array<string, int> $cumByCurrency */
             $cumByCurrency = [];
             $baseRows = $this->db->connection()->table('transactions')
-                ->where('user_id', $user->id)  // T-06-03: user-scoped
+                ->where('user_id', $user->id)
                 ->whereIn('account_id', $effectiveBalance)
                 ->where('posted_at', '<', $gridStart->toDateString())
                 ->groupBy('currency')
@@ -703,11 +551,10 @@ final readonly class CalendarQuery
                 $cumByCurrency[self::toString($row->currency)] = self::toInt($row->sum_minor);
             }
 
-            // Daily per-currency deltas inside the visible grid window.
             /** @var array<string, array<string, int>> $deltaByDateCurrency */
             $deltaByDateCurrency = [];
             $deltaRows = $this->db->connection()->table('transactions')
-                ->where('user_id', $user->id)  // T-06-03: user-scoped
+                ->where('user_id', $user->id)
                 ->whereIn('account_id', $effectiveBalance)
                 ->whereBetween('posted_at', [$gridStart->toDateString(), $pastEnd->toDateString()])
                 ->groupBy('posted_at', 'currency')
@@ -719,10 +566,10 @@ final readonly class CalendarQuery
                     = self::toInt($row->sum_minor);
             }
 
-            // Walk the past grid days, carrying the cumulative balance forward.
-            // convertToBase is a zero-query passthrough for base-currency
-            // buckets (the dominant case); non-base buckets hit the cached-by-
-            // SQLite exchange_rates lookup per (day, currency).
+            // Walk the past grid days, carrying the cumulative balance
+            // forward. convertToBase is a zero-query passthrough for
+            // base-currency buckets; non-base buckets hit the cached
+            // exchange_rates lookup per (day, currency).
             $cursor = $gridStart;
             while ($cursor->lte($pastEnd)) {
                 $dateStr = $cursor->toDateString();
@@ -739,7 +586,8 @@ final readonly class CalendarQuery
             }
         }
 
-        // A partially-computing aggregate has no honest SoD anchor (WR-08)
+        // A partially-computing aggregate has no honest SoD anchor to
+        // report, so todayAnchorMinor is forced null in that case.
         return ['map' => $map, 'todayAnchorMinor' => $isComputingAny ? null : $todayAnchorMinor];
     }
 
@@ -748,11 +596,6 @@ final readonly class CalendarQuery
     // -------------------------------------------------------------------------
 
     /**
-     * Build a map of seriesId => list<string date> for all occurrences in the month.
-     *
-     * Runs ONE month-scoped query against recurring_series_occurrences (T-06-03).
-     * The map is used to determine isPaid/isMissed for past-day entries.
-     *
      * @return array<int, list<string>>
      */
     private function buildOccurrenceMap(
@@ -760,13 +603,13 @@ final readonly class CalendarQuery
         CarbonImmutable $monthStart,
         CarbonImmutable $monthEnd,
     ): array {
-        // Extend the window by ±MATCH_WINDOW_DAYS to catch occurrences just outside the month
-        // that might still match entries near the month boundaries.
+        // Extend the window to catch occurrences just outside the month that
+        // might still match entries near the month boundaries.
         $windowStart = $monthStart->subDays(self::MATCH_WINDOW_DAYS)->toDateString();
         $windowEnd = $monthEnd->addDays(self::MATCH_WINDOW_DAYS)->toDateString();
 
         $rows = $this->db->connection()->table('recurring_series_occurrences')
-            ->where('user_id', $user->id)  // T-06-03: user-scoped
+            ->where('user_id', $user->id)
             ->whereBetween('observed_at', [$windowStart, $windowEnd])
             ->get(['recurring_series_id', 'observed_at']);
 
@@ -777,7 +620,6 @@ final readonly class CalendarQuery
             if ($seriesId === 0) {
                 continue;
             }
-            // Normalise observed_at to a date string
             $observedDate = CarbonImmutable::parse(self::toString($row->observed_at))->toDateString();
             $map[$seriesId][] = $observedDate;
         }
@@ -785,22 +627,14 @@ final readonly class CalendarQuery
         return $map;
     }
 
-    /**
-     * Resolve the paid-match tolerance window for a cadence (WR-02).
-     *
-     * The window is clamped to half the cadence interval so adjacent
-     * expected occurrences can never both match the same observed payment
-     * (the unclamped ±7-day window over a 7-day weekly spacing marked up
-     * to three entries paid from a single occurrence). MATCH_WINDOW_DAYS
-     * stays the cap for monthly and longer cadences, whose spacing
-     * comfortably exceeds twice the cap.
-     */
+    // The window is clamped to half the cadence interval so adjacent
+    // expected occurrences can never both match the same observed payment.
     private function matchWindowDays(?string $cadence): int
     {
         $cadenceDays = match ($cadence) {
             'daily' => 1,
             'weekly' => 7,
-            default => null, // monthly+ (and irregular): spacing exceeds 2× the cap
+            default => null,
         };
 
         if ($cadenceDays === null) {
@@ -811,9 +645,6 @@ final readonly class CalendarQuery
     }
 
     /**
-     * Return true if any observed date in $observedDates falls within
-     * ±$windowDays of the expected $date.
-     *
      * @param  list<string>  $observedDates
      */
     private function hasMatchingOccurrence(CarbonImmutable $date, array $observedDates, int $windowDays): bool
@@ -837,12 +668,6 @@ final readonly class CalendarQuery
     // -------------------------------------------------------------------------
 
     /**
-     * Resolve all account IDs owned by the user.
-     *
-     * Used to intersect caller-supplied arrays (T-06-02), and by
-     * CalendarPage::mount() to materialize the D-02 "entries all ON"
-     * default into an explicit account-id list (CR-01).
-     *
      * @return list<int>
      */
     public function ownedAccountIds(User $user): array
@@ -860,17 +685,7 @@ final readonly class CalendarQuery
     }
 
     /**
-     * Resolve the effective set of account IDs for entry visibility.
-     *
-     * Returns null when all accounts are visible (null input = D-02 default: ALL ON).
-     * Returns list<int> (possibly empty) when caller specified an explicit filter.
-     * An empty return means the filter matched nothing — no entries should appear.
-     *
-     * Null vs [] distinction (CR-01):
-     *   - null  → "never configured / all accounts on" — include even series
-     *             not linked to an account yet
-     *   - []    → explicit deselect-all (or nothing passed the filter) —
-     *             no entries, not even unlinked series
+     * @link ../../../../.docs/features/calendar/architecture.md
      *
      * @param  list<int>|null  $callerIds
      * @param  list<int>  $ownedIds
@@ -879,20 +694,14 @@ final readonly class CalendarQuery
     private function resolveVisibleAccountIds(?array $callerIds, array $ownedIds): ?array
     {
         if ($callerIds === null) {
-            // Never configured = all accounts ON (D-02 default) — signal "all visible" with null
             return null;
         }
 
-        // Intersect against owned IDs (T-06-02: drop any id the user does not own)
         return array_values(array_intersect($callerIds, $ownedIds));
     }
 
     /**
-     * Resolve the effective set of account IDs for balance aggregation.
-     *
-     * Null input = spendable default (D-03): accounts with kind in SPENDABLE_KINDS.
-     * Array input — including the explicit empty array (deselect-all, CR-01) —
-     * is intersected with owned accounts (T-06-02) and taken literally.
+     * @link ../../../../.docs/features/calendar/architecture.md
      *
      * @param  list<int>|null  $callerIds
      * @param  list<int>  $ownedIds
@@ -901,23 +710,14 @@ final readonly class CalendarQuery
     private function resolveBalanceAccountIds(?array $callerIds, array $ownedIds, User $user): array
     {
         if ($callerIds === null) {
-            // Never configured = spendable-kind default (D-03)
             return $this->spendableAccountIds($user);
         }
 
-        // Intersect against owned IDs (T-06-02: drop any id the user does not own)
         return array_values(array_intersect($callerIds, $ownedIds));
     }
 
     /**
-     * Return IDs of accounts with kinds in the SPENDABLE_KINDS constant (D-03).
-     *
-     * This is the default balance set: checking + savings + cash + PayPal ON;
-     * ICS credit-card family OFF (their liability shows up via the funding-chain
-     * settlement leg in the ASN account).
-     *
-     * Public so CalendarPage::mount() can materialize the D-03 default into
-     * an explicit account-id list for the Accounts popover (CR-01).
+     * @link ../../../../.docs/features/calendar/architecture.md
      *
      * @return list<int>
      */
@@ -941,23 +741,16 @@ final readonly class CalendarQuery
     // -------------------------------------------------------------------------
 
     /**
-     * Build the Mon–Sun grid for the given year + month.
-     *
-     * Starts on the Monday of the week containing the 1st of the month.
-     * Ends on the Sunday of the week containing the last day of the month.
-     *
      * @return list<CarbonImmutable>
      */
     private function buildGridDays(int $year, int $month): array
     {
-        // CarbonImmutable::create() returns CarbonImmutable|null — parse a formatted
-        // string to guarantee a non-null CarbonImmutable.
+        // CarbonImmutable::create() returns CarbonImmutable|null — parse a
+        // formatted string to guarantee a non-null CarbonImmutable.
         $firstOfMonth = CarbonImmutable::parse(sprintf('%04d-%02d-01', $year, $month))->startOfDay();
         $lastOfMonth = $firstOfMonth->endOfMonth()->startOfDay();
 
-        // Start of grid: Monday on or before the 1st
         $gridStart = $firstOfMonth->startOfWeek(CarbonImmutable::MONDAY);
-        // End of grid: Sunday on or after the last day
         $gridEnd = $lastOfMonth->endOfWeek(CarbonImmutable::SUNDAY);
 
         $days = [];
@@ -975,9 +768,6 @@ final readonly class CalendarQuery
     // -------------------------------------------------------------------------
 
     /**
-     * Resolve the display names for ALL accounts owned by the user in one
-     * query (WR-01). Map: account id => name.
-     *
      * @return array<int, string>
      */
     private function accountNamesForUser(User $user): array
@@ -996,13 +786,6 @@ final readonly class CalendarQuery
     }
 
     /**
-     * Batched lookup of `cluster_counterparty_key` for the given series ids
-     * (WR-01). Series with no key are absent from the result map.
-     *
-     * This feeds the fallback counterparty resolution path (D-16): when a
-     * series has no linked occurrences yet, the cluster_counterparty_key may
-     * still identify the counterparty by matching a counterparty slug.
-     *
      * @param  list<int>  $seriesIds
      * @return array<int, string>
      */
@@ -1010,7 +793,7 @@ final readonly class CalendarQuery
     {
         $rows = $this->db->connection()->table('recurring_series')
             ->whereIn('id', $seriesIds)
-            ->where('user_id', $user->id)  // T-06-02: user-scoped
+            ->where('user_id', $user->id)
             ->get(['id', 'cluster_counterparty_key']);
 
         $map = [];

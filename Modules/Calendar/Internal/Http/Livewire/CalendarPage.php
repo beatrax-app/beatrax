@@ -17,81 +17,28 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use stdClass;
 
 /**
- * `/calendar` Livewire page — cash-flow calendar surface.
- *
- * Phase 6 Plan 03 adds the full UI contract: month navigation with
- * 12-month forward horizon ceiling (D-14), the Accounts popover with
- * two independent per-account controls (D-02, D-03) that persist to
- * user_preferences, and the day selection that drives the right-rail
- * day panel or the phone bottom sheet (D-10, D-11).
- *
- * Security notes (T-06-01, T-06-02):
- *   - month and year are clamped to valid ranges before use.
- *   - visibleAccountIds and balanceAccountIds are INTERSECTED against
- *     the authenticated user's owned accounts before any CalendarQuery
- *     call. Foreign IDs are silently dropped.
- *   - The 12-month forward ceiling is enforced both on nextMonth() and
- *     at render time so a tampered ?year=&month= cannot exceed the
- *     forecast horizon.
+ * @link ../../../../../.docs/features/calendar/architecture.md
  */
 final class CalendarPage extends Component
 {
-    /**
-     * Display month (1–12). Null = current month (from clock).
-     */
     #[Url(as: 'month', except: null)]
     public ?int $month = null;
 
-    /**
-     * Display year (e.g. 2026). Null = current year (from clock).
-     */
     #[Url(as: 'year', except: null)]
     public ?int $year = null;
 
     /**
-     * Account IDs whose recurring entries appear on the grid.
-     *
-     * Materialized to an EXPLICIT list of owned account IDs in mount()
-     * (CR-01): the D-02 "entries all ON" default becomes the full owned
-     * set, so popover checkboxes always reflect effective behavior and
-     * deselect-all ([]) is representable. Intersected against user-owned
-     * accounts in CalendarQuery (T-06-02).
-     *
      * @var list<int>
      */
     public array $visibleAccountIds = [];
 
     /**
-     * Account IDs whose forecast balances are summed for the balance line.
-     *
-     * Materialized to an EXPLICIT list in mount() (CR-01): the D-03
-     * spendable default becomes the concrete spendable account-id set.
-     * Intersected against user-owned accounts in CalendarQuery (T-06-02).
-     *
      * @var list<int>
      */
     public array $balanceAccountIds = [];
 
-    /**
-     * Currently selected day (Y-m-d) — drives the day panel on desktop
-     * and the bottom sheet on phone (D-10, D-11).
-     */
     public ?string $selectedDay = null;
 
-    /**
-     * Load persisted account preferences from user_preferences on first
-     * page load, then materialize the defaults into EXPLICIT account-id
-     * lists (CR-01):
-     *
-     *   - A null DB column means "never configured" → entries default to
-     *     ALL owned accounts (D-02); balance defaults to the spendable
-     *     set (D-03).
-     *   - A stored array — including the empty array (deselect-all) — is
-     *     taken literally, intersected against owned accounts (T-06-02).
-     *
-     * After mount the component state always holds explicit IDs, so the
-     * popover checkboxes, the toggle actions, and CalendarQuery all agree.
-     */
     public function mount(CurrentUser $currentUser, CalendarQuery $calendarQuery): void
     {
         $user = $currentUser->user();
@@ -107,21 +54,16 @@ final class CalendarPage extends Component
         if ($entriesPref !== null) {
             $this->visibleAccountIds = array_values(array_intersect($entriesPref, $ownedIds));
         } elseif ($this->visibleAccountIds === []) {
-            // Never configured → D-02 default: entries all ON.
             $this->visibleAccountIds = $ownedIds;
         }
 
         if ($balancePref !== null) {
             $this->balanceAccountIds = array_values(array_intersect($balancePref, $ownedIds));
         } elseif ($this->balanceAccountIds === []) {
-            // Never configured → D-03 default: spendable set ON.
             $this->balanceAccountIds = $calendarQuery->spendableAccountIds($user);
         }
     }
 
-    /**
-     * Navigate to the previous month (always allowed — no lower bound).
-     */
     public function prevMonth(Clock $clock): void
     {
         $display = $this->resolveDisplay($clock);
@@ -131,10 +73,6 @@ final class CalendarPage extends Component
         $this->selectedDay = null;
     }
 
-    /**
-     * Navigate to the next month. No-op when the next month would exceed
-     * the 12-month forward forecast horizon (T-06-01, D-14).
-     */
     public function nextMonth(Clock $clock): void
     {
         $display = $this->resolveDisplay($clock);
@@ -149,21 +87,15 @@ final class CalendarPage extends Component
         $this->selectedDay = null;
     }
 
-    /**
-     * Select a day and open the day panel (desktop) or bottom sheet (phone).
-     * Validates that the date is a Y-m-d string within the display month.
-     */
     public function selectDay(string $date, Clock $clock): void
     {
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
             return;
         }
 
-        // The shape regex alone admits impossible dates ("2026-13-01",
-        // "2026-99-99") that make CarbonImmutable::parse() throw an
-        // InvalidFormatException — a 500 from a trivially tampered
-        // wire:click payload (WR-06). Validate the calendar date strictly
-        // before parsing.
+        // The shape regex alone admits impossible dates that would make
+        // CarbonImmutable::parse() throw — validate the calendar date
+        // strictly before parsing.
         [$y, $m, $d] = array_map(intval(...), explode('-', $date));
         if (! checkdate($m, $d, $y)) {
             return;
@@ -183,11 +115,6 @@ final class CalendarPage extends Component
         $this->dispatch('open-sheet', name: 'day-detail');
     }
 
-    /**
-     * Toggle an account's inclusion in the visible-entries set (D-02).
-     * Validates ownership against the user's account roster.
-     * After toggling, call persistAccountPrefs() to save.
-     */
     public function toggleEntriesAccount(int $accountId, DatabaseManager $db, CurrentUser $currentUser): void
     {
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
@@ -204,11 +131,8 @@ final class CalendarPage extends Component
         }
     }
 
-    /**
-     * Toggle an account's inclusion in the balance-calculation set (D-02).
-     * Independent from the entries toggle — the two controls do NOT affect
-     * each other.
-     */
+    // Independent from the entries toggle above — the two controls never
+    // affect each other.
     public function toggleBalanceAccount(int $accountId, DatabaseManager $db, CurrentUser $currentUser): void
     {
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
@@ -225,27 +149,13 @@ final class CalendarPage extends Component
         }
     }
 
-    /**
-     * Persist the current account preference arrays to user_preferences.
-     * Called on popover close so the UI round-trip stays one network call
-     * rather than one per toggle.
-     *
-     * Explicit arrays are stored as-is — INCLUDING the empty array, which
-     * is the legitimate "everything off" state (CR-01). Null in the DB is
-     * reserved for "never configured" (defaults re-resolve at mount).
-     *
-     * Write-side sanitization (WR-07): the arrays are public Livewire
-     * properties the client can set to arbitrary content without going
-     * through the ownership-validated toggle actions. Both arrays are
-     * filtered to ints and intersected against the user's owned accounts
-     * BEFORE persisting, so the DB never stores attacker-shaped payloads
-     * or foreign account ids (defense-in-depth on top of the read-side
-     * intersection in CalendarQuery).
-     */
     public function persistAccountPrefs(CurrentUser $currentUser, DatabaseManager $db): void
     {
         $ownedIds = $this->fetchOwnedAccountIds($db, $currentUser->id());
 
+        // Public Livewire array properties are client-controlled — filter to
+        // ints and intersect against owned accounts before persisting, so
+        // the DB never stores attacker-shaped payloads or foreign ids.
         $this->visibleAccountIds = self::sanitizeAccountIds($this->visibleAccountIds, $ownedIds);
         $this->balanceAccountIds = self::sanitizeAccountIds($this->balanceAccountIds, $ownedIds);
 
@@ -270,8 +180,6 @@ final class CalendarPage extends Component
         $year = $display['year'];
         $month = $display['month'];
 
-        // Build the account roster for the Accounts popover (also needed to
-        // decide the zero-account filter semantics below).
         $accounts = $db->connection()->table('accounts')
             ->where('user_id', $user->id)
             ->orderBy('name')
@@ -289,11 +197,9 @@ final class CalendarPage extends Component
             ];
         }
 
-        // CalendarQuery handles security (T-06-02): intersects account IDs against
-        // user-owned accounts; foreign IDs are silently dropped.
         // A user with zero accounts has nothing to filter on — pass null
-        // ("no filter") so series not yet linked to any account still render
-        // (CR-01: explicit [] otherwise means deselect-all).
+        // ("no filter") so series not yet linked to any account still
+        // render, since an explicit [] would otherwise mean deselect-all.
         $days = $calendarQuery->forMonth(
             $user,
             $year,
@@ -302,7 +208,6 @@ final class CalendarPage extends Component
             $accountRoster === [] ? null : $this->balanceAccountIds,
         );
 
-        // Determine empty state: no entries across any day in the grid
         $hasEntries = false;
         foreach ($days as $day) {
             if ($day->entries !== []) {
@@ -311,7 +216,6 @@ final class CalendarPage extends Component
             }
         }
 
-        // Resolve the day DTO for the selected day (for the day panel)
         $selectedDayDto = null;
         if ($this->selectedDay !== null) {
             foreach ($days as $day) {
@@ -322,7 +226,6 @@ final class CalendarPage extends Component
             }
         }
 
-        // Any day where isComputing is true means balance data is still being assembled.
         $isComputingAny = false;
         foreach ($days as $day) {
             if ($day->isComputing) {
@@ -331,7 +234,6 @@ final class CalendarPage extends Component
             }
         }
 
-        // Ceiling month: today + 12 months (D-14)
         $ceiling = $clock->now()->addMonths(12);
         $atCeiling = ($year > $ceiling->year)
             || ($year === $ceiling->year && $month >= $ceiling->month);
@@ -358,17 +260,6 @@ final class CalendarPage extends Component
     // -------------------------------------------------------------------------
 
     /**
-     * Resolve the effective display year + month from the #[Url] props,
-     * clamping to valid ranges. Called by both render() and action methods
-     * so the clamping logic lives in one place.
-     *
-     * Also clamps to the 12-month forward forecast ceiling (T-06-01, D-14,
-     * WR-05) so a tampered ?year=&month= URL cannot render a month beyond
-     * the forecast horizon — the same invariant nextMonth() enforces.
-     *
-     * "Now" comes from the injected Clock contract (WR-11) so the page and
-     * CalendarQuery can never disagree about the current moment.
-     *
      * @return array{year: int, month: int}
      */
     private function resolveDisplay(Clock $clock): array
@@ -381,7 +272,9 @@ final class CalendarPage extends Component
             ? $this->month
             : $now->month;
 
-        // 12-month forward ceiling (D-14, WR-05)
+        // Also clamps to the 12-month forward ceiling so a tampered
+        // ?year=&month= URL cannot render a month beyond the forecast
+        // horizon — the same invariant nextMonth() enforces.
         $ceiling = $now->addMonths(12);
         if ($year > $ceiling->year || ($year === $ceiling->year && $month > $ceiling->month)) {
             $year = $ceiling->year;
@@ -391,10 +284,6 @@ final class CalendarPage extends Component
         return ['year' => $year, 'month' => $month];
     }
 
-    /**
-     * True when the given year+month is at or beyond the 12-month forward
-     * forecast ceiling (D-14).
-     */
     private function exceedsCeiling(int $year, int $month, Clock $clock): bool
     {
         $ceiling = $clock->now()->addMonths(12);
@@ -404,8 +293,6 @@ final class CalendarPage extends Component
     }
 
     /**
-     * Fetch the list of account IDs owned by this user (for ownership validation).
-     *
      * @return list<int>
      */
     private function fetchOwnedAccountIds(DatabaseManager $db, int $userId): array
@@ -427,12 +314,10 @@ final class CalendarPage extends Component
         return $ids;
     }
 
+    // Typed array<array-key, mixed> deliberately: public Livewire array
+    // properties are client-controlled and their docblock list<int> shape
+    // cannot be trusted at this boundary.
     /**
-     * Drop everything that is not an int referring to an account the user
-     * owns (WR-07). Typed `array<array-key, mixed>` deliberately: public
-     * Livewire array properties are client-controlled and their docblock
-     * list<int> shape cannot be trusted at this boundary.
-     *
      * @param  array<array-key, mixed>  $ids
      * @param  list<int>  $ownedIds
      * @return list<int>
@@ -449,12 +334,9 @@ final class CalendarPage extends Component
         return $clean;
     }
 
+    // Preserves the null-vs-array distinction: null means "never
+    // configured"; an array — even empty — is an explicit user choice.
     /**
-     * Normalize a UserPreference array cast value into a list of ints,
-     * preserving the null-vs-array distinction (CR-01): null means "never
-     * configured"; an array — even empty — is an explicit user choice.
-     * Non-int members (legacy/corrupt JSON) are dropped.
-     *
      * @return list<int>|null
      */
     private static function toIntListOrNull(mixed $value): ?array
