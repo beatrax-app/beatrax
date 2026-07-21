@@ -10,13 +10,10 @@ use InvalidArgumentException;
 use Modules\Ledger\Public\Exceptions\MoneyColumnMissingException;
 use Modules\Ledger\Public\ValueObjects\Money;
 
+// Reads/writes a paired (minor, currency) column tuple as a Money
+// value object; pass column names as cast arguments to point at a
+// different pair than the default amount_minor/currency.
 /**
- * Eloquent cast that bridges a paired `(minor, currency)` column tuple to a
- * Money value object. Reads two columns out of `$attributes`, writes two
- * columns back. The default tuple maps the native amount; pass column names
- * as cast arguments (`MoneyMinorCast::class . ':settled_amount_minor,settled_currency'`)
- * to point the cast at a different pair.
- *
  * @implements CastsAttributes<Money, Money>
  */
 final class MoneyMinorCast implements CastsAttributes

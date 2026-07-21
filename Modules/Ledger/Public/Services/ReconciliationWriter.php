@@ -13,20 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Events\TransactionMutated;
 
 /**
- * The terminal, history-protecting write path for D-08 account reconciliation
- * (Req SC-2). Mirrors `EnvelopeWriter`'s shape: one DB transaction per
- * operation, events dispatched only AFTER commit (WR-06), every
- * client-supplied id re-validated as user-owned before any write (IDOR).
- *
- * `completeReconcile()` bulk-transitions an account's `cleared` transactions
- * up to (and including) the statement date to `reconciled` — the confirming
- * action of the reconcile flow (13.3-06 is a thin caller). `unreconcile()` is
- * the escape hatch that reverts a single row back to `cleared`.
- *
- * CRDT-correctness (SC-3): a bulk status transition is NEVER represented as a
- * single synthetic sync event. Every transitioned row gets its own
- * `TransactionMutated('edit', ['status' => 'reconciled'])`, dispatched in a
- * loop after the transaction commits (RESEARCH.md Anti-Patterns).
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class ReconciliationWriter
 {
@@ -37,15 +24,11 @@ final class ReconciliationWriter
     ) {}
 
     /**
-     * Transition every `cleared` transaction for `$accountId` posted on or
-     * before `$statementDate` to `reconciled`, scoped to `$user`. `uncleared`
-     * rows and rows posted after the statement date are left untouched.
-     *
      * @return int the number of rows actually transitioned to `reconciled`
-     *             (WR-04) — 0 when nothing fell in the statement-date window,
-     *             so callers can report the truthful outcome.
+     *             — 0 when nothing fell in the statement-date window, so
+     *             callers can report the truthful outcome.
      *
-     * @throws InvalidArgumentException when `$accountId` is not owned by `$user` (IDOR).
+     * @throws InvalidArgumentException when `$accountId` is not owned by `$user`.
      */
     public function completeReconcile(User $user, int $accountId, CarbonImmutable $statementDate): int
     {
@@ -55,27 +38,10 @@ final class ReconciliationWriter
         $statementDateString = $statementDate->toDateString();
         $reconciledAt = $this->clock->now();
 
-        // WR-02: capture the transitioned id set as an explicit SELECT taken
-        // BEFORE the UPDATE, inside the same DB transaction — never re-select
-        // by matching `updated_at = $reconciledAt` afterwards. Two
-        // completeReconcile() calls landing in the same wall-clock second
-        // (or sharing a frozen Clock) stamp the same `updated_at` value, so a
-        // post-update re-select on that timestamp cannot distinguish rows
-        // THIS call transitioned from rows a prior call already locked —
-        // that produced an inflated "N rows locked" count (WR-04) and
-        // duplicate `TransactionMutated('status' => 'reconciled')` dispatches
-        // for already-reconciled rows. Capturing the id set up front and
-        // driving both the UPDATE (via `whereIn`) and the dispatch loop from
-        // that exact list makes the transitioned set unambiguous regardless
-        // of timestamp collisions. The UPDATE re-asserts `status = 'cleared'`
-        // because a deferred SQLite transaction takes its write lock at the
-        // UPDATE, not the SELECT — a concurrent writer could flip a candidate
-        // between the two. If that happens the affected count disagrees with
-        // the candidate list, and the transitioned set is re-derived from the
-        // candidates the UPDATE actually stamped (safe to match on
-        // `updated_at = $reconciledAt` here: the whereIn confines it to rows
-        // that were `cleared` at SELECT time, so no prior reconcile's rows
-        // can be swept in).
+        // Captures the transitioned id set as an explicit SELECT before
+        // the UPDATE, inside the same transaction — see the linked
+        // architecture page for why this avoids inflated counts and
+        // duplicate dispatches under concurrent calls.
         $transactionIds = [];
 
         $connection->transaction(function () use ($connection, $accountId, $user, $statementDateString, $reconciledAt, &$transactionIds): void {
@@ -116,8 +82,8 @@ final class ReconciliationWriter
                 ->all();
         });
 
-        // Events dispatched AFTER commit (D-08) — one per actually-transitioned
-        // row (SC-3: never a single synthetic bulk event).
+        // Dispatched after commit — one per actually-transitioned row,
+        // never a single synthetic bulk event.
         foreach ($transactionIds as $transactionId) {
             $this->events->dispatch(new TransactionMutated(
                 transactionId: $transactionId,
@@ -130,12 +96,8 @@ final class ReconciliationWriter
         return count($transactionIds);
     }
 
-    /**
-     * Revert a single `reconciled` transaction back to `cleared`, scoped by
-     * `user_id`. A foreign or missing transaction id, or one that is not
-     * currently `reconciled`, is a silent no-op (mirrors `PotWriter::archive`'s
-     * cross-user handling).
-     */
+    // A foreign or missing transaction id, or one not currently
+    // reconciled, is a silent no-op.
     public function unreconcile(User $user, int $transactionId): void
     {
         $connection = $this->db->connection();
@@ -149,13 +111,9 @@ final class ReconciliationWriter
             return;
         }
 
-        // The `first()` above is a pre-read, not a lock — a row could flip
-        // away from `reconciled` between that read and the UPDATE below
-        // (TOCTOU). Re-asserting `status = 'reconciled'` on the UPDATE
-        // itself (not just the pre-read) closes that window: if the row no
-        // longer qualifies by the time the UPDATE runs, it matches zero
-        // rows, and the event dispatch below is gated on that affected-row
-        // count so a lost race never fires a spurious `cleared` event.
+        // The first() above is a pre-read, not a lock (TOCTOU) — see the
+        // linked architecture page for why the UPDATE re-asserts
+        // status = 'reconciled' and the dispatch below is affected-count-gated.
         $affected = 0;
 
         $connection->transaction(function () use ($connection, $transactionId, $user, &$affected): void {
@@ -182,9 +140,6 @@ final class ReconciliationWriter
     }
 
     /**
-     * Re-validate that `$accountId` belongs to `$user` (T-13.3-10 IDOR guard)
-     * — never trust a caller-supplied accountId without re-checking ownership.
-     *
      * @throws InvalidArgumentException
      */
     private function assertOwnedAccount(User $user, int $accountId): void

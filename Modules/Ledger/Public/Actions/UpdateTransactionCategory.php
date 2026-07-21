@@ -10,26 +10,12 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 
+// Defence in depth: the category — when not null — must either belong
+// to the user or be a global default-tree row. Without this, the FK
+// alone would accept any categories.id from another user, since the FK
+// target is the table, not the row's owner.
 /**
- * Mutates `transactions.category_id` for a transaction owned by the given
- * user. Exposed as a Public contract so the Categorization module can drive
- * category assignment without reaching into the Ledger model directly.
- *
- * Defence in depth: the transaction is filtered by `(id, user_id)` AND the
- * category — when not null — must either belong to the user or be a global
- * default-tree row (`categories.user_id IS NULL`). Without the second
- * check, the FK alone would accept any `categories.id` from another user
- * because the FK target is the table, not the row's owner. A foreign
- * category id would render as "uncategorized" in the picker (the Category
- * global scope hides it) but the raw column would still hold a
- * cross-tenant reference visible to any consumer that reads it directly.
- *
- * D-08 reconciled lock: this is the single writer behind every category-edit
- * entry point (AssignCategory, InlineCategoryPicker, TransactionDetail's
- * reclassifyCategory), so the warn-first "un-reconcile first" guard lives
- * here rather than being duplicated per caller — a reconciled row's category
- * can never change regardless of which surface drives the write. Mirrors
- * the same status check TransactionDetail's guarded mutators use (WR-01).
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class UpdateTransactionCategory implements UpdatesTransactionCategory
 {

@@ -9,19 +9,10 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\Period;
 
-/**
- * Derives the user's current period window from `user.period_start_day`.
- *
- * Period algorithm:
- *
- *   start = the most recent occurrence of `period_start_day` on or before
- *           the instant in question.
- *   endExclusive = start + 1 month (using subMonthNoOverflow / addMonthNoOverflow
- *                  so February + start_day=28 does not roll into March).
- *
- * `period_start_day` is clamped into 1..28 — values above 28 are unsafe
- * because not every month has a day 29, 30 or 31.
- */
+// start = the most recent occurrence of period_start_day on or before
+// the instant in question; endExclusive = start + 1 month via the
+// NoOverflow variants so Feb + start_day=28 never rolls into March.
+// period_start_day is clamped into 1..28 (not every month has day 29-31).
 final class PeriodQuery
 {
     public function __construct(

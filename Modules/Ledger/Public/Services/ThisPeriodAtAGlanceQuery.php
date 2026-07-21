@@ -20,57 +20,20 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 /**
- * The dashboard's data composer. Builds a single `DashboardSummary` payload
- * for the "this period at a glance" home view:
- *
- *   inflow / outflow / net   ← integer SUM over the period window, scoped
- *                              to one display currency
- *   topCategories            ← delegated to TopCategoriesByPeriodQuery
- *   recentTransactions       ← delegated to TransactionListQuery::recent
- *   uncategorizedCount       ← lifetime count (drives the top-nav badge)
- *   isFirstRun               ← user has zero transactions across all time
- *
- * The first-run flag drives the redirect: the route handler sends users
- * straight to `/imports/new` until they have at least one transaction.
- *
- * Money totals aggregate `settled_amount_minor` filtered by
- * `settled_currency = $displayCurrency`. Multi-currency users see a
- * single-currency total rather than a silently summed mix; non-display
- * currencies are deferred to a future per-currency breakdown panel. The
- * `recentTransactions` panel applies the same `settled_currency` filter
- * so every panel on the dashboard agrees on the currency in view.
- *
- * Money is composed only at the DTO boundary (`Money::ofMinor`) — the SQL
- * layer is integer-pure to keep the dashboard query under the 50ms budget
- * on 1k rows. The raw query builder (`DatabaseManager::table()`) is used
- * directly rather than the Eloquent Builder because the project applies
- * `phpstan-strict-rules`' `staticMethod.dynamicCall` rule which forbids
- * calls to `Builder::count()` / `Builder::orderByDesc()` / ... .
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class ThisPeriodAtAGlanceQuery
 {
     public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
 
-    /**
-     * Threshold (in seconds) beyond which an inbox is considered "stale"
-     * on the dashboard tile — a successfully-scanned inbox that hasn't
-     * been touched in over 24 hours surfaces an amber dot. Mirrors the
-     * UI-SPEC threshold so tile colouring is consistent across renders.
-     */
+    // A successfully-scanned inbox untouched for over 24h surfaces an
+    // amber dot on the dashboard tile. Extra inboxes beyond
+    // TILE_LINE_LIMIT collapse into a "+N more" footer line, and
+    // EMAIL_LOCAL_PART_MAX keeps per-line copy compact for that layout.
     private const STALE_THRESHOLD_SECONDS = 86400;
 
-    /**
-     * Maximum number of inbox lines surfaced inside the dashboard's
-     * Email-scan-health tile. Extra inboxes collapse into the
-     * "+{overflow} more" footer line.
-     */
     private const TILE_LINE_LIMIT = 3;
 
-    /**
-     * Email local-part truncation length used when multiple inboxes
-     * share a provider — keeps the per-line copy compact for the
-     * three-line tile layout.
-     */
     private const EMAIL_LOCAL_PART_MAX = 12;
 
     public function __construct(
@@ -102,19 +65,10 @@ final class ThisPeriodAtAGlanceQuery
             );
         }
 
-        // Inflow / outflow rollups filter by `transactions.type`, NOT by
-        // amount sign — the subtractive income rule. A `transfer_in`
-        // row carries a positive amount but is an internal move between
-        // own accounts and MUST NOT inflate the income tile. Symmetric
-        // on the expense side: `transfer_out` carries a negative amount
-        // but stays out of the expense tile. Refunds, fees, and
-        // adjustments are likewise excluded — only the two canonical
-        // "money truly flowing in / out" types feed the tiles.
-        //
-        // The income half is delegated to incomeForPeriod() — the one
-        // canonical "subtractive income, transfers excluded" definition
-        // (Phase 13.2 D-12 / Pitfall 3) — so this method no longer carries
-        // its own copy of the `type = 'income'` CASE-WHEN.
+        // Inflow/outflow rollups filter by transactions.type, never by
+        // amount sign (the subtractive income rule — see the linked
+        // architecture page). The income half delegates to
+        // incomeForPeriod(), the one canonical definition of this rule.
         $inflowMinor = $this->incomeForPeriod($user, $period, $displayCurrency);
 
         $row = $connection
@@ -138,9 +92,8 @@ final class ThisPeriodAtAGlanceQuery
             ->whereNull('category_id')
             ->count();
 
-        // Pass $displayCurrency through so the "Recent transactions" panel
-        // stays consistent with the currency-scoped tiles and Top Categories
-        // panel — a EUR view never surfaces USD/JPY rows in the recent list.
+        // Keeps the "Recent transactions" panel consistent with the
+        // currency-scoped tiles — a EUR view never surfaces USD/JPY rows.
         $recent = $this->listQuery->recent($user, daysBack: 90, limit: 10, currency: $displayCurrency);
 
         return new DashboardSummary(
@@ -155,22 +108,9 @@ final class ThisPeriodAtAGlanceQuery
         );
     }
 
-    /**
-     * The ONE canonical "subtractive income" sum for a (user, period,
-     * currency): `SUM(settled_amount_minor)` over rows whose `type =
-     * 'income'`, scoped to the period window and settled currency. A
-     * `transfer_in` row (positive amount, but an internal move between own
-     * accounts) contributes 0 — it is never `type = 'income'`. A period with
-     * no income rows returns 0 (Laravel's query builder `sum()` returns 0,
-     * never null, when no rows match).
-     *
-     * Extracted from `for()`'s inline CASE-WHEN (Phase 13.2 D-12 / Pitfall 3)
-     * so exactly one definition of "income, transfers excluded" exists in
-     * the codebase — `for()` calls this method internally, and
-     * `CarryoverQuery` (Modules\Budgets) reuses it as its income source. Do
-     * NOT add a second `WHERE type = 'income'` anywhere else; extend this
-     * method if the rule ever needs to change.
-     */
+    // The one canonical "subtractive income" sum. Do not add a second
+    // WHERE type = 'income' anywhere else — extend this method if the
+    // rule ever needs to change (see the linked architecture page).
     public function incomeForPeriod(User $user, Period $period, string $currency = self::DEFAULT_DISPLAY_CURRENCY): int
     {
         $value = $this->db->connection()
@@ -186,33 +126,14 @@ final class ThisPeriodAtAGlanceQuery
     }
 
     /**
-     * Original-currency mode for the dashboard KPI tiles. Returns one tile-
-     * row per distinct `settled_currency` present in the period with non-
-     * zero activity (either inflow or outflow). Rows are ordered
-     * alphabetically by ISO currency code so the rendered tile stack is
-     * deterministic across renders. Zero-activity currencies — those whose
-     * inflow and outflow both sum to zero in the period — are omitted by
-     * the HAVING clause so the UI never paints empty rows.
-     *
-     * A period with only EUR-native activity collapses to a single tile-
-     * row that visually matches the EUR-only mode output. Mixed-currency
-     * periods (e.g. EUR + USD) return one tile-row per currency in
-     * alphabetical order — EUR first, USD second.
-     *
-     * Same user-scoping guard as `for()` — every row is filtered by
-     * `user_id` before grouping so the aggregate cannot leak across user
-     * boundaries.
-     *
      * @return list<PerCurrencyTile>
      */
     public function forByCurrency(User $user, Period $period): array
     {
         $connection = $this->db->connection();
 
-        // Per-currency tiles apply the SAME type filter as `for()` so
-        // the original-currency mode never silently double-counts
-        // internal transfers as income / expense in any currency band.
-        // Symmetric contract with the EUR-only rollup above.
+        // Per-currency tiles apply the same type filter as for() so
+        // original-currency mode never double-counts internal transfers.
         $rows = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -244,27 +165,10 @@ final class ThisPeriodAtAGlanceQuery
         })->all());
     }
 
-    /**
-     * Dashboard "Next ICS settlement" tile (D-99 / D-100, CHN-06).
-     *
-     * Returns the most-recent `open` or `partially_settled`
-     * `card_statements` row joined to an `ics_card` account, mapped
-     * to a `CardStatementForecastTile` DTO:
-     *
-     *   - amount   = open_balance_minor (D-100; the open balance IS
-     *                the forecast — no clever cadence inference in
-     *                Phase 5)
-     *   - dueDate  = period_end + 5 calendar days (D-100; constant
-     *                forecast lag; user-configurable lag deferred)
-     *
-     * Returns null when no open / partially_settled statement exists,
-     * which the dashboard Blade reads as "hide the tile entirely"
-     * (D-99 — no "—" placeholder).
-     *
-     * Cross-user safety: the WHERE filters on
-     * `card_statements.user_id = $user->id` BEFORE any account join,
-     * so a forged user_id cannot leak another user's statement.
-     */
+    // Returns null when no open/partially_settled statement exists,
+    // which the Blade reads as "hide the tile entirely". The WHERE
+    // filters on card_statements.user_id before any account join, so a
+    // forged user_id cannot leak another user's statement.
     public function nextIcsSettlement(User $user): ?CardStatementForecastTile
     {
         $row = $this->db->connection()
@@ -298,32 +202,9 @@ final class ThisPeriodAtAGlanceQuery
         );
     }
 
-    /**
-     * Dashboard "Email scan health" tile.
-     *
-     * Returns up to three connected-inbox lines (in created_at order)
-     * plus a tile-level overall status:
-     *
-     *   - 'reauth'  when ANY inbox has status='needs_reauth'
-     *   - 'stale'   when no inbox needs reauth but at least one inbox
-     *               has not been successfully scanned within the last
-     *               24 hours (or has never been scanned)
-     *   - 'healthy' otherwise
-     *
-     * Returns null when zero inboxes are connected — the dashboard
-     * Blade reads this as "hide the tile entirely" so the surface
-     * stays empty until the user connects an email account on
-     * `/inboxes`. The DTO has no "no inboxes" sentinel; absence
-     * becomes "no tile" upstream.
-     *
-     * Cross-user safety: the WHERE filter on `inboxes.user_id` is the
-     * single user-scoping guard. The LEFT JOIN on `inbox_scan_state`
-     * preserves rows whose scan-state has not been inserted yet (a
-     * transient window after the OAuth callback lands but before the
-     * background fetcher stamps the row); such rows render with
-     * `lastScanAt = null` and the dashboard partial copies the
-     * "not scanned yet" variant.
-     */
+    // Returns null when zero inboxes are connected — see the linked
+    // architecture page for the overall-status rule and the
+    // LEFT JOIN's transient-row handling.
     public function emailScanHealth(User $user): ?EmailScanHealthTile
     {
         $rows = $this->db->connection()
@@ -358,8 +239,7 @@ final class ThisPeriodAtAGlanceQuery
             /** @var stdClass $row */
             $rawStatus = self::toString($row->status ?? null);
             // LEFT JOIN miss means the scan-state row has not been
-            // inserted yet — treat as idle so the UI reasoning matches
-            // InboxQuery::makeDto() (Plan 03).
+            // inserted yet — treat as idle to match InboxQuery::makeDto().
             $status = $rawStatus === '' ? 'idle' : $rawStatus;
 
             $lastScanRaw = self::toString($row->last_scan_at ?? null);
@@ -413,23 +293,11 @@ final class ThisPeriodAtAGlanceQuery
         );
     }
 
-    /**
-     * Coerces a raw query-builder scalar into an int. SUM expressions over
-     * an integer column always come back as a numeric string or null in the
-     * SQLite driver, so the guard keeps PHPStan's `cast.int` rule happy
-     * without any data-loss risk.
-     */
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    /**
-     * Coerces a raw query-builder scalar into a string. The grouped column
-     * (`settled_currency`) always returns a string in the SQLite driver,
-     * but the guard keeps PHPStan's strict-rules `cast.string` rule happy
-     * without leaking `mixed` into the Money construction.
-     */
     private static function toString(mixed $value): string
     {
         return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');

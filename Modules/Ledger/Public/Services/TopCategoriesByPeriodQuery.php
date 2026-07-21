@@ -13,29 +13,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 /**
- * Top-N spending categories for a given user + period window.
- *
- * Delegates the aggregation to `SpendByCategoryQuery::forUserAndPeriod()`
- * (Phase 13.1 / Req 4), the shared legs ∪ unsplit-parents read model — a
- * split transaction's legs count individually and its parent row is
- * excluded, so this panel (and, by delegation, the dashboard) never
- * double-counts a split. Money totals stay integer end-to-end; Money is
- * composed at the DTO boundary (no float arithmetic anywhere on the hot
- * path). The aggregation is scoped to a single `settled_currency` so
- * multi-currency users see a single-currency panel rather than a
- * silently-summed mix. The shared service returns an unordered map, so the
- * DESC-by-spend ordering + limit are re-applied here in PHP.
- *
- * The `percentageOfTotal` field is each row's share of the panel's total
- * (not the user's overall outflow). It always sums to ~1.0 for non-empty
- * results, which keeps the dashboard's thin progress bar arithmetic free
- * of edge cases.
- *
- * Uses the raw `DatabaseManager` query builder rather than Eloquent
- * because the project applies `phpstan-strict-rules`'
- * `staticMethod.dynamicCall` rule (which forbids `Builder::count()`,
- * `Builder::whereIn()`, etc.). Category lookups happen on the raw
- * builder and the parent-chain walk uses a single in-memory map.
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class TopCategoriesByPeriodQuery
 {
@@ -53,11 +31,8 @@ final class TopCategoriesByPeriodQuery
      */
     public function for(User $user, Period $period, string $displayCurrency = self::DEFAULT_DISPLAY_CURRENCY, int $limit = 5): array
     {
-        // Delegates to the shared legs ∪ unsplit-parents read model (Req 4 /
-        // D-02) — split transactions count their legs, never the parent row.
-        // The service returns an unordered map, so the DESC-by-spend +
-        // limit ordering the old single query did in SQL is re-applied here
-        // in PHP.
+        // The shared service returns an unordered map, so DESC-by-spend
+        // ordering + limit are re-applied here in PHP.
         $spendByCategoryId = $this->spendByCategory->forUserAndPeriod($user->id, $period, $displayCurrency);
 
         if ($spendByCategoryId === []) {
@@ -96,24 +71,9 @@ final class TopCategoriesByPeriodQuery
         return $result;
     }
 
+    // See the linked architecture page for the visibility predicate and
+    // the $attempted-set optimization this walk relies on.
     /**
-     * Loads the requested categories plus the entire parent chain into a
-     * single id-keyed map so `fullPath()` can resolve the breadcrumb
-     * without per-row queries. SQLite handles small recursive `WHERE id IN`
-     * fan-outs efficiently for the modest category tree expected in v1.
-     *
-     * The visibility predicate (`user_id IS NULL OR user_id = $userId`)
-     * applies to every level of the walk. A `parent_id` that points
-     * cross-tenant (corrupt import, future cross-user share, manual SQL
-     * edit) terminates the chain at the filtered-out parent rather than
-     * leaking the foreign user's category name into the breadcrumb.
-     *
-     * The `$attempted` set tracks ids that have already been queried
-     * (regardless of whether they came back from the database) so the
-     * grandparent of a filtered-out parent is never enqueued. Without
-     * this guard, every visibility miss costs an extra empty SELECT on
-     * `categories` before the loop terminates.
-     *
      * @param  list<int>  $startingIds
      * @return array<int, stdClass>
      */
@@ -154,13 +114,9 @@ final class TopCategoriesByPeriodQuery
         return $known;
     }
 
+    // A visited set + hard depth cap guard against accidental parent
+    // cycles — Eloquent does not enforce acyclicity on categories.
     /**
-     * Walks the parent chain to build the breadcrumb path. A `visited` set
-     * and a hard depth cap guard against accidental parent cycles in the
-     * `categories` table — Eloquent does not enforce acyclicity, so any bad
-     * data (external import, manual edit) would otherwise spin this loop
-     * forever.
-     *
      * @param  array<int, stdClass>  $byId
      */
     private function fullPath(int $categoryId, array $byId): string

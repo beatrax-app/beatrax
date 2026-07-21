@@ -13,29 +13,10 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
-/**
- * Materialises one explicit cross-account transfer pair for the
- * primary demo user, distinct from the monthly chain-flow transfers
- * the DemoTransactionsSeeder already pairs via `pair_transaction_id`.
- *
- * The pair models a one-off "reimburse for shared dinner" event:
- *
- *   - `transfer_out` on demo-1's ASN bank account
- *   - `transfer_in` on demo-1's PayPal wallet
- *
- * Both legs land on the same date with the same minor amount and are
- * linked via `pair_transaction_id` after both rows are written,
- * mirroring the production Layer-1 pair-detection listener. The
- * resulting pair is rendered as a single connected event in the
- * transfer-pair UI element.
- *
- * Idempotency: both legs ride on a dedicated `source_format='demo'`
- * ImportRun whose sha256 is deterministic across runs, so a second
- * seed run finds the same rows via the `(user_id, fingerprint)`
- * UNIQUE on transactions and skips the insertOrIgnore. The pair link
- * is re-applied each run, but `update(['pair_transaction_id' => …])`
- * on an already-linked row is a no-op write.
- */
+// Materialises one explicit "reimburse for shared dinner" transfer
+// pair (transfer_out on demo-1's ASN account, transfer_in on their
+// PayPal wallet), distinct from DemoTransactionsSeeder's monthly
+// chain-flow transfers; idempotent via a dedicated demo ImportRun.
 final class DemoTransferPairsSeeder
 {
     private const PAIR_DAY_OFFSET = 50;
@@ -173,12 +154,8 @@ final class DemoTransferPairsSeeder
         Transaction::query()->insertOrIgnore($attrs);
     }
 
-    /**
-     * Wire `pair_transaction_id` on both legs once both rows are
-     * persisted. Idempotent: the production Layer-1 listener uses the
-     * same identity-key shape and a second invocation on an already-
-     * linked pair is a no-op write.
-     */
+    // Wires pair_transaction_id on both legs once persisted; a second
+    // invocation on an already-linked pair is a no-op write.
     private function linkPair(User $user, CarbonImmutable $pairDate): void
     {
         $out = Transaction::query()

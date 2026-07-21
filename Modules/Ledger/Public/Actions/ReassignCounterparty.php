@@ -10,23 +10,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 
 /**
- * Mutates `transactions.counterparty_id` for a transaction owned by the
- * given user. Exposed as a Public contract (T-13.4-13b — module boundary
- * fix) so both `TransactionDetail` (manual reassignment) and, in Plan 05,
- * the rule engine, can drive counterparty reassignment without either
- * reaching into Ledger internals or writing raw SQL against another
- * module's table.
- *
- * PURE guarded write — mirrors `UpdateTransactionCategory` exactly: no
- * event dispatch, no provenance stamp. The caller owns emission
- * (`TransactionMutated`) and provenance stamping (`FieldProvenanceWriter`).
- *
- * Guards, in order:
- *   - D-08 reconciled lock: `status === 'reconciled'` → 0, no write.
- *   - Target counterparty ownership (T-13.4-17a): the counterparty must
- *     belong to `$user` → 0 on a cross-user or unknown id, silent no-op.
- *   - Write-only-on-change: the current `counterparty_id` already equals
- *     the target → 0, no redundant write / no spurious event upstream.
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class ReassignCounterparty implements ReassignsCounterparty
 {

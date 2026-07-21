@@ -6,12 +6,8 @@ namespace Modules\Ledger\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * Month-over-month spending comparison: the current period's total spend versus
- * the previous period's, plus the categories that moved the most. All amounts
- * are EUR minor units; `totalDeltaMinor` and each `CategoryDelta::deltaMinor`
- * are positive when spend went UP.
- */
+// All amounts are EUR minor units; totalDeltaMinor and each
+// CategoryDelta::deltaMinor are positive when spend went up.
 final class SpendTrend extends Data
 {
     /**

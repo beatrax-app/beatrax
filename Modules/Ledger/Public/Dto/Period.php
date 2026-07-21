@@ -7,10 +7,8 @@ namespace Modules\Ledger\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * A half-open period window [start, endExclusive). The label is the
- * human-readable string the dashboard displays in the period switcher.
- */
+// A half-open period window [start, endExclusive); label is the
+// human-readable string the dashboard displays in the period switcher.
 final class Period extends Data
 {
     public function __construct(

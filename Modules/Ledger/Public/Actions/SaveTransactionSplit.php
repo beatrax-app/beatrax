@@ -22,24 +22,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * The sole mutator of `transaction_splits` (Req 1, 5, 6, 7, 8, 10 / D-04,
- * D-07, D-08, D-09, D-12).
- *
- * `save()`: creates or edits a split. The sum-to-parent Money-VO invariant is
- * re-checked INSIDE the DB write transaction against a freshly re-read
- * parent `settled_amount_minor` (TOCTOU-safe, mirrors
- * `Modules\Pots\Public\Services\PotWriter::fund()`). The existing/incoming
- * leg sets are reconciled with a targeted, PK-PRESERVING UPDATE/DELETE/INSERT
- * diff — never delete-all+reinsert — so surviving legs keep their primary
- * keys and the per-(table, pk, field) LWW sync merge never diverges (D-09,
- * D-12, Req 10, Req 4).
- *
- * `unsplit()`: deletes every leg row and restores a single `category_id` on
- * the parent (Req 8).
- *
- * Every leg's `category_id` is visibility-guarded
- * (`whereNull('user_id')->orWhere('user_id', $user->id)` — copied verbatim
- * from `UpdateTransactionCategory`) before persist (T-13.1-02).
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class SaveTransactionSplit implements SavesTransactionSplit
 {
@@ -58,7 +41,6 @@ final class SaveTransactionSplit implements SavesTransactionSplit
      */
     public function save(User $user, int $transactionId, array $legs): void
     {
-        // 1. Ownership + type gate (pre-check, fail fast, no DB write).
         $parent = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
@@ -69,10 +51,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             throw new InvalidArgumentException('Transaction not found or not owned by user.');
         }
 
-        // D-08 reconciled lock (T-13.3-15, RESEARCH.md Pitfall 4): reuses the
-        // already user-scoped parent load above — no extra query. The
-        // catch(InvalidArgumentException) blocks in TransactionDetail's
-        // saveSplit()/confirmUnsplitAction()/confirmRemoveToOneAction()
+        // Reconciled lock: reuses the already user-scoped parent load
+        // above — no extra query. TransactionDetail's catch blocks
         // convert this into a warn toast, staying warn-first end-to-end.
         if (self::toStr($parent->status) === 'reconciled') {
             throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
@@ -83,8 +63,6 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             throw new InvalidArgumentException("Transaction type '{$parentType}' is not splittable.");
         }
 
-        // 2. Per-leg pre-validation (fail fast, no DB round trip needed for
-        // these checks — cheapest before any write).
         if (count($legs) < 2) {
             throw new InvalidArgumentException('A split requires at least 2 legs.');
         }
@@ -115,8 +93,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         $dispatchAfterCommit = [];
 
         $this->db->connection()->transaction(function () use ($user, $transactionId, $legs, &$dispatchAfterCommit): void {
-            // 3. Re-read the parent's settled amount INSIDE the transaction
-            // (TOCTOU-safe, mirrors PotWriter::fund()).
+            // Re-read the parent's settled amount inside the transaction
+            // — TOCTOU-safe, mirrors PotWriter::fund().
             $freshParent = $this->db->connection()
                 ->table('transactions')
                 ->where('id', $transactionId)
@@ -141,19 +119,10 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 );
             }
 
-            // Reconcile the leg set with a targeted, PK-PRESERVING diff —
-            // NOT delete-all+reinsert (D-09, D-12, Req 10, Req 4).
-            //
-            // Full rows (not just ids) are re-read here so the edit branch
-            // below can compute a genuine per-field dirty diff (T-13.1-09):
-            // per-(table,pk,field) LWW sync merge only converges correctly
-            // under two independent offline edits of the SAME leg if each
-            // device's op-log SET carries ONLY the fields it actually
-            // changed. Re-dispatching every field unconditionally would let
-            // one device's unchanged echo of a field (e.g. an amount it
-            // never touched) silently clobber the other device's real edit
-            // to that same field once HLC-ordered — a whole-row-wins bug
-            // masquerading as field-level LWW.
+            // PK-preserving UPDATE/DELETE/INSERT diff (never delete-all +
+            // reinsert), full rows re-read so the edit branch below can
+            // compute a genuine per-field dirty diff — see the linked
+            // architecture page for why the LWW sync merge requires this.
             /** @var Collection<int, stdClass> $existingRows */
             $existingRows = $this->db->connection()
                 ->table('transaction_splits')
@@ -180,9 +149,9 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 $legId = $leg['id'] ?? null;
 
                 if ($legId !== null && in_array($legId, $existingIds, true)) {
-                    // Matched by id → UPDATE in place, preserving the PK.
-                    // WR-04: canonicalise empty note to NULL on write so
-                    // '' and null are never distinct stored values.
+                    // Matched by id -> UPDATE in place, preserving the PK.
+                    // Canonicalise empty note to NULL on write so '' and
+                    // null are never distinct stored values.
                     $normalizedNote = self::normalizeNote($leg['note']);
                     $fields = [
                         'category_id' => $leg['category_id'],
@@ -191,10 +160,10 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                         'sort_order' => $index,
                     ];
 
-                    // D-07 at-rest encrypt hook (CR-02): the DB row stores
-                    // ciphertext; $fields (plaintext) stays the dirty-diff
-                    // and dispatched-event source of truth so the op-log's
-                    // own encrypt-on-write never double-encrypts.
+                    // The DB row stores ciphertext; $fields (plaintext)
+                    // stays the dirty-diff and dispatched-event source of
+                    // truth so the op-log's own encrypt-on-write never
+                    // double-encrypts.
                     $dbFields = $fields;
                     $dbFields['note'] = $this->encryptNote($normalizedNote, $user->id);
 
@@ -204,13 +173,10 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                         ->where('user_id', $user->id)
                         ->update($dbFields);
 
-                    // Dirty-field diff (T-13.1-09 / D-12): only fields whose
-                    // value actually changed relative to the pre-write row
-                    // are captured. See the comment above existingRows.
-                    // The stored note is ciphertext under an encrypted user
-                    // (CR-02) — decrypt before diffing so the comparison
-                    // runs on plaintext, never on a fresh random-nonce
-                    // ciphertext that would never equal the old one.
+                    // Only fields that actually changed are captured. The
+                    // stored note is ciphertext when encrypted — decrypt
+                    // before diffing so the comparison runs on plaintext,
+                    // never a fresh random-nonce ciphertext.
                     $old = $existingRows->get($legId);
                     $oldFields = $old !== null ? [
                         'category_id' => $old->category_id ?? null,
@@ -236,27 +202,24 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                         );
                     }
                 } else {
-                    // No matching incoming id → INSERT a new row.
                     $fields = [
                         'user_id' => $user->id,
                         'transaction_id' => $transactionId,
                         'category_id' => $leg['category_id'],
                         'settled_amount_minor' => $leg['settled_amount_minor'],
                         'settled_currency' => $currency,
-                        // WR-04: canonicalise empty note to NULL on write.
                         'note' => self::normalizeNote($leg['note']),
                         'sort_order' => $index,
-                        // IN-02: pass pre-formatted datetime strings into the
-                        // op-log dirtyFields rather than CarbonImmutable
-                        // objects — decouples the capture payload from Carbon
-                        // and the op-log serialiser's implicit coercion.
+                        // Pre-formatted datetime strings into the op-log
+                        // dirtyFields rather than CarbonImmutable objects —
+                        // decouples the capture payload from Carbon and
+                        // the op-log serialiser's implicit coercion.
                         'created_at' => $now->toDateTimeString(),
                         'updated_at' => $now->toDateTimeString(),
                     ];
 
-                    // D-07 at-rest encrypt hook (CR-02): $fields (plaintext)
-                    // stays the dispatched-event source of truth; only the DB
-                    // row gets the ciphertext note.
+                    // $fields (plaintext) stays the dispatched-event source
+                    // of truth; only the DB row gets the ciphertext note.
                     $dbFields = $fields;
                     $dbFields['note'] = $this->encryptNote($fields['note'], $user->id);
 
@@ -272,8 +235,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 }
             }
 
-            // Leg present in the existing set but absent from the incoming
-            // set → DELETE (tombstone).
+            // Leg present in the existing set but absent from the
+            // incoming set -> DELETE (tombstone).
             $removedIds = array_diff($existingIds, $incomingIds);
             foreach ($removedIds as $removedId) {
                 $this->db->connection()
@@ -291,8 +254,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             }
         });
 
-        // 4. Dispatch AFTER the transaction commits (WR-06 contract — never
-        // from inside an open DB::transaction() closure).
+        // Dispatch after the transaction commits — never from inside
+        // an open DB::transaction() closure.
         foreach ($dispatchAfterCommit as $event) {
             $this->events->dispatch($event);
         }
@@ -326,8 +289,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 throw new InvalidArgumentException('Transaction not found or not owned by user.');
             }
 
-            // D-08 reconciled lock (T-13.3-15, RESEARCH.md Pitfall 4): reuses
-            // the already user-scoped parent load above — no extra query.
+            // Reconciled lock: reuses the already user-scoped parent
+            // load above — no extra query.
             if (self::toStr($parent->status) === 'reconciled') {
                 throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
             }
@@ -388,35 +351,22 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 
-    /**
-     * Whether a leg field's incoming value differs from its pre-write DB
-     * value (T-13.1-09). $newValue's PHP type (int for category_id /
-     * settled_amount_minor / sort_order, string|null for note) determines
-     * which normalization is applied to the raw DB value before comparing.
-     *
-     * WR-04: string|null fields (note) are canonicalised so `''` and `null`
-     * compare EQUAL — a stored empty string vs an incoming null (either
-     * direction, e.g. from a sync replay of a Set op carrying `''`) must
-     * never be reported as a change, or leg notes ping-pong between `''` and
-     * `null` across devices under LWW.
-     */
+    // $newValue's PHP type determines which normalization applies to
+    // the raw DB value before comparing. string|null fields (note) are
+    // canonicalised so '' and null compare equal, or leg notes would
+    // ping-pong between '' and null across devices under LWW.
     private static function legFieldChanged(mixed $oldValue, mixed $newValue): bool
     {
         if (is_int($newValue)) {
             return self::toInt($oldValue) !== $newValue;
         }
 
-        // note (string|null): compare canonical empty representations.
         $old = $oldValue === null ? null : self::toStr($oldValue);
         $new = $newValue === null ? null : self::toStr($newValue);
 
         return self::normalizeNote($old) !== self::normalizeNote($new);
     }
 
-    /**
-     * Canonicalise a note value to a single empty representation (null): both
-     * `null` and the empty string collapse to `null` (WR-04).
-     */
     private static function normalizeNote(?string $note): ?string
     {
         return ($note === null || $note === '') ? null : $note;

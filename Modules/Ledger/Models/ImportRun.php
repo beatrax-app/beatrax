@@ -8,11 +8,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// The UNIQUE (user_id, sha256) constraint on the table prevents
+// re-importing the same physical file.
 /**
- * One import attempt. Records the source file, its SHA-256, and the row-count
- * outcome (inserted / duplicate / error). The UNIQUE `(user_id, sha256)`
- * constraint on the table prevents re-importing the same physical file.
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $source_format

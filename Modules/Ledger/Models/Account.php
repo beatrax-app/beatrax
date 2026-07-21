@@ -11,9 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Local financial account: ASN bank account, ICS credit card, PayPal wallet,
- * etc. Identified by IBAN where applicable.
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $name

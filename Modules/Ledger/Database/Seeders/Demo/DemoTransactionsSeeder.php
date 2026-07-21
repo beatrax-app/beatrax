@@ -15,68 +15,23 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 /**
- * Builds a deterministic, believable 90-day transaction slate for both
- * demo users. The seeder is the dataset the README screenshots derive
- * from — every merchant name, every amount, and every cadence is
- * chosen so a contributor opening the demo install sees recognisable
- * Dutch retail activity rather than Faker-generated noise.
- *
- * Mechanics:
- *
- *   - One `import_runs` row per (user, account) pair, stamped
- *     `source_format = 'demo'`. The marker is the wipe boundary that
- *     `DemoSeedCommand::resetDemoData()` walks; production user data
- *     is never targeted.
- *   - Per merchant, an explicit cadence and amount table is defined
- *     so the dataset is reproducible bit-for-bit between runs. No
- *     `rand()` / `Faker` — deterministic input produces deterministic
- *     fingerprints, which lets the second `php artisan demo:seed` run
- *     pass the composite UNIQUE index without an OR-IGNORE escape.
- *   - Every row is built as a `CanonicalTransaction` and hashed
- *     through the production `FingerprintComposer` so demo rows are
- *     indistinguishable from imported rows at the fingerprint layer
- *     (the resolver / categorizer / chains modules read the same
- *     shape regardless of origin).
- *   - A handful of PayPal rows are USD-denominated with a realistic
- *     EUR/USD cross rate so the multi-currency surfaces have data to
- *     render.
- *   - Transfer pairs (the monthly ASN→PayPal top-up that funds online
- *     spending) are linked via `pair_transaction_id` after both legs
- *     land, exactly mirroring the production Layer-1 pair detector.
- *   - The dataset covers EVERY value of `Transaction::TYPES` (expense,
- *     income, transfer_out, transfer_in, fee, refund, adjustment) with
- *     at least two rows per type, and EVERY value of `PaymentType` (pin,
- *     online, transfer, direct_debit, cash, fee, refund, unknown) with
- *     at least two rows per chip. The chip strips on /transactions and
- *     /community/mystery-merchants therefore render with full diversity
- *     on a fresh demo install — no chip class is missing data.
+ * @link ../../../../../.docs/features/ledger/architecture.md
  */
 final class DemoTransactionsSeeder
 {
-    /**
-     * Number of consecutive calendar months the dataset spans, ending
-     * with the current month (see run() for the anchoring rationale).
-     * Three months of monthly-cadence rows (salary, rent, the funding-
-     * chain settlements, …) plus the windowed day-offset series produce
-     * the documented ~166-row dataset.
-     */
+    // Consecutive calendar months the dataset spans, ending with the
+    // current month. Three months of monthly-cadence rows plus the
+    // windowed day-offset series produce the documented ~166-row set.
     private const MONTH_SPAN = 3;
 
-    /**
-     * Demo EUR/USD cross-rate used for the USD-denominated PayPal
-     * rows. The number is a plausible mid-2026 mid-market rate — the
-     * point is that the dashboard's currency-mode toggle has
-     * non-trivial data to convert, not that the rate matches a real
-     * forex provider.
-     */
+    // Plausible mid-2026 EUR/USD mid-market rate for the USD-denominated
+    // PayPal rows — the point is that the currency-mode toggle has
+    // non-trivial data to convert, not that it matches a real provider.
     private const EUR_PER_USD = '0.92000000';
 
-    /**
-     * Inclusive upper bound for the day-offset series, set in run() to
-     * the last day of the current calendar month so the row count is
-     * stable on every run date. Shared across the per-account seed
-     * methods within a single run().
-     */
+    // Inclusive upper bound for the day-offset series, set in run() to
+    // the last day of the current calendar month so the row count is
+    // stable on every run date; shared across the per-account methods.
     private CarbonImmutable $windowEnd;
 
     public function __construct(
@@ -89,39 +44,16 @@ final class DemoTransactionsSeeder
      */
     public function run(array $users, array $accounts): int
     {
-        // Anchor the window to the first day of the calendar month
-        // MONTH_SPAN-1 months before today (the dataset spans MONTH_SPAN
-        // consecutive calendar months ending with the current one).
-        //
-        // Two bugs in the previous rolling-window logic dropped rows and
-        // made the total drift with the wall-clock date the seeder ran
-        // on (observed 140–166 against a documented ~166):
-        //
-        //  1. `today->subDays(89)` is a rolling cursor, not a calendar
-        //     boundary, so the oldest month's monthly-cadence rows
-        //     (salary, rent, settlements, …) were clipped whenever their
-        //     day-of-month fell before the cursor.
-        //  2. `subMonths()` overflows on end-of-month run dates (e.g.
-        //     "May 31 − 3 months" lands in March, skipping February),
-        //     which collapsed two monthsBack offsets onto the same
-        //     calendar month and lost the duplicates to insertOrIgnore.
-        //
-        // `subMonthsNoOverflow()->startOfMonth()` fixes both: the window
-        // start is the same calendar-month boundary on every run date,
-        // so the row count is deterministic.
+        // Anchor to the calendar-month boundary MONTH_SPAN-1 months back
+        // (not a rolling today->subDays(89) cursor, which previously
+        // clipped the oldest month's rows) via subMonthsNoOverflow so
+        // end-of-month run dates never collapse two months into one.
         $today = CarbonImmutable::today();
         $windowStart = $today->subMonthsNoOverflow(self::MONTH_SPAN - 1)->startOfMonth();
 
-        // Upper bound for the day-offset series (groceries, transit,
-        // online purchases): the last day of the current calendar month.
-        // Anchoring the bound to a calendar boundary — not the rolling
-        // run date — keeps the row count stable on every run date
-        // (clamping to `today` instead would shrink the current month's
-        // tail on a mid-month run, dropping the total below the
-        // documented band). Seeding the current month in full mirrors the
-        // sibling demo seeders (Recurring/Forecast) which deliberately
-        // seed upcoming-occurrence rows so the "this month at a glance"
-        // surfaces have a complete current month to render.
+        // Upper bound for the day-offset series: the last day of the
+        // current calendar month, so the row count stays stable across
+        // run dates (clamping to `today` would shrink a mid-month run).
         $this->windowEnd = $today->endOfMonth();
 
         $totalInserted = 0;
@@ -182,7 +114,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Monthly rent on the 1st (housing-rent).
         $rentCategory = $this->categoryId('housing-rent');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 1, $monthsBack);
@@ -201,7 +132,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Monthly KPN internet + phone on the 3rd.
         $internetCategory = $this->categoryId('housing-internet');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 3, $monthsBack);
@@ -220,7 +150,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Monthly Ziggo TV/internet on the 5th.
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 5, $monthsBack);
             if ($date->lessThan($windowStart)) {
@@ -238,7 +167,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Monthly Sport City gym membership on the 1st.
         $membershipsCategory = $this->categoryId('subscriptions-memberships');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 1, $monthsBack);
@@ -257,7 +185,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Health insurance on the 28th (Zilveren Kruis).
         $healthInsuranceCategory = $this->categoryId('insurance-health');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 28, $monthsBack);
@@ -276,7 +203,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Belastingdienst (tax) on the 27th of each month.
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 27, $monthsBack);
             if ($date->lessThan($windowStart)) {
@@ -357,7 +283,6 @@ final class DemoTransactionsSeeder
             }
         }
 
-        // NS (public transport) — twice a week, business commute.
         $transitCategory = $this->categoryId('transport-public');
         $nsAmounts = [-1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240];
         $cursor = $windowStart;
@@ -379,7 +304,6 @@ final class DemoTransactionsSeeder
             $cursor = $cursor->addDay();
         }
 
-        // Eating out — Domino's monthly, La Place biweekly.
         $eatingOutCategory = $this->categoryId('eating-out');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 12, $monthsBack);
@@ -414,7 +338,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Cash withdrawal — once a month from ATM.
         $cashCategory = $this->categoryId('cash-withdrawal');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 8, $monthsBack);
@@ -458,7 +381,7 @@ final class DemoTransactionsSeeder
         // ICS bulk settlement on the 18th (one ICS→ASN row that
         // settles the full ICS card balance for the prior period).
         // The matching ICS credits land on the ICS account; the
-        // Chains demo seeder wires the chain_link in Task 3.
+        // Chains demo seeder wires the chain_link.
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 18, $monthsBack);
             if ($date->lessThan($windowStart)) {
@@ -505,7 +428,6 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        // Bol.com — biweekly online purchases on the ICS card.
         $onlineCategory = $this->categoryId('subscriptions-cloud');
         $bolAmounts = [-3500, -1295, -4995, -2150, -1875, -5495, -2799];
         foreach ([2, 9, 16, 23, 38, 52, 70] as $i => $dayOffset) {
@@ -525,7 +447,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Coolblue — one big-ticket purchase mid-window.
         $inserted += $this->insertTransaction($user, $ics, $run, $rowIndex++, [
             'type' => 'expense',
             'amountMinor' => -29900,
@@ -537,7 +458,6 @@ final class DemoTransactionsSeeder
             'categoryId' => null,
         ]);
 
-        // MediaMarkt — two purchases in different months.
         foreach ([20, 68] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
             if ($date->greaterThan($this->windowEnd)) {
@@ -555,7 +475,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // bookings + leisure travel
         $inserted += $this->insertTransaction($user, $ics, $run, $rowIndex++, [
             'type' => 'expense',
             'amountMinor' => -18900,
@@ -567,7 +486,6 @@ final class DemoTransactionsSeeder
             'categoryId' => null,
         ]);
 
-        // Restaurant evenings on ICS card.
         $eatingOutCategory = $this->categoryId('eating-out');
         foreach ([6, 19, 27, 41, 55, 73, 81] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
@@ -616,7 +534,6 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        // Monthly Spotify on the 11th.
         $musicCategory = $this->categoryId('subscriptions-music');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 11, $monthsBack);
@@ -635,7 +552,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Monthly Netflix on the 15th.
         $streamingCategory = $this->categoryId('subscriptions-streaming');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 15, $monthsBack);
@@ -801,7 +717,6 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        // Salary on the 25th — slightly smaller than user 1's.
         $salaryCategory = $this->categoryId('income-salary');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 25, $monthsBack);
@@ -820,7 +735,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Monthly rent (lower than user 1).
         $rentCategory = $this->categoryId('housing-rent');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 1, $monthsBack);
@@ -839,7 +753,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Albert Heijn weekly — sparse.
         $groceriesCategory = $this->categoryId('groceries');
         foreach ([3, 10, 17, 24, 38, 52, 66, 80] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
@@ -858,7 +771,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // Gemeente Den Haag — local tax.
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 22, $monthsBack);
             if ($date->lessThan($windowStart)) {
@@ -885,7 +797,6 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        // Monthly Spotify (the user keeps it on their PayPal).
         $musicCategory = $this->categoryId('subscriptions-music');
         foreach ([3, 2, 1, 0] as $monthsBack) {
             $date = $this->dayInMonth($windowStart, 9, $monthsBack);
@@ -904,7 +815,6 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // A couple of Bol.com purchases.
         $onlineCategory = $this->categoryId('subscriptions-cloud');
         foreach ([14, 47, 76] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
@@ -926,13 +836,10 @@ final class DemoTransactionsSeeder
         return $inserted;
     }
 
-    /**
-     * Walks the freshly-seeded ASN→PayPal transfer pairs for user 1
-     * and links each pair via `pair_transaction_id`, mirroring the
-     * production Layer-1 pair-detection listener so demo data carries
-     * the same relationship shape consumers (chains, recurring, query
-     * services) expect.
-     */
+    // Walks the freshly-seeded ASN→PayPal transfer pairs for user 1 and
+    // links each pair via pair_transaction_id, mirroring the production
+    // Layer-1 pair-detection listener so demo data carries the same
+    // relationship shape consumers (chains, recurring, queries) expect.
     private function linkUser1Transfers(User $user): void
     {
         $pairs = Transaction::query()
@@ -964,30 +871,24 @@ final class DemoTransactionsSeeder
         }
     }
 
-    /**
-     * Build a deterministic CalendarImmutable for the Nth day in the
-     * month that is `$monthsBack` months before the window-anchor
-     * month. Caps at the month's last day so e.g. day=31 in February
-     * clamps to Feb 28 / 29.
-     */
+    // Builds the Nth day in the month that is `$monthsBack` months
+    // before the window-anchor month, capped at the month's last day
+    // (day=31 in February clamps to Feb 28/29).
     private function dayInMonth(CarbonImmutable $windowStart, int $day, int $monthsBack): CarbonImmutable
     {
-        // `subMonthsNoOverflow` so that, e.g., "May 31 − 3 months" lands
-        // in February rather than overflowing into March — otherwise two
-        // monthsBack offsets collapse onto the same calendar month on
-        // end-of-month run dates and the duplicate rows are silently
-        // dropped by insertOrIgnore.
+        // subMonthsNoOverflow so "May 31 − 3 months" lands in February
+        // rather than overflowing into March, which would otherwise
+        // collapse two monthsBack offsets onto the same calendar month
+        // and drop the duplicate via insertOrIgnore.
         $anchor = CarbonImmutable::today()->subMonthsNoOverflow($monthsBack)->startOfMonth();
         $candidate = $anchor->setDay(min($day, $anchor->daysInMonth));
 
         return $candidate;
     }
 
-    /**
-     * Look up the global default-tree category id for a slug. Returns
-     * null when the slug is unknown (which the caller should treat as
-     * "leave category_id null").
-     */
+    // Looks up the global default-tree category id for a slug; returns
+    // null when the slug is unknown (caller treats null as "leave
+    // category_id null").
     private function categoryId(string $slug): ?int
     {
         /** @var Category|null $cat */
@@ -999,12 +900,9 @@ final class DemoTransactionsSeeder
         return $cat?->id;
     }
 
-    /**
-     * Ensure the demo ImportRun for (user, account) exists. The
-     * sha256 is deterministic — first 64 hex chars of a hash over
-     * (username, account-slug) — so a second seed run finds the same
-     * row via the (user_id, sha256) UNIQUE index.
-     */
+    // The sha256 is deterministic over (username, account-slug), so a
+    // second seed run finds the same row via the (user_id, sha256)
+    // UNIQUE index.
     private function ensureImportRun(User $user, Account $account): ImportRun
     {
         $sha = hash('sha256', 'demo|'.$user->username.'|'.$account->slug);
@@ -1024,12 +922,11 @@ final class DemoTransactionsSeeder
         return $run;
     }
 
+    // Builds a CanonicalTransaction, computes its production
+    // fingerprint, and INSERTs it via insertOrIgnore so an idempotent
+    // re-seed is a no-op (the composite UNIQUE on fingerprint + the v3
+    // tuple UNIQUE both catch a duplicate).
     /**
-     * Build a `CanonicalTransaction`, compute its production
-     * fingerprint, and INSERT it via `insertOrIgnore` so an
-     * idempotent re-seed is a no-op (the composite UNIQUE on
-     * fingerprint + the v3 tuple UNIQUE both catch a duplicate).
-     *
      * @param  array{type: string, amountMinor: int, description: string, counterpartyName: ?string, counterpartyIban: ?string, date: CarbonImmutable, paymentType: PaymentType, categoryId: ?int, currency?: string, settledAmountMinor?: int, settledCurrency?: string, fxRateUsed?: string|null}  $row
      */
     private function insertTransaction(

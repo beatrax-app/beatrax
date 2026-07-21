@@ -20,43 +20,10 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
- * Persists a batch of canonical transactions in bounded, independently-
- * committing chunks. This is NO LONGER whole-file-atomic: a full-year import
- * must not run as one unbounded in-memory DB transaction in the web request,
- * so the batch is sliced into `CHUNK_SIZE` rows and each chunk is committed in
- * its own DB transaction.
- *
- * The new guarantee is idempotent + resumable rather than all-or-nothing:
- *  - A row that fails the type-validation pre-check rolls back only its own
- *    chunk; chunks committed before it stay committed.
- *  - Rows whose fingerprint already exists are silently dropped by
- *    `insertOrIgnore` — the DB-layer idempotency proof — so re-running the
- *    same source after a partial failure is non-duplicating: already-committed
- *    rows are skipped and only the not-yet-stored remainder lands.
- *
- * Every row must carry a non-null `userId`. SQLite treats NULL as distinct in
- * UNIQUE indexes, so a row written with `user_id = NULL` would slip past the
- * composite UNIQUE on `(user_id, account_id, posted_at, …)` on a re-import.
- * The action rejects null-user rows before any DB write so the idempotency
- * guarantee holds for every persisted row.
- *
- * `created_at` / `updated_at` are stamped here (not inside the DTO) so the
- * value comes from the injected Clock and remains pinnable from tests.
- *
- * For every row that `insertOrIgnore` actually persists (effected === 1) a
- * `TransactionImported` event is dispatched synchronously through the
- * constructor-injected Dispatcher. The dispatch sits inside the row's own
- * chunk transaction so cross-module listeners (e.g., transfer-pair detection)
- * observe just-inserted partner rows within the same chunk's atomic frame.
- * Duplicates never produce an event.
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class RecordTransactions implements RecordsTransactions
 {
-    /**
-     * Maximum rows persisted per DB transaction. Bounds the size of any single
-     * transaction/in-memory unit so a large import is broken into
-     * independently-committing slices rather than one giant transaction.
-     */
     private const CHUNK_SIZE = 500;
 
     public function __construct(
@@ -75,9 +42,9 @@ final class RecordTransactions implements RecordsTransactions
         /** @var list<string> $sourceFormats */
         $sourceFormats = [];
 
-        // Buffer the (possibly lazy) iterable into bounded chunks and commit
-        // each chunk on its own. iterator_to_array would force the whole batch
-        // into memory at once; chunking keeps the working set bounded.
+        // Buffer the (possibly lazy) iterable into bounded chunks and
+        // commit each on its own — iterator_to_array would force the
+        // whole batch into memory at once.
         $chunk = [];
         foreach ($canonical as $row) {
             $chunk[] = $row;
@@ -87,16 +54,13 @@ final class RecordTransactions implements RecordsTransactions
             }
         }
 
-        // Flush the trailing partial chunk.
         if ($chunk !== []) {
             $this->persistChunk($chunk, $user, $inserted, $duplicates, $sourceFormats);
         }
 
-        // Batch-altitude announcement (D-22): dispatched exactly ONCE per
-        // call, AFTER every chunk transaction above has already committed,
-        // and only when at least one row actually landed. See
-        // TransactionBatchImported's docblock for the emit-after-commit
-        // contract this satisfies for free.
+        // Dispatched exactly once per call, after every chunk
+        // transaction above has already committed, and only when at
+        // least one row actually landed.
         if ($inserted > 0) {
             $distinctFormats = array_values(array_unique($sourceFormats));
             sort($distinctFormats);
@@ -112,10 +76,6 @@ final class RecordTransactions implements RecordsTransactions
     }
 
     /**
-     * Persist one bounded chunk in its own DB transaction, folding the chunk's
-     * insert/duplicate counts into the running totals. A failing row rolls back
-     * only this chunk; prior chunks remain committed.
-     *
      * @param  list<CanonicalTransaction>  $chunk
      * @param  list<string>  $sourceFormats
      */
@@ -131,11 +91,10 @@ final class RecordTransactions implements RecordsTransactions
                     throw new InvalidArgumentException("Invalid transaction type: '{$row->type}'");
                 }
 
-                // CRITICAL (CRYPT-01 direct-write hook, 14-RESEARCH Pitfall 2):
-                // the de-dup fingerprint is composed from the plaintext DTO
-                // ($row), NEVER from the (possibly-encrypted) $attrs below —
-                // re-import idempotency must be identical whether or not
-                // encryption is enabled.
+                // The de-dup fingerprint is composed from the plaintext
+                // DTO ($row), never from the possibly-encrypted $attrs
+                // below — re-import idempotency must be identical
+                // whether or not encryption is enabled.
                 $fingerprint = $this->fingerprints->compose($row);
                 $attrs = $row->toAttributes() + [
                     'fingerprint' => $fingerprint,
@@ -144,13 +103,10 @@ final class RecordTransactions implements RecordsTransactions
                     'updated_at' => $now,
                 ];
 
-                // Encrypt the D-02b sensitive content columns (description,
-                // counterparty_name, counterparty_iban, raw_payload) under
-                // the current GDK epoch before the row ever touches disk.
-                // Pass-through (no-op) when encryption is not enabled for
-                // this user. amount_minor/settled_amount_minor/fx_rate_used
-                // are never touched — D-02a excludes them so SQL SUM()/
-                // GROUP BY keeps working (Pitfall 1).
+                // Encrypts the sensitive content columns before the row
+                // touches disk (pass-through no-op when not enabled).
+                // Amount columns are never touched, so SQL SUM()/GROUP
+                // BY keeps working.
                 $attrs = $this->codec->encryptAttrs('transactions', $attrs, $row->userId, $this->session);
 
                 $effected = Transaction::insertOrIgnore($attrs);

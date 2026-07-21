@@ -10,17 +10,9 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\StatementSummaryData;
 
-/**
- * Upserts a single `statement_summaries` row per (user_id, import_run_id)
- * carrying the opening + closing balance, period dates, statement number,
- * and entry count emitted by a CAMT.053 or MT940 adapter. CSV imports
- * never reach this writer because their adapter returns `null` from
- * `SourceAdapter::statementMetadata()`.
- *
- * `DatabaseManager` + `Clock` are injected so the writer stays facade-free
- * and timestamps round-trip through the same Clock the rest of the ledger
- * uses (tests pin time via `CarbonImmutable::setTestNow`).
- */
+// Upserts a single statement_summaries row per (user_id,
+// import_run_id). CSV imports never reach this writer because their
+// adapter returns null from SourceAdapter::statementMetadata().
 final class StatementSummaryWriter implements RecordsStatementSummary
 {
     public function __construct(

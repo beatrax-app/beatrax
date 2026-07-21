@@ -7,16 +7,10 @@ namespace Modules\Ledger\Public\Dto;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * Statement-level metadata captured by a source adapter that carries it
- * (CAMT.053, MT940). CSV statements never produce this DTO — the ledger's
- * StatementSummaryWriter is simply not invoked for that path.
- *
- * `importRunId` and `accountId` are populated at the boundary between the
- * adapter (which doesn't know the surrounding import run) and the pipeline
- * (which does). `withImportRunId()` + `withAccountId()` are immutable
- * updates the pipeline applies just before invoking the writer.
- */
+// CSV statements never produce this DTO. importRunId and accountId are
+// populated at the boundary between the adapter (which doesn't know
+// the surrounding import run) and the pipeline (which does), via
+// withImportRunId()/withAccountId() just before invoking the writer.
 final class StatementSummaryData extends Data
 {
     /**

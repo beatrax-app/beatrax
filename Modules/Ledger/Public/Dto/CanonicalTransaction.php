@@ -9,46 +9,7 @@ use Modules\Import\Public\Enums\PaymentType;
 use Spatie\LaravelData\Data;
 
 /**
- * The canonical, persistence-ready shape of one transaction row. Ingestion +
- * Import build CanonicalTransaction instances from any source adapter; the
- * Ledger `RecordTransactions` action is the only thing that persists them.
- *
- * `counterparty_normalized` is NEVER NULL: NormalizeStage substitutes a
- * sentinel when the counterparty name is empty so the composite UNIQUE on
- * transactions catches duplicates even when `source_ref` is absent.
- *
- * `autoCategoryProvenance` is nullable JSON shape `{source: 'rule'|'memory',
- * rule_id?: int, memory_id?: int, category_id: int}` stamped by
- * ApplyAutoCategoryStage and persisted by RecordTransactions onto the
- * `transactions.auto_category_provenance` column. Read by the correction-
- * divergence flow (plan 05) so the drawer panel knows whether the
- * suggestion came from an explicit rule (which the user may want to
- * update) or from learned merchant memory.
- *
- * `paymentType` is the resolved `PaymentType` enum value the import
- * pipeline's classifier stage stamps onto every row before persistence.
- * The DB column `transactions.payment_type` carries the same closed
- * enumeration; a paired BEFORE INSERT / BEFORE UPDATE trigger on that
- * column rejects any value outside the enum's eight cases. Defaults to
- * null so legacy call-sites (raw row reconstruction in
- * FingerprintRederiveService, test fixtures, NormalizeStage's first
- * pass before classification) compile and run unchanged.
- *
- * `counterpartyId` is the FK onto `counterparties.id` the
- * ResolveCounterpartyStage stamps onto every row after the resolver
- * upserts the matching Counterparty. Stays null for the self_account
- * branch (the resolver short-circuits without writing a row) and for
- * the pathological branch where the source row carries no name, no
- * IBAN, and no description. Persisted to the `transactions.counterparty_id`
- * column via `toAttributes()`; intentionally NOT part of the
- * fingerprint tuple so re-resolving a row against an updated
- * counterparty model never invalidates a historical fingerprint.
- *
- * `note` mirrors `transactions.note` (nullable free-text). Stamped by
- * `RuleApplier::applyAtImport()` (Plan 05) when a firing rule carries a
- * `note` action — there is no prior stored note at import time, so
- * both `set` and `append` note modes resolve to the payload text
- * outright. Null for every other ingestion path.
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class CanonicalTransaction extends Data
 {
@@ -85,13 +46,9 @@ final class CanonicalTransaction extends Data
         public readonly ?string $note = null,
     ) {}
 
-    /**
-     * Immutable clone-with-override for `type`. The
-     * ClassifyTransactionType pipeline stage uses this to flip the
-     * NormalizeStage-derived default (`expense` / `income`) to the
-     * transfer / refund / fee variants required by the pair-detection
-     * listener.
-     */
+    // ClassifyTransactionType flips the NormalizeStage-derived default
+    // (expense/income) to the transfer/refund/fee variants the
+    // pair-detection listener requires.
     public function withType(string $type): self
     {
         return new self(
@@ -124,12 +81,8 @@ final class CanonicalTransaction extends Data
         );
     }
 
-    /**
-     * Immutable clone-with-override for `categoryId`. The
-     * ApplyAutoCategoryStage uses this to stamp the chosen rule /
-     * memory category onto the canonical row before fingerprinting
-     * + persistence. Pass `null` to explicitly clear the categoryId.
-     */
+    // ApplyAutoCategoryStage stamps the chosen rule/memory category
+    // before fingerprinting + persistence; null explicitly clears it.
     public function withCategoryId(?int $categoryId): self
     {
         return new self(
@@ -162,11 +115,9 @@ final class CanonicalTransaction extends Data
         );
     }
 
+    // ApplyAutoCategoryStage builds this alongside categoryId so
+    // RecordTransactions can persist both atomically.
     /**
-     * Immutable clone-with-override for `autoCategoryProvenance`.
-     * ApplyAutoCategoryStage builds the provenance map alongside the
-     * categoryId so RecordTransactions can persist both atomically.
-     *
      * @param  array<string, mixed>|null  $provenance
      */
     public function withAutoCategoryProvenance(?array $provenance): self
@@ -201,12 +152,8 @@ final class CanonicalTransaction extends Data
         );
     }
 
-    /**
-     * Immutable clone-with-override for `paymentType`. The
-     * `PaymentTypeClassifierStage` uses this to stamp the resolved
-     * payment-type chip onto every canonical row after the per-source
-     * hinters and the description-keyword fallback have run.
-     */
+    // PaymentTypeClassifierStage stamps the resolved chip after the
+    // per-source hinters and the description-keyword fallback have run.
     public function withPaymentType(PaymentType $paymentType): self
     {
         return new self(
@@ -238,15 +185,9 @@ final class CanonicalTransaction extends Data
         );
     }
 
-    /**
-     * Immutable clone-with-override for `counterpartyId`. The
-     * `ResolveCounterpartyStage` uses this to stamp the FK that points
-     * at the upserted `counterparties` row onto every canonical
-     * transaction. Pass `null` to leave the FK unset — the
-     * `self_account` branch (the user's own account legs) does exactly
-     * that, since the resolver short-circuits without writing a
-     * counterparty row.
-     */
+    // ResolveCounterpartyStage stamps the FK onto the upserted
+    // counterparties row; null leaves it unset (the self_account
+    // branch short-circuits without writing a counterparty row).
     public function withCounterpartyId(?int $counterpartyId): self
     {
         return new self(
@@ -279,12 +220,8 @@ final class CanonicalTransaction extends Data
         );
     }
 
-    /**
-     * Immutable clone-with-override for `note`. `RuleApplier::applyAtImport()`
-     * (Plan 05) uses this to fold a firing rule's `note` action onto the
-     * canonical row before persistence — the sole import-time writer of
-     * this field. Pass `null` to explicitly clear the note.
-     */
+    // RuleApplier::applyAtImport() folds a firing rule's note action
+    // before persistence — the sole import-time writer of this field.
     public function withNote(?string $note): self
     {
         return new self(
@@ -317,13 +254,10 @@ final class CanonicalTransaction extends Data
         );
     }
 
+    // Does not include the fingerprint columns or created_at/updated_at
+    // — the recorder action adds those via the injected Clock so tests
+    // can pin the value.
     /**
-     * Returns the column-name → value map ready for direct DB insert via
-     * `Transaction::query()->insertOrIgnore($attrs)`. Does NOT include the
-     * fingerprint columns or the created_at/updated_at timestamps — the
-     * recorder action adds those (timestamps via the injected Clock, so
-     * tests can pin the value through `CarbonImmutable::setTestNow`).
-     *
      * @return array<string, mixed>
      */
     public function toAttributes(): array
