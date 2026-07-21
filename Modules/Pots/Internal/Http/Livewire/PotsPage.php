@@ -16,64 +16,37 @@ use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
 
 /**
- * `/pots` page — list savings pots grouped by account with per-account
- * reconciliation headers (real · allocated · unallocated), negative-unallocated
- * amber warning (D-02/D-15), and Flux modals for create/edit/fund/move/withdraw/
- * archive/restore (D-17). Inline movement history expansion per card (D-17).
- *
- * Method-parameter DI on every action and on render/mount — constructor
- * injection is banned on Livewire Component subclasses by phpstan-strict-rules
- * (same pattern as GoalsPage and BudgetsPage).
- *
- * State:
- *   - `name`, `amount`, `accountId`, `linkType`, `goalId`, `editPotId` — form
- *     fields for the create/edit modal. Category-linking is retired (D-15);
- *     `linkType` is now 'goal' | 'none' only — `PotWriter` always receives a
- *     null `$categoryId`.
- *   - `operationPotId`, `operationAmount`, `operationMemo`, `operationKind`,
- *     `transferTargetPotId` — fund/move/withdraw operation modal state.
- *   - `archivingPotId` — non-zero triggers the in-card micro-confirm strip.
- *   - `errorName`, `errorAmount` — inline per-field validation banners.
- *   - `showArchived` — controls the "Archived pots (N)" disclosure.
+ * @link ../../../../../.docs/features/pots/architecture.md
  */
 final class PotsPage extends Component
 {
-    // Create / edit form state
     public string $name = '';
 
     public string $amount = '';
 
     public string $accountId = '';
 
-    /** 'goal' | 'none' — category-linking retired (D-15) */
     public string $linkType = 'none';
 
     public string $goalId = '';
 
     public int $editPotId = 0;
 
-    // Operation modal state (fund / withdraw / transfer)
     public int $operationPotId = 0;
 
     public string $operationAmount = '';
 
     public string $operationMemo = '';
 
-    /** 'fund' | 'withdraw' | 'transfer' */
     public string $operationKind = '';
 
-    /**
-     * String-typed because it backs a <select> whose placeholder option is ''
-     * — hydrating '' into an int property throws a Livewire property-type
-     * error instead of a validation message (WR-09; same pattern as
-     * $accountId here and on GoalsPage). Cast in movePot().
-     */
+    // String-typed because it backs a <select> whose placeholder option is
+    // '' — hydrating '' into an int property throws a Livewire property-type
+    // error instead of a validation message. Cast in movePot().
     public string $transferTargetPotId = '';
 
-    // Inline archive confirm
     public int $archivingPotId = 0;
 
-    // Error fields
     public string $errorName = '';
 
     public string $errorAmount = '';
@@ -91,10 +64,6 @@ final class PotsPage extends Component
     // Create pot
     // -----------------------------------------------------------------------
 
-    /**
-     * Create a new pot from the modal form. Maps PotWriter exceptions to
-     * per-field inline errors. On success closes modal and dispatches a toast.
-     */
     public function createPot(CurrentUser $currentUser, PotWriter $writer): void
     {
         $this->clearErrors();
@@ -116,8 +85,8 @@ final class PotsPage extends Component
             return;
         }
 
-        // D-15: category-linking retired — linkType is 'goal' | 'none' only,
-        // so PotWriter always receives a null categoryId here.
+        // linkType is 'goal' | 'none' only — PotWriter always receives a
+        // null categoryId here.
         $goalId = null;
         if ($this->linkType === 'goal' && $this->goalId !== '') {
             $goalId = (int) $this->goalId;
@@ -153,10 +122,6 @@ final class PotsPage extends Component
     // Edit / update pot
     // -----------------------------------------------------------------------
 
-    /**
-     * Populate the form with an existing pot's values and open the edit modal.
-     * Called from the "Edit" item in the pot card kebab menu.
-     */
     public function openEdit(int $potId, PotBalanceQuery $query, CurrentUser $currentUser): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -173,10 +138,9 @@ final class PotsPage extends Component
                     $this->linkType = 'goal';
                     $this->goalId = (string) $pot->goalId;
                 } else {
-                    // D-15: category-linking retired. Any pre-cutover active
-                    // pot with a lingering category_id (should not exist post-
-                    // cutover) falls back to 'none' rather than surfacing a
-                    // picker that no longer exists.
+                    // Any pot with a lingering category_id falls back to
+                    // 'none' rather than surfacing a picker that no longer
+                    // exists.
                     $this->linkType = 'none';
                     $this->goalId = '';
                 }
@@ -188,10 +152,6 @@ final class PotsPage extends Component
         }
     }
 
-    /**
-     * Update an existing pot's name and link. Delegates cross-user rejection
-     * to PotWriter (which throws PotNotFoundException when not owned).
-     */
     public function updatePot(CurrentUser $currentUser, PotWriter $writer): void
     {
         $this->clearErrors();
@@ -206,8 +166,6 @@ final class PotsPage extends Component
             return;
         }
 
-        // D-15: category-linking retired — linkType is 'goal' | 'none' only,
-        // so PotWriter always receives a null categoryId here.
         $goalId = null;
         if ($this->linkType === 'goal' && $this->goalId !== '') {
             $goalId = (int) $this->goalId;
@@ -222,7 +180,6 @@ final class PotsPage extends Component
                 null,
             );
         } catch (PotNotFoundException) {
-            // Cross-user / missing pot — silently ignore
             $this->resetForm();
 
             return;
@@ -241,10 +198,6 @@ final class PotsPage extends Component
     // Fund pot
     // -----------------------------------------------------------------------
 
-    /**
-     * Fund a pot from the fund modal. Maps InsufficientUnallocatedException to
-     * an inline error with the over-allocation copy from 03-UI-SPEC.
-     */
     public function fundPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
     {
         $this->clearErrors();
@@ -263,7 +216,6 @@ final class PotsPage extends Component
                 $memo,
             );
         } catch (InsufficientUnallocatedException) {
-            // Compute unallocated for the error message
             $user = $currentUser->user();
             $pot = null;
             foreach ($query->forUser($user) as $p) {
@@ -301,10 +253,6 @@ final class PotsPage extends Component
     // Withdraw
     // -----------------------------------------------------------------------
 
-    /**
-     * Withdraw from a pot. Maps InsufficientUnallocatedException (over-source)
-     * to an inline error with the over-source copy from 03-UI-SPEC.
-     */
     public function withdrawPot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
     {
         $this->clearErrors();
@@ -315,7 +263,6 @@ final class PotsPage extends Component
 
         $memo = trim($this->operationMemo) !== '' ? $this->operationMemo : null;
 
-        // Get pot name for error message before attempting write
         $user = $currentUser->user();
         $pot = null;
         foreach ($query->forUser($user) as $p) {
@@ -363,9 +310,6 @@ final class PotsPage extends Component
     // Move / transfer
     // -----------------------------------------------------------------------
 
-    /**
-     * Transfer funds between two pots in the same account.
-     */
     public function movePot(CurrentUser $currentUser, PotWriter $writer, PotBalanceQuery $query): void
     {
         $this->clearErrors();
@@ -387,7 +331,7 @@ final class PotsPage extends Component
 
         try {
             // '' (placeholder) casts to 0, which PotWriter rejects with
-            // PotNotFoundException → inline error (WR-09).
+            // PotNotFoundException, surfacing as an inline error below.
             $writer->transfer(
                 $user,
                 $this->operationPotId,
@@ -426,10 +370,6 @@ final class PotsPage extends Component
     // Archive / restore
     // -----------------------------------------------------------------------
 
-    /**
-     * Show the in-card micro-confirm for archiving a pot. Actual archive
-     * happens in `archivePot()`.
-     */
     public function confirmArchive(CurrentUser $currentUser, int $potId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -439,9 +379,6 @@ final class PotsPage extends Component
         $this->archivingPotId = $potId;
     }
 
-    /**
-     * Cancel the archive micro-confirm.
-     */
     public function cancelArchive(CurrentUser $currentUser): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -451,10 +388,6 @@ final class PotsPage extends Component
         $this->archivingPotId = 0;
     }
 
-    /**
-     * Archive a pot after micro-confirm. Dispatches a "Pot archived. [Restore]"
-     * toast with a one-tap undo action (mirrors GoalsPage::archive() D-09).
-     */
     public function archivePot(CurrentUser $currentUser, PotWriter $writer, int $potId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -466,9 +399,6 @@ final class PotsPage extends Component
         $this->dispatch('toast', message: 'Pot archived.', undoAction: 'restore', undoPayload: $potId);
     }
 
-    /**
-     * Restore an archived pot back to active status.
-     */
     public function restorePot(CurrentUser $currentUser, PotWriter $writer, int $potId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -479,9 +409,6 @@ final class PotsPage extends Component
         $this->toast('Pot restored.');
     }
 
-    /**
-     * Cancel / close the create-or-edit modal, resetting all form state.
-     */
     public function cancel(): void
     {
         $this->resetForm();
@@ -498,8 +425,8 @@ final class PotsPage extends Component
         DatabaseManager $db,
         ViewFactory $views,
     ): View {
-        // Defence-in-depth: the `auth` route middleware makes this unreachable,
-        // but guard anyway so an unauthenticated render degrades gracefully (IN-03).
+        // Defence-in-depth: the auth route middleware makes this unreachable,
+        // but guard anyway so an unauthenticated render degrades gracefully.
         if (! $currentUser->isAuthenticated()) {
             $view = $views->make('pots::livewire.pots-page', [
                 'groups' => [],
@@ -518,16 +445,13 @@ final class PotsPage extends Component
 
         $user = $currentUser->user();
 
-        // Active pots: flat list ordered by account name then pot name
         $activePots = $query->forUser($user);
 
-        // Group by accountId — preserves ordering from forUser()
         $groups = [];
         foreach ($activePots as $pot) {
             $groups[$pot->accountId][] = $pot;
         }
 
-        // Per-account reconciliation rows (only for accounts that have active pots)
         $reconciliations = [];
         foreach (array_keys($groups) as $accountId) {
             $reconciliations[$accountId] = $query->reconciliationForAccount($accountId, $user);
@@ -535,7 +459,6 @@ final class PotsPage extends Component
 
         $archived = $query->archivedForUser($user);
 
-        // User's accounts for account picker (name order)
         $accounts = $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
@@ -543,7 +466,6 @@ final class PotsPage extends Component
             ->get(['id', 'name', 'default_currency'])
             ->toArray();
 
-        // Goals not already pot-linked (for the create/edit link picker)
         $linkedGoalIds = $db->connection()
             ->table('pots')
             ->where('user_id', $user->id)
@@ -559,9 +481,9 @@ final class PotsPage extends Component
             ->orderBy('name');
 
         if ($this->editPotId !== 0) {
-            // When editing, exclude goals linked to OTHER pots (allow the current pot's goal).
-            // editPotId is client-controlled — scope to the user like every other
-            // read on user-owned tables (T-03-07 / WR-06).
+            // When editing, exclude goals linked to OTHER pots but allow the
+            // current pot's own goal. editPotId is client-controlled, so
+            // scope this lookup to the user like every other read here.
             $currentPotGoalId = $db->connection()
                 ->table('pots')
                 ->where('user_id', $user->id)
@@ -588,7 +510,7 @@ final class PotsPage extends Component
             'goalsForPicker' => $goalsForPicker,
             // The move-modal destination picker consumes the same
             // account-grouped active pots as the card list — one structure,
-            // two view variables (IN-04).
+            // two view variables.
             'potsForMove' => $groups,
         ]);
 
