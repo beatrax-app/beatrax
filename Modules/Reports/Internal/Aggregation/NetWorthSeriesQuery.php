@@ -16,42 +16,12 @@ use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
 use stdClass;
 
 /**
- * Net-worth-over-time as an on-demand SAMPLED series (Req 2/5/7) — no table
- * stores historical net worth; every point is computed fresh by repeating
- * `NetWorthQuery::forUser()`'s (Modules\Forecasting\Public\Services\
- * NetWorthQuery) exclude+count algorithm once per `TimeBucketGenerator`
- * sample date instead of once for "today" (999.6-RESEARCH.md Pattern 3).
- * This is a time series (no group-by dimension): exactly one point per
- * generated bucket.
- *
- * SCOPE LIMITATION (Open Question, RESEARCH Pattern 3 / Pitfall 9): the
- * most-recent point in this series is NOT guaranteed to be byte-identical
- * to the dashboard net-worth card's (`NetWorthQuery`) "today" figure.
- * `NetWorthQuery` sources its "today" balance from
- * `Forecasting\Internal\Pipeline\BalanceAnchorResolver`, which is
- * arch-fenced (`Forecasting\Internal` is off-limits to every other module,
- * `tests/Contracts/BoundaryArchTest.php`) and may apply a richer
- * statement-anchor + delta strategy than a raw sum of cleared transactions.
- * This class instead uses `AccountBalanceQuery::clearedBalanceAsOf()`
- * (Ledger `Public`) for every sample point — the only Public, point-in-
- * time-capable balance query. Req 5's testable guarantee (unconvertible
- * accounts excluded + counted, never a silent 1:1 fallback) still holds
- * exactly; only byte-parity with "today" is out of scope for this class.
- *
- * Excluded-kind parity: `paypal_funding` accounts are excluded from every
- * point exactly like `NetWorthQuery::EXCLUDED_KINDS`, so the series matches
- * the dashboard net-worth card's account set for every reason OTHER than
- * FX exclusion.
- *
- * Sample date: each bucket is a half-open `[start, endExclusive)` `Period`
- * (`TimeBucketGenerator`); the point is sampled at the last actual day
- * inside that window (`endExclusive->subDay()`) — e.g. a "Jul 2025" bucket
- * `[2025-07-01, 2025-08-01)` samples the end-of-month balance on
- * 2025-07-31.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class NetWorthSeriesQuery
 {
-    /** Must match NetWorthQuery::EXCLUDED_KINDS exactly (RESEARCH Pattern 3). */
+    // Must match Forecasting's NetWorthQuery::EXCLUDED_KINDS exactly, so
+    // this series' account set stays consistent with the dashboard card.
     private const EXCLUDED_KINDS = ['paypal_funding'];
 
     public function __construct(
@@ -112,11 +82,10 @@ final class NetWorthSeriesQuery
             $money = Money::ofMinor($balanceMinor, $currency);
             $result = $this->fx->convertAtDate($money, $baseCurrency, $asOf->toDateString());
 
-            // Never a silent 1:1 fallback (T-999.6-12): when no rate is
-            // available, ExchangeRateService returns a passthrough carrying
-            // the ORIGINAL currency (the currency === target fast path
-            // already handled same-currency accounts above). Any mismatch
-            // here means "excluded", never "assume rate 1".
+            // Never a silent 1:1 fallback: when no rate is available,
+            // ExchangeRateService returns a passthrough carrying the
+            // original currency. Any mismatch here means "excluded", never
+            // "assume rate 1".
             if ($result->converted->currency() !== $baseCurrency) {
                 $excludedCount++;
 

@@ -9,29 +9,7 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportDefinition;
 
 /**
- * The single, tested `Period` → `SearchFilters`/URL conversion for chart
- * drill-down (Req 12 / D-03). Every chart partial's `dataPointSelection`
- * handler navigates to a URL this class built — never `/search` (that
- * route is commented out, 999.6-RESEARCH.md Pitfall 3) and never an inline
- * `subDay()`/`addDay()` conversion at a second call site (Pitfall 2b).
- *
- * `route('transactions.index', ...)` uses the SINGULAR array param names
- * `TransactionsList`'s `#[Url(as: 'account'/'category'/'counterparty', ...)]`
- * properties expect — `accounts`/`categories`/`counterparties` would
- * silently no-op.
- *
- * `$period->endExclusive` is exclusive by contract; `SearchFilters.before`
- * (and `TransactionsList`'s `before` query param) is inclusive — this is
- * the ONE place `before = $period->endExclusive->subDay()` happens
- * (Pitfall 2b). `time_bucket` carries no group filter param at all (a
- * time-bucket row has no category/account/counterparty id to filter by);
- * only `after`/`before` narrow the drilled-down list, and they reflect the
- * REPORT's own period — not a per-bucket sub-window, since a
- * `ReportResultRow` does not carry its own bucket boundaries.
- *
- * A `null` `groupKey` (the "No category" / "No counterparty" / "No
- * account" aggregation bucket every dimension query emits) omits the
- * dimension filter entirely rather than filtering on a synthetic id.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class DrilldownUrlBuilder
 {
@@ -42,15 +20,20 @@ final class DrilldownUrlBuilder
         $params = [];
 
         if ($groupKey !== null) {
+            // time_bucket (and anything unrecognised) has no group filter
+            // param — a time-bucket row carries no category/account/
+            // counterparty id to filter by.
             $groupParams = match ($dimension) {
                 'category' => ['category' => [(int) $groupKey]],
                 'account' => ['account' => [(int) $groupKey]],
                 'counterparty' => ['counterparty' => [(int) $groupKey]],
-                default => [], // time_bucket (and anything unrecognised): no group filter param
+                default => [],
             };
             $params = [...$params, ...$groupParams];
         }
 
+        // endExclusive is exclusive by contract but the "before" query
+        // param is inclusive — this is the one place that conversion happens.
         $params['after'] = $period->start->toDateString();
         $params['before'] = $period->endExclusive->subDay()->toDateString();
         $params['amount_min'] = $definition->amountMin;

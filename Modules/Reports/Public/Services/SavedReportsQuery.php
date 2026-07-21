@@ -12,19 +12,7 @@ use Modules\Reports\Public\Dto\SavedReportIndexRow;
 use stdClass;
 
 /**
- * Read-side query powering `/reports/library` (Req 9) — the user's saved
- * reports, most-recently-updated first, each carrying a pre-rendered
- * metric·dimension·period summary line.
- *
- * Cross-user posture: every read carries an explicit `where('user_id',
- * $user->id)` filter at the raw query-builder boundary (999.6-PATTERNS.md
- * "Cross-user isolation guard" — the same convention as
- * `CounterpartyIndexQuery`/`AccountBalanceQuery`) — a foreign id never
- * reaches this query's caller, T-999.6-25.
- *
- * Raw `DatabaseManager` reads only (never Eloquent chains), matching every
- * other read-model class in this codebase (999.6-PATTERNS.md "Raw
- * DatabaseManager query discipline").
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final readonly class SavedReportsQuery
 {
@@ -106,9 +94,9 @@ final readonly class SavedReportsQuery
         $metricLabel = self::METRIC_LABELS[$metric] ?? 'Amount';
         $periodLabel = self::PERIOD_LABELS[$period] ?? 'Custom range';
 
-        // Group-by is hidden entirely for net-worth reports (999.6-UI-SPEC.md
-        // Component Inventory item 1) — the summary line omits the "by
-        // {dimension}" segment to match what the builder actually showed.
+        // Group-by is hidden entirely for net-worth reports — the summary
+        // line omits the "by {dimension}" segment to match what the
+        // builder actually showed.
         if ($metric === 'net_worth') {
             return "{$metricLabel} · {$periodLabel}";
         }

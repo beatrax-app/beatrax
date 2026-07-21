@@ -15,27 +15,7 @@ use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Toggles a saved report's dashboard-pin state (Req 10, D-02).
- *
- * The 3-pin cap (UI-SPEC "You can pin up to 3 reports. Unpin one to add
- * this.") is enforced HERE, in the write-service layer — never trusted from
- * the Livewire UI (999.6-PATTERNS.md "TogglePin's 3-pin cap", T-999.6-21).
- * WR-01: the cap check runs INSIDE the same DB transaction as the write, not
- * before it opens — two concurrent `toggle()` calls that both read the
- * pinned count before either commits would otherwise both pass a
- * pre-transaction check and together pin a 4th report (TOCTOU). Reading the
- * count inside the transaction means the second, blocked transaction
- * re-reads the now-updated count once it acquires the write lock and
- * correctly rejects the 4th pin — SQLite's single-writer serialization
- * actually protects the invariant. A 4th pin attempt throws
- * `InvalidArgumentException` with the exact UI-SPEC copy and the transaction
- * rolls back, so the database is never touched.
- *
- * Unpinning clears `pinned`/`pin_order` and compacts the remaining pinned
- * reports' `pin_order` values back to a dense 1..N sequence via the shared
- * `PinOrderCompactor` (WR-02, also used by `DeleteReport`) — each row whose
- * `pin_order` actually changes gets its own `SavedReportMutated` 'edit' so
- * every device's Sync op-log stays in step with the on-screen pin order.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class TogglePin
 {
@@ -48,6 +28,8 @@ final class TogglePin
 
     public function toggle(User $user, int $reportId): SavedReport
     {
+        // Cross-user safety: user-scoped lookup before the write. A
+        // foreign/missing id throws NotFoundHttpException (404, never 403).
         /** @var SavedReport|null $existing */
         $existing = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)
@@ -75,6 +57,10 @@ final class TogglePin
                     dirtyFields: ['pinned' => false, 'pin_order' => null],
                 );
 
+                // Unpinning compacts the remaining pinned reports' pin_order
+                // back to a dense 1..N sequence; each changed row gets its
+                // own SavedReportMutated 'edit' to keep every device's Sync
+                // op-log in step.
                 foreach (PinOrderCompactor::compact($this->db->connection(), $user) as $compacted) {
                     $events[] = new SavedReportMutated(
                         reportId: $compacted['id'],
@@ -87,10 +73,10 @@ final class TogglePin
                 return $existing;
             }
 
-            // WR-01: the pinned-count cap check runs HERE, inside the write
-            // transaction, right before the write itself — not as a
-            // pre-transaction round trip. See class docblock for the TOCTOU
-            // rationale.
+            // TOCTOU guard: the cap check runs inside this write
+            // transaction, not before it opens — two concurrent toggle()
+            // calls reading the count pre-transaction could both pass and
+            // together pin a 4th report; the blocked one re-reads here.
             $pinnedCount = $this->db->connection()
                 ->table('saved_reports')
                 ->where('user_id', $user->id)

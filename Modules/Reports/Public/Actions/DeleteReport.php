@@ -14,21 +14,7 @@ use Modules\Sync\Public\Events\SavedReportMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Deletes a saved_reports row, including its pin state (Req 9/10).
- *
- * Mirrors `DeleteCategorizationRule`'s cross-user-safety shape: the
- * user-scoped lookup happens before the write, and a foreign/missing id
- * throws `NotFoundHttpException` (404, never 403 — T-999.6-17) rather than
- * silently no-op'ing, so the existence of another user's report is never
- * leaked through the error path either.
- *
- * WR-02: when the deleted report was pinned, the remaining pinned reports'
- * `pin_order` values are compacted back to a dense 1..N sequence inside the
- * same transaction, via the shared `PinOrderCompactor` (also used by
- * `TogglePin`'s unpin path) — deleting a pinned report must not leave a gap
- * in the pin order, mirroring the invariant `TogglePin` already maintains
- * on unpin. Each row whose `pin_order` actually changes gets its own
- * `SavedReportMutated` 'edit' so every device's Sync op-log stays in step.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class DeleteReport
 {
@@ -39,6 +25,9 @@ final class DeleteReport
 
     public function delete(User $user, int $reportId): void
     {
+        // Cross-user safety: user-scoped lookup before the write. A
+        // foreign/missing id throws NotFoundHttpException (404, never 403)
+        // so another user's report existence is never leaked via the error.
         /** @var SavedReport|null $existing */
         $existing = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)
@@ -64,6 +53,10 @@ final class DeleteReport
                 mutationType: 'delete',
             );
 
+            // Deleting a pinned report must not leave a gap in the pin
+            // order (mirrors TogglePin's unpin invariant) — each changed
+            // row gets its own SavedReportMutated 'edit' so every device's
+            // Sync op-log stays in step.
             if ($wasPinned) {
                 foreach (PinOrderCompactor::compact($this->db->connection(), $user) as $compacted) {
                     $events[] = new SavedReportMutated(

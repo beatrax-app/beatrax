@@ -13,14 +13,7 @@ use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
 
 /**
- * Account-dimension aggregation for the Reports builder's spend/income/net
- * metrics (Req 2/3) — a thin, single-table `GROUP BY` over the
- * `transactions` parent rows.
- *
- * `transactions.account_id` is a required (non-nullable) FK, and, like
- * counterparty, is invariant across a split parent's legs — no split-leg
- * join is needed (999.6-RESEARCH.md Pattern 2 "split-leg insight",
- * mirrors `CounterpartySpendQuery`).
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class AccountSpendQuery
 {
@@ -28,7 +21,7 @@ final class AccountSpendQuery
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
-     * @param  list<int>  $accountIds  T-999.6-06/14: restrict to these account ids (empty = no restriction). Applied ALONGSIDE the existing `where('user_id', ...)` guard below, so a foreign id can only ever narrow this user's own result to nothing — never widen it to another user's rows.
+     * @param  list<int>  $accountIds  restrict to these account ids (empty = no restriction); applied alongside the user_id guard, so a foreign id only narrows this user's own result, never widens it
      * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
      * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
      * @param  ?int  $amountMinMinor  restrict to rows whose ABS(settled_amount_minor) >= this (empty = no restriction)

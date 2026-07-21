@@ -17,16 +17,7 @@ use Modules\Reports\Public\Services\SavedReportsQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * `/reports/library` saved-report index (Req 9) — Cards|List CRUD: list,
- * open (link to the builder pre-loaded), edit (same link), delete (inline
- * two-step confirm), pin toggle (capped at 3, cap-refusal surfaced as a
- * flash message).
- *
- * No constructor DI — phpstan-strict-rules bans it on Livewire `Component`
- * subclasses (999.6-PATTERNS.md "ReportsIndex.php"). Service collaborators
- * arrive as method-parameter DI on `mount()`, every wire action, and
- * `render()` — mirrors `CounterpartyIndex` (Cards|List persistence) and
- * `RulesPage` (inline two-step delete confirm).
+ * @link ../../../../../.docs/features/reports/architecture.md
  */
 final class ReportsIndex extends Component
 {
@@ -51,11 +42,8 @@ final class ReportsIndex extends Component
         }
     }
 
-    /**
-     * Switches the view mode and persists the choice in
-     * `user_preferences.reports_index_view` scoped to the authenticated
-     * user, mirroring `CounterpartyIndex::setView()`.
-     */
+    // Switches the view mode and persists the choice in
+    // user_preferences.reports_index_view scoped to the authenticated user.
     public function setView(string $view, CurrentUser $currentUser): void
     {
         if (! in_array($view, ['cards', 'list'], true)) {
@@ -80,14 +68,10 @@ final class ReportsIndex extends Component
         $this->confirmingDeleteId = null;
     }
 
-    /**
-     * Deletes a saved report via the two-step inline-confirm pattern
-     * (mirrors `RulesPage::deleteRule()`). `DeleteReport` throws
-     * `NotFoundHttpException` on a foreign/missing id — caught here so a
-     * tampered/stale Livewire payload renders a calm flash instead of a
-     * 500, exactly like `RulesPage`'s catch does; the action's own
-     * user-scoped lookup is the actual security boundary (T-999.6-26).
-     */
+    // DeleteReport throws NotFoundHttpException on a foreign/missing id,
+    // caught here so a tampered/stale Livewire payload renders a calm
+    // flash instead of a 500; the action's own user-scoped lookup is the
+    // actual security boundary.
     public function deleteReport(int $reportId, CurrentUser $currentUser, DeleteReport $delete): void
     {
         try {
@@ -103,14 +87,10 @@ final class ReportsIndex extends Component
         $this->flashMessage = 'Report deleted.';
     }
 
-    /**
-     * Toggles a report's dashboard-pin state. `TogglePin` enforces the
-     * 3-pin cap in the write-service layer (T-999.6-21) — a 4th pin
-     * attempt throws `InvalidArgumentException` with the exact UI-SPEC
-     * copy, surfaced here verbatim as the flash message rather than a
-     * generic error. A foreign/missing id throws `NotFoundHttpException`
-     * (T-999.6-26), caught the same way `deleteReport()` catches it.
-     */
+    // TogglePin enforces the 3-pin cap in the write-service layer; a 4th
+    // pin attempt throws InvalidArgumentException, surfaced here verbatim
+    // as the flash message. A foreign/missing id throws
+    // NotFoundHttpException, caught the same way deleteReport() catches it.
     public function togglePin(int $reportId, CurrentUser $currentUser, TogglePin $togglePin): void
     {
         try {

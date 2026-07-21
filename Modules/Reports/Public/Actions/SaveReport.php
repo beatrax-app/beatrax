@@ -12,15 +12,7 @@ use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Sync\Public\Events\SavedReportMutated;
 
 /**
- * Persists a new saved_reports row (Req 9). Mirrors
- * `EnvelopeWriter::setOverspendMode()`'s transaction-closes-before-event-
- * dispatch shape (999.6-PATTERNS.md, WR-06 / Pitfall 7): the Eloquent
- * write happens inside `$db->connection()->transaction()`, the
- * `SavedReportMutated` event is only dispatched AFTER the closure returns.
- *
- * `$definition->toArray()` is the full round-trip payload — reopening a
- * saved report via `ReportDefinition::from($row->definition)` reconstructs
- * every field losslessly, including `currencyMode` (SavedReportRoundTripTest).
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class SaveReport
 {

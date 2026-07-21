@@ -13,16 +13,7 @@ use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
 
 /**
- * Time-bucket-dimension aggregation for the Reports builder's spend/
- * income/net metrics (Req 2/3/6/7) — one type-based, user-scoped SUM per
- * `TimeBucketGenerator`-produced sub-`Period`.
- *
- * Like `CounterpartySpendQuery`/`AccountSpendQuery`, this aggregates the
- * `transactions` parent rows directly with no split-leg join (a split
- * parent's `settled_amount_minor` already equals the sum of its legs,
- * 999.6-RESEARCH.md Pattern 2). Every generated bucket produces exactly one
- * `ReportResultRow` — including a zero-activity bucket — so a chart's
- * x-axis never silently drops a point.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class TimeBucketSpendQuery
 {
@@ -34,7 +25,7 @@ final class TimeBucketSpendQuery
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
      * @param  string  $granularity  'monthly' | 'weekly'
-     * @param  list<int>  $accountIds  T-999.6-06/14: restrict to these account ids (empty = no restriction). Applied ALONGSIDE the existing `where('user_id', ...)` guard below, so a foreign id can only ever narrow this user's own result to nothing — never widen it to another user's rows.
+     * @param  list<int>  $accountIds  restrict to these account ids (empty = no restriction); applied alongside the user_id guard, so a foreign id only narrows this user's own result, never widens it
      * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
      * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
      * @param  ?int  $amountMinMinor  restrict to rows whose ABS(settled_amount_minor) >= this (empty = no restriction)
