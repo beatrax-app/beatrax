@@ -5,29 +5,11 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 /**
- * Language-keyed lookup from canonical column names (`date`, `type`,
- * `currency`, `gross`, `transactionId`, `referenceTxnId`, ...) to the
- * verbatim header cells of the PayPal Activity Download CSV.
- *
- * The map sits alongside `PaypalCsvLanguageProfile` rather than being
- * folded into it because the LanguageProfile owns the header-detection
- * signature (a discriminator subset), while this map owns the full
- * canonical-name → header-cell table — two distinct responsibilities.
- *
- * Currently registered locales: `nl`. An EN-locale entry lands the
- * moment a second-language sample is available.
- *
- * `counterpartyIban` maps to the `Bankrekening` column, which the NL
- * export ships as empty on every row (the funding-source child rows
- * carry no IBAN). Resolving the cell returns the empty string, matching
- * the column shape — the rollup walker is responsible for promoting
- * that to `null` before constructing the SourceTransactionDto.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class PaypalCsvColumnMap
 {
     /**
-     * Canonical name → verbatim header column, keyed by language code.
-     *
      * @var array<string, array<string, string>>
      */
     private const COLUMNS = [
@@ -54,18 +36,6 @@ final class PaypalCsvColumnMap
     ];
 
     /**
-     * Resolves a canonical column name against a row in the detected
-     * language. Returns the trimmed cell value, or null when the
-     * canonical column is not mapped for that language OR the row does
-     * not carry that header.
-     *
-     * Trimming defends two empirical PayPal quirks at once:
-     *   - The `Bruto ` and `Kosten ` headers ship with a trailing space
-     *     inside their quoted cells; this map lists them WITHOUT the
-     *     trailing space, and the lookup tries both spellings.
-     *   - Per-cell values can be surrounded by spurious whitespace
-     *     (rare but observed in some PayPal exports).
-     *
      * @param  array<string, string>  $row  league/csv associative record
      */
     public function value(string $canonical, string $language, array $row): ?string

@@ -18,45 +18,7 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
 /**
- * Hand-rolled MT940 (legacy SWIFT statement) parser for bank exports.
- * Pairs each `:61:` statement-line tag with the optional immediately-
- * following `:86:` narrative tag; produces one SourceTransactionDto per
- * pair. After `parse()` completes, `statementMetadata()` returns the
- * statement-level metadata (opening + closing balance, period dates,
- * entry count) captured from the file's `:20:`, `:25:`, `:28C:`, `:60F:`,
- * and `:62F:` tags so the import pipeline can populate the
- * `statement_summaries` row.
- *
- * Source-reference policy:
- *  - When the `:86:` GVC narrative carries an `EREF` keyword that is
- *    non-empty and not the literal `NOTPROVIDED`, that value becomes
- *    `sourceRef`.
- *  - Otherwise the `:61:` customer-reference (the 34-char extended
- *    variant) is used.
- *  - Otherwise `sourceRef` stays null. MT940's reference channel is
- *    intentionally weaker than CAMT.053's `EndToEndId`; a CAMT enrichment
- *    pass may overwrite this value later in the pipeline.
- *
- * Booking-date normalisation:
- *  - MT940's `:61:` carries a value date (YYMMDD) and an optional entry
- *    date (MMDD), both at day precision. The adapter zeroes `bookedAt`
- *    to `00:00:00` (matching the CSV and CAMT.053 adapters) so a single
- *    logical transaction produces the same FingerprintComposer v3 hash
- *    across all three formats.
- *
- * Multi-statement files:
- *  - When a file carries multiple `:20:` blocks, the FIRST statement's
- *    metadata is captured for `statement_summaries` and the persisted
- *    `entry_count` reflects only that first statement. Subsequent
- *    statements' entries still yield SourceTransactionDto rows; the
- *    `extras` envelope on the statement metadata carries
- *    `multiStatement: true` so downstream views can surface the fact.
- *
- * Source-format integrity:
- *  - `:25:` (own IBAN) and `:60F:`/`:60M:` (currency-bearing opening
- *    balance) must precede the first `:61:`. A `:61:` tag observed
- *    before either is rejected as a parse error so empty IBAN and
- *    silent-default-EUR currency can never reach the import pipeline.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Mt940Adapter implements SourceAdapter
 {
@@ -205,10 +167,6 @@ final class Mt940Adapter implements SourceAdapter
         }
     }
 
-    /**
-     * Builds one SourceTransactionDto from a `:61:`/`:86:` pair (or a
-     * lone `:61:` when no narrative follows).
-     */
     private function buildDto(Mt940StatementLine $line, ?Mt940Narrative $narrative, string $ownIban, string $currency, int $rowIndex): SourceTransactionDto
     {
         $rawName = $narrative?->counterpartyName;
@@ -253,13 +211,10 @@ final class Mt940Adapter implements SourceAdapter
         );
     }
 
-    /**
-     * Parses a `:60F:` / `:62F:` balance tag content (e.g.
-     * `C260401EUR1000,00`) into a signed integer minor amount, a 3-letter
-     * currency code, and the balance date. Routes the comma-decimal
-     * amount through `BankAmountParser` so the integer-only money path is
-     * preserved end-to-end.
-     */
+    // Parses e.g. "C260401EUR1000,00" into a signed integer minor amount, a
+    // 3-letter currency, and the balance date, routing the comma-decimal
+    // amount through BankAmountParser so the integer-only path holds
+    // end-to-end.
     private function parseBalance(string $content): ?Mt940BalanceTuple
     {
         if (preg_match('/^([CD])(\d{6})([A-Z]{3})([\d,]+)$/', trim($content), $m) !== 1) {
@@ -286,11 +241,9 @@ final class Mt940Adapter implements SourceAdapter
         );
     }
 
-    /**
-     * Routes a balance amount string ("1000,00" / "1000") through the
-     * integer-only amount parser. The comma-decimal cell is normalised
-     * to a two-fractional-digit period-decimal before delegation.
-     */
+    // Normalises a comma-decimal cell ("1000,00" / "1000") to a
+    // two-fractional-digit period-decimal before delegating to the
+    // integer-only amount parser.
     private function parseBalanceAmount(string $raw): int
     {
         $normalised = str_replace(',', '.', $raw);

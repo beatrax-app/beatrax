@@ -20,19 +20,7 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
 /**
- * Preset-driven streaming parser for any bank/fintech CSV export. One
- * instance is constructed per CsvPreset (see IngestionServiceProvider), so
- * supporting a new bank is a matter of adding a preset, not a class.
- *
- * Columns are matched by a NORMALISED header name (lower-cased, whitespace
- * removed) so a bank's minor spelling differences — `Naam / Omschrijving`
- * vs `Naam/Omschrijving`, `MutatieSoort` vs `Mutatiesoort` — still resolve.
- * The signed minor amount is computed per the preset's amount strategy
- * (signed column / separate debit-credit columns / amount-plus-direction
- * indicator). Rows the preset's state filter rejects, and rows with no
- * booking date (e.g. a Revolut pending entry), are skipped rather than
- * aborting the import. Like the other CSV adapters it carries no
- * statement-level metadata.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class GenericCsvAdapter implements SourceAdapter
 {

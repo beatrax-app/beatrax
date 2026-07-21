@@ -7,9 +7,7 @@ namespace Modules\Ingestion\Public\Dto;
 use Spatie\LaravelData\Data;
 
 /**
- * The output of HeaderSniffer::sniff() — the upload wizard reads $format and
- * $encoding to render confirmation copy in the preview screen before any
- * parser touches the file.
+ * @link ../../../../.docs/features/ingestion/architecture.md
  */
 final class SniffResult extends Data
 {

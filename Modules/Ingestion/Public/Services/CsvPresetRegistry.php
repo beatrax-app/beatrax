@@ -7,19 +7,10 @@ namespace Modules\Ingestion\Public\Services;
 use Modules\Ingestion\Public\Dto\CsvPreset;
 
 /**
- * The bundled set of bank/fintech CSV presets that drive GenericCsvAdapter.
- * Each preset is registered as its own ingestion format; this registry is
- * the single source of truth consumed by the service provider (to register
- * one adapter per preset), the HeaderSniffer (to validate a declared
- * preset's header signature), and the upload wizard (to list the choices).
- *
- * Adding a bank = adding a preset here. Column specs are from each
- * provider's documented export format; verify against a real export before
- * trusting the exact header strings.
+ * @link ../../../../.docs/features/ingestion/architecture.md
  */
 final class CsvPresetRegistry
 {
-    /** Issuer key the upload wizard groups these presets under. */
     public const ISSUER = 'other-bank';
 
     /** @var array<string, CsvPreset>|null */
@@ -49,7 +40,8 @@ final class CsvPresetRegistry
     private function build(): array
     {
         $presets = [
-            // N26 (EN export): signed Amount (EUR), ISO dates, clean IBAN/name.
+            // N26 (EN export): signed Amount (EUR), ISO dates, clean
+            // IBAN/name.
             new CsvPreset(
                 format: 'n26-csv',
                 label: 'N26',
@@ -69,11 +61,8 @@ final class CsvPresetRegistry
             ),
 
             // Revolut (personal export): signed Amount, per-row Currency,
-            // datetime Completed Date (the settlement/booking date). Only
-            // COMPLETED rows are imported — PENDING/REVERTED/DECLINED rows are
-            // skipped so reversed transactions aren't double-counted and
-            // pending rows (empty Completed Date) don't abort the import.
-            // Counterparty lives in Description.
+            // datetime Completed Date. Only COMPLETED rows import — reversed
+            // and pending (empty Completed Date) rows are skipped.
             new CsvPreset(
                 format: 'revolut-csv',
                 label: 'Revolut',

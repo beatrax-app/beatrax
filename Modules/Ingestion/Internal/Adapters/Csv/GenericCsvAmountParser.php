@@ -7,15 +7,7 @@ namespace Modules\Ingestion\Internal\Adapters\Csv;
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 
 /**
- * Parses a CSV amount cell into signed integer minor units (cents), driven
- * by the preset's decimal separator. Pure integer arithmetic — no float
- * path, which would corrupt cent precision.
- *
- * Handles the cross-bank zoo of amount spellings: `-1.234,56` (comma
- * decimal, dot thousands), `1,234.56` (dot decimal, comma thousands),
- * `1234.56`, `-12,34`, a leading `+`, parenthesised negatives `(12,34)`,
- * and stray currency symbols / non-breaking spaces. Assumes a two-decimal
- * minor unit (EUR/USD/GBP/etc.) — the only shapes these CSV exports use.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class GenericCsvAmountParser
 {
@@ -26,7 +18,8 @@ final class GenericCsvAmountParser
             throw new InvalidAmountException('Empty amount cell.');
         }
 
-        // Parenthesised negative, e.g. "(12,34)".
+        // Parenthesised negative, e.g. "(12,34)" — accounting-style sign
+        // notation some fintech exports use in place of a leading "-".
         $negative = false;
         if (preg_match('/^\((.*)\)$/', $raw, $m) === 1) {
             $negative = true;

@@ -18,21 +18,7 @@ use Modules\Ledger\Public\Dto\StatementSummaryData;
 use Throwable;
 
 /**
- * Streaming parser for the ASN Online Bankieren "CSV met IBAN" export.
- *
- * The adapter delegates pre-parse validation to HeaderSniffer (rejecting
- * non-CSV uploads with a user-readable message), reads the file lazily via
- * `league/csv` Reader + CharsetConverter (UTF-8 round-trip, safe for legacy
- * windows-1252 exports too), and yields one SourceTransactionDto per row.
- *
- * Yielding is intentional: a multi-year ASN history can run to tens of
- * thousands of rows. The Import pipeline consumes the generator once and
- * never materializes the whole list.
- *
- * Amounts go through BankAmountParser (regex + integer arithmetic, no float
- * path — IEEE-754 corrupts cent precision). Counterparty names that arrive
- * empty stay null in the DTO; substituting the `_no_counterparty` sentinel
- * is the Normalize stage's responsibility.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class AsnCsvAdapter implements SourceAdapter
 {
@@ -47,9 +33,7 @@ final class AsnCsvAdapter implements SourceAdapter
     }
 
     /**
-     * ASN's CSV export carries per-row data only — no opening balance,
-     * closing balance, period bounds, or statement number at the file
-     * level — so this adapter never produces a StatementSummaryData.
+     * @return null Always — ASN's CSV export carries no file-level totals.
      */
     public function statementMetadata(): ?StatementSummaryData
     {
@@ -70,9 +54,6 @@ final class AsnCsvAdapter implements SourceAdapter
 
         $index = 0;
         foreach ($reader->getRecords() as $record) {
-            // After setHeaderOffset, records are associative arrays keyed by
-            // header name. Coerce to a list keyed by integer column position
-            // so AsnCsvColumnMap constants resolve directly.
             $row = $this->normaliseRow($record);
 
             try {
@@ -118,14 +99,9 @@ final class AsnCsvAdapter implements SourceAdapter
         }
     }
 
+    // league/csv 9.x yields strings or null only per row; anything else is a
+    // precondition violation, rejected loudly rather than coerced silently.
     /**
-     * Coerces a league/csv record (associative under setHeaderOffset, keyed
-     * by header name) into a positional list of strings. The library's
-     * contract for 9.x is to yield strings or null only — anything else is
-     * a precondition violation and is rejected loudly rather than papered
-     * over with type juggling.
-     *
-     * @param  mixed  $record  Whatever league/csv yielded for one row.
      * @return array<int, string>
      */
     private function normaliseRow(mixed $record): array
@@ -171,10 +147,6 @@ final class AsnCsvAdapter implements SourceAdapter
     }
 
     /**
-     * Joins the payment reference and the free-text description, normalises
-     * embedded CR/LF (ASN historically emits literal `\r`), and collapses
-     * runs of whitespace.
-     *
      * @param  array<int, string>  $row
      */
     private function joinDescription(array $row): ?string
@@ -192,6 +164,8 @@ final class AsnCsvAdapter implements SourceAdapter
         }
 
         $combined = implode(' / ', $parts);
+        // ASN historically emits literal \r within this field; normalise
+        // both CR and LF to a single space before collapsing whitespace.
         $combined = str_replace(["\r", "\n"], ' ', $combined);
         $collapsed = preg_replace('/\s+/u', ' ', $combined);
 

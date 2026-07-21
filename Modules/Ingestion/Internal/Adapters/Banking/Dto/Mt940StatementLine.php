@@ -7,27 +7,20 @@ namespace Modules\Ingestion\Internal\Adapters\Banking\Dto;
 use Carbon\CarbonImmutable;
 
 /**
- * Decoded `:61:` statement-line tag — one bank-side movement on the
- * statement, parsed into typed fields. The `customerReference` field uses
- * the extended 34-character variant (not the SWIFT-standard 16).
- *
- * `status` follows the MT940 convention:
- *   - `C` = credit (positive amountMinor)
- *   - `D` = debit (negative amountMinor)
- *   - `RC` = reversal of credit (negative amountMinor)
- *   - `RD` = reversal of debit (positive amountMinor)
- *
- * Lives under `Internal/` because the shape is parser-implementation
- * detail; the adapter projects it onto `SourceTransactionDto`.
+ * @link ../../../../../../.docs/features/ingestion/architecture.md
  */
 final readonly class Mt940StatementLine
 {
     public function __construct(
         public CarbonImmutable $valueDate,
         public ?CarbonImmutable $entryDate,
+        /** @var string one of C (credit, +amountMinor), D (debit, -amountMinor),
+         *      RC (reversal of credit, -amountMinor), RD (reversal of debit, +amountMinor)
+         */
         public string $status,
         public ?string $transactionTypeCode,
         public int $amountMinor,
+        /** @var ?string extended 34-character variant, not the SWIFT-standard 16 */
         public ?string $customerReference,
         public ?string $bankReference,
         public ?string $extraDetails,

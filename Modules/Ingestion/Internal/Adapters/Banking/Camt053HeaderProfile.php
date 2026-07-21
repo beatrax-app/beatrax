@@ -5,19 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
 /**
- * CAMT.053 (ISO 20022 bank-to-customer statement) profile for a CAMT.053
- * Bankieren XML export.
- *
- * The `genkgo/camt` parser library covers every CAMT.053 sub-version a bank
- * emits (001.02 / 001.03 / 001.04 / 001.08); the FORMAT constant is the
- * stable identifier the SourceAdapterRegistry, the upload wizard dropdown,
- * and HeaderSniffer reference.
- *
- * The namespace regex anchors on the CAMT.053 family, not a specific
- * sub-version: any `urn:iso:std:iso:20022:tech:xsd:camt.053.001.NN` URI
- * (NN = two digits) passes the sniffer. Unknown sub-versions surface a
- * clear error at parse time rather than at sniff time so a future bank
- * upgrade does not silently fail at the front door.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Camt053HeaderProfile
 {
@@ -26,13 +14,10 @@ final class Camt053HeaderProfile
     /** @var list<string> */
     public const FILE_EXTENSIONS = ['xml'];
 
-    /**
-     * ISO 20022 CAMT.053 family namespace pattern. The full URI is
-     *   urn:iso:std:iso:20022:tech:xsd:camt.053.001.NN
-     * with NN being the two-digit sub-version. The regex tolerates an
-     * optional prefix on the `xmlns` attribute so non-default-namespace
-     * documents (`xmlns:camt="…"`) still match.
-     */
+    // Anchors on the CAMT.053 family, not a specific sub-version — any
+    // urn:iso:std:iso:20022:tech:xsd:camt.053.001.NN URI passes the sniffer,
+    // tolerating an optional xmlns prefix; unknown sub-versions fail at
+    // parse time instead, so a future bank upgrade won't fail at the door.
     public const XML_NAMESPACE_REGEX = '#xmlns(?::\w+)?\s*=\s*"urn:iso:std:iso:20022:tech:xsd:camt\.053\.001\.(\d{2})"#';
 
     public const SOURCE_ENCODING = 'UTF-8';

@@ -9,20 +9,7 @@ use Carbon\Exceptions\InvalidFormatException;
 use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 
 /**
- * Parses PayPal Activity Download Datum cells into a startOfDay
- * `CarbonImmutable`.
- *
- * The startOfDay normalisation matches the project-wide
- * FingerprintComposer v3 day-precision invariant the ASN CSV /
- * CAMT.053 / MT940 / ICS PDF adapters use, so cross-format dedup
- * hashes remain comparable.
- *
- * PayPal exports the Datum column as M/D/YYYY (US numeric date),
- * independent of the account's display locale. The ISO `yyyy-mm-dd`
- * shape is accepted as a forward-compatibility fallback for the case
- * where a future PayPal export shifts to that shape.
- *
- * Stateless; no global locale mutation.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class PaypalDateParser
 {

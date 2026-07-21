@@ -10,54 +10,7 @@ use Modules\Ingestion\Public\Exceptions\InvalidDateException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 
 /**
- * Three-pass Transaction-ID / Reference-Txn-ID rollup walker for PayPal
- * Activity Download rows.
- *
- * PayPal's CSV is an EVENT log, not a transaction log: a single logical
- * payment can produce up to four rows (parent + funding-source + EUR
- * currency-conversion leg + foreign currency-conversion leg). This
- * walker folds those event rows into one canonical
- * `SourceTransactionDto` per logical payment.
- *
- * Three passes:
- *
- *   1. Index rows by `Transaction ID`. Drop rows whose event type
- *      classifies as `'skip'` (Hold / Authorization / Reserve /
- *      Reversal); count them via `skippedHoldCount()` so the wizard
- *      can surface the count without re-deriving it.
- *
- *   2. Partition surviving rows into parents vs children by
- *      `Reference Txn ID`:
- *        - parent: `Reference Txn ID` is empty, self-referential, or
- *          points at a Transaction ID NOT in this file (cross-period
- *          billing-agreement parent — the row IS the parent inside
- *          this window)
- *        - child: `Reference Txn ID` points at another row's
- *          Transaction ID inside this file
- *      A row classified as `'child-fee'` or `'child-fx'` whose
- *      Reference Txn ID points outside the file becomes a standalone
- *      parent AND increments `orphanChildCount()` — that surface is
- *      audit-only.
- *
- *   3. For each parent, fold its children into ONE
- *      `SourceTransactionDto`:
- *        - `amountMinor` / `currency` = native (non-EUR) leg of any
- *          `child-fx` pair, else the parent's Gross
- *        - `settledAmountMinor` / `settledCurrency` = EUR leg of any
- *          `child-fx` pair, else null
- *        - `fxRateUsed` = null (NormalizeStage derives it later from
- *          the native/settled pair)
- *        - `rawPayload` = `{ format: 'paypal-csv', events: [{ type,
- *          row }, ...] }` with parent first then children in CSV order
- *        - `sourceRef` = parent's Transaction ID
- *        - `sourceRowIndex` = monotonically increasing across the
- *          rolled-up output (0, 1, 2, ...), NOT the raw CSV row index
- *
- * FX-direction safety net: the walker identifies the foreign leg by
- * `Currency != 'EUR'`, NEVER by row order. Both legs of a PayPal
- * currency-conversion pair are labelled with the same
- * `Algemene valutaomrekening` event type and share a `Reference Txn ID`,
- * but only the non-EUR leg carries the native-currency amount.
+ * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class PaypalTransactionRollup
 {
@@ -75,9 +28,6 @@ final class PaypalTransactionRollup
     ) {}
 
     /**
-     * Folds the flat row list into one canonical DTO per logical
-     * payment.
-     *
      * @param  list<array<string, string>>  $rawRows  one entry per CSV record
      * @return list<SourceTransactionDto>
      */
@@ -115,14 +65,10 @@ final class PaypalTransactionRollup
             }
         }
 
-        // Pass 2: partition into parents vs children. A row is a child
-        // ONLY when its event type is classified as 'child-fee' or
-        // 'child-fx' AND its Reference Txn ID points at another row in
-        // this file. Otherwise it is a parent.
-        //
-        // Orphan child = classified as child-* AND RefId points outside
-        // this file. These are promoted to standalone parents and
-        // counted via orphanChildCount() for audit reporting.
+        // Pass 2: a row is a child only when classified 'child-fee' or
+        // 'child-fx' AND its Reference Txn ID points at another row in this
+        // file; an orphan child (RefId points outside the file) is promoted
+        // to a standalone parent and counted via orphanChildCount().
         /** @var array<string, list<array<string, string>>> $childrenByParent */
         $childrenByParent = [];
         /** @var list<array<string, string>> $parents */
@@ -152,11 +98,9 @@ final class PaypalTransactionRollup
             $parents[] = $row;
         }
 
-        // Pass 3: fold each parent + its inside-file children into ONE
-        // SourceTransactionDto. A malformed amount cell on the parent
-        // means we cannot construct a sensible DTO — drop the whole
-        // logical-payment group and bump the malformed-row counter so
-        // the wizard's audit panel can surface the skip.
+        // Pass 3: fold each parent + its children into one DTO. A malformed
+        // parent amount drops the whole logical-payment group and bumps
+        // the malformed-row counter instead of raising.
         /** @var list<SourceTransactionDto> $rolledUp */
         $rolledUp = [];
         $canonicalIndex = 0;
@@ -194,8 +138,6 @@ final class PaypalTransactionRollup
     }
 
     /**
-     * Builds the canonical DTO for one parent + its children.
-     *
      * @param  array<string, string>  $parentRow
      * @param  list<array<string, string>>  $children
      */
@@ -209,14 +151,10 @@ final class PaypalTransactionRollup
         $settledAmountMinor = null;
         $settledCurrency = null;
 
-        // FX-direction safety net: scan child-fx siblings
-        // and identify the foreign leg by Currency != 'EUR', NOT by row
-        // order. The walker tolerates both orientations:
-        //   - parent native foreign + child EUR settled
-        //   - parent EUR settled + child non-EUR native (the empirical
-        //     PayPal shape stamps Bruto on the parent with foreign
-        //     currency, so the second orientation is unusual but covered
-        //     defensively).
+        // FX-direction safety net: identify the foreign leg by Currency !=
+        // 'EUR', never by row order — the walker tolerates both the
+        // typical (parent native + child EUR settled) and swapped
+        // orientation defensively.
         foreach ($children as $childRow) {
             $childEventType = $this->columns->value('type', $language, $childRow) ?? '';
             $childAction = $this->events->classify($childEventType, $language);
@@ -252,7 +190,8 @@ final class PaypalTransactionRollup
                 $nativeAmountMinor = $childAmountMinor;
                 $nativeCurrency = $childCurrency;
             }
-            // Else: same-currency pair — degenerate; ignore.
+            // A same-currency pair is degenerate for FX purposes and is
+            // left as-is (no settled leg populated).
         }
 
         $bookedAt = $this->dates->parse($this->columns->value('date', $language, $parentRow) ?? '');
@@ -296,10 +235,6 @@ final class PaypalTransactionRollup
         );
     }
 
-    /**
-     * Composes a "{event-type} / {counterparty}" description, falling
-     * back gracefully when either token is empty.
-     */
     private function formatDescription(string $eventType, ?string $counterpartyName): ?string
     {
         $tokens = [];
