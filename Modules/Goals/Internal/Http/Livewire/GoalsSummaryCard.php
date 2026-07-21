@@ -12,16 +12,7 @@ use Modules\Goals\Public\Dto\GoalProgressRow;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 
 /**
- * Compact dashboard "Goals" summary card.
- *
- * Shows up to 3 nearest-finishing active goals after the NetWorthCard.
- * Does NOT call `->extends('layouts.app')` — it renders inline in the
- * dashboard (`@livewire('goals.summary-card')`).
- *
- * Empty-state (no active goals): renders the calm-collapse single-line copy
- * inside the card chrome — never a broken or invisible card.
- *
- * Method-parameter DI on render — no constructor (phpstan-strict-rules ban).
+ * @link ../../../../../.docs/features/goals/architecture.md
  */
 final class GoalsSummaryCard extends Component
 {

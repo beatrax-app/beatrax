@@ -15,29 +15,7 @@ use Modules\Pots\Public\Services\PotBalanceQuery;
 use stdClass;
 
 /**
- * Read model for the Goals page and dashboard card.
- *
- * `forUser()` returns the user's active and completed goals (excluding archived
- * — those are returned by the sibling `archivedForUser()` for Plan 04's
- * archived-goals disclosure).
- *
- * Contribution sum: credits (type IN transfer_in, income) on the linked account
- * posted on/after the goal's start_date, each converted into the goal's
- * immutable `target_currency` (D-05 — NOT the user's current base currency,
- * which may diverge). Unlinked goals report 0 contributed.
- *
- * All reads go through raw `DatabaseManager` queries to stay clean under
- * `phpstan-strict-rules`' `staticMethod.dynamicCall` rule (the same pattern
- * as BudgetProgressQuery and UncategorizedTriageQuery — Eloquent-free read path,
- * Eloquent only for the write path).
- *
- * Cross-user isolation: every raw `goals` read carries an explicit
- * `->where('user_id', $user->id)` guard; raw `transactions` reads carry the same.
- * (T-02-04).
- *
- * No float money on amounts: `fractionComplete` is a float ratio of two
- * integer minor amounts (contributedMinor / targetMinor) — a display fraction,
- * never a Money->float() call on a money value (T-02-06).
+ * @link ../../../../.docs/features/goals/architecture.md
  */
 final class GoalProgressQuery
 {
@@ -49,9 +27,6 @@ final class GoalProgressQuery
     ) {}
 
     /**
-     * Returns active and completed goals for the user, each with its
-     * contribution progress and projected finish date.
-     *
      * @return list<GoalProgressRow>
      */
     public function forUser(User $user): array
@@ -60,9 +35,6 @@ final class GoalProgressQuery
     }
 
     /**
-     * Returns archived goals for the user — consumed by Plan 04's archived
-     * goals disclosure section (D-09).
-     *
      * @return list<GoalProgressRow>
      */
     public function archivedForUser(User $user): array
@@ -71,17 +43,12 @@ final class GoalProgressQuery
     }
 
     /**
-     * Internal: loads goals matching the given statuses and maps them to rows.
-     *
      * @return list<GoalProgressRow>
      */
     private function loadRows(User $user, string ...$statuses): array
     {
         $connection = $this->db->connection();
 
-        // Fetch goals via raw DatabaseManager to stay clean under phpstan-strict-rules'
-        // staticMethod.dynamicCall constraint. Left-join accounts so account_name
-        // arrives in a single query with no N+1 expansion.
         $goalRows = $connection->table('goals')
             ->leftJoin('accounts', 'goals.account_id', '=', 'accounts.id')
             ->where('goals.user_id', $user->id)
@@ -103,7 +70,8 @@ final class GoalProgressQuery
             return [];
         }
 
-        // D-10: batch-load pot balances keyed by goal_id — avoids N+1 in the loop.
+        // Batch-load pot balances keyed by goal_id — avoids N+1 in the loop
+        // below.
         $linkedPotBalances = $this->potBalance->linkedPotBalancesForUser($user);
 
         // Build a lightweight Goal model per row so GoalProjectionService can
@@ -116,13 +84,11 @@ final class GoalProgressQuery
                 ? $row->account_name
                 : null;
 
-            // D-10: if this goal has an active linked pot, use the pot's balance
-            // as contributedMinor (FX-converted into target_currency when needed).
-            // Otherwise fall back to the Phase 2 sumContributions() path.
+            // If this goal has an active linked pot, use the pot's balance as
+            // contributedMinor (FX-converted into target_currency when
+            // needed); otherwise fall back to sumContributions() below.
             $goalId = self::toInt($row->id);
             if (isset($linkedPotBalances[$goalId])) {
-                // IN-03: balance and currency arrive from the single batched
-                // load — no per-goal follow-up query.
                 $potMinor = $linkedPotBalances[$goalId]['balance'];
                 $potCurrency = $linkedPotBalances[$goalId]['currency'];
                 $targetCurrency = self::toStr($row->target_currency);
@@ -168,18 +134,15 @@ final class GoalProgressQuery
         return $rows;
     }
 
-    /**
-     * Hydrates a Goal Eloquent model from a raw stdClass row so that
-     * model casts (immutable_date for start_date / target_date) and typed
-     * properties are available to GoalProjectionService without repeating
-     * the casting logic here.
-     */
+    // Hydrates a Goal Eloquent model from a raw stdClass row so model casts
+    // and typed properties are available to GoalProjectionService without
+    // repeating the casting logic here.
     private function hydrateGoal(stdClass $row): Goal
     {
         $goal = new Goal;
         $goal->forceFill([
             'id' => self::toInt($row->id),
-            'user_id' => null, // not loaded on the read path; projection takes $user explicitly
+            'user_id' => null,
             'account_id' => $row->account_id !== null ? self::toInt($row->account_id) : null,
             'name' => self::toStr($row->name),
             'target_minor' => self::toInt($row->target_minor),
@@ -192,16 +155,6 @@ final class GoalProgressQuery
         return $goal;
     }
 
-    /**
-     * Sums credits (transfer_in, income) on the linked account since the goal's
-     * start_date, converted into the goal's own `target_currency` (NOT the user's
-     * current base currency — D-05 makes target_currency immutable so it can
-     * diverge from base_currency; numerator and denominator must share a unit so
-     * fractionComplete, the "reached" flip, and the rendered figure are all
-     * consistent). Returns 0 for unlinked goals.
-     *
-     * Every raw read carries an explicit user_id guard (T-02-04).
-     */
     private function sumContributions(Goal $goal, User $user): int
     {
         if ($goal->account_id === null) {
@@ -235,11 +188,9 @@ final class GoalProgressQuery
         return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 
-    /**
-     * Normalises a raw DB date value to a 'Y-m-d' string suitable for a
-     * `<input type="date">` prefill, regardless of whether the driver returns
-     * 'Y-m-d' or 'Y-m-d H:i:s'. Returns '' for an empty/unparseable value.
-     */
+    // Normalises a raw DB date value to a 'Y-m-d' string, regardless of
+    // whether the driver returns 'Y-m-d' or 'Y-m-d H:i:s'. Returns '' for an
+    // empty/unparseable value.
     private static function toDateStr(mixed $value): string
     {
         $raw = self::toStr($value);

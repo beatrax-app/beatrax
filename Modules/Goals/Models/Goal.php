@@ -14,18 +14,7 @@ use Modules\Goals\Database\Factories\GoalFactory;
 use Modules\Ledger\Models\Account;
 
 /**
- * A savings goal with an optional linked account for contribution tracking.
- *
- * Contributions are counted as credits (type IN transfer_in, income) posted
- * on/after `start_date` on the linked `account_id`. When `account_id` is null
- * the goal is "unlinked" — progress shows 0/target with no projection.
- *
- * Money follows the project-wide signed BIGINT minor-units convention:
- * `target_minor` is always positive (a goal amount, not a signed flow).
- *
- * `status` lifecycle: active → completed (explicit mark) | archived (hidden).
- * The `BelongsToUser` trait adds a global UserScope so resolving a foreign
- * `goal_id` (client-supplied) safely returns nothing.
+ * @link ../../../.docs/features/goals/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
@@ -77,12 +66,9 @@ final class Goal extends Model
         ];
     }
 
+    // Laravel's default resolver derives Database\Factories\<ModelName>Factory,
+    // which is not where module factories live — point directly at GoalFactory.
     /**
-     * Override factory resolution — Laravel's default resolver derives
-     * `Database\Factories\<ModelName>Factory` which is not where module
-     * factories live. Pointing directly to GoalFactory ensures
-     * `Goal::factory()` resolves correctly in tests.
-     *
      * @return Factory<self>
      */
     protected static function newFactory(): Factory
