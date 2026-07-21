@@ -19,13 +19,7 @@ use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
 /**
- * `/cash` — the Cash book. A form to hand-enter a transaction (typically cash)
- * straight into the canonical ledger via RecordManualTransaction, and a list of
- * the manual entries with delete. Manual rows are user-owned and deletable,
- * unlike immutable imported rows — delete is scoped to source_format=manual.
- *
- * Service collaborators arrive as action/render parameters (constructor
- * injection is banned on Livewire Component subclasses by phpstan-strict-rules).
+ * @see RecordManualTransaction
  */
 final class CashBookPage extends Component
 {
@@ -120,12 +114,9 @@ final class CashBookPage extends Component
             ->limit(100)
             ->get(['t.id', 't.posted_at', 't.counterparty_name', 't.settled_amount_minor', 't.type', 'c.name as category_name']);
 
-        // WR-12: `transactions.counterparty_name` is a SensitiveFieldRegistry
-        // column stored as AEAD ciphertext at rest. The raw query builder
-        // applies no cast, so decrypt each entry before it reaches the view —
-        // otherwise an encrypted user sees a ciphertext blob in the cash-book
-        // list. decryptValue never throws and is a pass-through no-op for
-        // non-encryption users.
+        // counterparty_name is ciphertext at rest and the raw query builder
+        // applies no cast, so decrypt each entry before it reaches the view.
+        // decryptValue is a pass-through no-op for non-encryption users.
         $entries = $entries->map(function (object $entry) use ($codec, $user, $session): object {
             if (is_string($entry->counterparty_name) && $entry->counterparty_name !== '') {
                 $entry->counterparty_name = $codec->decryptValue(
@@ -147,7 +138,6 @@ final class CashBookPage extends Component
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        // Batch-load tax state for all manual entries (Pitfall 1 — ONE query).
         $entryIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $entries->all());
         $taxState = $this->taxTagStateFor($entryIds, $taxTagQuery, $currentUser);
 
@@ -182,14 +172,10 @@ final class CashBookPage extends Component
         return $owned ? $this->categoryId : null;
     }
 
-    /**
-     * Parse a money string to minor units. Accepts plain ("12.50"), Dutch
-     * grouped ("1.234,56"), and comma-decimal ("12,50") forms; the rightmost of
-     * '.' or ',' is the decimal separator and the rest are grouping. Rejects
-     * anything with non-numeric characters (so scientific notation like "1e3"
-     * or a leading sign never coerces to a surprise amount). Whole part capped
-     * at 12 digits.
-     */
+    // Accepts plain ("12.50"), Dutch grouped ("1.234,56"), and comma-decimal
+    // ("12,50") forms; the rightmost of '.' or ',' is the decimal separator.
+    // Rejects non-numeric characters, so scientific notation or a leading
+    // sign never coerces to a surprise amount.
     private static function parseAmount(string $raw): ?int
     {
         $trimmed = str_replace(' ', '', trim($raw));

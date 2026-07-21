@@ -14,21 +14,15 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
+// Records a hand-entered transaction through the same canonical pipeline
+// imports use, so it categorises/recur-detects/reports identically. It hangs
+// off two synthetic per-user fixtures (a "Cash" account, a "manual"
+// import_run); a random source_ref avoids same-day fingerprint collisions.
 /**
- * Records a hand-entered (typically cash) transaction into the SAME canonical
- * ledger pipeline imports use — so a manual entry categorises, recur-detects,
- * and reports exactly like an imported one. It is NOT a special-cased ledger
- * row: it flows through RecordsTransactions, which composes the fingerprint,
- * insert-or-ignores, and dispatches TransactionImported.
- *
- * The entry hangs off two synthetic, find-or-created per-user fixtures: a single
- * "Cash" account (kind=cash) and a single "manual" import_run. A random
- * source_ref per entry keeps two genuinely-distinct identical cash spends (e.g.
- * two €3 coffees on the same day) from colliding on the transaction fingerprint.
+ * @see RecordsTransactions
  */
 final class RecordManualTransaction
 {
-    /** Max bookedAt-bump retries to dodge a same-second fingerprint collision. */
     private const MAX_ATTEMPTS = 5;
 
     public function __construct(
@@ -57,19 +51,10 @@ final class RecordManualTransaction
 
         $counterpartyNormalized = $this->fingerprints->normalize($counterpartyName);
 
-        // postedAt/valueDate are the transaction's own date (the user picks it,
-        // so the entry lands in the right period). bookedAt is when it entered
-        // the ledger.
-        //
-        // De-duplication is the subtle part: both transaction-fingerprint unique
-        // indexes (the column tuple AND the SHA) key on (…, booked_at, …) at
-        // SECOND precision and EXCLUDE source_ref, so two genuinely-distinct
-        // identical cash spends (same counterparty/amount/date) recorded in the
-        // same second hash identically and the ledger's insertOrIgnore would
-        // silently drop the second. RecordsTransactions reports how many rows it
-        // actually inserted, so we bump bookedAt by a second and retry until the
-        // entry lands — guaranteeing a manual entry is never silently lost,
-        // while a true same-instant double-submit still collapses harmlessly.
+        // postedAt/valueDate are the transaction's own date; bookedAt is when
+        // it entered the ledger. Both fingerprint indexes key on booked_at at
+        // second precision, so two identical same-second cash spends would
+        // otherwise collide; bump bookedAt by a second and retry until it lands.
         $now = $this->clock->now();
         for ($attempt = 0; $attempt < self::MAX_ATTEMPTS; $attempt++) {
             $canonical = new CanonicalTransaction(
@@ -137,12 +122,10 @@ final class RecordManualTransaction
         ]);
     }
 
+    // Re-selects on a unique-constraint violation so a concurrent double-submit
+    // (two adds racing to create the singleton Cash account / manual run)
+    // never surfaces as a 500.
     /**
-     * Find a row's id by $match, or insert $attributes and return the new id.
-     * Re-selects on a unique-constraint violation so a concurrent double-submit
-     * (two adds racing to create the singleton Cash account / manual run) never
-     * surfaces as a 500.
-     *
      * @param  array<string, mixed>  $match
      * @param  array<string, mixed>  $attributes
      */
