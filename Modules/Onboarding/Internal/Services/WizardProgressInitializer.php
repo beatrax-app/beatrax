@@ -8,19 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Seeds the per-user `wizard_progress` rows for a fresh install. One
- * row per (user_id, step_key) — the schema's UNIQUE(user_id, step_key)
- * constraint makes the existence-checked insert idempotent so a re-fire
- * from a duplicated `UserInstalled` dispatch never duplicates rows AND
- * never overwrites a row that has already progressed past `pending`.
- *
- * The insert-only behaviour matters because the same `UserInstalled`
- * event the wizard initializer subscribes to is also re-dispatched by
- * the `beatrax:install` command when it re-runs against an already-
- * installed account. A user who is mid-wizard (or has finished it)
- * when the install command re-fires must NOT have their progress
- * demoted; the listener / initializer pairing is the safety net that
- * preserves their in-flight state.
+ * @link ../../../../.docs/features/onboarding/architecture.md
  */
 final readonly class WizardProgressInitializer
 {
@@ -47,12 +35,8 @@ final readonly class WizardProgressInitializer
                 }
             }
 
-            // A step added to the registry AFTER a user already finished the
-            // wizard (every existing row done/skipped) is seeded as `skipped`,
-            // not `pending` — otherwise the resume resolver would re-drop a
-            // finished user back into the wizard at the new step on their next
-            // visit. A fresh install (no rows) or an in-progress user gets the
-            // normal `pending` seed.
+            // See architecture.md for why a newly-registered step seeds as
+            // skipped (not pending) for an already-finished user.
             $seedStatus = ($existing !== [] && ! $hasPending) ? 'skipped' : 'pending';
 
             foreach ($this->registry->steps() as $stepKey) {

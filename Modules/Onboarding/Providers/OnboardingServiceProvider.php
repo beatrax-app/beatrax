@@ -26,23 +26,7 @@ use Modules\Onboarding\Internal\Services\WizardStepRegistry;
 use Modules\Onboarding\Public\Services\WizardProgressQuery;
 
 /**
- * Wires the Onboarding module:
- *
- *  - registers the wizard's state collaborators (registry / initializer
- *    / resume resolver / public progress query) as singletons.
- *  - listens for `UserInstalled` so the wizard's six per-user rows are
- *    seeded by the same event the default-category-tree seeder uses.
- *  - loads the wizard_progress migration so the state-machine table is
- *    created on `php artisan migrate`.
- *  - loads `/setup-wizard` and any other module routes.
- *  - registers the `onboarding::` Blade view namespace so the wizard's
- *    blade views can extend the wizard layout.
- *  - registers the SetupWizard parent + WelcomeStep + DoneStep Livewire
- *    components AND the five connector-step Livewire components
- *    (connect-bank, connect-paypal, connect-card, connect-email,
- *    first-import) AND the optional budgets + tax-country steps, plus
- *    the StartingBalanceCard child component under the `onboarding.*`
- *    alias namespace.
+ * @link ../../../.docs/features/onboarding/architecture.md
  */
 final class OnboardingServiceProvider extends ServiceProvider
 {

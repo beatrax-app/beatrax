@@ -11,148 +11,51 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Livewire child component the first-import step mounts once per
- * detected account (and once per account that needs manual entry).
- * Each card owns its own state machine — Detected / Conflict / Editing
- * / Confirmed / manual-entry — and emits `starting-balance.confirmed`
- * back to the parent step whenever the user accepts a value. The
- * parent aggregates every emitted payload into a per-account
- * `$balanceConfirmations` map that the commit-everything button later
- * writes to the `accounts.starting_balance_*` columns inside the same
- * DB transaction that confirms the stashed ImportRuns.
- *
- * State machine:
- *
- *   - `detected` — one detector fired with a non-zero value (the
- *     common case). The card shows the pre-filled value, a Confirm
- *     pill, and a quiet Edit affordance.
- *   - `conflict` — two detectors disagreed on the same account. The
- *     card shows a radio-button list of alternative candidates with
- *     the earliest-date one pre-selected.
- *   - `editing` — the user clicked Edit (or started a manual entry).
- *     The card shows inline number + date inputs with Cancel + Save.
- *   - `confirmed` — the user accepted a value; the card collapses to
- *     a single-line summary with a Change link.
- *   - `manual-entry` — no detector fired for this account; the card
- *     mounts in an "editing"-shaped state with empty inputs and a
- *     lede explaining the auto-detect miss.
- *
- * The user-id boundary is enforced when `save()` reads the
- * `transactions.posted_at` column for the earliest-transaction
- * warning — the query carries an explicit `where('user_id', ...)`
- * even though the BelongsToUser global scope would catch it on an
- * Eloquent query (this is a raw `DB::table()` read for tight control
- * over the one-column SELECT).
- *
- * Per the project DI-only rule, every collaborator is method-DI'd on
- * `save()` — Livewire forbids constructor DI on Component subclasses.
+ * @link ../../../../../.docs/features/onboarding/architecture.md
  */
 final class StartingBalanceCard extends Component
 {
-    /**
-     * Minimum and maximum minor-unit value the validator accepts on
-     * `save()`. ±€10M caps a typo or tampered-frontend cent value at
-     * a sane bound.
-     */
+    // ±€10M caps a typo or tampered-frontend cent value at a sane
+    // bound.
     private const MIN_BALANCE_MINOR = -1_000_000_000_00;
 
     private const MAX_BALANCE_MINOR = 1_000_000_000_00;
 
-    /**
-     * The accounts.id row this card's confirmation will write to. Set
-     * at mount; the parent step looks up the right value via
-     * DetectStartingBalancesQuery (or via the account list itself for
-     * the manual-entry case).
-     */
     public int $accountId = 0;
 
-    /**
-     * Human-readable label for the account ("ASN account", "ICS card",
-     * "PayPal balance"). Rendered in the H3 and in the confirmed
-     * single-line summary.
-     */
     public string $accountLabel = '';
 
-    /**
-     * Short identifier rendered inside the .funding-tag mono pill on
-     * the card eyebrow — typically "NL18 ASNB · 4321" (IBAN tail-4 +
-     * bank code) but free-form so the PayPal / wallet case can render
-     * "PAYPAL · wallet".
-     */
+    // Rendered inside the .funding-tag mono pill on the card eyebrow —
+    // typically "NL18 ASNB · 4321" but free-form for the PayPal/wallet case.
     public string $accountShort = '';
 
-    /**
-     * ISO-4217 currency code for the account. Drives the currency
-     * symbol/suffix in the rendered numeric value.
-     */
     public string $currency = 'EUR';
 
-    /**
-     * Detector verdict for this account, in minor units. Null when
-     * the detector returned no candidate (manual-entry case).
-     */
+    // Null when the detector returned no candidate (the manual-entry
+    // case).
     public ?int $detectedMinor = null;
 
-    /**
-     * Detector verdict date in ISO `YYYY-MM-DD` format. Null on
-     * manual-entry.
-     */
     public ?string $detectedDate = null;
 
-    /**
-     * User-edited value while the card is in `editing` state. Bound
-     * to a numeric input via `wire:model.live`.
-     */
+    // Bound to a numeric input via wire:model.live while the card is
+    // editing.
     public ?int $editedMinor = null;
 
-    /**
-     * User-edited date while the card is in `editing` state. Bound
-     * to a date input via `wire:model.live`.
-     */
     public ?string $editedDate = null;
 
-    /**
-     * Current state machine slot — one of `detected`, `conflict`,
-     * `editing`, `confirmed`, `manual-entry`. Mounted by the parent;
-     * mutated by the card's own action methods.
-     */
     public string $state = 'detected';
 
-    /**
-     * True once the user has accepted a value (either via `confirm`,
-     * `save`, or `pickConflictCandidate`). Drives the emerald left-
-     * stroke + ✓ glyph on the card chrome.
-     */
     public bool $isConfirmed = false;
 
-    /**
-     * Warning message populated on `save()` when the accepted date is
-     * later than the account's earliest imported transaction date.
-     * Empty string when no warning applies.
-     */
     public string $dateWarning = '';
 
-    /**
-     * Inline validation error surfaced beneath an offending input
-     * (out-of-range amount, unparseable date, future date). Empty
-     * string when no error.
-     */
     public string $validationError = '';
 
-    /**
-     * Alternative candidates the user can pick between when the card
-     * is in `conflict` state. Each entry carries the minor + date +
-     * source-format label rendered alongside the radio button.
-     *
-     * @var list<array{minor: int, date: string, sourceLabel: string}>
-     */
+    /** @var list<array{minor: int, date: string, sourceLabel: string}> */
     public array $alternativeCandidates = [];
 
-    /**
-     * Index into `$alternativeCandidates` the user has selected on
-     * the conflict variant. Defaults to 0 (the earliest-date
-     * candidate, which wins the tie-break on date alone).
-     */
+    // Defaults to 0 — the earliest-date candidate, which wins the
+    // tie-break on date alone.
     public int $selectedConflictIndex = 0;
 
     /**
@@ -181,12 +84,6 @@ final class StartingBalanceCard extends Component
         $this->alternativeCandidates = $alternativeCandidates;
     }
 
-    /**
-     * Accept the detector's value as-is. Used from the Detected
-     * state's primary "Confirm" pill — the card collapses to the
-     * confirmed single-line summary and emits a payload carrying the
-     * detector's own minor + date.
-     */
     public function confirm(): void
     {
         if ($this->accountId <= 0 || $this->detectedMinor === null || $this->detectedDate === null) {
@@ -207,11 +104,6 @@ final class StartingBalanceCard extends Component
         );
     }
 
-    /**
-     * Switch the card from Detected (or Confirmed) into Editing
-     * state. Copies the detected values into the edited fields so the
-     * inputs render with the existing value as a starting point.
-     */
     public function startEdit(): void
     {
         $this->validationError = '';
@@ -221,12 +113,6 @@ final class StartingBalanceCard extends Component
         $this->state = 'editing';
     }
 
-    /**
-     * Discard an in-progress edit and revert to the prior state. When
-     * a detector verdict exists the card snaps back to Detected;
-     * otherwise (manual-entry) the inputs remain visible and just the
-     * validation/error state is cleared.
-     */
     public function cancelEdit(): void
     {
         $this->validationError = '';
@@ -241,14 +127,6 @@ final class StartingBalanceCard extends Component
         }
     }
 
-    /**
-     * Validate the user's edits and accept them. Range-checks the
-     * minor amount, requires a parseable ISO date that is not in the
-     * future, optionally surfaces a warning when the date is later
-     * than the account's earliest imported transaction, then
-     * dispatches `starting-balance.confirmed` regardless of the
-     * warning — the warning is informational only.
-     */
     public function save(
         DatabaseManager $db,
         CurrentUser $currentUser,
@@ -319,11 +197,6 @@ final class StartingBalanceCard extends Component
         );
     }
 
-    /**
-     * Conflict variant — pick one of the alternative candidates the
-     * detector aggregator surfaced for this account and emit it as
-     * the confirmation payload.
-     */
     public function pickConflictCandidate(int $candidateIndex): void
     {
         if ($this->accountId <= 0 || ! array_key_exists($candidateIndex, $this->alternativeCandidates)) {

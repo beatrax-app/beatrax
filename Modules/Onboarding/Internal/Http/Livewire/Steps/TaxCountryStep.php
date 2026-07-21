@@ -11,22 +11,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Tax\Public\Services\TaxCountrySetup;
 
 /**
- * Optional wizard step — pick a tax country so the per-country deduction
- * categories are seeded before the user first opens the tax cockpit.
- * Mirrors the BudgetsStep shape: a `continue` action that persists the
- * selection (via the Tax module's public TaxCountrySetup surface — the
- * boundary arch tests forbid touching Modules\Tax\Internal from here) and
- * bubbles `wizard.step.completed`, plus a `skip` action that bubbles
- * `wizard.step.skipped`. The parent SetupWizard owns the wizard_progress
- * mutation + the advance.
- *
- * Choosing nothing and continuing is valid — the tax country can always be
- * set later on the /settings page; this step is a convenience, not a gate.
- * On a wizard re-run (?force=1) an already-stored country is preselected.
+ * @link ../../../../../../.docs/features/onboarding/architecture.md
  */
 final class TaxCountryStep extends Component
 {
-    /** Selected country code, or empty string when nothing is chosen. */
     public string $taxCountryCode = '';
 
     public function mount(CurrentUser $currentUser, TaxCountrySetup $setup): void
@@ -39,8 +27,8 @@ final class TaxCountryStep extends Component
     public function continue(CurrentUser $currentUser, TaxCountrySetup $setup): void
     {
         if ($this->taxCountryCode !== '' && $currentUser->isAuthenticated()) {
-            // selectCountry re-validates the code against the allow-list
-            // server-side, so an injected/unknown code is silently ignored.
+            // Re-validates the code against the allow-list server-side, so
+            // an injected/unknown code is silently ignored.
             $setup->selectCountry($currentUser->id(), $this->taxCountryCode);
         }
 

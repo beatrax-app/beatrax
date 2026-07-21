@@ -24,111 +24,36 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Wizard step 5 — the consolidated commit surface.
- *
- * This step renders a single "review everything we found, then commit"
- * page. On mount it reads
- * the ImportRun ids the connector steps stashed into
- * `wizard_progress.data` (the bank step writes one int, the PayPal step
- * writes one int, the card step writes an int array) and feeds the
- * union into `BuildConsolidatedPreviewQuery`, which applies the user-id
- * boundary + stale + already-confirmed filters and groups survivors by
- * source format. The step also feeds the same id list into
- * `DetectStartingBalancesQuery` to surface a `StartingBalanceCandidate`
- * per detected account.
- *
- * The body renders:
- *
- *   1. One `consolidated-preview-section` partial per
- *      `ConsolidatedPreviewSection` in the batch.
- *   2. One `StartingBalanceCard` child Livewire component per
- *      detected account (and one per detected-but-no-candidate
- *      account so the user can manually enter a starting balance for
- *      a PayPal wallet that auto-detect can't reach).
- *   3. One commit footer with the live deduplicated counter + a
- *      single "Commit everything (N transactions) →" primary CTA.
- *
- * `commitEverything()` wraps every `ConfirmImport(..., dispatchChain: false)`
- * call AND every `accounts.starting_balance_*` UPDATE in a single
- * `DB::transaction()`. On success the step dispatches chain
- * resolution + recurring detection ONCE post-transaction (mirroring
- * the standalone ConfirmImport action) and dispatches
- * `wizard.step.completed` so the SetupWizard parent advances. On
- * failure the rose inline error surfaces and nothing was changed
- * (rollback is automatic).
- *
- * The `wiz-card--wide` class on the rendered card preserves the
- * locked 1120px width exception for this step (`FirstImportStepWidthTest`).
- *
- * Per the project DI-only rule, every collaborator is method-DI'd —
- * Livewire forbids constructor DI on Component subclasses.
+ * @link ../../../../../../.docs/features/onboarding/architecture.md
  */
 final class FirstImportStep extends Component
 {
-    /**
-     * Per-account user confirmations the child cards have aggregated
-     * via the `starting-balance.confirmed` event listener. Keyed by
-     * `accountId`. The commitEverything() action writes each entry to
-     * `accounts.starting_balance_minor` + `accounts.starting_balance_date`
-     * inside the outer transaction.
-     *
-     * @var array<int, array{minor: int, date: string}>
-     */
+    /** @var array<int, array{minor: int, date: string}> */
     public array $balanceConfirmations = [];
 
-    /**
-     * In-memory consolidated preview batch produced by
-     * `BuildConsolidatedPreviewQuery::build()` on every render(). Not
-     * a Livewire-serialised property — Livewire 4 cannot hydrate the
-     * Spatie Data DTO across HTTP boundaries — so the batch is held
-     * as a plain property the render-pass repopulates and the blade
-     * reads via `View::with()`. The same constraint applies to the
-     * starting-balance candidate list and the per-account meta.
-     */
+    // Not a Livewire-serialised property — Livewire 4 cannot hydrate the
+    // Spatie Data DTO across HTTP boundaries — so render() repopulates
+    // this plain property and the blade reads it via View::with().
     private ?ConsolidatedPreviewBatch $preview = null;
 
-    /**
-     * @var list<StartingBalanceCandidate>
-     */
+    /** @var list<StartingBalanceCandidate> */
     private array $startingBalances = [];
 
-    /**
-     * @var array<int, array{label: string, short: string, currency: string}>
-     */
+    /** @var array<int, array{label: string, short: string, currency: string}> */
     private array $accountMeta = [];
 
-    /**
-     * Inline rose error surfaced beneath the commit button when the
-     * outer transaction rolls back. Empty string when no error.
-     */
     public string $commitError = '';
 
-    /**
-     * True while the commitEverything() action is executing — disables
-     * the primary CTA and swaps its label to "Committing…".
-     */
     public bool $isCommitting = false;
 
-    /**
-     * Cached union of every stashed ImportRun id (bank + cards +
-     * PayPal). Recomputed on every render() so a back-and-forth
-     * through earlier wizard steps (which mutate the stash) reflects
-     * fresh on this page without a manual refresh.
-     *
-     * @var list<int>
-     */
+    // Recomputed on every render() so a back-and-forth through earlier
+    // wizard steps reflects fresh on this page without a manual refresh.
+    /** @var list<int> */
     public array $stashedImportRunIds = [];
 
-    /**
-     * Per-section row caps the user has expanded past the default
-     * `SAMPLE_ROW_LIMIT` (5) via the "Load more (N remaining)" footer
-     * button. Keyed by `source_format` value (`'camt053'`,
-     * `'ics-pdf'`, `'paypal-csv'`, …); the value is the absolute row
-     * cap the section should render (5, 30, 55, 80, …). Sections
-     * absent from this map use the default 5-row cap.
-     *
-     * @var array<string, int>
-     */
+    // Keyed by source_format; absolute row cap per section (5, 30, 55,
+    // 80, ...) once the user clicks "Load more". Absent = default 5-row cap.
+    /** @var array<string, int> */
     public array $expandedRowCount = [];
 
     public function mount(): void
@@ -140,13 +65,8 @@ final class FirstImportStep extends Component
         $this->expandedRowCount = [];
     }
 
-    /**
-     * Public read accessor — the consolidated preview batch built by
-     * the current render pass. Returns an empty batch when called
-     * before the first render. The blade reads the same batch via the
-     * `$preview` view variable injected through `View::with()`, but
-     * tests prefer this accessor over an HTML-shape assertion.
-     */
+    // Returns an empty batch when called before the first render; tests
+    // prefer this accessor over an HTML-shape assertion.
     public function currentPreview(): ConsolidatedPreviewBatch
     {
         return $this->preview ?? new ConsolidatedPreviewBatch(
@@ -156,16 +76,9 @@ final class FirstImportStep extends Component
         );
     }
 
-    /**
-     * Listener — the StartingBalanceCard child component dispatches
-     * `starting-balance.confirmed` whenever the user accepts a value
-     * (Confirm pill, Save inside the editor, or a conflict-resolution
-     * pick). The payload's `accountId` is the load-bearing
-     * scope-write — we never trust the caller's accountId on UPDATE;
-     * the `commitEverything()` action carries the `where('user_id', $user->id)`
-     * filter so a tampered child dispatch cannot leak a write to a
-     * sibling user's account row.
-     */
+    // The payload's accountId is never trusted directly on UPDATE —
+    // commitEverything() carries its own where('user_id', ...) filter so
+    // a tampered child dispatch can't leak a write to another user's row.
     #[On('starting-balance.confirmed')]
     public function onStartingBalanceConfirmed(int $accountId, int $minor, string $date): void
     {
@@ -175,15 +88,8 @@ final class FirstImportStep extends Component
         ];
     }
 
-    /**
-     * Expand one preview section by another 25-row chunk. The next
-     * render() pass passes `$expandedRowCount` into
-     * BuildConsolidatedPreviewQuery as the per-section override map,
-     * so only the requested section grows. Idempotent past the
-     * section's totalRows: the query clamps the slice server-side
-     * (via array_slice) and the blade footer hides the button when
-     * remaining hits zero.
-     */
+    // Idempotent past the section's totalRows: the query clamps the
+    // slice server-side and the blade footer hides the button at zero.
     public function loadMoreRows(string $sourceFormat): void
     {
         $current = $this->expandedRowCount[$sourceFormat]
@@ -191,24 +97,9 @@ final class FirstImportStep extends Component
         $this->expandedRowCount[$sourceFormat] = $current + 25;
     }
 
-    /**
-     * Atomic commit-everything — wraps every stashed ImportRun's
-     * `ConfirmImport(..., dispatchChain: false)` call AND every
-     * `accounts.starting_balance_*` UPDATE in a single DB
-     * transaction. After the transaction returns successfully, the
-     * chain resolver + recurring detection dispatchers are invoked
-     * ONCE (not per-run) to keep the queue worker from racing the
-     * SQLite commit.
-     *
-     * On any throwable the transaction rolls back, the rose error
-     * surfaces inline, and the step stays where it is (no state
-     * change to wizard_progress, no chain dispatch).
-     *
-     * Method name avoids the literal `commit` because Livewire 3
-     * reserves `$commit` as a magic state-sync action; a wire:click
-     * pointing at a method literally named `commit` resolves to the
-     * magic no-op and never reaches user code.
-     */
+    // Named to avoid the literal "commit" — Livewire 3 reserves $commit
+    // as a magic state-sync action, so a method named commit() would
+    // never reach user code. See architecture.md for the atomicity contract.
     public function commitEverything(
         DatabaseManager $db,
         ConfirmsImports $confirmImport,
@@ -231,19 +122,13 @@ final class FirstImportStep extends Component
                 'balance_confirmations' => count($this->balanceConfirmations),
             ]);
 
-            // Rebuild the consolidated preview at commit time. Livewire
-            // calls action methods directly without running render()
-            // first, so we cannot rely on the property the render
-            // pass populates. Re-running the query also drops any
-            // run-ids the user may have removed from a connector step
-            // since the page loaded.
+            // Rebuilt at commit time since Livewire invokes action methods
+            // without running render() first.
             $stashedIds = $this->resolveStashedImportRunIds($user->id, $db);
             $preview = $buildPreview->build($stashedIds, $user);
 
-            // The query already groups by source format AND filters
-            // out empty / errored sections. Only `ready` sections feed
-            // the commit loop so a half-broken upload doesn't take the
-            // whole batch down with it.
+            // Only ready sections feed the commit loop, so a half-broken
+            // section doesn't take the whole batch down.
             $runIdsToCommit = [];
             foreach ($preview->sections as $section) {
                 if ($section->status !== 'ready') {
@@ -345,16 +230,10 @@ final class FirstImportStep extends Component
             sectionLimitOverrides: $this->expandedRowCount,
         );
 
-        // The detector aggregator returns a flat list with one entry per
-        // (account, winning candidate) pair. When the aggregator surfaces
-        // two candidates for the same account (conflict), both appear in
-        // this list — the blade groups by accountId and switches the
-        // card into the conflict variant.
+        // Two candidates for the same account (conflict) both appear in
+        // this flat list — the blade groups by accountId to detect it.
         $this->startingBalances = $detectBalances->collect($this->stashedImportRunIds, $user);
 
-        // Resolve the per-card props (label, short-id, currency) from
-        // the accounts table now so the blade stays free of
-        // cross-module queries.
         $this->accountMeta = $this->loadAccountMeta($user->id, $db, $this->startingBalances);
 
         return $views->make('onboarding::livewire.steps.first-import-step', [
@@ -364,19 +243,11 @@ final class FirstImportStep extends Component
         ]);
     }
 
+    // Uses raw DatabaseManager::table() rather than WizardProgress::query()
+    // so the explicit user-scope filter is load-bearing rather than
+    // relying on the BelongsToUser global scope, which falls through
+    // under non-HTTP contexts (queue workers, listener tests).
     /**
-     * Read every connector step's stash payload out of
-     * `wizard_progress.data` for the current user, union the int +
-     * int-array values into a single deduplicated list of ImportRun
-     * ids, and preserve insertion order so the consolidated preview
-     * orders sections bank → PayPal → ICS card → email deterministically.
-     *
-     * Uses raw `DatabaseManager::table()` rather than
-     * `WizardProgress::query()` so the explicit user-scope filter is
-     * the single load-bearing user-id check — never relying on the
-     * BelongsToUser global scope, which falls through under non-HTTP
-     * contexts (queue workers, listener tests).
-     *
      * @return list<int>
      */
     private function resolveStashedImportRunIds(int $userId, DatabaseManager $db): array
@@ -420,6 +291,7 @@ final class FirstImportStep extends Component
         }
 
         // Deduplicate while preserving first-occurrence order.
+        // (bank → PayPal → ICS card → email, per the row query above)
         $seen = [];
         $out = [];
         foreach ($ids as $id) {
@@ -434,10 +306,6 @@ final class FirstImportStep extends Component
     }
 
     /**
-     * Look up the account metadata the StartingBalanceCard children
-     * need to render (label, short-id, currency). Keyed by accountId
-     * so the blade can mount each card without an additional query.
-     *
      * @param  list<StartingBalanceCandidate>  $candidates
      * @return array<int, array{label: string, short: string, currency: string}>
      */
