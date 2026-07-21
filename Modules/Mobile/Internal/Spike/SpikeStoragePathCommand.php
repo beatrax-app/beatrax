@@ -8,24 +8,7 @@ use Illuminate\Console\Command;
 use Modules\Core\Public\Services\UserDataPathService;
 
 /**
- * Throwaway Wave-0 topology probe (Phase 15-02, Spike B).
- *
- * Dumps the four values a later wave (Plan 04's on-device migrate-on-launch)
- * needs to reason about the mobile storage root: the two NativePHP-mobile
- * environment signals plus where Laravel and the app's own path service each
- * believe user data lives. On a real device NativePHP mobile sets
- * `NATIVEPHP_STORAGE_PATH` to the app sandbox's writable container and
- * `NATIVEPHP_PLATFORM` to `ios` / `android`; `UserDataPathService` already
- * honours `NATIVEPHP_STORAGE_PATH` (its `storageRoot()` / `databaseFile()`
- * accessors read it via `getenv()`), so this probe confirms the encrypted
- * SQLite file will land inside the sandbox rather than the project tree.
- *
- * Read via `getenv()` (not Laravel's `env()`) to mirror `UserDataPathService`
- * exactly — `getenv()` is unconditional at every boot stage and reflects the
- * live process environment the NativePHP shell exports.
- *
- * @internal Throwaway spike probe — not shipped wiring. Registered only from
- *           the mobile-app root's bootstrap (never the shared MobileServiceProvider).
+ * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class SpikeStoragePathCommand extends Command
 {

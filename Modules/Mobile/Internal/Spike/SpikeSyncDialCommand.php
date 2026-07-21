@@ -14,35 +14,7 @@ use function Amp\async;
 use function Amp\Websocket\Client\connect;
 
 /**
- * Throwaway Wave-0 topology probe (Phase 15-02, Spike A).
- *
- * Proves the amphp / Revolt event loop can be driven to completion for a
- * SINGLE bounded dial-out burst (open -> handshake-probe -> close) from within
- * the mobile app shell — the on-device question RESEARCH.md flags as
- * "amphp-in-mobile-runtime GO/NO-GO". The desktop peer's `sync:serve`
- * (Modules\Sync\Commands\SyncServeCommand) is the dial target: an amphp
- * WebSocket listener on `0.0.0.0:51337` that speaks the Noise handshake first
- * (Modules\Sync\Internal\Transport\PeerCatchUpExchanger). This probe does NOT
- * implement that handshake — it only opens the socket, waits briefly for the
- * peer's first frame, then closes. The load-bearing signal is whether the
- * Revolt loop runs to completion WITHOUT a driver/loop-conflict exception, not
- * whether a peer answered.
- *
- * OUTBOUND-CLIENT-ONLY discipline (RESEARCH.md Pitfall 1): this is a bounded
- * burst, never a long-lived listener — iOS/Android forbid always-on background
- * sockets. `async(...)->await()` drives the Revolt loop until the single
- * coroutine settles, then control returns.
- *
- * Exit semantics:
- *   - SUCCESS: the loop ran to completion. Either the peer answered (full
- *     connect + clean close) OR the peer was unreachable (connection refused /
- *     timeout). Both prove the loop topology works — a refused connection still
- *     means Revolt drove the socket attempt to a definite result.
- *   - FAILURE: an UNEXPECTED throwable surfaced (the shape a native-loop /
- *     Revolt-driver conflict would take under the NativePHP mobile runtime).
- *
- * @internal Throwaway spike probe — not shipped wiring. Registered only from
- *           the mobile-app root's bootstrap (never the shared MobileServiceProvider).
+ * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class SpikeSyncDialCommand extends Command
 {
@@ -69,12 +41,10 @@ final class SpikeSyncDialCommand extends Command
         try {
             $frameSeen = $this->dialOnce($uri);
         } catch (WebsocketConnectException|CancelledException $e) {
-            // Peer unreachable (connection refused / handshake rejected) or the
-            // connect budget's TimeoutCancellation fired. Either way the Revolt
-            // loop STILL ran to completion — a refused socket reaches a definite
-            // result and a fired cancellation is itself a loop-driven event — so
-            // the loop-topology proof holds. This is the expected outcome when no
-            // desktop sync:serve is listening.
+            // Peer unreachable or the connect budget fired - either way the
+            // Revolt loop still ran to completion (a refused socket reaches
+            // a definite result), so the loop-topology proof holds. This is
+            // the expected outcome when no desktop sync:serve is listening.
             $this->warn('mobile:spike-dial: peer unreachable — no desktop sync:serve listening (or connect timed out).');
             $this->line('  reason: '.$e::class.': '.$e->getMessage());
             $this->info('RESULT: SUCCESS (Revolt loop drove to completion; no loop-conflict).');
@@ -100,10 +70,6 @@ final class SpikeSyncDialCommand extends Command
     }
 
     /**
-     * Open one WebSocket connection, wait briefly for the peer's first frame,
-     * then close. Runs entirely inside a single Revolt coroutine that
-     * `await()` drives to completion.
-     *
      * @return bool whether a frame arrived within the probe window
      */
     private function dialOnce(string $uri): bool

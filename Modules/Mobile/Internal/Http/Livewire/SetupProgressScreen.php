@@ -13,27 +13,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 
 /**
- * The blocking, resumable, full-screen initial-sync setup gate (D-03/D-04,
- * R5, MOBILE-01/MOBILE-02) — the post-pairing landing page (`/mobile/setup`,
- * routed + Livewire-registered by the Plan 01 `MobileServiceProvider`; this
- * plan does NOT edit the provider or routes).
- *
- * `mount()` reads `InitialSyncPuller::progress()` — the DURABLE
- * `mobile_sync_progress` cursor, never a default-0 Livewire property — so a
- * cold-started process (an app-kill mid-pull, exactly what routinely
- * happens on mobile OSes, RESEARCH Pattern 3 / Pitfall 5) renders at the
- * TRUE resumed percent on its very first paint. `poll()` (driven by
- * `wire:poll` in the view) then actively drives the pull forward one
- * bounded step at a time via `InitialSyncPuller::pull()` until
- * `phase === 'complete'`, then redirects into the app.
- *
- * Genuinely blocking (D-03): no cancel/dismiss/back/skip control anywhere
- * in this component or its view — a finance app must never let the user
- * skip past a half-populated balance.
- *
- * Constructor-free Livewire component (phpstan-strict-rules forbids a
- * constructor on a `Component` subclass) — collaborators arrive as
- * mount()/poll()/render() method-DI parameters.
+ * @link ../../../../../.docs/features/mobile/architecture.md
  */
 final class SetupProgressScreen extends Component
 {
@@ -45,12 +25,9 @@ final class SetupProgressScreen extends Component
 
     public string $phase = 'pending';
 
-    /**
-     * True the moment the FIRST render already reflects prior progress
-     * (a non-zero applied count, or any phase past 'pending') — drives the
-     * "Resuming setup…" vs "Setting up this device…" headline. UI-SPEC
-     * Copywriting: never re-show the fresh-start copy once resumed.
-     */
+    // True the moment the first render already reflects prior progress -
+    // drives the "Resuming setup..." vs "Setting up this device..."
+    // headline, never re-showing the fresh-start copy once resumed.
     public bool $isResuming = false;
 
     public function mount(CurrentUser $currentUser, InitialSyncPuller $puller): void
@@ -62,16 +39,10 @@ final class SetupProgressScreen extends Component
         $this->isResuming = $this->recordsApplied > 0 || $this->phase !== 'pending';
     }
 
-    /**
-     * `wire:poll` tick — drives the pull forward by ONE bounded step and
-     * redirects into the app the moment `phase` reaches `complete`.
-     *
-     * Peer discovery (LAN host/port resolution) is out of this plan's
-     * scope (mirrors 15-05-PLAN.md's own "peer discovery... out of this
-     * plan's scope" note) — this tick relies on whatever transport leg
-     * (LAN, if a future plan supplies host/port, or the configured relay)
-     * `MobileSyncTriggerService::syncOnce()` can already reach.
-     */
+    // wire:poll tick - drives the pull forward by one bounded step and
+    // redirects into the app the moment phase reaches complete. Peer
+    // discovery (LAN host/port resolution) is out of scope here; this
+    // tick relies on whatever transport leg syncOnce() can already reach.
     public function poll(
         CurrentUser $currentUser,
         InitialSyncPuller $puller,
