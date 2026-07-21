@@ -8,31 +8,10 @@ use ZBateson\MailMimeParser\Header\HeaderConsts;
 use ZBateson\MailMimeParser\MailMimeParser;
 use ZBateson\MailMimeParser\Message;
 
-/**
- * Thin facade over zbateson/mail-mime-parser that decodes the body
- * + header surface every Receipts matcher needs.
- *
- * Body-extraction policy:
- *
- *   - text/plain when present (zbateson auto-chooses the first
- *     text/plain part via getTextContent()).
- *   - text/html fallback only when text/plain is null. The html body
- *     is returned verbatim; matchers call html_entity_decode +
- *     strip_tags when they need a plain rendering. Reading text/plain
- *     first matters because multipart/alternative ordering is not
- *     guaranteed to put text/plain first — relying on order would
- *     silently parse the wrong part.
- *
- * Header surface: every header is returned as a lowercase-keyed
- * map (sender-email lowercasing is the only normalisation; everything
- * else is verbatim).
- *
- * Attachment surface: only filenames; matchers do not yet parse
- * attachment bodies. A future PDF-receipt arm can re-read the .eml
- * to extract bytes.
- *
- * Stateless / singleton-safe.
- */
+// Thin facade over zbateson/mail-mime-parser: prefers text/plain,
+// falling back to verbatim text/html only when text/plain is absent —
+// multipart/alternative part ordering is not guaranteed to put
+// text/plain first.
 final class EmlMimeReader
 {
     public function read(string $rawEml): ParsedMimeMessage
@@ -69,10 +48,6 @@ final class EmlMimeReader
     }
 
     /**
-     * Pull the small set of canonical headers Receipts matchers
-     * consult. The map is keyed by lowercase header name. Sender
-     * email gets lowercased; everything else is returned verbatim.
-     *
      * @return array<string, string>
      */
     private function extractHeaders(Message $message): array

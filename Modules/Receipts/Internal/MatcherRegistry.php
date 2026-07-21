@@ -8,22 +8,10 @@ use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 
-/**
- * Holds the priority-sorted list of every `SenderMatcher` bound under
- * the `receipts.matcher` container tag. Constructed once by the
- * `ReceiptsServiceProvider` register-time closure with the tagged
- * collection already sorted (priority descending).
- *
- * `dispatch()` walks the list in priority order and returns the first
- * matcher's `match()` result whose `canHandle()` claims responsibility.
- * If no matcher claims the message, the registry returns
- * `MatchOutcomeDto::unmatched()` — the consumer transitions the
- * source row to `status='unmatched'` so a future matcher addition
- * can re-process it.
- *
- * The registry is the only place that knows the ordering; matchers
- * themselves never branch on each other.
- */
+// Holds the priority-sorted list of every SenderMatcher tagged
+// receipts.matcher, sorted once at register time. dispatch() walks it
+// in order and returns the first matcher whose canHandle() claims the
+// message; matchers themselves never branch on each other.
 final class MatcherRegistry
 {
     /** @param list<SenderMatcher> $matchers Sorted by priority() DESC. */
@@ -42,10 +30,6 @@ final class MatcherRegistry
     }
 
     /**
-     * Return the stable matcher keys in priority order. Used by the
-     * consumer job's audit log and by tests that need to assert the
-     * registered matcher inventory matches expectation.
-     *
      * @return list<string>
      */
     public function supportedKeys(): array

@@ -11,53 +11,16 @@ use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
-/**
- * Filesystem repository for raw .eml blobs that arrived via file
- * drop (wizard upload + watched-folder secondary path), separate
- * from the EmailScan inbox blob store.
- *
- * Per-user blob duplication: the path is partitioned by `user_id` so
- * two users dropping byte-identical email files land in two distinct
- * physical files. This preserves per-user `chmod 0700` directory
- * isolation; cross-user deduplication would defeat that boundary.
- *
- * Each blob lives at
- * `storage/app/inbox/{user_id}/file-drop/{YYYY}/{MM}/{messageIdHash}.eml`
- * where `messageIdHash` is either:
- *
- *   - the RFC 822 Message-ID header value (when present), normalised
- *     to fit the allow-list; or
- *   - the sha256 hex of the full raw .eml bytes (when the Message-ID
- *     header is absent — the headerless-file fallback that keeps the
- *     UNIQUE constraint workable and preserves byte-identical
- *     re-drop idempotency).
- *
- * The directory partition is by user + year + month so any single
- * directory stays small enough for fast listings on APFS / ext4.
- *
- * Writes are atomic via the tmp + flock + fsync + chmod + rename
- * sequence. A POSIX rename is atomic, so a crash mid-write either
- * leaves the previous file in place or has not yet exposed the new
- * one — there is no in-between state where a partial .eml could be
- * observed by a reader. The parent directory is created on first
- * write with mode 0700 so cohabiting OS-level users cannot enumerate
- * another user's blobs.
- *
- * `pathFor` rejects message ids whose characters fall outside the
- * `[A-Za-z0-9._-]{1,200}` allow-list — the sha256 hex synthetic id
- * (purely [0-9a-f]) trivially satisfies it, and a sanitiser at the
- * call site normalises any provider Message-ID into the allow-list
- * before this method runs.
- */
+// Filesystem repository for raw .eml blobs that arrived via file drop
+// (wizard upload + watched-folder path), separate from the EmailScan
+// inbox blob store. Partitioned per user_id/year/month; writes are
+// atomic via tmp + flock + fsync + chmod + rename.
 final class FileDropEmlBlobStore
 {
-    /** Allow-list for message-id-derived filename components. */
     private const MESSAGE_ID_PATTERN = '/^[A-Za-z0-9._\-]{1,200}$/';
 
-    /** Parent directory mode — owner-only read/write/execute. */
     private const DIR_MODE = 0700;
 
-    /** Blob file mode — owner-only read/write. */
     private const FILE_MODE = 0600;
 
     public function __construct(
@@ -65,11 +28,6 @@ final class FileDropEmlBlobStore
         private readonly Application $app,
     ) {}
 
-    /**
-     * Compute the absolute on-disk path for a raw .eml blob without
-     * touching the filesystem. Callers use the path to pass to put()
-     * or to assert against in tests.
-     */
     public function pathFor(
         int $userId,
         DateTimeImmutable $internalDate,
@@ -91,15 +49,6 @@ final class FileDropEmlBlobStore
         ));
     }
 
-    /**
-     * Write raw .eml bytes to disk atomically. Ensures the parent
-     * directory exists with mode 0700 (chmod applied only on first
-     * creation so subsequent writes do not narrow permissions an
-     * admin may have widened intentionally), writes to a sibling
-     * `.tmp` file, fsyncs, chmods to 0600, then renames over the
-     * canonical path. Any failure during the write tears down the
-     * temp file and rethrows as a RuntimeException.
-     */
     public function put(string $absolutePath, string $rawMime): void
     {
         $dir = dirname($absolutePath);
@@ -116,11 +65,8 @@ final class FileDropEmlBlobStore
         $tmp = $absolutePath.'.tmp';
 
         // Narrow umask BEFORE opening the temp file so it is born at
-        // mode 0600 rather than the umask-0022 default of 0644. The
-        // sibling EmlBlobStore + OAuthSecretsRepository writers (Phase
-        // 6) carry the same pattern. The explicit chmod below remains
-        // as defence-in-depth — together they close both the umask
-        // race and any filesystem that ignores the umask narrowing.
+        // mode 0600 rather than the umask-0022 default of 0644 — the
+        // explicit chmod below is defence-in-depth on top of that.
         $previousUmask = umask(0077);
 
         $fp = @fopen($tmp, 'wb');

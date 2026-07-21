@@ -8,17 +8,9 @@ use Exception;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 
-/**
- * Read-side projection of pending_enrichment_conflicts. Used by the
- * first-conflict ReceiptConflictToast SFC to populate its body on
- * mount when no fresh ReceiptConflictDetected event has arrived this
- * request (covers queued-backfill flows where the conflict was held
- * during a background job and the user lands on the next page render).
- *
- * `latestForUser` returns the most-recently-created pending conflict
- * for the user, scoped by user_id — cross-user reads can never see a
- * foreign conflict.
- */
+// Read-side projection of pending_enrichment_conflicts for the
+// first-conflict toast's mount() fallback. Every read is scoped by
+// user_id, so a foreign conflict can never surface.
 final readonly class ReceiptConflictQuery
 {
     public function __construct(private DatabaseManager $db) {}

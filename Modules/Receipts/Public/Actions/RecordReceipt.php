@@ -15,54 +15,12 @@ use Modules\Receipts\Public\Pipeline\EmlMimeReader;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
 use Throwable;
 
+// The single Public entry point for processing one raw RFC 822 message,
+// used by both the file-drop wizard path and the inbox handoff path.
+// Never writes to transactions itself — chain hints ride through
+// raw_payload and are re-emitted once the canonical row exists.
 /**
- * Single Public entrypoint for processing one raw RFC 822 message
- * through the matcher pipeline.
- *
- * Used by two consumers — kept in lockstep so file-drop and inbox
- * paths cannot drift:
- *
- *  - `ParseStage` (the file-drop wizard path) invokes RecordReceipt
- *    once per dropped `.eml` and once per message inside a `.mbox`,
- *    then bridges any `parsed` outcome to a SourceTransactionDto via
- *    ReceiptSourceAdapter.
- *  - `ProcessFetchedInboxMessagesJob` (the inbox handoff path) walks
- *    `inbox_messages.status='fetched'` rows for a user and invokes
- *    RecordReceipt against the on-disk `.eml` bytes for each one.
- *
- * Per-row side effects:
- *
- *  1. Read MIME headers via EmlMimeReader to extract Message-ID
- *     (synthetic sha256 fallback when absent), From, Date.
- *  2. UPSERT a `file_imports` row keyed by the
- *     (user_id, provider_message_id) UNIQUE — re-drops short-circuit
- *     to the existing row idempotently.
- *  3. Atomic .eml-then-DB ordering via FileDropEmlBlobStore.put().
- *  4. Dispatch the message through MatcherRegistry against the bytes.
- *  5. Transition the file_imports row to 'parsed' / 'skipped' /
- *     'unmatched' per outcome.
- *
- * Returns the `MatchOutcomeDto` so the caller can branch on `parsed`
- * vs `skipped` vs `unmatched` and decide whether to yield a
- * canonical row downstream. The action does NOT itself write to the
- * transactions table — that responsibility stays on the existing
- * NormalizeStage → FingerprintComposer → RecordTransactions pipeline,
- * which the caller (ParseStage) plugs into via ReceiptSourceAdapter.
- *
- * Chain-hint event dispatch — the `ChainHintDetected` event is NOT
- * dispatched from this action. RecordReceipt cannot know the
- * just-inserted `transactions.id` because the canonical row is
- * persisted downstream by `RecordTransactions`. Instead the
- * matcher's `ParsedReceiptDto::chainHints` rides through the
- * canonical pipeline on `transactions.raw_payload['chain_hints']`
- * (serialised by `ReceiptSourceAdapter::toSourceDto()`), and a
- * Receipts-internal listener
- * (`Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt`)
- * subscribes to `TransactionImported` and re-emits
- * `ChainHintDetected` with the canonical sourceTransactionId. The
- * Chains module's `CreateChainLinkFromHint` then writes the
- * candidate chain_links row. ParseStage is unchanged — it does not
- * dispatch `ChainHintDetected` directly.
+ * @link ../../../../.docs/features/receipts/architecture.md
  */
 final class RecordReceipt
 {
@@ -121,17 +79,14 @@ final class RecordReceipt
             ->where('provider_message_id', $providerMessageId)
             ->first();
         if ($row === null) {
-            // Defensive: the insertOrIgnore above MUST land a row.
             return MatchOutcomeDto::unmatched('persist_failed');
         }
         $rawId = $row->id;
         $fileImportId = is_numeric($rawId) ? (int) $rawId : 0;
 
         if ($inserted === 0 && $row->status !== 'fetched') {
-            // Already processed by a prior drop — the matcher_key on
-            // the existing row preserves the original outcome; do
-            // not re-dispatch and do not yield a duplicate canonical
-            // row to the caller.
+            // Already processed by a prior drop — never re-dispatch or
+            // yield a duplicate canonical row to the caller.
             return MatchOutcomeDto::unmatched('duplicate_drop');
         }
 
@@ -169,14 +124,9 @@ final class RecordReceipt
         return $outcome;
     }
 
-    /**
-     * Sanitise the Message-ID header value to fit the FileDrop blob
-     * store's `[A-Za-z0-9._-]{1,200}` allow-list. Strips angle
-     * brackets, collapses non-allowed characters to `-`, and bounds
-     * the length so a pathological header value cannot blow up the
-     * filename. Falls back to sha256(value) when the sanitised result
-     * is empty.
-     */
+    // Sanitises the Message-ID to fit the blob store's
+    // [A-Za-z0-9._-]{1,200} allow-list — falls back to sha256(value)
+    // when the sanitised result would otherwise be empty.
     private function sanitiseMessageId(string $raw): string
     {
         $trimmed = trim($raw, " \t\n\r\0\x0B<>");
@@ -189,12 +139,6 @@ final class RecordReceipt
         return $sanitised;
     }
 
-    /**
-     * Parse the message's Date header into a `DateTimeImmutable`
-     * suitable for the file_imports.internal_date column. Falls back
-     * to the local clock on parse failure so the row still lands and
-     * the matcher dispatch can flip it to `unmatched` for triage.
-     */
     private function parseInternalDate(string $dateRaw): DateTimeImmutable
     {
         if ($dateRaw === '') {
