@@ -20,22 +20,7 @@ use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
 
 /**
- * `/goals` page — list and manage savings goals with a 3-state progress bar,
- * projected-date copy, Flux create/edit modal, and Edit/kebab lifecycle
- * affordances (Mark complete, Archive, Restore).
- *
- * Method-parameter DI on every action and on render/mount — constructor
- * injection is banned on Livewire Component subclasses by phpstan-strict-rules
- * (same pattern as BudgetsPage and RecurringPage).
- *
- * State:
- *   - `name`, `targetAmount`, `targetDate`, `accountId` — form fields for the
- *     create/edit modal.
- *   - `editGoalId` — when non-zero, the modal is in edit mode.
- *   - `errorName`, `errorAmount`, `errorDate` — inline per-field validation
- *     banners (`.wiz-error` style).
- *   - `archivingGoalId` — non-zero triggers the in-card micro-confirm row.
- *   - `showArchived` — controls the "Archived goals (N)" disclosure.
+ * @link ../../../../../.docs/features/goals/architecture.md
  */
 final class GoalsPage extends Component
 {
@@ -70,12 +55,9 @@ final class GoalsPage extends Component
         }
     }
 
-    /**
-     * The pot picker's option list is scoped to the selected account, but the
-     * bound property survives a re-render — switching accounts would silently
-     * keep (and submit) a pot from the previously selected account (WR-10).
-     * Reset the selection whenever the account changes.
-     */
+    // The pot picker's option list is scoped to the selected account, but the
+    // bound property survives a re-render — switching accounts would
+    // silently keep (and submit) a pot from the previously selected account.
     public function updatedAccountId(): void
     {
         $this->linkedPotId = '';
@@ -85,10 +67,6 @@ final class GoalsPage extends Component
     // Create goal
     // -----------------------------------------------------------------------
 
-    /**
-     * Create a new goal from the modal form. Maps GoalWriter exceptions to
-     * per-field inline errors. On success closes modal and dispatches a toast.
-     */
     public function createGoal(CurrentUser $currentUser, GoalWriter $writer, DatabaseManager $db, PotWriter $potWriter): void
     {
         $this->clearErrors();
@@ -111,9 +89,8 @@ final class GoalsPage extends Component
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
 
-        // WR-02: goal save + optional pot link run in ONE transaction so a
-        // failed link (one-pot-per-goal violation, cross-user pot id) rolls
-        // back the goal — no orphan goal and no duplicate on resubmit.
+        // Goal save + optional pot link run in one transaction so a failed
+        // link rolls back the goal — no orphan goal, no duplicate on resubmit.
         try {
             $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId): void {
                 $goal = $writer->save(
@@ -124,7 +101,6 @@ final class GoalsPage extends Component
                     $accountId,
                 );
 
-                // D-11: if a pot was selected, link it from the goal side via PotWriter.
                 if ($this->linkedPotId !== '') {
                     $this->linkPotToGoal($currentUser, $db, $potWriter, (int) $this->linkedPotId, $goal->id);
                 }
@@ -148,28 +124,22 @@ final class GoalsPage extends Component
     // Edit / update goal
     // -----------------------------------------------------------------------
 
-    /**
-     * Populate the form with an existing goal's values and open the edit modal.
-     * Called from the "Edit" button on each goal card.
-     */
     public function openEdit(int $goalId, GoalProgressQuery $query, CurrentUser $currentUser, PotBalanceQuery $potBalance): void
     {
         if (! $currentUser->isAuthenticated()) {
             return;
         }
 
-        // Find the goal in the active rows so we only allow editing owned goals.
         $rows = $query->forUser($currentUser->user());
         foreach ($rows as $row) {
             if ($row->id === $goalId) {
                 $this->editGoalId = $goalId;
                 $this->name = $row->name;
-                // Integer-only minor→display formatting — no float division on
-                // a money amount (IN-05 / no-float-money rule).
+                // Integer-only minor -> display formatting — no float
+                // division on a money amount.
                 $this->targetAmount = sprintf('%d.%02d', intdiv($row->targetMinor, 100), $row->targetMinor % 100);
-                $this->targetDate = $row->targetDate;   // prefill from the goal's stored target date (WR-01)
+                $this->targetDate = $row->targetDate;
                 $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
-                // D-11: prefill the linked pot picker from the goal side.
                 $linkedPotId = $potBalance->linkedPotIdForGoal($goalId, $currentUser->user());
                 $this->linkedPotId = $linkedPotId !== null ? (string) $linkedPotId : '';
                 $this->clearErrors();
@@ -180,10 +150,6 @@ final class GoalsPage extends Component
         }
     }
 
-    /**
-     * Update an existing goal. Delegates cross-user rejection to GoalWriter
-     * (which throws if the goal is not owned by the user).
-     */
     public function updateGoal(CurrentUser $currentUser, GoalWriter $writer, PotBalanceQuery $potBalance, DatabaseManager $db, PotWriter $potWriter): void
     {
         $this->clearErrors();
@@ -206,14 +172,12 @@ final class GoalsPage extends Component
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
 
-        // D-11: pot picker change (link, move, or clear) is resolved up front.
         $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
         $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
 
-        // WR-03: the goal update and the clear + relink sequence run in ONE
-        // transaction so a failed relink (e.g. tampered/cross-user pot id)
-        // rolls back both the goal update and the cleared previous link —
-        // the existing goal↔pot link is never silently lost.
+        // The goal update and the clear + relink sequence run in one
+        // transaction so a failed relink rolls back both — the existing
+        // goal<->pot link is never silently lost.
         try {
             $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId, $newPotId, $prevPotId): void {
                 $writer->update(
@@ -226,20 +190,16 @@ final class GoalsPage extends Component
                 );
 
                 if ($newPotId !== null && $newPotId !== $prevPotId) {
-                    // Clear the previous link first so assertGoalOwnedAndFree passes (D-11).
                     if ($prevPotId !== null) {
                         $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
                     }
 
                     $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
                 } elseif ($newPotId === null && $prevPotId !== null) {
-                    // User cleared the selection — remove the link.
                     $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
                 }
             });
         } catch (GoalNotFoundException) {
-            // Cross-user / missing goal — silently ignore (control flow on
-            // exception type, not message text — WR-05).
             $this->resetForm();
 
             return;
@@ -262,11 +222,6 @@ final class GoalsPage extends Component
     // Lifecycle actions
     // -----------------------------------------------------------------------
 
-    /**
-     * Mark a goal as complete. The goal stays in the active list with a
-     * "Completed" chip (D-08 — "reached" badge is passive; "complete" is
-     * an explicit user action).
-     */
     public function markComplete(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -277,10 +232,6 @@ final class GoalsPage extends Component
         $this->toast('Goal marked as complete.');
     }
 
-    /**
-     * Show the in-card micro-confirm for archiving a goal.
-     * Actual archive happens in `archive()`.
-     */
     public function confirmArchive(CurrentUser $currentUser, int $goalId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -290,9 +241,6 @@ final class GoalsPage extends Component
         $this->archivingGoalId = $goalId;
     }
 
-    /**
-     * Cancel the archive micro-confirm.
-     */
     public function cancelArchive(CurrentUser $currentUser): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -302,10 +250,6 @@ final class GoalsPage extends Component
         $this->archivingGoalId = 0;
     }
 
-    /**
-     * Archive a goal after micro-confirm. Dispatches a "Goal archived. [Restore]"
-     * toast with a one-tap undo action (D-09).
-     */
     public function archive(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -317,9 +261,6 @@ final class GoalsPage extends Component
         $this->dispatch('toast', message: 'Goal archived.', undoAction: 'restore', undoPayload: $goalId);
     }
 
-    /**
-     * Restore an archived goal back to active status.
-     */
     public function restore(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
     {
         if (! $currentUser->isAuthenticated()) {
@@ -330,9 +271,6 @@ final class GoalsPage extends Component
         $this->toast('Goal restored.');
     }
 
-    /**
-     * Cancel / close the create-or-edit modal, resetting all form state.
-     */
     public function cancel(): void
     {
         $this->resetForm();
@@ -349,9 +287,9 @@ final class GoalsPage extends Component
         DatabaseManager $db,
         ViewFactory $views,
     ): View {
-        // Defence-in-depth: the `auth` route middleware makes this unreachable,
+        // Defence-in-depth: the auth route middleware makes this unreachable,
         // but guard anyway so an unauthenticated render degrades to the empty
-        // page instead of throwing NotAuthenticatedException (IN-03).
+        // page instead of throwing.
         if (! $currentUser->isAuthenticated()) {
             $view = $views->make('goals::livewire.goals-page', [
                 'rows' => [],
@@ -371,7 +309,6 @@ final class GoalsPage extends Component
         $rows = $query->forUser($user);
         $archived = $query->archivedForUser($user);
 
-        // User's accounts for the account picker (savings-kind first, then name order).
         $accounts = $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
@@ -380,17 +317,14 @@ final class GoalsPage extends Component
             ->get(['id', 'name', 'kind'])
             ->toArray();
 
-        // Pot options for the linked-pot picker (D-11 / T-03-13):
-        // Only active pots owned by this user that are fully unlinked —
-        // neither goal-linked nor category-linked (WR-05: selecting a
-        // category-linked pot here would silently destroy its category link)
-        // — or already linked to the goal being edited (so the current link
-        // stays in the list). Scoped to the selected account when one is
-        // chosen.
+        // Pot options for the linked-pot picker: only active pots owned by
+        // this user that are fully unlinked (neither goal- nor category-
+        // linked), or already linked to the goal being edited so the
+        // current link stays in the list. Scoped to the selected account.
         $selectedAccountId = $this->accountId !== '' ? (int) $this->accountId : null;
 
         // Single source for the base picker query so the edit-mode union
-        // branch cannot drift from the non-edit branch (IN-04).
+        // branch cannot drift from the non-edit branch.
         $basePotsQuery = static function () use ($db, $user, $selectedAccountId): Builder {
             return $db->connection()
                 ->table('pots')
@@ -407,7 +341,6 @@ final class GoalsPage extends Component
 
         $potsQuery = $basePotsQuery();
 
-        // If editing, also include the pot currently linked to this goal.
         if ($this->editGoalId !== 0) {
             $potsQuery = $basePotsQuery()
                 ->union(
@@ -459,11 +392,6 @@ final class GoalsPage extends Component
         $this->clearErrors();
     }
 
-    /**
-     * Fetch the pot's current name so PotWriter::update does not blank it.
-     * Returns a fallback empty string on lookup miss (should not happen in
-     * normal flow — the picker only shows pots the user owns).
-     */
     private function potName(int $potId, User $user, DatabaseManager $db): string
     {
         $row = $db->connection()
@@ -480,15 +408,8 @@ final class GoalsPage extends Component
     }
 
     /**
-     * Link $potId to $goalId using PotWriter::update. Fetches the pot's current
-     * name first so the update does not blank it.
-     *
-     * Rejects category-linked pots: PotWriter::update would otherwise null out
-     * `category_id` and silently destroy the user's category link (WR-05). The
-     * picker already excludes them, this guards against stale/tampered ids.
-     *
-     * @throws \InvalidArgumentException on one-pot-per-goal violation (T-03-12) or category-linked pot (WR-05)
-     * @throws PotNotFoundException on cross-user pot id (T-03-11)
+     * @throws \InvalidArgumentException on one-pot-per-goal violation or category-linked pot
+     * @throws PotNotFoundException on cross-user pot id
      */
     private function linkPotToGoal(
         CurrentUser $currentUser,
@@ -505,6 +426,9 @@ final class GoalsPage extends Component
             ->where('id', $potId)
             ->first(['name', 'category_id']);
 
+        // PotWriter::update would otherwise null out category_id and
+        // silently destroy the user's category link; the picker already
+        // excludes these, this guards against stale/tampered ids.
         if ($row !== null && $row->category_id !== null) {
             throw new \InvalidArgumentException(
                 'This pot is linked to a category. Remove that link on the Pots page first.'
@@ -516,8 +440,6 @@ final class GoalsPage extends Component
     }
 
     /**
-     * Clear the goal_id link from $potId — sets goal_id to null.
-     *
      * @throws PotNotFoundException on cross-user pot id
      */
     private function clearPotGoalLink(

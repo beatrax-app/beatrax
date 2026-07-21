@@ -10,18 +10,6 @@ use Modules\Goals\Internal\Http\Livewire\GoalsPage;
 use Modules\Goals\Internal\Http\Livewire\GoalsSummaryCard;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 
-/**
- * Wires the Goals module: migrations, routes, views, Livewire component
- * registrations, and the GoalProgressQuery singleton.
- *
- * `GoalProjectionService` and `GoalProgressQuery` autowire their constructor
- * deps (DatabaseManager / ExchangeRateService / ForecastQuery) — an explicit
- * singleton for GoalProgressQuery matches the Budgets pattern and prevents
- * multiple queries being built per request cycle.
- *
- * Plan 04 will add the two $livewire->component() registrations below once the
- * Livewire page and summary-card components exist.
- */
 final class GoalsServiceProvider extends ServiceProvider
 {
     public function register(): void
