@@ -10,17 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 
+// A transaction with >=2 TransactionSplit rows is a split parent; its
+// settled_amount_minor is excluded from category-sum roll-ups in favour
+// of its legs, and the sum of every leg's settled_amount_minor equals
+// the parent's exactly — enforced by SaveTransactionSplit, never a DB CHECK.
 /**
- * One "leg" of a split transaction (Phase 13.1). A transaction with ≥2
- * TransactionSplit rows is a split parent; its settled_amount_minor is
- * excluded from category-sum roll-ups in favour of its legs (D-02/D-08).
- *
- * `category_id` is REQUIRED (unlike Transaction::category_id) — Req 5.
- * `settled_amount_minor`/`settled_currency` always share the parent
- * transaction's settled currency (D-04b); the sum of every leg's
- * settled_amount_minor equals the parent's settled_amount_minor exactly,
- * enforced by SaveTransactionSplit (never a DB CHECK — D-04).
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $transaction_id

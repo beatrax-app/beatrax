@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Hierarchical spending / income / transfer category.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int|null $parent_id

@@ -22,62 +22,19 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 
+// The query service is injected as a parameter on render() — Livewire
+// Component subclasses can't accept constructor injection under the
+// project's strict-rules ruleset.
 /**
- * The `/transactions` list page. Defaults to a 90-day recent window;
- * a "Show full history" toggle widens the query to every persisted row.
- *
- * Pagination is cursor-based via `TransactionListQuery`. The cursor is a
- * `(posted_at, id)` pair — pressing "Load more" hands both back into the
- * query so rows sharing a `posted_at` value never silently drop between
- * pages.
- *
- * The `$currency` property is URL-bound (refresh-stable, browser back /
- * forward respects it) and falls back to the user's `default_currency_view`
- * preference when no `?currency=` query parameter is present. Two values
- * are accepted: `'eur'` projects the settled-EUR pair (one line per row);
- * `'original'` projects the native pair with a settled-EUR secondary line
- * on foreign-currency rows. The `except: ''` modifier on the Url attribute
- * keeps the URL clean when the property is left on its empty default.
- *
- * The query service is injected as a parameter on `render()` (Livewire
- * Component subclasses can't accept constructor injection under the
- * project's strict-rules ruleset).
- *
- * Phone-width infinite scroll: `$accumulatedRows` stores a flat scalar
- * array of rows accumulated across all `loadMore()` calls. Because
- * `Money` objects are not Livewire-dehydratable, each row is stored as
- * an array with scalar/primitive values. The phone card-list blade loops
- * this accumulated set; the desktop table keeps iterating `$page->rows`
- * directly. A `$appendedCursorIds` guard set prevents the same page from
- * being double-appended on component re-renders that do not advance the
- * cursor.
- *
- * Search mode (Phase 8): when `isSearchActive()` returns true, `render()`
- * branches to `SearchQuery::search()` and returns `SearchResultPage` data.
- * Highlight/snippet data from SearchRowDto is NOT stored in $accumulatedRows
- * to avoid Livewire snapshot bloat (Pitfall-4). Summary strip data
- * (totalCount / totalOutMinor / totalInMinor) and `didYouMean` are passed
- * to the view only in search mode. Clearing search restores the prior
- * $fullHistory toggle state.
+ * @link ../../../../../.docs/features/ledger/architecture.md
  */
 final class TransactionsList extends Component
 {
     use HandlesClearedStatus;
     use HandlesTaxTagging;
 
-    /**
-     * Maximum number of rows kept in the Livewire dehydrated snapshot.
-     *
-     * At ~200–400 bytes JSON-encoded per row, 500 rows ≈ 200 KB — well
-     * below Livewire 4's 4 MB snapshot limit. When exceeded, the oldest
-     * rows are trimmed from the front and the `$appendedCursorIds` guard
-     * is reset to only the guard key for the new tail row, preventing
-     * the trimmed pages from being appended again.
-     *
-     * Without this cap, a user scrolling through years of full-history
-     * data accumulates 5 000+ rows in the snapshot, eventually hitting
-     * the payload limit and corrupting the component state.
-     */
+    // ~200-400 bytes JSON-encoded per row, so 500 rows stays well below
+    // Livewire 4's 4MB snapshot limit. See the linked architecture page.
     private const MAX_ACCUMULATED_ROWS = 500;
 
     public bool $fullHistory = false;
@@ -86,136 +43,60 @@ final class TransactionsList extends Component
 
     public ?string $cursorPostedAt = null;
 
-    /**
-     * Currency view mode. The empty string is the "no preference applied
-     * yet" sentinel; `mount()` resolves it to the user's stored default
-     * before the first render. The `#[Url(except: '')]` modifier keeps
-     * the URL clean when the property is on that sentinel.
-     */
+    // Empty string is the "no preference applied yet" sentinel;
+    // mount() resolves it to the user's stored default before the
+    // first render.
     #[Url(as: 'currency', except: '')]
     public string $currency = '';
 
-    // ─── Search-mode URL-bound properties (Phase 8) ──────────────────────────
-
-    /** Full-text search query string. Bound to ?q= in the URL. */
     #[Url(as: 'q', except: '')]
     public string $searchQuery = '';
 
-    /**
-     * Account IDs to restrict results to. Bound to ?account[]= in the URL.
-     *
-     * @var list<int>
-     */
+    /** @var list<int> */
     #[Url(as: 'account', except: [])]
     public array $filterAccounts = [];
 
-    /**
-     * Category IDs to restrict results to. Bound to ?category[]= in the URL.
-     *
-     * @var list<int>
-     */
+    /** @var list<int> */
     #[Url(as: 'category', except: [])]
     public array $filterCategories = [];
 
-    /**
-     * Counterparty IDs to restrict results to. Bound to ?counterparty[]= in
-     * the URL. This is the real drill-down target for Reports' counterparty-
-     * grouped chart clicks (Req 12, 999.6-02).
-     *
-     * @var list<int>
-     */
+    /** @var list<int> */
     #[Url(as: 'counterparty', except: [])]
     public array $filterCounterparties = [];
 
-    /** ISO date string for the lower bound of the date range filter. */
     #[Url(as: 'after', except: '')]
     public string $filterAfter = '';
 
-    /** ISO date string for the upper bound of the date range filter. */
     #[Url(as: 'before', except: '')]
     public string $filterBefore = '';
 
-    /** Minimum absolute amount as a decimal string (e.g. "10.00"). */
     #[Url(as: 'amount_min', except: '')]
     public string $filterAmountMin = '';
 
-    /** Maximum absolute amount as a decimal string (e.g. "500.00"). */
     #[Url(as: 'amount_max', except: '')]
     public string $filterAmountMax = '';
 
-    /** Amount direction: 'in', 'out', or 'both'. */
     #[Url(as: 'amount_dir', except: 'both')]
     public string $filterAmountDir = 'both';
 
-    /**
-     * Stores the pre-search $fullHistory state so clearSearch() can restore
-     * it exactly. Null means a search session has not yet started.
-     */
     public ?bool $preSearchFullHistory = null;
 
-    /**
-     * Flat array of accumulated phone-row data across all `loadMore()` calls.
-     * Each element is a scalar array so Livewire can dehydrate the state:
-     *
-     *   [
-     *     'id'               => int,
-     *     'bookedAt'         => string   (d-m-Y),
-     *     'counterpartyName' => ?string,
-     *     'counterpartySlug' => ?string,
-     *     'categoryId'       => ?int,
-     *     'amountMinor'      => int,
-     *     'amountCurrency'   => string,
-     *     'secondaryMinor'   => ?int,
-     *     'secondaryCurrency'=> ?string,
-     *   ]
-     *
-     * The blade reconstructs `Money` objects from the `*Minor` / `*Currency`
-     * pairs at render time so the phone card formatting matches the desktop
-     * table (same `$fmt` closure).
-     *
-     * Note: highlightedCounterparty and snippet from SearchRowDto are NOT
-     * stored here (Pitfall-4 — snapshot bloat). They are re-computed from
-     * SearchQuery on each render in search mode.
-     *
-     * Phase 13.1 Plan 06 adds `splitLegs`: the batch-loaded list of split
-     * legs for this row (empty for an unsplit row, >= 2 entries for a split
-     * parent — split detection is leg-row presence, never category_id
-     * nullity, per D-11). Populated after accumulation, mirroring the
-     * taxTagged/taxCategoryShortName merge below.
-     *
-     * Phase 13.3 Plan 03 adds `status`: the batch-loaded cleared/uncleared/
-     * reconciled value for this row (SC-1, D-11), merged in both render
-     * branches alongside taxTagged/splitLegs — never per-row (Pitfall 1).
-     *
-     * @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}>
-     */
+    // See the linked architecture page for the phone-infinite-scroll
+    // and search-mode accumulation rules this array supports.
+    /** @var list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}> */
     public array $accumulatedRows = [];
 
-    /**
-     * The `hasMore` flag and next-cursor pair from the most-recently rendered
-     * page. These are exposed as public properties so the Livewire test
-     * harness (and the blade sentinel) can read the next page's cursor
-     * without having to parse the rendered HTML.
-     */
     public bool $hasMore = false;
 
     public ?int $nextCursorId = null;
 
     public ?string $nextCursorPostedAt = null;
 
-    /**
-     * Tracks which cursor ids have already been appended to `$accumulatedRows`.
-     * The sentinel value `0` represents the "first page" (no cursor set).
-     * This prevents a Livewire re-render that does NOT advance the cursor
-     * from appending the same page twice.
-     *
-     * Must be `public` so Livewire dehydrates it into the encrypted snapshot
-     * and rehydrates it on every round-trip. A `protected` property is
-     * re-initialised to `[]` on every request, making the duplicate guard
-     * ineffective in real browser sessions.
-     *
-     * @var array<int, true>
-     */
+    // The sentinel value 0 represents "first page" (no cursor set).
+    // Must be public so Livewire dehydrates it into the encrypted
+    // snapshot — a protected property re-initialises to [] on every
+    // request, making the duplicate-append guard ineffective.
+    /** @var array<int, true> */
     public array $appendedCursorIds = [];
 
     public function mount(CurrentUser $currentUser): void
@@ -226,11 +107,8 @@ final class TransactionsList extends Component
         }
     }
 
-    /**
-     * Returns true when any search-mode property is non-default.
-     * When true, `render()` branches to SearchQuery::search() and all history
-     * is searched regardless of the $fullHistory toggle.
-     */
+    // When true, render() branches to SearchQuery::search() and all
+    // history is searched regardless of the $fullHistory toggle.
     public function isSearchActive(): bool
     {
         return $this->searchQuery !== ''
@@ -244,13 +122,9 @@ final class TransactionsList extends Component
             || $this->filterAmountDir !== 'both';
     }
 
-    /**
-     * Reset all search-mode properties and cursor state.
-     *
-     * Mirrors toggleFullHistory() for cursor/accumulation state, and restores
-     * $fullHistory to its value before the search session started (so the user
-     * returns to the same view mode they were in before typing).
-     */
+    // Restores $fullHistory to its value before the search session
+    // started, so the user returns to the same view mode they were in
+    // before typing.
     public function clearSearch(): void
     {
         $this->searchQuery = '';
@@ -263,13 +137,11 @@ final class TransactionsList extends Component
         $this->filterAmountMax = '';
         $this->filterAmountDir = 'both';
 
-        // Restore the pre-search fullHistory toggle state
         if ($this->preSearchFullHistory !== null) {
             $this->fullHistory = $this->preSearchFullHistory;
             $this->preSearchFullHistory = null;
         }
 
-        // Reset cursor/accumulation state (same as toggleFullHistory)
         $this->cursorId = null;
         $this->cursorPostedAt = null;
         $this->accumulatedRows = [];
@@ -291,17 +163,10 @@ final class TransactionsList extends Component
         $this->nextCursorPostedAt = null;
     }
 
-    /**
-     * Advance to the next cursor page.
-     *
-     * Reads `$this->nextCursorId` and `$this->nextCursorPostedAt` from the
-     * server-side Livewire snapshot rather than accepting them as browser-
-     * supplied parameters. This prevents a caller from forging a cursor value
-     * to skip rows or submit an unvalidated page offset. The snapshot values
-     * are set by the previous `render()` and are encrypted / HMAC-verified
-     * by Livewire before hydration — they cannot be tampered with by the
-     * browser.
-     */
+    // Reads the cursor from the server-side Livewire snapshot rather
+    // than accepting it as a browser-supplied parameter — the
+    // snapshot is encrypted/HMAC-verified before hydration, so a
+    // caller cannot forge a cursor to skip rows.
     public function loadMore(): void
     {
         $this->cursorId = $this->nextCursorId;
@@ -320,14 +185,11 @@ final class TransactionsList extends Component
     ): View {
         $user = $currentUser->user();
 
-        // ─── Search mode branch ──────────────────────────────────────────────
         if ($this->isSearchActive()) {
-            // Store pre-search fullHistory state on the first render in search mode
             if ($this->preSearchFullHistory === null) {
                 $this->preSearchFullHistory = $this->fullHistory;
             }
 
-            // Build SearchFilters from URL-bound props
             $filters = new SearchFilters(
                 accounts: array_values(array_filter(
                     $this->filterAccounts,
@@ -356,11 +218,9 @@ final class TransactionsList extends Component
                 $this->cursorPostedAt,
             );
 
-            // Accumulate search result rows using the same guard pattern
-            // NOTE: highlightedCounterparty + snippet are NOT stored in
-            // $accumulatedRows (Pitfall-4 — they would bloat the snapshot and
-            // go stale across renders). They are re-fetched from SearchQuery
-            // on each render.
+            // Accumulate search result rows using the same guard pattern;
+            // highlightedCounterparty + snippet are re-fetched from
+            // SearchQuery on each render rather than stored here.
             $guardKey = $this->cursorId ?? 0;
 
             if ($guardKey === 0) {
@@ -385,7 +245,6 @@ final class TransactionsList extends Component
             $this->nextCursorId = $searchPage->nextCursorId;
             $this->nextCursorPostedAt = $searchPage->nextCursorPostedAt;
 
-            // Batch-load tax tag state for search rows (D-20)
             $rowIds = array_map(static fn (SearchRowDto $row): int => $row->id, $searchPage->rows);
             $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
             $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
@@ -402,8 +261,8 @@ final class TransactionsList extends Component
             }
             unset($accRow);
 
-            // Build highlight map for current page (re-computed per render — Pitfall-4)
-            // Maps transaction id → SearchRowDto for highlight/snippet access in Blade.
+            // Transaction id -> SearchRowDto, for highlight/snippet
+            // access in the Blade; recomputed on every render.
             $searchRows = [];
             foreach ($searchPage->rows as $row) {
                 $searchRows[$row->id] = $row;
@@ -431,7 +290,6 @@ final class TransactionsList extends Component
             ]);
         }
 
-        // ─── Default (non-search) branch — byte-for-byte identical to before ─
         $queryCurrency = $this->currency === 'eur' ? 'EUR' : null;
 
         $page = $this->fullHistory
@@ -522,9 +380,6 @@ final class TransactionsList extends Component
         ]);
     }
 
-    /**
-     * Count the number of active filter dimensions (for the phone "Filters N" badge).
-     */
     public function activeFilterCount(): int
     {
         $count = 0;
@@ -547,11 +402,7 @@ final class TransactionsList extends Component
         return $count;
     }
 
-    /**
-     * Load the list of user accounts for the Account filter popover.
-     *
-     * @return list<array{id: int, name: string, currency: string}>
-     */
+    /** @return list<array{id: int, name: string, currency: string}> */
     private function availableAccounts(DatabaseManager $db, int $userId): array
     {
         $rows = $db->connection()
@@ -570,17 +421,13 @@ final class TransactionsList extends Component
         }, $rows));
     }
 
-    /**
-     * Load the list of user categories for the Category filter popover.
-     *
-     * @return list<array{id: int, name: string}>
-     */
+    /** @return list<array{id: int, name: string}> */
     private function availableCategories(DatabaseManager $db, int $userId): array
     {
-        // Categories are visible when global (seeded default tree, user_id IS
-        // NULL) OR owned by the user — the canonical scoping used across the
-        // categorization read paths. Filtering on user_id alone hid the chip
-        // entirely on installs that only use the global tree.
+        // Categories are visible when global (seeded default tree,
+        // user_id IS NULL) OR owned by the user — filtering on
+        // user_id alone hid the chip on installs using only the
+        // global tree.
         $rows = $db->connection()
             ->table('categories')
             ->where(static function (Builder $query) use ($userId): void {
@@ -598,17 +445,11 @@ final class TransactionsList extends Component
         }, $rows));
     }
 
-    /**
-     * Converts a TransactionRowDto to a scalar array suitable for Livewire
-     * dehydration / serialisation. Money objects are stored as their minor
-     * integer + currency code pair; the blade view reconstructs them at
-     * render time via `Money::ofMinor()`.
-     *
-     * taxTagged + taxCategoryShortName default to false/null here; they are
-     * overwritten after batch-load in render() so the values are always fresh.
-     *
-     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>}
-     */
+    // Money objects are stored as their minor integer + currency code
+    // pair; the blade reconstructs them via Money::ofMinor(). taxTagged
+    // + taxCategoryShortName default here and are overwritten after
+    // batch-load in render().
+    /** @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>} */
     private static function rowToArray(TransactionRowDto $row): array
     {
         return [
@@ -627,13 +468,9 @@ final class TransactionsList extends Component
         ];
     }
 
-    /**
-     * Converts a SearchRowDto to a scalar array for phone accumulation.
-     * highlightedCounterparty and snippet are intentionally excluded to
-     * avoid Livewire snapshot bloat (Pitfall-4).
-     *
-     * @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>}
-     */
+    // highlightedCounterparty and snippet are intentionally excluded to
+    // avoid Livewire snapshot bloat.
+    /** @return array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged: bool, taxCategoryShortName: ?string, splitLegs: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>} */
     private static function searchRowToArray(SearchRowDto $row): array
     {
         return [
@@ -652,18 +489,10 @@ final class TransactionsList extends Component
         ];
     }
 
+    // See the linked architecture page for why joining on
+    // transaction_id alone cannot leak another user's legs.
     /**
-     * Batch-load split legs (Phase 13.1) for the given transaction ids — a
-     * single query for the whole page batch (Pitfall 1 / N+1 guard), keyed
-     * by transaction_id. Downstream split detection is by LEG-ROW PRESENCE
-     * ONLY (count >= 2 legs), never `category_id` nullity (Pitfall 1 / D-11)
-     * — a split parent may carry a vestigial non-null `category_id`.
-     *
-     * Every id in $transactionIds is already user-scoped by the list query
-     * that produced it (`transactions.user_id = $userId`), so joining on
-     * `transaction_id` alone cannot leak another user's legs (T-13.1-14) —
-     * a `transaction_splits` row can only exist for a `transaction_id`, and
-     * every id passed here already belongs to the requesting user.
+     * @link ../../../../../.docs/features/ledger/architecture.md
      *
      * @param  array<int>  $transactionIds
      * @return array<int, list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>>
@@ -689,8 +518,8 @@ final class TransactionsList extends Component
                 'categories.name as category_name',
             ]);
 
-        // Leg-scoped tax state — one batched query, keyed by "{txId}:{legId}"
-        // (D-06a). Not merged into $taxState (whole-transaction only).
+        // Leg-scoped tax state — one batched query, keyed by
+        // "{txId}:{legId}". Not merged into $taxState (whole-transaction only).
         $legTaxState = $taxTagQuery->forTransactionIdsWithLegs($userId, $transactionIds);
 
         $map = [];
@@ -699,8 +528,8 @@ final class TransactionsList extends Component
             $legId = is_numeric($row->id) ? (int) $row->id : 0;
             $legTag = $legTaxState[$txId.':'.$legId] ?? null;
 
-            // CRYPT-01 (D-02b) read-side decrypt — pass-through no-op
-            // when encryption is not enabled for this user.
+            // Read-side decrypt — pass-through no-op when encryption
+            // is not enabled for this user.
             $legNote = is_string($row->note)
                 ? $codec->decryptValue('transaction_splits', 'note', $row->note, $userId, $session)['value']
                 : null;

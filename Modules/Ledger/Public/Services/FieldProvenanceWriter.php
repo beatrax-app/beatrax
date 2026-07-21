@@ -8,29 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use JsonException;
 
 /**
- * Shared, race-safe writer/reader for `transactions.field_provenance`
- * (D-04) — a generic per-field manual-vs-rule provenance map consumed
- * by the re-apply-rules manual-edit guard (Req 6/Req 4): a field the
- * user has hand-edited must never be silently overwritten by a rule
- * re-application.
- *
- * Payload shape: `{ "<logical field>": "manual" | "rule" }` — e.g.
- * `{"category_id": "manual", "note": "rule"}`. Canonical logical field
- * keys are `category_id`, `note`, `counterparty_id`, `tax_tag`. IN-02:
- * a third `"import"` state was originally documented but is never
- * stamped by any writer — an absent key already means "not manually
- * set" to every guard that reads this map, which is what `"import"`
- * would have meant too, so the two-state contract above is the actual
- * one.
- *
- * Race safety (T-13.4-12): every stamp is a single DB-side `json_set`
- * UPDATE — never a PHP read-modify-write. Two concurrent stamps to
- * DIFFERENT keys both survive; SQLite's per-row write serialization
- * means the DB, not PHP, owns the merge.
- *
- * Ownership (T-13.4-11): every write and read is scoped by
- * `(id, user_id)` — a foreign or missing transaction id is a silent
- * no-op (0 rows affected) / empty-array read, never a leak.
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class FieldProvenanceWriter
 {
@@ -38,13 +16,10 @@ final class FieldProvenanceWriter
         private readonly DatabaseManager $db,
     ) {}
 
+    // A null (never-stamped) map is initialised via COALESCE(..., '{}')
+    // before the first key is set. No-op for a foreign/missing
+    // transaction id — the user_id predicate below is the guard.
     /**
-     * Merges `$fieldToSource` into the transaction's existing
-     * `field_provenance` map via a single, race-safe `json_set` UPDATE.
-     * A null (never-stamped) map is initialised via `COALESCE(..., '{}')`
-     * before the first key is set. No-op (0 rows) for a foreign/missing
-     * transaction id — the `user_id` predicate below is the guard.
-     *
      * @param  array<string, string>  $fieldToSource
      */
     public function stamp(int $userId, int $transactionId, array $fieldToSource): void
@@ -71,12 +46,10 @@ final class FieldProvenanceWriter
         );
     }
 
+    // Returns [] for a never-stamped row, a foreign/missing transaction
+    // id, or corrupt JSON — provenance is best-effort audit metadata,
+    // never a crash surface.
     /**
-     * Decodes the transaction's `field_provenance` map. Returns `[]` for
-     * a never-stamped row, a foreign/missing transaction id, or a
-     * corrupt JSON payload — provenance is best-effort audit metadata,
-     * never a crash surface.
-     *
      * @return array<string, string>
      */
     public function provenanceFor(int $userId, int $transactionId): array

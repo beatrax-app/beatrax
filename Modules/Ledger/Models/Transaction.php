@@ -16,10 +16,6 @@ use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 use Modules\Sync\Public\Casts\EncryptedJsonCast;
 
 /**
- * The canonical row in the ledger. One row per posted bank/card movement,
- * keyed by a composite-UNIQUE fingerprint that makes idempotent re-imports
- * a no-op at the DB layer.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $account_id
@@ -57,29 +53,17 @@ final class Transaction extends Model
 {
     use BelongsToUser;
 
-    /**
-     * Allowed transaction-type values. The DB-layer BEFORE INSERT / BEFORE
-     * UPDATE triggers on `transactions` reject any value outside this list
-     * regardless of write path (Eloquent or raw insertOrIgnore), so this
-     * constant is the authoritative human-readable reference. The migration
-     * mirrors the same list inside the trigger body — keep them in sync.
-     *
-     * @var list<string>
-     */
+    // The DB-layer BEFORE INSERT/UPDATE triggers on transactions reject
+    // any value outside this list regardless of write path, so this
+    // constant is the authoritative human-readable reference — the
+    // migration mirrors the same list inside the trigger body.
+    /** @var list<string> */
     public const TYPES = ['expense', 'income', 'transfer_out', 'transfer_in', 'fee', 'refund', 'adjustment'];
 
-    /**
-     * Allowed reconciliation-status values (D-01/D-02, Phase 13.3). The
-     * three-state lifecycle `uncleared -> cleared -> reconciled` is the
-     * single app-level allow-list every Phase 13.3 write path (the D-03
-     * import default, the per-row toggle, `ReconciliationWriter`)
-     * validates against. Unlike `TYPES`, `status` carries no DB-layer
-     * BEFORE INSERT/UPDATE trigger — `status string(16) default 'cleared'`
-     * is otherwise unconstrained — so this constant is the sole source of
-     * truth for the enum.
-     *
-     * @var list<string>
-     */
+    // Three-state lifecycle uncleared -> cleared -> reconciled. Unlike
+    // TYPES, status carries no DB-layer trigger — this constant is the
+    // sole source of truth for the enum every write path validates against.
+    /** @var list<string> */
     public const STATUSES = ['uncleared', 'cleared', 'reconciled'];
 
     /** @var list<string> */
@@ -138,20 +122,11 @@ final class Transaction extends Model
         return $this->belongsTo(Category::class);
     }
 
+    // Null for rows that pre-date the resolver, rows it couldn't
+    // materialise (self-account branch, or no IBAN/name/description),
+    // or rows whose linked counterparty was pruned by the GC job.
+    // Consumers eager-load via ->with('counterparty') to prevent N+1.
     /**
-     * The resolved counterparty for this transaction. Populated by the
-     * `ResolveCounterpartyStage` Import-pipeline stage (Plan 17-05b) via
-     * the `CounterpartyResolver` 7-step chain. NULL for rows that pre-
-     * date the resolver, rows the resolver couldn't materialise (self-
-     * account branch, or pathological rows carrying no IBAN / name /
-     * description), or rows whose linked counterparty was pruned by the
-     * future garbage-collector job.
-     *
-     * Consumers rendering counterparty-name affordances (the four
-     * transaction-row surfaces in Ledger / Categorization / Chains)
-     * eager-load this relation via `->with('counterparty')` to prevent
-     * N+1 query expansion on list-render paths.
-     *
      * @return BelongsTo<Counterparty, $this>
      */
     public function counterparty(): BelongsTo
@@ -167,11 +142,10 @@ final class Transaction extends Model
         return $this->belongsTo(ImportRun::class);
     }
 
+    // Populated for transfer_out/transfer_in rows whose cross-account
+    // counterpart landed in the ledger and was matched by the
+    // deterministic Layer-1 listener.
     /**
-     * The paired-partner relationship. Populated for `transfer_out` /
-     * `transfer_in` rows whose cross-account counterpart landed in the
-     * ledger and was matched by the deterministic Layer-1 listener.
-     *
      * @return BelongsTo<Transaction, $this>
      */
     public function pair(): BelongsTo

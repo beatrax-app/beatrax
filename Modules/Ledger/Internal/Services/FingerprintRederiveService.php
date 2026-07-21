@@ -10,24 +10,10 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use stdClass;
 
-/**
- * Re-derives the SHA-256 fingerprint of every transactions row to the
- * current FingerprintComposer NORMALIZATION_VERSION.
- *
- * The algorithm is:
- *   1. Stream every row whose stored normalization_version is below the
- *      composer's current version.
- *   2. Compose the new fingerprint in memory.
- *   3. Detect collisions (two distinct rows that would now hash to the
- *      same fingerprint) before writing anything.
- *   4. On a clean pre-check, apply the UPDATEs inside one DB transaction.
- *   5. On collision, return a failure outcome and leave the table
- *      untouched.
- *
- * Both the artisan command and the schema migration call this service
- * directly; consolidating the algorithm here avoids invoking artisan
- * from a migration via service-locator helpers.
- */
+// Streams every row below the composer's current normalization
+// version, composes the new fingerprint in memory, detects collisions
+// before writing anything, then applies all UPDATEs in one transaction
+// (or returns a failure outcome untouched on collision).
 final class FingerprintRederiveService
 {
     public function __construct(
@@ -36,8 +22,6 @@ final class FingerprintRederiveService
     ) {}
 
     /**
-     * Runs the re-derive against the live transactions table.
-     *
      * @param  bool  $apply  When true and no collision is detected, the
      *                       UPDATEs are written inside a single DB
      *                       transaction. When false, the call is a
@@ -79,7 +63,7 @@ final class FingerprintRederiveService
 
         /** @var array<string, int> $seen Maps `${user_id}|${fingerprint}` to the first transactions.id that produced it */
         $seen = [];
-        /** @var array<int, string> $updates Maps transactions.id to the new SHA-256 fingerprint */
+        /** @var array<int, string> $updates Maps transactions.id to the new sha256 fingerprint */
         $updates = [];
         /** @var list<array{existing_id:int,colliding_id:int,fingerprint:string}> $collisions */
         $collisions = [];
@@ -139,13 +123,9 @@ final class FingerprintRederiveService
         return FingerprintRederiveOutcome::applied($targetVersion, $pendingCount);
     }
 
-    /**
-     * Reconstructs a CanonicalTransaction from a raw stored row so the
-     * composer can hash it under the current tuple shape. Date columns
-     * stored as ISO strings round-trip through CarbonImmutable so the
-     * composer's `->toDateString()` and `->toDateTimeString()` calls see
-     * the same value they would for a freshly-built canonical.
-     */
+    // Date columns stored as ISO strings round-trip through
+    // CarbonImmutable so the composer sees the same value it would for
+    // a freshly-built canonical.
     private function buildCanonicalFromRow(stdClass $row, int $targetVersion): CanonicalTransaction
     {
         return new CanonicalTransaction(

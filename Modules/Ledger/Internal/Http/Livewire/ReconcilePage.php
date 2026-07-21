@@ -18,28 +18,11 @@ use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Throwable;
 
+// DI-only: no constructor. Service collaborators arrive as parameters
+// on mount()/render()/action methods — Livewire Component subclasses
+// are barred from constructor injection by phpstan-strict-rules.
 /**
- * `/reconcile` — the standalone SC-2 account-reconciliation surface (D-05:
- * no account-detail page exists in the app, so this is its own top-level
- * route rather than a tab on one).
- *
- * The user picks an account, confirms/edits a statement balance + date
- * (pre-filled from imported statement data per D-06), and watches the
- * cleared balance converge on that target. A non-zero difference is
- * flagged read-only (D-07) — this flow never fabricates a balancing
- * transaction. Confirming a matched reconcile calls
- * `ReconciliationWriter::completeReconcile()`, which bulk-locks the
- * account's cleared rows up to the statement date to `reconciled` (D-08).
- *
- * DI-only: no constructor. Service collaborators arrive as parameters on
- * `mount()`, `render()`, and action methods (Livewire Component subclasses
- * are barred from constructor injection by phpstan-strict-rules).
- *
- * IDOR (T-13.3-16): `$accountId` is a client-controllable, URL-bound
- * property. Every read re-validates account ownership by `user_id` before
- * touching `statement_summaries`/`card_statements`/`AccountBalanceQuery`,
- * and `ReconciliationWriter::completeReconcile()` re-scopes by `user_id`
- * again on the write side. A foreign accountId shows and does nothing.
+ * @link ../../../../../.docs/features/ledger/architecture.md
  */
 final class ReconcilePage extends Component
 {
@@ -62,12 +45,9 @@ final class ReconcilePage extends Component
         $this->loadAccount($currentUser, $db);
     }
 
-    /**
-     * Livewire lifecycle hook — fires when the account picker changes
-     * (`wire:model.live="accountId"`). Re-runs the D-06 pre-fill for the
-     * newly selected account; clears any stale balance/date/error first so
-     * a value pre-filled for the previous account never bleeds through.
-     */
+    // Livewire hook: fires when the account picker changes. Clears any
+    // stale balance/date/error before re-running the pre-fill so a
+    // value from the previous account never bleeds through.
     public function updatedAccountId(mixed $value, Clock $clock, CurrentUser $currentUser, DatabaseManager $db): void
     {
         $this->statementBalance = '';
@@ -76,26 +56,19 @@ final class ReconcilePage extends Component
         $this->loadAccount($currentUser, $db);
     }
 
-    /**
-     * The "Check" affordance the blade binds to after the user edits the
-     * statement balance/date. `render()` is the single source of truth for
-     * the difference computation and re-runs on every Livewire round trip
-     * regardless, so this method is intentionally a no-op — it exists to
-     * give the UI an explicit "review the difference" action distinct from
-     * live-typing, and to give tests a stable action name to call.
-     */
+    // Intentionally a no-op: render() already recomputes the difference
+    // on every round trip. This gives the UI an explicit "review the
+    // difference" action distinct from live-typing, and tests a stable
+    // action name to call.
     public function checkDiscrepancy(): void
     {
         $this->error = '';
     }
 
-    /**
-     * Completes the reconcile ONLY when the entered/pre-filled statement
-     * balance exactly matches the cleared balance (difference === 0). A
-     * discrepancy performs no write and creates no transaction — it is
-     * surfaced as an error/flag for the user to resolve by toggling cleared
-     * rows or correcting the entered balance (D-07).
-     */
+    // Completes the reconcile only when the entered/pre-filled statement
+    // balance exactly matches the cleared balance (difference === 0). A
+    // discrepancy performs no write and creates no transaction — it
+    // surfaces as an error for the user to resolve.
     public function confirmReconcile(ReconciliationWriter $writer, CurrentUser $currentUser, AccountBalanceQuery $balances): void
     {
         $this->error = '';
@@ -116,15 +89,14 @@ final class ReconcilePage extends Component
         }
 
         $user = $currentUser->user();
-        // CR-01: bound the cleared balance by the statement date so the
-        // matched-check here uses the SAME window completeReconcile() locks
-        // (`posted_at <= $date`). Using the un-bounded balance would flag a
-        // spurious discrepancy for a past statement date whenever a cleared
-        // row is posted after it.
+        // Bound the cleared balance by the statement date so this check
+        // uses the same posted_at <= $date window completeReconcile()
+        // locks — the unbounded balance would flag a spurious
+        // discrepancy whenever a cleared row posts after the date.
         $cleared = $balances->clearedBalanceAsOf($this->accountId, $user, $date);
 
         if ($target - $cleared !== 0) {
-            // D-07: a discrepancy is flag-only — never auto-balanced, never
+            // A discrepancy is flag-only — never auto-balanced, never
             // completed. No write happens below this line.
             $this->error = 'The statement balance does not match the cleared balance yet — adjust cleared rows or the entered balance until the difference is zero.';
 
@@ -139,7 +111,7 @@ final class ReconcilePage extends Component
             return;
         }
 
-        // WR-04: report the truthful outcome. A matched target with no cleared
+        // Report the truthful outcome. A matched target with no cleared
         // rows in the statement-date window locks nothing — don't claim it did.
         $message = $lockedCount === 0
             ? 'Nothing to lock for this statement date.'
@@ -160,10 +132,10 @@ final class ReconcilePage extends Component
 
         $ownedAccountId = $this->ownedAccountId($connection, $user->id);
 
-        // CR-01: the on-screen difference, the @disabled(! $isMatched) gate,
-        // and confirmReconcile() must all agree on `posted_at <= statementDate`
-        // — the window completeReconcile() actually locks. Compute the cleared
-        // balance as of the parsed statement date, not the un-bounded total.
+        // The on-screen difference, the disabled-button gate, and
+        // confirmReconcile() must all agree on posted_at <= statementDate
+        // — compute the cleared balance as of the parsed statement date,
+        // not the unbounded total.
         $statementDate = self::parseDate($this->statementDate);
 
         $clearedBalanceMinor = ($ownedAccountId !== null && $statementDate !== null)
@@ -192,20 +164,12 @@ final class ReconcilePage extends Component
         return $view;
     }
 
+    // Pre-fills statementBalance/statementDate per account kind (source
+    // mapping documented in the linked architecture page). Re-validates
+    // account ownership before reading anything; a foreign accountId is
+    // cleared back to null so no other user's data leaks.
     /**
-     * Pre-fills `statementBalance`/`statementDate` from the D-06 statement
-     * sources for the currently-selected account:
-     *   - `asn` accounts    -> latest `statement_summaries.closing_balance_minor`/`closing_balance_date`
-     *   - `ics_card` accounts -> latest `card_statements.total_amount_minor` by `period_end` DESC
-     *     (Pitfall 3 — NOT `open_balance_minor`; this table is READ-ONLY
-     *     here, the sole legal mutator remains Chains
-     *     CardStatementStateMachine, T-13.3-18)
-     *   - any other kind (paypal, generic CSV, cash book) -> no statement
-     *     source; fields stay blank for manual entry
-     *
-     * Re-validates account ownership before reading anything (T-13.3-16 /
-     * T-13.3-17) — a foreign accountId is cleared back to null so no data
-     * from another user's statements can leak through.
+     * @link ../../../../../.docs/features/ledger/architecture.md
      */
     private function loadAccount(CurrentUser $currentUser, DatabaseManager $db): void
     {
@@ -270,11 +234,9 @@ final class ReconcilePage extends Component
         // source exists — leave statementBalance blank for manual entry.
     }
 
-    /**
-     * Re-validates ownership on every render (T-13.3-16 IDOR guard) — never
-     * trusts the URL-bound `$accountId` without re-checking. Returns null
-     * for a foreign or missing account so `render()` shows nothing for it.
-     */
+    // Re-validates ownership on every render — never trusts the
+    // URL-bound $accountId without re-checking. Returns null for a
+    // foreign or missing account so render() shows nothing for it.
     private function ownedAccountId(ConnectionInterface $connection, int $userId): ?int
     {
         if ($this->accountId === null) {
@@ -303,11 +265,9 @@ final class ReconcilePage extends Component
         }
     }
 
-    /**
-     * Formats minor units back into an editable Dutch-decimal string (e.g.
-     * `-6000` -> `"-60,00"`) so a pre-filled statement balance round-trips
-     * through `parseAmount()` unchanged if the user submits it untouched.
-     */
+    // Formats minor units as an editable Dutch-decimal string (e.g.
+    // -6000 -> "-60,00") so a pre-filled balance round-trips through
+    // parseAmount() unchanged if submitted untouched.
     private static function formatMinorForInput(int $minor): string
     {
         $negative = $minor < 0;
@@ -318,17 +278,10 @@ final class ReconcilePage extends Component
         return ($negative ? '-' : '').$whole.','.str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Parses a signed money string to minor units. Adapted from
-     * `EnvelopeWriter::parseAmount()` (PATTERNS.md Shared Patterns) with one
-     * deliberate change: this accepts an optional leading `-` sign and
-     * allows zero/negative results. A statement balance is a signed figure
-     * (an ICS card statement total is negative — the amount owed), unlike
-     * an envelope amount, which is always a positive magnitude. Otherwise
-     * identical: accepts plain ("12.50"), Dutch grouped ("1.234,56"), and
-     * comma-decimal ("12,50") forms; the rightmost of '.' or ',' is the
-     * decimal separator.
-     */
+    // Parses a signed money string to minor units (accepts an optional
+    // leading '-', since a statement balance can be negative). Accepts
+    // plain, Dutch-grouped, or comma-decimal forms — the rightmost of
+    // '.' or ',' is the decimal separator.
     private static function parseAmount(string $value): ?int
     {
         $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));

@@ -9,15 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// One row per import_run when the source carries statement-level
+// metadata. CSV imports leave the table absent; CAMT.053 and MT940
+// imports always populate it. The UNIQUE (user_id, import_run_id)
+// constraint guards against multiple rows per run; the writer upserts.
 /**
- * One row per import_run when the source carries statement-level metadata
- * (opening + closing balance, period start/end, statement number, IBAN
- * owner). CSV imports leave the table absent; CAMT.053 and MT940 imports
- * always populate it.
- *
- * The UNIQUE `(user_id, import_run_id)` constraint guards against multiple
- * statement rows per import run; the writer upserts on that pair.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $import_run_id

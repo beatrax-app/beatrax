@@ -7,10 +7,8 @@ namespace Modules\Ledger\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Modules\Ledger\Models\Currency;
 
-/**
- * Seeds the ISO 4217 currencies the app understands out of the box. Idempotent
- * via updateOrInsert so `beatrax:install` can run safely on every invocation.
- */
+// updateOrInsert keeps this idempotent so beatrax:install can safely
+// re-run without duplicating currency rows.
 final class CurrenciesSeeder extends Seeder
 {
     public function run(): void

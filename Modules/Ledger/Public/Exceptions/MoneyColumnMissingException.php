@@ -6,13 +6,9 @@ namespace Modules\Ledger\Public\Exceptions;
 
 use RuntimeException;
 
-/**
- * Thrown when the MoneyMinorCast is asked to hydrate from an attribute set
- * that does not carry both the minor-amount column and its paired currency
- * column. Surfaces partial-SELECT misuse loudly rather than fabricating a
- * silent (0, 'EUR') sentinel that the caller cannot distinguish from a
- * legitimate zero amount.
- */
+// Surfaces partial-SELECT misuse loudly rather than fabricating a
+// silent (0, 'EUR') sentinel the caller cannot distinguish from a
+// legitimate zero amount.
 final class MoneyColumnMissingException extends RuntimeException
 {
     public function __construct(string $minorColumn, string $currencyColumn)

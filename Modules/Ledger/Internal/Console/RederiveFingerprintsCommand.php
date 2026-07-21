@@ -8,22 +8,10 @@ use Illuminate\Console\Command;
 use Modules\Ledger\Internal\Services\FingerprintRederiveOutcome;
 use Modules\Ledger\Internal\Services\FingerprintRederiveService;
 
-/**
- * Re-computes the SHA-256 fingerprint of every transactions row using the
- * current FingerprintComposer NORMALIZATION_VERSION. The algorithm lives
- * in `FingerprintRederiveService` so the schema migration that ships the
- * version bump can invoke the same code path with explicit dependencies
- * instead of shelling out to artisan.
- *
- * Surface of this command:
- *  - Streams a human-readable progress / collision report to the console.
- *  - Returns the standard artisan SUCCESS / FAILURE exit codes.
- *
- * The runtime guard against accidental HTTP invocation is registered in
- * the LedgerServiceProvider via the `runningInConsole()` check; the
- * compile-time guard is the BoundaryArchTest rule that asserts this class
- * is never used from any Http or Routes namespace.
- */
+// Re-computes the sha256 fingerprint of every transactions row using
+// the current FingerprintComposer normalization version, via
+// FingerprintRederiveService; guarded against HTTP invocation by
+// LedgerServiceProvider's runningInConsole() check plus a BoundaryArchTest rule.
 final class RederiveFingerprintsCommand extends Command
 {
     /** @var string */

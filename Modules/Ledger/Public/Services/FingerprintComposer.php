@@ -8,45 +8,12 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Normalizer;
 
 /**
- * Produces the canonical SHA-256 fingerprint of a CanonicalTransaction. The
- * fingerprint is the second-layer idempotency guard — the composite UNIQUE
- * index on `transactions(user_id, account_id, posted_at, booked_at,
- * amount_minor, currency, counterparty_normalized)` is the first.
- *
- * The tuple is prefixed with `user_id` so the same row imported under two
- * different users hashes to two different fingerprints. Without that prefix
- * the SHA-256 UNIQUE index would silently reject the second user's row as a
- * "duplicate" of the first user's row.
- *
- * `normalize()` collapses a raw counterparty name into a stable string used
- * inside the fingerprint tuple. NORMALIZATION_VERSION is bumped whenever the
- * algorithm or the tuple shape changes so the column on `transactions`
- * (`normalization_version`) lets old rows be re-normalised against a new
- * algorithm without invalidating historic fingerprints.
+ * @link ../../../../.docs/features/ledger/architecture.md
  */
 final class FingerprintComposer
 {
-    /**
-     * Version stamp persisted on every transaction row as
-     * `normalization_version`. The current algorithm hashes the tuple
-     * `user_id | account_id | posted_at | booked_at | amount_minor |
-     * currency | counterparty_normalized` combined with the
-     * counterparty-normalisation rules implemented in `normalize()`:
-     * lowercased, NFD-stripped of combining marks, non-alphanumeric runs
-     * collapsed to single spaces, whitespace-collapsed, trim-and-truncated
-     * to 80 UTF-8 characters. `booked_at` carries second-resolution so
-     * two same-day same-merchant same-amount entries posted seconds apart
-     * never collide. `source_ref` is intentionally absent: the same
-     * real-world transaction surfaces in CSV and CAMT.053 exports with
-     * different reference values, and the fingerprint must equate those.
-     *
-     * Bump the constant whenever either the tuple shape or the
-     * `normalize()` output changes; a stored row with a lower version
-     * stamp signals "re-derive the fingerprint before comparing against
-     * the current algorithm". Re-derive existing rows via the
-     * `beatrax:rederive-fingerprints` artisan command when bumping past
-     * this version.
-     */
+    // Bump whenever the tuple shape or normalize()'s output changes;
+    // re-derive existing rows via beatrax:rederive-fingerprints.
     public const NORMALIZATION_VERSION = 3;
 
     public function compose(CanonicalTransaction $tx): string
@@ -79,12 +46,9 @@ final class FingerprintComposer
         return self::NORMALIZATION_VERSION;
     }
 
-    /**
-     * Strips combining marks (accents, umlauts, tildes, …) from a UTF-8 string
-     * by decomposing to NFD and removing every `\p{Mn}` (Mark, Non-spacing)
-     * codepoint. This avoids the iconv `//TRANSLIT` failure mode where `é`
-     * becomes `'e` and a stray apostrophe leaks into the normalised name.
-     */
+    // Decomposes to NFD and removes every \p{Mn} codepoint, avoiding the
+    // iconv //TRANSLIT failure mode where e-acute becomes "'e" and a
+    // stray apostrophe leaks into the normalised name.
     private function stripDiacritics(string $s): string
     {
         $decomposed = Normalizer::normalize($s, Normalizer::FORM_D);

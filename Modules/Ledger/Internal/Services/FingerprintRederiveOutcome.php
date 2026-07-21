@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Ledger\Internal\Services;
 
-/**
- * Result envelope returned by `FingerprintRederiveService::run()`.
- *
- * The status surface is small on purpose: callers (artisan command,
- * schema migration) only need to distinguish "all good" from "stop, do
- * not write" and need access to the rows-affected count or the
- * collision detail for reporting.
- */
+// The status surface is small on purpose: callers only need to
+// distinguish "all good" from "stop, do not write", plus the
+// rows-affected count or collision detail for reporting.
 final class FingerprintRederiveOutcome
 {
     /**

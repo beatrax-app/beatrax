@@ -6,20 +6,10 @@ namespace Modules\Ledger\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 
-/**
- * Writes the earliest opening balance per account into
- * accounts.starting_balance_minor + starting_balance_date, skipping any
- * account whose starting-balance pair is already populated.
- *
- * Source rows come from statement_summaries — populated by every CAMT.053,
- * MT940, and ICS PDF import. The earliest opening_balance_date wins; ties
- * on date fall back to the lowest statement_summaries.id for a
- * deterministic pick.
- *
- * Re-running the service is safe: rows whose starting_balance_minor and
- * starting_balance_date are both already set are left untouched so a
- * user-confirmed override survives later imports.
- */
+// Writes the earliest opening balance per account into
+// accounts.starting_balance_minor + starting_balance_date. Re-running
+// is safe: rows whose pair is already set are left untouched, so a
+// user-confirmed override survives later imports.
 final class BackfillStartingBalanceFromStatementSummaries
 {
     public function __construct(
@@ -75,11 +65,8 @@ final class BackfillStartingBalanceFromStatementSummaries
         });
     }
 
-    /**
-     * Strip any time component from a statement_summaries.opening_balance_date
-     * value. The source column is `dateTime`, but accounts.starting_balance_date
-     * is a `date` — round to the ISO date so SQLite stores a stable value.
-     */
+    // The source column is dateTime, but accounts.starting_balance_date
+    // is a date — round to the ISO date so SQLite stores a stable value.
     private static function dateOnly(string $raw): string
     {
         $spacePos = strpos($raw, ' ');

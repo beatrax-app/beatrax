@@ -7,14 +7,9 @@ namespace Modules\Ledger\Public\Dto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * The composed "this period at a glance" payload. Built by
- * `ThisPeriodAtAGlanceQuery::for()` and consumed by the dashboard Blade.
- *
- * `isFirstRun` is true exactly when the user has zero transactions across
- * all periods — the dashboard route uses it to redirect to `/imports/new`
- * before the dashboard ever renders.
- */
+// isFirstRun is true exactly when the user has zero transactions
+// across all periods — the dashboard route uses it to redirect to
+// /imports/new before the dashboard ever renders.
 final class DashboardSummary extends Data
 {
     /**

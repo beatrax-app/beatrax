@@ -29,20 +29,10 @@ use Modules\Ledger\Public\Services\ThisPeriodAtAGlanceQuery;
 use Modules\Ledger\Public\Services\TopCategoriesByPeriodQuery;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 
-/**
- * Wires the Ledger module:
- *
- * - binds the two public action contracts so other modules can inject them
- * - registers FingerprintComposer as a singleton (stateless, cheap)
- * - registers PeriodQuery as a transient binding because it depends on the
- *   per-request CurrentUser contract; singleton scope would freeze the
- *   first-request user under a long-lived worker
- * - registers the three dashboard query services as singletons (stateless,
- *   user is supplied per call)
- * - loads migrations, routes, and views
- * - registers the rederive-fingerprints artisan command behind a
- *   runningInConsole() guard so it never binds on web requests
- */
+// PeriodQuery is bound transient (not singleton) because it depends on
+// the per-request CurrentUser contract; singleton scope would freeze
+// the first-request user under a long-lived worker. The rederive-
+// fingerprints command is registered behind a runningInConsole() guard.
 final class LedgerServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -50,20 +40,16 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->app->bind(RecordsTransactions::class, RecordTransactions::class);
         $this->app->bind(UpdatesTransactionCategory::class, UpdateTransactionCategory::class);
         $this->app->bind(RecordsStatementSummary::class, StatementSummaryWriter::class);
-        // Phase 13.1 Plan 05: the sole mutator of transaction_splits was never
-        // bound after Plan 01 introduced it — TransactionDetail's split-editor
-        // actions type-hint the interface, so without this binding every
-        // saveSplit()/unsplit() call would fail to resolve (Rule 3 fix).
         $this->app->bind(SavesTransactionSplit::class, SaveTransactionSplit::class);
-        // Plan 13.4-04 (T-13.4-13b — module boundary fix): counterparty-
-        // reassign and set/append-note promoted to Ledger Public guarded
-        // actions so both TransactionDetail and the Plan 05 rule engine
-        // write these fields through one seam, never raw SQL.
+        // Counterparty-reassign and set/append-note are guarded Public
+        // actions so every caller writes these fields through one seam,
+        // never raw SQL.
         $this->app->bind(ReassignsCounterparty::class, ReassignCounterparty::class);
         $this->app->bind(SetsTransactionNote::class, SetTransactionNote::class);
         $this->app->singleton(FingerprintComposer::class);
         $this->app->bind(PeriodQuery::class);
-        // Transient (not singleton): depends on the per-request PeriodQuery.
+        // Transient, not singleton — depends on the per-request
+        // PeriodQuery binding above.
         $this->app->bind(CategorySpendTrendQuery::class);
         $this->app->singleton(ThisPeriodAtAGlanceQuery::class);
         $this->app->singleton(TopCategoriesByPeriodQuery::class);

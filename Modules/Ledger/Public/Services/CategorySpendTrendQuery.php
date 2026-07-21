@@ -11,15 +11,9 @@ use Modules\Ledger\Public\Dto\CategoryDelta;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\SpendTrend;
 
-/**
- * Month-over-month spend comparison (SEED-006): the current period's categorised
- * outflow versus the previous period's, plus the categories that moved the most.
- *
- * Spend is the same definition the rest of the ledger uses — EUR-settled
- * outflow (`settled_amount_minor < 0`) within the period's [start, endExclusive)
- * window — so the figures reconcile with "this month at a glance". Every read is
- * scoped to the user.
- */
+// Spend is the same definition the rest of the ledger uses —
+// EUR-settled outflow within the period's [start, endExclusive) window
+// — so the figures reconcile with "this month at a glance".
 final class CategorySpendTrendQuery
 {
     private const DISPLAY_CURRENCY = 'EUR';
@@ -75,13 +69,10 @@ final class CategorySpendTrendQuery
      */
     private function spendByCategory(int $userId, Period $period): array
     {
-        // Delegates to the shared legs ∪ unsplit-parents read model
-        // (Req 4 / D-02) — a split transaction's legs count individually,
-        // never the parent row. includeUncategorized: true keeps
-        // uncategorised outflow under id 0 → "Uncategorized" so the period
-        // total is the FULL EUR-settled outflow, not just the categorised
-        // slice — the same behaviour this method had before delegation.
-        // Non-EUR-settled spend is out of scope by design (EUR-denominated).
+        // Delegates to the shared legs-union-unsplit-parents read model
+        // — a split transaction's legs count individually, never the
+        // parent row. includeUncategorized keeps uncategorised outflow
+        // under id 0 so the period total is the full EUR-settled outflow.
         return $this->spendByCategoryQuery->forUserAndPeriod($userId, $period, self::DISPLAY_CURRENCY, includeUncategorized: true);
     }
 
@@ -95,8 +86,8 @@ final class CategorySpendTrendQuery
             return [];
         }
 
-        // Own-or-global guard, matching the rest of the read layer — a name is
-        // only ever resolved for the user's own categories or shared globals.
+        // Own-or-global guard: a name is only ever resolved for the
+        // user's own categories or shared globals.
         $rows = $this->db->connection()->table('categories')
             ->whereIn('id', array_values($categoryIds))
             ->where(static function (Builder $query) use ($userId): void {
