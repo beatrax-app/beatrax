@@ -12,33 +12,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Writes a single un-acknowledged `system_alerts` row of kind
- * `open_banking_reconsent_required` whenever an Open Banking connection's
- * consent/SCA session fails or expires (`OpenBankingConsentFailed`,
- * D-09/T-19-06-02/T-19-06-03).
- *
- * A verbatim port of `Modules\EmailScan\Internal\Listeners\
- * RaiseReconsentAlertOnTokenFailure` — NOT `EmitOAuthReauthRequiredAlert`,
- * which is a one-time Phase-12-migration-specific alert, not a reusable
- * consent-expiry template (RESEARCH.md D-09 note). `connection_id` plays
- * the role `inbox_id` plays there; there is no provider-branching
- * `messageFor()` since Open Banking has exactly one provider (Enable
- * Banking).
- *
- * Dedup pattern: at most one active (un-acknowledged) row per
- * (user_id, connection_id) — once the user reconnects, a future Wave 3
- * surface acknowledges the alert; the next failure (if any) creates a
- * fresh row because the existence check filters on
- * `acknowledged_at IS NULL`.
- *
- * Dedup query uses SQLite's `json_extract` against the `metadata`
- * column, falling back to a dual-needle LIKE match (trailing comma OR
- * trailing brace) so `connection_id=1` never falsely matches
- * `connection_id=10`/`11`/`123` on a SQLite build without the JSON1
- * extension compiled in.
- *
- * Never throws upward (defence-in-depth try/catch → log warning) — the
- * caller is typically mid-error-recovery already (T-19-06-03).
+ * @link ../../../../.docs/features/open-banking/architecture.md
  */
 final class RaiseOpenBankingReconsentAlert
 {
@@ -89,14 +63,7 @@ final class RaiseOpenBankingReconsentAlert
     }
 
     /**
-     * Existence check for an active (un-acknowledged) re-consent alert
-     * scoped to the given user + connection. Returns true when a row
-     * already exists so the listener can no-op.
-     *
-     * Prefers the precise `json_extract(metadata, '$.connection_id')`
-     * form; falls back to a LIKE form if the extracted-column predicate
-     * throws on an older SQLite where the JSON1 extension is not
-     * compiled in.
+     * @link ../../../../.docs/features/open-banking/architecture.md
      */
     private function alreadyAlerted(int $userId, int $connectionId): bool
     {
@@ -107,14 +74,9 @@ final class RaiseOpenBankingReconsentAlert
                 ->whereRaw("json_extract(metadata, '$.connection_id') = ?", [$connectionId])
                 ->exists();
         } catch (Throwable) {
-            // Fallback — match the JSON-encoded fragment
-            // `"connection_id":N` inside the raw column text. SQLite
-            // LIKE does not support character classes, so the trailing
-            // boundary is anchored by OR-ing two literal needles: one
-            // ending in `,` (when other JSON keys follow) and one
-            // ending in `}` (when connection_id is the last key in the
-            // object). Without this, connection_id=1 would falsely
-            // match connection_id=10, 11, 123.
+            // Two OR-ed needles anchor the trailing boundary since SQLite
+            // LIKE has no character classes — without this, connection_id=1
+            // would falsely match connection_id=10/11/123.
             $withComma = '%"connection_id":'.$connectionId.',%';
             $withBrace = '%"connection_id":'.$connectionId.'}%';
 
@@ -127,11 +89,8 @@ final class RaiseOpenBankingReconsentAlert
         }
     }
 
-    /**
-     * Shared per-user predicate filtered to active re-consent rows. The
-     * second-pass LIKE-fallback call re-builds the query because Laravel
-     * builders are not safe to reuse across `where` re-additions.
-     */
+    // The second-pass LIKE-fallback call re-builds the query because
+    // Laravel builders are not safe to reuse across where re-additions.
     private function baseDedupQuery(int $userId): Builder
     {
         return $this->db->connection()

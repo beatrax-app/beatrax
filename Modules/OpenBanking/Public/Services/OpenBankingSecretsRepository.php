@@ -16,51 +16,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * The ONE place in the OpenBanking module allowed to touch the
- * filesystem secrets path (D-07 arch guard — enforced by
- * Modules\OpenBanking\tests\Contracts\OpenBankingSecretsFileGuardTest).
- *
- * Persists the caller's own Enable Banking "application" credentials
- * (BYO-key, D-05) — application_id, RSA private-key PEM, session/
- * consent tokens, consent expiry, and the resolved bank SCA host — to
- * a chmod-600 JSON file at storage/app/secrets/open-banking.json.
- * NEVER a DB column: any secret in SQLite would leak into DB backups.
- *
- * This is a verbatim port of the git-recovered pre-Phase-12
- * `Modules\EmailScan\Public\Services\OAuthSecretsRepository`
- * (`git show 97decba2^:...`) — the debugged file-backed atomic-write
- * blueprint (WR-04 umask narrowing, WR-08 chmod-parent-only-on-first-
- * create) — layered with D-06's SecretShield wrapping on top: the
- * encoded JSON bytes are run through `SecretShield::protect()` before
- * `fwrite()` and `SecretShield::reveal()`d after `file_get_contents()`.
- * On web/desktop-without-keychain this is identity (`PassthroughSecretShield`);
- * on the desktop bundle it layers OS-keychain-bound ciphertext
- * (`SafeStorageSecretShield`) under the chmod-0600 file permission.
- *
- * Writes are atomic via the tmp+fsync+rename sequence: open a
- * sibling `.tmp` file, write the shielded payload, fflush, fsync
- * (where available), chmod to 0600, then rename over the canonical
- * path. A POSIX rename is atomic, so a crash mid-write leaves the
- * prior file content intact and never produces a half-written file
- * the next reader would choke on. The performRename hook is extracted
- * so tests can simulate a failed rename without touching the
- * filesystem in destructive ways.
- *
- * Failures emit a typed SecretsWriteFailed exception whose message
- * never contains the JSON payload — only the absolute path and a
- * generic description — so any logging surface above this class can
- * never accidentally leak credential material.
- *
- * SINGLE-USER v1 (WR-08): this is a single GLOBAL secrets file
- * (`storage/app/secrets/open-banking.json`) with NO per-user or
- * per-connection keying. The `user_id` columns on
- * `open_banking_connections` therefore do NOT imply any secret-store
- * isolation yet — a second user's `save()` would silently overwrite the
- * first user's credentials in the same global blob. Per-user (or
- * per-connection) keying of this store is REQUIRED before a second user
- * is onboarded. Until then `save()` carries a defensive guard (see
- * `guardSingleUser()`) that logs loudly if it is ever asked to write
- * while more than one user account exists.
+ * @link ../../../../.docs/features/open-banking/architecture.md
  */
 class OpenBankingSecretsRepository
 {
@@ -73,18 +29,12 @@ class OpenBankingSecretsRepository
     public function __construct(
         private readonly Filesystem $files,
         private readonly SecretShield $shield,
-        // WR-08: injected (not the Log facade — larastan strict rules
-        // forbid facades here) so the single-user guard can warn. Defaults
-        // to NullLogger so the DB-less unit construction stays 2-arg,
-        // mirroring EnableBankingSourceAdapter's logger seam.
+        // Injected (not the Log facade — larastan strict rules forbid
+        // facades here) so the single-user guard can warn. Defaults to
+        // NullLogger so the DB-less unit construction stays 2-arg.
         private readonly LoggerInterface $logger = new NullLogger,
     ) {}
 
-    /**
-     * Wizard credential-gate check: true once an application_id +
-     * private-key PEM have been saved, regardless of whether the
-     * consent dance has completed yet.
-     */
     public function hasApplication(): bool
     {
         $data = $this->readAll();
@@ -107,16 +57,10 @@ class OpenBankingSecretsRepository
         ]);
     }
 
-    /**
-     * Gated ONLY on the private key being present. `application_id` is
-     * intentionally NOT required here (unlike `hasApplication()`, which
-     * gates on both): the onboarding wizard (19-06) writes the private
-     * key first (Step 1) and the application_id afterwards (Step 3), and
-     * Step 3 must be able to `load()` the just-generated private key to
-     * merge the pasted application_id into it. Any caller that needs the
-     * "fully registered" signal uses `hasApplication()`, not a null
-     * check on `load()`.
-     */
+    // Gated only on the private key being present, unlike hasApplication()
+    // which gates on both — the onboarding wizard writes the private key
+    // first and the application_id afterwards, and must be able to load()
+    // the just-generated private key to merge the pasted id into it.
     public function load(): ?OpenBankingCredentials
     {
         $data = $this->readAll();
@@ -138,10 +82,8 @@ class OpenBankingSecretsRepository
         );
     }
 
-    /**
-     * Disconnect: remove the on-disk credential file entirely. A
-     * missing file is treated as already-cleared (idempotent).
-     */
+    // A missing file is treated as already-cleared, so this action is
+    // idempotent across repeated disconnect calls.
     public function clear(): void
     {
         $absolute = $this->absolutePath();
@@ -150,24 +92,16 @@ class OpenBankingSecretsRepository
         }
     }
 
-    /**
-     * Hook extracted so tests can simulate a rename failure without
-     * touching the filesystem in destructive ways. Override in a test
-     * subclass to return false; the caller treats the failure
-     * identically to a native rename() returning false.
-     */
+    // Extracted so tests can simulate a rename failure without touching the
+    // filesystem destructively; the caller treats it identically to a
+    // native rename() returning false.
     protected function performRename(string $tmp, string $final): bool
     {
         return @rename($tmp, $final);
     }
 
     /**
-     * WR-08 single-user guard: the count of application users, or null
-     * when it cannot be determined (e.g. a pure-unit context with no
-     * migrated database). Extracted as a hook — mirroring
-     * {@see performRename()} — so tests can drive the multi-user branch
-     * without seeding a second real user, and so a DB-less unit context
-     * degrades to "unknown" rather than throwing.
+     * @see performRename()
      */
     protected function userCount(): ?int
     {
@@ -179,19 +113,7 @@ class OpenBankingSecretsRepository
     }
 
     /**
-     * SINGLE-USER v1 guard (WR-08): the on-disk secrets file is one GLOBAL
-     * blob with no per-user keying, so a second user's credentials would
-     * silently overwrite the first's. Until per-user (or per-connection)
-     * keying exists, writing while more than one user account exists is
-     * unsupported — log LOUDLY so the constraint is auditable.
-     *
-     * A hard throw was considered but deliberately rejected: it would (a)
-     * break the DB-less unit suite that exercises `save()` without a
-     * migrated `users` table, and (b) risk breaking green feature suites
-     * that legitimately seed multiple users around a `save()`. The warning
-     * preserves every green suite while still creating the audit trail the
-     * review asked for; a null user count (unknown / no DB) is treated as
-     * "cannot violate the constraint" and is silent.
+     * @link ../../../../.docs/features/open-banking/architecture.md
      */
     private function guardSingleUser(): void
     {
@@ -283,22 +205,16 @@ class OpenBankingSecretsRepository
             );
         }
 
-        // D-06: shield the encoded JSON bytes before they ever touch
-        // disk. Identity on web/desktop-without-keychain; safeStorage
-        // ciphertext on the desktop bundle.
+        // Shield the encoded JSON bytes before they ever touch disk —
+        // identity on web/desktop-without-keychain, safeStorage ciphertext
+        // on the desktop bundle.
         $bytes = $this->shield->protect($encoded);
 
         $tmp = $absolute.'.tmp';
 
-        // Narrow umask BEFORE opening the temp file so the file is
-        // born with mode 0600 (0666 & ~0077 = 0600). Without this,
-        // fopen's default 0666 & ~0022 = 0644 leaves the temp file
-        // world-readable for the brief window between fwrite and the
-        // explicit chmod below — a cohabiting OS user racing a `cat`
-        // could observe the shielded bytes (or, on web, the raw
-        // credential JSON). The explicit chmod is kept as
-        // belt-and-braces against umask churn from other libs running
-        // in the same request.
+        // Narrow umask before opening the temp file so it is born 0600 —
+        // otherwise fopen's default mode leaves it world-readable for the
+        // brief window before the explicit chmod below runs.
         $prevUmask = umask(0077);
 
         $fp = @fopen($tmp, 'wb');

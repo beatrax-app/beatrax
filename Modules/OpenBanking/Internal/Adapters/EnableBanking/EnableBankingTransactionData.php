@@ -7,24 +7,7 @@ namespace Modules\OpenBanking\Internal\Adapters\EnableBanking;
 use Spatie\LaravelData\Data;
 
 /**
- * Typed boundary DTO for one row of Enable Banking's `GET
- * /accounts/{uid}/transactions` response (RESEARCH.md Architecture
- * Patterns §2 field table). Every documented EB transaction field is
- * typed here BEFORE `EnableBankingSourceAdapter` maps it onto the
- * canonical `SourceTransactionDto` — nothing downstream ever touches the
- * raw decoded JSON array directly (T-19-08-02).
- *
- * Nested EB objects (`transaction_amount`, `creditor`/`debtor`,
- * `creditor_account`/`debtor_account`) are flattened onto this single
- * class rather than split into per-object Data subclasses: the codebase
- * convention is strictly one class per file (verified: zero multi-class
- * files exist under `Modules/`), and `Task 1`'s file scope is this one
- * file, so flattening avoids either violating that convention or
- * spilling extra files outside the plan's declared scope.
- *
- * `status === 'BOOK'` is the only value the pipeline is allowed to
- * consume (`isBooked()`); PSD2 also reports `'PDNG'` (pending) rows,
- * which `EnableBankingSourceAdapter` must filter out before yielding.
+ * @link ../../../../../.docs/features/open-banking/architecture.md
  */
 final class EnableBankingTransactionData extends Data
 {
@@ -50,22 +33,14 @@ final class EnableBankingTransactionData extends Data
         public readonly ?string $bankTransactionSubFamily,
     ) {}
 
-    /**
-     * `status` is documented as `'BOOK'` for booked entries; anything
-     * else (e.g. `'PDNG'`) must never reach the canonical pipeline
-     * (RESEARCH.md Pattern 2 booked-only filter, T-19-08-03).
-     */
+    // 'BOOK' is the only status booked entries carry; anything else (e.g.
+    // 'PDNG' pending) must never reach the canonical pipeline.
     public function isBooked(): bool
     {
         return $this->status === 'BOOK';
     }
 
     /**
-     * Decodes one raw EB transaction row (as produced by
-     * `json_decode($response, true)`) into a typed instance. Every
-     * nested access is narrowed via `is_array`/`is_string` checks so no
-     * `mixed` value leaks past this boundary (PHPStan level 10 strict).
-     *
      * @param  array<string, mixed>  $row
      */
     public static function fromArray(array $row): self
@@ -100,10 +75,6 @@ final class EnableBankingTransactionData extends Data
     }
 
     /**
-     * Decodes a full `transactions` array (as found under the
-     * `transactions` key of the aggregator's response body) into a list
-     * of typed instances.
-     *
      * @param  list<array<string, mixed>>  $rows
      * @return list<self>
      */

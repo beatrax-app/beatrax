@@ -10,34 +10,7 @@ use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
 use Symfony\Component\Process\Process;
 
 /**
- * Terminates TLS on the loopback OAuth redirect port so the Enable Banking
- * (`open-banking`) consent dance can be exercised end-to-end on a developer
- * machine.
- *
- * Why this exists: Enable Banking requires an `https://127.0.0.1:PORT/...`
- * redirect URI (see `LoopbackRedirectUri` / 19-05), but `php artisan serve`
- * is a plain-HTTP SAPI and cannot present a certificate. This command is the
- * "self-signed local TLS listener" that 19-05 deferred: it is a stunnel-style
- * TCP tunnel — it accepts an HTTPS connection on the redirect port, lets PHP's
- * `tls://` stream perform the handshake, and then transparently pumps the
- * decrypted bytes to a plain `artisan serve` backend (which it launches on a
- * separate port by default). No HTTP parsing happens: after the handshake it
- * is a byte-for-byte pipe per connection, so keep-alive, Livewire polling, and
- * asset requests all flow through unchanged.
- *
- * The backend is started with `APP_URL=https://127.0.0.1:PORT` so Laravel and
- * Livewire generate same-origin HTTPS URLs (Laravel's immutable env loader
- * lets a real environment variable win over the `.env` value), keeping the
- * whole UAT on one origin: log in at `https://127.0.0.1:PORT`, run the wizard,
- * and the bank redirects back to the same origin's callback route.
- *
- * This is a local dev/UAT tool only — registered behind the provider's
- * `runningInConsole()` guard. The certificate is throwaway and self-signed;
- * the browser will warn once until the user trusts it.
- *
- * Non-blocking correctness: a readable socket is drained into its peer's write
- * buffer, and a socket is only added to `stream_select`'s write set while it
- * has buffered bytes — so a partial `fwrite` never truncates a large response.
+ * @link ../../../../.docs/features/open-banking/architecture.md
  */
 final class ServeOpenBankingTlsCommand extends Command
 {
@@ -188,7 +161,6 @@ final class ServeOpenBankingTlsCommand extends Command
         $process->setTimeout(null);
         $process->start();
 
-        // Wait for the backend to accept connections before we advertise ready.
         for ($i = 0; $i < 100; $i++) {
             if (! $process->isRunning()) {
                 $this->error('The backend `artisan serve` exited during startup:');
@@ -224,8 +196,6 @@ final class ServeOpenBankingTlsCommand extends Command
     }
 
     /**
-     * The proxy event loop. Returns the artisan exit code.
-     *
      * @param  resource  $server
      */
     private function runProxyLoop($server, int $backendPort, ?Process $backend): int
@@ -255,7 +225,6 @@ final class ServeOpenBankingTlsCommand extends Command
             $except = null;
             $ready = @stream_select($read, $write, $except, 1);
             if ($ready === false) {
-                // Interrupted by a signal (Ctrl+C) — loop condition re-checks.
                 continue;
             }
             if ($ready === 0) {
@@ -363,9 +332,6 @@ final class ServeOpenBankingTlsCommand extends Command
     }
 
     /**
-     * Close a socket and its peer together, best-effort flushing any bytes
-     * still buffered toward the peer first.
-     *
      * @param  array<int, array{sock: resource, peer: int, wbuf: string}>  $conns
      */
     private function closePair(array &$conns, int $id): void

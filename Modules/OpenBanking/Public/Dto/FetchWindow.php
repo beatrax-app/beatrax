@@ -7,9 +7,7 @@ namespace Modules\OpenBanking\Public\Dto;
 use Carbon\CarbonImmutable;
 
 /**
- * The date range a `RemoteSourceAdapter::fetch()` call requests from the
- * aggregator — inclusive on both ends. Both fields are `CarbonImmutable`
- * dates (time-of-day is not meaningful for a booked-transactions window).
+ * @link ../../../../.docs/features/open-banking/architecture.md
  */
 final readonly class FetchWindow
 {

@@ -11,26 +11,12 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 
 /**
- * Settings entry row (19-11, UI-SPEC Surface A) — a compact link-out card
- * mounted inside `Modules\Core\Resources\views\livewire\settings-page.blade.php`,
- * following the existing `Aliases` link-out shape (not the fully-embedded
- * `Devices & Sync` shape — this surface's own full UI lives at the
- * dedicated `/settings/open-banking` page, not inline here).
- *
- * A tiny, self-contained Livewire component rather than static Blade
- * copy (unlike `Aliases`) because the one-line status text is genuinely
- * dynamic per user (off / connected+bank+relative-sync / expired) —
- * mirrors every other dynamic settings sub-section
- * (`anomaly.settings-section`, `notifications.settings-section`, etc.)
- * in reaching for its own tiny component rather than threading query
- * results through `Modules\Core\Internal\Http\Livewire\SettingsPage`,
- * which would otherwise need to import an OpenBanking Public service.
+ * @link ../../../../../.docs/features/open-banking/architecture.md
  */
 final class OpenBankingStatusRow extends Component
 {
     public string $statusText = '';
 
-    /** Renders the rose "reconnect needed" tone when true. */
     public bool $expired = false;
 
     public function mount(CurrentUser $currentUser, OpenBankingConnectionQuery $query): void

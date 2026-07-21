@@ -7,30 +7,7 @@ namespace Modules\OpenBanking\Internal\Tls;
 use RuntimeException;
 
 /**
- * Manages the self-signed certificate that lets a local listener terminate
- * TLS on the loopback OAuth redirect port.
- *
- * Enable Banking's Control Panel rejects a plain-HTTP loopback redirect URI
- * (unlike Google/Microsoft, it does not extend the RFC 8252 native-client
- * exception to `http://127.0.0.1`; see `LoopbackRedirectUri`). The consent
- * dance therefore has to come back over `https://127.0.0.1:PORT/...`, which
- * means *something* on the machine must present a certificate valid for the
- * loopback IP. `php artisan serve` cannot (it is a plain-HTTP SAPI), so the
- * `open-banking:serve-tls` command stands up its own TLS tunnel and consumes
- * this class for the certificate material.
- *
- * The certificate is a throwaway, machine-local, self-signed leaf for
- * CN=127.0.0.1 with `subjectAltName` covering both `127.0.0.1` and
- * `localhost`. It never leaves the box and carries no trust beyond "the user
- * clicked through / trusted it locally," which is exactly the security model
- * of a single-user localhost dev/UAT tool. Generation is done through the
- * `ext-openssl` API (available per composer.json) with an explicit temp
- * OpenSSL config so the SAN block is honoured on both OpenSSL and LibreSSL
- * (macOS) builds — shelling out to the `openssl` CLI is avoided because its
- * `-addext` support is not portable across those two.
- *
- * The private key is written 0600; the whole directory is created 0700 and
- * carries a `.gitignore` (`*`) so key material can never be committed.
+ * @link ../../../../.docs/features/open-banking/architecture.md
  */
 final class LoopbackTlsCertificate
 {
@@ -43,9 +20,6 @@ final class LoopbackTlsCertificate
     public function __construct(private readonly string $directory) {}
 
     /**
-     * Return absolute paths to a usable cert/key pair, generating a fresh
-     * one only when missing, expired, or when the caller forces it.
-     *
      * @return array{cert: string, key: string}
      */
     public function ensure(bool $regenerate = false): array
@@ -71,8 +45,6 @@ final class LoopbackTlsCertificate
     }
 
     /**
-     * Generate a fresh self-signed cert/key pair for the loopback host.
-     *
      * @return array{0: string, 1: string} [certificate PEM, private key PEM]
      */
     public function generate(): array
