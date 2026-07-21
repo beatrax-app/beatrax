@@ -141,6 +141,24 @@ A violation of any invariant fails the Pest run, which fails the PR gate.
 The full list lives in `tests/Contracts/BoundaryArchTest.php`; the file is
 the load-bearing safety net for the entire module structure.
 
+### The static-analysis half: `app/PhpStan/Rules/BoundaryRule.php`
+
+A custom Larastan rule catches the same class of violation one layer
+earlier, at `phpstan analyse` time rather than at test-run time. From a
+file whose namespace (or, failing that, filesystem path) resolves to
+`Modules\X\…`, any `use` import targeting another module `Y` (`Y != X`)
+must begin with `Modules\Y\Public\…` or `Modules\Y\Models\…` — anything
+else under `Modules\Y\` (`Internal`, `Database`, `Providers`,
+`Resources`, `Routes`, and so on) fails the rule, even directories that
+currently hold no PHP classes, so a future module cannot silently gain
+a public surface. Files outside `Modules\` are not governed by this
+rule; facade/helper bans are enforced separately by
+`canvural/larastan-strict-rules`. The importer module is detected via
+the declared namespace first (so the deliberate violation fixtures
+under `app/PhpStan/Rules/Fixtures/` exercise the rule without needing
+to live inside `Modules/`), falling back to the filesystem path when
+the namespace is anonymous.
+
 ## Events as the second boundary path
 
 Where a contract would be too narrow — when one module reacts to a thing

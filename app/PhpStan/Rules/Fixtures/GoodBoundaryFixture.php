@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Categorization\Internal\Examples;
 
-// GOOD: cross-module access goes through Public/ or Models/.
+// Good: cross-module access goes through Public/ or Models/, which
+// BoundaryRule allows.
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;

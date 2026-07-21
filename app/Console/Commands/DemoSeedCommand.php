@@ -29,37 +29,10 @@ use Modules\Onboarding\Database\Seeders\Demo\DemoWizardProgressSeeder;
 use Modules\Receipts\Database\Seeders\Demo\DemoReceiptsSeeder;
 use Modules\Recurring\Database\Seeders\Demo\DemoRecurringSeeder;
 
-/**
- * Orchestrates the demo-dataset pipeline behind the `demo:seed`
- * artisan command. The command is a developer-only tool — it stands
- * up two demo users, five accounts, ~165 transactions across the
- * recent 90-day window, four pre-resolved funding chains plus two
- * candidate hint chains, six recurring detections covering every
- * lifecycle state, two forecast scenarios (Base + What-If) with a
- * mutation and a shortfall window, a representative drift-alert
- * dataset, system-alert banners for every kind, a Gmail + Microsoft
- * inbox-scanning slate, recovery codes, community mappings, wizard
- * progress in mixed states, receipts + a pending enrichment conflict,
- * a cross-account transfer pair, merchant memory / alias rows, and (18-16)
- * a mixed notification inbox covering all 8 trigger types with a realistic
- * read/unread/dismissed/resolved/dead-link spread.
- * It is the canonical path to a realistic-looking install for
- * screenshot capture, onboarding shake-out, and dev-experience parity.
- *
- * Isolation: every transaction the command writes belongs to an
- * `import_runs` row stamped `source_format = 'demo'`. `--reset` walks
- * that marker first so the wipe touches only demo-tagged rows; real
- * user data on the same database is never affected.
- *
- * Idempotency: every seeder in the chain is idempotent. Running
- * `php artisan demo:seed` twice produces identical row counts (no
- * duplicates, no exceptions). `--reset` is the explicit "tear down
- * and rebuild" path; the bare invocation is the "ensure exists" path.
- *
- * Each phase prints a single console line so the command is also a
- * learning artifact — a contributor reading the output sees the
- * graph of demo data being constructed in order.
- */
+// Developer-only tool standing up a realistic-looking demo install
+// across every seeder in the constructor list below. Every transaction
+// belongs to an import_runs row stamped source_format='demo', which
+// --reset walks to scope the wipe to demo data only, never real users.
 final class DemoSeedCommand extends Command
 {
     /** @var string */
@@ -103,12 +76,9 @@ final class DemoSeedCommand extends Command
         }
 
         // Reference-data prerequisites the demo dataset assumes are
-        // already populated by the production install flow. Calling
-        // them explicitly here makes the demo seeder safe to run
-        // against a freshly-migrated database that has never been
-        // through `php artisan beatrax:install` — every seeder is
-        // idempotent so re-running over a populated install is a
-        // no-op for these rows.
+        // already populated by the production install flow; calling them
+        // explicitly here makes the demo seeder safe to run against a
+        // freshly-migrated database that never ran beatrax:install.
         $this->line('Ensuring reference data (currencies + default category tree)…');
         $this->currencies->run();
         $this->categories->run();
@@ -193,9 +163,9 @@ final class DemoSeedCommand extends Command
         $fileImportCount = $this->receipts->run($userMap);
         $this->info(sprintf('  %d demo file-import rows present', $fileImportCount));
 
-        // Runs LAST — references series/budget-category/account/drift-alert
-        // rows seeded above (D-41), dispatching the real trigger events with
-        // delivery suppressed (D-43) so no OS notification ever fires here.
+        // Runs last — references series/budget-category/account/drift-alert
+        // rows seeded above, dispatching the real trigger events with
+        // delivery suppressed so no OS notification ever fires here.
         $this->line('Seeding demo notification inbox (all 8 types, mixed read/unread/dismissed/resolved/dead-link)…');
         $notificationCount = $this->notifications->run($userMap);
         $this->info(sprintf('  %d demo notifications present', $notificationCount));
@@ -206,22 +176,10 @@ final class DemoSeedCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Wipe every row the demo seeder has previously created. The query
-     * builder is used directly so the deletion order honours the FK
-     * dependency graph and SQLite's `ON DELETE CASCADE` collapses the
-     * trailing deletions for us. Tables that cascade from
-     * `users.id` are deleted last via the users wipe; tables that
-     * cascade from per-row owners (drift_alerts → drift_alert_transitions,
-     * forecast_scenarios → mutations + shortfall windows,
-     * inboxes → scan_state + messages + discovered_senders) are
-     * collapsed by the cascade DDL.
-     *
-     * The wipe is bounded to demo data exclusively. The `seed_key`
-     * metadata marker on system_alerts plus the `demo://` eml_path
-     * prefix on file_imports keep the wipe scoped even when the demo
-     * seeder runs against a populated production DB.
-     */
+    // Deletion order honours the FK dependency graph; SQLite's ON DELETE
+    // CASCADE collapses the rest. Bounded to demo data via the seed_key
+    // marker on system_alerts and the demo:// eml_path prefix on
+    // file_imports, even against a populated production DB.
     private function resetDemoData(): void
     {
         $connection = $this->db->connection();
@@ -236,13 +194,10 @@ final class DemoSeedCommand extends Command
             $demoUserIds,
         );
 
-        // Transactions cascade-delete via import_runs FK, but the
-        // composite UNIQUE index on transactions(user_id, fingerprint)
+        // The composite UNIQUE index on transactions(user_id, fingerprint)
         // means a stale row with the same fingerprint would block a
-        // re-seed if a demo user is wiped while keeping their tx
-        // history. Wipe transactions explicitly first so the order is
-        // observable in the logs (and a future contributor can spot a
-        // missed cascade without diffing the SQLite schema).
+        // re-seed; wipe transactions explicitly first so the order is
+        // observable in the logs rather than relying on the FK cascade.
         $importRunIds = $connection->table('import_runs')
             ->where('source_format', 'demo')
             ->pluck('id')
@@ -262,22 +217,10 @@ final class DemoSeedCommand extends Command
         }
 
         if ($demoUserIds !== []) {
-            // Tables that have a `user_id` column carrying the demo
-            // users' id but whose rows are not necessarily owned by an
-            // ImportRun. The schema's cascade-on-delete from users
-            // would handle these automatically when the user row is
-            // deleted below; we wipe them explicitly here so a partial
-            // reset (e.g. a manual `DELETE FROM accounts WHERE …`
-            // halfway through development) still finishes the job.
-            //
-            // Order matters for tables whose FK chains stack:
-            // drift_alert_transitions → drift_alerts → recurring_series_occurrences
-            // → recurring_series; forecast_scenario_mutations +
-            // forecast_shortfall_windows → forecast_scenarios.
-            // SQLite's cascade DDL handles them automatically, but we
-            // explicitly mirror the parent-first order for readability.
-            // Envelope budgeting tables (Phase 13.2). All cascade from users,
-            // but wipe explicitly so a partial reset still finishes the job.
+            // These tables carry a user_id column but aren't necessarily
+            // owned by an ImportRun; wiping them explicitly (rather than
+            // relying only on the users-cascade below) lets a partial
+            // reset still finish.
             $connection->table('envelope_moves')
                 ->whereIn('user_id', $demoUserIds)
                 ->delete();
