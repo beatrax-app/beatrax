@@ -11,53 +11,16 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use stdClass;
 
 /**
- * Memory-only fallback lookup (demoted from its original rule-scoring
- * role by Plan 06 — `RuleEngine` + `RuleApplier` now own ALL rule
- * matching/application against the categorization-rules parent +
- * child tables; see those classes' docblocks). `lookupMemory()` is
- * the sole surviving responsibility:
- * it pulls the highest-`occurrence_count` `merchant_memories` row for
- * the canonical row's merchant, for `ApplyAutoCategoryStage` to apply
- * ONLY when none of the fired rules carried a `category` action
- * (RESEARCH Pattern 4).
- *
- * Reads are scoped by `where('user_id', $user->id)` on every query so
- * a foreign user's memory never fires for the current user.
- *
- * Merchant memory lookup derives `merchant_id` by JOINing the
- * merchants table on (user_id, normalized_name = counterpartyNormalized).
- * CanonicalTransaction does NOT carry a merchantId property — adding
- * one would ripple through every ingestion adapter + NormalizeStage
- * + tests. The merchants table enforces UNIQUE (user_id,
- * normalized_name) so the join yields at most one merchant per
- * normalized_name. When the transaction's counterpartyNormalized is
- * the empty-counterparty sentinel (see NormalizeStage::NO_COUNTERPARTY)
- * the memory lookup is skipped.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class RuleEvaluator
 {
     public function __construct(private readonly DatabaseManager $db) {}
 
-    /**
-     * Pulls the merchant_memories row for the canonical row's merchant
-     * (derived via the merchants JOIN on user_id + normalized_name).
-     * Returns null when:
-     *  - the counterpartyNormalized is the empty-counterparty sentinel
-     *    (NormalizeStage::NO_COUNTERPARTY), OR
-     *  - no merchants row exists for (user_id, normalized_name), OR
-     *  - no merchant_memories row exists for the merchant.
-     *
-     * When multiple memories exist for the same merchant (rare —
-     * usually one row per (user, merchant, category) tuple) the highest
-     * occurrence_count wins.
-     *
-     * **14.1-07 Task 2 audit (D-06):** the JOIN matches on
-     * `merchants.normalized_name`/`$tx->counterpartyNormalized` —
-     * neither is a `SensitiveFieldRegistry` column (`normalized_name`
-     * is a derived lookup key, distinct from the encrypted
-     * `counterparties.merchant_name`), and `$tx` is the pre-persistence
-     * DTO. No decrypt is needed on this path.
-     */
+    // Returns null when there is no merchants/merchant_memories row to
+    // match; the highest occurrence_count wins when several exist. The
+    // JOIN matches on the derived `normalized_name` key, distinct from
+    // the encrypted `counterparties.merchant_name` — no decrypt needed.
     public function lookupMemory(CanonicalTransaction $tx, int $userId): ?stdClass
     {
         $normalized = $tx->counterpartyNormalized;

@@ -29,64 +29,7 @@ use stdClass;
 use Throwable;
 
 /**
- * User-triggered re-apply-to-history job (Req 4, D-05) — walks a
- * user's NON-split transactions in chunks and re-runs
- * `RuleEngine::match()` + `RuleApplier::applyAtReapply()` against every
- * eligible row. `RuleApplier::applyAtReapply()` already guarantees
- * per-field manual-provenance preservation (D-04), write-only-on-change
- * idempotency, and dispatches one `TransactionMutated` per genuinely
- * changed field — this job's own job is purely the chunked walk plus
- * the two guards RuleApplier cannot apply on its own: reconciled/locked
- * rows and split transactions.
- *
- * **Split guard (T-13.4-23):** `whereNotExists(transaction_splits)`
- * excludes every split transaction from the walk entirely — a split
- * transaction's category/tax semantics are leg-owned (13.1 D-02/D-06a),
- * so re-apply never even reads a split parent, let alone its legs. This
- * mirrors `RuleEngineIgnoresSplitLegsTest`'s "never touch
- * transaction_splits" invariant.
- *
- * **Reconciled guard (T-13.4-22):** `TransactionStatusQuery::
- * reconciledIdsAmong()` is called ONCE per chunk (never per-row) so a
- * reconciled/locked transaction is skipped before `RuleEngine`/
- * `RuleApplier` ever see it.
- *
- * **hits_count is NOT touched here** (Pitfall 3) — that counter is
- * bumped only by `ApplyAutoCategoryStage` at import time; re-apply
- * counts matches via the cache progress payload instead.
- *
- * **Concurrency contract:** unlike `BackfillAnomaliesJob`'s
- * first-activation-only shape (`ShouldBeUniqueUntilProcessing` +
- * a persistent `whereNull(...)->update(...)` claim), this job is
- * re-triggerable on every user click — a plain `ShouldBeUnique`
- * collapses a double-click into a single queued run without any
- * persistent claim column; a fresh dispatch after a prior run
- * completes is a legitimate new pass, not a duplicate.
- *
- * **Progress (Plan 08):** a pollable payload is written to the cache
- * under `rule-reapply:{userId}` (no new synced table) after every
- * chunk, so the UI can show a live "N of M" readout and a completion
- * summary. The cache entry TTLs out on its own — no cleanup job
- * needed.
- *
- * **Module boundary:** this job reads `transactions` for the chunk
- * walk (an allowed cross-module read, mirroring
- * `BackfillAnomaliesJob`/`SafetyNetAnomalySweepJob`) but performs NO
- * `transactions` WRITE itself — every mutation is delegated to
- * `RuleApplier`, which in turn delegates to the Ledger Public actions
- * (Plan 04/05).
- *
- * **CR-04 (14.1-07):** `counterparty_name`/`description` are decrypted
- * via {@see SensitiveColumnCodec} before {@see RuleMatchInput} is
- * built, so substring conditions match plaintext even though the two
- * columns are ciphertext at rest under an encrypted user. Safe by
- * construction under `dispatchSync` (this job's only reachable
- * dispatch shape, per plan 04/D-03): the KEK is always the caller's
- * own request-context key. The {@see AppLockKeyService::release()}
- * check below is a defensive belt against a future re-introduction of
- * a queued/daemon dispatch origin (RESEARCH Pitfall 1) — if it ever
- * fires, decrypting would silently no-op and this run would silently
- * classify nothing, exactly the failure this plan exists to close.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 {
@@ -95,14 +38,10 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    /** Chunk size for the history walk AND the reconciled-batch filter. */
     private const CHUNK = 500;
 
-    /**
-     * Progress cache TTL in seconds — long enough to outlive the whole
-     * run (including retries) plus a reasonable UI poll gap after
-     * completion.
-     */
+    // Long enough to outlive the whole run (including retries) plus a
+    // reasonable UI poll gap after completion.
     private const PROGRESS_TTL_SECONDS = 3600;
 
     public int $tries = 3;
@@ -124,7 +63,6 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         return 600;
     }
 
-    /** Cache key Plan 08's polling UI reads the progress payload from. */
     public static function progressCacheKey(int $userId): string
     {
         return "rule-reapply:{$userId}";
@@ -178,12 +116,9 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             'fields_updated' => 0,
             'transactions_updated' => 0,
             'reconciled_skipped' => 0,
-            // WR-03: rows skipped because match()/applyAtReapply() threw
-            // (e.g. a malformed date condition value CreateCategorizationRule/
-            // UpdateCategorizationRule's normalizeCondition() didn't
-            // reject) — surfaced so a run that silently skipped rows is
-            // still visible in the polled progress payload, not just
-            // logged.
+            // Rows skipped because match()/applyAtReapply() threw —
+            // surfaced so a run that silently skipped rows is still
+            // visible in the polled progress payload, not just logged.
             'rows_errored' => 0,
             'started_at' => $clock->now()->toIso8601String(),
             'finished_at' => null,
@@ -235,15 +170,10 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
                         continue;
                     }
 
-                    // WR-03: fail-open per row, mirroring
-                    // ApplyAutoCategoryStage/RuleApplier's own "a rule
-                    // error never blocks the whole pass" convention. A
-                    // malformed condition value (e.g. a non-date string
-                    // reaching RuleEngine::matchDate()'s
-                    // CarbonImmutable::parse() call) would otherwise throw
-                    // uncaught out of this chunk closure, failing the
-                    // ENTIRE queued job (all remaining chunks too) instead
-                    // of just skipping the one bad row.
+                    // Fail-open per row: a malformed condition value would
+                    // otherwise throw uncaught out of this chunk closure,
+                    // failing the ENTIRE queued job instead of just
+                    // skipping the one bad row.
                     try {
                         $input = self::matchInputFromRow($row, $codec, $session, $userId, $hasKek);
                         $matched = $engine->match($input, $user);
@@ -285,11 +215,9 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         $counterpartyName = is_string($row->counterparty_name) ? $row->counterparty_name : null;
         $description = is_string($row->description) ? $row->description : null;
 
-        // CR-04: decrypt-before-match — codec->decryptValue() is itself a
-        // no-op pass-through when encryption isn't enabled, but skipping
-        // the call entirely when $hasKek is false avoids a wasted
-        // keyring-load attempt per row (the KEK-absence guard in handle()
-        // already logged once for the whole run).
+        // decryptValue() is a no-op pass-through when encryption isn't
+        // enabled, but skipping the call entirely when $hasKek is false
+        // avoids a wasted keyring-load attempt per row.
         if ($hasKek) {
             if ($counterpartyName !== null && $counterpartyName !== '') {
                 $counterpartyName = $codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $session)['value'];

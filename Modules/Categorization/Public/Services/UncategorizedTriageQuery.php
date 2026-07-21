@@ -13,20 +13,10 @@ use Modules\Core\Models\User;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
-/**
- * Cursor-paginated read of transactions awaiting categorization. Powers
- * the `/uncategorized` triage inbox. Selects from the `transactions`
- * table directly via the raw query builder (rather than Eloquent) to
- * stay clean under `phpstan-strict-rules`' `staticMethod.dynamicCall`
- * rule and to keep the SELECT minimal — the triage UI needs only the
- * six columns rendered in the row DTO.
- *
- * Cursor pagination is a `(posted_at, id)` tuple compared via
- * `WHERE (posted_at, id) < (?, ?)`. The pair (rather than `id` alone)
- * is required because rows inserted in non-chronological order share
- * `posted_at` values, and a single-column id cursor would silently drop
- * them from later pages.
- */
+// Cursor pagination is a (posted_at, id) tuple compared via
+// WHERE (posted_at, id) < (?, ?). The pair (rather than id alone) is
+// required because rows inserted out of chronological order share
+// posted_at values, and a single-column cursor would silently drop them.
 final class UncategorizedTriageQuery
 {
     public function __construct(
@@ -37,11 +27,9 @@ final class UncategorizedTriageQuery
 
     public function for(User $user, int $limit = 50, ?int $cursorId = null, ?string $cursorPostedAt = null): TriageBatch
     {
-        // Left-join `counterparties` so each row carries its resolved
-        // counterparty slug in a single query (no N+1 expansion across
-        // the triage page render). Rows with counterparty_id NULL
-        // yield NULL on the joined slug and the Blade falls back to
-        // plain-text rendering of the counterparty name.
+        // Left-join counterparties so each row carries its resolved slug
+        // in a single query (no N+1 expansion). A NULL counterparty_id
+        // yields a NULL slug and the Blade falls back to plain text.
         $query = $this->db->connection()
             ->table('transactions')
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
@@ -93,8 +81,8 @@ final class UncategorizedTriageQuery
     private function mapRow(stdClass $row, int $userId): TriageRow
     {
         $bookedAt = CarbonImmutable::parse(self::toString($row->booked_at));
-        // D-06 (14.1-10) read-side decrypt — pass-through no-op when
-        // encryption is not enabled for this user.
+        // Read-side decrypt — pass-through no-op when encryption is not
+        // enabled for this user.
         $counterpartyName = $row->counterparty_name === null
             ? null
             : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, $this->session)['value'];

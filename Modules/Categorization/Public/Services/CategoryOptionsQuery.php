@@ -11,19 +11,10 @@ use Modules\Categorization\Public\Dto\CategoryOption;
 use Modules\Core\Models\User;
 use stdClass;
 
-/**
- * Loads the flattened category list (Parent / Leaf) for pickers and inboxes.
- *
- * Visibility rule: a row is offered when its `user_id` is null (the seeded
- * default tree) OR matches the supplied user. Both halves of the self-join
- * (leaf AND parent) apply the rule, so a leaf whose `parent_id` accidentally
- * points to a foreign user's category never leaks the foreign parent name
- * into the path breadcrumb.
- *
- * The DTO `CategoryOption` is ordered by `c.display_order` so the keyboard
- * picker's `1`-`9` shortcut always maps to the same nine items across
- * sessions.
- */
+// Visibility rule: a row is offered when its user_id is null (the seeded
+// default tree) OR matches the supplied user. Both halves of the
+// self-join apply the rule, so a leaf whose parent_id points to a
+// foreign user's category never leaks the foreign parent name.
 final class CategoryOptionsQuery
 {
     public function __construct(private readonly DatabaseManager $db) {}

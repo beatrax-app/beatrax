@@ -15,27 +15,10 @@ use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 
-/**
- * Default implementation of the Categorization Public `AssignsCategory`
- * contract. Routes the write through Ledger's `UpdatesTransactionCategory`
- * action so Ledger remains the only mutator of `transactions`, and fires
- * the `TransactionCategorized` event after a successful write so other
- * modules can react without coupling.
- *
- * Divergence detection: BEFORE invoking the Ledger updater, the action
- * reads the row's existing `auto_category_provenance` (user-scoped).
- * After a successful write, if the prior provenance had source='rule'
- * AND the new categoryId differs from the rule's category_id AND the
- * provenance carried a non-null rule_id, dispatch
- * `CategorizationDiverged` so the CorrectionDivergenceToast SFC can
- * offer the user the choice between Update rule / Keep current rule.
- *
- * Memory-provenance overrides do NOT dispatch CategorizationDiverged
- * — memory grows automatically via MerchantMemoryWriter on every
- * TransactionCategorized event, so a memory-driven suggestion that the
- * user overrides updates memory transparently without a confirmation
- * surface.
- */
+// Routes the write through Ledger's UpdatesTransactionCategory action so
+// Ledger remains the only mutator of `transactions`. Memory-provenance
+// overrides do NOT dispatch CategorizationDiverged — memory grows
+// automatically via MerchantMemoryWriter, so no confirmation is needed.
 final class AssignCategory implements AssignsCategory
 {
     public function __construct(
@@ -58,8 +41,8 @@ final class AssignCategory implements AssignsCategory
                 userId: $user->id,
             ));
 
-            // Hand-wired capture emission (D-02): only user-driven category edits
-            // enter the op-log. Import-pipeline writes stay immutable.
+            // Only user-driven category edits enter the op-log;
+            // import-pipeline writes stay immutable.
             $this->events->dispatch(new TransactionMutated(
                 transactionId: $transactionId,
                 userId: $user->id,
@@ -67,13 +50,10 @@ final class AssignCategory implements AssignsCategory
                 dirtyFields: ['category_id' => $categoryId],
             ));
 
-            // D-04 (Req 4 — manual-preservation): this action is the
-            // sole manual entry point for user-driven category
-            // assignment (reclassifyCategory + every InlineCategoryPicker
-            // caller route through AssignsCategory), so every successful
-            // write here is a 'manual' stamp — never invoked by the
-            // Plan 05 rule engine, which writes categories through
-            // UpdatesTransactionCategory directly.
+            // This is the sole manual entry point for user-driven category
+            // assignment, so every successful write here is a 'manual'
+            // stamp — the rule engine writes categories through
+            // UpdatesTransactionCategory directly, never through here.
             $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'manual']);
 
             if ($categoryId !== null) {
@@ -92,15 +72,10 @@ final class AssignCategory implements AssignsCategory
         return $affected;
     }
 
+    // Static + DatabaseManager argument so the same helper is available
+    // to TransactionDetail (Ledger) without crossing the
+    // Ledger-Categorization boundary or duplicating the read shape.
     /**
-     * Reads transactions.auto_category_provenance (already cast as an
-     * array by the Eloquent model) via the raw query builder so callers
-     * stay decoupled from the model's casting layer.
-     *
-     * Static + DatabaseManager argument so the same helper is
-     * available to TransactionDetail (Ledger) without crossing the
-     * Ledger-Categorization boundary or duplicating the read shape.
-     *
      * @return array<string, mixed>|null
      */
     public static function readPriorProvenance(DatabaseManager $db, int $transactionId, int $userId): ?array
@@ -115,12 +90,9 @@ final class AssignCategory implements AssignsCategory
             return null;
         }
 
-        // The auto_category_provenance column is best-effort audit
-        // metadata — a corrupt JSON payload must NOT crash a reclassify
-        // request. JSON_THROW_ON_ERROR matches the project-wide
-        // json_decode convention (ApplyEnrichments, ApplyReceiptConflictResolution);
-        // the JsonException catch returns null so the caller falls
-        // back to the no-prior-provenance code path.
+        // auto_category_provenance is best-effort audit metadata — a
+        // corrupt JSON payload must NOT crash a reclassify request; the
+        // JsonException catch falls back to no-prior-provenance.
         try {
             /** @var mixed $decoded */
             $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);

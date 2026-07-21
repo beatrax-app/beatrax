@@ -19,46 +19,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Synchronous Import-pipeline stage that runs `RuleEngine::match()` +
- * `RuleApplier::applyAtImport()` against the incoming canonical row +
- * user (D-06, Req 2/3/5), and falls through to `merchant_memories`
- * (via `RuleEvaluator::lookupMemory()`) only when none of the fired
- * rules carried a `category` action (RESEARCH Pattern 4).
- *
- * Placement: ImportPipeline.preview() inserts this stage AFTER
- * ClassifyTransactionType and BEFORE FingerprintStage::classify.
- * Sync placement (no queued posture): every source format
- * (CSV / CAMT / MT940 / PayPal / ICS PDF / email receipts) flows
- * through the same pipeline, so one sync stage covers them all
- * without per-adapter post-persistence wiring.
- *
- * Side-effect-free on stage failure (T-13.4-18): the entire matching +
- * applying + hits_count-bump + memory-fallback flow runs inside one
- * try/catch. If anything throws (rare — a rule matcher/applier bug),
- * the stage logs a warning and returns
- * `AutoCategorizationOutcomeDto::manual($tx)` built from the ORIGINAL,
- * untouched canonical row, so the import is not aborted by a buggy
- * rule. The user sees the row land in the uncategorised bucket and can
- * re-categorise manually.
- *
- * hits_count (Pitfall 3): bumped once per matched rule, regardless of
- * whether that rule's actions included a `category` action — this is
- * import-only; `ReapplyRulesJob` (Plan 07) never touches this counter.
- *
- * Cross-module contract: bound to `AppliesAutoCategory` so
- * ImportPipeline depends on the Public contract (not this Internal
- * class). Mirrors the RecordsStatementSummary / AppliesEnrichments
- * cross-module shape ImportPipeline already uses.
- *
- * **14.1-07 Task 2 audit (D-06, import-time twin of CR-04):**
- * `apply()` matches `RuleMatchInput::fromCanonical($tx)` — the
- * incoming, pre-persistence `$tx` DTO — never a stored `transactions`
- * row. `ImportPipeline::preview()` always calls this method BEFORE
- * `RecordTransactions` writes (and encrypts) anything, so the values
- * matched are plaintext regardless of whether the user has encryption
- * enabled. No decrypt is needed here; only `ReapplyRulesJob` (CR-04
- * itself) reads a persisted, potentially-ciphertext row. See
- * `ApplyAutoCategoryStageEncryptionTest`.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class ApplyAutoCategoryStage implements AppliesAutoCategory
 {
@@ -77,12 +38,10 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
             $matched = $this->ruleEngine->match(RuleMatchInput::fromCanonical($tx), $user);
             $folded = $this->ruleApplier->applyAtImport($matched, $tx);
 
-            // WR-01: wrap the hits_count bump loop in a single DB
-            // transaction so a mid-loop exception (e.g. on the 3rd of 4
-            // matched rules) rolls back every increment for this row,
-            // instead of leaving rules 1-2 permanently bumped even though
-            // the outer catch below discards the folded categorization
-            // entirely and falls back to AutoCategorizationOutcomeDto::manual().
+            // Wrap the hits_count bump loop in a single DB transaction so
+            // a mid-loop exception rolls back every increment for this
+            // row, rather than leaving earlier rules permanently bumped
+            // even though the outer catch discards the categorization.
             $categoryRuleId = null;
             $this->db->connection()->transaction(function () use ($matched, $user, &$categoryRuleId): void {
                 foreach ($matched as $rule) {
@@ -93,10 +52,9 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
                         ->update(['hits_count' => new Expression('hits_count + 1')]);
 
                     foreach ($rule->actions as $action) {
+                        // Last-writer-wins, mirroring
+                        // RuleApplier::applyAtImport's own fold order.
                         if ($action->type === 'category') {
-                            // Last-writer-wins: a later firing rule's category
-                            // action overwrites an earlier one, mirroring
-                            // RuleApplier::applyAtImport's own fold order.
                             $categoryRuleId = $rule->ruleId;
                         }
                     }
@@ -120,9 +78,7 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
             }
 
             // No fired rule carried a category action — fall through to
-            // merchant_memories exactly as before the multi-condition
-            // engine landed (RESEARCH Pattern 4, resolves the D-06
-            // memory FLAG).
+            // merchant_memories.
             $memory = $this->evaluator->lookupMemory($tx, $user->id);
             if ($memory === null) {
                 return AutoCategorizationOutcomeDto::manual($folded);

@@ -21,25 +21,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * The dual-mode action executor that turns a `list<MatchedRule>` into
- * effects (D-06), with same-field conflicts resolved last-writer-wins
- * by execution order (Req 3).
- *
- * `applyAtImport()` folds `category`/`counterparty`/`note` actions onto
- * a `CanonicalTransaction` DTO via withers before persistence — no
- * op-log, no DB write, no event dispatch. `tax_tag` cannot fire at
- * import (there is no persisted `transaction_id` yet for
- * `tax_transaction_tags` to reference — RESEARCH Pitfall 4) and is
- * silently skipped.
- *
- * `applyAtReapply()` (Plan 05 Task 2) DELEGATES every field write to
- * the Ledger Public guarded actions — this service NEVER writes
- * `transactions` raw (CLAUDE.md module boundary).
- *
- * Fail-open (T-13.4-15): a malformed action payload (missing/non-numeric
- * embedded id, unrecognised action type) skips just that one action —
- * logged, never thrown — so one broken action can never abort a whole
- * import row or re-apply pass.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class RuleApplier
 {
@@ -64,17 +46,11 @@ final class RuleApplier
         private readonly Session $session,
     ) {}
 
+    // Folding sequentially over a mutable $tx local makes last-writer-wins
+    // automatic: a later action targeting the same field simply overwrites
+    // the earlier wither's result. `tax_tag` actions are ignored outright
+    // — import-time tax tagging is deferred to re-apply.
     /**
-     * Iterates `$matched` in the given (already priority/id-ordered)
-     * order; within each rule, actions are iterated in their
-     * position-ordered sequence (`RuleEngine::actionsFor()` already
-     * orders them). Folding sequentially over a mutable `$tx` local
-     * makes last-writer-wins automatic: a later action targeting the
-     * same field simply overwrites the earlier wither's result.
-     *
-     * `tax_tag` actions are ignored outright (no crash, no effect on
-     * the DTO) — import-time tax tagging is deferred to re-apply.
-     *
      * @param  list<MatchedRule>  $matched
      */
     public function applyAtImport(array $matched, CanonicalTransaction $tx): CanonicalTransaction
@@ -88,27 +64,11 @@ final class RuleApplier
         return $tx;
     }
 
+    // Reduce-to-desired: rules fold into a single desired action per
+    // action `type`, so last-writer-wins resolves to exactly one write
+    // attempt per field. `field_provenance` is read once up front; any
+    // field already stamped 'manual' is skipped entirely.
     /**
-     * Applies `$matched` against an already-persisted transaction.
-     * Every field write is DELEGATED to a Ledger Public guarded action
-     * (or, for `tax_tag`, to `TagTransaction`) — this method never
-     * writes `transactions` raw (CLAUDE.md module boundary).
-     *
-     * Reduce-to-desired: rules are folded in the given (priority/id-
-     * ordered) sequence, and each rule's actions in position order,
-     * into a single desired action PER action `type` — a later action
-     * targeting the same type simply replaces the earlier one in the
-     * map, so last-writer-wins resolves to exactly one write attempt
-     * per field (Req 6: at most one op-log entry per genuinely-changed
-     * field).
-     *
-     * Manual-preservation (D-04/T-13.4-14): `field_provenance` is read
-     * once up front; any field already stamped `'manual'` is skipped
-     * entirely — no read, no write, no dispatch.
-     *
-     * Fail-open (T-13.4-15): a malformed or dangling payload id skips
-     * just that one field (logged), never aborts the whole pass.
-     *
      * @param  list<MatchedRule>  $matched
      * @return array<string, mixed> the fields actually changed (dirtyFields shape)
      */
@@ -167,9 +127,8 @@ final class RuleApplier
 
         // Unlike ReassignCounterparty/SetTransactionNote, UpdateTransactionCategory
         // has no internal write-only-on-change guard — an UPDATE with an
-        // unchanged category_id still reports 1 affected row on SQLite
-        // (it counts matched rows, not changed rows). Read-before-write
-        // here so re-apply idempotency (Req 4/6) holds for this field too.
+        // unchanged category_id still reports 1 affected row on SQLite.
+        // Read-before-write here so re-apply idempotency holds too.
         $currentCategoryId = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
@@ -211,7 +170,7 @@ final class RuleApplier
         $affected = ($this->reassignCounterparty)($transactionId, $counterpartyId, $user);
         if ($affected === 0) {
             // Cross-user/unknown target, reconciled lock, or unchanged
-            // value — all resolve to a silent skip (fail-open, T-13.4-15).
+            // value — all resolve to a silent skip (fail-open).
             return null;
         }
 
@@ -226,13 +185,10 @@ final class RuleApplier
         return ['counterparty_id', $counterpartyId];
     }
 
+    // `append` concatenates onto the current note, so the final text is
+    // only known AFTER a genuine write — re-read here so dirtyFields
+    // always carries the value actually persisted.
     /**
-     * Delegates to `SetsTransactionNote`, which resolves `set`/`append`
-     * mode internally. Because `append` concatenates onto whatever the
-     * current note happens to be, the final text is only known AFTER a
-     * genuine write — re-read here so `dirtyFields`/the returned
-     * changed-map always carry the value actually persisted.
-     *
      * @return array{0: string, 1: mixed}|null
      */
     private function applyNote(int $ruleId, RuleAction $action, int $transactionId, User $user): ?array
@@ -256,10 +212,9 @@ final class RuleApplier
             ->where('id', $transactionId)
             ->where('user_id', $user->id)
             ->value('note');
-        // D-07: the re-read note is ciphertext under an encrypted user
-        // (SetTransactionNote's own write hook) — decrypt before it becomes
-        // an op-log dirtyFields value, or the op-log's own encrypt-on-write
-        // would double-encrypt it.
+        // The re-read note is ciphertext under an encrypted user; decrypt
+        // before it becomes an op-log dirtyFields value, or the op-log's
+        // own encrypt-on-write would double-encrypt it.
         $finalNote = is_string($finalNoteRaw)
             ? $this->codec->decryptValue('transactions', 'note', $finalNoteRaw, $user->id, $this->session)['value']
             : null;
@@ -275,22 +230,11 @@ final class RuleApplier
         return ['note', $finalNote];
     }
 
+    // TagTransaction::execute() dispatches its own event and stamps its
+    // own provenance internally, so this method does NOT re-dispatch or
+    // re-stamp. Reads the current tag row first so an identical re-apply
+    // is a genuine no-op rather than relying on the upsert's own idempotency.
     /**
-     * Delegates to `TagTransaction::execute(..., 'rule')` — an
-     * idempotent upsert that dispatches its own `TransactionTagged`
-     * event and stamps its own `field_provenance.tax_tag` internally
-     * (it accepts the provenance source as a trailing param), so this
-     * method does NOT re-dispatch `TransactionMutated` or re-stamp
-     * provenance itself — that would double-report the change.
-     *
-     * Idempotency: reads the current whole-transaction tag row first
-     * so a second identical re-apply is a genuine no-op (no call to
-     * `TagTransaction` at all) rather than relying on the upsert's own
-     * internal idempotency, which still rewrites `updated_at` on every
-     * call. A dangling `deduction_category_id` (row deleted after the
-     * rule was authored) is caught as a thrown `NotFoundHttpException`
-     * and fail-opens to a skip (T-13.4-15).
-     *
      * @return array{0: string, 1: mixed}|null
      */
     private function applyTaxTag(int $ruleId, RuleAction $action, int $transactionId, int $userId): ?array
@@ -316,20 +260,10 @@ final class RuleApplier
         $currentYear = $current !== null && is_numeric($current->tax_year_override)
             ? (int) $current->tax_year_override
             : null;
-        // CR-02: TagTransaction::updateExisting() rewrites note/category/year
-        // TOGETHER the instant any one of the three is non-null — since
-        // $deductionCategoryId is always non-null here, passing a literal
-        // `null` note would silently wipe a user-authored tax note on every
-        // rule-driven category/year change. Read the existing note and pass
-        // it through unchanged so a rule re-apply never touches it.
-        //
-        // CR-04: `tax_transaction_tags.note` is a SensitiveFieldRegistry column,
-        // so `$current->note` is ciphertext under an encrypted user. Because
-        // TagTransaction::updateExisting() unconditionally re-encrypts the note
-        // it receives on this path, passing the ciphertext back through would
-        // double-encrypt it and irreversibly corrupt the note. Decrypt it first
-        // (mirroring applyNote() above); decryptValue is a pass-through no-op for
-        // non-encryption users, so this is safe on both paths.
+        // TagTransaction::updateExisting() rewrites note/category/year
+        // TOGETHER the instant any one is non-null, so a literal null note
+        // would silently wipe a user-authored tax note; read the existing
+        // note (decrypted, mirroring applyNote()) and pass it through unchanged.
         $currentNote = $current !== null && is_string($current->note)
             ? $this->codec->decryptValue('tax_transaction_tags', 'note', $current->note, $userId, $this->session)['value']
             : null;
@@ -369,7 +303,7 @@ final class RuleApplier
             'category' => $this->foldCategory($ruleId, $action, $tx),
             'counterparty' => $this->foldCounterparty($ruleId, $action, $tx),
             'note' => $this->foldNote($ruleId, $action, $tx),
-            'tax_tag' => $tx, // import-deferred (Pitfall 4) — not a failure, no log.
+            'tax_tag' => $tx,
             default => $this->skipped($ruleId, $action->type, 'unrecognised action type', $tx),
         };
     }
@@ -394,11 +328,8 @@ final class RuleApplier
         return $tx->withCounterpartyId($counterpartyId);
     }
 
-    /**
-     * At import there is no prior stored note, so `set` and `append`
-     * both resolve to the payload text outright (append onto a null
-     * base collapses to a plain set).
-     */
+    // At import there is no prior stored note, so `set` and `append` both
+    // resolve to the payload text outright.
     private function foldNote(int $ruleId, RuleAction $action, CanonicalTransaction $tx): CanonicalTransaction
     {
         $text = self::stringFromPayload($action->payload, 'text');

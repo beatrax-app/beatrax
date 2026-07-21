@@ -16,32 +16,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Public action that updates one `categorization_rules` parent row
- * plus its `rule_conditions` / `rule_actions` children (D-01/D-02/
- * D-03).
- *
- * Cross-user safety: the parent row is looked up via `where('id',
- * $ruleId)->where('user_id', $user->id)`. A foreign-user id throws
- * `NotFoundHttpException` (404, not 403, so the existence of other
- * users' rules is not leaked).
- *
- * Child-row reconciliation is a targeted, PK-PRESERVING
- * UPDATE/DELETE/INSERT diff keyed by the caller-supplied `id` (present
- * only for a row that already exists) — never a delete-all+reinsert —
- * mirroring `SaveTransactionSplit`'s leg-diffing convention so a
- * future per-(table, pk, field) LWW sync merge never diverges. A
- * caller-supplied `id` that does not belong to THIS rule (a forged or
- * cross-rule id) is silently treated as absent, i.e. inserted as a new
- * row, rather than ever updating a row scoped to a different rule.
- *
- * Validation contract mirrors `CreateCategorizationRule` exactly (op x
- * value_type matrix, payload-id ownership, at-least-one-condition/
- * -action) — see that class's docblock for the full rationale.
- *
- * Duplicate-rule mitigation mirrors `CreateCategorizationRule`: a
- * `QueryException` is translated to a `ValidationException` rather
- * than surfacing a raw SQL error, even though the redesigned schema
- * carries no UNIQUE constraint today.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class UpdateCategorizationRule
 {
@@ -62,14 +37,6 @@ final class UpdateCategorizationRule
 
     private const DUPLICATE_MESSAGE = 'A rule with this field, match, and value already exists. Edit the existing rule instead.';
 
-    /**
-     * An `amount`-value_type condition's `value`/`value2` MUST already
-     * be a signed integer minor-unit string (the same units as
-     * `settledAmountMinor`/`RuleEngine::toIntValue()`) by the time it
-     * reaches this action — `RuleFormModal::conditionPayload()` performs
-     * the Euro-decimal -> minor-unit scaling before calling here (CR-01).
-     * Mirrors the sibling guard on `CreateCategorizationRule`.
-     */
     private const AMOUNT_VALUE_PATTERN = '/^-?\d+$/';
 
     public function __construct(
@@ -77,14 +44,10 @@ final class UpdateCategorizationRule
         private readonly Clock $clock,
     ) {}
 
+    // $conditions/$actions are untrusted, caller-supplied arrays; every
+    // element is validated field-by-field before use. An element's `id`
+    // key (present only for a row that already exists) is optional.
     /**
-     * `$conditions`/`$actions` are untrusted, caller-supplied arrays
-     * (a Livewire form's repeater payload, or a direct-action /
-     * DevTools call) — every element is validated field-by-field
-     * before use, never assumed to already conform to a shape. An
-     * element's `id` key (present only for a row that already exists)
-     * is optional.
-     *
      * @param  list<array<string, mixed>>  $conditions
      * @param  list<array<string, mixed>>  $actions
      */
@@ -378,11 +341,9 @@ final class UpdateCategorizationRule
         ];
     }
 
+    // Discards the value entirely (empty array) unless it already is a
+    // string-keyed array — never partially trusts a mixed-keyed array.
     /**
-     * Coerces an arbitrary (untrusted) value into a string-keyed array,
-     * discarding it entirely (empty array) unless it already is one —
-     * never partially trusts a mixed-keyed array.
-     *
      * @return array<string, mixed>
      */
     private static function toStringKeyedArray(mixed $value): array
@@ -493,11 +454,6 @@ final class UpdateCategorizationRule
             || str_contains($message, 'duplicate key value');
     }
 
-    /**
-     * Verifies the supplied category is visible to the caller
-     * (global default or owned). Throws InvalidArgumentException on
-     * miss — mirrors the sibling guard on `CreateCategorizationRule`.
-     */
     private static function assertCategoryVisible(
         DatabaseManager $db,
         int $categoryId,
@@ -517,10 +473,6 @@ final class UpdateCategorizationRule
         }
     }
 
-    /**
-     * Verifies the supplied counterparty belongs to the caller —
-     * mirrors the sibling guard on `CreateCategorizationRule`.
-     */
     private static function assertCounterpartyVisible(
         DatabaseManager $db,
         int $counterpartyId,
@@ -538,10 +490,6 @@ final class UpdateCategorizationRule
         }
     }
 
-    /**
-     * Verifies the supplied deduction category belongs to the caller —
-     * mirrors the sibling guard on `CreateCategorizationRule`.
-     */
     private static function assertDeductionCategoryVisible(
         DatabaseManager $db,
         int $deductionCategoryId,

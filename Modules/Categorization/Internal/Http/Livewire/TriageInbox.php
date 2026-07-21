@@ -14,28 +14,10 @@ use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * `/uncategorized` triage inbox. Renders a cursor-paginated batch of
- * uncategorized transactions and a keyboard-driven category picker. Users
- * can stage assignments (`selectForRow`) and commit them all at once via
- * the `Save categories` button (`save`); `clearPending` resets the staged
- * state (Escape key).
- *
- * Pagination is cursor-based via `UncategorizedTriageQuery`. The cursor is
- * a `(posted_at, id)` pair — pressing "Load more" hands both back into the
- * query so rows sharing a `posted_at` value never silently drop between
- * pages. The header copy reports the true backlog size (counted directly
- * from the `transactions` table) rather than the on-page row count, so a
- * user with 200 uncategorized transactions sees "200 pending" instead of
- * "50 pending".
- *
- * Every collaborator arrives as a parameter on `render()` / action methods
- * — no `boot()` injection (the strict-rules ruleset bans property-based
- * constructor injection on Livewire components).
- *
- * The keymap `1`–`9` is wired in the Blade view via Alpine.js; the
- * action layer here just owns the staging map.
- */
+// Users stage assignments (selectForRow) and commit them all at once via
+// `save`. The cursor is a (posted_at, id) pair so rows sharing a
+// posted_at value never silently drop between pages. The header count is
+// read directly from `transactions` rather than the on-page row count.
 final class TriageInbox extends Component
 {
     /** @var array<int, ?int> map of transactionId => pending categoryId */
@@ -50,18 +32,11 @@ final class TriageInbox extends Component
         $this->pending[$transactionId] = $categoryId;
     }
 
-    /**
-     * Re-render when the SharedListSettingsPanel saves a new
-     * `offerToContribute` value so the per-row CTA visibility tracks
-     * the toggle without a manual page refresh.
-     */
+    // Empty body — the re-render is the side effect; the listener
+    // existing on the component is what triggers Livewire to walk
+    // render() again, picking up the new community_settings value.
     #[On('shared-list-settings:saved')]
-    public function refreshSettings(): void
-    {
-        // Empty body — the re-render is the side effect; the listener
-        // existing on the component is what triggers Livewire to walk
-        // render() again, picking up the new community_settings value.
-    }
+    public function refreshSettings(): void {}
 
     public function clearPending(): void
     {
@@ -106,11 +81,8 @@ final class TriageInbox extends Component
         $categories = $options->for($user);
         $topNine = array_slice($categories, 0, 9);
 
-        // Read the user's `offerToContribute` toggle once per render so
-        // the triage table can render the per-row CTA inline rather
-        // than mounting a Livewire component per row. The default is
-        // `true` so a user who never opens the Settings panel still
-        // sees the CTA.
+        // Default is true so a user who never opens the Settings panel
+        // still sees the per-row CTA.
         $settings = is_array($user->community_settings) ? $user->community_settings : [];
         $offerToContribute = array_key_exists('offerToContribute', $settings)
             ? (bool) $settings['offerToContribute']

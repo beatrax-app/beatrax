@@ -23,43 +23,10 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Global rule-form modal SFC. Mounted once in `app.blade.php` so the
- * `rule-form:open` Livewire event can open the modal from anywhere
- * (the `/rules` page rows + the transaction detail provenance panel
- * both dispatch the same event).
- *
- * Multi-condition / multi-action builder (13.4-UI-SPEC.md § Component
- * Contract) — the natural-language sentence aesthetic is preserved,
- * but each clause is now a repeater:
- *
- *     Match [all ▼] of the following:
- *       [merchant ▼] [contains ▼] [SPOTIFY_______] [×]
- *       + Add condition
- *     Then:
- *       [Category ▼] [Subscriptions / Streaming ▼] [×]
- *       + Add action
- *     Priority [___10___]
- *                                              [Save rule] [Cancel]
- *
- * Service collaborators arrive as parameters on action methods +
- * the render() / open() listener — never via constructor injection.
- * The strict-rules ruleset banishes constructor DI from Livewire
- * components.
- *
- * Cross-user safety: the open() listener pulls the rule via
- * CategorizationRuleQuery::findForUser which is user-scoped; a
- * foreign ruleId returns null and the modal opens in create mode
- * (no foreign rule data ever lands on the form).
- *
- * Each condition row's `field` property is a UI-level concept with
- * FIVE options (merchant/description/counterparty/amount/date) that
- * maps to the backend's (`field`, `value_type`) pair: the three
- * string fields map directly (value_type='string'); 'amount'/'date'
- * map to value_type='amount'/'date' with a placeholder DB `field`
- * value of 'merchant' (the DB column still requires a valid enum —
- * see `RuleConditionDto`'s docblock).
- */
+// Global rule-form modal SFC, mounted once in app.blade.php. The open()
+// listener pulls the rule via CategorizationRuleQuery::findForUser
+// (user-scoped); a foreign ruleId falls back to create mode. Each
+// condition row's UI `field` maps to the backend (field, value_type) pair.
 final class RuleFormModal extends Component
 {
     /** @var array<string, string> UI field option => backend value_type. */
@@ -115,15 +82,10 @@ final class RuleFormModal extends Component
     /** @var array<int, string> action row index => error message */
     public array $actionErrors = [];
 
-    /**
-     * Always start the modal with one blank condition + one blank
-     * action row (never a truly-empty repeater) — the combinator
-     * toggle is spec'd as "always visible", and a blank Livewire
-     * array property would otherwise leave `conditions.0.field`-style
-     * nested `set()` calls constructing a partial row missing keys
-     * `updated()` (and normalizeCondition/normalizeAction) assume are
-     * present.
-     */
+    // Always start with one blank condition + one blank action row —
+    // never a truly-empty repeater, since a blank array property would
+    // let `conditions.0.field`-style nested set() calls construct a
+    // partial row missing keys updated() assumes are present.
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {
         $this->resetToCreateDefaults($currentUser, $db);
@@ -138,11 +100,8 @@ final class RuleFormModal extends Component
     ): void {
         $this->resetErrors();
 
-        // Surface the Flux modal. Symmetric with the `modal-close` dispatches
-        // in save()/cancel(); every sibling page (GoalsPage, PotsPage,
-        // BudgetsPage) opens its modal the same way. Dispatched before the
-        // hydration branches below so all paths (create, foreign-fallback,
-        // edit) reliably show the dialog.
+        // Dispatched before the hydration branches below so all paths
+        // (create, foreign-fallback, edit) reliably show the dialog.
         $this->dispatch('modal-show', name: 'rule-form');
 
         if ($ruleId === null) {
@@ -153,8 +112,6 @@ final class RuleFormModal extends Component
 
         $existing = $query->findForUser($currentUser->user(), $ruleId);
         if ($existing === null) {
-            // Foreign / missing rule -> fall back to create mode so the
-            // modal never renders another user's rule values.
             $this->resetToCreateDefaults($currentUser, $db);
 
             return;
@@ -169,13 +126,9 @@ final class RuleFormModal extends Component
         $this->actions = array_map(self::actionFromDto(...), $existing->actions);
     }
 
-    /**
-     * Livewire lifecycle hook — fires after every public-property update,
-     * including nested array paths like `conditions.0.field`. Used to
-     * keep a condition row's `op` valid whenever its `field` (and thus
-     * its value_type) changes, and to clear a stale `value2` whenever
-     * the row's `op` moves away from `between`.
-     */
+    // Keeps a condition row's `op` valid whenever its `field` (and thus
+    // its value_type) changes, and clears a stale `value2` whenever the
+    // row's `op` moves away from `between`.
     public function updated(string $name, mixed $value): void
     {
         if (preg_match('/^conditions\.(\d+)\.field$/', $name, $matches) === 1) {
@@ -203,12 +156,9 @@ final class RuleFormModal extends Component
             return;
         }
 
-        // Livewire binds <select> values as strings, but every action payload
-        // id is declared ?int throughout this component. Re-coerce the id
-        // fields to int (or null when blank/non-numeric) after each update so
-        // validation (isEmptyId), payload building, and persistence all see
-        // the ?int contract they expect — otherwise a picked category id
-        // arrives as the string "20" and blows up actionRowError().
+        // Livewire binds <select> values as strings; re-coerce to ?int
+        // after each update, otherwise a picked id arrives as "20" and
+        // blows up actionRowError().
         if (preg_match('/^actions\.(\d+)\./', $name, $matches) === 1) {
             $index = (int) $matches[1];
             if (! isset($this->actions[$index])) {
@@ -221,10 +171,6 @@ final class RuleFormModal extends Component
         }
     }
 
-    /**
-     * Normalise a form-bound id (Livewire delivers <select> values as
-     * strings) back to the ?int the action payload contract expects.
-     */
     private static function intIdOrNull(mixed $value): ?int
     {
         return is_numeric($value) ? (int) $value : null;
@@ -349,21 +295,14 @@ final class RuleFormModal extends Component
 
             return;
         } catch (InvalidArgumentException) {
-            // CreateCategorizationRule / UpdateCategorizationRule throw
-            // InvalidArgumentException for an out-of-whitelist field/op/
-            // value_type OR for an action-payload id (category/
-            // counterparty/deduction category) not visible to the
-            // caller. All causes are tampered-payload-only — the form's
-            // dropdowns can only emit valid options. Surface a calm
-            // copy and let the user retry.
+            // All causes are tampered-payload-only — the form's dropdowns
+            // can only emit valid options.
             $this->errorGeneral = 'Invalid rule data — pick from the dropdowns and try again.';
 
             return;
         } catch (NotFoundHttpException) {
-            // UpdateCategorizationRule throws this when $editingRuleId
-            // no longer maps to a row visible to the user (deleted in
-            // another tab, or a tampered ruleId). Close the modal so
-            // the page re-renders without it.
+            // $editingRuleId no longer maps to a row visible to the user
+            // (deleted in another tab, or a tampered ruleId).
             $this->errorGeneral = 'That rule is no longer available.';
             $this->dispatch('modal-close', name: 'rule-form');
 
@@ -398,10 +337,9 @@ final class RuleFormModal extends Component
     ): View {
         $user = $currentUser->user();
 
-        // D-06 (14.1-10): no longer ORDER BY the ciphertext display_name
-        // column — SQL order over ciphertext is meaningless once
-        // encryption is enabled. A stable orderBy('id') keeps row
-        // iteration deterministic; the real, user-facing order is the
+        // SQL order over ciphertext is meaningless once encryption is
+        // enabled; a stable orderBy('id') keeps row iteration
+        // deterministic, and the real user-facing order is the
         // post-decrypt sortBy() below.
         $counterparties = $db->connection()
             ->table('counterparties')
@@ -479,10 +417,10 @@ final class RuleFormModal extends Component
         $field = $dto->valueType === 'string' ? $dto->field : $dto->valueType;
 
         if ($dto->valueType === 'amount') {
-            // The DB stores signed integer minor units (CR-01); the form
-            // input displays the project's Dutch-decimal Euro convention,
-            // so round-trip through formatAmount() rather than showing
-            // the raw minor-unit string back to the user.
+            // The DB stores signed integer minor units; the form input
+            // displays the project's Dutch-decimal Euro convention, so
+            // round-trip through formatAmount() rather than showing the
+            // raw minor-unit string back to the user.
             $value = is_numeric($dto->value) ? self::formatAmount((int) $dto->value) : $dto->value;
             $value2 = $dto->value2 !== null && is_numeric($dto->value2) ? self::formatAmount((int) $dto->value2) : $dto->value2;
         } else {
@@ -516,8 +454,6 @@ final class RuleFormModal extends Component
             $row['note_text'] = isset($payload['text']) && is_string($payload['text']) ? $payload['text'] : '';
             $row['note_mode'] = isset($payload['mode']) && is_string($payload['mode']) ? $payload['mode'] : 'set';
         } else {
-            // 'tax_tag' — the only type left once category/counterparty/note
-            // are excluded (VALID_ACTION_TYPES has exactly 4 members).
             $row['deduction_category_id'] = isset($payload['deduction_category_id']) && is_numeric($payload['deduction_category_id']) ? (int) $payload['deduction_category_id'] : null;
             if (isset($payload['year']) && is_numeric($payload['year'])) {
                 $row['year_override_enabled'] = true;
@@ -575,12 +511,10 @@ final class RuleFormModal extends Component
         return $value === null || $value <= 0;
     }
 
+    // ValidationException::errors() returns an untyped array per the
+    // framework's own docblock — every access here is defensively
+    // narrowed before use.
     /**
-     * Extracts the first string message for `$key` out of a
-     * `ValidationException::errors()` payload (untyped `array` return
-     * per the framework's own docblock — every access here is
-     * defensively narrowed before use).
-     *
      * @param  array<array-key, mixed>  $messages
      */
     private static function firstMessage(array $messages, string $key): ?string
@@ -605,14 +539,9 @@ final class RuleFormModal extends Component
 
         if ($valueType === 'amount') {
             // Convert the human-entered Dutch/plain-decimal Euro string
-            // (placeholder "0,00", the project's established money-input
-            // convention — see TransactionDetail::parseAmount()) into
-            // signed integer minor units BEFORE it is persisted, so it
-            // agrees with `settledAmountMinor`/RuleEngine::toIntValue()'s
-            // units (CR-01). conditionRowError() has already rejected an
-            // unparsable value by the time save() reaches this method, so
-            // the `?? 0` fallback below is unreachable defence-in-depth,
-            // never the normal path.
+            // into signed integer minor units before persistence.
+            // conditionRowError() has already rejected an unparsable
+            // value by this point, so the `?? 0` fallback is unreachable.
             $value = (string) (self::parseAmount($condition['value']) ?? 0);
             $value2 = $condition['op'] === 'between'
                 ? (string) (self::parseAmount($condition['value2'] ?? '') ?? 0)
@@ -632,19 +561,10 @@ final class RuleFormModal extends Component
         ];
     }
 
-    /**
-     * Parses a signed money string to minor units, or null if unparsable.
-     * COPIED (adapted) from `Modules\Ledger\Internal\Http\Livewire\
-     * ReconcilePage::parseAmount()` — same duplication convention as
-     * every other Livewire money input in this codebase (see
-     * `TransactionDetail::parseAmount()`'s docblock). Signed (allows a
-     * leading `-`, zero, and negative results) because an amount
-     * condition compares against `settledAmountMinor`, which is a signed
-     * BIGINT (negative for expenses). Accepts plain ("12.50"), Dutch
-     * grouped ("1.234,56"), and comma-decimal ("12,50") forms; the
-     * rightmost of '.' or ',' is the decimal separator. Do not hand-roll
-     * a new regex; keep in sync if the canonical copy ever changes.
-     */
+    // Signed (allows a leading '-') because an amount condition compares
+    // against settledAmountMinor, a signed BIGINT. Accepts plain
+    // ("12.50"), Dutch grouped ("1.234,56"), and comma-decimal ("12,50")
+    // forms; the rightmost of '.' or ',' is the decimal separator.
     private static function parseAmount(string $value): ?int
     {
         $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));
@@ -675,13 +595,9 @@ final class RuleFormModal extends Component
         return $negative ? -$minor : $minor;
     }
 
-    /**
-     * Formats signed minor units back into an editable Dutch-decimal
-     * string (e.g. `-5000` -> `"-50,00"`) so an amount condition loaded
-     * via `conditionFromDto()` round-trips through `parseAmount()`
-     * unchanged if the user submits it untouched (mirrors
-     * `ReconcilePage::formatMinorForInput()`).
-     */
+    // e.g. -5000 -> "-50,00", so an amount condition loaded via
+    // conditionFromDto() round-trips through parseAmount() unchanged if
+    // the user submits it untouched.
     private static function formatAmount(int $minor): string
     {
         $negative = $minor < 0;

@@ -11,45 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 
 /**
- * Listens for TransactionCategorized and grows the merchant_memories
- * table so future imports for the same normalised merchant auto-
- * suggest the chosen category.
- *
- * The listener:
- *  1. Skips when categoryId is null (the user un-categorized — not a
- *     memory-grow event).
- *  2. Loads the transaction's counterparty_normalized (scoped by
- *     user_id), then JOINs the merchants table on (user_id,
- *     normalized_name) to derive merchant_id. Transactions carries no
- *     merchant_id column; deriving via the merchants join is the
- *     stable shape that matches how RuleEvaluator looks memory up.
- *  3. Skips silently when:
- *     - the transaction was not found (cross-user), OR
- *     - the counterparty_normalized is the empty-counterparty
- *       sentinel (NormalizeStage::NO_COUNTERPARTY), OR
- *     - no merchants row exists for this (user, normalized_name) — the
- *       merchants table is populated by NormalizeStage / Ledger and
- *       not by this listener; absence is a Ledger concern, not a
- *       categorization concern.
- *  4. Upserts merchant_memories on the (user_id, merchant_id,
- *     category_id) UNIQUE constraint. The implementation attempts an
- *     `insert` first; when the UNIQUE constraint triggers a
- *     QueryException the listener catches it and falls back to an
- *     atomic `occurrence_count + 1` UPDATE. The insert-then-catch
- *     pattern is race-safe: the DB serialises competing inserts and
- *     exactly one of N concurrent events lands the row; the rest take
- *     the UPDATE branch and increment the counter.
- *
- * Synchronous: the listener fires inside AssignCategory's request
- * cycle. There is no queued posture — memory growth is a tiny indexed
- * write and benefits from staying in the same DB transaction frame as
- * the category assignment.
- *
- * Counter semantics: the first event for a (user, merchant, category)
- * triple lands occurrence_count = 1; every subsequent event adds 1
- * via the atomic UPDATE branch. The counter advances monotonically by
- * exactly the number of distinct events dispatched, regardless of
- * dispatch order under concurrency.
+ * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class MerchantMemoryWriter
 {
@@ -100,13 +62,10 @@ final class MerchantMemoryWriter
         $userId = $event->userId;
         $categoryId = $event->categoryId;
 
-        // Try-insert-then-update: the (user_id, merchant_id, category_id)
-        // UNIQUE constraint on merchant_memories makes a naked INSERT
-        // race-safe. The first event for a new triple wins the INSERT
-        // and lands occurrence_count = 1; the second and subsequent
-        // events catch the UNIQUE violation and fall through to the
-        // atomic `occurrence_count + 1` UPDATE. This avoids the
-        // check-then-insert TOCTOU window a SELECT-first approach has.
+        // Try-insert-then-update: the UNIQUE constraint on
+        // merchant_memories makes a naked INSERT race-safe. The first
+        // event for a new triple wins; subsequent events catch the
+        // violation and fall through to the atomic UPDATE below.
         try {
             $connection->table('merchant_memories')->insert([
                 'user_id' => $userId,
