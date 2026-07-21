@@ -106,6 +106,29 @@ The module listens for nothing — every reaction it needs (the default
 category seed, the wizard first-step priming) lives in a downstream
 listener for `UserInstalled`, which the module dispatches.
 
+## Recovery codes
+
+`RecoveryCodeGenerator` draws each of the ten codes as five hyphenated
+groups of four characters (e.g. `A2BJ-XK9M-PQ7N-RX4F-V8HD`) from a
+31-character phone-readable alphabet that excludes the visually ambiguous
+glyphs `I`, `L`, `O`, `0`, and `1`. Every character comes from
+`random_int`, giving roughly 99 bits of entropy per code. Codes are
+bcrypt-hashed at issue time in that same hyphenated shape.
+
+A user re-typing a code by hand may vary case or add/drop/misplace
+separators, so `RecoveryCodeNormalizer` folds the input to uppercase and
+strips everything outside the generator's alphabet before
+`RecoveryCodeAuthenticator` re-inserts the hyphens and hashes the result
+in the identical shape it was stored in.
+
+`RecoveryCodeAuthenticator::verify()` runs the whole match-and-consume
+sequence inside one transaction with the candidate rows held under
+`lockForUpdate()`, so a concurrent redemption of the same code blocks on
+the row lock rather than racing — a code is consumed exactly once. Every
+attempt, success or failure, writes a `system_alerts` audit row; a
+failure against an unknown username still writes one, with a null
+`user_id`, so the audit trail cannot itself reveal which usernames exist.
+
 ## Data flow
 
 The signup ceremony, walked end-to-end:
@@ -321,6 +344,40 @@ without any of those features needing to be deployed to verify the gate
 works. It renders only a truncated SHA-256 fingerprint of the key, never
 the raw bytes, and is mounted exclusively behind the `developer`
 middleware — it must never appear on any non-developer surface.
+
+### Idle-timeout enforcement (`AppLockMiddleware`)
+
+The idle lock is server-authoritative: the global session lifetime is
+already a 30-day rolling window, so `lock_enabled` (not the session
+lifetime) controls whether the lock gate fires at all. On every gated
+request the middleware compares `last_activity_at` to the current time;
+past the configured idle timeout it locks the session and redirects to
+`/lock`. To avoid a DB read on every request, the lock config
+(`lock_enabled`, `idle_timeout_minutes`) is cached in the session and
+re-read from the DB only once per a short TTL window; the
+`last_activity_at` write still happens on every passing request so the DB
+stays fresh independent of that cache.
+
+Livewire update traffic (`wire:poll` machine polling included) must never
+count as user activity, or any page with a polling component would hold
+`last_activity_at` fresh forever and the idle lock would never fire on an
+unattended machine — genuine interaction on Livewire-heavy pages is
+reported instead by a plain-fetch activity heartbeat from `lock.js`.
+
+The middleware is registered twice: once pushed onto the `auth` route
+middleware group (covers every web+auth route), and once as a Livewire
+persistent middleware (re-runs the gate on every `/livewire/update`
+request), so a locked session cannot bypass the gate through the Livewire
+update endpoint alone.
+
+Route exemptions (`ALLOWED_ROUTE_NAMES`) let a locked session still reach
+the lock screen, its challenge/verify endpoints, `logout`, and the mobile
+unlock screen (`mobile.lock` — its own on-device biometric/PIN-fallback
+surface, exempted so a locked mobile session isn't bounced away from its
+own unlock screen back to the desktop/web `auth.lock` route). Biometric
+*enrollment* is deliberately absent from that list: enrollment requires
+the session data key, which a locked session never has, so exempting it
+would only widen the locked-session surface for no benefit.
 
 ### Transport notes
 

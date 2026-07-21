@@ -10,14 +10,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Restricts a route to developer (owner) users.
- *
- * A request from a non-developer — or from no user at all — raises a 404
- * NotFoundHttpException rather than a 403, so a non-developer cannot
- * confirm the route exists. The current user is read through the
- * CurrentUser contract, never the Auth facade or the auth() helper.
- */
+// Raises a 404 rather than a 403, so a non-developer cannot confirm the
+// route exists.
 final readonly class RequireDeveloperMiddleware
 {
     public function __construct(private CurrentUser $currentUser) {}
