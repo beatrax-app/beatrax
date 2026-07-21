@@ -8,15 +8,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// System-seeded rows carry user_id = NULL and source = 'system';
+// per-user rows (manual or promoted from discovered_senders) carry
+// user_id = $user->id and source = 'user'. The runtime query unions
+// both via WHERE user_id = $userId OR user_id IS NULL.
 /**
- * Eloquent model for the known_senders table — the curated list of
- * sender patterns the primary scan filter narrows the fetch to.
- *
- * System-seeded rows carry user_id = NULL and source = 'system';
- * per-user rows (added manually or promoted from discovered_senders)
- * carry user_id = $user->id and source = 'user'. The runtime query
- * unions both via `WHERE user_id = $userId OR user_id IS NULL`.
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $email_pattern

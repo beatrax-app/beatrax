@@ -9,18 +9,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Public action: dismiss a discovered_senders candidate so the daily
- * DiscoveryScanJob excludes it on every subsequent run AND the
- * /inboxes panel hides it from this user's view.
- *
- * Mirrors PromoteDiscoveredSender's invariants:
- *  - Cross-user 404 via the (id, user_id) scoped lookup.
- *  - Idempotent — a row already in state='dismissed' or 'added' is a
- *    silent no-op (consistent with Promote's idempotent posture).
- *  - PRAGMA busy_timeout fence inside the wrapping transaction
- *    serialises concurrent Dismiss / Promote calls.
- */
+// Dismisses a discovered_senders candidate so DiscoveryScanJob
+// excludes it going forward and the /inboxes panel hides it. Mirrors
+// PromoteDiscoveredSender's cross-user 404, idempotency, and
+// busy_timeout-fenced transaction invariants.
 final class DismissDiscoveredSender
 {
     public function __construct(

@@ -14,56 +14,20 @@ use stdClass;
 use Throwable;
 
 /**
- * Public read API over discovered_senders, scoped to the rolling
- * promotion window.
- *
- * The /inboxes "Discovered senders" panel reads this surface to
- * decide which sender candidates surface to the user — only those
- * the daily DiscoveryScanJob saw at least MIN_OCCURRENCES times
- * within WITHIN_DAYS of today. A single-shot sender that turns up
- * once and never again deliberately stays below the threshold so
- * the panel never asks the user to make a call on a row that may
- * never reappear.
- *
- * Threshold defaults (CONTEXT.md D-135):
- *  - MIN_OCCURRENCES = 2 — two observations within the window is
- *    the floor for "this is a recurring sender, worth asking about".
- *  - WITHIN_DAYS = 90 — a quarter of recurring receipt traffic; long
- *    enough to catch monthly subscriptions, short enough to age out
- *    one-off promotional senders.
- *
- * The constants are exposed as method-default parameters so a future
- * UI toggle ("show all" mode) can pass relaxed values without changing
- * the query shape. The defaults match the panel's locked behaviour.
- *
- * candidatesForUser JOINs to `inboxes` on both `inbox_id` AND
- * `user_id` so a discovered row whose denormalised `user_id` somehow
- * disagrees with the parent inbox's `user_id` is dropped at the read
- * boundary. The write-side `PromoteDiscoveredSender` /
- * `DismissDiscoveredSender` actions already enforce the cross-user
- * 404 invariant; this is the read-side mirror.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class DiscoveredSenderQuery
 {
-    /**
-     * Minimum number of observations within the rolling window before
-     * a sender is surfaced in the panel.
-     */
     public const MIN_OCCURRENCES = 2;
 
-    /**
-     * Number of days back from `now()` that count toward the
-     * MIN_OCCURRENCES threshold. Observations older than this are
-     * ignored (not deleted — the row stays for audit).
-     */
+    // Days back from now() counting toward MIN_OCCURRENCES;
+    // observations older than this are ignored, not deleted (the row
+    // stays for audit).
     public const WITHIN_DAYS = 90;
 
-    /**
-     * Hard cap on rows returned. The panel paginates client-side; this
-     * cap prevents a runaway-growth scenario where 1000+ discovered
-     * candidates land in one render. 25 is enough for the panel to
-     * stay scrollable without taking over the page.
-     */
+    // Hard cap on rows returned, since the panel paginates
+    // client-side; prevents a runaway-growth render while staying
+    // scrollable without taking over the page.
     public const PANEL_PAGE_SIZE = 25;
 
     public function __construct(
@@ -81,13 +45,10 @@ final class DiscoveredSenderQuery
     ): array {
         $threshold = $this->clock->now()->modify("-{$withinDays} days")->toDateTimeString();
 
-        // Defense-in-depth: JOIN to inboxes on BOTH inbox_id AND
+        // Defence-in-depth: joins to inboxes on both inbox_id and
         // user_id so a candidate row whose denormalised user_id
-        // somehow disagrees with the parent inboxes.user_id (a future
-        // bug or a malicious foreign-key insert) is silently dropped
-        // by the SQL filter rather than leaked into the UI. The
-        // PromoteDiscoveredSender / DismissDiscoveredSender actions
-        // already guard the write side; this guards the read side.
+        // disagrees with the parent's is dropped by the SQL filter
+        // rather than leaked into the UI (see architecture.md).
         $rows = $this->db->connection()
             ->table('discovered_senders')
             ->join('inboxes', function (JoinClause $join) use ($user): void {
@@ -122,12 +83,9 @@ final class DiscoveredSenderQuery
         return $out;
     }
 
-    /**
-     * Count panel-eligible candidates for the top-nav badge. Same
-     * threshold as `candidatesForUser` so the badge value mirrors what
-     * the panel renders — a count > 0 on the badge means at least one
-     * row WILL appear on the panel.
-     */
+    // Counts panel-eligible candidates for the top-nav badge, using
+    // the same threshold as candidatesForUser so a count > 0 on the
+    // badge means at least one row will appear on the panel.
     public function candidatesCountForUser(
         User $user,
         int $minOccurrences = self::MIN_OCCURRENCES,

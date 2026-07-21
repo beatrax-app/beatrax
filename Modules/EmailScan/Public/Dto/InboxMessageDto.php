@@ -7,20 +7,10 @@ namespace Modules\EmailScan\Public\Dto;
 use DateTimeImmutable;
 use Spatie\LaravelData\Data;
 
-/**
- * Single row from inbox_messages, in the shape the downstream parser
- * stage iterates.
- *
- * `internalDate` carries the provider-stamped message time (Gmail's
- * `internalDate` or Graph's `receivedDateTime`); `fetchedAt` is the
- * local time the background fetcher persisted the .eml. The pair lets
- * the parser order messages by send-time while still being able to
- * rewind to "everything fetched since N" via fetchedAt.
- *
- * `status` is the lifecycle handoff column — Phase 6 only ever writes
- * 'fetched'; the parser stage transitions rows in place to 'parsed',
- * 'skipped', or 'unmatched'.
- */
+// Single row from inbox_messages, in the shape the downstream parser
+// iterates. internalDate is the provider-stamped message time;
+// fetchedAt is when the fetcher persisted the .eml. status is the
+// lifecycle handoff — this module only ever writes 'fetched'.
 final class InboxMessageDto extends Data
 {
     public function __construct(

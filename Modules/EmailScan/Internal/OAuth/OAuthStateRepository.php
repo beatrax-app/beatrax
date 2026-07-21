@@ -11,37 +11,15 @@ use Modules\Core\Public\Contracts\Clock;
 use Throwable;
 
 /**
- * Per-flow random OAuth state, stored in the Laravel session.
- *
- * Each issue() call generates a 64-character hex token (32 random
- * bytes) and stashes it in the session under a per-provider key.
- * consume() pops the value (single-use) and returns the associated
- * inbox id when the candidate state matches via hash_equals AND the
- * stored user_id matches the caller-supplied current user id; null
- * otherwise. The single-use semantics prevent a replay-attack from
- * reusing a leaked state value, and the user-id binding closes the
- * cross-user-attach window that arises when the authenticated user
- * changes between authorize and callback (shared browser, session
- * reuse, or a future multi-user install).
- *
- * The entry also carries an issued-at timestamp; consumeState rejects
- * entries older than MAX_AGE_SECONDS so a state token that survives
- * an unusually long session cannot be replayed days later.
- *
- * The implementation injects the framework's Session contract + the
- * project's Clock contract — no auth(), session(), or now() global
- * helpers — per the project-wide DI invariant.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class OAuthStateRepository
 {
     private const ALLOWED_PROVIDERS = ['gmail', 'microsoft'];
 
-    /**
-     * Maximum lifetime of an issued state entry, in seconds. Ten
-     * minutes is long enough for a typical OAuth round-trip including
-     * an MFA prompt; entries older than this are treated as expired
-     * and rejected by consumeState.
-     */
+    // Maximum lifetime of an issued state entry in seconds (10 minutes
+    // covers a typical OAuth round-trip including an MFA prompt);
+    // consumeState rejects entries older than this.
     private const MAX_AGE_SECONDS = 600;
 
     public function __construct(
@@ -64,13 +42,10 @@ final class OAuthStateRepository
         return $state;
     }
 
-    /**
-     * Single-use: the session entry is removed regardless of match
-     * outcome. Returns the stored inbox id on match (0 = new-inbox
-     * flow), null on mismatch / missing / malformed / expired entry
-     * or when the stored user_id does not match the caller-supplied
-     * current user id.
-     */
+    // Single-use: the session entry is removed regardless of match
+    // outcome. Returns the stored inbox id on match (0 = new-inbox
+    // flow), null on any mismatch/missing/malformed/expired entry or
+    // a stored user_id that doesn't match the caller-supplied one.
     public function consumeState(string $provider, string $candidateState, int $currentUserId): ?int
     {
         $this->assertProvider($provider);
@@ -94,11 +69,9 @@ final class OAuthStateRepository
             return null;
         }
 
-        // User-id binding: the consent flow must complete under the
-        // same authenticated user that started it. A change of
-        // session-bound user between authorize and callback (shared
-        // browser, multi-user host) must NOT attach the inbox to the
-        // wrong account.
+        // User-id binding: a change of session-bound user between
+        // authorize and callback (shared browser, multi-user host)
+        // must not attach the inbox to the wrong account.
         $storedUserId = $entry['user_id'] ?? null;
         if (! is_int($storedUserId) || $storedUserId !== $currentUserId) {
             return null;

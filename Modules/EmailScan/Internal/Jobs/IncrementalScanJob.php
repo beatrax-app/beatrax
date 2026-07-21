@@ -31,63 +31,7 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Throwable;
 
 /**
- * Per-inbox hourly incremental fetcher.
- *
- * Walks the Gmail historyId cursor (for provider='gmail' inboxes) or
- * the Microsoft Graph delta-link (`@odata`.`deltaLink`, for provider='microsoft'
- * inboxes) from the value previously written by BackfillInboxJob's
- * baseline phase (Plan 05 + 06). New messages discovered on the walk
- * land as `.eml` blobs on disk plus inbox_messages index rows with
- * status='fetched' — the exact same atomic .eml-then-DB-tx ordering
- * the backfill job uses (D-122).
- *
- * Concurrency contract (mirrors BackfillInboxJob):
- *  - `ShouldBeUnique` keyed on `inboxId` blocks every second dispatch
- *    for the same inbox until the worker FINISHES (not just starts).
- *    A queue-level lock that released at handle-entry would let two
- *    workers walk the same inbox's history concurrently, race on the
- *    cursor write, and trigger the state machine's duplicate
- *    'scanning' transition reject. The unique-lock store is resolved
- *    by the shared LockStore helper from `config('cache.locks_store')`.
- *  - `uniqueFor=600` (10 minutes) is shorter than the 30-minute
- *    backfill ceiling — incremental scans complete in seconds, so
- *    the lock should not linger.
- *  - The BackfillInboxJob shares the same uniqueId derivation (the
- *    raw inboxId), so a hourly tick that lands while a backfill is
- *    still in flight collapses cleanly into the existing lock.
- *  - `tries=3` + `backoff=[60,300,900]` matches the project-wide
- *    retry envelope.
- *
- * Error envelope:
- *  - `CursorExpiredException` on the cursor-walk endpoint triggers a
- *    date-bounded fallback walk via `listSenderMessages` / `listSenderMessagesPaged`,
- *    capped at the last_scan_at minus 7 days (RESEARCH Pitfall 3 / 4)
- *    + a hard 500-message defensive cap so a misbehaving provider
- *    cannot exhaust the heap. After the fallback walk the cursor is
- *    re-baselined: Gmail captures the highest historyId seen across
- *    the page-walk's metadata; Microsoft issues a fresh `deltaPage(null)`
- *    baseline call.
- *  - `RateLimitedException` → `applyRateLimited` flips status to
- *    rate_limited + bumps retry_attempts + stamps "Retry after Xs".
- *    Rethrown so Horizon honours the project-wide backoff envelope.
- *  - `InvalidGrantException` → `applyStatus(needs_reauth)`. Swallowed
- *    (terminal until the user hits Reconnect in the Plan 08 UI).
- *  - Any other Throwable → `applyStatus(error, message[:500])` +
- *    rethrow so the JobFailed listener can surface the failure.
- *
- * Two early-exit paths skip the provider call entirely:
- *  - `needs_reauth` inboxes — the FIRST step in handle() reads the
- *    state; if status='needs_reauth' the job exits immediately
- *    (T-06-07-06 mitigation; no provider API call to burn refresh
- *    attempts on a known-revoked grant).
- *  - Empty cursor (no backfill has set last_history_id /
- *    last_delta_link yet) — the job transitions to idle and exits;
- *    the next hour's tick after backfill completes will pick up.
- *
- * Queue-uniqueness lock resolution is delegated to the shared
- * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
- * returns `LockStore::forUniqueJobs()`, which resolves the cache store
- * named by `config('cache.locks_store')`.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 {
@@ -101,23 +45,15 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
     /** @var array<int, int> */
     public array $backoff = [60, 300, 900];
 
-    /**
-     * Defensive cap on the cursor-expiry fallback walk. A misbehaving
-     * provider that keeps returning a nextPageToken / Graph next-link
-     * indefinitely must not exhaust the heap; the walker breaks out
-     * after this many messages even if the provider has more pages
-     * to offer. The 7-day window cap from RESEARCH Pitfall 3 / 4
-     * is the primary correctness guard; this is the defence-in-depth
-     * ceiling.
-     */
+    // Defensive cap on the cursor-expiry fallback walk so a
+    // misbehaving provider returning pages indefinitely cannot
+    // exhaust the heap; the 7-day window is the primary guard, this
+    // is the defence-in-depth ceiling.
     private const FALLBACK_WALK_HARD_CAP = 500;
 
-    /**
-     * Cursor-expiry fallback window. RESEARCH Pitfall 3 / 4 caps the
-     * re-scan at 7 days back from last_scan_at; the rest of the
-     * retention window is recovered the next time the user hits
-     * "Reconnect" or via a manual backfill.
-     */
+    // Cursor-expiry fallback window: caps the re-scan at 7 days back
+    // from last_scan_at; the rest of the retention window is
+    // recovered on the next Reconnect or manual backfill.
     private const FALLBACK_WALK_DAYS = 7;
 
     public function __construct(public readonly int $inboxId) {}
@@ -129,9 +65,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
     public function uniqueFor(): int
     {
-        // 10-minute single-flight ceiling — incremental scans
-        // complete in seconds; the lock should not linger if a
-        // worker crashes mid-scan.
+        // 10-minute single-flight ceiling: incremental scans complete
+        // in seconds, so the lock shouldn't linger past a crash.
         return 600;
     }
 
@@ -154,8 +89,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
 
         $inboxRow = $connection->table('inboxes')->where('id', $this->inboxId)->first();
         if ($inboxRow === null) {
-            // Inbox was deleted between dispatch and worker pickup —
-            // silently exit so the queue does not retry forever.
+            // Inbox deleted between dispatch and worker pickup —
+            // silently exit so the queue doesn't retry forever.
             return;
         }
 
@@ -172,9 +107,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        // Early exit #1: needs_reauth inboxes are terminal until the
-        // user hits Reconnect. No provider API call — a revoked
-        // refresh token cannot be repaired by another scan attempt.
+        // needs_reauth inboxes are terminal until the user hits
+        // Reconnect: no provider API call, since a revoked refresh
+        // token cannot be repaired by another scan attempt.
         $currentStatus = is_string($stateRow->status) ? $stateRow->status : '';
         if ($currentStatus === 'needs_reauth') {
             return;
@@ -188,16 +123,14 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             $senderQuery->all($user),
         );
         if ($senderPatterns === []) {
-            // Nothing to scan; leave the row idle. This also handles
-            // the "first incremental run before the system seeds
-            // shipped" edge case without throwing.
+            // Nothing to scan; leave the row idle (also covers the
+            // first-run-before-seeds-shipped edge case without throwing).
             return;
         }
 
-        // Early exit #2: collapse the contention case where a
-        // backfill is mid-flight. The state machine will reject
-        // backfilling → scanning, so detect upfront and skip — the
-        // backfill will set last_scan_at when it finishes.
+        // Collapses the contention case where a backfill is
+        // mid-flight: the state machine rejects backfilling ->
+        // scanning, so detect it upfront and skip rather than error.
         try {
             $sm->applyStatus($this->inboxId, 'scanning');
         } catch (InvalidStateTransitionException) {
@@ -250,7 +183,6 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
                 'needs_reauth',
                 'OAuth grant revoked or expired.',
             );
-            // Do not rethrow — needs_reauth is terminal.
         } catch (Throwable $e) {
             $sm->applyStatus(
                 $this->inboxId,
@@ -290,31 +222,22 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             $messageIds = $this->extractGmailHistoryMessageIds($history['history']);
             $newHistoryId = $history['historyId'];
         } catch (CursorExpiredException) {
-            // Fallback walk: date-bounded messages.list pages from
-            // last_scan_at minus 7 days. Capped at FALLBACK_WALK_HARD_CAP
-            // messages defensively.
             $messageIds = $this->gmailFallbackWalk(
                 $gmail,
                 $stateRow,
                 $senderPatterns,
                 $clock,
             );
-            // We do not learn a new historyId from listSenderMessages
-            // (Gmail returns it via getProfile in production; the
-            // Wave 0 contract pins it to null). Keep the prior cursor
-            // — the next hour's run will re-attempt listHistory; if
-            // it succeeds the cursor advances normally.
+            // listSenderMessages never returns a historyId (Gmail
+            // surfaces it via getProfile in production), so the prior
+            // cursor is kept — the next run re-attempts listHistory.
         }
 
         $now = $clock->now()->toDateTimeString();
         foreach ($messageIds as $messageId) {
-            // Skip messages we already have on disk + indexed. The
-            // history walk can legitimately re-surface a message a
-            // prior backfill pass already persisted; re-fetching the
-            // raw bytes burns provider quota without changing state
-            // (insertOrIgnore would short-circuit the DB write
-            // anyway, and the .eml atomic-rename would overwrite an
-            // identical file).
+            // Skips a message already fetched+indexed: the history
+            // walk can legitimately re-surface one a prior backfill
+            // already persisted, and refetching burns quota for nothing.
             $alreadyFetched = $connection->table('inbox_messages')
                 ->where('inbox_id', $this->inboxId)
                 ->where('provider_message_id', $messageId)
@@ -324,12 +247,10 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             }
 
             $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
-            // Gmail's users.history.list does not stamp a per-message
-            // internalDate, so pass the project Clock through as the
-            // fallback when the .eml carries no parseable Date: header.
-            // Routing through Clock keeps test-frozen time honoured —
-            // the parser itself never reaches for `new
-            // DateTimeImmutable('now')`.
+            // Gmail's users.history.list stamps no per-message
+            // internalDate, so the project Clock is the fallback when
+            // the .eml carries no parseable Date: header (keeping
+            // test-frozen time honoured rather than a raw 'now').
             $headers = $mime->parseHeadersWithFallbackDate(
                 $rawEml,
                 $clock->now()->toDateTimeImmutable(),
@@ -406,15 +327,10 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             $messages = $page['messages'];
             $newDeltaLink = $page['deltaLink'];
         } catch (CursorExpiredException) {
-            // Fallback walk: date-bounded /me/messages walk from
-            // last_scan_at minus 7 days. Capped at the hard cap
-            // defensively. After the walk, re-baseline via a fresh
-            // deltaPage(null, $walkStartedAt) so the cursor lower-bound
-            // is anchored to the pre-walk timestamp; this closes the
-            // gap-window race where messages arriving during the
-            // fallback walk could fall outside both the walk's filter
-            // and the new baseline's lower bound. BackfillInboxJob
-            // uses the same pre-walk-timestamp baseline pattern.
+            // Fallback walk anchored to the pre-walk timestamp, then
+            // re-baselined via deltaPage(null, $walkStartedAt) — the
+            // same pattern BackfillInboxJob uses to close the
+            // gap-window race (see architecture.md).
             $walkStartedAt = $clock->now()->toDateTimeImmutable();
             $messages = $this->graphFallbackWalk(
                 $graph,
@@ -426,11 +342,10 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             $newDeltaLink = $baseline['deltaLink'];
         }
 
-        // Client-side post-filter on the delta messages. Graph's
-        // delta endpoint does not honour a from-address $filter, so
-        // any messages from senders outside the allow-list are
-        // dropped at the boundary — the fallback walk already filters
-        // server-side via listSenderMessagesPaged.
+        // Client-side post-filter: Graph's delta endpoint doesn't
+        // honour a from-address $filter, so senders outside the
+        // allow-list are dropped here (the fallback walk already
+        // filters server-side via listSenderMessagesPaged).
         $now = $clock->now()->toDateTimeString();
         foreach ($messages as $msgMeta) {
             $senderAddr = '';
@@ -452,11 +367,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
                 continue;
             }
 
-            // Skip messages we already have on disk + indexed. The
-            // Graph delta walk + fallback walk can both legitimately
-            // re-surface a message a prior pass already persisted;
-            // re-fetching its raw bytes burns Graph quota without
-            // changing state.
+            // Skips a message already fetched+indexed: both the delta
+            // walk and the fallback walk can legitimately re-surface
+            // one a prior pass already persisted.
             $alreadyFetched = $connection->table('inbox_messages')
                 ->where('inbox_id', $this->inboxId)
                 ->where('provider_message_id', $messageId)
@@ -518,22 +431,9 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    /**
-     * Laravel calls this method on the resolved job instance after the
-     * worker exhausts its retry budget. Container DI resolves the
-     * InboxScanStateMachine argument so the same sole-mutator surface
-     * the in-flight pipeline uses also handles the terminal error
-     * transition.
-     *
-     * Replaces the previous JobFailed listener + regex extraction over
-     * the serialised job payload (which was fragile against
-     * serialiser-format changes and a future job class whose
-     * property name shared a prefix with 'inboxId').
-     *
-     * Invalid transitions (e.g. an already-needs_reauth inbox failing
-     * again) are swallowed so the failed-hook surface never escalates
-     * a recovery scenario into a hard queue-worker error.
-     */
+    // Laravel calls this after the worker exhausts its retry budget;
+    // container DI resolves InboxScanStateMachine so the same
+    // sole-mutator surface handles the terminal error transition.
     public function failed(Throwable $exception, InboxScanStateMachine $sm): void
     {
         try {
@@ -543,18 +443,16 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
                 substr($exception->getMessage(), 0, 500),
             );
         } catch (Throwable) {
-            // Swallow — invalid transitions are acceptable on the
-            // failed-hook surface.
+            // Invalid transitions are acceptable on this hook — they
+            // must not escalate into a hard queue-worker error.
         }
     }
 
+    // Pulls provider message ids out of a Gmail history.list response;
+    // each entry may carry a messagesAdded array of
+    // {message: {id, threadId}} objects, and the messagesDeleted/
+    // labelAdded shapes are ignored (a deleted message has nothing to fetch).
     /**
-     * Pull provider message ids out of a Gmail history.list response.
-     * Each history entry may carry a `messagesAdded` array of
-     * `{message: {id, threadId}}` objects; the messagesDeleted /
-     * labelAdded shapes are ignored for incremental fetch (a deleted
-     * message has nothing to fetch).
-     *
      * @param  list<array<string, mixed>>  $historyEntries
      * @return list<string>
      */
@@ -584,16 +482,11 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         return $ids;
     }
 
+    // Date-bounded fallback walk over Gmail's listSenderMessages,
+    // invoked when listHistory's startHistoryId has aged out; passes
+    // $windowStart = last_scan_at - FALLBACK_WALK_DAYS so the
+    // server-side after: filter trims the result set to the recovery window.
     /**
-     * Date-bounded fallback walk over Gmail's listSenderMessages —
-     * invoked when listHistory's startHistoryId has aged out
-     * (CursorExpiredException). The walk passes
-     * `$windowStart = last_scan_at - FALLBACK_WALK_DAYS` so the
-     * server-side `after:` filter trims the result set tightly
-     * against the recovery window the docblock promises. The
-     * FALLBACK_WALK_HARD_CAP message ceiling stays as the
-     * defence-in-depth bound against a runaway page walk.
-     *
      * @param  list<string>  $senderPatterns
      * @return list<string>
      */
@@ -628,12 +521,11 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         return $ids;
     }
 
+    // Date-bounded fallback walk over Microsoft Graph's
+    // listSenderMessagesPaged, invoked when deltaPage's stored
+    // delta-link has aged out; walks at most FALLBACK_WALK_HARD_CAP
+    // messages defensively.
     /**
-     * Date-bounded fallback walk over Microsoft Graph's
-     * listSenderMessagesPaged — invoked when deltaPage's stored
-     * Graph delta-link has aged out (CursorExpiredException). Walks
-     * at most FALLBACK_WALK_HARD_CAP messages defensively.
-     *
      * @param  list<string>  $senderPatterns
      * @return list<array<string, mixed>>
      */
@@ -664,12 +556,10 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         return $results;
     }
 
+    // Matches a sender address against a pattern list: patterns
+    // starting with '@' match by domain suffix, otherwise a substring
+    // containment match (case-insensitive, both sides lowercased).
     /**
-     * Match a sender address against a list of patterns. Patterns
-     * starting with '@' match by domain suffix; otherwise a substring
-     * containment match. Case-insensitive (both sides are
-     * already lowercased by the caller).
-     *
      * @param  list<string>  $patterns
      */
     private function matchesAnyPattern(string $senderAddr, array $patterns): bool

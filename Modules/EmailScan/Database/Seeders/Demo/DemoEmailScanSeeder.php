@@ -14,34 +14,7 @@ use Modules\EmailScan\Models\KnownSender;
 use Modules\EmailScan\Models\OAuthSecret;
 
 /**
- * Materialises a complete EmailScan demo dataset for the primary
- * demo user so every visible surface in the inbox-scanning module
- * has data to render against on a fresh demo install:
- *
- *   - 2 `inboxes` rows (one Gmail, one Microsoft 365)
- *   - 2 `inbox_scan_state` rows with realistic resume cursors and
- *     `last_scan_at` stamped
- *   - 2 `oauth_secrets` rows (one per provider), carrying encrypted-
- *     at-rest placeholder credentials
- *   - 2 `known_senders` rows (per-user additions stacking on top of
- *     the migration-seeded global system rows)
- *   - 3 `discovered_senders` rows (the candidate queue surface) in
- *     mixed states (one candidate, one added, one dismissed)
- *   - 3 `inbox_messages` rows so the message-feed surface renders
- *
- * Idempotency: every row keys on an application-visible UNIQUE — the
- * inbox upserts on `(user_id, email)`, scan state on
- * `(inbox_id, folder)`, known_senders on `(user_id, email_pattern)`,
- * discovered_senders on `(user_id, inbox_id, sender_email)`, and
- * inbox_messages on `(inbox_id, provider_message_id)`. OAuth secret
- * upserts on `(user_id, provider)`. Each table's UNIQUE constraint
- * matches the key tuple the seeder uses.
- *
- * Encryption posture: the OAuth secret rows carry plaintext
- * placeholders that flow through the `encrypted` cast at write time
- * and round-trip cleanly. Real credentials never land in a demo seed
- * — the contributor inspecting the surface sees the per-provider
- * connection shape, not a usable secret.
+ * @link ../../../../../.docs/features/email-scan/architecture.md
  */
 final class DemoEmailScanSeeder
 {

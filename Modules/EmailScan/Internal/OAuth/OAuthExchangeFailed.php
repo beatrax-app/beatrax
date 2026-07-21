@@ -6,13 +6,8 @@ namespace Modules\EmailScan\Internal\OAuth;
 
 use RuntimeException;
 
-/**
- * Sentinel raised when the underlying OAuth library throws an
- * IdentityProviderException for any reason that is not invalid_grant
- * (network error, malformed response, scope mismatch, etc.).
- *
- * The message carries the provider's short error description only —
- * never the request body, never any token payload — so callers can
- * safely surface the message to the UI flash.
- */
+// Sentinel raised when the OAuth library throws an
+// IdentityProviderException for any non-invalid_grant reason (network
+// error, malformed response, scope mismatch). The message carries
+// only the provider's short error description, safe to surface as-is.
 final class OAuthExchangeFailed extends RuntimeException {}

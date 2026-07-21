@@ -11,24 +11,10 @@ use InvalidArgumentException;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use stdClass;
 
-/**
- * Public read-side query over inbox_messages.
- *
- * Streams rows in id order via the query builder's `cursor()` so
- * downstream parser consumers can iterate large fetch backlogs
- * without ever materialising the full set into memory. Each yielded
- * row is mapped to an InboxMessageDto lazily inside the generator.
- *
- * The single public method `forStatus(string)` is intentionally
- * narrow — Phase 6's primary consumer (Phase 7's parser stage) only
- * needs to walk rows in a specific status bucket. Additional access
- * patterns (`forInbox`, `since`, ...) land in later plans when their
- * consumer arrives.
- *
- * The status value is validated against the known enum set so a
- * call site with a typo fails loud rather than silently returning
- * zero rows.
- */
+// Public read-side query over inbox_messages. Streams rows in id
+// order via cursor() so downstream parsers iterate large fetch
+// backlogs without materialising the full set; the status value is
+// validated so a typo call site fails loud, not silently zero rows.
 readonly class InboxMessageQuery
 {
     private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];

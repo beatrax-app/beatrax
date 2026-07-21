@@ -11,17 +11,11 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\EmailScan\Database\Factories\OAuthSecretFactory;
 
+// A user holds at most one credential row per provider, guarded by
+// the (user_id, provider) unique index. client_secret and tokens_blob
+// are encrypted at rest (aes256-cbc) via Laravel's encrypted cast
+// keyed on APP_KEY; plaintext exists only in this model's attribute layer.
 /**
- * Eloquent model for the oauth_secrets table — per-user OAuth client
- * credentials and token blob for one connected email provider.
- *
- * A user holds at most one credential row per provider ('gmail' or
- * 'microsoft'), guarded by the table's unique (user_id, provider) index
- * and its provider enum trigger pair. The `client_secret` and
- * `tokens_blob` columns are AES-256-CBC encrypted at rest via Laravel's
- * `encrypted` cast keyed on APP_KEY; plaintext exists only inside this
- * model's attribute layer.
- *
  * @property int $id
  * @property int|null $user_id
  * @property string $provider

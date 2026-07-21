@@ -8,24 +8,9 @@ use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
 use RuntimeException;
 
-/**
- * Fixture-driven fake of the future real Microsoft Graph API client.
- * Replays canned JSON responses from
- * `Modules/EmailScan/tests/fixtures/api-responses/graph/` so plans
- * that wire the production pipeline can drive end-to-end tests
- * without a real Microsoft consent flow.
- *
- * Wave 0 ships this Fake before the production `GraphApiClient`
- * interface exists. The public method signatures here ARE the
- * contract — later plans ship the real client and the formal
- * interface; both must adopt the same shape so the test seam stays
- * drop-in compatible.
- */
 final class FakeGraphApiClient implements GraphApiClientContract
 {
-    /**
-     * @var list<array{method: string, args: array<int|string, mixed>}>
-     */
+    /** @var list<array{method: string, args: array<int|string, mixed>}> */
     private array $calls = [];
 
     /** @var array<int, int> */
@@ -34,31 +19,21 @@ final class FakeGraphApiClient implements GraphApiClientContract
     /** @var array<int, true> */
     private array $cursorExpiredInboxes = [];
 
-    /**
-     * Plan 07: inbox-id-keyed retry-after seconds for a deltaPage
-     * rate-limit simulation. The next `deltaPage` call for that
-     * inbox pops the entry and throws RateLimitedException.
-     *
-     * @var array<int, int>
-     */
+    // Inbox-id-keyed retry-after seconds for a deltaPage rate-limit
+    // simulation; the next deltaPage call for that inbox pops the
+    // entry and throws RateLimitedException.
+    /** @var array<int, int> */
     private array $deltaRateLimitedInboxes = [];
 
-    /**
-     * Plan 07: queued non-empty deltaPage responses. Each call to
-     * `deltaPage` shifts the front entry. Once empty, the default
-     * baseline fixture is returned.
-     *
-     * @var list<array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}>
-     */
+    // Queued non-empty deltaPage responses. Each call to deltaPage
+    // shifts the front entry; once empty, the default baseline
+    // fixture is returned.
+    /** @var list<array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}> */
     private array $queuedDeltaResponses = [];
 
-    /**
-     * Plan 09: queued listDiscoveryCandidatesPaged responses. Each
-     * call shifts the front entry; once empty, the default fixture
-     * is replayed.
-     *
-     * @var list<array{messages: list<array<string, mixed>>, nextLink: ?string}>
-     */
+    // Queued listDiscoveryCandidatesPaged responses. Each call shifts
+    // the front entry; once empty, the default fixture is replayed.
+    /** @var list<array{messages: list<array<string, mixed>>, nextLink: ?string}> */
     private array $queuedDiscoveryResponses = [];
 
     public function __construct(
@@ -66,11 +41,10 @@ final class FakeGraphApiClient implements GraphApiClientContract
         private readonly string $fixtureRoot = __DIR__.'/../../tests/fixtures/api-responses/graph',
     ) {}
 
+    // Replays paged /me/messages with a from-address filter: the
+    // first call per inbox returns the page-1 fixture, subsequent
+    // calls return the empty page-2 sentinel.
     /**
-     * Replays paged `/me/messages` with a from-address filter. First
-     * call per inbox returns the page-1 fixture; subsequent calls
-     * return the empty page-2 sentinel.
-     *
      * @param  list<string>  $senderPatterns
      * @return array{messages: list<array<string, mixed>>, nextLink: ?string}
      */
@@ -105,11 +79,9 @@ final class FakeGraphApiClient implements GraphApiClientContract
         ];
     }
 
-    /**
-     * Replays `/messages/{id}/$value`. Graph returns the raw RFC 822
-     * MIME stream directly (no base64 transport wrapper), so the
-     * Fake reads the matching `.eml` fixture verbatim.
-     */
+    // Replays /messages/{id}/$value. Graph returns the raw RFC 822
+    // MIME stream directly (no base64 transport wrapper), so the Fake
+    // reads the matching .eml fixture verbatim.
     public function getRawMessage(int $inboxId, string $providerMessageId): string
     {
         $this->calls[] = ['method' => __FUNCTION__, 'args' => [
@@ -126,12 +98,11 @@ final class FakeGraphApiClient implements GraphApiClientContract
         return self::normaliseCrlf($contents);
     }
 
+    // Replays the $delta endpoint. Default behaviour returns the
+    // baseline empty delta page with a deltaLink; tests that arm
+    // simulateCursorExpired() get the 410/syncStateNotFound shape
+    // replayed as CursorExpiredException.
     /**
-     * Replays the `$delta` endpoint. Default behaviour returns the
-     * baseline empty delta page with a deltaLink. Tests that arm
-     * `simulateCursorExpired()` get the 410 / syncStateNotFound shape
-     * replayed as CursorExpiredException.
-     *
      * @return array{messages: list<array<string, mixed>>, deltaLink: ?string, nextLink: ?string}
      */
     public function deltaPage(int $inboxId, ?string $deltaLink, ?DateTimeImmutable $sinceOverride = null): array
@@ -180,20 +151,11 @@ final class FakeGraphApiClient implements GraphApiClientContract
         ];
     }
 
+    // Replays the discovery query. Default fixture is the three
+    // sender entries from messages-page-1.json, each carrying
+    // from.emailAddress.{address,name} + receivedDateTime inline so
+    // discovery can populate discovered_senders without a body fetch.
     /**
-     * Replays the discovery query. Default fixture is the three Wave 0
-     * sender entries from messages-page-1.json; each entry carries the
-     * sender `from.emailAddress.{address,name}` + `receivedDateTime`
-     * inline so the discovery loop can populate `discovered_senders`
-     * without a body fetch.
-     *
-     * Test-controllable shape:
-     *  - `queueDiscoveryResponse([...])` queues a specific message list
-     *    for the next call. Subsequent calls fall back to the default
-     *    fixture.
-     *  - `simulateRateLimit($inboxId, $retryAfter)` arms the existing
-     *    rate-limit pool which also fires on listDiscoveryCandidatesPaged.
-     *
      * @param  list<string>  $keywords
      * @param  list<string>  $excludeSenders
      * @return array{messages: list<array<string, mixed>>, nextLink: ?string}
@@ -227,11 +189,10 @@ final class FakeGraphApiClient implements GraphApiClientContract
         ];
     }
 
+    // Queues the next listDiscoveryCandidatesPaged response; each
+    // call consumes the queue's front entry, and once empty the
+    // default messages-page-1.json fixture is replayed.
     /**
-     * Plan 09: queue the next listDiscoveryCandidatesPaged response.
-     * Each call consumes the queue's front entry; once empty, the
-     * default messages-page-1.json fixture is replayed.
-     *
      * @param  list<array<string, mixed>>  $messages
      */
     public function queueDiscoveryResponse(array $messages, ?string $nextLink = null): void
@@ -252,23 +213,18 @@ final class FakeGraphApiClient implements GraphApiClientContract
         $this->cursorExpiredInboxes[$inboxId] = true;
     }
 
-    /**
-     * Plan 07: arm a rate-limit response for the next deltaPage call.
-     * IncrementalScanJob's Microsoft branch calls deltaPage(storedLink)
-     * before any listSenderMessagesPaged call, so a Graph
-     * incremental-scan rate-limit fires via this surface (not via
-     * simulateRateLimit, which targets listSenderMessagesPaged).
-     */
+    // Arms a rate-limit response for the next deltaPage call, since
+    // IncrementalScanJob's Microsoft branch calls deltaPage() before
+    // listSenderMessagesPaged (which simulateRateLimit targets).
     public function simulateDeltaRateLimit(int $inboxId, int $retryAfterSeconds = 60): void
     {
         $this->deltaRateLimitedInboxes[$inboxId] = $retryAfterSeconds;
     }
 
+    // Queues the next deltaPage response so the caller sees a
+    // specific set of messages + new deltaLink; calls past the queued
+    // entries fall back to the default baseline fixture.
     /**
-     * Plan 07: queue the next deltaPage response so the caller sees
-     * a specific set of messages + new deltaLink. Calls past the
-     * queued entries fall back to the default baseline fixture.
-     *
      * @param  list<array<string, mixed>>  $messages
      */
     public function queueDeltaResponse(array $messages, ?string $newDeltaLink, ?string $nextLink = null): void

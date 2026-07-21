@@ -13,54 +13,21 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
 
 /**
- * Flux modal SFC for the bring-your-own OAuth client registration.
- *
- * A single component renders both the Gmail and Microsoft 365
- * variants; the open() event sets the $provider property to either
- * 'gmail' or 'microsoft' and submit() branches on that value to apply
- * the provider-specific validation rules.
- *
- * Google variant: client_id ends in `.apps.googleusercontent.com`,
- * client_secret starts with `GOCSPX-`, and the publishedConfirmed
- * checkbox is required (Google Testing-mode refresh tokens expire
- * after 7 days for the gmail.readonly scope).
- *
- * Microsoft variant: client_id is a UUID v4, client_secret is
- * non-empty. There is no publishedConfirmed equivalent — Azure does
- * not require a separate publication step for personal accounts.
- *
- * On valid submission the credentials are persisted atomically via
- * OAuthSecretsRepository (chmod-600 + tmp+rename) and the wizard
- * auto-redirects into the per-inbox consent flow so the user reaches
- * the provider authorization page without an extra click.
- *
- * Service collaborators arrive as parameters on action methods + the
- * render() method — constructor injection is banned on Livewire
- * components by the strict-rules plugin.
+ * @link ../../../../../.docs/features/email-scan/architecture.md
  */
 final class OAuthClientWizardModal extends Component
 {
-    /**
-     * Azure assigns the application (client) ID as a UUID v4. The
-     * format is documented at
-     * https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
-     * and matches the canonical RFC 4122 v4 shape (8-4-4-4-12 hex
-     * digits with a fixed `4` in the third group and one of 8/9/a/b
-     * in the high nibble of the fourth group).
-     */
+    // Azure assigns the application (client) ID as a UUID v4, matching
+    // the canonical RFC 4122 v4 shape (8-4-4-4-12 hex digits, fixed 4
+    // in the third group, 8/9/a/b in the fourth group's high nibble).
     private const MICROSOFT_CLIENT_ID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
 
     public ?string $provider = null;
 
-    /**
-     * Optional inbox id threaded through from the InboxesPage re-consent
-     * surface. When set, submit()'s redirect target appends
-     * `?inbox_id={id}` so OAuthConnectController binds the resulting
-     * consent dance back to the existing inbox row instead of creating
-     * a fresh one. Null on the first-connect path so the modal stays
-     * backward compatible with call sites (e.g. Plan 03b's wizard
-     * email step) that invoke `open($provider)` with no inbox.
-     */
+    // Optional inbox id threaded through from the InboxesPage
+    // re-consent surface; when set, submit()'s redirect appends
+    // ?inbox_id={id} so the consent dance binds to the existing row
+    // instead of creating a fresh one. Null on the first-connect path.
     public ?int $reconnectInboxId = null;
 
     public string $clientId = '';
@@ -83,17 +50,10 @@ final class OAuthClientWizardModal extends Component
         $this->publishedConfirmed = false;
         $this->errorMessage = '';
 
-        // Once the provider is set, the rendered <flux:modal> picks
-        // up its new name (`oauth-client-wizard-gmail` /
-        // `oauth-client-wizard-microsoft`). Dispatch `modal-show` from
-        // here so the listener inside the modal — which is the only
-        // surface that knows the correct provider-suffixed name —
-        // owns the open. The previous shape had InboxesPage dispatch
-        // `modal-show` directly; that ran before this open() handler,
-        // so when the provider was 'microsoft' the show targeted a
-        // name (`oauth-client-wizard-microsoft`) that did not yet
-        // exist in the DOM (the modal had mounted with the default
-        // gmail-named instance), and the button silently no-op'd.
+        // Dispatches modal-show from here (not from the caller) so it
+        // targets the now-correct oauth-client-wizard-{provider} name
+        // — this component is the only surface that knows its own
+        // provider-suffixed name once $provider is set above.
         if ($this->provider !== null) {
             $this->dispatch('modal-show', name: 'oauth-client-wizard-'.$this->provider);
         }
@@ -123,7 +83,6 @@ final class OAuthClientWizardModal extends Component
                 return null;
             }
         } else {
-            // Google variant validation.
             if ($this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com')) {
                 $this->errorMessage = 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.';
 
@@ -145,12 +104,10 @@ final class OAuthClientWizardModal extends Component
 
         $redirectUri = $loopback->forProvider($provider);
 
-        // Capture the secret into a local so the property can be
-        // wiped BEFORE the external call. A thrown exception during
-        // saveProviderClient therefore cannot leave the secret on the
-        // component instance (which would round-trip back to the
-        // browser inside the wire:snapshot payload on the next
-        // render).
+        // Captures the secret into a local so the property can be
+        // wiped before the external call — a thrown exception then
+        // cannot leave the secret on the component instance, which
+        // would otherwise round-trip inside the wire:snapshot payload.
         $clientId = $this->clientId;
         $clientSecret = $this->clientSecret;
         $this->clientId = '';
@@ -159,28 +116,18 @@ final class OAuthClientWizardModal extends Component
         try {
             $secrets->saveProviderClient($provider, $clientId, $clientSecret, $redirectUri);
         } catch (SecretsWriteFailed) {
-            // Surface the disk-write failure as an inline error so the
-            // user understands what to fix instead of seeing Livewire's
-            // generic "Server error" toast. Re-rendering preserves the
-            // partial wizard state — the user still has to re-paste
-            // the secret (the wipe above is the intentional security
-            // posture) but at least they know why and can act on it.
             $this->errorMessage = 'Could not save your OAuth client to disk — check your secrets-directory permissions and try again.';
 
             return null;
         }
 
         $this->dispatch('modal-close', name: 'oauth-client-wizard-'.$provider);
-        // Always dispatch the "client saved" signal so future call
-        // sites (the onboarding wizard's email step) can react without
-        // a new event-name carve-out per use case.
         $this->dispatch('oauth-client-wizard:saved', provider: $provider);
 
-        // Re-consent flow: thread inbox id back through the connect
-        // route so OAuthConnectController binds the consent dance to
-        // the existing inbox row (preserves inbox_messages + .eml
-        // blobs + cursor). The InboxesPage listener acknowledges the
-        // active oauth_reconsent_required alert in lockstep.
+        // Re-consent flow: threads the inbox id back through the
+        // connect route so the consent dance binds to the existing row
+        // (preserving inbox_messages/.eml blobs/cursor) instead of
+        // creating a fresh one.
         $reconnectInboxId = $this->reconnectInboxId;
         if ($reconnectInboxId !== null && $reconnectInboxId > 0) {
             $this->dispatch('oauth-client-wizard:reconsented', inboxId: $reconnectInboxId);

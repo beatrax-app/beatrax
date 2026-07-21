@@ -24,65 +24,7 @@ use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Throwable;
 
 /**
- * Daily per-user broad-keyword discovery scan.
- *
- * Walks each connected inbox with a broad subject-keyword query
- * (`receipt OR factuur OR betaling OR invoice OR order OR bevestiging`)
- * minus the senders the user has already promoted to known_senders
- * OR explicitly dismissed via the /inboxes panel. New sender metadata
- * lands as `discovered_senders` rows in state='candidate'. The
- * promotion-threshold cap (2 occurrences within 90 days) lives in the
- * panel-rendering query (DiscoveredSenderQuery), NOT here — the job
- * collects every observation so the user has a complete picture in
- * the UI's "shown only above threshold" / "all observations" toggle
- * (the toggle itself is out of scope for Phase 6; the data shape
- * supports it).
- *
- * Discovery-loop invariants (D-121):
- *  - NO .eml blobs are persisted from this surface. The Gmail client
- *    calls `users.messages.get?format=metadata&metadataHeaders=['From','Date']`
- *    so only the From + Date headers cross the wire; the Graph client
- *    uses `$search` with `$select=id,from,subject,receivedDateTime`
- *    so the body never lands on the worker.
- *  - Dismissed and already-added senders are excluded from the query
- *    AND defensively re-filtered client-side; even if a provider's
- *    query syntax fails to honour the exclude list, the in-handler
- *    loop drops the message before any `discovered_senders` upsert.
- *  - Per-message sender_email is lowercased so case-different variants
- *    of the same address (e.g. `Sender@example.com` vs
- *    `sender@example.com`) collapse to one row via the UNIQUE
- *    constraint `(user_id, inbox_id, sender_email)` from Plan 02.
- *
- * Concurrency contract (mirrors BackfillInboxJob / IncrementalScanJob):
- *  - `ShouldBeUnique` keyed on `userId` blocks every second dispatch
- *    for the same user until the worker FINISHES (not just starts).
- *    A queue-level lock that released at handle-entry would let two
- *    workers walk the user's inboxes in parallel and race on the
- *    discovered_senders upsert (occurrence_count would silently
- *    double-count). The unique-lock store is resolved by the shared
- *    LockStore helper from `config('cache.locks_store')`.
- *  - `uniqueFor=600` (10 minutes) matches IncrementalScanJob —
- *    discovery completes in seconds-to-minutes per inbox and the
- *    lock should not linger if a worker crashes.
- *  - `tries=3` + `backoff=[60,300,900]` matches the project-wide
- *    retry envelope.
- *
- * Error envelope:
- *  - `RateLimitedException` on the discovery query → silently abort
- *    the daily run; the next day's scheduler tick will retry. The
- *    daily cadence is forgiving enough that an empty-handed retry
- *    tomorrow is cheaper than burning the per-inbox state-machine
- *    on a transient quota hit (no `.eml` blobs are involved so there
- *    is nothing to clean up).
- *  - Any other Throwable → log nothing (no facade access to Log in
- *    module code) and continue to the next inbox. Discovery is a
- *    best-effort surface — a single inbox's failure must not abort
- *    the per-user pass.
- *
- * Queue-uniqueness lock resolution is delegated to the shared
- * `Modules\Core\Public\Support\LockStore` helper: `uniqueVia()`
- * returns `LockStore::forUniqueJobs()`, which resolves the cache store
- * named by `config('cache.locks_store')`.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 {
@@ -96,14 +38,10 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
     /** @var array<int, int> */
     public array $backoff = [60, 300, 900];
 
-    /**
-     * Locked keyword list for the broad discovery subject filter.
-     * Matches CONTEXT.md D-121 verbatim. The mix of English + Dutch
-     * terms reflects the user's likely receipt-sender pool (PayPal,
-     * ICS Cards, Bol.com, Coolblue, Albert Heijn, etc.).
-     *
-     * @var list<string>
-     */
+    // Locked keyword list for the broad discovery subject filter; the
+    // mix of English + Dutch terms reflects the user's likely
+    // receipt-sender pool (PayPal, ICS Cards, Bol.com, Coolblue, etc.).
+    /** @var list<string> */
     private const DISCOVERY_KEYWORDS = [
         'receipt',
         'factuur',
@@ -113,16 +51,9 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         'bevestiging',
     ];
 
-    /**
-     * Defensive cap on how many pages of discovery candidates this job
-     * walks per inbox per day. 10 pages * 100 candidates/page = 1000
-     * candidate observations per inbox per daily tick — large enough
-     * that a busy inbox's receipt senders are surfaced even when they
-     * sit past the first 100 newest broad-keyword matches, but bounded
-     * enough that a misbehaving provider cannot exhaust the worker's
-     * heap or burn quota for the rest of the day. Mirrors the
-     * FALLBACK_WALK_HARD_CAP semantics in IncrementalScanJob.
-     */
+    // Defensive cap on discovery-candidate pages walked per inbox per
+    // day (see architecture.md for the sizing rationale and the
+    // FALLBACK_WALK_HARD_CAP parallel in IncrementalScanJob).
     private const DISCOVERY_MAX_PAGES = 10;
 
     public function __construct(public readonly int $userId) {}
@@ -151,35 +82,18 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
     ): void {
         $connection = $db->connection();
 
-        // SQLite default behaviour is to raise SQLITE_BUSY immediately
-        // when another writer holds the slot. The daily discovery scan
-        // runs concurrently with the hourly incremental scan (different
-        // ShouldBeUnique keys: per-user vs per-inbox). Without a
-        // busy_timeout, a single contended write would throw mid-loop,
-        // the catch (Throwable) in the per-inbox loop would swallow
-        // it, and the per-user pass would silently abort halfway
-        // through. Setting the pragma once at the connection level
-        // inherits across every subsequent query for the duration of
-        // handle() — every other write path in this module already
-        // sets the same 5-second envelope.
+        // Sets busy_timeout once for the whole handle(): the daily
+        // discovery scan runs concurrently with the hourly incremental
+        // scan (different ShouldBeUnique keys), and without it a
+        // contended write would throw mid-loop and silently abort.
         $connection->statement('PRAGMA busy_timeout = 5000');
 
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
 
-        // 1. Build the exclude list. Two sources of "do not surface
-        //    this sender again":
-        //     - every known_senders pattern (the user already promoted
-        //       it, or the system seed shipped it). Some patterns are
-        //       full addresses (`paypal.com`); others are @-prefixed
-        //       domain suffixes (`@ics.nl`) — both forms pass through
-        //       the provider's exclude operator without translation.
-        //     - every discovered_senders row in state='dismissed' or
-        //       'added' for this user. Both states mean "do not surface
-        //       again": dismissed = user explicitly said no, added =
-        //       user already promoted (and there's now a matching
-        //       known_senders row, but the discovered row stays for
-        //       audit).
+        // Builds the exclude list from known_senders patterns plus
+        // dismissed/added discovered_senders rows (see architecture.md
+        // for why both discovered-sender states mean "do not resurface").
         $knownPatterns = array_map(
             static fn ($s) => $s->emailPattern,
             $senderQuery->all($user),
@@ -197,8 +111,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         }
         $allExcludes = array_values(array_unique(array_merge($knownPatterns, $dismissedSenders)));
 
-        // 2. Enumerate user's connected inboxes. An empty inbox list
-        //    is a no-op early exit — the user has no inboxes to scan.
         $inboxRows = $connection->table('inboxes')
             ->where('user_id', $this->userId)
             ->get(['id', 'provider']);
@@ -228,24 +140,20 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                 );
             } catch (RateLimitedException) {
                 // Discovery is daily — abort silently and retry
-                // tomorrow. No state machine transition because
-                // discovered_senders has no per-inbox lifecycle column;
-                // the absence of new rows for one day is its own
-                // signal.
+                // tomorrow; discovered_senders has no per-inbox
+                // lifecycle column to transition.
                 return;
             } catch (Throwable) {
-                // Best-effort surface — a single inbox failure must
-                // not abort the per-user pass. Logging would require
-                // a facade.
+                // Best-effort surface — one inbox's failure must not
+                // abort the per-user pass.
                 continue;
             }
         }
     }
 
+    // Walks one inbox's discovery results and upserts
+    // discovered_senders rows.
     /**
-     * Walk one inbox's discovery results + upsert discovered_senders
-     * rows.
-     *
      * @param  list<string>  $allExcludes
      */
     private function runDiscoveryForInbox(
@@ -260,11 +168,9 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         $messages = [];
 
         if ($provider === 'gmail') {
-            // Walk pages of discovery candidates up to the defensive
-            // hard cap. Previously the job called listDiscoveryCandidates
-            // exactly once and ignored nextPageToken — for any inbox
-            // whose receipt senders sat past the first 100 newest
-            // broad-keyword matches, discovery silently failed.
+            // Walks pages of discovery candidates up to the defensive
+            // hard cap (see architecture.md for why a single-page call
+            // previously made discovery silently fail on busy inboxes).
             $pageToken = null;
             $pagesWalked = 0;
             do {
@@ -275,13 +181,10 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                     $pageToken,
                 );
                 foreach ($page['messages'] as $msg) {
-                    // Always parse to DateTimeImmutable at the boundary
-                    // so the downstream foreach can rely on one type.
-                    // Defensive narrowing on every field — the contract
-                    // exposes the message entries as
-                    // array<string, mixed> precisely so a future Fake
-                    // variant or a production-side response shape drift
-                    // cannot crash the daily scan.
+                    // Defensively narrows every field to DateTimeImmutable
+                    // at the boundary, since the contract exposes entries
+                    // as array<string, mixed> precisely so a future
+                    // response-shape drift cannot crash the daily scan.
                     $rawAddr = $msg['fromAddress'] ?? null;
                     if (! is_string($rawAddr) || $rawAddr === '') {
                         continue;
@@ -333,12 +236,10 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                         }
                     }
                     $received = $rawMsg['receivedDateTime'] ?? null;
-                    // When the Graph response omits receivedDateTime
-                    // (rare, but possible on malformed entries), fall
-                    // back to the injected clock rather than the magic
-                    // 'now' string literal — keeps the missing-data
-                    // path explicit and avoids piggy-backing on
-                    // DateTimeImmutable's natural-language parser.
+                    // Falls back to the injected clock (not the magic
+                    // 'now' string literal) when Graph omits
+                    // receivedDateTime, keeping the missing-data path
+                    // explicit rather than reaching for natural-language parsing.
                     $internalDate = is_string($received) && $received !== ''
                         ? $this->safeParseDate($received, $clock)
                         : $clock->now()->toDateTimeImmutable();
@@ -356,7 +257,6 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                 && $pagesWalked < self::DISCOVERY_MAX_PAGES
             );
         } else {
-            // Unknown provider — nothing to discover.
             return;
         }
 
@@ -424,11 +324,9 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                 continue;
             }
 
-            // Only resurface candidates — never re-touch a dismissed
-            // OR added row (their `state` is terminal for the
-            // discovery loop). The exclude list above SHOULD have kept
-            // them out of $messages, but this is the second line of
-            // defence at the persistence layer.
+            // Only resurfaces candidates — never re-touches a
+            // dismissed/added row; second line of defence past the
+            // exclude list above.
             $existingState = is_string($existing->state ?? null) ? $existing->state : '';
             if ($existingState !== 'candidate') {
                 continue;
@@ -457,11 +355,9 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    /**
-     * Numeric coercion for raw query-builder column values. SQLite
-     * returns scalars as strings via stdClass attributes; the strict-
-     * rules `cast.int` lint stays happy via the is_numeric guard.
-     */
+    // Numeric coercion for raw query-builder column values: SQLite
+    // returns scalars as strings via stdClass attributes, so this
+    // guards the int cast to keep the strict-rules cast.int lint happy.
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;

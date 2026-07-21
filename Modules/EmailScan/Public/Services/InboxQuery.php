@@ -11,23 +11,10 @@ use Modules\Core\Models\User;
 use Modules\EmailScan\Public\Dto\InboxHealthDto;
 use stdClass;
 
-/**
- * Public read API over inboxes + inbox_scan_state.
- *
- * Hydrates each connected inbox row into an InboxHealthDto by left-
- * joining the per-folder scan-state row on the default INBOX folder.
- * The single LEFT JOIN preserves rows whose scan-state has not been
- * inserted yet (the row may transiently exist when the OAuth callback
- * lands but the background fetcher has not yet stamped the state); the
- * Blade view branches on `lastScanAt === null` to render the "not
- * scanned yet" copy.
- *
- * Every public method scopes to the current user via a `where user_id`
- * clause. `findForUser` returns null when the inbox row belongs to
- * another user — the HTTP layer translates the null into a 404.
- * Direct facade access (`DB::table(...)`) is banned; the constructor-
- * injected DatabaseManager is the only DB touchpoint.
- */
+// Public read API over inboxes + inbox_scan_state: hydrates each
+// inbox row into an InboxHealthDto via a LEFT JOIN on the default
+// INBOX folder's scan-state; findForUser returns null for another
+// user's row so the HTTP layer translates it into a 404.
 final class InboxQuery
 {
     public function __construct(private readonly DatabaseManager $db) {}

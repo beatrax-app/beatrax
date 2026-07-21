@@ -6,16 +6,10 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use RuntimeException;
 
-/**
- * Thrown when a provider's incremental-sync cursor has aged out and
- * must be re-baselined. Maps to Gmail's `users.history.list` returning
- * 404 (the historyId is older than ~7 days of retained history) and to
- * Microsoft Graph's `$delta` returning 410 / `syncStateNotFound` (the
- * delta token is no longer valid).
- *
- * Catch this exception inside the incremental-scan path and fall back
- * to a date-bounded re-scan rather than treating it as a hard error.
- */
+// Thrown when a provider's incremental-sync cursor has aged out:
+// Gmail's users.history.list returning 404 (historyId older than the
+// ~7-day retention window), or Graph's $delta returning 410 /
+// syncStateNotFound. Callers fall back to a date-bounded re-scan.
 final class CursorExpiredException extends RuntimeException
 {
     public static function gmail(string $detail = ''): self

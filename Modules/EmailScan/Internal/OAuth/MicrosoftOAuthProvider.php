@@ -15,38 +15,7 @@ use TheNetworg\OAuth2\Client\Token\AccessToken as AzureAccessToken;
 use Throwable;
 
 /**
- * Thin wrapper over TheNetworg\OAuth2\Client\Provider\Azure.
- *
- * Owns three concerns the rest of the module relies on:
- *
- *  1. Reading the per-install Azure client id + secret out of the
- *     chmod-600 JSON repository on every call so the controller
- *     never holds credentials in memory across requests.
- *  2. Mapping the league library's IdentityProviderException to the
- *     module's two typed sentinels (InvalidGrantException for the
- *     needs_reauth transition; OAuthExchangeFailed for everything
- *     else) without ever including the raw token or request body in
- *     the message.
- *  3. Always requesting the Mail.Read + offline_access + User.Read
- *     scopes against tenant=common with defaultEndPointVersion=2.0
- *     and prompt=consent so Azure issues a refresh token on every
- *     consent — required for the always-on background scanner.
- *
- * Microsoft Graph refresh tokens are single-use: every refresh-token
- * exchange rotates the refresh_token. The caller persists the new
- * refresh token via OAuthSecretsRepository::rotateRefreshToken.
- *
- * Per the project's DI invariant, the underlying Azure provider is
- * instantiated per call rather than cached as a constructor property
- * because the redirect URI is computed by the caller and may differ
- * across reconnect flows. The chmod-600 read is cheap enough (single
- * file, ~1KB) that the per-call cost is not worth memoising.
- *
- * The class is non-final so the feature tests can substitute a stub
- * subclass via $this->app->instance(...). The contract is enforced
- * by the singleton binding + the constructor signature, not by the
- * final modifier — same pattern OAuthSecretsRepository uses for its
- * performRename() failure-injection hook.
+ * @link ../../../../.docs/features/email-scan/architecture.md
  */
 class MicrosoftOAuthProvider
 {

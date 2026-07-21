@@ -9,17 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// Re-runs of the discovery scan are idempotent via the (user_id,
+// inbox_id, sender_email) UNIQUE key: the row is either inserted new
+// or its occurrence_count + last_seen_at are bumped. The discovery
+// scan suppresses rows already in 'added' or 'dismissed'.
 /**
- * Eloquent model for the discovered_senders table — the candidate
- * queue the discovery-scan job appends to whenever it observes a
- * sender the user has not yet curated into known_senders.
- *
- * Re-runs of the discovery scan are idempotent via the (user_id,
- * inbox_id, sender_email) UNIQUE key — the row is either inserted
- * new or its occurrence_count + last_seen_at are bumped. The `state`
- * column drives the promotion UI; the discovery scan suppresses rows
- * already in 'added' or 'dismissed' on subsequent runs.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $inbox_id
