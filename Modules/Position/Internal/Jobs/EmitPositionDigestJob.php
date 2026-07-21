@@ -24,48 +24,7 @@ use Modules\Position\Public\Events\PositionDigestDue;
 use Modules\Position\Public\Services\PositionQuery;
 
 /**
- * Cadence-aware position digest emission (Req 5).
- *
- * The cadence is a CONSTRUCTOR PARAMETER, resolved by the scheduler entry
- * (plan 18-14) which reads the Notifications module's per-device
- * preferences and dispatches this job — this module itself never reads
- * that other module's preference-query service; doing so would violate
- * D-38 invariant 1 (Position must stay ignorant of Notifications).
- *
- * Body (D-21 / D-06):
- *   1. `cadence === 'off'` -> return immediately, dispatch nothing (Req 5's
- *      'off' case).
- *   2. Compute the D-06 occurrence key from the injected `Clock` (never
- *      `now()` directly, so `CarbonImmutable::setTestNow()` drives it).
- *   3. `PositionQuery::forUser()`.
- *   4. Dispatch exactly ONE `PositionDigestDue` — UNCONDITIONALLY, even
- *      when nothing is notable. There is no "is anything interesting?"
- *      gate: the digest IS the ritual (D-21), and adding one would make
- *      Req 5's cadence acceptance test ambiguous.
- *
- * Per-user job shape cloned from `SafetyNetAnomalySweepJob` +
- * `CounterpartyGarbageCollectorJob`'s `ShouldBeUniqueUntilProcessing` triad
- * verbatim. `uniqueId()` includes the cadence so a daily and a weekly run
- * for the same user can never lock each other out.
- *
- * Period resolution: `PositionQuery::forUser()` needs a `Period`, and
- * (transitively, via `BudgetProgressQuery::forCurrentPeriod()`) resolves
- * ANOTHER `Period` of its own — both paths go through
- * `Modules\Ledger\Public\Services\PeriodQuery`, which is bound to the
- * request-scoped `CurrentUser` contract (the authenticated web guard user).
- * There is no authenticated guard user in a queue/console context. This job
- * therefore reuses `EmitBudgetNudgesJob`'s exact precedent (18-07): for the
- * duration of the composition call only, the loaded `$user` is bound onto
- * the default auth guard (`CurrentUserService` is a thin, uncached
- * pass-through to that guard, so every `CurrentUser` read reached
- * transitively during the call resolves to `$user`), and the guard's prior
- * state is restored in a `finally` block — this job never leaves a queue
- * worker process with another user's identity bound to the guard after it
- * returns.
- *
- * Explicit user scoping throughout; no transaction wraps the dispatch
- * (D-28 / WR-06) — the event dispatch happens strictly after
- * `PositionQuery`'s reads, never inside an open write transaction.
+ * @link ../../../../.docs/features/position/architecture.md
  */
 final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -131,9 +90,8 @@ final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, Shou
             },
         );
 
-        // D-21: dispatch UNCONDITIONALLY — no "is anything interesting?"
-        // gate. The digest IS the ritual; "nothing notable" is itself the
-        // reassurance the notification carries.
+        // Dispatch unconditionally — no "is anything interesting?" gate.
+        // The digest itself is the reassurance the notification carries.
         $events->dispatch(new PositionDigestDue(
             userId: $this->userId,
             cadence: $this->cadence,
@@ -143,18 +101,7 @@ final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, Shou
     }
 
     /**
-     * Runs `$callback` with `$user` bound to the default auth guard, so any
-     * `CurrentUser` read reached transitively during the call (via
-     * `PositionQuery` -> `PeriodQuery` / `BudgetProgressQuery` ->
-     * `CurrentUserService` -> the guard) resolves to `$user` rather than
-     * throwing `NotAuthenticatedException`. Always restores the guard's
-     * prior state in a `finally` — a real previous user is set back via
-     * `setUser()`; an unauthenticated prior state is cleared back via
-     * `SessionGuard::forgetUser()` when the resolved guard is the app's
-     * configured session guard (the only guard driver this project runs),
-     * otherwise left as-is rather than risking an unsupported mutation on
-     * an unknown guard implementation. Cloned verbatim from
-     * `EmitBudgetNudgesJob` (18-07).
+     * @link ../../../../.docs/features/position/architecture.md
      *
      * @template T
      *
