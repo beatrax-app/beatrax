@@ -11,23 +11,8 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 
-/**
- * The `/signup` route landing — the first-user creation form.
- *
- * The page is only reachable while the device has no users; the route
- * guard returns a 404 once one exists. On submit the page confirms the
- * two password fields match, then delegates to SignupAction, which
- * creates the owner account, logs them in, and stashes the ten recovery
- * codes in the session. A successful submit redirects to the first-run
- * setup wizard at `/setup`; the wizard's Done step links onward to
- * the recovery-codes display ceremony while the plaintext codes are
- * still in the session. A validation failure renders a single inline
- * error line and clears both password fields so the plaintext never
- * re-enters the component snapshot.
- *
- * Constructor-free Livewire component; service collaborators arrive as
- * parameters on the action method and render().
- */
+// Only reachable while the device has no users; the route guard returns
+// a 404 once one exists.
 final class SignupPage extends Component
 {
     public string $username = '';
@@ -71,10 +56,6 @@ final class SignupPage extends Component
         return $view;
     }
 
-    /**
-     * Extracts the first message of the first failing field so the page
-     * can render a single inline error line.
-     */
     private static function firstErrorMessage(ValidationException $exception): string
     {
         /** @var array<string, mixed> $errors */

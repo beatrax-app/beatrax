@@ -11,18 +11,8 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * The `/settings/users/new` route landing — the owner-adds-partner form.
- *
- * The route is developer-gated; this page collects a username and an
- * initial password, confirms the two password fields match, then
- * delegates to AddUserAction. On success the page flashes the created
- * username and clears the form; the partner's recovery codes are never
- * shown to the owner — the partner sees them after their first sign-in.
- *
- * Constructor-free Livewire component; service collaborators arrive as
- * parameters on the action method and render().
- */
+// The partner's recovery codes are never shown to the owner -- the
+// partner sees them after their own first sign-in.
 final class AddUserPage extends Component
 {
     public string $username = '';
@@ -72,10 +62,6 @@ final class AddUserPage extends Component
         $this->initialPasswordConfirmation = '';
     }
 
-    /**
-     * Extracts the first message of the first failing field so the page
-     * can render a single inline error line.
-     */
     private static function firstErrorMessage(ValidationException $exception): string
     {
         /** @var array<string, mixed> $errors */

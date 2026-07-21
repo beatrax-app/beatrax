@@ -12,18 +12,8 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * The `/change-password` route landing — the forced-password-change form.
- *
- * ForcePasswordChangeMiddleware redirects a user carrying the
- * force_password_change_at_next_login flag here. The user confirms their
- * current password, then sets a new one of at least twelve characters.
- * On success the new password is hashed onto the user row, the force
- * flag is cleared, and the user is sent to the dashboard.
- *
- * Constructor-free Livewire component; service collaborators arrive as
- * parameters on the action method and render().
- */
+// ForcePasswordChangeMiddleware redirects a user carrying the
+// force_password_change_at_next_login flag here.
 final class ChangePasswordPage extends Component
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;

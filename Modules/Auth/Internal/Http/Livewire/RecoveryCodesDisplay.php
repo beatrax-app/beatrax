@@ -15,25 +15,11 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * The `/recovery-codes` route landing — the one-time recovery-code
- * display ceremony shown immediately after signup.
- *
- * The plaintext codes are read from the session key the SignupAction
- * stashed; reaching the page without that key (a back-navigation or a
- * direct visit) yields a 404. The codes are never stored on a public
- * component property — every method reads them fresh from the session,
- * so the plaintext never round-trips to the browser wire snapshot. The
- * page offers a `.txt` download and gates its Continue button on a
- * checkbox; completing the ceremony forgets the session key so the codes
- * can never be shown again.
- *
- * Constructor-free Livewire component; service collaborators arrive as
- * parameters on the lifecycle / action methods and render().
- */
+// The plaintext codes are never stored on a public component property --
+// every method reads them fresh from the session, so the plaintext never
+// round-trips to the browser wire snapshot.
 final class RecoveryCodesDisplay extends Component
 {
-    /** Session key under which SignupAction stashes the plaintext codes. */
     private const SESSION_KEY = 'auth.signup.recovery_codes_plain';
 
     public bool $confirmed = false;
@@ -88,9 +74,6 @@ final class RecoveryCodesDisplay extends Component
     }
 
     /**
-     * Reads the stashed plaintext codes from the session, or throws a
-     * 404 when the ceremony key is absent.
-     *
      * @return list<string>
      */
     private function codesFromSession(Session $session): array
