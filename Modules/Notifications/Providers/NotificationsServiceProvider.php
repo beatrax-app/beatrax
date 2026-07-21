@@ -24,38 +24,7 @@ use Modules\Notifications\Public\Services\NotificationQuery;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 
 /**
- * Wires the Notifications module.
- *
- * Per D-26 the notification store must boot on web, artisan AND mobile —
- * unlike `Modules\Desktop`, this provider is NEVER `class_exists`-guarded
- * for its OWN classes.
- *
- * register() binds every stateless in-tree service as a singleton: the
- * store's sole mutator (`NotificationStateMachine`), the single
- * deterministic key-derivation site (`DeterministicKeyDeriver`), the
- * idempotent writer (`NotificationWriter`), the inbox read model
- * (`NotificationQuery`), and the three lifecycle actions.
- *
- * boot() conditionally loads the module's migrations, routes, and views via
- * `is_dir`/`is_file` guards, and — per this plan's
- * <planner_decisions> — is the SINGLE OWNER of the trigger-listener
- * registrations for the whole phase (plans 18-06..18-11 add ONLY their
- * listener classes; none of them may edit this file). Phase 19 (19-16)
- * legitimately extends this ownership with a 9th guarded pair
- * (`PersistIcsStatementReady` / `IcsStatementReady`) rather than creating a
- * parallel registration site. Every registration is
- * guarded on BOTH the listener class and the trigger event class existing,
- * each referenced by a runtime-built FQCN string constant (never `::class`
- * on a not-yet-existing class) so PHPStan does not fold the `class_exists()`
- * guard to an impossible type — mirrors `AnomalyServiceProvider`'s guarded-
- * subscription pattern and the runtime-FQCN idiom already established by
- * `BudgetsServiceProvider`/`ReportsServiceProvider`/`MigrationServiceProvider`.
- *
- * Trigger event ownership (D-28 inversion, this plan's <planner_decisions>
- * §1): every trigger event class lives in the TRIGGER module's own
- * `Public\Events` namespace, never in `Modules\Notifications\Public\Events`
- * — `NotificationDeliverable` is the sole exception, because Notifications
- * is its producer.
+ * @link ../../../.docs/features/notifications/architecture.md
  */
 final class NotificationsServiceProvider extends ServiceProvider
 {
@@ -91,7 +60,6 @@ final class NotificationsServiceProvider extends ServiceProvider
 
     private const EVENT_FORECAST_SHORTFALL_DETECTED = 'Modules\Forecasting\Public\Events\ForecastShortfallDetected';
 
-    /** Phase 19 (Req 14, D-14/D-15) — the 9th guarded pair, legitimately extending this single-owner file. */
     private const LISTENER_PERSIST_ICS_STATEMENT_READY = 'Modules\Notifications\Internal\Listeners\PersistIcsStatementReady';
 
     private const EVENT_ICS_STATEMENT_READY = 'Modules\EmailScan\Public\Events\IcsStatementReady';
@@ -108,8 +76,8 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(DismissNotification::class);
         $this->app->singleton(UndoDismissNotification::class);
 
-        // 18-12: the /notifications inbox's render-time deep-link
-        // existence check (D-25).
+        // The /notifications inbox's render-time deep-link existence
+        // check.
         $this->app->singleton(DeepLinkResolver::class);
     }
 
@@ -125,11 +93,7 @@ final class NotificationsServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'notifications');
         }
 
-        // 18-12: the /notifications inbox Livewire SFC + its nav-badge
-        // unread count (D-03).
         $livewire->component('notifications.page', NotificationsPage::class);
-
-        // 18-13: the Settings "Notifications" section (D-36).
         $livewire->component('notifications.settings-section', NotificationsSettingsSection::class);
 
         $this->registerNavBadgeComposer();
@@ -137,20 +101,10 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->registerTriggerListeners($events);
     }
 
-    /**
-     * Injects the D-03 unread count into the sidebar nav as
-     * `navCounts['notifications']` via the View Factory contract (the
-     * global `view()` helper is forbidden in module code). Cloned from
-     * `AnomalyServiceProvider::registerNavBadgeComposer()` verbatim,
-     * swapping `AnomalyAlertQuery::openCountForUser` for
-     * `NotificationQuery::unreadCountForUser` — including BOTH load-
-     * bearing details of that clone: the boot-scoped per-user memo array
-     * that collapses repeated renders to one COUNT query, and the
-     * unauthenticated-user branch that zeroes the count BEFORE the
-     * `CurrentUser::user()` call (T-18-51 — the count reads only
-     * plaintext `read_at`/`dismissed_at` columns, so it also works on a
-     * locked, KEK-less device).
-     */
+    // Injects the unread count into the sidebar nav as
+    // navCounts['notifications'] via the View Factory contract. A
+    // boot-scoped per-user memo array collapses repeated renders to one
+    // COUNT query; the unauthenticated branch zeroes the count first.
     private function registerNavBadgeComposer(): void
     {
         $app = $this->app;
@@ -184,14 +138,9 @@ final class NotificationsServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * The guarded listener registrations (originally eight, this plan's
-     * <planner_decisions> §2; Phase 19 (19-16) adds a 9th) — none of these
-     * listener classes exist yet, and several of the trigger event classes
-     * do not either. An unguarded reference would fatal the boot; every
-     * pair is checked with `class_exists()` before `Dispatcher::listen()`
-     * is ever called.
-     */
+    // Not every listener class or trigger event class necessarily
+    // exists yet - an unguarded reference would fatal the boot, so every
+    // pair is checked with class_exists() before Dispatcher::listen() runs.
     private function registerTriggerListeners(Dispatcher $events): void
     {
         if (class_exists(self::LISTENER_PERSIST_PAYMENT_REMINDER) && class_exists(self::EVENT_PAYMENT_REMINDER_DUE)) {

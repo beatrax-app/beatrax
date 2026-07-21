@@ -12,47 +12,14 @@ use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Psr\Log\LoggerInterface;
 
 /**
- * The ONE place notification-delivery suppression is decided (D-38
- * invariant 4). Both `DispatchOsNotification` (18-11) and
- * `DispatchMobileNotification` (18-15) call `shouldDeliver()`; plan 18-17's
- * BoundaryArchTest proves nothing else evaluates toggles / quiet hours /
- * the seeding flag.
- *
- * Lives on the module's `Public\Services` surface (relocated from
- * `Internal\Support` during 18-11) because both consumers are OTHER
- * modules' delivery adapters — `Modules\Desktop` and (18-15)
- * `Modules\Mobile` — and the cross-module `BoundaryRule` only admits
- * `Public\*` / `Models\*` imports. `DeliveryDecision` moved alongside it to
- * `Public\Dto` for the same reason: an adapter that cannot see the return
- * type cannot call the method.
- *
- * D-08 / Req 9 shared contract (binding): this class decides DELIVERY only.
- * It NEVER prevents a notification row from being written and nothing is
- * ever silently dropped — a suppressed decision means "store the row but do
- * not push it to the OS", exactly D-08's per-trigger and D-43's seeding
- * semantics. The writer (18-05) always persists the row regardless of what
- * this returns.
- *
- * Preferences are read via `NotificationPreferenceQuery::forCurrentDevice()`
- * so an unpaired / preference-less device transparently gets the D-16/D-19
- * defaults, never an error.
- *
- * The instance-level seeding flag (D-43) is scoped here — NOT in each
- * delivery adapter — so "store but do not deliver" has exactly one home
- * (D-38 invariant 4) and plans 18-11/18-15 never both edit a shared helper.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class SuppressionEvaluator
 {
-    /**
-     * Trigger types that carry no D-36 control-list toggle — always
-     * deliverable. `TRIGGER_ICS_STATEMENT_READY` (Phase 19, Req 14) joins
-     * this set rather than `triggerEnabled()`'s default arm: this plan
-     * introduces no new NotificationPreferencesDto field for it, and the
-     * default arm's "unrecognised trigger" fallback silently suppresses
-     * delivery + logs a warning on every single fire — the correct
-     * behaviour for a genuinely forgotten pref-wiring bug, not for a
-     * trigger that intentionally has no per-trigger toggle yet.
-     */
+    // Trigger types that carry no control-list toggle - always
+    // deliverable, rather than falling into triggerEnabled()'s default
+    // arm, whose "unrecognised trigger" fallback suppresses + logs a
+    // warning for a genuinely forgotten pref-wiring bug.
     private const ALWAYS_DELIVERABLE = [
         DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
         DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
@@ -68,19 +35,10 @@ final class SuppressionEvaluator
         private readonly LoggerInterface $logger,
     ) {}
 
-    /**
-     * Decides whether $triggerType should be delivered on THIS device at
-     * $at, and whether financial detail must be hidden (D-24).
-     *
-     * Evaluation order (D-08/D-19/D-43):
-     *   1. seeding flag set        -> suppress, reason 'seeding'
-     *   2. per-trigger toggle off  -> suppress, reason 'trigger_disabled'
-     *   3. inside quiet-hours      -> suppress, reason 'quiet_hours'
-     *   4. otherwise               -> deliver,  reason 'ok'
-     *
-     * `hideDetails` always reflects the stored preference, regardless of
-     * the deliver outcome.
-     */
+    // Evaluation order: seeding -> suppress 'seeding'; per-trigger
+    // toggle off -> suppress 'trigger_disabled'; inside quiet-hours ->
+    // suppress 'quiet_hours'; otherwise -> deliver 'ok'. hideDetails
+    // always reflects the stored preference regardless of the outcome.
     public function shouldDeliver(int $userId, string $triggerType, CarbonImmutable $at): DeliveryDecision
     {
         /** @var User $user */
@@ -103,12 +61,11 @@ final class SuppressionEvaluator
         return new DeliveryDecision(true, 'ok', $prefs->hideDetails);
     }
 
+    // Runs $callback with delivery globally suppressed, restoring the
+    // prior flag value in a finally (reentrant-safe). The demo seeder
+    // and feature tests wrap their event dispatch in this so rows are
+    // stored but never pushed to the OS.
     /**
-     * The D-43 seeding/test suppression flag. Runs $callback with delivery
-     * globally suppressed, restoring the PRIOR flag value in a `finally`
-     * (reentrant-safe). The seeder (18-16) and feature tests wrap their
-     * event dispatch in this so rows are stored but never pushed to the OS.
-     *
      * @template T
      *
      * @param  callable(): T  $callback
@@ -137,10 +94,9 @@ final class SuppressionEvaluator
             DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE => $prefs->budgetNudgesEnabled,
             DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT => $prefs->savingsPromptsEnabled,
             DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST => $prefs->digestCadence !== 'off',
-            // No permissive default arm (T-18-10): an unrecognised trigger
-            // type fails LOUDLY at review rather than silently bypassing
-            // every toggle and quiet-hours window. Treated as NOT deliverable
-            // and logged so a future ninth type cannot slip through.
+            // No permissive default arm: an unrecognised trigger type
+            // fails loudly at review rather than silently bypassing
+            // every toggle and quiet-hours window.
             default => $this->rejectUnknownTrigger($triggerType),
         };
     }
@@ -155,12 +111,10 @@ final class SuppressionEvaluator
         return false;
     }
 
-    /**
-     * True when $at's local time falls inside the half-open window
-     * `[quiet_hours_from, quiet_hours_to)`. Handles the wrap-around case
-     * (22:00-08:00 spans midnight): when `from > to`, the window is
-     * `time >= from OR time < to`.
-     */
+    // True when $at's local time falls inside the half-open window
+    // [quiet_hours_from, quiet_hours_to). Handles the wrap-around case
+    // (22:00-08:00 spans midnight): when from > to, the window is
+    // time >= from OR time < to.
     private function insideQuietHours(NotificationPreferencesDto $prefs, CarbonImmutable $at): bool
     {
         if (! $prefs->quietHoursEnabled) {
@@ -184,7 +138,6 @@ final class SuppressionEvaluator
             return $now >= $from && $now < $to;
         }
 
-        // Wrap-around window (spans midnight).
         return $now >= $from || $now < $to;
     }
 }

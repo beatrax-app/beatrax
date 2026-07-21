@@ -16,41 +16,19 @@ use Modules\Notifications\Public\Actions\UndoDismissNotification;
 use Modules\Notifications\Public\Services\NotificationQuery;
 
 /**
- * `/notifications` — the unified notification center (Req 2, D-01). ONE
- * lifecycle dimension (Unread / All / Dismissed, D-04) — D-02 is explicit
- * that this surface must NOT grow a second Level-1 type switch like
- * `DriftPage`'s; `/drift` stays the separate charges-that-changed surface.
- *
- * NO constructor DI — `Component` subclasses are banned from it by
- * phpstan-strict-rules. Every collaborator arrives as a parameter on the
- * action methods and `render()`, exactly like `DriftPage`.
- *
- * Every action re-resolves the user from `CurrentUser` and passes it to
- * the Public action — the notification id arriving from the Livewire
- * payload is NEVER treated as an authorization boundary (the sha256 PK is
- * matched only in a `WHERE` dedup clause; every Public action carries its
- * own explicit `user_id` scope, T-18-48).
- *
- * D-25 / Req 14: every row's deep link is re-validated at RENDER time via
- * `DeepLinkResolver` — never cached from write time — so a target deleted
- * after delivery degrades to a disabled, explained link instead of a 404.
+ * @link ../../../../../.docs/features/notifications/architecture.md
  */
 final class NotificationsPage extends Component
 {
     private const TABS = ['unread', 'all', 'dismissed'];
 
-    /**
-     * Active tab. Three values: unread (default) / all / dismissed.
-     * Whitelist-validated (D-04) — a tampered value falls back to
-     * 'unread' rather than throwing.
-     */
+    // Whitelist-validated - a tampered value falls back to 'unread'
+    // rather than throwing.
     #[Url(as: 'tab', except: 'unread')]
     public string $tab = 'unread';
 
-    /**
-     * Opaque compound `(created_at, id)` cursor (D-05's string PK is not
-     * insertion-ordered) — a STRING cursor, unlike `DriftPage`'s `?int`.
-     */
+    // Opaque compound (created_at, id) cursor - a string cursor, since
+    // the sha256 PK is not insertion-ordered.
     public ?string $cursor = null;
 
     public function setTab(string $tab): void
@@ -72,8 +50,8 @@ final class NotificationsPage extends Component
     {
         $action($notificationId, $currentUser->user());
 
-        // D-10: reversible, no confirmation gate. The undo toast mirrors
-        // the DriftAlerts/Anomaly dismiss-with-undo convention.
+        // Reversible, no confirmation gate - mirrors the
+        // DriftAlerts/Anomaly dismiss-with-undo convention.
         $this->dispatch('toast', message: 'Dismissed — Undo', undo: 'undoDismiss', undoArg: $notificationId);
     }
 

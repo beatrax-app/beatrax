@@ -11,9 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Eloquent model for the `notification_preferences` table — one row per
- * (user, device) pair (D-34). `NotificationPreferenceQuery` is the sole
- * Public read/write surface; direct model access stays inside this module.
+ * @link ../../../.docs/features/notifications/architecture.md
  *
  * @property int $id
  * @property int $user_id

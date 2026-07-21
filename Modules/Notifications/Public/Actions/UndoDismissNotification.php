@@ -12,14 +12,7 @@ use Modules\Sync\Public\Events\NotificationMutated;
 use stdClass;
 
 /**
- * Nulls `dismissed_at` — the reverse edge of `DismissNotification` (D-10).
- *
- * A no-op (no write, no event) when the row is not currently dismissed or
- * does not belong to the caller — every query carries an explicit
- * `->where('user_id', ...)` (T-18-16).
- *
- * Does not touch `notifications.state` — that column is
- * `NotificationStateMachine`'s exclusive concern.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class UndoDismissNotification
 {

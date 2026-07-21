@@ -13,27 +13,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Persists Req 3's forecast-shortfall reactive notification into the
- * unified inbox.
- *
- * Subscribes to `Modules\Forecasting\Public\Events\ForecastShortfallDetected`
- * — an EXISTING event that already fires; registered by
- * `NotificationsServiceProvider`'s guarded listener table (18-05); this
- * class's exact name/namespace is what flips that guard on.
- *
- * The body copy is ported VERBATIM from
- * `Modules\Desktop\Internal\Listeners\DispatchOsNotification::handleForecastShortfall()`
- * — the phrasing is locked, this phase persists and governs it, it does not
- * reword it (D-29).
- *
- * The occurrence key is the shortfall window's start date
- * (`$event->startsAt`), so one shortfall per date yields one row — the same
- * shortfall re-detected for the same start date re-derives the same
- * notification id, absorbed by `NotificationWriter`'s `insertOrIgnore`.
- *
- * The whole handler body is wrapped in the never-throw envelope (D-07),
- * cloned from `SyncCaptureListener::handle()`: a failed notification-persist
- * must NEVER break the originating shortfall-detection run.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class PersistForecastShortfall
 {
@@ -57,8 +37,8 @@ final class PersistForecastShortfall
                 deepLinkRoute: $this->urls->route('forecast.index'),
             );
         } catch (Throwable $e) {
-            // Swallow — a failed persist must NEVER break the originating
-            // shortfall-detection run (D-07).
+            // Swallow - a failed persist must never break the
+            // originating shortfall-detection run.
             $this->log->error('PersistForecastShortfall: failed to persist forecast shortfall notification', [
                 'exception' => $e->getMessage(),
                 'accountId' => $event->accountId,

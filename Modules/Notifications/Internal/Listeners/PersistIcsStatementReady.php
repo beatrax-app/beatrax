@@ -14,33 +14,7 @@ use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Throwable;
 
 /**
- * Persists Req 14's ICS "statement ready" nudge into the unified inbox
- * (D-14/D-15).
- *
- * Subscribes to `Modules\EmailScan\Public\Events\IcsStatementReady` —
- * registered by `NotificationsServiceProvider`'s guarded listener table
- * (the 9th pair, extending the Phase 18 single-owner registration site);
- * this class's exact name/namespace is what flips that guard on.
- *
- * `subjectKey` is the static `'ics-card'` (there is one ICS card per user
- * in this project's model); `occurrence` is the statement-arrival DAY
- * (`Y-m-d`), NOT the message id — so at most one ICS nudge fires per
- * (user, statement-arrival-DAY). A bank-side resend or the detector
- * re-scanning the same row on a later tick lands on the same day key and
- * dedups idempotently, while two DISTINCT statements arriving on different
- * days in the same calendar month no longer collide into one nudge (WR-12;
- * D-15 "fires once per statement, not per message" — 19-RESEARCH.md
- * Pitfall 4). `params.target_kind = 'ics-import'`
- * mirrors `PersistCoalescedImport`'s no-deletable-entity `'inbox'`/`'import'`
- * shape — `DeepLinkResolver::ALWAYS_LIVE_KINDS` resolves it to the same
- * `settings.open-banking#ics-import` anchor passed as `deepLinkRoute`
- * below, so both the OS-push deep link AND the `/notifications` inbox's
- * render-time link point at the same place.
- *
- * The whole handler body is wrapped in the never-throw envelope (D-07),
- * cloned from `PersistPaymentReminder::handle()`: a failed
- * notification-persist must NEVER break the originating
- * `DetectIcsStatementReadyJob` run.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class PersistIcsStatementReady
 {
@@ -52,13 +26,10 @@ final class PersistIcsStatementReady
 
     public function handle(IcsStatementReady $event): void
     {
-        // WR-15: resolve the deep link FIRST, tolerating a missing
-        // settings.open-banking route (OpenBanking is optional and may be
-        // disabled/unregistered). Evaluating route() inside the write()
-        // call would let a RouteNotFoundException abort the persist
-        // entirely — violating the store's "never prevent a row from being
-        // written" invariant — so a failed lookup degrades to a null (no)
-        // deep link instead.
+        // Resolve the deep link FIRST, tolerating a missing route
+        // (OpenBanking is optional and may be disabled/unregistered).
+        // Evaluating route() inside the write() call would let a
+        // RouteNotFoundException abort the persist entirely.
         $deepLinkRoute = $this->resolveDeepLinkRoute();
 
         try {
@@ -73,8 +44,8 @@ final class PersistIcsStatementReady
                 deepLinkRoute: $deepLinkRoute,
             );
         } catch (Throwable $e) {
-            // Swallow — a failed persist must NEVER break the originating
-            // detector job run (D-07).
+            // Swallow - a failed persist must never break the
+            // originating detector job run.
             $this->log->error('PersistIcsStatementReady: failed to persist nudge', [
                 'exception' => $e->getMessage(),
                 'userId' => $event->userId,
@@ -82,12 +53,9 @@ final class PersistIcsStatementReady
         }
     }
 
-    /**
-     * The ICS nudge is conceptually independent of the OpenBanking module,
-     * so a missing `settings.open-banking` route (module disabled/route
-     * unregistered) must degrade to "no deep link", never stop the row
-     * being written (WR-15).
-     */
+    // The ICS nudge is conceptually independent of the OpenBanking
+    // module, so a missing route (module disabled/route unregistered)
+    // must degrade to "no deep link", never stop the row being written.
     private function resolveDeepLinkRoute(): ?string
     {
         try {

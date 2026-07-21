@@ -29,63 +29,7 @@ use Modules\Recurring\Public\Events\PaymentSettled;
 use stdClass;
 
 /**
- * Materialises a realistic, MIXED demo inbox (D-41) for the primary demo
- * user — every one of the 8 trigger types, mostly read with a few unread, a
- * couple dismissed, a resolved/withdrawn reminder, and a dead-link entry —
- * so every interesting inbox state a UAT reviewer needs to see actually has
- * a row to look at.
- *
- * **D-42 (the faithful path):** this seeder never persists a row directly
- * and never reaches for the module's internal writer/model surface. It
- * DISPATCHES the real trigger events (`PaymentReminderDue`, `PaymentSettled`,
- * `BudgetThresholdCrossed`, `SavingsPromptDue`, `PositionDigestDue`,
- * `DriftAlertOpened`, `ForecastShortfallDetected`, `TransactionBatchImported`)
- * and lets the REAL `Persist*` listeners (18-05..18-11) derive the
- * deterministic key and write the row — the same code path production
- * traffic runs through.
- *
- * **D-43 (never deliver):** the ENTIRE run is wrapped in
- * `SuppressionEvaluator::suppressDelivery()` — the one flag both delivery
- * adapters (`Modules\Desktop\DispatchOsNotification`,
- * `Modules\Mobile\DispatchMobileNotification`) check before touching the
- * OS. Seeding must never fire a real OS/mobile notification, explicitly,
- * rather than relying on either adapter happening not to boot under
- * artisan.
- *
- * **Timestamp control:** the module's write path stamps `created_at`/
- * `updated_at` from the injected `Clock` (`SystemClock::now()` delegates to
- * `CarbonImmutable::now()`), and `PersistCoalescedImport` derives the import
- * occurrence key from that same clock. Every dispatch in this seeder
- * therefore runs with `CarbonImmutable::setTestNow()` pinned to a specific
- * past instant — computed ONCE from the real "now" captured at the top of
- * `run()`, never recomputed while frozen — so (a) `created_at` spreads
- * naturally across recent days for the inbox's relative timestamps, and (b)
- * a second `demo:seed` run derives the byte-identical occurrence key for the
- * timestamp-based import trigger (18-10), collapsing via the writer's
- * idempotent insert exactly like every other trigger's stable occurrence
- * key. The previous test-now value (if any) is always restored in a
- * `finally` block.
- *
- * **Ordering:** registered in `App\Console\Commands\DemoSeedCommand` AFTER
- * the recurring-series, envelope-budget, counterparty and drift-alert
- * seeders — this seeder references existing series/category/account/
- * drift-alert rows created by those earlier steps (a series id, a category
- * id, an account slug, an already-`open` drift alert). Seeding before them
- * would make the intentional dead-link case (a series id that was NEVER
- * seeded) indistinguishable from an accidentally-broken reference to a
- * not-yet-seeded live one.
- *
- * **Deviation from the plan's stated file path:** 18-16-PLAN.md names
- * `Modules\Core\Database\Seeders\DemoSeeder` as the registration site. No
- * such class exists in this codebase — the demo pipeline is orchestrated by
- * `App\Console\Commands\DemoSeedCommand` (constructor-injected seeder list,
- * `demo:seed` artisan command). This seeder is registered there instead
- * (Rule 3 auto-fix: the referenced file does not exist).
- *
- * Idempotency falls out of D-05 (deterministic sha256 PK) plus every
- * `Persist*` listener's `insertOrIgnore` — re-running `run()` derives the
- * same ids for the same inputs and is a silent no-op the second time. No
- * truncate, no existence pre-check.
+ * @link ../../../../../.docs/features/notifications/architecture.md
  */
 final class DemoNotificationsSeeder
 {
@@ -111,12 +55,10 @@ final class DemoNotificationsSeeder
         $primary = $users['demo-1@beatrax.local'] ?? null;
 
         if ($primary !== null) {
-            // Captured ONCE, before any CarbonImmutable::setTestNow() call —
-            // every business-date computation below (due dates, drift ages,
-            // forecast windows, category periods) derives from this single
-            // real-time snapshot so it stays stable across two runs on the
-            // same calendar day, matching the sibling demo seeders'
-            // CarbonImmutable::today() convention.
+            // Captured once, before any setTestNow() call - every
+            // business-date computation below derives from this single
+            // real-time snapshot so it stays stable across two runs on
+            // the same calendar day.
             $realToday = CarbonImmutable::today();
             $previousTestNow = CarbonImmutable::hasTestNow() ? CarbonImmutable::getTestNow() : null;
 
@@ -138,16 +80,13 @@ final class DemoNotificationsSeeder
             ->count();
     }
 
-    /**
-     * The 13-row default set — one entry per demo scenario, covering all 8
-     * trigger types and D-41's five interesting states (unread, read,
-     * dismissed, resolved, dead-link).
-     */
+    // The 13-row default set - one entry per demo scenario, covering all
+    // 8 trigger types and five interesting states (unread, read,
+    // dismissed, resolved, dead-link).
     private function seedCoreEntries(User $user, CarbonImmutable $realToday): void
     {
-        // --- Payment reminders (Req 4 / D-17 confident+hedged pair) -------
-
-        // r1: confident reminder, upcoming, on an existing approved series — read.
+        // Payment reminders: r1 is a confident reminder, upcoming, on an
+        // existing approved series - marked read below.
         $kpnSeriesId = $this->seriesId($user, 'demo:kpn:monthly:4500');
         if ($kpnSeriesId !== null) {
             $due = $realToday->addDays(3);
@@ -164,7 +103,8 @@ final class DemoNotificationsSeeder
             $this->markRead($user, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, (string) $kpnSeriesId, $due->toDateString());
         }
 
-        // r2: D-17's hedged variant, side by side with r1 — unread.
+        // r2: the hedged variant, side by side with r1 - left
+        // unread.
         $sportCitySeriesId = $this->seriesId($user, 'demo:sport-city:monthly:2500');
         if ($sportCitySeriesId !== null) {
             $due = $realToday->addDays(2);
@@ -178,12 +118,11 @@ final class DemoNotificationsSeeder
                     displayName: 'Sport City',
                 ));
             });
-            // Left unread deliberately — no markRead call.
         }
 
-        // r3: Req 13's resolved/withdrawn outcome — a reminder that later
+        // r3: the resolved/withdrawn outcome - a reminder that later
         // settles via a matching PaymentSettled, flipping the row to
-        // 'resolved' through the real ResolveSettledReminder listener — read.
+        // 'resolved' through the real ResolveSettledReminder listener.
         $spotifySeriesId = $this->seriesId($user, 'demo:spotify:monthly:1099');
         if ($spotifySeriesId !== null) {
             $due = $realToday->subDays(7);
@@ -207,9 +146,9 @@ final class DemoNotificationsSeeder
             $this->markRead($user, DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER, (string) $spotifySeriesId, $due->toDateString());
         }
 
-        // r4: Req 14's dead-link outcome — a reminder for a series id that
-        // was NEVER seeded, so DeepLinkResolver::resolveSeries() finds
-        // nothing and renders the disabled "no longer exists" state — unread.
+        // r4: the dead-link outcome - a reminder for a series id that was
+        // never seeded, so DeepLinkResolver::resolveSeries() finds nothing
+        // and renders the disabled "no longer exists" state. Left unread.
         $deadSeriesId = 999_999_999;
         $deadDue = $realToday->subDays(3);
         $this->frozen($realToday->subDays(3)->setTime(10, 0), function () use ($user, $deadSeriesId, $deadDue): void {
@@ -222,13 +161,8 @@ final class DemoNotificationsSeeder
                 displayName: 'Discontinued subscription',
             ));
         });
-        // Left unread deliberately — no markRead call.
-
-        // --- Budget nudges (Req 6) -----------------------------------------
-
         $period = $this->currentPeriodStart($realToday, (int) $user->period_start_day);
 
-        // r5 — read.
         $groceries = $this->category('groceries');
         if ($groceries !== null) {
             $this->frozen($realToday->subDays(2)->setTime(18, 0), function () use ($user, $groceries, $period): void {
@@ -246,7 +180,6 @@ final class DemoNotificationsSeeder
             $this->markRead($user, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, (string) $groceries['id'], $period);
         }
 
-        // r6 — read, second budget-nudge row for realistic variety.
         $eatingOut = $this->category('eating-out');
         if ($eatingOut !== null) {
             $this->frozen($realToday->subDays(4)->setTime(18, 30), function () use ($user, $eatingOut, $period): void {
@@ -264,9 +197,6 @@ final class DemoNotificationsSeeder
             $this->markRead($user, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, (string) $eatingOut['id'], $period);
         }
 
-        // --- Savings prompt (Req 7) -----------------------------------------
-
-        // r7 — dismissed.
         $netflixSeriesId = $this->seriesId($user, 'demo:netflix:monthly:1499');
         if ($netflixSeriesId !== null) {
             $insightKey = 'cheaper:'.$netflixSeriesId;
@@ -285,9 +215,6 @@ final class DemoNotificationsSeeder
             $this->dismiss($user, DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT, (string) $netflixSeriesId, $insightKey);
         }
 
-        // --- Position digest (Req 5) -----------------------------------------
-
-        // r8 — read.
         $weeklyOccurrence = $realToday->isoWeekYear.'-W'.str_pad((string) $realToday->isoWeek, 2, '0', STR_PAD_LEFT);
         $this->frozen($realToday->subDays(1)->setTime(8, 0), function () use ($user, $weeklyOccurrence, $realToday): void {
             $this->events->dispatch(new PositionDigestDue(
@@ -299,9 +226,6 @@ final class DemoNotificationsSeeder
         });
         $this->markRead($user, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, 'position', $weeklyOccurrence);
 
-        // --- Drift alerts (Req 3, existing reactive trigger) ----------------
-
-        // r9 — read.
         if ($spotifySeriesId !== null) {
             $alert = $this->openDriftAlert($user, $spotifySeriesId);
             if ($alert !== null) {
@@ -320,7 +244,6 @@ final class DemoNotificationsSeeder
             }
         }
 
-        // r10 — read, second drift row for realistic variety.
         if ($sportCitySeriesId !== null) {
             $alert = $this->openDriftAlert($user, $sportCitySeriesId);
             if ($alert !== null) {
@@ -339,15 +262,12 @@ final class DemoNotificationsSeeder
             }
         }
 
-        // --- Forecast shortfall (Req 3, existing reactive trigger) ----------
-
-        // r11 — unread.
         $asnAccountId = $this->accountId($user, 'asn-demo-1');
         if ($asnAccountId !== null) {
             // ForecastShortfallDetected carries Illuminate\Support\Carbon
             // (not CarbonImmutable, unlike every other event in this
-            // seeder) — Carbon::instance() converts without disturbing the
-            // CarbonImmutable-only test-now freeze used elsewhere.
+            // seeder) - Carbon::instance() converts without disturbing
+            // the CarbonImmutable-only test-now freeze used elsewhere.
             $startsAt = SupportCarbon::instance($realToday->addDays(18));
             $endsAt = SupportCarbon::instance($realToday->addDays(22));
             $this->frozen($realToday->subDays(1)->setTime(6, 0), function () use ($user, $asnAccountId, $startsAt, $endsAt): void {
@@ -362,12 +282,10 @@ final class DemoNotificationsSeeder
                     bufferUsedMinor: 50000,
                 ));
             });
-            // Left unread deliberately — no markRead call.
         }
 
-        // --- Coalesced import (Req 10, D-22) ---------------------------------
-
-        // r12: "Import finished" — read.
+        // r12 ("Import finished") is marked read; r13 ("New receipts
+        // found") below is dismissed.
         $this->frozen($realToday->subDays(3)->setTime(20, 0), function () use ($user): void {
             $this->events->dispatch(new TransactionBatchImported(
                 userId: $user->id,
@@ -382,7 +300,6 @@ final class DemoNotificationsSeeder
             $this->importOccurrence($realToday->subDays(3)->setTime(20, 0), 24),
         );
 
-        // r13: "New receipts found" — dismissed.
         $this->frozen($realToday->subDays(7)->setTime(21, 0), function () use ($user): void {
             $this->events->dispatch(new TransactionBatchImported(
                 userId: $user->id,
@@ -398,14 +315,10 @@ final class DemoNotificationsSeeder
         );
     }
 
-    /**
-     * Pads the inbox toward Req 2's 50+ UAT case with additional, distinct
-     * position-digest rows (daily cadence, one per distinct past day well
-     * outside the core set's date range so no occurrence key collides).
-     * Every filler row is immediately marked read so a large `extraFiller`
-     * value never distorts the nav badge into showing dozens of unread
-     * items.
-     */
+    // Pads the inbox with additional, distinct position-digest rows (one
+    // per distinct past day well outside the core set's date range so no
+    // occurrence key collides). Every filler row is immediately marked
+    // read so a large count never distorts the nav badge.
     private function seedFiller(User $user, CarbonImmutable $realToday, int $count): void
     {
         for ($i = 1; $i <= $count; $i++) {
@@ -424,14 +337,10 @@ final class DemoNotificationsSeeder
         }
     }
 
-    /**
-     * Runs $callback with CarbonImmutable's global test-now pinned to $at —
-     * every collaborator reached transitively (the writer's injected Clock,
-     * PersistCoalescedImport's Clock) reads $at as "now" for that one call.
-     * The caller (`run()`) restores the prior test-now value afterward; this
-     * helper deliberately does NOT restore between calls, since the next
-     * `frozen()` call simply re-pins to its own instant.
-     */
+    // Runs $callback with CarbonImmutable's global test-now pinned to
+    // $at. The caller (run()) restores the prior test-now value
+    // afterward; this helper deliberately does not restore between
+    // calls, since the next frozen() call simply re-pins its own instant.
     private function frozen(CarbonImmutable $at, callable $callback): void
     {
         CarbonImmutable::setTestNow($at);
@@ -450,19 +359,17 @@ final class DemoNotificationsSeeder
         ($this->dismissAction)($id, $user);
     }
 
-    /** Mirrors PersistCoalescedImport::handle()'s occurrence-key formula exactly. */
+    // Mirrors PersistCoalescedImport::handle()'s occurrence-key formula
+    // exactly.
     private function importOccurrence(CarbonImmutable $at, int $insertedCount): string
     {
         return $at->format('Y-m-d H:i:s').':'.$insertedCount;
     }
 
-    /**
-     * A minimal, hand-built PositionSummaryDto — no cross-module
-     * composition needed since the seeder controls the demo figures
-     * directly. `topCategories`/`recentTransactions`/`budgets`/`upcoming`
-     * stay empty; the digest body only ever reads the summary + budgets +
-     * upcoming + shortfallAhead fields (see PersistPositionDigest::composeBody()).
-     */
+    // A minimal, hand-built DTO - no cross-module composition needed
+    // since the seeder controls the demo figures directly. The list
+    // fields stay empty; the digest body only reads the summary +
+    // budgets + upcoming + shortfallAhead fields.
     private function buildPosition(CarbonImmutable $realToday, int $inflowMinor, int $outflowMinor, int $netMinor): PositionSummaryDto
     {
         $period = new Period(
@@ -562,13 +469,10 @@ final class DemoNotificationsSeeder
         ];
     }
 
-    /**
-     * Replicates `DemoEnvelopeBudgetsSeeder::currentPeriodStart()` exactly
-     * (that service resolves the period from the *authenticated* user via
-     * `PeriodQuery`, which cannot be called per-user from a seeder) — kept
-     * in lock-step so the occurrence key this seeder derives would match
-     * what the live envelope grid computes for the same user.
-     */
+    // Replicates DemoEnvelopeBudgetsSeeder::currentPeriodStart() exactly
+    // (that service resolves the period via PeriodQuery, which cannot be
+    // called per-user from a seeder) - kept in lock-step so the
+    // occurrence key matches what the live envelope grid computes.
     private function currentPeriodStart(CarbonImmutable $now, int $periodStartDay): string
     {
         $startDay = max(1, min(28, $periodStartDay));

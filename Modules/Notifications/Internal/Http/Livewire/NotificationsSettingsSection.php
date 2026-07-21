@@ -12,51 +12,30 @@ use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
 /**
- * Settings "Notifications" section (D-36) — the ~9-control preferences form
- * plus the D-35 read-only "Other devices" panel.
- *
- * Follows the `AnomalySettingsSection` FORM shape (`mount()`/`save()`/inline
- * `$saveError`/`$saved`, bounds-checking before any write) but NOT its
- * storage: this section reads and writes a `(user_id, device_id)` row in
- * the synced `notification_preferences` table via
- * `NotificationPreferenceQuery`, never `users` columns (D-34).
- *
- * NO constructor DI — collaborators arrive as parameters on `mount()`,
- * `save()` and `render()`.
+ * @link ../../../../../.docs/features/notifications/architecture.md
  */
 final class NotificationsSettingsSection extends Component
 {
-    /** Payment reminders toggle. Default ON (D-16). */
     public bool $remindersEnabled = true;
 
-    /** Reminder lead time in days (1..30). Default 3 (D-15). */
     public int $reminderLeadDays = 3;
 
-    /** Budget nudges toggle. Default ON (D-16). */
     public bool $budgetNudgesEnabled = true;
 
-    /** Weekly position digest cadence: daily|weekly|off. Default weekly (D-16). */
     public string $digestCadence = 'weekly';
 
-    /** Savings-opportunity prompts toggle. Default OFF (D-16). */
     public bool $savingsPromptsEnabled = false;
 
-    /** Quiet hours toggle. Default OFF (D-19). */
     public bool $quietHoursEnabled = false;
 
-    /** Quiet hours start, HH:MM. Default 22:00 (D-19). */
     public string $quietHoursFrom = '22:00';
 
-    /** Quiet hours end, HH:MM. Default 08:00 (D-19). */
     public string $quietHoursTo = '08:00';
 
-    /** Hide details in notifications toggle, per-device. Default OFF (D-24). */
     public bool $hideDetails = false;
 
-    /** Inline validation error for the save form. */
     public string $saveError = '';
 
-    /** Success flash after a save. */
     public bool $saved = false;
 
     public function mount(CurrentUser $currentUser, NotificationPreferenceQuery $prefs): void
@@ -74,14 +53,10 @@ final class NotificationsSettingsSection extends Component
         $this->hideDetails = $dto->hideDetails;
     }
 
-    /**
-     * Bounds-checks EVERY input before any write (T-18-53), mirroring
-     * `AnomalySettingsSection::save()`'s documented discipline that "a
-     * tampered Livewire payload cannot persist an out-of-range value".
-     * `NotificationPreferenceQuery::saveForCurrentDevice()` (18-03)
-     * re-validates and throws as defence in depth, but this method never
-     * relies on that — it rejects first.
-     */
+    // Bounds-checks every input before any write - a tampered Livewire
+    // payload cannot persist an out-of-range value. The query layer
+    // re-validates and throws as defence in depth, but this method never
+    // relies on that; it rejects first.
     public function save(CurrentUser $currentUser, NotificationPreferenceQuery $prefs): void
     {
         $this->saveError = '';
@@ -138,10 +113,8 @@ final class NotificationsSettingsSection extends Component
         ]);
     }
 
-    /**
-     * Plain-text summary of another device's toggle states for the D-35
-     * read-only panel — no inputs, no edit affordances.
-     */
+    // Plain-text summary of another device's toggle states for the
+    // read-only panel - no inputs, no edit affordances.
     private static function summarize(NotificationPreferencesDto $dto): string
     {
         $onOff = static fn (bool $value): string => $value ? 'on' : 'off';
