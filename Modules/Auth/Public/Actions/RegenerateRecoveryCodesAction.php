@@ -12,20 +12,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+// The caller must either be a developer (owner regenerating a partner's
+// codes) or the target user themselves; any other caller raises a 404,
+// never a 403, so a probing non-developer cannot confirm the surface exists.
 /**
- * Invalidates a user's unused recovery codes and issues ten fresh ones.
- *
- * The caller must either be a developer (the owner regenerating the
- * partner's codes) or the target user themselves; any other caller
- * raises a 404 NotFoundHttpException — never a 403 — so a probing
- * non-developer cannot confirm the surface exists.
- *
- * Regeneration runs inside one transaction: every still-unused code for
- * the target user is stamped `used_at = now` (kept, not deleted, so the
- * audit chain survives), then ten fresh distinct codes are generated and
- * bcrypt-hashed into new rows. The ten plaintext codes are returned for
- * a single one-time display; they are never persisted in clear form.
- *
  * @phpstan-type RecoveryCodeList list<string>
  */
 final class RegenerateRecoveryCodesAction

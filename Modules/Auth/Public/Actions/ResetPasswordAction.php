@@ -9,25 +9,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
 
-/**
- * Recovery-code-driven password reset.
- *
- * Given a typed username, one recovery code, and a new password, this
- * action verifies the username + code through RecoveryCodeAuthenticator
- * (which consumes the code on a match), then writes the new password
- * hash onto the user row and clears `force_password_change_at_next_login`
- * — the user just chose the password they want, so no forced change is
- * pending.
- *
- * A password shorter than twelve characters raises a ValidationException
- * keyed `password`; a username + code that do not match raises one keyed
- * `code` with a generic message that never reveals whether the username
- * existed.
- *
- * The action mutates a password but never drives the guard: it neither
- * logs the user in nor reads the session, so the reset flow ends with the
- * user signing in fresh on `/login`.
- */
+// Never drives the guard: neither logs the user in nor reads the session,
+// so the reset flow ends with the user signing in fresh on /login.
 final class ResetPasswordAction
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;
