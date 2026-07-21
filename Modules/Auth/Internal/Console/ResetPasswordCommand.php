@@ -9,22 +9,10 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 
-/**
- * Interactive CLI fallback for resetting a user's password.
- *
- * A local-only install has no SMTP and no other operator-driven way back
- * in if every recovery code is spent: `beatrax:reset-password <username>`
- * is that path. It prompts for the new password twice through hidden
- * input, validates the two entries match and meet the twelve-character
- * minimum, writes the new hash, and sets
- * `force_password_change_at_next_login = true` so the user is asked to
- * choose their own password the first time they sign in.
- *
- * The command refuses to run non-interactively: there is no
- * `--password` option, and a non-interactive invocation exits with a
- * failure code without touching the password. That keeps a scripted
- * reset on an unattended machine from silently rewriting a password.
- */
+// Refuses to run non-interactively: there is no --password option, and
+// a non-interactive invocation exits with a failure code without
+// touching the password. This keeps a scripted reset on an unattended
+// machine from silently rewriting a password.
 class ResetPasswordCommand extends Command
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;

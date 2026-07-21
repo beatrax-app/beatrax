@@ -4,36 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
-/**
- * Detects the platform from a User-Agent string and returns the appropriate
- * biometric label and platform key.
- *
- * Label contract (UI-SPEC §1 biometric button):
- *   - macOS desktop   → "Use Touch ID"
- *   - iOS             → "Use Face ID"
- *   - Windows         → "Use Windows Hello"
- *   - Android/generic → "Use fingerprint"
- *
- * Known limitation (IN-09, accepted): iPadOS 13+ Safari in desktop mode sends
- * a "Macintosh" user-agent, so those iPads get the macOS "Use Touch ID" label
- * instead of "Use Face ID". Cosmetic only — the WebAuthn flow itself is
- * unaffected. Fixing it would require client-side detection
- * (navigator.userAgentData / maxTouchPoints), which is not worth the wiring
- * for a label on a single-user local app.
- *
- * Platform key contract:
- *   - 'nativephp_macos' — only when running inside the NativePHP macOS bundle
- *     on macOS (caller passes $isNativeMacos=true from System::canPromptTouchID()).
- *   - 'webauthn'        — all other platforms (browser, PWA, Windows, iOS,
- *     Android, non-native macOS browser).
- */
 final class PlatformDetector
 {
-    /**
-     * Return the platform-aware biometric button label.
-     *
-     * @param  string  $userAgent  The HTTP User-Agent header value.
-     */
+    // Known limitation, accepted: iPadOS 13+ Safari in desktop mode sends a
+    // "Macintosh" user-agent, so those iPads get the macOS "Use Touch ID"
+    // label instead of "Use Face ID". Cosmetic only -- the WebAuthn flow
+    // itself is unaffected.
     public function detectLabel(string $userAgent): string
     {
         if ($this->isIos($userAgent)) {
@@ -48,17 +24,10 @@ final class PlatformDetector
             return 'Use Windows Hello';
         }
 
-        // Android / generic fallback.
         return 'Use fingerprint';
     }
 
     /**
-     * Return the platform key used to categorise the enrolled credential.
-     *
-     * Only returns 'nativephp_macos' when the caller explicitly confirms that
-     * the NativePHP macOS bundle is active (via System::canPromptTouchID()).
-     * All other cases — including macOS in a browser — return 'webauthn'.
-     *
      * @param  string  $userAgent  The HTTP User-Agent header value.
      * @param  bool  $isNativeMacos  Pass true when System::canPromptTouchID() returned true.
      */

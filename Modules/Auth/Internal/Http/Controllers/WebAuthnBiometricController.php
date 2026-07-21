@@ -14,40 +14,15 @@ use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Core\Public\Contracts\CurrentUser;
 
+// These routes sit in the standard 'web' middleware group, so
+// VerifyCsrfToken IS enforced -- there is no JSON exemption. lock.js reads
+// the XSRF-TOKEN cookie and sends it back as the X-XSRF-TOKEN request
+// header on every fetch, which Laravel accepts as the supplied token.
 /**
- * JSON endpoints for WebAuthn biometric enrollment and assertion.
- *
- * Two routes — both in AppLockMiddleware::ALLOWED_ROUTE_NAMES so a locked
- * session can reach them to complete biometric unlock (T-05-21):
- *
- *   POST /lock/biometric/challenge  → challenge()  [get requestOptions]
- *   POST /lock/biometric/verify     → verify()     [submit assertion]
- *
- * The enroll flow uses separate dedicated query-string routing:
- *   POST /lock/biometric/challenge?enroll=1  → creationOptions
- *
- * Security:
- *   T-05-20: The WebAuthnBiometricService validates rpId + full origin.
- *   T-05-21: Routes are in ALLOWED_ROUTE_NAMES (AppLockMiddleware).
- *   T-05-22: verifyAndRelease increments failure count on any failure.
- *   T-05-23: The browser only fires navigator.credentials.get on button tap.
- *
- * CSRF: these routes sit in the standard 'web' middleware group, so
- * VerifyCsrfToken IS enforced — there is no JSON exemption and no exclusion
- * list entry. The requests succeed because lock.js reads the XSRF-TOKEN
- * cookie and sends its value back as the X-XSRF-TOKEN request header on
- * every fetch; Laravel accepts the token only from a `_token` body field,
- * the X-CSRF-TOKEN header, or the X-XSRF-TOKEN header (the cookie alone is
- * never accepted as the supplied token).
+ * @link ../../../../../.docs/features/auth/architecture.md
  */
 final class WebAuthnBiometricController
 {
-    /**
-     * Return challenge options.
-     *
-     * With ?enroll=1: returns PublicKeyCredentialCreationOptions (attestation).
-     * Without:        returns PublicKeyCredentialRequestOptions (assertion).
-     */
     public function challenge(
         Request $request,
         CurrentUser $currentUser,
@@ -56,6 +31,8 @@ final class WebAuthnBiometricController
     ): JsonResponse {
         $user = $currentUser->user();
 
+        // ?enroll=1 requests attestation options (new credential); without
+        // it, this returns assertion options (unlock an existing one).
         if ($request->query('enroll') === '1') {
             $options = $service->creationOptions($user->id, $user->username, $session);
         } else {
@@ -65,13 +42,6 @@ final class WebAuthnBiometricController
         return new JsonResponse($options);
     }
 
-    /**
-     * Verify an assertion and unlock the session.
-     *
-     * Returns JSON: { unlocked: bool, redirect: string }.
-     * On success: the session is unlocked and the redirect URL is the intended URL.
-     * On failure: unlocked is false, redirect is the lock route.
-     */
     public function verify(
         Request $request,
         CurrentUser $currentUser,
@@ -101,12 +71,6 @@ final class WebAuthnBiometricController
         ]);
     }
 
-    /**
-     * Complete enrollment: verify the attestation and store the credential.
-     *
-     * Expects JSON body with the attestation response from navigator.credentials.create.
-     * The caller must be unlocked (session has the data key) for this to succeed.
-     */
     public function enroll(
         Request $request,
         CurrentUser $currentUser,
