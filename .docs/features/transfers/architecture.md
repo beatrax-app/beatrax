@@ -42,13 +42,16 @@ What the module explicitly does NOT do:
 `Public/` exposes a small cross-module surface:
 
 - **Contracts/**
-  - `PairsTransferLegs::pair($transactionId, $user): void` —
-    the contract the per-row listener and the chain-resolution
-    bulk sweep both inject.
+  - `PairsTransferLegs::pairOne($tx, $user): ?int` — the per-row
+    hot path both the listener and the bulk sweep call.
+  - `PairsTransferLegs::pairOrphansForUser($user): int` — sweeps
+    every unpaired transfer leg for the user, used by the chain-
+    resolution job after its `RetypeByAliasResolver` re-types rows
+    the wizard's interleaved upload flow left mis-typed.
 - **Services/**
-  - `PairLookup::partnerFor($transactionId, $user):
-    ?Transaction` — read-side query consumed by
-    `Chains::PaypalFundingResolver::asnDirectArm`.
+  - `PairLookup::isPaired($txId, $user): bool` and
+    `PairLookup::partnerId($txId, $user): ?int` — read-side
+    queries consumed by `Chains::PaypalFundingResolver::asnDirectArm`.
 
 `Internal/` houses the matcher + listener:
 
@@ -65,22 +68,47 @@ What the module explicitly does NOT do:
   resolves through `Import::ResolvesKnownCounterpartyIban`).
 - **Internal/Listeners/PairTransferCandidates** — listens for
   `Import::TransactionImported`; calls
-  `TransferPairer::pair` per row inside the import transaction
-  frame.
+  `TransferPairer::pairOne()` per row inside the import
+  transaction frame.
+
+### Decrypt-then-match (encrypted `counterparty_iban`)
+
+`transactions.counterparty_iban` is a `SensitiveFieldRegistry` ciphertext
+column once encryption is enabled for a user, so it can never sit in a SQL
+equality or `whereIn` predicate — a ciphertext value never equals a
+plaintext candidate. Both matcher arms decrypt before comparing:
+
+- **Forward arm** (firing leg has a `counterparty_iban`): decrypts the
+  firing leg's IBAN once into a plaintext local, then compares it against
+  plaintext `accounts.iban` / hands it to `ResolvesKnownCounterpartyIban`.
+- **Reverse arm** (firing leg has none): keeps its existing narrow SQL
+  predicates (amount equal-and-opposite, currency, ±WINDOW_DAYS window,
+  unpaired, type — already a small candidate set), then decrypts each
+  surviving candidate's `counterparty_iban` and matches it against the
+  plaintext candidate-IBAN set in PHP.
+
+Both arms treat a decrypt failure (`decrypted: false`) as "cannot match"
+only when encryption is actually enabled for the user — for a
+non-encryption user, `decrypted: false` is the expected pass-through
+signal and the returned value is valid plaintext.
 
 ## Key services + events
 
-- `TransferPairer::pair($transactionId, $user)` — the sole
-  deterministic matcher. Used by both the listener and the
-  bulk sweep so the pairing logic is one source of truth.
+- `TransferPairer::pairOne($tx, $user)` — the sole deterministic
+  matcher. Used by both the listener and the bulk sweep so the
+  pairing logic is one source of truth.
+- `TransferPairer::pairOrphansForUser($user)` — sweeps every
+  unpaired transfer leg for the user, pairing each one that now
+  has a persisted partner.
 - `PairTransferCandidates::handle($event)` — per-row hot path
   inside `Import::TransactionImported`. Calls
-  `TransferPairer::pair`; on a successful match, both legs'
+  `TransferPairer::pairOne()`; on a successful match, both legs'
   `pair_transaction_id` columns are written bidirectionally
   inside the same transaction frame.
-- `PairLookup::partnerFor($transactionId, $user)` — read-side
-  consumed by `Chains::PaypalFundingResolver` to determine the
-  partner row when computing the ASN-direct funding arm.
+- `PairLookup::isPaired($txId, $user)` / `PairLookup::partnerId($txId, $user)`
+  — read-side consumed by `Chains::PaypalFundingResolver` to
+  determine the partner row when computing the ASN-direct funding
+  arm.
 
 The module raises no events; it persists in response to the
 upstream `TransactionImported`.
@@ -93,7 +121,7 @@ The per-row pair detection at import time:
 Import::ConfirmImport persists transaction
   → dispatch TransactionImported($transactionId)
        → PairTransferCandidates::handle($event)
-            → TransferPairer::pair($transactionId, $user)
+            → TransferPairer::pairOne($tx, $user)
                  → SELECT candidate partner (amount opposite,
                                               ±WINDOW_DAYS,
                                               both legs unpaired)
@@ -110,7 +138,7 @@ Chains::ResolveChainLinksJob::handle
   → for each unpaired transfer leg the wizard's interleaved
     flow left mis-typed:
        → RetypeByAliasResolver retypes
-       → TransferPairer::pair (same matcher)
+       → TransferPairer::pairOne (same matcher)
             → bidirectional update
 ```
 
@@ -119,7 +147,7 @@ The read-side from chain resolution:
 ```
 Chains::PaypalFundingResolver::asnDirectArm
   → for each unfunded PayPal expense:
-       → PairLookup::partnerFor($candidateAsnLeg, $user)
+       → PairLookup::partnerId($candidateAsnLeg, $user)
        → confirm partner is the PayPal leg expected
        → write chain_links row
 ```
