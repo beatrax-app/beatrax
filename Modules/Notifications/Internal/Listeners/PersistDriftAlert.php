@@ -13,27 +13,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Persists Req 3's drift-alert reactive notification into the unified inbox.
- *
- * Subscribes to `Modules\DriftAlerts\Public\Events\DriftAlertOpened` — an
- * EXISTING event that already fires; registered by
- * `NotificationsServiceProvider`'s guarded listener table (18-05); this
- * class's exact name/namespace is what flips that guard on.
- *
- * The body copy is ported VERBATIM from
- * `Modules\Desktop\Internal\Listeners\DispatchOsNotification::handleDriftAlert()`
- * — the phrasing is locked, this phase persists and governs it, it does not
- * reword it (D-29).
- *
- * The occurrence key is the drift alert's OWN id (`$event->driftAlertId`),
- * not a date: `drift_alerts` already enforces one row per detected drift, so
- * keying on the alert's own id makes ONE alert produce ONE inbox row and
- * re-dispatching the SAME alert re-derive the SAME notification id —
- * `NotificationWriter`'s `insertOrIgnore` silently absorbs the duplicate.
- *
- * The whole handler body is wrapped in the never-throw envelope (D-07),
- * cloned from `SyncCaptureListener::handle()`: a failed notification-persist
- * must NEVER break the originating drift-detection run.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class PersistDriftAlert
 {
@@ -61,8 +41,8 @@ final class PersistDriftAlert
                 deepLinkRoute: $this->urls->route('drift.index'),
             );
         } catch (Throwable $e) {
-            // Swallow — a failed persist must NEVER break the originating
-            // drift-detection run (D-07).
+            // Swallow - a failed persist must never break the
+            // originating drift-detection run.
             $this->log->error('PersistDriftAlert: failed to persist drift alert notification', [
                 'exception' => $e->getMessage(),
                 'driftAlertId' => $event->driftAlertId,

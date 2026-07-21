@@ -12,16 +12,7 @@ use Modules\Sync\Public\Events\NotificationMutated;
 use stdClass;
 
 /**
- * Sets `dismissed_at`. Reversible (D-10) via `UndoDismissNotification` — this
- * action never gates behind a confirmation, matching the UI-SPEC's explicit
- * "no destructive confirmation" contract for this phase.
- *
- * A no-op (no write, no event) when the row is already dismissed or does not
- * belong to the caller — every query carries an explicit
- * `->where('user_id', ...)` (T-18-16).
- *
- * Does not touch `notifications.state` — that column is
- * `NotificationStateMachine`'s exclusive concern.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class DismissNotification
 {

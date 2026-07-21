@@ -18,38 +18,14 @@ use stdClass;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 /**
- * D-25's render-time deep-link existence check — the collaborator that
- * turns a bare `NotificationDto` (deepLinkUrl/deepLinkDisabled/targetKind
- * all null/false, per `NotificationQuery::hydrate()`) into one carrying a
- * validated link. Every call re-derives the answer from CURRENT data; the
- * result is NEVER cached from write time and NEVER computed in a background
- * sweep, because a target can be deleted after delivery and a sweep would
- * leave a staleness window (18-12 planner decision).
- *
- * `notifications.params` is a `SensitiveFieldRegistry`-registered column
- * (18-04) — this class re-reads and decrypts it directly rather than
- * threading it through `NotificationQuery`'s DTO, since 18-12 does not
- * touch that class or `NotificationDto` (both owned by earlier plans).
- *
- * Every existence check re-runs the SAME user-scoped query the deep-link
- * target itself would use (T-18-49): a target belonging to another user
- * resolves exactly like a deleted target — disabled, generic copy, no
- * distinguishing signal. Crosses only through other modules' `Public`
- * seams (`RecurringSeriesQuery`, `BudgetProgressQuery`,
- * `CounterpartyProfileQuery`) plus this module's OWN `notifications` /
- * (read-only) `transactions` table reads via `DatabaseManager` — never an
- * `Internal` import from another module.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final readonly class DeepLinkResolver
 {
-    /**
-     * `target_kind` values that never carry a deletable per-user entity —
-     * always live, never disabled. `dashboard`/`forecast` per D-25;
-     * `inbox`/`import` are the coalesced-import trigger's equivalent
-     * no-deletable-entity targets (PersistCoalescedImport); `ics-import`
-     * (Phase 19, Req 14) is `PersistIcsStatementReady`'s equivalent — a
-     * static settings anchor, never a per-user deletable row.
-     */
+    // target_kind values that never carry a deletable per-user entity -
+    // always live, never disabled. inbox/import are the coalesced-import
+    // trigger's equivalent; ics-import is a static settings anchor,
+    // never a per-user deletable row.
     private const ALWAYS_LIVE_KINDS = ['dashboard', 'forecast', 'inbox', 'import', 'ics-import'];
 
     public function __construct(
@@ -88,11 +64,10 @@ final readonly class DeepLinkResolver
         );
     }
 
+    // Re-reads and decrypts the notification's own params column,
+    // user-scoped. Never throws - a missing row, unencryptable/malformed
+    // JSON, or an unexpected shape all collapse to [null, null].
     /**
-     * Re-reads and decrypts the notification's own `params` column,
-     * user-scoped. Never throws — a missing row, unencryptable/malformed
-     * JSON, or an unexpected shape all collapse to `[null, null]`.
-     *
      * @return array{0: ?string, 1: ?int}
      */
     private function readTarget(string $notificationId, User $user): array
@@ -169,19 +144,17 @@ final readonly class DeepLinkResolver
                 'forecast' => $this->urls->route('forecast.index'),
                 'inbox' => $this->urls->route('inboxes.index'),
                 'import' => $this->urls->route('imports.new'),
-                // Phase 19 (Req 14, D-14/D-15): the guided ICS file-import
-                // card's anchor (Surface B7, 19-15) — same target
-                // `PersistIcsStatementReady::handle()` passes as its
-                // `deepLinkRoute` OS-push argument.
+                // The guided ICS file-import card's anchor - same target
+                // PersistIcsStatementReady::handle() passes as its
+                // deepLinkRoute OS-push argument.
                 'ics-import' => $this->urls->route('settings.open-banking').'#ics-import',
                 default => null,
             };
         } catch (RouteNotFoundException) {
-            // WR-15: an always-live kind whose route is not registered
-            // (e.g. 'ics-import' when the optional OpenBanking module is
-            // disabled) degrades to a disabled link — the caller turns a
-            // null url into the [null, true] shape — rather than 500-ing
-            // /notifications, consistent with the other resolver arms.
+            // An always-live kind whose route is not registered (e.g.
+            // ics-import when the optional OpenBanking module is
+            // disabled) degrades to a disabled link, consistent with
+            // the other resolver arms, rather than 500-ing /notifications.
             return null;
         }
     }
@@ -199,15 +172,11 @@ final readonly class DeepLinkResolver
         return [$this->urls->route('recurring.series.show', ['seriesId' => $seriesId]), false];
     }
 
+    // The Budgets module's write-dead category_budgets table is not the
+    // existence source - canBudget() checks whether $categoryId is
+    // still a live, user-visible expense category, which is what "the
+    // budget target still exists" means under the envelope model.
     /**
-     * The Budgets module's write-dead `category_budgets` table (superseded
-     * by the envelope model, D-20 REDIRECT) is NOT the existence source —
-     * `canBudget()` checks whether `$categoryId` is still a live,
-     * user-visible expense category, which IS what "the budget target still
-     * exists" means under the envelope model (every live expense category
-     * is an implicit envelope; deleting/retyping the category is what makes
-     * a budget nudge's target disappear).
-     *
      * @return array{0: ?string, 1: bool}
      */
     private function resolveBudget(int $categoryId, User $user): array
@@ -232,14 +201,11 @@ final readonly class DeepLinkResolver
         return [$this->urls->route('counterparties.profile', ['slug' => $identity['slug']]), false];
     }
 
+    // No dedicated Ledger Public existence method exists for a bare
+    // transaction id. Reads the transactions table directly via
+    // DatabaseManager, user-scoped - the same cross-module raw-table-read
+    // shape CounterpartyProfileQuery already uses for its own reads.
     /**
-     * No dedicated Ledger Public existence method exists for a bare
-     * transaction id (the closest, `TransactionStatusQuery::isReconciled`,
-     * conflates "missing" with "not reconciled"). Reads the `transactions`
-     * table directly via `DatabaseManager`, user-scoped — the same
-     * cross-module raw-table-read shape `CounterpartyProfileQuery` already
-     * uses for its own recent-activity/category-breakdown reads.
-     *
      * @return array{0: ?string, 1: bool}
      */
     private function resolveTransaction(int $transactionId, User $user): array

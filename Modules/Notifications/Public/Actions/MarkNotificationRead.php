@@ -12,17 +12,7 @@ use Modules\Sync\Public\Events\NotificationMutated;
 use stdClass;
 
 /**
- * Sets `read_at` — a ONE-WAY LATCH (D-09): the row is marked read only if
- * `read_at` is currently null. Re-marking (or a cross-user invocation) is a
- * silent no-op — there is deliberately NO mark-as-unread action anywhere in
- * this module.
- *
- * Every query carries an explicit `->where('user_id', ...)` because
- * `BelongsToUser`'s `UserScope` global scope does not fire in queue/console
- * context (T-18-16) and the sha256 PK is NOT an authorization boundary.
- *
- * Does not touch `notifications.state` — that column is
- * `NotificationStateMachine`'s exclusive concern.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class MarkNotificationRead
 {

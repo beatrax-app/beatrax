@@ -16,30 +16,12 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Public read API over `notifications` — the inbox read model (18-12) and
- * the nav-badge unread count (D-03). Every method carries an explicit
- * `->where('user_id', $user->id)` because `BelongsToUser`'s `UserScope`
- * global scope does not fire in queue/console context, and the sha256 PK is
- * NOT an authorization boundary (T-18-16).
- *
- * Clones `DriftAlertQuery`'s shape (limit 26 = 25 + 1 lookahead) with ONE
- * mandatory deviation: `drift_alerts.id` is an autoincrement surrogate, so
- * `ORDER BY id DESC` + `WHERE id < cursor` stays monotone with insertion
- * order. `notifications.id` is a sha256 hex digest and is NOT
- * insertion-ordered, so this query sorts on `created_at DESC, id DESC` and
- * pages on a COMPOUND cursor — `(created_at < ?) OR (created_at = ? AND
- * id < ?)` — backed by the `(user_id, created_at, id)` index from 18-01.
- * A malformed cursor is treated as null (first page) rather than thrown.
- *
- * `unreadCountForUser` is the ONE method in this class that never touches
- * `SensitiveColumnCodec`/`Session` — it counts on the plaintext
- * `read_at`/`dismissed_at` columns only, so the nav badge works on a locked,
- * KEK-less device. Every other method decrypts `title`/`body`/`trigger_type`
- * via the codec (a pass-through no-op when encryption is not enabled).
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final readonly class NotificationQuery
 {
-    /** 25 + 1 lookahead, matching the DriftAlertQuery / 18-UI-SPEC.md precedent. */
+    // 25 + 1 lookahead, matching the DriftAlertQuery
+    // precedent.
     private const PAGE_LIMIT = 26;
 
     public function __construct(
@@ -49,8 +31,6 @@ final readonly class NotificationQuery
     ) {}
 
     /**
-     * `read_at IS NULL AND dismissed_at IS NULL`.
-     *
      * @return list<NotificationDto>
      */
     public function unreadForUser(User $user, ?string $cursor = null): array
@@ -64,8 +44,6 @@ final readonly class NotificationQuery
     }
 
     /**
-     * `dismissed_at IS NULL` (read or unread, just not dismissed).
-     *
      * @return list<NotificationDto>
      */
     public function allForUser(User $user, ?string $cursor = null): array
@@ -78,8 +56,6 @@ final readonly class NotificationQuery
     }
 
     /**
-     * `dismissed_at IS NOT NULL`.
-     *
      * @return list<NotificationDto>
      */
     public function dismissedForUser(User $user, ?string $cursor = null): array
@@ -91,11 +67,9 @@ final readonly class NotificationQuery
         return $this->paginate($query, $user, $cursor);
     }
 
-    /**
-     * The D-03 nav-badge unread count. Deliberately runs with NO KEK: it
-     * counts rows on the plaintext `read_at`/`dismissed_at` columns and never
-     * touches `title`/`body`/`params`/`trigger_type`.
-     */
+    // The nav-badge unread count. Deliberately runs with no encryption
+    // key: it counts rows on the plaintext read_at/dismissed_at columns
+    // and never touches title/body/params/trigger_type.
     public function unreadCountForUser(User $user): int
     {
         return $this->db->connection()->table('notifications')
@@ -105,11 +79,9 @@ final readonly class NotificationQuery
             ->count();
     }
 
-    /**
-     * Opaque cursor encoding the `(created_at, id)` pair of the last row on
-     * the current page. The page renderer passes this back verbatim as the
-     * next page's `$cursor` argument.
-     */
+    // Opaque cursor encoding the (created_at, id) pair of the last row
+    // on the current page. The page renderer passes this back verbatim
+    // as the next page's $cursor argument.
     public static function encodeCursor(string $createdAt, string $id): string
     {
         return base64_encode(json_encode(['created_at' => $createdAt, 'id' => $id], JSON_THROW_ON_ERROR));
@@ -146,11 +118,10 @@ final readonly class NotificationQuery
         return $result;
     }
 
+    // A missing, malformed, or non-conforming cursor is treated as null
+    // (first page) rather than thrown - a tampered #[Url] param must not
+    // 500 the inbox.
     /**
-     * Decodes an opaque cursor into its `(created_at, id)` pair. A missing,
-     * malformed, or non-conforming cursor is treated as null (first page)
-     * rather than thrown — a tampered `#[Url]` param must not 500 the inbox.
-     *
      * @return array{createdAt: string, id: string}|null
      */
     private static function decodeCursor(?string $cursor): ?array

@@ -15,26 +15,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Persists the position digest (Req 5) into the unified inbox.
- *
- * Subscribes to `PositionDigestDue` — registered by
- * `NotificationsServiceProvider`'s guarded listener table (18-05); this
- * class's exact name/namespace is what flips that guard on.
- *
- * The whole handler body is wrapped in the never-throw envelope (D-07),
- * cloned from `SyncCaptureListener::handle()`: a failed notification-persist
- * must NEVER break the originating `EmitPositionDigestJob` run.
- *
- * `subjectKey` is the constant `'position'` — there is exactly one position
- * per user, so the subject is not a per-entity id like the other seven
- * trigger types. `occurrence` is `$event->occurrence` (D-06: the digest date
- * for a daily cadence, the ISO week for a weekly one) — the occurrence key
- * is what makes a second same-day/same-week emission collapse into the
- * existing row via `NotificationWriter`'s `insertOrIgnore`.
- *
- * `params.target_kind` is always `'dashboard'` (D-25) — the digest
- * deep-links to the dashboard, which can never be deleted, so
- * `deepLinkDisabled` is never true for a digest.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class PersistPositionDigest
 {
@@ -58,8 +39,8 @@ final class PersistPositionDigest
                 deepLinkRoute: $this->urls->route('dashboard'),
             );
         } catch (Throwable $e) {
-            // Swallow — a failed persist must NEVER break the originating
-            // digest job run (D-07).
+            // Swallow - a failed persist must never break the
+            // originating digest job run.
             $this->log->error('PersistPositionDigest: failed to persist position digest', [
                 'exception' => $e->getMessage(),
                 'userId' => $event->userId,
@@ -68,16 +49,10 @@ final class PersistPositionDigest
         }
     }
 
-    /**
-     * One-line body summarising `$position`. Every amount is formatted
-     * through the `Money` value object — never a hand-formatted minor-unit
-     * value.
-     *
-     * D-21: when nothing is notable — no transactions this period, no
-     * budgets, no upcoming charges, no shortfall ahead — the body says so
-     * plainly rather than emitting empty or generic filler; "nothing
-     * notable" is itself the reassurance the digest exists to deliver.
-     */
+    // One-line body summarising $position. Every amount is formatted
+    // through the Money value object, never a hand-formatted minor-unit
+    // value. When nothing is notable, the body says so plainly rather
+    // than emitting empty or generic filler.
     private function composeBody(PositionSummaryDto $position): string
     {
         $summary = $position->summary;

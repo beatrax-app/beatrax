@@ -9,38 +9,7 @@ use Modules\Core\Public\Contracts\Clock;
 use RuntimeException;
 
 /**
- * The single legal mutator of `notifications.state`.
- *
- * LOCKED PLANNER DECISION (resolves RESEARCH.md Open Question 1 / Pitfall
- * 4, binding for the whole phase): `notifications.state` carries ONLY the
- * Req-13 resolved/withdrawn axis. `ALLOWED_TRANSITIONS` is exactly
- * `['open' => ['resolved'], 'resolved' => []]` — there is no "unread"
- * concept here and no "mark as unread" transition. `read_at` (D-09, a
- * plain nullable latch) and `dismissed_at` (D-10, a plain nullable
- * reversible timestamp) are written DIRECTLY by callers, never through
- * this class.
- *
- * `state` is a LOCALLY-DERIVED column and is NOT a synced field — it is
- * written only by this class, from a local settlement check (plan
- * 18-06). `OpLogReplayer` therefore NEVER touches `state`: it only
- * replays `read_at` / `dismissed_at`. This makes the D-39 "replayer is a
- * second mutator" wrinkle disappear for `state` — `OpLogReplayer` is a
- * legitimate second mutator of `read_at`/`dismissed_at` ONLY, and never
- * of `state`. Plan 18-17's single-mutator invariant asserts this class is
- * the ONLY writer of the `state` column.
- *
- * The schema-level `notifications_state_check_insert/update` trigger
- * pair (D-39) plus this class's `ALLOWED_TRANSITIONS` map enforce the
- * two-value enum at two layers: runtime (this class throws on an illegal
- * target) and database (SQLite ABORTs on any out-of-enum value even if
- * an arbitrary code path bypasses this class).
- *
- * Mirrors `AnomalyAlertStateMachine::transition()`'s shape: opens a DB
- * transaction, sets `PRAGMA busy_timeout = 5000`, takes a row lock via
- * `lockForUpdate()`, validates the requested move, and writes. Every
- * query carries an explicit `->where('user_id', $userId)` because
- * `BelongsToUser`'s `UserScope` global scope does not fire in queue or
- * console context (T-18-03).
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class NotificationStateMachine
 {

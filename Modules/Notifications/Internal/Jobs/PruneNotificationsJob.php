@@ -19,55 +19,7 @@ use Modules\Core\Public\Support\LockStore;
 use Psr\Log\LoggerInterface;
 
 /**
- * Per-user daily notification-inbox retention sweep (Req 14, D-18, D-37).
- * Clones `CounterpartyGarbageCollectorJob`'s shape verbatim — the
- * `ShouldBeUniqueUntilProcessing` triad, `tries`/`backoff`, and the
- * inline-hardcoded-cutoff-with-docblock-justification idiom.
- *
- * **D-18 — the 365-day window.** Hardcoded inline (NOT a `config()` lookup,
- * per the GC precedent) so the number is grep-able in one place:
- * `whereRaw("notifications.created_at < datetime('now', '-365 days')")`.
- * 365 matches `CounterpartyGarbageCollectorJob`'s window exactly — one
- * retention number across the project.
- *
- * **This is NOT a "history retained forever" violation.** That project rule
- * (CLAUDE.md / PROJECT.md) governs TRANSACTIONS — long-term
- * subscription-drift analysis needs them. 18-SPEC.md's Constraints section
- * carves notification pruning out of it explicitly: "Pruning notifications
- * follows the existing `CounterpartyGarbageCollectorJob` precedent." A
- * verifier must NOT flag this job as a history-retention violation.
- *
- * **D-37 — the KEK-less property is the point, not an optimisation.** The
- * sweep is age-based on the ALWAYS-PLAINTEXT `notifications.created_at`
- * column — `id` / `user_id` / `created_at` / `read_at` / `dismissed_at` /
- * `state` are deliberately never encrypted (see the `create_notifications_table`
- * migration's docblock, D-12) — and its predicate touches NONE of the four
- * `SensitiveFieldRegistry`-listed notifications columns (`title` / `body` /
- * `params` / `trigger_type`). So, unlike `CounterpartyGarbageCollectorJob`
- * (whose orphan predicate DOES compare an encrypted column), this job needs
- * no KEK to run correctly — on a locked or headless device the sweep still
- * runs and the inbox still stays bounded. Without this property, an
- * encrypted inbox on a usually-locked device would silently never prune and
- * Req 14's bounded-growth promise would fail with only a warning log as
- * evidence.
- *
- * The optional `Session` / `AppLockKeyService` / `EncryptionMigrationService`
- * / `LoggerInterface` parameters below exist as a DEFENSIVE SAFETY NET only,
- * cloned from `CounterpartyGarbageCollectorJob`'s CRYPT-01 KEK-less
- * skip-with-warning branch (~lines 282-301) — they are NOT consulted to gate
- * today's delete (the predicate never touches an encrypted column, so there
- * is nothing to skip). They exist so that IF a future change ever extends
- * this job's predicate onto an encrypted column, the KEK-check machinery and
- * its preserve-on-uncertainty ethos (never a wrongful prune when in doubt)
- * is already in place to inherit rather than having to be re-derived. Today
- * the branch only LOGS (never skips) so this run is visible for debugging
- * without ever affecting correctness.
- *
- * Cross-user discipline (T-18-57): every clause carries an explicit
- * `where('user_id', $this->userId)` — `BelongsToUser`'s `UserScope` global
- * scope does not fire in queue/console context. Deletes run in bounded
- * chunks (id-batched) rather than one unbounded `DELETE`, matching the GC
- * job's bounded-delete discipline.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -76,17 +28,12 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
     use Queueable;
     use SerializesModels;
 
-    /**
-     * D-18: matches `CounterpartyGarbageCollectorJob`'s retention window
-     * exactly — one retention number across the project. Referenced in the
-     * `whereRaw()` cutoff below; kept as a named constant for readability,
-     * NOT as a `config()`-driven tunable (the GC precedent this job clones
-     * hardcodes its own 365 inline for the same reason: a single grep-able
-     * number, not a setting a user could accidentally widen unboundedly).
-     */
+    // Matches CounterpartyGarbageCollectorJob's retention window exactly
+    // - one retention number across the project. Kept as a named
+    // constant, not a config()-driven tunable, so it stays a single
+    // grep-able number rather than a setting a user could widen unboundedly.
     private const int RETENTION_DAYS = 365;
 
-    /** Bounded id-batch size for the chunked delete loop. */
     private const int CHUNK_SIZE = 500;
 
     public int $tries = 3;
@@ -120,11 +67,10 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
         ?EncryptionMigrationService $encryptionMigrationService = null,
         ?LoggerInterface $logger = null,
     ): void {
-        // Defensive safety net only (D-37) — see the class docblock. This
-        // job's real predicate below never touches an encrypted column, so
-        // this check gates NOTHING today; it only logs, purely for
-        // visibility, so a future contributor who adds an encrypted-column
-        // predicate to this job notices the precedent already exists.
+        // Defensive safety net only - the real predicate below never
+        // touches an encrypted column, so this check gates nothing today;
+        // it only logs, so a future contributor who adds an
+        // encrypted-column predicate here notices the precedent exists.
         if ($session !== null
             && $appLockKeyService !== null
             && $encryptionMigrationService !== null
@@ -141,14 +87,14 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
         $connection = $db->connection();
 
         do {
-            // notifications.id is a 64-char sha256 hex STRING primary key
-            // (D-05), never an integer — every id collected/deleted below
+            // notifications.id is a 64-char sha256 hex string primary
+            // key, never an integer - every id collected/deleted below
             // stays a string throughout.
             /** @var list<string> $ids */
             $ids = $connection->table('notifications')
                 ->where('notifications.user_id', $this->userId)
-                // D-18 / D-37: the age-based, KEK-less cutoff — the sole
-                // predicate. Portable SQLite date arithmetic mirrors
+                // The age-based, key-less cutoff - the sole predicate.
+                // Portable SQLite date arithmetic mirrors
                 // CounterpartyGarbageCollectorJob's identical idiom.
                 ->whereRaw("notifications.created_at < datetime('now', '-".self::RETENTION_DAYS." days')")
                 ->orderBy('notifications.id')

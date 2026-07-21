@@ -16,26 +16,7 @@ use Psr\Log\LoggerInterface;
 use stdClass;
 
 /**
- * The Public read/write seam over `notification_preferences` (D-34/D-35).
- *
- * Implements D-35's own-device-write / other-devices-read-only split:
- *   - `forCurrentDevice()` returns THIS device's row (or the locked
- *     defaults) — this is what `SuppressionEvaluator` reads.
- *   - `forOtherDevices()` returns every OTHER device's row, read-only, for
- *     the settings "Other devices" panel.
- *   - `saveForCurrentDevice()` is the ONLY write path and only ever writes
- *     THIS device's row.
- *
- * The local device id is resolved via `DeviceRegistryService::localDeviceId()`
- * (the sanctioned Public crossing) — `Modules\Notifications` may not reach
- * `Modules\Sync\Internal\Identity`. A null device id (unpaired / no self
- * row) is a TOTAL contract, never an error: `forCurrentDevice()` returns
- * `NotificationPreferencesDto::defaults()` and `saveForCurrentDevice()`
- * is a logged no-op (an unpaired device has no identity to key a row on).
- *
- * Every query carries an explicit `->where('user_id', $user->id)` because
- * `BelongsToUser`'s `UserScope` global scope does not fire in queue/console
- * context (T-18-03) — the explicit predicate is the primary guard.
+ * @link ../../../../.docs/features/notifications/architecture.md
  */
 final readonly class NotificationPreferenceQuery
 {
@@ -50,10 +31,8 @@ final readonly class NotificationPreferenceQuery
         private LoggerInterface $logger,
     ) {}
 
-    /**
-     * This device's preferences, or the locked D-16/D-19 defaults when the
-     * device has no row OR is unpaired. Never throws, never returns null.
-     */
+    // This device's preferences, or the locked defaults when the device
+    // has no row or is unpaired. Never throws, never returns null.
     public function forCurrentDevice(User $user): NotificationPreferencesDto
     {
         $deviceId = $this->devices->localDeviceId($user->id);
@@ -74,11 +53,10 @@ final readonly class NotificationPreferenceQuery
         return self::hydrate($row, $deviceId, '');
     }
 
+    // Every other device's preferences, read-only. Named via
+    // DeviceRegistryService::otherDeviceNames(); a device with a
+    // registry row but no preference row is omitted (nothing to show yet).
     /**
-     * Every OTHER device's preferences, read-only (D-35). Named via
-     * `DeviceRegistryService::otherDeviceNames()`; a device with a registry
-     * row but no preference row is omitted (nothing to show yet).
-     *
      * @return array<int, NotificationPreferencesDto>
      */
     public function forOtherDevices(User $user): array
@@ -101,13 +79,10 @@ final readonly class NotificationPreferenceQuery
         return $result;
     }
 
-    /**
-     * Writes THIS device's preferences (D-35 own-device write). Validates
-     * server-side (T-18-06) — out-of-range input throws, never clamps.
-     * Dispatches `NotificationPreferenceMutated` AFTER the write commits
-     * (D-28 / WR-06). A no-op when the device is unpaired (`localDeviceId()`
-     * is null) — logged, never thrown.
-     */
+    // Writes THIS device's preferences. Validates server-side -
+    // out-of-range input throws, never clamps. Dispatches
+    // NotificationPreferenceMutated after the write commits. A no-op
+    // when the device is unpaired - logged, never thrown.
     public function saveForCurrentDevice(User $user, NotificationPreferencesDto $prefs): void
     {
         self::validate($prefs);
