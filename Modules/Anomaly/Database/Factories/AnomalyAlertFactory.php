@@ -8,17 +8,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalyAlert;
 
+// The default state encodes a large-vs-typical expense anomaly: a €23.49
+// charge against a €9.99 per-merchant baseline, flagged `large`. Callers
+// must override the `transaction_id` FK — the schema constraint rejects
+// the factory default of `null`.
 /**
- * Eloquent factory for the anomaly_alerts table.
- *
- * The default state encodes a large-vs-typical expense anomaly: a €23.49
- * charge against a €9.99 per-merchant baseline, flagged `large`. State
- * factories cover the four lifecycle phases: open() (the default),
- * acknowledged(), snoozed($until), and dismissed().
- *
- * Callers must override the `transaction_id` FK — the schema constraint
- * rejects the factory default of `null`.
- *
  * @extends Factory<AnomalyAlert>
  */
 final class AnomalyAlertFactory extends Factory
@@ -46,11 +40,8 @@ final class AnomalyAlertFactory extends Factory
         ];
     }
 
-    /**
-     * State factory: an open alert. This is the default state but the
-     * helper is kept symmetric with the terminal states below so call
-     * sites read explicitly.
-     */
+    // Default state, kept symmetric with the terminal states below so
+    // call sites read explicitly.
     public function open(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -61,11 +52,8 @@ final class AnomalyAlertFactory extends Factory
         ]);
     }
 
-    /**
-     * State factory: an acknowledged alert. The user reviewed it and
-     * confirmed "seen it, it's fine" (History tab) without recording any
-     * suppression intent. Sets `actioned_at` to now.
-     */
+    // The user reviewed the alert and confirmed "seen it, it's fine"
+    // (History tab) without recording any suppression intent.
     public function acknowledged(): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -75,11 +63,8 @@ final class AnomalyAlertFactory extends Factory
         ]);
     }
 
-    /**
-     * State factory: a snoozed alert. Caller supplies the `snoozed_until`
-     * timestamp explicitly — the revival sweep flips the row back to
-     * `open` once the timestamp is in the past.
-     */
+    // Caller supplies `snoozed_until` explicitly — the revival sweep
+    // flips the row back to `open` once the timestamp is in the past.
     public function snoozed(CarbonImmutable $until): self
     {
         return $this->state(fn (array $attributes): array => [
@@ -89,12 +74,9 @@ final class AnomalyAlertFactory extends Factory
         ]);
     }
 
-    /**
-     * State factory: a dismissed-as-expected alert (Dismissed tab).
-     * Records the user's intent that the charge is not unusual; the
-     * dismiss action creates a suppression rule (D-17). The dismissal is
-     * undoable — `dismissed -> open` is the diverging state-machine edge.
-     */
+    // Dismissed-as-expected (Dismissed tab): records the user's intent
+    // that the charge is not unusual and creates a suppression rule. The
+    // dismissal is undoable via the `dismissed -> open` state edge.
     public function dismissed(): self
     {
         return $this->state(fn (array $attributes): array => [

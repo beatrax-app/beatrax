@@ -7,14 +7,11 @@ namespace Modules\Anomaly\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalyAlertTransition;
 
+// The default state encodes a "user acknowledged an open alert"
+// transition. Callers override `from_state` / `to_state` /
+// `transition_reason` / `actor` for the snooze / dismiss / undo / revive
+// shapes.
 /**
- * Eloquent factory for the anomaly_alert_transitions audit table.
- *
- * The default state encodes a "user acknowledged an open alert"
- * transition. Callers can override `from_state` / `to_state` /
- * `transition_reason` / `actor` for the snooze / dismiss / undo / revive
- * shapes.
- *
  * @extends Factory<AnomalyAlertTransition>
  */
 final class AnomalyAlertTransitionFactory extends Factory

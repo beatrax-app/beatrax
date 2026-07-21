@@ -28,20 +28,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Events\TransactionImported;
 
 /**
- * Wires the Anomaly module.
- *
- * register() binds the stateless in-tree services as singletons. In this
- * wave only the sole-mutator state machine exists; the Public queries /
- * actions, the detector, the queued jobs, and the Livewire surface land
- * in later plans (02 evaluator, 03 read/write surface, 04 jobs, 05 UI)
- * and register their own singletons / components here as they arrive.
- *
- * boot() conditionally loads the module's migrations, routes, and views
- * and (Plan 04) registers the synchronous TransactionImported listener
- * that QUEUES a unique DetectAnomaliesJob — detection runs on the queue,
- * never inline in the import transaction (D-12 / T-09-14). It also (Plan 05)
- * wires the top-nav anomaly badge view composer and registers the anomaly
- * Livewire components.
+ * @link ../../../.docs/features/anomaly/architecture.md
  */
 final class AnomalyServiceProvider extends ServiceProvider
 {
@@ -49,29 +36,21 @@ final class AnomalyServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AnomalyAlertStateMachine::class);
 
-        // Plan 02: the three stateless detectors + the evaluator that
-        // orchestrates them. Singletons because they hold no per-request
-        // state (they read the DatabaseManager / Clock / RecurringSeriesQuery
-        // bindings, all themselves singletons).
+        // Every binding below is a singleton: each collaborator is
+        // stateless and depends only on other singleton bindings
+        // (DatabaseManager / Clock / the Public query services).
         $this->app->singleton(LargeVsTypicalDetector::class);
         $this->app->singleton(FirstTimeMerchantDetector::class);
         $this->app->singleton(DuplicateChargeDetector::class);
         $this->app->singleton(AnomalyEvaluator::class);
 
-        // Plan 03: the Public read surface. Singletons because they hold no
-        // per-request state (they read the DatabaseManager / Clock /
-        // CounterpartyProfileQuery bindings, all themselves singletons).
         $this->app->singleton(AnomalyAlertQuery::class);
         $this->app->singleton(AnomalySuppressionRuleQuery::class);
 
-        // The three lifecycle Actions. Singletons (state machine +
-        // dispatcher + clock dependencies are all singletons).
         $this->app->singleton(AcknowledgeAnomalyAlert::class);
         $this->app->singleton(SnoozeAnomalyAlert::class);
         $this->app->singleton(DismissAnomalyAlert::class);
 
-        // Dismiss-as-expected (creates ±15% suppression rules, D-17) and
-        // the two-path rule removal (settings delete + undo re-open, D-18).
         $this->app->singleton(DismissAnomalyAlertAsExpected::class);
         $this->app->singleton(RemoveAnomalySuppressionRule::class);
     }
@@ -88,19 +67,15 @@ final class AnomalyServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'anomaly');
         }
 
-        // Plan 05 Livewire surface: the dashboard "Unusual charges" tile
-        // (D-03) and the Settings "Anomaly detection" section (D-11/D-18).
         $livewire->component('anomaly.dashboard-anomaly-badge', DashboardAnomalyBadge::class);
         $livewire->component('anomaly.settings-section', AnomalySettingsSection::class);
 
         $this->registerNavBadgeComposer();
 
-        // Plan 04: queue a unique DetectAnomaliesJob on every import (D-12).
         // The listener stays synchronous but only DISPATCHES the job — the
-        // baseline math runs on the queue, never in the import transaction
-        // (T-09-14). class_exists-guarded so the skeleton waves cannot wire
-        // detection before the evaluator + job exist (mirrors the
-        // SearchServiceProvider TransactionImported registration shape).
+        // baseline math runs on the queue, never in the import transaction.
+        // class_exists-guarded so a partially-booted module never wires
+        // detection before the evaluator + job exist.
         if (class_exists(EvaluateAnomaliesOnTransactionImport::class)) {
             $events->listen(
                 TransactionImported::class,
@@ -114,22 +89,10 @@ final class AnomalyServiceProvider extends ServiceProvider
         // on first activation (Plan 05 settings toggle).
     }
 
-    /**
-     * Inject the anomaly open-alert count into the sidebar nav as
-     * `navCounts['anomaly']` via the View Factory contract (the global
-     * `view()` helper is forbidden in module code).
-     *
-     * The sidebar's `AppSidebar` component already provides a `navCounts`
-     * map (from `NavCountsService`); this composer MERGES the
-     * revival-aware anomaly open count into that map so the value stays
-     * exactly equal to `AnomalyAlertQuery::openCountForUser` (which a raw
-     * `state='open'` COUNT would not — it must also surface snoozed-but-
-     * expired alerts). UI-SPEC §5 renders the amber `.side-badge.alert`
-     * when the count is > 0.
-     *
-     * A boot-scoped memo collapses repeated renders within a single boot
-     * cycle to a single COUNT query.
-     */
+    // Injects the anomaly open-alert count into the sidebar's existing
+    // `navCounts` map via the View Factory contract (the global `view()`
+    // helper is forbidden in module code). A boot-scoped memo collapses
+    // repeated renders within a single boot cycle to a single COUNT query.
     private function registerNavBadgeComposer(): void
     {
         $app = $this->app;

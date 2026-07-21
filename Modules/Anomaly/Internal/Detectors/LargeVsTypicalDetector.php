@@ -10,28 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
- * Large-vs-typical detector (D-06 / D-07 / D-08).
- *
- * Judges a charge against the user's own per-counterparty history (robust
- * median + k×MAD z-score) over a rolling 12-month window, falling back to
- * the per-category p95 when the merchant has thin history (< 5 prior
- * samples). When both the counterparty and the category are thin the
- * charge cannot be judged and the detector returns null (no fire) rather
- * than guessing.
- *
- * Currency discipline (Pitfall 5 / T-09-07): every amount is read and
- * compared in SETTLED minor units (`settled_amount_minor` /
- * `settled_currency`) so a multi-currency merchant's history stays
- * comparable and a routine USD charge whose settled-EUR amount is typical
- * never produces a spurious flag.
- *
- * Cross-user discipline (T-09-05): every baseline query carries an
- * explicit `where('user_id', ...)` — the BelongsToUser global scope does
- * not fire under queue/console, so the explicit filter is the primary
- * guard.
- *
- * The detector reads `transactions` directly (a sanctioned cross-module
- * read) and never writes it (`noTransactionWritesFromAnomaly` invariant).
+ * @link ../../../../.docs/features/anomaly/architecture.md
  */
 final readonly class LargeVsTypicalDetector
 {
@@ -51,7 +30,6 @@ final readonly class LargeVsTypicalDetector
         $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : 'EUR';
         $absMinor = abs($settledMinor);
 
-        // D-11: the min-amount floor gates the detector.
         if ($absMinor < $minFloorMinor) {
             return null;
         }
@@ -90,7 +68,7 @@ final readonly class LargeVsTypicalDetector
             return null;
         }
 
-        // Per-category fallback (D-06): only when the category has richer
+        // Per-category fallback: only when the category has richer
         // history. Trip on x > p95(category, same direction, same window).
         if ($categoryId === null) {
             return null;
@@ -107,16 +85,14 @@ final readonly class LargeVsTypicalDetector
         );
 
         if (count($categorySample) < RobustStatistics::THIN_HISTORY_CUTOFF) {
-            // Both counterparty and category are thin — cannot be judged.
             return null;
         }
 
         $absSample = array_map('abs', $categorySample);
         $p95 = RobustStatistics::percentile($absSample, RobustStatistics::CATEGORY_PERCENTILE);
-        // WR-04: tie-inclusive boundary — a charge EQUAL to the category p95
-        // (which collapses toward the sample max for small samples) fires,
+        // Tie-inclusive boundary: a charge EQUAL to the category p95 fires,
         // so a repeat of the largest-ever charge is not a silent false
-        // negative. See RobustStatistics::exceedsPercentile.
+        // negative. {@see RobustStatistics::exceedsPercentile}
         if (RobustStatistics::exceedsPercentile($absMinor, $categorySample, RobustStatistics::CATEGORY_PERCENTILE)) {
             return [
                 'baseline_amount_minor' => (int) round(-$p95),
@@ -129,11 +105,6 @@ final readonly class LargeVsTypicalDetector
     }
 
     /**
-     * Gathers the prior settled-minor-unit sample for a column key
-     * (counterparty_id or category_id), scoped to the user, same direction
-     * (via the transaction type set), same settled currency, within the
-     * window, excluding the charge under test.
-     *
      * @param  list<string>  $types
      * @return list<int>
      */
@@ -163,22 +134,11 @@ final readonly class LargeVsTypicalDetector
         return $sample;
     }
 
+    // The larger of the hard MAD_FLOOR_MINOR and 1% of the sample median
+    // magnitude, so a high-value merchant's near-constant history does not
+    // trip on a tiny absolute deviation; cheap merchants get the flat
+    // floor, larger merchants get a value-scaled one.
     /**
-     * Context-derived MAD floor (minor units): the larger of the hard
-     * minimum (MAD_FLOOR_MINOR, 50) and 1% of the sample median magnitude,
-     * so a high-value merchant's near-constant history does not trip on a
-     * tiny absolute deviation.
-     *
-     * NOTE: for any merchant whose median magnitude is below 5000 minor
-     * units (€50.00), `median * 0.01 < 50`, so the floor collapses to the
-     * hard MAD_FLOOR_MINOR — the 1%-of-median scaling only engages above a
-     * €50 median. That is intentional: cheap recurring merchants get the
-     * flat 50-minor-unit floor, larger merchants get a value-scaled floor.
-     *
-     * The max() is computed in float so the fractional 1% is not discarded
-     * before the comparison; only the final result is cast to int (the
-     * integer minor-unit denominator the robust-z uses).
-     *
      * @param  list<int>  $sample
      */
     private static function madFloorFor(array $sample): int
@@ -213,11 +173,9 @@ final readonly class LargeVsTypicalDetector
         };
     }
 
+    // The baseline must compare like with like: an expense charge against
+    // the expense-side history, an inflow against the income-side history.
     /**
-     * The transaction `type` values that constitute one direction. The
-     * baseline must compare like with like: an expense charge against the
-     * expense-side history, an inflow against the income-side history.
-     *
      * @return list<string>
      */
     private static function typesForDirection(string $direction): array

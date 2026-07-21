@@ -16,37 +16,11 @@ use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Core\Public\Contracts\Clock;
 use stdClass;
 
+// Global (no `user_id` scope): alerts may belong to any user, and
+// revival is purely a timer-driven transition preserved on the audit row
+// by the state machine's own read of the alert's owning user.
 /**
- * Hourly scheduled sweep that flips `anomaly_alerts` rows from
- * `state='snoozed'` to `state='open'` once their `snoozed_until` has
- * elapsed. Cloned from RevivedExpiredDriftSnoozesJob, re-keyed to the
- * anomaly_alerts table + AnomalyAlertStateMachine.
- *
- * Companion to the query-time conditional on
- * `AnomalyAlertQuery::openForUser` (and `openCountForUser`) — those reads
- * widen their state filter to include `state='snoozed' AND snoozed_until
- * <= now()` so the count + list stay honest between sweeps (Pattern 4).
- * The audit row is written exclusively by this sweep: the query-time
- * conditional is a read-side projection, never a write.
- *
- * Runs hourly via `routes/console.php` (a scheduler entry named
- * `anomaly.revive-snoozes`). The sweep is global (no `user_id` scope) —
- * alerts may belong to any user; revival is purely a timer-driven
- * transition, and the user-id is preserved on the audit row by the state
- * machine's read of the alert's owning user (T-09-16: a global revival
- * that only flips snoozed->open exposes no cross-user data).
- *
- * Retries on transient failure: `tries=3` with exponential backoff
- * (60s / 5min / 15min). Each individual transition is idempotent at the
- * state-machine level, so retrying a partially-completed sweep is safe.
- *
- * Concurrent user actions: if a user acknowledges, dismisses, or
- * re-snoozes a candidate row between the SELECT scan and the state-machine
- * call, the state machine sees the new state under its row lock and raises
- * InvalidStateTransitionException. The sweep catches that per-row and skips
- * silently so a single mid-sweep user action cannot fail the entire job
- * (T-09-17: the revival only ever mutates state via the sole-mutator
- * state machine).
+ * @link ../../../../.docs/features/anomaly/architecture.md
  */
 final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
 {
@@ -55,7 +29,6 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    /** Chunk size for the candidate walk (mirrors SafetyNetAnomalySweepJob). */
     private const CHUNK = 500;
 
     public int $tries = 3;
@@ -67,11 +40,9 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
     {
         $now = $clock->now()->toDateTimeString();
 
-        // Chunk the candidate scan with lazyById so a large backlog of
-        // expired snoozes (across all users on a multi-user box) never loads
-        // every row into memory at once — mirroring SafetyNetAnomalySweepJob.
-        // The per-row state-machine transition stays inside the callback so
-        // each row is re-read fresh under its own row lock.
+        // lazyById so a large backlog of expired snoozes never loads every
+        // row into memory at once; each row is re-read fresh under its own
+        // row lock inside the callback.
         $db->connection()->table('anomaly_alerts')
             ->where('state', 'snoozed')
             ->whereNotNull('snoozed_until')
@@ -102,9 +73,8 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
                     );
                 } catch (InvalidStateTransitionException) {
                     // A concurrent user action moved the row off 'snoozed'
-                    // between the candidate scan and the state-machine row
-                    // lock. The transition guard correctly refused the
-                    // revival; skip this row and continue the sweep.
+                    // between the scan and the state-machine row lock; skip
+                    // this row and continue the sweep.
                 }
             });
     }

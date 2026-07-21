@@ -12,21 +12,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Plain dismiss of an anomaly_alerts row — the user wants the alert out
- * of the Open tab WITHOUT recording a suppression rule. The row
- * transitions to `dismissed` with `dismissed_as = 'dismissed'`; NO
- * anomaly_suppression_rules row is written (that is the distinct
- * `DismissAnomalyAlertAsExpected` action's job, D-17).
- *
- * Idempotent when already dismissed. Cross-user invocation raises
- * NotFoundHttpException. Dispatches `AnomalyAlertDismissed` carrying the
- * `dismissed` discriminator so listeners can tell a plain dismiss from a
- * dismiss-as-expected.
- *
- * Transition reason is `user_dismissed` so the append-only audit can
- * separate a plain dismiss from acknowledge / dismiss-as-expected.
- */
+// Plain dismiss: the alert leaves the Open tab WITHOUT recording a
+// suppression rule (that is DismissAnomalyAlertAsExpected's job).
+// Idempotent when already dismissed; cross-user invocation raises
+// NotFoundHttpException.
 final class DismissAnomalyAlert
 {
     public function __construct(

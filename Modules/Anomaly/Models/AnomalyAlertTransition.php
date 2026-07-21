@@ -12,15 +12,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Anomaly\Database\Factories\AnomalyAlertTransitionFactory;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// Append-only audit trail produced by AnomalyAlertStateMachine, one row
+// per transition. `actor` is `user` (alerts-page affordance) or
+// `detector` (snooze-expiry revival flip back to `open`).
 /**
- * Eloquent model for the anomaly_alert_transitions table — the
- * append-only audit trail produced by `AnomalyAlertStateMachine`.
- *
- * One row per state transition. `actor` is either `user` (alerts-page
- * acknowledge / snooze / dismiss / undo affordance) or `detector`
- * (snooze-expiry revival flip back to `open`). `transition_reason` is the
- * structured code downstream surfaces narrate to the user.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $anomaly_alert_id

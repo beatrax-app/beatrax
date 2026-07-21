@@ -10,24 +10,10 @@ use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
-/**
- * Shared hydrator for `anomaly_alerts` rows → `AnomalyAlertDto`.
- *
- * Static-only: no constructor dependencies. The mapper does not read
- * services or touch the DB; it is pure-data transformation cloned from
- * `DriftAlertDtoMapper`, re-keyed to the anomaly shape:
- *   - `reasons` is a JSON list<string> column → decoded into a list.
- *   - `baseline_amount_minor` / `latest_amount_minor` are nullable
- *     (a first-time-merchant flag has no per-merchant amount baseline);
- *     a null minor amount hydrates to a zero-amount Money in the settled
- *     currency so call sites never branch on null.
- *   - `currency` is nullable; when absent the DTO falls back to EUR so
- *     the Money factory always receives a valid ISO code.
- *   - There are NO annualized/threshold fields.
- *
- * The caller passes the merchant display name (resolved at the query
- * layer from `CounterpartyProfileQuery::identitiesForIds`).
- */
+// Static-only: no constructor dependencies, no DB access. A null
+// baseline/latest amount hydrates to a zero-amount Money in the settled
+// currency (a first-time-merchant flag has no per-merchant baseline) so
+// call sites never branch on null.
 final class AnomalyAlertDtoMapper
 {
     /**
@@ -72,11 +58,9 @@ final class AnomalyAlertDtoMapper
         );
     }
 
+    // A malformed or non-array payload degrades to an empty list rather
+    // than throwing — the renderer simply shows no reason chips.
     /**
-     * Decodes the `reasons` JSON column into a list<string>. A malformed
-     * or non-array payload degrades to an empty list rather than throwing
-     * — the renderer simply shows no reason chips.
-     *
      * @return list<string>
      */
     private static function decodeReasons(mixed $value): array

@@ -12,18 +12,10 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Acknowledges an open (or snoozed) anomaly_alerts row — the user has
- * reviewed the unusual charge and no further action is required. The
- * alert moves to the History tab. Idempotent when already acknowledged
- * (silent no-op). Cross-user invocation raises NotFoundHttpException via
- * the `(id, user_id)` guard.
- *
- * The state machine writes the new state + `actioned_at` audit timestamp
- * inside the same row-locked transaction as the
- * anomaly_alert_transitions row insert. Acknowledging closes only the
- * alert that was acted on; future detection is unaffected.
- */
+// Idempotent when already acknowledged (silent no-op). Cross-user
+// invocation raises NotFoundHttpException via the `(id, user_id)` guard.
+// Acknowledging closes only the alert acted on; future detection is
+// unaffected.
 final class AcknowledgeAnomalyAlert
 {
     public function __construct(
