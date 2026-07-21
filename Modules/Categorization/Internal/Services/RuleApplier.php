@@ -33,6 +33,14 @@ final class RuleApplier
         'tax_tag' => 'tax_tag',
     ];
 
+    // Per-instance User memo, keyed by userId. A single ReapplyRulesJob run
+    // resolves this RuleApplier once and folds every chunk + matched row
+    // through it, so without memoization applyAtReapply reloads the SAME user
+    // from the DB once per matched row. Keyed (not a single slot) so a
+    // hypothetically instance-reused across two users stays correct.
+    /** @var array<int, User> */
+    private array $userCache = [];
+
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly DatabaseManager $db,
@@ -86,7 +94,7 @@ final class RuleApplier
             return [];
         }
 
-        $user = User::query()->findOrFail($userId);
+        $user = $this->resolveUser($userId);
         $provenance = $this->provenance->provenanceFor($userId, $transactionId);
 
         $changed = [];
@@ -110,6 +118,14 @@ final class RuleApplier
         }
 
         return $changed;
+    }
+
+    // `??=` only queries when the key is absent, so findOrFail still throws
+    // ModelNotFoundException on a missing user on the first resolve and
+    // nothing is cached on failure — identical to the pre-memo behavior.
+    private function resolveUser(int $userId): User
+    {
+        return $this->userCache[$userId] ??= User::query()->findOrFail($userId);
     }
 
     /**
