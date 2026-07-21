@@ -13,96 +13,14 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Post-import retype-by-alias healing pass.
- *
- * Resolves the wizard-order race: when the onboarding flow uploads a
- * source file BEFORE the user has created the destination-kind account
- * (e.g. ASN CSV uploaded while only the `bank`-kind account exists,
- * with the `paypal`-kind account created moments later in a subsequent
- * wizard step), the preview-time ClassifyTransactionType pipeline stage
- * (Import module) finds the alias row but no matching destination
- * Account, so
- * the row falls through to the amount-sign default (`expense` /
- * `income`). The cached canonical persists that type into the ledger
- * on confirm. Without a healing pass those rows remain mis-typed
- * forever, every downstream chain resolver iterates an empty set, and
- * `chain_links` stays empty.
- *
- * The resolver re-applies the classifier's cross-account rule against
- * the now-complete account graph per user:
- *
- *   - target rows: `type IN ('expense', 'income')` AND
- *     `counterparty_iban` non-null AND non-empty
- *   - retype condition: the counterparty IBAN appears in
- *     `known_counterparty_ibans` for this user AND the alias's
- *     `target_account_kind` resolves to an account belonging to the
- *     same user AND that account is NOT the row's own account
- *   - new type: amount-sign rule — `amount_minor < 0` →
- *     `transfer_out`, otherwise `transfer_in`
- *
- * Idempotent — a second pass matches zero rows because the previous
- * pass already flipped them out of `'expense' | 'income'`. Self-healing
- * — when the user adds a new known-counterparty alias later, the next
- * chain dispatch retypes any historical rows that match it.
- *
- * Run BEFORE the per-row pair-orphan sweep + the two existing chain
- * resolvers inside ResolveChainLinksJob so the downstream resolvers
- * iterate the corrected ledger.
- *
- * The retype does NOT touch `pair_transaction_id` — pairing is the
- * orphan-sweep's responsibility. Cross-user safety: every predicate
- * filters on `$user->id` (the outer query, the alias map build, and
- * the account-kind map build).
- *
- * CR-03/D-06 (decrypt-then-match, HIGH candidate-set-narrowing risk):
- * the retype condition used to be a single raw SQL UPDATE with a
- * correlated `EXISTS` subquery testing
- * `kci.real_iban = transactions.counterparty_iban` — a ciphertext-
- * column equality that can never match once `counterparty_iban` is
- * encrypted. That whole-table join-equality cannot survive under
- * encryption; it is replaced with a BOUNDED decrypt-then-match:
- *
- *   1. Load `known_counterparty_ibans` for this user into an in-PHP
- *      map (`real_iban` (plaintext) => `target_account_kind`). This
- *      table is small and plaintext. If the user has NO aliases at
- *      all, return 0 immediately WITHOUT decrypting a single
- *      transaction row (T-14.1-06 DoS guard — the common case for a
- *      brand-new user).
- *   2. Load this user's own accounts into an in-PHP map (`kind` =>
- *      list of account ids). Also small (a handful of rows per user).
- *   3. Narrow candidate transactions on the SAME cheap plaintext dims
- *      the original SQL used (`user_id`, `type IN ('expense',
- *      'income')`, `counterparty_iban` non-null/non-empty) — this
- *      predicate is inherently self-shrinking across resolver runs
- *      (idempotency: a retyped row leaves the `('expense', 'income')`
- *      set and is never a candidate again), so it does not degrade
- *      into an unbounded full-history scan on steady-state (non-first)
- *      runs. Processed via `chunkById()` so even a large first-run
- *      history sweep never holds every candidate row in memory at
- *      once.
- *   4. Decrypt each surviving candidate's `counterparty_iban` ONCE and
- *      look it up in the in-PHP alias map; only when a match resolves
- *      to a target-kind account OTHER than the row's own account
- *      (mirrors the dropped subquery's `a.id != transactions.account_id`
- *      self-transfer guard) does the row get queued for retype.
- *   5. Apply the retype via one or more bulk `UPDATE ... WHERE id IN
- *      (...)` statements, batched to bound statement size.
- *
- * Raw query builder rather than Eloquent throughout — sidesteps
- * Eloquent's per-row event/observer firing (neither needed here) and
- * keeps the project's `phpstan-strict-rules` `staticMethod.dynamicCall`
- * rule satisfied.
+ * @link ../../../../.docs/architecture/chain-resolution.md
  */
 final class RetypeByAliasResolver
 {
-    /**
-     * Bulk-UPDATE batch size for the retype pass. Bounds the size of
-     * any single `WHERE id IN (...)` statement regardless of how many
-     * rows the decrypt-then-match pass queues.
-     */
+    // Bounds the size of any single WHERE id IN (...) statement regardless
+    // of how many rows the decrypt-then-match pass queues.
     private const UPDATE_BATCH_SIZE = 500;
 
-    /** `chunkById()` page size for the candidate-transaction decrypt scan. */
     private const CANDIDATE_CHUNK_SIZE = 500;
 
     public function __construct(
@@ -120,7 +38,6 @@ final class RetypeByAliasResolver
         $connection = $this->db->connection();
         $now = $this->clock->now()->toDateTimeString();
 
-        // Bound #1 (T-14.1-06): the alias set is small and plaintext.
         // No aliases at all means this pass can never retype anything —
         // return before decrypting a single row.
         $aliasKindByIban = $this->loadAliasMap($connection, $user);
@@ -128,7 +45,6 @@ final class RetypeByAliasResolver
             return 0;
         }
 
-        // Bound #2: this user's own accounts grouped by kind — small.
         $accountIdsByKind = $this->loadAccountKindMap($connection, $user);
 
         /** @var list<int> $transferOutIds */
@@ -136,9 +52,9 @@ final class RetypeByAliasResolver
         /** @var list<int> $transferInIds */
         $transferInIds = [];
 
-        // Bound #3/#4: narrow on the same cheap plaintext dims the
-        // original SQL used, chunk the scan, decrypt-then-match each
-        // candidate against the in-PHP maps built above.
+        // Narrows on the same cheap plaintext dims as the original SQL,
+        // chunking the scan and decrypt-then-matching each candidate
+        // against the in-PHP maps built above.
         $connection
             ->table('transactions')
             ->select(['id', 'account_id', 'amount_minor', 'counterparty_iban'])
@@ -174,11 +90,6 @@ final class RetypeByAliasResolver
     }
 
     /**
-     * Decrypt one candidate's counterparty_iban and, on a match against
-     * the alias map (resolving to a target-kind account other than the
-     * row's own account), queue its id into the appropriate by-target-
-     * type bucket.
-     *
      * @param  array<string, string>  $aliasKindByIban
      * @param  array<string, list<int>>  $accountIdsByKind
      * @param  list<int>  $transferOutIds
@@ -284,20 +195,6 @@ final class RetypeByAliasResolver
     }
 
     /**
-     * Apply the retype for one target type via batched raw
-     * `UPDATE ... WHERE id IN (...)` statements. Returns the number of
-     * rows updated.
-     *
-     * Deliberately a raw SQL string (mirrors the resolver's pre-fix
-     * single-statement shape) rather than the fluent
-     * `->table('transactions')->update(...)` builder chain — this
-     * resolver is the ONE documented exception to
-     * `BoundaryArchTest::noResolverWritesTransactions` (it retypes
-     * `transactions.type`, unlike every other Chains resolver, which
-     * writes only `chain_links`/`card_statements`); staying on the raw
-     * SQL form keeps that exception textually distinct from the
-     * forbidden fluent-builder shape the arch test greps for.
-     *
      * @param  list<int>  $ids
      */
     private function applyRetype(Connection $connection, array $ids, string $type, string $now): int
@@ -318,17 +215,11 @@ final class RetypeByAliasResolver
         return $touched;
     }
 
-    /**
-     * Numeric coercion for raw query-builder column values.
-     */
     private static function toInt(mixed $value): int
     {
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    /**
-     * Null-safe string coercion for raw query-builder column values.
-     */
     private static function toStringOrNull(mixed $value): ?string
     {
         if ($value === null) {

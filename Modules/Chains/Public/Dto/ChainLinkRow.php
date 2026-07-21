@@ -8,23 +8,10 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * Single row payload for the `/chains/review` candidate queue. One
- * instance per `chain_links.state = 'candidate'` row that surfaces in
- * the review surface.
- *
- * The DTO carries both endpoints' display data so the Blade view can
- * render the candidate's "from" and "to" sides without re-querying.
- * `$confirmsRemaining` is the auto-promotion hint — once the user
- * has confirmed two same-signature candidates, the third confirmation
- * promotes the signature to auto-confirm via `resolver='rule'`.
- *
- * `$fromCounterpartySlug` / `$toCounterpartySlug` carry the resolved-
- * counterparty slug for each endpoint's counterparty-name click-through
- * anchor that routes to `counterparties.profile`. NULL when the
- * corresponding transaction has no resolved counterparty — the Blade
- * then renders the counterparty name as plain text instead of a link.
- */
+// One instance per candidate chain_links row for /chains/review.
+// confirmsRemaining counts down to the auto-promotion threshold; the
+// *CounterpartySlug fields are null when the transaction has no resolved
+// counterparty, falling back to plain text instead of a profile link.
 final class ChainLinkRow extends Data
 {
     public function __construct(

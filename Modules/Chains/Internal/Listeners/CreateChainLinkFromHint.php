@@ -11,58 +11,15 @@ use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 /**
- * Listens for the Receipts module's `ChainHintDetected` event and
- * persists a candidate `chain_links` row in the Chains ledger.
+ * @link ../../../../.docs/features/chains/architecture.md
  *
- * The Receipts module emits the event AFTER a canonical transaction
- * has been written (from `RecordReceipt::__invoke`), so the event
- * payload's `sourceTransactionId` is the id of an existing row. The
- * listener does not validate that the transactions row exists at
- * read-time — the schema's foreign-key constraint enforces that
- * invariant; an event for a deleted transaction simply fails the
- * insert with a constraint violation, which surfaces as a job
- * failure for triage.
- *
- * Two hint types are handled in v1:
- *
- *  - `funded_by_card` -> `chain_links.kind = 'funded_by_card_hint'`.
- *    Emitted when an ICS receipt surfaces a card last-four; the
- *    candidate row waits for a future Chains resolver to bind it to
- *    the matching ICS card statement once the funder lands.
- *
- *  - `refund_of` -> `chain_links.kind = 'refund_of_hint'`. Emitted
- *    when a refund-shaped receipt surfaces the original-order
- *    reference id. No matcher emits this hint type yet — refund
- *    pairing is a deferred capability — but the listener branch is
- *    in place so the Public event contract is total.
- *
- * Cross-user safety: the listener trusts the `userId` field on the
- * event payload as the authoritative source.
- * The dispatcher (`RecordReceipt`) populates that field from the
- * `User` argument it received, so any cross-user leak would have to
- * originate upstream of this listener. The chain_links row's
- * `user_id` is written from `$event->userId` only — never inferred
- * from the current HTTP session or any global state.
- *
- * Idempotency: re-dispatching the same event is a no-op. A pre-INSERT
- * existence check on `(user_id, from_transaction_id, kind)` skips
- * when a row is already present in ANY state — a manually-rejected
- * row stays rejected because the listener refuses to write a fresh
- * candidate over it.
- *
- * Forward-compat: unknown `hintType` values are silently ignored. The
- * sum-type of payloads is closed in v1 (FundedByCardPayload +
- * RefundOfPayload), so an unknown type indicates a producer that has
- * not yet been integrated; dropping the event is the safest default.
- *
- * @internal Kept under Internal because the row it
- *           writes is consumed exclusively by the Chains module's own
- *           resolvers + review-queue UI. Subscription is wired in
- *           `ChainsServiceProvider::boot()`.
+ * @internal Row consumed exclusively by the Chains module's own resolvers
+ *           + review-queue UI. Subscription wired in ChainsServiceProvider::boot().
  */
 final class CreateChainLinkFromHint
 {
-    /** Confidence for a hint-only candidate — half-confident pending resolver promotion. */
+    // Confidence for a hint-only candidate: half-confident pending
+    // resolver promotion.
     private const HINT_CONFIDENCE = '0.500';
 
     public function __construct(

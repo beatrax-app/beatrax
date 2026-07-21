@@ -17,129 +17,54 @@ use Modules\Transfers\Public\Services\PairLookup;
 use stdClass;
 
 /**
- * PayPal funding-chain resolver — three arms.
- *
- *   1. Deterministic arm — inspect the row's stored raw payload (the
- *      PayPal Activity Download event tape) for "Bankstorting" /
- *      "General Withdrawal" / "Transfer to bank" events whose memo
- *      cells carry an IBAN matching one of the user's accounts. When
- *      an equal-and-opposite `transfer_in` exists on that account
- *      within ±DATE_WINDOW_DAYS, write a confirmed chain_link with
- *      confidence=1.0, resolver='auto'.
- *
- *   2. ASN-direct arm — handles the empirical Activity Download shape
- *      where the funding-leg `Bankstorting` row is ABSENT from the
- *      PayPal CSV (the user's CSV ships only outgoing merchant
- *      payments, not the SEPA-pull deposits that funded them). Pairs
- *      the PayPal `expense` row directly against an ASN-side
- *      `transfer_out` whose counterparty_iban alias-resolves through
- *      `known_counterparty_ibans` to one of the user's `paypal`-kind
- *      accounts — same settled amount, ±DATE_WINDOW_DAYS. Unique
- *      match: state='confirmed', confidence=1.0; ambiguous (≥2
- *      candidates inside the window): state='candidate',
- *      confidence=ASN_DIRECT_AMBIGUOUS_CONFIDENCE. The arm only
- *      considers ASN rows not already cited as the `to` side of
- *      another `paypal_funding` chain_link, so two same-amount
- *      same-day PayPal expenses cannot both claim a single ASN
- *      debit.
- *
- *   3. Fuzzy arm — when arms 1 and 2 miss, score candidate
- *      `transfer_in` rows by a weighted blend of Levenshtein-
- *      normalised merchant similarity (0.5) + amount-band similarity
- *      (0.3) + date-window similarity (0.2). The best score ≥
- *      FUZZY_MIN_CONFIDENCE surfaces as state='candidate',
- *      confidence ∈ [0.6, 0.99].
- *
- * `signature_hash` (D-88) = sha256(`counterparty_normalized` + '|' +
- * funding-account IBAN). Both arms compute and persist it in
- * `evidence.signature_hash` so the Wave 3 ConfirmChainLink auto-
- * promotion learning loop has a single key to count over.
- *
- * Architectural invariants:
- *   - D-84 — resolver writes chain_links only (BoundaryArchTest
- *     enforces). The transactions table is read-only here; the read
- *     uses raw DatabaseManager query-builder calls (never
- *     `Transaction::query()`) so the BoundaryArchTest's regex stays
- *     satisfied without per-call exemptions.
- *   - FND-03 — every query filters on `user_id = $user->id` first.
- *     Cross-user leakage is structurally impossible.
- *   - Idempotency — duplicate writes are blocked by
- *     `ChainLinkInsertHelper`'s pre-insert pair-uniqueness guard,
- *     which also keeps user-rejected pairs rejected on re-run
- *     (rejected pair → re-insert refused → state preserved).
- *
- * Concurrency: invoked from `ResolveChainLinksJob`, which is keyed
- * unique-per-user (ShouldBeUniqueUntilProcessing). Parallel passes
- * for the same user cannot interleave.
+ * @link ../../../../.docs/architecture/chain-resolution.md
  *
  * @internal Driven by ResolveChainLinksJob — not called directly
  *           from Public action classes.
  */
 final class PaypalFundingResolver
 {
-    /** Symmetric tolerance arm for fuzzy matching: ±2% of the expense. */
     public const AMOUNT_BAND_PERCENT = 2;
 
-    /** Symmetric date window for both arms: ±3 days. */
     public const DATE_WINDOW_DAYS = 3;
 
-    /** Floor below which the fuzzy score is dropped (no chain_link). */
+    // Floor below which the fuzzy score is dropped (no chain_link); ceiling
+    // stays under 1.0 since that confidence is reserved for the
+    // deterministic arm.
     public const FUZZY_MIN_CONFIDENCE = 0.6;
 
-    /** Ceiling below 1.0 for fuzzy candidates (1.0 is reserved for deterministic). */
     public const FUZZY_MAX_CONFIDENCE = 0.99;
 
-    /**
-     * Confidence written when the ASN-direct arm finds exactly one
-     * ASN-side `transfer_out` matching the PayPal expense's settled
-     * amount inside the date window. Matches the deterministic arm's
-     * 1.000 because the match is structurally unambiguous for the
-     * user (single PayPal expense + single ASN debit of equal amount
-     * within ±3 days).
-     */
+    // Matches the deterministic arm's 1.000: a single PayPal expense +
+    // single ASN debit of equal amount within the date window is
+    // structurally unambiguous.
     private const ASN_DIRECT_UNIQUE_CONFIDENCE = '1.000';
 
-    /**
-     * Confidence written when the ASN-direct arm finds ≥2 ASN-side
-     * `transfer_out` candidates inside the date window. The closest by
-     * booked_at wins but the link drops to `state='candidate'` so the
-     * user sees the ambiguity in the review queue.
-     */
+    // Written when the ASN-direct arm finds 2+ candidates in the window;
+    // the closest by booked_at wins but drops to state='candidate' so the
+    // user reviews the ambiguity.
     private const ASN_DIRECT_AMBIGUOUS_CONFIDENCE = '0.900';
 
-    /**
-     * Event types whose memo cells are scanned for a destination IBAN
-     * (D-106 — PayPal NL "General Withdrawal" hand-off close-out).
-     *
-     * @var list<string>
-     */
+    /** @var list<string> */
     private const FUNDING_EVENT_TYPES = ['General Withdrawal', 'Bankstorting', 'Transfer to bank'];
 
-    /**
-     * Header cells inspected for an IBAN literal. The NL Activity
-     * Download stores the destination IBAN in the `Naam` column for
-     * Bankstorting rows; `Omschrijving` and `Memo` are defensive
-     * fallbacks for forward-compat with the EN locale and ad-hoc
-     * payment memos.
-     *
-     * @var list<string>
-     */
+    // The NL Activity Download stores the destination IBAN in the Naam
+    // column for Bankstorting rows; Omschrijving and Memo are defensive
+    // fallbacks for the EN locale and ad-hoc payment memos.
+    /** @var list<string> */
     private const IBAN_MEMO_KEYS = ['Naam', 'Memo', 'Note', 'Description', 'Omschrijving'];
 
-    /** Weighted score breakdown for the fuzzy arm — sums to 1.0. */
+    // Weighted score breakdown for the fuzzy arm; the three weights below
+    // sum to 1.0.
     private const FUZZY_WEIGHT_MERCHANT = 0.5;
 
     private const FUZZY_WEIGHT_AMOUNT = 0.3;
 
     private const FUZZY_WEIGHT_DATE = 0.2;
 
-    /**
-     * Cap on the ASN-direct arm's amount+date-window candidate scan
-     * before per-row `counterparty_iban` decrypt-then-match (T-14.1-06).
-     * The amount+date predicate already narrows to a handful of rows in
-     * practice; this bounds the pathological case where many ASN debits
-     * share both the settled amount and the date window.
-     */
+    // Caps the ASN-direct arm's candidate scan before the per-row decrypt;
+    // the amount+date predicate already narrows to a handful of rows in
+    // practice, this bounds the pathological case of many shared-amount rows.
     private const ASN_DIRECT_CANDIDATE_SCAN_LIMIT = 20;
 
     public function __construct(
@@ -152,12 +77,8 @@ final class PaypalFundingResolver
         private readonly Session $session,
     ) {}
 
-    /**
-     * Defensive accessor mirroring `IcsSettlementResolver::pairLookupAvailable()`.
-     * Both injected collaborators stay reachable for downstream waves;
-     * the read keeps PHPStan's onlyWritten lint quiet on the
-     * still-incubating chain-walk consumer paths.
-     */
+    // Keeps both injected collaborators reachable so PHPStan's onlyWritten
+    // lint stays quiet on paths that only read from them.
     public function injectedCollaboratorsWired(): bool
     {
         return get_class($this->pairLookup) === PairLookup::class
@@ -165,20 +86,15 @@ final class PaypalFundingResolver
             && $this->clock->now()->year > 0;
     }
 
-    /**
-     * Run the two-arm resolver pass for one user. Re-running is a
-     * no-op once chain_links exist for every PayPal expense /
-     * transfer_out the algorithm can pair.
-     */
+    // Idempotent: re-running is a no-op once chain_links exist for every
+    // pairable PayPal expense/transfer_out.
     public function resolveForUser(User $user): void
     {
         $connection = $this->db->connection();
 
-        // Pick up every PayPal-account expense + transfer_out lacking
-        // any chain_link of kind='paypal_funding'. The left-join
-        // filter ensures rejected pairs ARE included in the iteration
-        // (the per-pair pre-insert guard in ChainLinkInsertHelper
-        // suppresses re-proposal — the user's rejection is final).
+        // The left-join filter still includes rejected pairs in the
+        // iteration — ChainLinkInsertHelper's pre-insert guard suppresses
+        // re-proposal, so the user's rejection stays final.
         $rows = $connection
             ->table('transactions')
             ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
@@ -226,21 +142,14 @@ final class PaypalFundingResolver
     }
 
     /**
-     * Deterministic arm. Inspects the row's raw_payload event tape for
-     * an IBAN that matches one of the user's accounts; matches an
-     * equal-and-opposite transfer_in on that account inside the date
-     * window. Returns a chain_link payload ready for the inserter, or
-     * null when no event row carries an actionable IBAN.
-     *
      * @return ?array<string, mixed>
      */
     private function deterministicMatch(stdClass $row, User $user): ?array
     {
-        // D-05: this row came off a raw query-builder read (`resolveForUser`'s
-        // `$connection->table('transactions')->get()` above), which bypasses
-        // the Eloquent `EncryptedJsonCast` entirely — the ciphertext must be
-        // decrypted explicitly before `extractEvents()` can `json_decode` it.
-        // Pass-through no-op when encryption is not enabled for this user.
+        // This row came off a raw query-builder read, which bypasses the
+        // Eloquent EncryptedJsonCast entirely — decrypt explicitly before
+        // extractEvents() can json_decode it. Pass-through no-op when
+        // encryption is not enabled for this user.
         $storedRawPayload = self::toString($row->raw_payload ?? null);
         $plainRawPayload = $storedRawPayload === ''
             ? ''
@@ -306,55 +215,6 @@ final class PaypalFundingResolver
     }
 
     /**
-     * ASN-direct arm. Pairs a PayPal `expense` directly with the ASN-
-     * side `transfer_out` that funded it, in the empirical Activity-
-     * Download shape where the funding-leg `Bankstorting` row is
-     * absent from the PayPal CSV.
-     *
-     * Match predicates (all required, all per-user):
-     *
-     *   1. The PayPal expense's `settled_amount_minor` matches an
-     *      ASN-side `transfer_out`'s `settled_amount_minor` exactly
-     *      (same negative-signed integer — both rows are "money
-     *      leaving an account").
-     *
-     *   2. The ASN row's `counterparty_iban` is present in
-     *      `known_counterparty_ibans` for the user with
-     *      `target_account_kind='paypal'` (alias bridge — the real
-     *      institution IBAN like `LU89751000135104200E` is mapped to
-     *      the synthetic `'PAYPAL'` Account.iban literal at install
-     *      time by the DefaultKnownCounterpartyIbansSeeder).
-     *
-     *   3. The ASN row's `booked_at` is within ±DATE_WINDOW_DAYS of
-     *      the PayPal expense's `booked_at`. SEPA debits typically
-     *      lag the originating PayPal payment by 0–2 days; the
-     *      window is symmetric to absorb adapter book-time
-     *      conventions (ASN at 12:00, PayPal at startOfDay).
-     *
-     *   4. The ASN row is not already cited as the `to` side of
-     *      another `paypal_funding` chain_link in state `confirmed`
-     *      or `candidate`. This 1:1 enforcement keeps two same-day
-     *      same-amount PayPal expenses from both claiming a single
-     *      ASN debit (the closest-by-date one wins; the other falls
-     *      through to the fuzzy arm).
-     *
-     * Result:
-     *
-     *   - Exactly one candidate inside the window →
-     *     state='confirmed', confidence=ASN_DIRECT_UNIQUE_CONFIDENCE
-     *     (1.000). The match is structurally unambiguous.
-     *
-     *   - ≥2 candidates → state='candidate',
-     *     confidence=ASN_DIRECT_AMBIGUOUS_CONFIDENCE (0.900). The
-     *     closest by booked_at wins; the user reviews the link.
-     *
-     *   - Zero candidates → null (fall through to fuzzy arm).
-     *
-     * Cross-user safety: every predicate joins/scopes on `user_id`.
-     * Idempotency: re-running picks up zero new ASN rows because the
-     * outer chain_links left-join in `resolveForUser` excludes PayPal
-     * expenses already carrying a `paypal_funding` link.
-     *
      * @return ?array<string, mixed>
      */
     private function asnDirectMatch(stdClass $row, User $user): ?array
@@ -372,17 +232,10 @@ final class PaypalFundingResolver
         $windowStart = $center->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
         $windowEnd = $center->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
 
-        // D-05: `tx.counterparty_iban` is a `SensitiveFieldRegistry`
-        // ciphertext column under encryption, so it CANNOT be part of a
-        // SQL equality predicate — a `kci.real_iban = tx.counterparty_iban`
-        // JOIN would never match once the user's data is encrypted. The
-        // alias set (`known_counterparty_ibans` for this user +
-        // target_account_kind='paypal') is small and plaintext, so it is
-        // loaded in full; the `tx` candidates are narrowed on cheap
-        // PLAINTEXT dims only (user/type/amount/date window, and the 1:1
-        // chain_links exclusion), then each candidate's `counterparty_iban`
-        // is decrypted and matched against the alias set in PHP —
-        // mirrors CounterpartyIndexQuery's decrypt-then-match template.
+        // tx.counterparty_iban is encrypted, so it can't sit in a SQL
+        // equality predicate — the small, plaintext alias set is loaded in
+        // full instead, candidates are narrowed on plaintext dims only,
+        // then each candidate's IBAN is decrypted and matched in PHP.
         $paypalAliasRows = $this->db->connection()
             ->table('known_counterparty_ibans')
             ->where('user_id', $user->id)
@@ -402,17 +255,10 @@ final class PaypalFundingResolver
             return null;
         }
 
-        // The left-join on chain_links is the 1:1 enforcement: an ASN
-        // row already cited as `to_transaction_id` on another
-        // `paypal_funding` link in a non-rejected state is excluded
-        // from the candidate set. A rejected link does NOT exclude —
-        // the per-pair pre-insert guard in ChainLinkInsertHelper still
-        // suppresses re-proposal of the same (from, to, kind, user)
-        // tuple, so a rejected pair stays rejected.
-        //
-        // ASN_DIRECT_CANDIDATE_SCAN_LIMIT bounds the decrypt scan
-        // (T-14.1-06) — the amount+date predicate already narrows this to
-        // a handful of rows in practice.
+        // The left-join on chain_links is the 1:1 enforcement — an ASN row
+        // already cited on another non-rejected paypal_funding link is
+        // excluded. ASN_DIRECT_CANDIDATE_SCAN_LIMIT bounds the decrypt scan
+        // beyond what the amount+date predicate already narrows.
         $candidates = $this->db->connection()
             ->table('transactions as tx')
             ->leftJoin('chain_links as existing', function ($join): void {
@@ -489,11 +335,9 @@ final class PaypalFundingResolver
                 'matched_iban' => $partnerIban,
                 'matched_amount_minor' => $settledMinor,
                 'date_delta_days' => $dateDeltaDays,
-                // WR-15: report the true IBAN-matched count (capped at 2 by the
-                // decrypt-then-match loop above), not $candidates->count() — the
-                // up-to-20 rows narrowed on amount/date BEFORE the decrypt filter.
-                // Rows whose decrypted IBAN is not in the alias set never became
-                // matches and must not inflate the reported ambiguity.
+                // The true IBAN-matched count (capped at 2), not
+                // $candidates->count() — rows whose decrypted IBAN misses
+                // the alias set never became matches.
                 'ambiguous_candidates' => $ambiguous ? count($matches) : null,
                 'signature_hash' => $this->signatureHash(
                     self::toString($row->counterparty_normalized ?? null),
@@ -504,11 +348,6 @@ final class PaypalFundingResolver
     }
 
     /**
-     * Fuzzy arm. Scores candidate `transfer_in` rows by a weighted
-     * blend of normalised-merchant Levenshtein similarity (0.5), amount
-     * band (0.3), and date window (0.2). Best score ≥
-     * FUZZY_MIN_CONFIDENCE surfaces as state='candidate'.
-     *
      * @return ?array<string, mixed>
      */
     private function fuzzyMatch(stdClass $row, User $user): ?array
@@ -594,8 +433,8 @@ final class PaypalFundingResolver
             return null;
         }
 
-        // Clamp under 1.0 so deterministic stays the only path to a
-        // round-confidence chain_link.
+        // Clamps under 1.0 so the deterministic arm stays the only path to
+        // a round-confidence chain_link.
         $confidence = min(self::FUZZY_MAX_CONFIDENCE, $bestScore);
 
         $fundingIban = $this->ibanForAccountId(self::toInt($bestRow->account_id ?? null), $user) ?? '';
@@ -616,11 +455,9 @@ final class PaypalFundingResolver
         ];
     }
 
+    // Returns an empty array on any parse failure or missing key —
+    // defensive against null, malformed JSON, or unexpected payload shapes.
     /**
-     * Decode the raw_payload JSON column into its events list. Returns
-     * an empty array on any parse failure or missing key — defensive
-     * against null, malformed JSON, or unexpected payload shapes.
-     *
      * @return list<mixed>
      */
     private function extractEvents(string $rawPayload): array
@@ -642,12 +479,10 @@ final class PaypalFundingResolver
         return array_values($events);
     }
 
+    // The IBAN regex covers the canonical 4-char prefix ([A-Z]{2}\d{2})
+    // followed by 8-30 BBAN characters; the haystack is upper-cased so the
+    // regex stays single-pass.
     /**
-     * Match an IBAN from a free-text memo cell. The IBAN regex covers
-     * the canonical 4-char prefix (`[A-Z]{2}\d{2}`) followed by 8–30
-     * BBAN characters. The haystack is upper-cased so the regex stays
-     * single-pass.
-     *
      * @param  array<int|string, mixed>  $eventRow
      */
     private function extractIbanFromEventRow(array $eventRow): ?string
@@ -668,10 +503,6 @@ final class PaypalFundingResolver
         return null;
     }
 
-    /**
-     * Locate a user-owned account by IBAN. Returns the account id, or
-     * null when no row matches.
-     */
     private function accountIdForIban(string $iban, User $user): ?int
     {
         $row = $this->db->connection()
@@ -687,12 +518,8 @@ final class PaypalFundingResolver
         return self::toInt($row->id);
     }
 
-    /**
-     * Find the equal-and-opposite `transfer_in` partner on the given
-     * funding account inside the date window. The closest-by-booked_at
-     * row wins so noisy weekly statements with multiple matching
-     * settlements still pick the deterministic candidate.
-     */
+    // The closest-by-booked_at row wins so noisy weekly statements with
+    // multiple matching settlements still pick the deterministic candidate.
     private function findPartnerOnAccount(int $accountId, int $expectedAmountMinor, string $bookedAt, User $user): ?int
     {
         $center = CarbonImmutable::parse($bookedAt);
@@ -716,10 +543,6 @@ final class PaypalFundingResolver
         return self::toInt($row->id);
     }
 
-    /**
-     * Look up the IBAN of a user-owned account by id. Returns null
-     * when the account does not exist or does not belong to the user.
-     */
     private function ibanForAccountId(int $accountId, User $user): ?string
     {
         $row = $this->db->connection()
@@ -735,11 +558,8 @@ final class PaypalFundingResolver
         return self::toString($row->iban);
     }
 
-    /**
-     * Levenshtein-distance similarity in [0, 1]. The longer of the two
-     * strings is the denominator so a single-character flip in a
-     * five-character name still scores 0.8.
-     */
+    // The longer of the two strings is the denominator, so a single-
+    // character flip in a five-character name still scores 0.8.
     private function levenshteinSimilarity(string $a, string $b): float
     {
         $maxLen = max(mb_strlen($a), mb_strlen($b));
@@ -751,24 +571,16 @@ final class PaypalFundingResolver
         return max(0.0, 1.0 - ($dist / $maxLen));
     }
 
-    /**
-     * `evidence.signature_hash` per D-88: sha256 of the
-     * normalized_merchant joined with the funding-account IBAN. The
-     * Wave 3 ConfirmChainLink auto-promotion loop counts confirmed
-     * rows sharing this hash; when the user has confirmed three rows
-     * of the same signature, every remaining candidate of the same
-     * signature is auto-promoted.
-     */
+    // ConfirmChainLink's auto-promotion loop counts confirmed rows sharing
+    // this hash; three confirmations of the same signature auto-promotes
+    // every remaining candidate with it.
     private function signatureHash(string $normalisedMerchant, string $fundingIban): string
     {
         return hash('sha256', $normalisedMerchant.'|'.$fundingIban);
     }
 
-    /**
-     * Format a float confidence value as a fixed-precision decimal
-     * string matching the chain_links.confidence column's decimal(4,3)
-     * shape. Mirrors `IcsSettlementResolver::formatConfidence()`.
-     */
+    // Fixed-precision decimal string matching the chain_links.confidence
+    // column's decimal(4,3) shape.
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');

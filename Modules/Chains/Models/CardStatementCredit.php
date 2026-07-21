@@ -10,18 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * Eloquent model for the card_statement_credits table — the carry-
- * forward credit ledger that captures overpayment surplus and
- * refund-after-close amounts flowing from one statement to the next.
- *
- * `from_statement_id` is the source statement (the one that went
- * overpaid or accepted a refund after close). `to_statement_id` is the
- * destination — nullable because surplus may exist before the next
- * statement period rolls in; a follow-up resolver pass updates the
- * pointer when the next statement lands.
- *
- * Allowed reasons: `overpayment`, `refund_after_close`. The DB-layer
- * trigger pair rejects anything else.
+ * @link ../../../.docs/architecture/chain-resolution.md
  *
  * @property int $id
  * @property int|null $user_id

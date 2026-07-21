@@ -10,27 +10,7 @@ use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Public action that marks a `chain_link` as `state='rejected'`.
- *
- * Per D-89, rejection is strictly per-pair: the signature counter
- * stays NEUTRAL. A rejected row neither demotes existing same-
- * signature confirmed rows nor blocks the auto-promotion threshold
- * from accumulating across OTHER same-signature confirmations. The
- * only place the rejected state matters is the resolver's per-pair
- * pre-insert guard (`ChainLinkInsertHelper`), which refuses to
- * re-propose a candidate for an already-rejected (from, to, kind,
- * user) tuple — the user's rejection is final.
- *
- * Cross-user safety: `firstOrFail()` against `(id, user_id)` raises
- * NotFoundHttpException (404) when the target row belongs to another
- * user.
- *
- * DI shape: no DatabaseManager — the action's only write path is
- * Eloquent's `save()` which routes through the model's own
- * connection. A future batch-reject extension that needs raw query
- * builder access can DI DatabaseManager when added; until then the
- * single-row save() is small enough that the model facade-free
- * boundary is satisfied without extra collaborators.
+ * @link ../../../../.docs/features/chains/architecture.md
  */
 final class RejectChainLink
 {
@@ -43,22 +23,16 @@ final class RejectChainLink
             ->first();
 
         if ($link === null) {
-            // Surface the canonical 404 explicitly so the contract is
-            // testable outside the HTTP layer. The framework would
-            // convert a `firstOrFail()` ModelNotFoundException to the
-            // same 404 at the router, but explicit throwing keeps the
-            // action's signature self-documenting.
+            // Thrown explicitly so the contract is testable outside the
+            // HTTP layer, where the framework isn't there to convert it.
             throw new NotFoundHttpException('Chain link not found.');
         }
 
         if ($link->to_transaction_id === null) {
             // Symmetric guard with ConfirmChainLink: hint-shaped rows
-            // permit a NULL endpoint only while state='candidate'; the
-            // chain_links_to_transaction_id_check_update trigger
-            // refuses to flip state='rejected' on these rows. Trip
-            // the typed exception BEFORE the save so the caller
-            // surfaces a user-readable message instead of an
-            // SQLSTATE 23000 integrity-constraint violation.
+            // permit a NULL endpoint only while candidate; the schema
+            // trigger refuses to flip them to rejected. Trip the typed
+            // exception before the save so the caller renders a readable message.
             throw ChainLinkRequiresConcretePartnerException::from($link);
         }
 

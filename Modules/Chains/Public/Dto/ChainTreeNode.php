@@ -8,17 +8,9 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Spatie\LaravelData\Data;
 
-/**
- * One leg of the chain waterfall. The root node has `$chainLinkId` of
- * null and `$kind` equal to `'root'`. Funder legs carry their
- * `chain_links.id`, the relationship kind (`paypal_funding` /
- * `ics_bulk_settle`), and a `$confidenceTier` that maps the raw
- * `(state, resolver, confidence)` tuple to the UI's three-tier chip
- * (`Deterministic` / `Confirmed` / `Candidate`).
- *
- * `$children` carries nested fan-out — populated when an ICS bulk-
- * settle node covers multiple underlying ICS expenses.
- */
+// The root node has $chainLinkId null and $kind = 'root'; funder legs
+// carry their chain_links.id and a $confidenceTier mapping (state,
+// resolver, confidence) to the UI's Deterministic/Confirmed/Candidate chip.
 final class ChainTreeNode extends Data
 {
     /**
