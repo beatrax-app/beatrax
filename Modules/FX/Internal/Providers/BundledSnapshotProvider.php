@@ -9,18 +9,7 @@ use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
 /**
- * Reads EUR-based exchange rates from the bundled offline snapshot file.
- *
- * This provider is always available as the final fallback in the registry
- * chain (Priority 0). It never makes network requests — the snapshot JSON
- * ships with the application and is seeded into `exchange_rates` on install
- * by `BundledRatesSeeder`.
- *
- * Key: 'bundled', Priority: 0 (lowest — used only when ECB and Frankfurter
- * both fail or are circuit-broken).
- *
- * The snapshot lives at `Modules/FX/Resources/rates-snapshot.json` and
- * contains EUR-based rates for all major currency pairs (USD, GBP, etc.).
+ * @link ../../../../.docs/features/fx/architecture.md
  */
 final class BundledSnapshotProvider implements RateProvider
 {
@@ -61,8 +50,8 @@ final class BundledSnapshotProvider implements RateProvider
         } catch (JsonException $e) {
             // JsonException extends Exception, not RateFetchException — without
             // this catch a corrupt snapshot would escape the whole provider
-            // fallback chain (the registry only catches RateFetchException),
-            // bypassing the D-07 safe-fallback contract.
+            // fallback chain, since the registry only catches
+            // RateFetchException, bypassing the safe-fallback contract.
             throw new RateFetchException('Bundled snapshot JSON is malformed: '.$e->getMessage(), previous: $e);
         }
 

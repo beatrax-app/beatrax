@@ -18,29 +18,7 @@ use Modules\FX\Internal\RateProviderRegistry;
 use Psr\Log\LoggerInterface;
 
 /**
- * Fetches current exchange rates from the provider chain and writes
- * idempotent rows to `exchange_rates`.
- *
- * Concurrency contract (mirrors ProjectForecastJob):
- *  - ShouldBeUniqueUntilProcessing keyed on uniqueId() = "{userId}"
- *    collapses any concurrent (scheduled-tick + on-demand refresh)
- *    trigger pair into a single queued job per user.
- *  - tries = 3 + backoff = [60, 300, 900] keeps a transient provider
- *    failure from final-failing the run without two retries.
- *
- * Idempotency: rows are upserted on the unique index
- * (base_currency, quote_currency, rate_date, source) so re-running
- * the job never duplicates rows (CLAUDE.md idempotency rule).
- *
- * The date keyed in `exchange_rates` is the date from the provider's
- * feed response (the ECB `time` attribute), NOT CarbonImmutable::now().
- * On weekends and ECB public holidays the feed publishes the previous
- * business day's date — keying on now() would produce a false "today"
- * row (Pitfall 2).
- *
- * Rate values are validated against a plausible range (0.00001–100000)
- * before upsert. Values outside this range are logged and skipped
- * (T-02-01 / STRIDE Threat Register).
+ * @link ../../../../.docs/features/fx/architecture.md
  */
 final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -77,12 +55,10 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
 
     public function handle(RateProviderRegistry $registry, DatabaseManager $db, LoggerInterface $logger): void
     {
-        // Defense-in-depth privacy gate (D-04): online fetch is opt-in and off
-        // by default, and this job is the single point where outbound rate HTTP
-        // actually happens. Re-check the flag here so NO dispatch path (the
-        // scheduler, the on-demand "Refresh now" action, or any future caller)
-        // can leak network calls for a user who never enabled online fetch —
-        // the UI gate alone is not a security boundary.
+        // Defense-in-depth privacy gate: online fetch is opt-in and off by
+        // default. Re-checking here (rather than trusting the caller) means
+        // no dispatch path can leak network calls for a user who never
+        // enabled it — the UI gate alone is not a security boundary.
         $fxOnlineEnabled = $db->connection()->table('users')
             ->where('id', $this->userId)
             ->value('fx_online_enabled');
@@ -108,7 +84,6 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
         $now = CarbonImmutable::now()->toDateTimeString();
 
         foreach ($rates as $quoteCurrency => $rateStr) {
-            // Validate rate within plausible range (T-02-01)
             $rateFloat = (float) $rateStr;
 
             if ($rateFloat < self::RATE_MIN || $rateFloat > self::RATE_MAX) {
@@ -122,10 +97,14 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
                 continue;
             }
 
+            // rate_date is the provider's own feed date, never now() — on a
+            // weekend or ECB holiday the feed still publishes the previous
+            // business day's date, and keying on now() would write a false
+            // "today" row.
             $rows[] = [
                 'base_currency' => 'EUR',
                 'quote_currency' => $quoteCurrency,
-                'rate_date' => $date,             // provider's date, NOT now() — Pitfall 2
+                'rate_date' => $date,
                 'rate' => $rateStr,
                 'source' => $source,
                 'created_at' => $now,
@@ -137,7 +116,6 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
             return;
         }
 
-        // Upsert on the unique index — idempotent on re-run
         $db->connection()->table('exchange_rates')->upsert(
             $rows,
             ['base_currency', 'quote_currency', 'rate_date', 'source'],

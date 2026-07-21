@@ -8,22 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds the bundled offline exchange-rate snapshot into `exchange_rates`.
- *
- * Reads `Modules/FX/Resources/rates-snapshot.json` and upserts one row
- * per currency pair on the unique index
- * (base_currency, quote_currency, rate_date, source) so the seeder is
- * fully idempotent — safe to re-run on every `beatrax:install` invocation
- * (CLAUDE.md idempotency rule).
- *
- * No Eloquent model exists for `exchange_rates`; rows are written via
- * raw query builder (DatabaseManager) to avoid coupling the seeder to an
- * Eloquent model that would only be used in this one place (01-PATTERNS.md
- * BundledRatesSeeder pattern).
- *
- * Source 'bundled' distinguishes these rows from live ECB or Frankfurter
- * rows so callers can surface the appropriate transparency label in the
- * FX disclosure affordance (D-11/D-12).
+ * @link ../../../../.docs/features/fx/architecture.md
  */
 final class BundledRatesSeeder extends Seeder
 {
@@ -78,7 +63,6 @@ final class BundledRatesSeeder extends Seeder
             return;
         }
 
-        // Upsert on the unique index — idempotent on re-run
         $this->db->connection()->table('exchange_rates')->upsert(
             $rows,
             ['base_currency', 'quote_currency', 'rate_date', 'source'],

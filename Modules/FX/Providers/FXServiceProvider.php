@@ -15,20 +15,7 @@ use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Services\ExchangeRateService;
 
 /**
- * Wires the FX module.
- *
- * `register()` tags and registers the three rate providers as singletons,
- * binds `RateProviderRegistry` (sorted by priority() DESC), and binds
- * `ExchangeRateService` as a singleton — mirroring the ReceiptsServiceProvider
- * tagged-singleton pattern exactly (01-PATTERNS.md lines 133–189).
- *
- * `boot()` loads migrations under `Database/Migrations` and views under
- * `Resources/views` using the conditional `is_dir()` guard established by
- * BudgetsServiceProvider and ReceiptsServiceProvider.
- *
- * No Livewire components in v1 — FX has no own pages; settings live on
- * the Core SettingsPage. No Routes/web.php or module-local Routes/console.php;
- * the daily refresh entry lives in the root routes/console.php.
+ * @link ../../../.docs/features/fx/architecture.md
  */
 final class FXServiceProvider extends ServiceProvider
 {

@@ -9,24 +9,18 @@ use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\RateFetchException;
 
 /**
- * Fetches EUR-based exchange rates from the Frankfurter API (fallback provider).
- *
- * URL: https://api.frankfurter.dev/v1/latest
- * Note: the old api.frankfurter.app domain 301-redirects to api.frankfurter.dev;
- * use the new URL directly to avoid the redirect hop (Pitfall 3).
- *
- * Key: 'frankfurter', Priority: 100 (second in the chain after ECB).
- *
- * Rate values are cast to string; never float (Pitfall 1 / T-02-03).
- *
- * The Http\Factory is constructor-injected (never the Http facade) to satisfy
- * BoundaryArchTest's "no Illuminate\Support\Facades inside Modules\" rule
- * (Pitfall 5 / T-02-04).
+ * @link ../../../../.docs/features/fx/architecture.md
  */
 final class FrankfurterRateProvider implements RateProvider
 {
+    // The old api.frankfurter.app domain 301-redirects to
+    // api.frankfurter.dev; use the new URL directly to avoid the
+    // redirect hop. Priority 100 - second in the chain after ECB.
     private const string URL = 'https://api.frankfurter.dev/v1/latest';
 
+    // Http\Factory is constructor-injected, never the Http facade, so
+    // this class satisfies the arch test forbidding Illuminate facades
+    // inside Modules\.
     public function __construct(private readonly HttpFactory $http) {}
 
     public function key(): string
