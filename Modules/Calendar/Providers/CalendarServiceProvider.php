@@ -9,14 +9,6 @@ use Livewire\LivewireManager;
 use Modules\Calendar\Internal\Http\Livewire\CalendarPage;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 
-/**
- * Wires the Calendar module: migrations, routes, views, and the
- * CalendarPage Livewire component registration.
- *
- * CalendarQuery is registered as a singleton — it is stateless (all state
- * flows through forMonth() arguments) so a shared instance is safe and
- * avoids repeated DI resolution overhead on multi-component pages.
- */
 final class CalendarServiceProvider extends ServiceProvider
 {
     public function register(): void
