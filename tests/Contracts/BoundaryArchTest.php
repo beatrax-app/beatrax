@@ -75,6 +75,17 @@ arch('Modules\\Counterparties\\Internal is only used inside Modules\\Counterpart
     ->expect('Modules\\Counterparties\\Internal')
     ->toOnlyBeUsedIn('Modules\\Counterparties');
 
+// Mobile is Sync's co-designed peer: the mobile app is the second half of the
+// device-to-device sync protocol, so Modules\Mobile\Internal\Sync\* legitimately
+// imports Sync\Internal transport/identity primitives (DeviceIdentityLoader,
+// TransportFramer, PeerCatchUpExchanger). This coupling is intentional and reviewed —
+// Mobile is allow-listed here rather than routed through Sync\Public. The cleaner
+// future refactor is to promote the consumed Sync\Internal surface into Sync\Public
+// and drop Mobile from this allow-list (deferred).
+arch('Modules\\Sync\\Internal is only used inside Modules\\Sync (Mobile peer allow-listed)')
+    ->expect('Modules\\Sync\\Internal')
+    ->toOnlyBeUsedIn(['Modules\\Sync', 'Modules\\Mobile']);
+
 // The Sync device-identity tests (Phase 12) must prime the Auth session
 // lock state to exercise real crypto — Modules/Sync/tests/TestCase.php calls
 // LockStateManager->unlock() in setUp(). There is deliberately no Public
