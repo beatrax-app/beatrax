@@ -28,40 +28,17 @@ use Webauthn\PublicKeyCredentialRpEntity;
 use Webauthn\PublicKeyCredentialUserEntity;
 use Webauthn\TrustPath\EmptyTrustPath;
 
+// rpId is 'localhost' in dev (the host portion of APP_URL). The full
+// origin (http://localhost:8000) is validated separately -- rpId vs.
+// origin must BOTH be validated, or a same-rpId, different-origin
+// attacker page could pass.
 /**
- * Server-side WebAuthn enrollment (attestation) and assertion (unlock) logic.
- *
- * Design decisions (D-12, D-13, D-14, D-16):
- *   D-12: web-auth/webauthn-lib 5.3.4 used directly (NOT laravel/passkeys).
- *   D-13: Enrollment only available from settings when a PIN exists.
- *   D-14: The data key is wrapped under a random per-device biometric secret;
- *         the PIN wrap remains the cryptographic root.
- *   D-16: N failures disable the credential until the next PIN unlock re-arms.
- *
- * rpId is 'localhost' in dev (the host portion of APP_URL).
- * The full origin (http://localhost:8000) is validated separately to avoid
- * Pitfall 3 from 05-RESEARCH: rpId vs. origin must BOTH be validated.
- *
- * Sensitive intermediate values are zeroed with sodium_memzero() after use
- * where possible. IN-08 caveat: PHP's sodium_memzero only zeroes refcount-1
- * buffers — once the data key is stored in the session the buffer is shared
- * and the bytes intentionally live on there (see LockStateManager custody
- * note); the memzero calls are best-effort hygiene for local references.
- *
- * Session keys for pending challenge options:
- *   - CREATION_CHALLENGE_SESSION: pending creation challenge (base64).
- *   - REQUEST_CHALLENGE_SESSION:  pending assertion challenge (base64).
- *
- * Stored blob format in biometric_wrap_secret column:
- *   [ 32 bytes raw secret ] || [ nonce||ciphertext bytes (from secretbox wrap) ]
- * The secret IS the secretbox key; the wrapped data key is the nonce||ciphertext.
+ * @link ../../../../.docs/features/auth/architecture.md
  */
 final class WebAuthnBiometricService
 {
-    /** Session key holding the pending creation challenge (for enrollment). */
     public const CREATION_CHALLENGE_SESSION = 'beatrax_webauthn_creation_challenge';
 
-    /** Session key holding the pending assertion challenge (for unlock). */
     public const REQUEST_CHALLENGE_SESSION = 'beatrax_webauthn_request_challenge';
 
     public function __construct(
@@ -77,22 +54,16 @@ final class WebAuthnBiometricService
     // -------------------------------------------------------------------------
 
     /**
-     * Build PublicKeyCredentialCreationOptions for navigator.credentials.create.
-     *
-     * Sets a fresh random challenge and stores it in the session so
-     * completeEnrollment() can validate the response.
-     *
-     * @return array<string, mixed> JSON-serializable options for the browser.
+     * @return array<string, mixed>
      */
     public function creationOptions(int $userId, string $username, Session $session): array
     {
         $rpId = $this->rpId();
         $challenge = random_bytes(32);
 
-        // IN-02: list already-enrolled credential IDs as excludeCredentials so
+        // Lists already-enrolled credential IDs as excludeCredentials so
         // re-enrolling the same authenticator is rejected by the browser
-        // instead of creating a duplicate row (lock.js already decodes the
-        // field when present).
+        // instead of creating a duplicate row.
         /** @var list<PublicKeyCredentialDescriptor> $excludeCredentials */
         $excludeCredentials = [];
         foreach ($this->store->findForUser($userId) as $cred) {
@@ -131,7 +102,6 @@ final class WebAuthnBiometricService
             excludeCredentials: $excludeCredentials,
         );
 
-        // Persist challenge for later validation.
         $session->put(self::CREATION_CHALLENGE_SESSION, base64_encode($challenge));
 
         /** @var array<string, mixed> */
@@ -139,15 +109,9 @@ final class WebAuthnBiometricService
     }
 
     /**
-     * Verify the attestation response and persist the credential.
-     *
-     * Generates a random 32-byte biometric wrap secret, wraps $dataKey under
-     * it using AppLockKeyWrap (sodium_crypto_secretbox), and stores the blob
-     * (secret || wrapped_key_bytes) in biometric_wrap_secret column.
-     *
-     * @param  string  $username  The username used in creationOptions() (IN-03:
-     *                            the rebuilt options must mirror the issued
-     *                            user entity, not substitute the userId).
+     * @param  string  $username  Must match the username issued in
+     *                            creationOptions() -- the rebuilt options must mirror the issued
+     *                            user entity, not substitute the userId.
      * @param  array<string, mixed>  $credentialResponse  Browser attestation JSON.
      * @param  string  $dataKey  The caller's live data-key bytes (from session).
      * @param  string  $deviceLabel  Human-readable device label.
@@ -203,24 +167,19 @@ final class WebAuthnBiometricService
             $this->rpId(),
         );
 
-        // Build per-device biometric secret (32 random bytes).
         $secret = random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
-
-        // Wrap the data key under the secret.
         $wrappedKey = $this->keyWrap->wrap($dataKey, $secret);
 
         $credentialIdRaw = $credentialRecord->publicKeyCredentialId;
         $credentialId = base64_encode($credentialIdRaw);
         $publicKeyCbor = $credentialRecord->credentialPublicKey;
 
-        // Decode the wrapped key back to raw bytes for concatenation.
         $wrappedKeyBytes = base64_decode($wrappedKey, strict: true);
         if ($wrappedKeyBytes === false) {
             sodium_memzero($secret);
             throw new \RuntimeException('Wrap produced invalid base64.');
         }
 
-        // Store format: secret (32 bytes) || wrapped_key_bytes.
         $storedBlob = $secret.$wrappedKeyBytes;
         sodium_memzero($secret);
 
@@ -244,10 +203,6 @@ final class WebAuthnBiometricService
     // -------------------------------------------------------------------------
 
     /**
-     * Build PublicKeyCredentialRequestOptions for navigator.credentials.get.
-     *
-     * Lists only armed credentials for this user. Stores the challenge in the session.
-     *
      * @return array<string, mixed>
      */
     public function requestOptions(int $userId, Session $session): array
@@ -292,22 +247,6 @@ final class WebAuthnBiometricService
     }
 
     /**
-     * Verify the WebAuthn assertion and, on success, unlock the session.
-     *
-     * On success:
-     *   - Updates the signature counter (replay protection, T-05-19).
-     *   - Resets biometric_failed_count (re-arms for the next use).
-     *   - Unwraps the data key from the stored per-device secret.
-     *   - Calls LockStateManager->unlock() to store the key in the session.
-     *   - Returns true.
-     *
-     * On failure (signature, counter, or armed check):
-     *   - Increments biometric_failed_count (D-16).
-     *   - Returns false.
-     *
-     * Pitfall 3 (05-RESEARCH): validates the FULL origin (http://localhost:8000)
-     * as well as rpId='localhost'. Both MUST match.
-     *
      * @param  array<string, mixed>  $assertion  Browser assertion JSON.
      */
     public function verifyAndRelease(int $userId, array $assertion, Session $session): bool
@@ -317,13 +256,10 @@ final class WebAuthnBiometricService
             return false;
         }
 
-        // Pre-identify the credential so we can increment failure count on error.
-        // lock.js serialises rawId as base64url WITHOUT padding, while the store
-        // keeps credential_id in STANDARD base64 (base64_encode at enrollment).
-        // Normalise to the stored encoding before lookup — otherwise the catch
-        // path below never matches a row and the D-16 failure throttle silently
-        // never engages (CR-04). Standard base64 is accepted as a fallback so
-        // non-browser callers remain compatible.
+        // Pre-identify the credential for the failure counter below. lock.js
+        // serialises rawId as base64url without padding, while the store
+        // keeps credential_id in standard base64 -- normalise before lookup,
+        // or the failure throttle silently never engages on a wrong match.
         $rawIdValue = $assertion['rawId'] ?? null;
         $credentialId = '';
         if (is_string($rawIdValue) && $rawIdValue !== '') {
@@ -332,7 +268,8 @@ final class WebAuthnBiometricService
                     $credentialId = base64_encode(sodium_base642bin($rawIdValue, $variant, ''));
                     break;
                 } catch (\SodiumException) {
-                    // Not this encoding — try the next variant.
+                    // Try the next variant; sodium_base642bin() throws when
+                    // $rawIdValue doesn't decode under this variant.
                 }
             }
         }
@@ -350,14 +287,12 @@ final class WebAuthnBiometricService
                 return false;
             }
 
-            // Identify the credential in the DB by the rawId from the browser.
             $credRow = $this->store->findByCredentialId($userId, base64_encode($credential->rawId));
 
             if ($credRow === null) {
                 return false;
             }
 
-            // D-16: reject if the credential is disarmed.
             if (! $this->store->isArmed($credRow)) {
                 return false;
             }
@@ -388,7 +323,6 @@ final class WebAuthnBiometricService
                 counter: (int) $counterValue,
             );
 
-            // Build the request options with the same challenge for validation.
             $requestOptions = PublicKeyCredentialRequestOptions::create(
                 challenge: $challenge,
                 rpId: $this->rpId(),
@@ -415,17 +349,14 @@ final class WebAuthnBiometricService
                 return false;
             }
 
-            // T-05-19: update the counter to prevent replay.
+            // Update the counter (replay protection) and reset the failure
+            // count now that the assertion has verified successfully.
             $this->store->updateCounter((int) $credRowId, $updatedRecord->counter);
-
-            // D-16: reset the failure count on success.
             $this->store->resetFailureCount((int) $credRowId);
 
-            // Unwrap the data key from the stored per-device blob. Reveal it
-            // from the OS keychain first (identity on web / mobile, and on
-            // desktop for legacy rows written before shielding — reveal()
-            // returns the input unchanged when it is not safeStorage
-            // ciphertext).
+            // Reveal the stored per-device blob from the OS keychain first --
+            // a no-op on web/mobile, or on desktop rows written before
+            // shielding was introduced -- then unwrap the data key from it.
             $storedBlob = $credRow->biometric_wrap_secret;
             if (! is_string($storedBlob)) {
                 return false;
@@ -436,17 +367,15 @@ final class WebAuthnBiometricService
                 return false;
             }
 
-            // Unlock the session with the recovered data key. The memzero is
-            // best-effort (IN-08): the session now shares the buffer, so only
-            // the local reference is affected — the session copy persists by
-            // design until lock().
+            // The memzero is best-effort: the session now shares the buffer,
+            // so only the local reference is affected -- the session copy
+            // persists by design until lock().
             $this->lockState->unlock($session, $dataKey);
             sodium_memzero($dataKey);
 
             return true;
 
         } catch (\Throwable) {
-            // Any assertion verification failure increments the failure count.
             $credRow2 = $this->store->findByCredentialId($userId, $credentialId);
             if ($credRow2 !== null) {
                 $this->incrementFailureIfPresent($credRow2);
@@ -460,7 +389,6 @@ final class WebAuthnBiometricService
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /** Return the RP ID (host portion of APP_URL). */
     private function rpId(): string
     {
         $url = $this->config->get('app.url', 'http://localhost');
@@ -473,7 +401,6 @@ final class WebAuthnBiometricService
         return is_string($host) ? $host : 'localhost';
     }
 
-    /** Return the full origin (e.g. http://localhost:8000). Per Pitfall 3. */
     private function origin(): string
     {
         $url = $this->config->get('app.url', 'http://localhost');
@@ -481,7 +408,6 @@ final class WebAuthnBiometricService
         return is_string($url) ? $url : 'http://localhost';
     }
 
-    /** Consume and decode the stored creation challenge from the session. */
     private function consumeCreationChallenge(Session $session): string
     {
         $encoded = $session->pull(self::CREATION_CHALLENGE_SESSION);
@@ -497,7 +423,6 @@ final class WebAuthnBiometricService
         return $bytes;
     }
 
-    /** Consume and decode the stored assertion challenge from the session. */
     private function consumeRequestChallenge(Session $session): ?string
     {
         $encoded = $session->pull(self::REQUEST_CHALLENGE_SESSION);
@@ -510,12 +435,8 @@ final class WebAuthnBiometricService
         return $bytes === false ? null : $bytes;
     }
 
-    /**
-     * Extract the data key from the stored blob.
-     *
-     * Stored blob format: secret (32 bytes) || wrapped_key_bytes (remainder).
-     * The secret is the raw secretbox key used to unwrap the data key.
-     */
+    // Stored blob format: secret (32 bytes) || wrapped_key_bytes (remainder).
+    // The secret is the raw secretbox key used to unwrap the data key.
     private function extractDataKey(string $storedBlob): ?string
     {
         if (strlen($storedBlob) <= SODIUM_CRYPTO_SECRETBOX_KEYBYTES) {
@@ -525,7 +446,6 @@ final class WebAuthnBiometricService
         $secret = substr($storedBlob, 0, SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
         $wrappedKeyBytes = substr($storedBlob, SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
 
-        // Re-encode as base64 to pass to AppLockKeyWrap->unwrap.
         $wrappedKey = base64_encode($wrappedKeyBytes);
 
         $dataKey = $this->keyWrap->unwrap($wrappedKey, $secret);
@@ -534,9 +454,6 @@ final class WebAuthnBiometricService
         return $dataKey === false ? null : $dataKey;
     }
 
-    /**
-     * Increment the failure count if the credential row has a valid int id.
-     */
     private function incrementFailureIfPresent(\stdClass $credRow): void
     {
         $id = $credRow->id;
@@ -545,14 +462,10 @@ final class WebAuthnBiometricService
         }
     }
 
-    /**
-     * Build and return the WebAuthn serializer.
-     *
-     * The Symfony Serializer returned by WebauthnSerializerFactory::create()
-     * implements both SerializerInterface and NormalizerInterface at runtime.
-     * This helper declares the return type as the intersection so PHPStan
-     * allows both ->normalize() and ->deserialize() calls without @var casts.
-     */
+    // The Symfony Serializer returned by WebauthnSerializerFactory::create()
+    // implements both SerializerInterface and NormalizerInterface at
+    // runtime; declaring the return type as the intersection lets PHPStan
+    // allow both ->normalize() and ->deserialize() without @var casts.
     private function buildSerializer(): Serializer
     {
         $serializer = (new WebauthnSerializerFactory(

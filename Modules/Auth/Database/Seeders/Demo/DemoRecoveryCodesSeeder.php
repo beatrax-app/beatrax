@@ -8,29 +8,16 @@ use Carbon\CarbonImmutable;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 
-/**
- * Materialises five `user_recovery_codes` rows for the primary demo
- * user so the recovery-codes surface renders both the active-codes
- * view and the consumption audit:
- *
- *   - 3 unused codes (`used_at IS NULL`)
- *   - 2 used codes (`used_at` stamped at different ages)
- *
- * Code hashes are derived from `hash('sha256', 'demo-' . $seedKey)`
- * so the same rows produce the same hashes on every re-run; the
- * UNIQUE index on `code_hash` therefore makes a second seed run a
- * no-op via `updateOrCreate` keyed on the hash.
- *
- * The literal plaintext code never lands on disk (that would defeat
- * the purpose of the hashed column); the contributor inspecting the
- * recovery-codes surface sees the consumption state, not the codes.
- */
 final class DemoRecoveryCodesSeeder
 {
+    // Hashes derive from hash('sha256', 'demo-'.$seedKey), so reseeding is
+    // idempotent via updateOrCreate on the UNIQUE code_hash column. The
+    // plaintext code is never persisted, only its hash, matching the
+    // production invariant that recovery codes are always stored hashed.
+
+    // usedAgeHours of null keeps the row unused; any integer stamps
+    // used_at at that many hours before now.
     /**
-     * Per-code seed. `usedAgeHours` of `null` keeps the row unused;
-     * any integer stamps `used_at` at that many hours before now.
-     *
      * @var list<array{seedKey: string, usedAgeHours: ?int}>
      */
     private const CODES = [

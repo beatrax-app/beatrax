@@ -7,24 +7,10 @@ namespace Modules\Auth\Internal\Console;
 use Illuminate\Console\Command;
 use Modules\Core\Models\User;
 
-/**
- * CLI grant of the `is_developer` flag for an existing user.
- *
- * Phase 12's first-signup ceremony auto-promotes the first account to
- * developer (D-04), so the second device user starts with
- * `is_developer = false`. This command is the operator path to flip
- * that flag for an existing username — pair it with
- * `beatrax:reset-password` when standing up a new partner account.
- *
- * The runner is whitelisted as DESTRUCTIVE in the Dev Console and
- * the Dev Console wraps every destructive run in the triple-gate
- * modal (typed-app-name confirmation + advanced-toggle +
- * dev-mode-on). At the CLI there is no triple gate; the operator
- * is expected to know what they are doing.
- *
- * Idempotent: running against a user who is already a developer
- * reports "Already a developer" and exits SUCCESS.
- */
+// The Dev Console wraps this runner's destructive equivalent in a
+// triple-gate modal (typed-app-name confirmation + advanced-toggle +
+// dev-mode-on). At the CLI there is no triple gate — the operator is
+// expected to know what they are doing.
 class GrantDevCommand extends Command
 {
     /** @var string */

@@ -138,3 +138,164 @@ POST ManageUserPage::setPartnerPassword
 `/reset-password`, taken by a user who has lost their password but holds a
 recovery code. It clears the forced-change flag because the user has just
 chosen the password they want.)
+
+## App-lock (PIN / biometric)
+
+A second, session-scoped lock sits in front of the app once a user opts in:
+a 4–10 digit PIN (Argon2id-hashed) or, on capable devices, WebAuthn
+platform biometrics. Both gate access to a per-session **data key** that
+downstream encryption features (base-currency FX, at-rest field encryption)
+read through `AppLockKeyService::release()`/`withhold()`.
+
+### Key-wrapping model
+
+`AppLockProvisioner::enable()` generates a fresh random 32-byte data key
+(`random_bytes(SODIUM_CRYPTO_SECRETBOX_KEYBYTES)`) and double-wraps it under
+a single shared KDF salt:
+
+- **PIN wrap** (`pin_wrapped_key`) — the day-to-day unlock path.
+- **Password wrap** (`password_wrapped_key`) — the recovery path. The
+  account password is always available after re-authentication, so it
+  survives a forgotten PIN (`AppLockProvisioner::rewrapForNewPin()`
+  unwraps via the password and re-wraps under a new PIN; the underlying
+  data key is unchanged).
+
+Both wrap keys and the data key's local copies are zeroed with
+`sodium_memzero()` after use. Because a value handed to `$session->put()`
+is a shared (refcount > 1) buffer, that memzero is best-effort process
+hygiene, not a guarantee — the session's own copy persists by design until
+`lock()` removes it.
+
+Enabling always mints a **new** data key, which invalidates every existing
+per-device biometric wrap (they hold the old key) — `enable()` and
+`disable()` both delete all biometric credentials for the user so a stale
+enrollment can never unlock with divergent key material. `changePin()`
+dispatches `AppLockPassphraseChanged` after a successful PIN change so a
+Sync listener re-wraps the Group Data Key keyring under the (unchanged)
+app-lock data key; the listener is deliberately best-effort/never-throw so
+a keyring re-wrap failure can never surface as this method throwing
+instead of returning its documented `bool`.
+
+### Confirmation matrix
+
+Each settings-surface mutation requires a different proof, matched to how
+security-sensitive it is:
+
+| Action | Requires |
+|---|---|
+| Enable (first PIN setup) | Account password (builds the password recovery wrap) |
+| Disable | Current PIN |
+| Change PIN | Current PIN |
+| De-enroll biometric | Current PIN (verify-only — never touches PIN/wrap columns) |
+| Forgot PIN → reset | Account password |
+| Idle-timeout preset | Nothing — explicitly exempted; it only narrows the auto-lock window, never touches key material |
+
+`AppLockProvisioner::verifyPin()` is side-effect-free by design so the
+de-enroll confirmation can check the PIN without accidentally mutating
+`failed_attempts`/backoff state, which is scoped to lock-screen unlock
+attempts only.
+
+### Session custody (`LockStateManager`)
+
+Two session keys: a boolean lock flag, and a **custody handle** for the
+data key (not necessarily the raw key — see `KeyCustodian` below). An
+absent lock flag is treated as unlocked, covering both "no PIN set up yet"
+and "fresh session" — there is no third state.
+
+The data key lives in the Laravel session payload for as long as the
+session stays unlocked, which the session driver serialises at rest (file
+driver: `storage/framework/sessions/*`, owner-only permissions). This is
+an accepted risk for a local-only, single-machine deployment: the session
+store and the SQLite database share the same disk and OS user, so an
+attacker who can read session files can already read the DB. `lock()`
+removes the key from the session immediately; the only deliberate
+persistent copies are the wrapped blobs in `user_app_lock_configs` /
+`user_biometric_credentials`.
+
+`KeyCustodian` (`Public/Contracts/KeyCustodian.php`) abstracts what the
+"handle" actually is: on the default (web) custodian the handle IS the raw
+key, so behaviour is unchanged from the pre-custodian shape; on
+desktop/mobile bundles the custodian instead stores a `safeStorage`
+ciphertext or a Keychain reference, so the raw key bytes never touch the
+session payload at all. `LockStateManager::heldKey()` is the single
+sanctioned reader — going through the custodian's `read()` rather than
+reading the session key directly, which would yield the opaque handle
+instead of the key on non-web bundles.
+
+Lock-state changes are UI-scoped only: background queue/scheduler workers
+hold their own in-memory copy of the data key, independent of any session
+lock state. Locking the UI never revokes a running worker's copy — only
+the next `release()` call in *that* session returns null.
+
+### PIN verification + backoff (`PinVerificationService`)
+
+Wraps the compare-and-unwrap in a `lockForUpdate()` + `transaction()` pair
+(mirroring `RecoveryCodeAuthenticator`) so concurrent PIN attempts can't
+race the failure counter. On a wrong PIN, `failed_attempts` increments;
+crossing a threshold sets an escalating `locked_until` backoff window
+(30s, 60s, then 300s and beyond) that short-circuits further attempts
+without even hashing; reaching the hard cap signs the session out
+entirely and emits a `SystemAlert`. A corrupted wrap blob is treated as a
+non-counting failure (also alerted) rather than a crash. A successful PIN
+unlock re-arms every one of the user's biometric credentials (see below)
+and refreshes the "must re-enter PIN periodically" clock the mobile
+cold-start biometric path reads.
+
+### Biometric enrollment + assertion (`WebAuthnBiometricService`)
+
+Uses `web-auth/webauthn-lib` directly (not a Laravel passkey wrapper).
+Enrollment is only reachable once a PIN exists — biometric unlock is
+strictly additive to the PIN, never a replacement for the wrap chain.
+Both `rpId` (host portion of `APP_URL`) and the full origin are validated
+independently on every assertion; validating only one of the two is a
+known WebAuthn integration pitfall.
+
+Each enrolled device gets its own random 32-byte "biometric wrap secret";
+the data key is wrapped under that per-device secret (not under the PIN
+wrap key), so the PIN wrap remains the cryptographic root and a single
+compromised device secret cannot unwrap another device's copy. The stored
+blob is `secret (32 bytes) || wrapped_key_bytes`, and is passed through
+`SecretShield::protect()`/`reveal()` so the desktop bundle keeps it as
+OS-keychain-bound ciphertext rather than a directly-readable DB value (a
+no-op passthrough on web/mobile).
+
+`BiometricDeviceStore` implements an arm/disarm cycle per credential:
+after `BIOMETRIC_DISABLE_THRESHOLD` (5) consecutive failures a credential
+is disarmed and refuses further biometric attempts until the next
+successful PIN unlock re-arms every credential for that user. The
+WebAuthn signature counter is updated only after a successful assertion,
+rejecting non-increasing counters beforehand as replay protection against
+a cloned authenticator. Browsers serialise the credential ID as unpadded
+base64url while the store persists standard base64 at enrollment time —
+assertion lookups normalise across both encodings before matching, with
+standard base64 kept as a fallback for non-browser callers.
+
+### Priming the session after credential login
+
+A fresh password login must never leave a session in the incoherent
+"unlocked UI, no data key" state — before `AppLockProvisioner::primeSessionAfterLogin()`
+existed, that was exactly what happened, since a nominally-unlocked
+session with no stored key made `AppLockKeyService::release()` return
+null with nothing prompting the PIN to restore it. At login time the
+plaintext account password is available, so the data key is recovered
+through the password recovery wrap and the session is unlocked with the
+key already in hand — password re-auth is a strictly stronger gate than
+the PIN, so skipping the PIN screen here is sound. If the password wrap
+cannot be unwrapped (e.g. a stale wrap after an account-password change),
+the session starts locked instead and the PIN/biometric restores the key
+via the lock screen — never the incoherent unlocked/key-less state. This
+priming is a no-op when the lock is not enabled for the user.
+
+### Transport notes
+
+- `WebAuthnBiometricController`'s two JSON routes stay inside the standard
+  `web` middleware group (CSRF enforced, no JSON exemption); `lock.js`
+  reads the `XSRF-TOKEN` cookie and forwards it as the `X-XSRF-TOKEN`
+  request header, which Laravel accepts as the supplied token.
+- `LockEngageController` is posted to via `fetch` with `keepalive: true`,
+  not `navigator.sendBeacon` — a beacon cannot set headers, and
+  `VerifyCsrfToken` only accepts the token from a body field or one of
+  the CSRF headers, so a beacon request would always 419.
+- Both controllers are allow-listed in `AppLockMiddleware`'s route
+  exemptions so a session that is already locked (or racing a lock) can
+  still reach them to complete an unlock.

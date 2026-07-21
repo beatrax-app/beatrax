@@ -10,24 +10,12 @@ use Modules\Core\Public\Contracts\Clock;
 use stdClass;
 
 /**
- * CRUD store for the user_biometric_credentials table.
- *
- * Implements D-16 arm/disarm: after N consecutive biometric failures the
- * credential is disarmed (isArmed returns false) until the next successful
- * PIN unlock re-arms it via resetAllForUser().
- *
- * All queries are scoped to user_id — cross-user access is structurally
- * impossible from within this class (T-05-22).
- *
- * Follows the raw query-builder CRUD discipline from RecoveryCodeAuthenticator:
- * no Eloquent model, direct $db->connection()->table() writes.
+ * @link ../../../../.docs/features/auth/architecture.md
  */
 final class BiometricDeviceStore
 {
-    /**
-     * Number of consecutive biometric failures after which the button is
-     * disabled until the next successful PIN unlock re-arms it (D-16).
-     */
+    // Number of consecutive biometric failures after which the credential
+    // is disarmed until the next successful PIN unlock re-arms it.
     public const BIOMETRIC_DISABLE_THRESHOLD = 5;
 
     public function __construct(
@@ -36,8 +24,6 @@ final class BiometricDeviceStore
     ) {}
 
     /**
-     * Insert a new enrolled biometric credential row for the given user.
-     *
      * @param  string  $biometricWrapSecret  32-byte random server secret (raw bytes).
      * @param  string|null  $publicKeyCbor  COSE-encoded public key bytes (null for NativePHP path).
      * @param  string  $platform  'webauthn' or 'nativephp_macos'.
@@ -68,8 +54,6 @@ final class BiometricDeviceStore
     }
 
     /**
-     * Return all enrolled credential rows for a user.
-     *
      * @return Collection<int, stdClass>
      */
     public function findForUser(int $userId): Collection
@@ -80,11 +64,6 @@ final class BiometricDeviceStore
             ->get();
     }
 
-    /**
-     * Find a single credential by user_id + credential_id.
-     *
-     * Returns null when the credential does not exist or belongs to another user.
-     */
     public function findByCredentialId(int $userId, string $credentialId): ?stdClass
     {
         $row = $this->db->connection()
@@ -100,13 +79,8 @@ final class BiometricDeviceStore
         return $row;
     }
 
-    /**
-     * Increment the consecutive biometric failure counter for this credential (D-16).
-     *
-     * When the count reaches BIOMETRIC_DISABLE_THRESHOLD the credential is
-     * disarmed: isArmed() returns false until resetFailureCount or resetAllForUser
-     * is called.
-     */
+    // When the count reaches BIOMETRIC_DISABLE_THRESHOLD the credential is
+    // disarmed until resetFailureCount() or resetAllForUser() is called.
     public function incrementFailureCount(int $id): void
     {
         $this->db->connection()
@@ -115,11 +89,6 @@ final class BiometricDeviceStore
             ->increment('biometric_failed_count');
     }
 
-    /**
-     * Reset the failure counter to 0 for a single credential.
-     *
-     * Called after a successful biometric assertion (D-16 re-arm).
-     */
     public function resetFailureCount(int $id): void
     {
         $this->db->connection()
@@ -128,11 +97,6 @@ final class BiometricDeviceStore
             ->update(['biometric_failed_count' => 0]);
     }
 
-    /**
-     * Reset the failure counter for ALL of a user's credentials.
-     *
-     * Called after a successful PIN unlock (D-16: PIN re-arms all biometrics).
-     */
     public function resetAllForUser(int $userId): void
     {
         $this->db->connection()
@@ -141,13 +105,9 @@ final class BiometricDeviceStore
             ->update(['biometric_failed_count' => 0]);
     }
 
-    /**
-     * Update the signature counter after a successful WebAuthn assertion.
-     *
-     * Replay protection: a non-increasing counter means the authenticator may
-     * have been cloned. The caller is responsible for rejecting non-increasing
-     * counters BEFORE calling this method (T-05-19).
-     */
+    // Replay protection: a non-increasing counter means the authenticator
+    // may have been cloned. The caller must reject a non-increasing counter
+    // BEFORE calling this method.
     public function updateCounter(int $id, int $counter): void
     {
         $this->db->connection()
@@ -156,11 +116,6 @@ final class BiometricDeviceStore
             ->update(['counter' => $counter]);
     }
 
-    /**
-     * Delete all enrolled credentials for a user.
-     *
-     * Called when the user disables biometric unlock (cascade on disable).
-     */
     public function deleteForUser(int $userId): void
     {
         $this->db->connection()
@@ -170,11 +125,6 @@ final class BiometricDeviceStore
     }
 
     /**
-     * Returns true when the credential is still armed (failure count < threshold).
-     *
-     * A disarmed credential (biometric_failed_count >= BIOMETRIC_DISABLE_THRESHOLD)
-     * must not be allowed to attempt biometric unlock (D-16).
-     *
      * @param  stdClass  $credential  A row from user_biometric_credentials.
      */
     public function isArmed(stdClass $credential): bool

@@ -12,29 +12,16 @@ use Laravel\Fortify\Actions\PrepareAuthenticatedSession;
 use Laravel\Fortify\Fortify;
 use Modules\Core\Models\User;
 
-/**
- * Configures Fortify to authenticate the active user against
- * `users.username` via the injected `Hasher` contract.
- *
- * The authenticator closure normalises the submitted username
- * (lowercase, trimmed) before the lookup and returns a generic null on
- * any miss, so a wrong password and a missing account are
- * indistinguishable from the response.
- *
- * The pipeline omits the throttle middleware by design: the deployment
- * is local-only and single-machine, so the natural cost factor of the
- * bcrypt hash is the defence against credential guessing rather than a
- * per-IP rate limiter.
- *
- * `Fortify::authenticateUsing()` / `Fortify::authenticateThrough()` are
- * Fortify's own configuration DSL — library static methods, not Laravel
- * facades — so the facadeless rule needs no exemption for them.
- */
+// No throttle middleware by design: this is a local-only, single-machine
+// deployment, so bcrypt's cost factor is the credential-guessing defence,
+// not a per-IP limiter. The authenticator returns a generic null on any
+// miss, so a wrong password and a missing account are indistinguishable.
 final class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Fortify auto-binds its own services; no container wiring needed.
+        // Fortify auto-binds its own services from its own service
+        // provider; this override exists only to configure boot() below.
     }
 
     public function boot(Hasher $hasher): void

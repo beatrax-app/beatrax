@@ -12,24 +12,10 @@ use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
-/**
- * CLI regeneration of the 10 single-use recovery codes for a user.
- *
- * Used when a user has lost their printed recovery sheet or wants to
- * rotate after a suspected leak. Marks every unused outstanding code
- * as consumed (via `used_at`) so the old sheet stops working, then
- * issues a fresh batch of 10 hyphenated codes using the same
- * RecoveryCodeGenerator + bcrypt hash discipline the signup ceremony
- * uses. The plaintext codes are printed to the console exactly once —
- * the operator must record them on the spot, or re-run the command.
- *
- * Whole operation runs inside a database transaction so a partial
- * failure does not leave the user with no usable recovery path.
- *
- * Registered as DESTRUCTIVE in the Dev Console: a mistaken
- * regenerate forces the user back through the password-reset
- * path if they are not signed in.
- */
+// Runs inside a database transaction so a partial failure never leaves
+// the user with no usable recovery path. The plaintext codes are
+// printed to the console exactly once -- the operator must record
+// them on the spot, or re-run the command.
 class RegenerateRecoveryCodesCommand extends Command
 {
     private const RECOVERY_CODE_COUNT = 10;
