@@ -15,28 +15,12 @@ use Modules\Import\Public\Services\MerchantNameResolver;
 use stdClass;
 
 /**
- * `/community/mystery-merchants` browse destination. Lists every
- * description in the user's transaction history that the
- * MerchantNameResolver cannot identify (no user alias, no community
- * corpus row matches) and renders each as a mystery card the user can
- * click to open the suggest-mapping modal.
- *
- * The stats strip across the top renders four KPIs: the user's
- * mystery-code count, the corpus size (mappings + heuristics combined),
- * the rough auto-named percentage, and the user's contribution count
- * (deferred to a future plan and surfaced as zero here so the slot is
- * rendered consistently with the eventual real value).
- *
- * Service collaborators arrive as parameters on render() — never via
- * constructor injection. The strict-rules ruleset banishes
- * constructor-DI from Livewire components.
+ * @link ../../../../../.docs/features/community/architecture.md
  */
 final class MysteryMerchantsPage extends Component
 {
-    /** Maximum number of mystery cards rendered per request. */
     private const CARD_LIMIT = 24;
 
-    /** Cap the scan over the user's transactions so the per-render cost stays bounded. */
     private const SCAN_LIMIT = 2000;
 
     public function render(
@@ -95,7 +79,6 @@ final class MysteryMerchantsPage extends Component
             }
         }
 
-        // Sort by occurrence count desc + description asc for stability.
         uasort($grouped, static function (array $a, array $b): int {
             $countOrder = $b['count'] <=> $a['count'];
 

@@ -17,30 +17,7 @@ use Modules\Community\Public\Events\MysteryMerchantSubmitted;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 /**
- * Global suggest-mapping modal SFC. Mounted once at the layout level so
- * the `suggest-mapping:open` Livewire event can open the modal from
- * anywhere — the Triage row CTA, the `/community/mystery-merchants`
- * card, and the Settings → Shared list "Browse mystery merchants"
- * button all dispatch the same event.
- *
- * The modal renders a small form (read-only mono pattern + editable
- * name + optional category + region dropdown), a live-updating YAML
- * preview pane that mirrors the four fields, and a primary "Submit as
- * draft PR" button. On submit the action layer builds a GitHub Compare
- * URL via GitHubCompareUrlBuilder, hands it to OpenExternalUrlAction
- * (which validates the https + allow-listed host posture and then
- * delegates to Native\Desktop\Contracts\Shell::openExternal), and
- * dispatches a MysteryMerchantSubmitted event via the method-injected
- * Dispatcher.
- *
- * Service collaborators arrive as parameters on action methods — never
- * via constructor injection. The Livewire strict-rules ruleset
- * forbids constructor-DI on Component subclasses.
- *
- * On OpenExternalUrlAction throwing (e.g. a tampered config value
- * pointed at a non-allow-listed host) the modal stays open and the
- * error message is rendered inline above the footer; the user can
- * close the modal and re-open without re-typing.
+ * @link ../../../../../.docs/features/community/architecture.md
  */
 final class SuggestMappingModal extends Component
 {

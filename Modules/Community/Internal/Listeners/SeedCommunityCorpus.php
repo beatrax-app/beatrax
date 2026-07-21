@@ -12,20 +12,7 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Idempotent UserInstalled listener that loads the bundled merchant
- * corpus + built-in heuristics from YAML and upserts each row into
- * `community_merchant_mappings` keyed on `(pattern, user_id IS NULL)`.
- * Mirrors `Modules\Categorization\Internal\Listeners\SeedDefaultCategoryTree`
- * in shape: dispatched on every signup AND on every re-run of the
- * install command, so listeners MUST tolerate re-dispatch without
- * producing duplicate rows.
- *
- * Failure handling is per-entry: a Throwable raised by the underlying
- * `updateOrInsert` call (e.g. a constraint violation we could not
- * predict) is logged at `warning` and the loop continues with the next
- * entry. The bundled YAML is project-controlled and audited at PR time,
- * so per-row failure is a defensive measure, not the expected steady
- * state.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class SeedCommunityCorpus
 {
@@ -47,13 +34,10 @@ final class SeedCommunityCorpus
 
         foreach ($entries as $entry) {
             try {
-                // Idempotent shape keyed on (pattern, user_id IS NULL):
-                // re-dispatch updates the mutable fields in place
-                // without producing duplicates. The check-then-branch
-                // is preferred over updateOrInsert here so created_at
-                // is written only on the INSERT side — preserving the
-                // original-seed timestamp for audit even when the
-                // install command re-emits UserInstalled later.
+                // Check-then-branch (not updateOrInsert) keyed on (pattern,
+                // user_id IS NULL): created_at is written only on the INSERT
+                // side, preserving the original-seed timestamp across a
+                // re-dispatch of this idempotent listener.
                 $existingId = $connection->table('community_merchant_mappings')
                     ->where('pattern', $entry->pattern)
                     ->whereNull('user_id')

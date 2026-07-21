@@ -7,10 +7,7 @@ namespace Modules\Community\Public\Dto;
 use Spatie\LaravelData\Data;
 
 /**
- * Immutable payload assembled by the SuggestMappingModal before it
- * hands off to GitHubCompareUrlBuilder + OpenExternalUrlAction. The
- * region defaults to `'NL'` because the bundled corpus targets Dutch
- * banks; the dropdown in the modal lets the user override.
+ * @link ../../../../.docs/features/community/architecture.md
  */
 final class SuggestMappingDto extends Data
 {
