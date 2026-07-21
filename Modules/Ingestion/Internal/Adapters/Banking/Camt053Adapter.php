@@ -147,25 +147,13 @@ final class Camt053Adapter implements SourceAdapter
     // upload pipeline surfaces it as a single per-file ERROR preview row.
     private function readMessage(string $localPath): Message
     {
-        // XXE mitigation: allow local-filesystem entity reads only (the
-        // CAMT.053 XSDs genkgo/camt ships reference each other by relative
-        // path) and deny every remote URI scheme, regardless of libxml
-        // defaults (full rationale in the Ingestion architecture doc).
+        // XXE mitigation: deny ALL external entities — with XSD validation
+        // disabled nothing legitimate needs to resolve, so any external entity
+        // (file, scheme-less, or any network/wrapper scheme) is hostile and the
+        // loader returns null unconditionally (full rationale in the Ingestion
+        // architecture doc).
         libxml_set_external_entity_loader(
-            static function (?string $publicId, ?string $systemId, array $context): ?string {
-                if ($systemId === null) {
-                    return null;
-                }
-
-                $scheme = parse_url($systemId, PHP_URL_SCHEME);
-                if ($scheme === null || $scheme === false || $scheme === '' || $scheme === 'file') {
-                    return $systemId;
-                }
-
-                // Block http://, https://, ftp://, php://, expect://, … any
-                // network or wrapper scheme an attacker could weaponise.
-                return null;
-            }
+            static fn (?string $publicId, ?string $systemId, array $context): ?string => null
         );
 
         $previousErrorState = libxml_use_internal_errors(true);
