@@ -10,16 +10,9 @@ use Livewire\Component;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-/**
- * Inline dashboard "Unusual charges" count tile (D-03). Reads through
- * `AnomalyAlertQuery::openCountForUser` + `openDetectorBreakdownForUser`
- * for the current user; renders no chrome when `openCount === 0` so the
- * dashboard collapses gracefully on a quiet day — distinct from the drift
- * tile so subscription-creep and one-off unusual charges stay legible.
- *
- * Method-parameter DI on `render()` — constructor injection is banned on
- * Livewire `Component` subclasses by phpstan-strict-rules.
- */
+// Renders no chrome when `openCount === 0` so the dashboard collapses
+// gracefully on a quiet day. Method-parameter DI on `render()` —
+// constructor injection is banned on Livewire Component subclasses.
 final class DashboardAnomalyBadge extends Component
 {
     public function render(

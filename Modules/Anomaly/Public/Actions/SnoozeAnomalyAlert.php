@@ -14,28 +14,12 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Snoozes an open (or already-snoozed) anomaly_alerts row until the
- * supplied timestamp. The state-machine call carries the `snoozed_until`
- * patch in its `$extraColumns` so the state flip and the snooze timestamp
- * land inside the same row-locked transaction and audit row.
- *
- * The snooze target is bounded SERVER-SIDE to `(now, now+6mo]` (T-09-10):
- * a tampered Livewire payload widening the snooze window past six months
- * — or pointing at a past timestamp — is rejected with an
- * InvalidArgumentException before any state change. This bound lives in
- * the action (not the Livewire layer) so every caller is protected.
- *
- * Idempotent when re-snoozing to the exact same target timestamp (silent
- * no-op). The comparison runs both sides through the same
- * `toDateTimeString()` round-trip the persisted value uses, so a re-snooze
- * to the same intended instant never writes a redundant transition/event
- * even when the caller's `$until` carries a distinct offset or sub-second
- * component. Cross-user invocation raises NotFoundHttpException.
- */
+// The snooze target is bounded SERVER-SIDE to (now, now+6mo]: a tampered
+// Livewire payload widening the window or pointing at the past is
+// rejected before any state change. This bound lives in the action (not
+// the Livewire layer) so every caller is protected.
 final class SnoozeAnomalyAlert
 {
-    /** Server-side upper bound on a snooze window: six months from now. */
     private const MAX_SNOOZE_MONTHS = 6;
 
     public function __construct(
@@ -56,9 +40,8 @@ final class SnoozeAnomalyAlert
             throw new NotFoundHttpException('Anomaly alert not found.');
         }
 
-        // Server-side bounds (now, now+6mo]. The 404 guard runs first so a
-        // cross-user probe never learns whether its tampered target was in
-        // range.
+        // The 404 guard runs first so a cross-user probe never learns
+        // whether its tampered target was in range.
         $now = $this->clock->now();
         if ($until->lessThanOrEqualTo($now)) {
             throw new InvalidArgumentException('Snooze target must be in the future.');
@@ -69,15 +52,10 @@ final class SnoozeAnomalyAlert
 
         $untilString = $until->toDateTimeString();
 
-        // Idempotency: compare the to-be-written string against the stored
-        // value's identical `toDateTimeString()` round-trip. snoozed_until
-        // is persisted via toDateTimeString() (dropping sub-second
-        // precision and the source offset) and re-hydrated in the app
-        // timezone, so a raw getTimestamp() comparison against the caller's
-        // $until could spuriously differ — and a genuine re-snooze to the
-        // same intended instant would write a redundant transition + event.
-        // Normalising both sides through the same round-trip makes the
-        // short-circuit fire exactly when the stored instant is unchanged.
+        // Compare through the same toDateTimeString() round-trip the
+        // stored value uses (it drops sub-second precision and the source
+        // offset), so a raw getTimestamp() comparison against the
+        // caller's $until could spuriously differ on a genuine re-snooze.
         if (
             $alert->state === 'snoozed'
             && $alert->snoozed_until !== null

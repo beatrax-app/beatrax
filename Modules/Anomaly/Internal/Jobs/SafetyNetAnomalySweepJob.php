@@ -20,28 +20,7 @@ use Modules\Core\Public\Support\LockStore;
 use stdClass;
 
 /**
- * Per-user safety-net sweep: re-evaluates recently-imported transactions
- * that have NO anomaly_alerts row yet, catching any charge the reactive
- * EvaluateAnomaliesOnTransactionImport listener missed (a dropped queue
- * job, a worker crash mid-import). Dispatched hourly per user from
- * `routes/console.php` (anomaly.safety-net-sweep), one job per user.
- *
- * Concurrency contract:
- *  - ShouldBeUniqueUntilProcessing keyed on uniqueId() = (string) userId
- *    collapses any same-hour duplicate dispatch into a single queued
- *    sweep per user.
- *  - tries=3 + backoff=[60,300,900] tolerates a transient hiccup.
- *
- * Recency window: only transactions imported within RECENT_WINDOW_DAYS
- * (by created_at — the import timestamp) are candidates, so the sweep
- * stays cheap and does NOT re-walk history (that is the one-shot
- * BackfillAnomaliesJob's job). The candidate filter is a NOT EXISTS
- * against anomaly_alerts so already-alerted rows are never re-evaluated;
- * UNIQUE(transaction_id) is the final backstop making any race a no-op.
- *
- * Cross-user discipline (T-09-16): the candidate query carries an explicit
- * where('user_id', ...) — the BelongsToUser global scope does not fire
- * under queue/console.
+ * @link ../../../../.docs/features/anomaly/architecture.md
  */
 final class SafetyNetAnomalySweepJob implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
@@ -50,10 +29,8 @@ final class SafetyNetAnomalySweepJob implements ShouldBeUniqueUntilProcessing, S
     use Queueable;
     use SerializesModels;
 
-    /** Recent-import window (days) the sweep re-checks. */
     private const RECENT_WINDOW_DAYS = 30;
 
-    /** Chunk size for the candidate walk. */
     private const CHUNK = 500;
 
     public int $tries = 3;
@@ -107,9 +84,6 @@ final class SafetyNetAnomalySweepJob implements ShouldBeUniqueUntilProcessing, S
                 if ($transactionId <= 0) {
                     return;
                 }
-                // Shared evaluator path — same detection logic as the
-                // reactive job + backfill. UNIQUE(transaction_id) makes a
-                // concurrent reactive insert collapse harmlessly.
                 $evaluator->evaluate($transactionId, $user);
             });
     }

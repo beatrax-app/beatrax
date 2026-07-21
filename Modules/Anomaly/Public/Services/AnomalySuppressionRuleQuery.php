@@ -12,15 +12,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
 /**
- * Public read API over `anomaly_suppression_rules` for the settings
- * surface (D-18). Lists every rule the user has created by dismissing an
- * anomaly "as expected" so each can be reviewed and removed — nothing is
- * muted invisibly.
- *
- * User-scoped explicitly. Merchant display names are resolved through the
- * Counterparties Public surface (`identitiesForIds`); a rule keyed on a
- * NULL `counterparty_id` (normalized-name fallback) surfaces with an
- * empty display name and the renderer can show its band/detector alone.
+ * @link ../../../../.docs/features/anomaly/architecture.md
  */
 final readonly class AnomalySuppressionRuleQuery
 {
@@ -30,9 +22,6 @@ final readonly class AnomalySuppressionRuleQuery
     ) {}
 
     /**
-     * Returns the user's suppression rules (newest first) for the
-     * settings list.
-     *
      * @return list<AnomalySuppressionRuleDto>
      */
     public function forUser(User $user): array

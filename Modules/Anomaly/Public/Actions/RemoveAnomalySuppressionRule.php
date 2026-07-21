@@ -12,19 +12,7 @@ use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Removes anomaly suppression rules (D-18). There are two distinct paths,
- * both user-scoped (`where('id'|'source_anomaly_alert_id')->where('user_id')`)
- * and both raising NotFoundHttpException on a cross-user / unknown target:
- *
- *   - `removeRule` (settings "Remove"): deletes a single rule by id. The
- *     anomaly that created it STAYS dismissed — the user is just pruning
- *     their mute list.
- *
- *   - `undoSuppression` (post-dismiss toast "Undo"): deletes every rule
- *     created by a given dismissal (matched on `source_anomaly_alert_id`)
- *     AND re-opens the anomaly via the state machine's diverging
- *     `dismissed -> open` edge (D-18). This is the only place that edge is
- *     exercised.
+ * @link ../../../../.docs/features/anomaly/architecture.md
  */
 final class RemoveAnomalySuppressionRule
 {
@@ -33,10 +21,6 @@ final class RemoveAnomalySuppressionRule
         private readonly AnomalyAlertStateMachine $stateMachine,
     ) {}
 
-    /**
-     * Settings path: delete a single suppression rule by id. The
-     * originating anomaly is left dismissed.
-     */
     public function removeRule(int $ruleId, User $user): void
     {
         /** @var AnomalySuppressionRule|null $rule */
@@ -55,12 +39,8 @@ final class RemoveAnomalySuppressionRule
             ->delete();
     }
 
-    /**
-     * Undo path: delete every suppression rule created by the dismissal of
-     * `$alertId`, then re-open the anomaly (dismissed -> open via the state
-     * machine). Raises NotFoundHttpException if the alert is unknown or
-     * belongs to another user.
-     */
+    // Undo path: deletes every rule created by the dismissal, then
+    // re-opens the anomaly via the state machine's dismissed -> open edge.
     public function undoSuppression(int $alertId, User $user): void
     {
         /** @var AnomalyAlert|null $alert */

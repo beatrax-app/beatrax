@@ -11,22 +11,12 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Anomaly\Database\Factories\AnomalySuppressionRuleFactory;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
+// A rule keys narrowly on merchant + amount band + detector + direction,
+// so a genuinely larger/different later charge still fires. `BelongsToUser`
+// is a SECONDARY guard — every evaluation-time query under queue/console
+// must carry its own explicit `where('user_id', ...)` filter.
 /**
- * Eloquent model for the anomaly_suppression_rules table (D-17/D-18) —
- * the user-visible, undoable mute list produced when a user dismisses an
- * anomaly "as expected".
- *
- * A rule keys narrowly on merchant (`counterparty_id`) + amount band
- * (`amount_band_low_minor` .. `amount_band_high_minor`) + `detector` +
- * `direction`, so a genuinely larger/different later charge from the same
- * merchant still fires. Per D-18 nothing is muted invisibly — the
- * settings surface lists every rule and lets the user revoke it.
- *
- * Cross-user posture (borrowed from Counterparty): the `BelongsToUser`
- * global scope is a SECONDARY guard that fires only inside HTTP-bound
- * Eloquent queries. Every evaluation-time matching query under
- * queue/console MUST carry its own explicit `where('user_id', ...)`
- * filter — the explicit filter is the primary guard.
+ * @link ../../../.docs/features/anomaly/architecture.md
  *
  * @property int $id
  * @property int|null $user_id

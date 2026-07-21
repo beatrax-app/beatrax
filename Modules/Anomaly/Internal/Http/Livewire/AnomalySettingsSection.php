@@ -16,38 +16,18 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-/**
- * Settings "Anomaly detection" section (D-11/D-18). Exposes the alert
- * sensitivity, the global minimum-charge floor, and the user-visible +
- * removable suppression-rules list so nothing is muted invisibly
- * (a hard requirement for a fraud-adjacent feature).
- *
- * Follows the SettingsPage pattern: NO constructor DI — collaborators
- * arrive as parameters on each action/render method.
- *
- * On the FIRST save while `users.anomaly_backfilled_at` is still null,
- * the full-history `BackfillAnomaliesJob` is dispatched once (D-13). The
- * job is `ShouldBeUniqueUntilProcessing` keyed on userId and additionally
- * guards wholesale on the same timestamp, so a duplicate dispatch is a
- * no-op; subsequent saves (after the backfill stamps the column) never
- * re-dispatch.
- *
- * Sensitivity is validated server-side to [1,100] and the floor to >= 0
- * (T-09-19) — a tampered Livewire payload cannot persist an out-of-range
- * value.
- */
+// Follows the SettingsPage pattern: NO constructor DI — collaborators
+// arrive as parameters on each action/render method. The first save while
+// `users.anomaly_backfilled_at` is still null dispatches the full-history
+// backfill exactly once; subsequent saves never re-dispatch.
 final class AnomalySettingsSection extends Component
 {
-    /** Alert sensitivity percent (1–100). Default 50. */
     public int $anomalySensitivityPercent = 50;
 
-    /** Minimum-charge floor in minor units (>= 0). Default 1000 (€10.00). */
     public int $anomalyMinAmountMinor = 1000;
 
-    /** Inline validation error for the save form. */
     public string $saveError = '';
 
-    /** Success flash after a save. */
     public bool $saved = false;
 
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
@@ -68,10 +48,6 @@ final class AnomalySettingsSection extends Component
         }
     }
 
-    /**
-     * Persist sensitivity + floor (server-validated), and on first
-     * activation dispatch the full-history backfill exactly once.
-     */
     public function save(
         CurrentUser $currentUser,
         DatabaseManager $db,
@@ -84,8 +60,8 @@ final class AnomalySettingsSection extends Component
         $sensitivity = $this->anomalySensitivityPercent;
         $floor = $this->anomalyMinAmountMinor;
 
-        // Server-side bounds (T-09-19). A tampered payload is rejected
-        // before any write.
+        // Server-side bounds: a tampered payload is rejected before any
+        // write reaches the database.
         if ($sensitivity < 1 || $sensitivity > 100) {
             $this->saveError = 'Sensitivity must be between 1 and 100.';
 
@@ -100,7 +76,7 @@ final class AnomalySettingsSection extends Component
         $user = $currentUser->user();
 
         // Read the first-activation guard BEFORE the write so we know
-        // whether this is the first save (D-13).
+        // whether this is the first save.
         $backfilledAt = $db->connection()->table('users')
             ->where('id', $user->id)
             ->value('anomaly_backfilled_at');
@@ -123,11 +99,8 @@ final class AnomalySettingsSection extends Component
         $this->saved = true;
     }
 
-    /**
-     * Remove a single suppression rule from the settings list (D-18). The
-     * originating anomaly stays dismissed; the user is just pruning their
-     * mute list. Cross-user / unknown ids are silently ignored in the UI.
-     */
+    // The originating anomaly stays dismissed; the user is just pruning
+    // their mute list.
     public function removeSuppressionRule(
         int $ruleId,
         CurrentUser $currentUser,
@@ -137,7 +110,6 @@ final class AnomalySettingsSection extends Component
             $action->removeRule($ruleId, $currentUser->user());
             $this->dispatch('toast', message: 'Rule removed');
         } catch (NotFoundHttpException) {
-            // Cross-user / unknown rule — silently ignore in the UI layer.
         }
     }
 

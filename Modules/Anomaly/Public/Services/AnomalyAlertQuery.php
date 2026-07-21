@@ -15,38 +15,13 @@ use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use stdClass;
 
 /**
- * Public read API over `anomaly_alerts`. Cloned from `DriftAlertQuery`,
- * re-keyed to the per-transaction anomaly shape. Every method scopes by
- * `user_id` and returns Spatie-Data DTOs so the anomaly section of the
- * /drift alerts home, the dashboard tile, and downstream listeners read a
- * single canonical shape.
- *
- * Cross-user reads return an empty list (or zero on count aggregates);
- * cross-user 404s are surfaced at the Public Action layer.
- *
- * Cursor pagination is keyed strictly on `id DESC`. The single-column
- * cursor stays monotone: `anomaly_alerts.id` is a SQLite autoincrementing
- * surrogate, so newer alerts always have larger ids. Ordering and
- * filtering by id alone keeps the cursor consistent when several alerts
- * share an exact `detected_at` second (a backfill or safety-net sweep can
- * batch many writes inside a single scheduler tick).
- *
- * Cross-module reads of `counterparties` (display name) are delegated to
- * `CounterpartyProfileQuery::identitiesForIds` so the Anomaly module
- * never issues a raw SELECT against another module's table.
- *
- * Unlike drift, anomalies are per-transaction and carry no
- * recurring-series coupling, so the series-grouped /
- * annualized-impact methods are dropped. `openDetectorBreakdownForUser`
- * counts open alerts per detector reason for the dashboard tile.
+ * @link ../../../../.docs/features/anomaly/architecture.md
  */
 final readonly class AnomalyAlertQuery
 {
-    /**
-     * Default page size for the cursor-paginated list reads: 25 rows shown
-     * plus 1 look-ahead row the caller uses to decide whether a "next page"
-     * cursor exists (25 + 1 = 26). The look-ahead row is never rendered.
-     */
+    // 25 rows shown plus 1 look-ahead row the caller uses to decide
+    // whether a "next page" cursor exists; the look-ahead row is never
+    // rendered.
     public const PAGE_SIZE_WITH_LOOKAHEAD = 26;
 
     public function __construct(
@@ -55,17 +30,10 @@ final readonly class AnomalyAlertQuery
         private CounterpartyProfileQuery $counterpartyQuery,
     ) {}
 
+    // The state filter is widened to include rows in `state='snoozed'`
+    // whose `snoozed_until` has elapsed: the sweep is the durable write,
+    // this query is the fresh read reflecting "open again" between sweeps.
     /**
-     * Open alerts. The state filter is widened to include rows in
-     * `state='snoozed'` whose `snoozed_until` has elapsed: the snooze-
-     * revival sweep flips those rows back to `state='open'` and writes an
-     * audit transition, but between sweeps the count + the listing must
-     * already reflect the user-visible "this is open again" reality. The
-     * two paths produce the same set; the sweep is the durable write, the
-     * query is the fresh read.
-     *
-     * Sort: `id DESC`. Cursor pagination filters strictly on `id`.
-     *
      * @return list<AnomalyAlertDto>
      */
     public function openForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
@@ -84,8 +52,6 @@ final readonly class AnomalyAlertQuery
     }
 
     /**
-     * Acknowledged alerts (state='acknowledged' — the History tab).
-     *
      * @return list<AnomalyAlertDto>
      */
     public function historyForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
@@ -94,9 +60,6 @@ final readonly class AnomalyAlertQuery
     }
 
     /**
-     * Dismissed alerts (state='dismissed' — the Dismissed tab). Anomaly
-     * uses the plain dismissed state, never the drift cancelled variant.
-     *
      * @return list<AnomalyAlertDto>
      */
     public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
@@ -104,11 +67,6 @@ final readonly class AnomalyAlertQuery
         return $this->scoped($user, ['dismissed'], $cursorId, $limit);
     }
 
-    /**
-     * Count of open alerts for the user. Revival-aware (mirrors
-     * `openForUser`). Used by the top-nav badge composer and the
-     * dashboard "Unusual charges" tile.
-     */
     public function openCountForUser(User $user): int
     {
         return $this->db->connection()->table('anomaly_alerts')
@@ -117,16 +75,11 @@ final readonly class AnomalyAlertQuery
             ->count();
     }
 
+    // A multi-reason alert contributes to every reason it carries, so
+    // counts across detectors can exceed openCountForUser. Computed in
+    // PHP since `reasons` is a JSON list (SQLite has no first-class
+    // JSON-array aggregation here).
     /**
-     * Counts of open alerts per tripped detector reason. A multi-reason
-     * alert (D-16) contributes to every reason it carries, so the counts
-     * across detectors can exceed `openCountForUser`. Used by the
-     * dashboard tile's per-detector breakdown.
-     *
-     * The `reasons` column is a JSON list, so the breakdown is computed
-     * in PHP over the revival-aware open set rather than via a SQL
-     * GROUP BY (SQLite has no first-class JSON-array aggregation here).
-     *
      * @return array<string, int>
      */
     public function openDetectorBreakdownForUser(User $user): array
@@ -194,13 +147,10 @@ final readonly class AnomalyAlertQuery
         return $result;
     }
 
+    // A permitted READ of the ledger (noTransactionWritesFromAnomaly
+    // forbids only writes); the anomaly table keys per-transaction so the
+    // merchant id lives on the transaction.
     /**
-     * Resolve `transaction_id => counterparty_id` for the alert rows.
-     * This is a permitted READ of the ledger (the
-     * `noTransactionWritesFromAnomaly` invariant forbids only writes);
-     * the anomaly table keys per-transaction so the merchant id lives on
-     * the transaction.
-     *
      * @param  Collection<int, stdClass>  $rows
      * @return array<int, int>
      */
@@ -237,11 +187,8 @@ final readonly class AnomalyAlertQuery
         return $map;
     }
 
-    /**
-     * Apply the open-tab state filter onto a query builder: rows in
-     * `state='open'`, plus rows in `state='snoozed'` whose `snoozed_until`
-     * has elapsed. Copied VERBATIM from `DriftAlertQuery::applyOpenStateFilter`.
-     */
+    // Rows in `state='open'`, plus rows in `state='snoozed'` whose
+    // `snoozed_until` has elapsed.
     private function applyOpenStateFilter(Builder $query): void
     {
         $now = $this->clock->now()->toDateTimeString();
@@ -254,9 +201,6 @@ final readonly class AnomalyAlertQuery
     }
 
     /**
-     * Resolve merchant display names for the counterparty ids via the
-     * Counterparties Public surface — no raw cross-module SELECT.
-     *
      * @param  array<int, int>  $counterpartyByTxn  transaction_id => counterparty_id
      * @return array<int, string> counterparty_id => display name
      */

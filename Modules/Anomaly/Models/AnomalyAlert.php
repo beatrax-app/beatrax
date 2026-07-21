@@ -14,20 +14,12 @@ use Modules\Anomaly\Database\Factories\AnomalyAlertFactory;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Models\Transaction;
 
+// The `state` column is mutated exclusively by AnomalyAlertStateMachine;
+// the schema-level trigger pair plus the noOtherAnomalyAlertStateMutator
+// arch-test invariant enforce the sole-mutator contract. `transaction_id`
+// is the idempotency seam (UNIQUE) the evaluator re-runs against.
 /**
- * Eloquent model for the anomaly_alerts table — one row models one
- * detected unusual charge for a single transaction (D-16: one alert per
- * transaction, multi-reason).
- *
- * The `state` column is mutated exclusively by
- * `Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine`; the
- * schema-level trigger pair plus the `noOtherAnomalyAlertStateMutator`
- * BoundaryArchTest invariant enforce the sole-mutator contract.
- *
- * `transaction_id` is the idempotency seam (UNIQUE) that lets the
- * evaluator re-run against the same charge without producing duplicate
- * alerts. `reasons` is the JSON list of detector reasons the charge
- * tripped (large / first_time / duplicate).
+ * @link ../../../.docs/features/anomaly/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
