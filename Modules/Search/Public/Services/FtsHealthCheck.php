@@ -7,40 +7,21 @@ namespace Modules\Search\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Throwable;
 
-/**
- * Public facade exposing FTS5 index health to consumers outside Search Internal.
- *
- * This class lives in Search Public so that Core's DoctorCommand can depend on
- * it without crossing into Search Internal — maintaining the module boundary
- * enforced by BoundaryArchTest (Pitfall-7 / T-08-05).
- *
- * Design: returns plain PHP values (no Core Internal types) so DoctorCommand
- * can construct its own ProbeResult from this data without FtsHealthCheck
- * importing Core\Internal types (which would violate the arch boundary).
- *
- * Registered as a singleton by the Plan 01 class_exists()-guarded block in
- * SearchServiceProvider::register() — do NOT add a constructor binding here.
- */
+// Lives in Public so Core's DoctorCommand can depend on it without
+// crossing into Search Internal. Returns plain PHP values (no Core
+// Internal types) so DoctorCommand builds its own ProbeResult.
 final class FtsHealthCheck
 {
     public function __construct(
         private readonly DatabaseManager $db,
     ) {}
 
-    /**
-     * Human-readable label for the doctor output table.
-     */
     public function label(): string
     {
         return 'FTS search index';
     }
 
     /**
-     * Returns the probe severity for the doctor output table.
-     *
-     * Returns 'warning' when the index lags behind the table or the
-     * index table is absent. Returns 'ok' when row counts match.
-     *
      * @return 'ok'|'warning'
      */
     public function severity(): string
@@ -48,14 +29,6 @@ final class FtsHealthCheck
         return $this->result()['severity'];
     }
 
-    /**
-     * Human-readable message for the doctor output table.
-     *
-     * Uses the UI-SPEC copywriting contract:
-     *   ok:      "FTS index: {N} rows — in sync"
-     *   warning: "FTS index: {N} rows — {delta} behind table"
-     *   absent:  "FTS index table absent — run php artisan migrate then search:reindex"
-     */
     public function message(): string
     {
         return $this->result()['message'];

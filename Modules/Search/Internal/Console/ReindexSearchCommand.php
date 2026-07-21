@@ -7,23 +7,12 @@ namespace Modules\Search\Internal\Console;
 use Illuminate\Console\Command;
 use Illuminate\Database\DatabaseManager;
 
+// The designed recovery tool for any desync between transactions and
+// transaction_search_docs/transaction_search_fts. Chunked in batches
+// of 500 to avoid OOM on multi-year datasets. SearchIndexWriter is the
+// synchronous path for normal writes; this is the full-rebuild path.
 /**
- * Rebuilds the entire FTS5 full-text search index from the transactions table.
- *
- * Use when the index is stale (doctor probe reports divergent row counts) or
- * after a bulk data migration. Chunked in batches of 500 to avoid OOM on
- * multi-year datasets (D-24).
- *
- * Recovery path: this command is the designed recovery tool for any desync
- * between the transactions table and transaction_search_docs / transaction_search_fts.
- * The index writer (SearchIndexWriter) is the synchronous path for normal writes.
- *
- * Process:
- *   1. Truncate transaction_search_docs and delete-all the FTS index.
- *   2. Chunk through all transactions, build a denormalized search_body per row
- *      (counterparty_name + chr(12) + description + chr(12) + tax note if any).
- *   3. Insert docs in batches.
- *   4. Run FTS 'rebuild' to atomically reconstruct the inverted index.
+ * @link ../../../../.docs/features/search/architecture.md
  */
 final class ReindexSearchCommand extends Command
 {
@@ -43,9 +32,8 @@ final class ReindexSearchCommand extends Command
     {
         $connection = $this->db->connection();
 
-        // Step 1: Clear existing docs and FTS entries in one transaction.
-        // Note: truncate() fails on SQLite tables without sqlite_sequence (no AUTOINCREMENT).
-        // Using DELETE instead, which is equivalent for our purpose and works reliably.
+        // truncate() fails on SQLite tables without sqlite_sequence
+        // (no AUTOINCREMENT); DELETE is equivalent for our purpose.
         $connection->transaction(function () use ($connection): void {
             $connection->table('transaction_search_docs')->delete();
             $connection->statement(
@@ -53,7 +41,6 @@ final class ReindexSearchCommand extends Command
             );
         });
 
-        // Step 2: Stream transactions in batches, build search_body for each.
         $total = $connection->table('transactions')->count();
         $bar = $this->output->createProgressBar($total);
         $bar->start();
@@ -65,7 +52,6 @@ final class ReindexSearchCommand extends Command
             ->select(['id', 'user_id', 'counterparty_name', 'description'])
             ->orderBy('id')
             ->chunk(500, function ($rows) use ($connection, $bar, &$indexed): void {
-                // Fetch tax notes for this batch in one query.
                 $ids = $rows->pluck('id')->all();
 
                 /** @var array<int, string> $notesByTxId */
@@ -78,7 +64,6 @@ final class ReindexSearchCommand extends Command
                     ->map(fn ($row) => is_string($row->note) ? $row->note : '')
                     ->all();
 
-                // Build doc rows.
                 $docs = [];
                 foreach ($rows as $row) {
                     $txId = is_numeric($row->id) ? (int) $row->id : 0;
@@ -105,16 +90,13 @@ final class ReindexSearchCommand extends Command
         $bar->finish();
         $this->newLine();
 
-        // Step 3: Rebuild the FTS inverted index from the now-populated content table.
         $connection->statement(
             "INSERT INTO transaction_search_fts(transaction_search_fts) VALUES('rebuild')",
         );
 
-        // WR-05: fail loudly on a partial run. If the number of indexed docs
-        // does not match the transaction count (e.g. a chunk failed / the
-        // process was interrupted mid-stream), the index is incomplete and
-        // search would silently return partial results. Surface a warning and a
-        // non-zero exit code so the operator (and CI / scheduler) notices.
+        // Fail loudly on a partial run — a mismatched count means the
+        // index is incomplete, and search would silently return
+        // partial results otherwise.
         if ($indexed !== $total) {
             $this->warn(
                 "FTS reindex incomplete: indexed {$indexed} of {$total} transactions. ".

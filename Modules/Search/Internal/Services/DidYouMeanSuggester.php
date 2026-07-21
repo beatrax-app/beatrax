@@ -10,37 +10,16 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
+// Suggests one "did you mean" word (levenshtein <= 2, no spellfix1 in
+// this SQLite build) for a zero-result query >= 4 chars, built from a
+// decrypt-then-tally corpus over a bounded most-recent window.
 /**
- * Provides a single "did you mean" suggestion when a query returns zero results.
- *
- * Strategy (RESEARCH OQ3, D-21):
- *   1. Gate: only suggest when `strlen($query) >= 4`.
- *   2. Corpus: the user's most-recent counterparty_name values (bounded,
- *      CRYPT-01/D-06 — see CANDIDATE_ROW_CAP), decrypted then tokenized into
- *      individual words.
- *   3. Comparison: last word of the query vs every corpus word via PHP `levenshtein()`.
- *   4. Tie-break: equal-distance candidates are broken by corpus frequency
- *      (the more frequent merchant wins) so the suggestion is deterministic and
- *      useful (WR-06).
- *   5. Threshold: only suggest when the closest distance is <= 2.
- *   6. Return: the closest corpus word, or null when no close enough match found.
- *      An exact corpus-word match is skipped as a candidate (a word is not a
- *      "did you mean" for itself) but does NOT suppress suggestions derived from
- *      other corpus words (WR-06).
- *
- * spellfix1 is not available in this SQLite build — confirmed via environment check.
- * PHP levenshtein() built-in is the designated fallback (RESEARCH Environment Availability).
+ * @link ../../../../.docs/features/search/architecture.md
  */
 final class DidYouMeanSuggester
 {
-    /**
-     * CRYPT-01 (D-06) / RESEARCH Pitfall 3: `counterparty_name` is
-     * ciphertext at rest once encryption is enabled, so the corpus can no
-     * longer be built via a SQL `GROUP BY counterparty_name` aggregate — the
-     * value must be decrypted per row before it can be tallied. Bound the
-     * number of raw rows fetched (most-recent-first) so this never decrypts
-     * an entire multi-year transaction history to build one suggestion.
-     */
+    // Bounds the number of raw rows decrypted to build the corpus so a
+    // single suggestion never decrypts an entire multi-year history.
     private const CANDIDATE_ROW_CAP = 2000;
 
     public function __construct(
@@ -54,12 +33,10 @@ final class DidYouMeanSuggester
     {
         $query = trim($query);
 
-        // Gate: only attempt suggestions for longer queries
         if (strlen($query) < 4) {
             return null;
         }
 
-        // Split query into words; use the last word as the one most likely mistyped
         $rawWords = explode(' ', $query);
         $words = array_values(array_filter($rawWords, static fn (string $w): bool => $w !== ''));
         if ($words === []) {
@@ -67,16 +44,6 @@ final class DidYouMeanSuggester
         }
         $targetWord = strtolower($words[count($words) - 1]);
 
-        // Build the corpus: decrypt-then-tally counterparty names over a
-        // bounded, most-recent candidate window (CRYPT-01/D-06). SQL can no
-        // longer GROUP BY the ciphertext column, so this fetches raw
-        // (ungrouped) rows narrowed on the cheap plaintext `user_id`/ordering
-        // dimensions, decrypts each name in PHP, and tallies frequency there
-        // — mirrors CounterpartyIndexQuery's PHP-side aggregation precedent.
-        // `decryptValue()` is a documented pass-through no-op when
-        // encryption is not enabled, so this stays behavior-identical (aside
-        // from the row-cap trade-off) to the old SQL GROUP BY for a
-        // plaintext user.
         $names = $this->db->connection()
             ->table('transactions')
             ->where('user_id', $user->id)
@@ -90,11 +57,9 @@ final class DidYouMeanSuggester
         $userId = $user->id;
         $encryptionEnabled = $this->encryptionService->isEnabled($userId);
 
-        // Tokenize decrypted names into individual words, keeping each word's
-        // accumulated corpus frequency so distance ties can be broken by
-        // frequency (WR-06).
-        // Keys are corpus words; PHP coerces purely-numeric word keys to int, so
-        // the key type is array-key, not string (normalized back below).
+        // Keys are corpus words; PHP coerces purely-numeric word keys
+        // to int, so the key type is array-key, not string (normalized
+        // back below).
         /** @var array<array-key, int> $corpusWords */
         $corpusWords = [];
         foreach ($names as $name) {
@@ -103,10 +68,9 @@ final class DidYouMeanSuggester
             }
             $result = $this->codec->decryptValue('transactions', 'counterparty_name', $name, $userId, $this->session);
 
-            // WR-18: when encryption is enabled, a decrypted:false result is
-            // ciphertext (rekey/epoch gap, or a locked app-lock) — skip it
-            // rather than tokenizing a ciphertext blob into the suggestion
-            // corpus. Non-encryption users keep the plaintext pass-through.
+            // A decrypted:false result is ciphertext (rekey/epoch gap,
+            // or a locked app-lock) — skip rather than tokenizing a
+            // ciphertext blob into the corpus.
             if ($encryptionEnabled && ! $result['decrypted']) {
                 continue;
             }
@@ -131,24 +95,17 @@ final class DidYouMeanSuggester
             return null;
         }
 
-        // Find the closest corpus word by levenshtein distance, breaking ties by
-        // corpus frequency (more frequent merchant wins). WR-06: do NOT abort the
-        // whole search on an exact corpus-word match — the zero-result was caused
-        // by a different query word or a filter, so skipping the exact word and
-        // suggesting for the rest is still useful. We simply skip the exact word
-        // as a candidate (it cannot be a "did you mean" for itself).
         $bestWord = null;
         $bestDist = PHP_INT_MAX;
         $bestFreq = -1;
 
         foreach ($corpusWords as $corpusWord => $freq) {
-            // Normalize the (possibly int-coerced) key back to a string so
-            // levenshtein() and the (string-typed) target comparison are exact.
             $word = (string) $corpusWord;
 
             if ($word === $targetWord) {
-                // Exact word — not a suggestion candidate, but does not suppress
-                // suggestions derived from other corpus words.
+                // An exact word is not a suggestion candidate for
+                // itself, but does not suppress suggestions derived
+                // from other corpus words.
                 continue;
             }
 
@@ -160,7 +117,6 @@ final class DidYouMeanSuggester
             }
         }
 
-        // Only suggest when close enough (levenshtein <= 2)
         if ($bestDist <= 2 && $bestWord !== null) {
             return $bestWord;
         }
