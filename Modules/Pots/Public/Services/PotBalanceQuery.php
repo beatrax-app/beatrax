@@ -14,20 +14,7 @@ use Modules\Pots\Public\Dto\PotRow;
 use Modules\Pots\Public\Dto\ReconciliationRow;
 
 /**
- * Read model for the /pots page and the Goals D-10 override.
- *
- * All reads use raw `$this->db->connection()->table(...)` — never Eloquent
- * static calls (Larastan level 10 staticMethod.dynamicCall per 03-RESEARCH.md
- * Pitfall 6).
- *
- * Cross-user isolation: every read carries an explicit `->where('user_id', …)`
- * guard (T-03-07).
- *
- * D-01: unallocatedMinor is NEVER read from a stored column — always derived
- * as real − allocated at read time.
- *
- * D-06: a pot's balance is the signed SUM(amount_minor) of its pot_movements
- * rows — there is no stored balance column.
+ * @link ../../../../.docs/features/pots/architecture.md
  */
 final class PotBalanceQuery
 {
@@ -37,14 +24,6 @@ final class PotBalanceQuery
         private readonly PeriodQuery $periods,
     ) {}
 
-    /**
-     * Returns the signed SUM(amount_minor) for a pot — the pot's current
-     * balance (D-06). Returns 0 when no movements exist.
-     *
-     * Takes the acting $user explicitly so this Public (cross-module) method
-     * can never read another user's pot balance from an unvalidated id
-     * (T-03-07 / WR-07). The ['user_id','pot_id'] index serves this shape.
-     */
     public function balanceForPot(int $potId, User $user): int
     {
         return (int) $this->db->connection()
@@ -54,16 +33,6 @@ final class PotBalanceQuery
             ->sum('amount_minor');
     }
 
-    /**
-     * Returns per-account reconciliation data: real = allocated + unallocated
-     * (D-01 / D-15).
-     *
-     * `allocatedMinor` = SUM of all ACTIVE pot balances for the account.
-     * `unallocatedMinor` = real − allocated (derived, never stored — D-01).
-     * `isOverAllocated` = unallocated < 0 (D-02 — surface the negative state,
-     * never auto-rewrite it).
-     * Archived pots are excluded from allocated (D-09).
-     */
     public function reconciliationForAccount(int $accountId, User $user): ReconciliationRow
     {
         $allocated = $this->allocatedForAccount($accountId, $user);
@@ -94,13 +63,6 @@ final class PotBalanceQuery
         );
     }
 
-    /**
-     * Returns real − allocated for an account — the value PotWriter guards
-     * against when funding a pot (D-03).
-     *
-     * Delegates to `allocatedForAccount()` so reconciliation and the
-     * writer-facing method share one query implementation.
-     */
     public function currentUnallocatedForAccount(int $accountId, User $user): int
     {
         $real = $this->accountBalance->currentBalance($accountId, $user);
@@ -109,11 +71,6 @@ final class PotBalanceQuery
     }
 
     /**
-     * Returns active pots for the user ordered by account name then pot name,
-     * each row carrying balanceMinor, accountName, goalName/categoryName
-     * (left-joined), recentMovements (latest 10), and categorySpentMinor for
-     * category-linked pots (D-12).
-     *
      * @return list<PotRow>
      */
     public function forUser(User $user): array
@@ -122,9 +79,6 @@ final class PotBalanceQuery
     }
 
     /**
-     * Returns archived pots for the user. Balance is expected to be 0 after
-     * the archive-release (D-09) but computed honestly via balanceForPot.
-     *
      * @return list<PotRow>
      */
     public function archivedForUser(User $user): array
@@ -133,11 +87,6 @@ final class PotBalanceQuery
     }
 
     /**
-     * Batch-load pot balance AND currency keyed by goal_id for all active
-     * goal-linked pots owned by the user — avoids N+1 in GoalProgressQuery
-     * (03-RESEARCH.md Pitfall 3 / D-10). Currency rides along in the same
-     * load so no per-goal follow-up query is needed (IN-03).
-     *
      * @return array<int, array{balance: int, currency: string}> goal_id => pot balance + currency
      */
     public function linkedPotBalancesForUser(User $user): array
@@ -160,11 +109,6 @@ final class PotBalanceQuery
         return $result;
     }
 
-    /**
-     * Returns the id of the active pot linked to $goalId for $user, or null
-     * when no such pot exists. Used by GoalsPage to prefill the pot-picker
-     * when opening the edit modal (D-11).
-     */
     public function linkedPotIdForGoal(int $goalId, User $user): ?int
     {
         $row = $this->db->connection()
@@ -183,12 +127,9 @@ final class PotBalanceQuery
         return is_numeric($id) ? (int) $id : null;
     }
 
-    /**
-     * Returns the currency of the active pot linked to $goalId for $user, or
-     * null when no such pot exists. Single-goal convenience lookup; batched
-     * consumers should prefer linkedPotBalancesForUser(), which carries the
-     * currency alongside the balance (IN-03).
-     */
+    // Single-goal convenience lookup; batched consumers should prefer
+    // linkedPotBalancesForUser(), which carries the currency alongside the
+    // balance.
     public function currencyForLinkedPot(int $goalId, User $user): ?string
     {
         $row = $this->db->connection()
@@ -211,11 +152,8 @@ final class PotBalanceQuery
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns the SUM of all active pot balances for an account. Archived pots
-     * are excluded (D-09). Private — shared by reconciliationForAccount and
-     * currentUnallocatedForAccount so neither duplicates the query logic.
-     */
+    // Shared by reconciliationForAccount and currentUnallocatedForAccount so
+    // neither duplicates the query logic.
     private function allocatedForAccount(int $accountId, User $user): int
     {
         $activePotIds = $this->db->connection()
@@ -238,9 +176,6 @@ final class PotBalanceQuery
     }
 
     /**
-     * Internal loader: fetches pots with the given status, enriches each with
-     * balance, recent movements, and category spend.
-     *
      * @return list<PotRow>
      */
     private function loadPotRows(User $user, string $status): array
@@ -272,13 +207,11 @@ final class PotBalanceQuery
             return [];
         }
 
-        // Build a lookup of pot names for resolving counterpart transfer names
         $potNameById = $connection->table('pots')
             ->where('user_id', $user->id)
             ->pluck('name', 'id')
             ->toArray();
 
-        // Derive current-period dates once (for category spend)
         $period = $this->periods->current();
 
         $rows = [];
@@ -286,7 +219,6 @@ final class PotBalanceQuery
             $potId = self::toInt($pot->id);
             $balanceMinor = $this->balanceForPot($potId, $user);
 
-            // Recent movements: latest 10 for this pot
             $movementRows = $connection->table('pot_movements')
                 ->where('user_id', $user->id)
                 ->where('pot_id', $potId)
@@ -337,10 +269,9 @@ final class PotBalanceQuery
                 );
             }
 
-            // Category spend for the current period (D-12). Filtered to the
-            // pot's currency: settled amounts are per-row currency-tagged and
-            // the view labels this figure with the pot's currency — summing
-            // mixed currencies in raw minor units would be dishonest (WR-08).
+            // Filtered to the pot's own currency — summing mixed currencies
+            // in raw minor units would be dishonest against the label the
+            // view shows.
             $categoryId = $pot->category_id !== null ? self::toInt($pot->category_id) : null;
             $categorySpentMinor = null;
             if ($categoryId !== null) {

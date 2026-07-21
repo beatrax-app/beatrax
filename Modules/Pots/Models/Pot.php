@@ -13,18 +13,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Pots\Database\Factories\PotFactory;
 
 /**
- * A virtual savings pot allocated over a real account balance.
- *
- * A pot's balance is the signed SUM of its `pot_movements` rows — it is never
- * stored as a column (D-01). The `BelongsToUser` trait adds a global UserScope
- * so resolving a foreign `pot_id` (client-supplied) safely returns nothing.
- *
- * D-04: any account can own a pot — no savings-kind restriction.
- * D-05: `currency` is the account's native currency at creation time.
- * D-09: archiving a funded pot releases its balance to unallocated via a final
- * withdraw movement before status = 'archived'. Restore brings the pot back empty.
- *
- * `status` lifecycle: active (default) → archived.
+ * @link ../../../.docs/features/pots/architecture.md
  *
  * @property int $id
  * @property int|null $user_id
@@ -74,12 +63,9 @@ final class Pot extends Model
         ];
     }
 
+    // Laravel's default resolver derives Database\Factories\<ModelName>Factory,
+    // which is not where module factories live — point directly at PotFactory.
     /**
-     * Override factory resolution — Laravel's default resolver derives
-     * `Database\Factories\<ModelName>Factory` which is not where module
-     * factories live. Pointing directly to PotFactory ensures
-     * `Pot::factory()` resolves correctly in tests.
-     *
      * @return Factory<self>
      */
     protected static function newFactory(): Factory

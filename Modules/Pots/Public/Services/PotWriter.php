@@ -13,26 +13,7 @@ use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 
 /**
- * The single write path for savings pots.
- *
- * Responsibilities:
- *  - Parse user-entered amounts via `parseAmount()` (verbatim from GoalWriter).
- *  - Assert that account_id belongs to the user before writing (IDOR — T-03-03).
- *  - Enforce goal-only linking (D-15): category-linked pots are retired by
- *    the envelope-budgeting cutover (Plan 13.2-06) — assertXorLink now
- *    rejects any non-null categoryId outright rather than allowing a
- *    goal-XOR-category choice.
- *  - Enforce one-pot-per-goal (D-11): save/update reject linking a goal that
- *    already has an active linked pot.
- *  - Create and update pots with status hard-coded 'active' (never from caller).
- *  - Append movement rows in transactions so check + insert are atomic (D-06).
- *  - Re-read unallocated INSIDE the transaction for fund/transfer (Pitfall 2 /
- *    T-03-04 over-allocation replay).
- *  - archive() releases balance to unallocated via a final withdraw movement
- *    before status flip (D-09 / Pitfall 4).
- *  - restore() brings pot back empty — no movements inserted (D-09).
- *  - Cross-user / missing pot: findOwnedActivePot returns null → PotNotFoundException
- *    for writes, silent no-op for lifecycle (archive/restore) — mirrors GoalWriter.
+ * @link ../../../../.docs/features/pots/architecture.md
  */
 final class PotWriter
 {
@@ -42,12 +23,6 @@ final class PotWriter
     ) {}
 
     /**
-     * Create a new pot for the user.
-     *
-     * Validates name, account ownership, XOR link (D-13), one-pot-per-goal
-     * (D-11), and optional initial funding (D-08). Currency is set from the
-     * account's native currency (D-05).
-     *
      * @throws \InvalidArgumentException blank name / unowned account / both goal+category / bad amount
      * @throws InsufficientUnallocatedException when initial funding exceeds unallocated
      */
@@ -72,8 +47,8 @@ final class PotWriter
 
         $currency = $this->accountCurrency($accountId, $user);
 
-        // Parse the optional initial amount BEFORE any write so an invalid
-        // amount string never leaves an orphan pot behind (WR-01).
+        // Parse the optional initial amount before any write so an invalid
+        // amount string never leaves an orphan pot behind.
         $minor = null;
         if ($rawInitialAmount !== null && trim($rawInitialAmount) !== '') {
             $minor = $this->parseAmount($rawInitialAmount);
@@ -82,9 +57,9 @@ final class PotWriter
             }
         }
 
-        // Creation + optional initial funding (D-08) run in ONE transaction so
-        // a failed funding check rolls back the pot row — no orphan pot in the
-        // list and no duplicate on resubmit (WR-01).
+        // Creation + optional initial funding run in one transaction so a
+        // failed funding check rolls back the pot row — no orphan pot in
+        // the list and no duplicate on resubmit.
         /** @var Pot $pot */
         $pot = $this->db->connection()->transaction(function () use ($user, $name, $accountId, $goalId, $categoryId, $currency, $minor): Pot {
             /** @var Pot $pot */
@@ -101,7 +76,6 @@ final class PotWriter
             if ($minor !== null) {
                 $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user);
                 if ($minor > $unallocated) {
-                    // Throwing inside the transaction rolls back the pot creation.
                     throw new InsufficientUnallocatedException(
                         'Initial amount exceeds unallocated balance.'
                     );
@@ -127,9 +101,6 @@ final class PotWriter
     }
 
     /**
-     * Update name and link (goal XOR category) for an existing active pot.
-     * Never touches account_id or status.
-     *
      * @throws PotNotFoundException when pot is not found or not owned
      * @throws \InvalidArgumentException blank name / both goal+category
      */
@@ -164,11 +135,6 @@ final class PotWriter
     }
 
     /**
-     * Fund a pot: insert a +amount fund movement (D-07).
-     *
-     * Re-reads unallocated INSIDE the transaction to prevent over-allocation
-     * replay (D-03 / T-03-04 / Pitfall 2).
-     *
      * @throws \InvalidArgumentException invalid/zero/negative amount
      * @throws PotNotFoundException pot not found or not owned
      * @throws InsufficientUnallocatedException amount exceeds unallocated
@@ -189,7 +155,8 @@ final class PotWriter
         $currency = $pot->currency;
 
         $this->db->connection()->transaction(function () use ($user, $potId, $minor, $accountId, $currency, $memo): void {
-            // Re-read INSIDE transaction to serialise against concurrent writers (Pitfall 2)
+            // Re-read inside the transaction to serialise against concurrent
+            // writers rather than checking against a stale value.
             $unallocated = $this->balance->currentUnallocatedForAccount($accountId, $user);
             if ($minor > $unallocated) {
                 throw new InsufficientUnallocatedException(
@@ -212,8 +179,6 @@ final class PotWriter
     }
 
     /**
-     * Withdraw from a pot: insert a -amount withdraw movement (D-07).
-     *
      * @throws \InvalidArgumentException invalid/zero/negative amount
      * @throws PotNotFoundException pot not found or not owned
      * @throws InsufficientUnallocatedException amount exceeds pot balance
@@ -255,13 +220,6 @@ final class PotWriter
     }
 
     /**
-     * Pot→pot transfer: atomic debit from source + credit to target (D-07).
-     *
-     * Both pots must be active, owned by the user, and share the same
-     * account_id (intra-account moves only — the move modal spec). Checks
-     * source balance INSIDE the transaction to prevent over-allocation replay
-     * (D-03 / T-03-04 / Pitfall 2).
-     *
      * @throws \InvalidArgumentException invalid amount / cross-account / self-transfer
      * @throws PotNotFoundException either pot not found or not owned
      * @throws InsufficientUnallocatedException amount exceeds source pot balance
@@ -334,24 +292,17 @@ final class PotWriter
         });
     }
 
-    /**
-     * Archive a pot: release its balance to unallocated as a final withdraw
-     * movement, then set status='archived' — all in one transaction (D-09).
-     *
-     * A foreign or missing pot id is a silent no-op (mirrors GoalWriter).
-     */
     public function archive(User $user, int $potId): void
     {
         $pot = $this->findOwnedActivePot($user, $potId);
         if (! $pot instanceof Pot) {
-            return; // cross-user / missing — silent no-op
+            return;
         }
 
         $this->db->connection()->transaction(function () use ($user, $pot): void {
             $balance = $this->balance->balanceForPot($pot->id, $user);
 
             if ($balance > 0) {
-                // Release balance back to unallocated before archiving (D-09 / Pitfall 4)
                 $this->db->connection()->table('pot_movements')->insert([
                     'user_id' => $user->id,
                     'pot_id' => $pot->id,
@@ -370,17 +321,6 @@ final class PotWriter
         });
     }
 
-    /**
-     * Restore an archived pot to active status. No balance is restored —
-     * the pot comes back empty (D-09).
-     *
-     * One-pot-per-goal (D-11) is re-checked here: if another active pot
-     * claimed this pot's goal while it was archived, the restored pot comes
-     * back UNLINKED instead of creating a second active pot on the same goal
-     * (WR-04).
-     *
-     * A foreign or missing archived pot id is a silent no-op.
-     */
     public function restore(User $user, int $potId): void
     {
         /** @var Pot|null $pot */
@@ -394,10 +334,9 @@ final class PotWriter
             return;
         }
 
-        // D-11 / WR-04: archive() keeps goal_id, and another pot may have
-        // been linked to the same goal in the meantime. Restoring must not
-        // produce two active pots on one goal — the restored pot loses its
-        // link when the goal is already taken.
+        // archive() keeps goal_id, and another pot may have been linked to
+        // the same goal in the meantime — restoring must not produce two
+        // active pots on one goal.
         if ($pot->goal_id !== null) {
             $goalTaken = $this->db->connection()
                 ->table('pots')
@@ -416,16 +355,10 @@ final class PotWriter
         $pot->save();
     }
 
-    /**
-     * Parse a user-entered amount into positive integer minor units, or null
-     * if invalid. Handles the Dutch grouped form "1.234,56" and the plain
-     * forms "1234.56" / "50,00" / "50": the rightmost of '.'/',' is the
-     * decimal separator and the other is thousands. The whole part is capped
-     * at 12 digits so the cents arithmetic cannot overflow PHP_INT_MAX.
-     *
-     * COPIED VERBATIM from GoalWriter (proven, unit-tested). Do not
-     * re-implement.
-     */
+    // Handles the Dutch grouped form "1.234,56" and the plain forms
+    // "1234.56" / "50,00" / "50": the rightmost of '.'/',' is the decimal
+    // separator and the other is thousands. The whole part is capped at 12
+    // digits so the cents arithmetic cannot overflow PHP_INT_MAX.
     public function parseAmount(string $value): ?int
     {
         $normalised = str_replace([' ', "\u{00A0}"], '', trim($value));
@@ -457,11 +390,8 @@ final class PotWriter
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Resolve an active pot by id, scoped explicitly to the PASSED $user.
-     * Bypasses BelongsToUser global scope so ownership is independent of guard
-     * state. Returns null for cross-user or missing pot (T-03-03).
-     */
+    // Bypasses the global scope so ownership is independent of guard state.
+    // Returns null for a cross-user or missing pot.
     private function findOwnedActivePot(User $user, int $potId): ?Pot
     {
         /** @var Pot|null $pot */
@@ -475,8 +405,6 @@ final class PotWriter
     }
 
     /**
-     * Assert that $accountId belongs to $user. Throws when not owned (T-03-03).
-     *
      * @throws \InvalidArgumentException
      */
     private function assertOwnedAccount(User $user, int $accountId): void
@@ -492,11 +420,8 @@ final class PotWriter
         }
     }
 
-    /**
-     * Returns the default_currency of the account — set as the pot's currency
-     * at creation time (D-05). Requires assertOwnedAccount to have been called
-     * first so $accountId is guaranteed to belong to the user.
-     */
+    // Requires assertOwnedAccount to have been called first so $accountId is
+    // guaranteed to belong to the user.
     private function accountCurrency(int $accountId, User $user): string
     {
         $row = $this->db->connection()
@@ -513,12 +438,6 @@ final class PotWriter
     }
 
     /**
-     * D-15: category-linked pots are retired by the envelope-budgeting
-     * cutover (Plan 06). A pot may only be linked to a goal (or left
-     * unlinked) — any non-null `$categoryId` is rejected outright so a stale
-     * caller fails loudly instead of silently creating a category link the
-     * rest of the system no longer expects (D-13/D-17).
-     *
      * @throws \InvalidArgumentException when a category link is attempted
      */
     private function assertXorLink(?int $goalId, ?int $categoryId): void
@@ -531,9 +450,6 @@ final class PotWriter
     }
 
     /**
-     * Assert that the goal is owned by the user AND does not already have an
-     * active linked pot (D-11 one-pot-per-goal).
-     *
      * @throws \InvalidArgumentException when goal not owned or already linked
      */
     private function assertGoalOwnedAndFree(User $user, int $goalId): void
