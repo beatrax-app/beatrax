@@ -6,20 +6,10 @@ namespace Modules\Tax\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * Full grouped year data for the TaxPage.
- *
- * Produced by TaxYearQuery (Plan 02). Each element in $categories is
- * an associative array with keys: id, name, shortName, subtotalMinor,
- * rows[].
- *
- * Each row in a category's `rows` array has keys:
- *   transactionId, bookedAt, accountName, counterpartyName,
- *   counterpartyIban, description, note, settledAmountMinor,
- *   settledCurrency, amountMinor, currency, transactionType,
- *   categoryId, categoryName, categoryShortName, taxYearOverride,
- *   sourceFormat, importRunId, fingerprint
- */
+// Produced by TaxYearQuery; each $categories element is an associative
+// array with id/name/shortName/subtotalMinor/rows keys, and each rows[]
+// entry carries the full per-transaction tax-year row shape (see
+// TaxYearQuery::forYear() for the canonical key list).
 final class TaxYearData extends Data
 {
     /**

@@ -11,16 +11,7 @@ use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Manages the user's deduction categories (create, rename, archive, corpus seed).
- *
- * Rules:
- *  - seedFromCorpus: INSERT-only on (user_id, corpus_key). Never UPDATE existing rows
- *    (Pitfall-4 / T-07-14 — user renames survive corpus updates).
- *  - add: inserts a user-created row (corpus_key null). The DB unique constraint on
- *    (user_id, name) prevents duplicates; a friendly conflict message is surfaced.
- *  - rename/archive: user-scoped updates; NotFoundHttpException on cross-user id
- *    (404-not-403 pattern, T-07-13).
- *  - listForUser: active (optionally + archived) categories ordered by sort_order, name.
+ * @link ../../../../.docs/features/tax/architecture.md
  */
 final class TaxCategoryWriter
 {
@@ -30,9 +21,6 @@ final class TaxCategoryWriter
     ) {}
 
     /**
-     * Seed the user's categories from the given country corpus.
-     * INSERT-only on (user_id, corpus_key) — existing rows are NEVER updated.
-     *
      * @return int Number of rows actually inserted (0 when already seeded).
      */
     public function seedFromCorpus(User $user, string $countryCode): int
@@ -46,8 +34,8 @@ final class TaxCategoryWriter
         $now = Carbon::now()->toDateTimeString();
         $inserted = 0;
 
-        // IN-04: continue sort_order AFTER the user's existing categories
-        // (as add() does) so seeding a second country appends its block
+        // sort_order continues after the user's existing categories (as
+        // add() does) so seeding a second country appends its block
         // instead of interleaving pairwise with the first country's set.
         $maxOrder = $connection->table('tax_deduction_categories')
             ->where('user_id', $user->id)
@@ -61,20 +49,22 @@ final class TaxCategoryWriter
                 continue;
             }
 
-            // INSERT-only: check if this corpus_key already exists for the user.
+            // Check if this corpus_key already exists for the user (the
+            // INSERT-only contract).
             $existingId = $connection->table('tax_deduction_categories')
                 ->where('user_id', $user->id)
                 ->where('corpus_key', $key)
                 ->value('id');
 
             if ($existingId !== null) {
-                // Already seeded — skip to preserve any user rename (Pitfall-4).
+                // Already seeded — skip to preserve any rename the user
+                // has made since.
                 continue;
             }
 
-            // A user-created category may already carry this exact name —
+            // A user-created category may already carry this exact name;
             // inserting would violate unique(user_id, name) and 500 the
-            // settings/wizard country pickers (WR-01). Skip; the user's own
+            // settings/wizard country pickers. Skip — the user's own
             // category wins.
             $nameTaken = $connection->table('tax_deduction_categories')
                 ->where('user_id', $user->id)
@@ -108,8 +98,6 @@ final class TaxCategoryWriter
     }
 
     /**
-     * Create a user-owned category (corpus_key null).
-     *
      * @return int The new category's id.
      *
      * @throws \RuntimeException When a category with the same name already exists for the user.
@@ -135,7 +123,6 @@ final class TaxCategoryWriter
             throw new \RuntimeException('A category with this name already exists.');
         }
 
-        // Determine next sort_order.
         $maxOrder = $connection->table('tax_deduction_categories')
             ->where('user_id', $userId)
             ->max('sort_order');
@@ -169,11 +156,9 @@ final class TaxCategoryWriter
     }
 
     /**
-     * Rename a category. User-scoped: throws NotFoundHttpException on cross-user id.
-     *
-     * @throws NotFoundHttpException When the category id is not owned by the user (T-07-13).
+     * @throws NotFoundHttpException When the category id is not owned by the user.
      * @throws \InvalidArgumentException When the new name is empty.
-     * @throws \RuntimeException When another category already carries the new name (WR-11).
+     * @throws \RuntimeException When another category already carries the new name.
      */
     public function rename(int $userId, int $categoryId, string $name): void
     {
@@ -194,7 +179,7 @@ final class TaxCategoryWriter
         }
 
         // Duplicate-name guard mirroring add() — surfaces a friendly message
-        // instead of an uncaught unique(user_id, name) QueryException (WR-11).
+        // instead of an uncaught unique(user_id, name) QueryException.
         $nameTaken = $connection->table('tax_deduction_categories')
             ->where('user_id', $userId)
             ->where('name', $name)
@@ -215,9 +200,7 @@ final class TaxCategoryWriter
     }
 
     /**
-     * Archive a category. User-scoped: throws NotFoundHttpException on cross-user id.
-     *
-     * @throws NotFoundHttpException When the category id is not owned by the user (T-07-13).
+     * @throws NotFoundHttpException When the category id is not owned by the user.
      */
     public function archive(int $userId, int $categoryId): void
     {
@@ -242,11 +225,7 @@ final class TaxCategoryWriter
     }
 
     /**
-     * Restore an archived category to active. User-scoped: throws
-     * NotFoundHttpException on cross-user id. Makes archiving reversible
-     * from the product (WR-11).
-     *
-     * @throws NotFoundHttpException When the category id is not owned by the user (T-07-13).
+     * @throws NotFoundHttpException When the category id is not owned by the user.
      */
     public function unarchive(int $userId, int $categoryId): void
     {
@@ -271,8 +250,6 @@ final class TaxCategoryWriter
     }
 
     /**
-     * List the user's deduction categories ordered by sort_order then name.
-     *
      * @return list<\stdClass>
      */
     public function listForUser(int $userId, bool $includeArchived = false): array

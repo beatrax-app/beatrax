@@ -12,14 +12,7 @@ use Modules\Tax\Internal\Services\TaxCsvExporter as InternalTaxCsvExporter;
 use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
 
 /**
- * Public facade for the D-15 audit-extra CSV export service.
- *
- * Delegates all work to the internal implementation so consumers can resolve
- * this class through the IoC container without reaching into Modules\Tax\Internal.
- *
- * This class is the singleton registered in TaxServiceProvider (Plan 03).
- * The internal class carries the full implementation and is only visible
- * inside the Tax module boundary.
+ * @link ../../../../.docs/features/tax/architecture.md
  */
 final class TaxCsvExporter
 {
@@ -29,11 +22,6 @@ final class TaxCsvExporter
         private readonly Session $session,
     ) {}
 
-    /**
-     * Build and return the full D-15 audit CSV body for the user and year.
-     *
-     * Returns a header-only CSV when no tagged transactions exist.
-     */
     public function export(User $user, int $year): string
     {
         $internalQuery = new InternalTaxYearQuery($this->db, $this->codec, $this->session);
