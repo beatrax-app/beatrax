@@ -11,47 +11,10 @@ use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/*
- * 999.6-08: the `/reports` live single-page builder (D-01). Routes to a
- * thin wrapper Blade view (`reports::report-builder`, mirrors
- * `categorization::rules`'s `@extends('layouts.app', ...)` +
- * `@livewire(...)` shape) rather than directly to the Livewire component
- * class — this codebase's established full-page-component convention
- * (Route::view + @livewire inside @section('content')), not the
- * alternative "route straight to the component class" Livewire pattern.
- */
-
-/*
- * Reports module web routes.
- *
- * Owned by 999.6-07 (this file is created here, not by Plan 01) — later
- * plans in this phase APPEND their routes (builder, index) below this
- * group; `ReportsServiceProvider::boot()` already `loadRoutesFrom` this
- * path unconditionally.
- *
- * `reports.export` (Req 11) streams the current report definition as a CSV
- * download. The definition is built from validated query params using the
- * SAME short names the ReportBuilder's `#[Url]`-bound control-rail
- * properties use (metric/dim/period/gran/ccy/viz/cmp/account/category/
- * counterparty/amount_min/amount_max/amount_dir/from/to —
- * 999.6-PATTERNS.md "ReportBuilder.php" `#[Url]` list) so a builder-driven
- * "Export CSV" link can pass its current URL query string straight through
- * unchanged.
- *
- * Mirrors `Modules\Tax\Internal\Http\Livewire\TaxPage::exportCsv()`'s
- * unauthenticated -> empty StreamedResponse guard (T-999.6-20) even though
- * the route already sits behind the `auth` middleware group below —
- * defense-in-depth, matching the Tax precedent exactly.
- *
- * NOTE: `ServiceProvider::loadRoutesFrom()` uses a plain `require` (not
- * `require_once`), so this file can be re-executed within the same PHP
- * process across multiple app boots (e.g. repeated test-suite boots). A
- * top-level named `function` declared here would fatal with "Cannot
- * redeclare" on the second boot — every helper below is therefore kept as
- * an anonymous closure local to the route handler, never a named top-level
- * function (this is why every other module's Routes/web.php avoids them
- * too).
- */
+// ServiceProvider::loadRoutesFrom() uses a plain require (not require_once),
+// so this file can re-execute within the same PHP process across multiple
+// app boots. A top-level named function here would fatal with "Cannot
+// redeclare" on the second boot, so every helper below is an anonymous closure.
 Route::middleware(['web', 'auth'])->group(static function (): void {
     Route::get('/reports/export', static function (
         Request $request,
@@ -59,6 +22,8 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         ReportCsvExporter $exporter,
         CurrentUser $currentUser,
     ): StreamedResponse {
+        // Defense-in-depth: the route already sits behind the 'auth'
+        // middleware group above, so this branch is unreachable in practice.
         if (! $currentUser->isAuthenticated()) {
             return new StreamedResponse(static function (): void {});
         }
@@ -106,19 +71,16 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         );
     })->name('reports.export');
 
-    // 999.6-08: the live single-page builder. Optional ?report={id} query
-    // param loads a user-owned saved definition (ReportBuilder::mount()).
-    // Mirrors Modules/Import/Routes/web.php's preview route shape — a
-    // closure resolving the query/route param into a plain view variable,
-    // rather than reading the request() global helper inside the Blade
-    // view itself.
+    // The live single-page builder. Optional ?report={id} query param
+    // loads a user-owned saved definition (ReportBuilder::mount()); the
+    // query param is resolved here into a plain view variable rather than
+    // read via the request() global helper inside the Blade view itself.
     Route::get('/reports', static fn (Request $request) => view('reports::report-builder', [
         'report' => $request->integer('report') ?: null,
     ]))->name('reports.index');
 
-    // 999.6-09: the saved-report index (Req 9). Routes directly to the
-    // Livewire component class (mirrors CalendarPage/BudgetsPage — the
-    // component's own render() calls $view->extends('layouts.app', ...),
-    // so a wrapper Blade view is unnecessary here).
+    // Routes directly to the Livewire component class since its own
+    // render() calls $view->extends('layouts.app', ...), so a wrapper
+    // Blade view is unnecessary here.
     Route::get('/reports/library', ReportsIndex::class)->name('reports.library');
 });

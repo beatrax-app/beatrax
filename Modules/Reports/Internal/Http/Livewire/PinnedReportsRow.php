@@ -14,23 +14,7 @@ use Modules\Reports\Public\Dto\ReportResultRow;
 use Modules\Reports\Public\Services\PinnedReportsQuery;
 
 /**
- * Dashboard "pinned reports" mini-card row (Req 10) — up to 3 chart-only
- * mini cards built from the user's pinned saved reports (`TogglePin`,
- * Plan 07 / `/reports/library`, Plan 09).
- *
- * Renders NOTHING (an empty root `<div>`) when the user has zero pins —
- * same "renders-nothing-when-empty" convention as
- * `goals.summary-card`/`budgets.envelope-glance-card`. Does NOT call
- * `->extends('layouts.app')` — renders inline in the dashboard
- * (`@livewire('reports.pinned-reports-row')`).
- *
- * Each card is a single anchor to `route('reports.index', ['report' =>
- * id])` — unlike the full builder's per-data-point drill-down (Req 12),
- * clicking anywhere on a mini card (including the chart) opens the full
- * report; the chart itself carries no `dataPointSelection` handler here.
- *
- * Method-parameter DI on render — no constructor (phpstan-strict-rules
- * bans constructor injection on `Component` subclasses).
+ * @link ../../../../../.docs/features/reports/architecture.md
  */
 final class PinnedReportsRow extends Component
 {
@@ -84,12 +68,10 @@ final class PinnedReportsRow extends Component
         return $optionsJson === false ? '{}' : $optionsJson;
     }
 
-    /**
-     * The mini card is chart-only, so a `'table'` viz (the builder's own
-     * default — not a renderable chart form) falls back to the same
-     * metric-based default the full builder's Visualization selector
-     * documents (Req 8): net-worth/time-series -> line, else -> bar.
-     */
+    // The mini card is chart-only, so a 'table' viz (the builder's own
+    // default, not a renderable chart form) falls back to the same
+    // metric-based default the full builder's Visualization selector uses:
+    // net-worth/time-series -> line, else -> bar.
     private function chartTypeFor(ReportDefinition $definition): string
     {
         if (in_array($definition->viz, ['bar', 'line', 'donut'], true)) {
@@ -100,11 +82,6 @@ final class PinnedReportsRow extends Component
     }
 
     /**
-     * Bar/line options — reduced height, no axis labels/legend/toolbar (the
-     * mount pattern is the same `beatraxApplyChartTheme`/Alpine `x-init` +
-     * `data-options` mechanism as the full builder's chart partials, Plan
-     * 08, just at mini-card scale with no per-point drill-down).
-     *
      * @param  list<ReportResultRow>  $rows
      * @return array<string, mixed>
      */

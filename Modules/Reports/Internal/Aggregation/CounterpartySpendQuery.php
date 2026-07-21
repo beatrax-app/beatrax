@@ -14,28 +14,10 @@ use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
 
 /**
- * Counterparty-dimension aggregation for the Reports builder's spend/
- * income/net metrics (Req 2/3) — a thin, single-table `GROUP BY` over the
- * `transactions` parent rows.
- *
- * No split-leg join is needed here (unlike `CategorySpendQuery`):
- * `transaction_splits` carries only `category_id`, never `account_id` or
- * `counterparty_id` — a split divides a transaction's spend across
- * *categories*, never across counterparties. A split parent's
- * `settled_amount_minor` already equals the sum of its legs and every leg
- * shares the parent's counterparty, so aggregating the parent rows directly
- * is exact (999.6-RESEARCH.md Pattern 2 "split-leg insight").
- *
- * Mirrors `ThisPeriodAtAGlanceQuery::incomeForPeriod()`'s type-based
- * single-table shape, generalized to spend/income/net and grouped by
- * `counterparty_id` instead of summed to a scalar.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class CounterpartySpendQuery
 {
-    /**
-     * In-memory sentinel for the "no counterparty" bucket — a real
-     * counterparty id is always a positive autoincrement value.
-     */
     private const NO_COUNTERPARTY_SENTINEL = -1;
 
     public function __construct(
@@ -45,7 +27,7 @@ final class CounterpartySpendQuery
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
-     * @param  list<int>  $accountIds  T-999.6-06/14: restrict to these account ids (empty = no restriction). Applied ALONGSIDE the existing `where('user_id', ...)` guard below, so a foreign id can only ever narrow this user's own result to nothing — never widen it to another user's rows.
+     * @param  list<int>  $accountIds  restrict to these account ids (empty = no restriction); applied alongside the user_id guard, so a foreign id only narrows this user's own result, never widens it
      * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
      * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
      * @param  ?int  $amountMinMinor  restrict to rows whose ABS(settled_amount_minor) >= this (empty = no restriction)

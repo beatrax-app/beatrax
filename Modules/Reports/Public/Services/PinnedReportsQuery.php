@@ -12,26 +12,13 @@ use stdClass;
 use Throwable;
 
 /**
- * Read-side query powering the dashboard "pinned reports" mini-card row
- * (Req 10). Returns the caller's own pinned saved reports, ordered by
- * `pin_order`, capped at 3.
- *
- * `TogglePin` (Plan 07) already enforces the 3-pin cap in the write layer —
- * this query's own `LIMIT 3` is a second, independent enforcement point
- * (T-999.6-29, "never trust the cap from a single layer"), so a stray
- * fourth pinned row (e.g. a data anomaly, a future write-path bug) can
- * never render a 4th mini card on the dashboard.
- *
- * Cross-user posture: explicit `where('user_id', $user->id)` guard at the
- * raw query-builder boundary (999.6-PATTERNS.md "Cross-user isolation
- * guard", T-999.6-28) — a foreign id never reaches this query's caller.
- *
- * Raw `DatabaseManager` reads only (never Eloquent chains), matching every
- * other read-model class in this codebase (999.6-PATTERNS.md "Raw
- * DatabaseManager query discipline").
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final readonly class PinnedReportsQuery
 {
+    // TogglePin already enforces the 3-pin cap in the write layer; this
+    // query's own LIMIT is a second, independent enforcement point so a
+    // stray fourth pinned row can never render a 4th mini card.
     private const MAX_PINS = 3;
 
     public function __construct(private DatabaseManager $db) {}
@@ -63,9 +50,8 @@ final readonly class PinnedReportsQuery
                 $definition = ReportDefinition::from($definitionArray);
             } catch (Throwable) {
                 // A malformed/incomplete definition must never break the
-                // dashboard — skip the row rather than 500 (Rule 2
-                // robustness; mirrors the aggregation layer's own
-                // never-crash-the-dashboard posture).
+                // dashboard — skip the row rather than 500, mirroring the
+                // aggregation layer's own never-crash-the-dashboard posture.
                 continue;
             }
 

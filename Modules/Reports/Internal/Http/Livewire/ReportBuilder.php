@@ -28,27 +28,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * The `/reports` live single-page builder (D-01, Req 1/8/12). Every control
- * is a `#[Url]`-bound property so the current composition is a shareable,
- * refresh-stable URL; changing any control re-runs `ReportAggregator::run()`
- * on the next Livewire round trip — no page reload, no "Apply" button.
- *
- * `#[Url]` alias/`except` pairs mirror `TransactionsList`'s idiom AND the
- * short param names `reports.export` (Plan 07) already committed to, so a
- * builder-driven "Export CSV" link can pass the current URL query string
- * straight through unchanged (999.6-PATTERNS.md "ReportBuilder.php").
- *
- * `mount(?int $report = null)` — T-999.6-22 (IDOR): the lookup is an
- * EXPLICIT `user_id` guard via `withoutGlobalScope(UserScope::class)`, not
- * reliance on the ambient session-bound global scope, mirroring the write
- * actions' (Plan 07) "the injected user is always the source of truth"
- * convention. A foreign or missing id silently falls through to the
- * builder's own (default) empty composition — never another user's data,
- * never a 404 (a 404 would confirm the id's existence to an attacker).
- *
- * Constructor-free; every wire action + `render()` take service
- * collaborators as method parameters (`Component` subclasses can't accept
- * constructor injection under this project's strict-rules ruleset).
+ * @link ../../../../../.docs/features/reports/architecture.md
  */
 final class ReportBuilder extends Component
 {
@@ -100,15 +80,13 @@ final class ReportBuilder extends Component
     #[Url(as: 'amount_dir', except: 'both')]
     public string $filterAmountDir = 'both';
 
-    /** The saved report id this builder was opened from, when any (?report=). */
+    // The saved report id this builder was opened from, when any
+    // (?report= on mount).
     public ?int $loadedReportId = null;
 
-    /**
-     * The loaded report's name (CR-01) — stashed in `mount()` so
-     * `openSaveForm()` can pre-fill `saveName` with it instead of showing a
-     * blank field that silently implies "Save report" will create a new
-     * row rather than update the one currently open.
-     */
+    // Stashed in mount() so openSaveForm() can pre-fill saveName with it
+    // instead of showing a blank field that implies "Save report" will
+    // create a new row rather than update the one currently open.
     public string $loadedReportName = '';
 
     public bool $showSaveForm = false;
@@ -123,6 +101,10 @@ final class ReportBuilder extends Component
             return;
         }
 
+        // IDOR guard: explicit user_id check via withoutGlobalScope. A
+        // foreign or missing id falls through to the default empty
+        // composition — never another user's data, never a 404 (which
+        // would confirm existence to an attacker).
         /** @var SavedReport|null $saved */
         $saved = SavedReport::query()
             ->withoutGlobalScope(UserScope::class)
@@ -142,10 +124,9 @@ final class ReportBuilder extends Component
     public function openSaveForm(): void
     {
         $this->showSaveForm = true;
-        // CR-01: pre-fill with the currently-loaded report's name (rather
-        // than always resetting to '') so the user sees, at a glance, that
-        // submitting will UPDATE that report — not silently fork a second,
-        // identically-named row.
+        // Pre-fill with the currently-loaded report's name (rather than
+        // resetting to '') so the user sees at a glance that submitting
+        // will update that report, not fork a second identically-named row.
         $this->saveName = $this->loadedReportId !== null ? $this->loadedReportName : '';
     }
 
@@ -155,15 +136,10 @@ final class ReportBuilder extends Component
         $this->saveName = '';
     }
 
-    /**
-     * CR-01: a builder opened from a saved report (`$loadedReportId !==
-     * null`) must UPDATE that same row — `UpdateReport::update()` — never
-     * fork a new one via `SaveReport::save()`. Only a builder that was
-     * never loaded from (or has not yet been saved as) an existing report
-     * creates a fresh row, and that fresh row's id is then stashed into
-     * `loadedReportId` so a subsequent save on the same page load also
-     * updates in place rather than creating a second duplicate.
-     */
+    // A builder opened from a saved report (loadedReportId !== null)
+    // updates that same row rather than forking a new one; a fresh save's
+    // id is stashed into loadedReportId so a subsequent save on the same
+    // page load also updates in place instead of duplicating.
     public function save(SaveReport $action, UpdateReport $updateAction, CurrentUser $currentUser): void
     {
         $name = trim($this->saveName);
@@ -191,32 +167,24 @@ final class ReportBuilder extends Component
         $this->flashMessage = '';
     }
 
-    /**
-     * CR-03: dispatches a browser event after every Livewire property sync
-     * (control-rail `$set(...)` calls, `wire:model.live` filter inputs) so
-     * the mounted ApexCharts instance can refresh in place via
-     * `chart.updateOptions()` — mirrors `ForecastPage`'s per-mutation
-     * `$this->dispatch('forecast-updated')` calls, but as a single generic
-     * hook rather than one dispatch call per action, since every control on
-     * this page is a bare property setter rather than a named method.
-     */
+    // Dispatches a browser event after every Livewire property sync so the
+    // mounted ApexCharts instance can refresh in place via
+    // chart.updateOptions() — a single generic hook rather than one
+    // dispatch per action, since every control here is a bare setter.
     public function updated(string $property): void
     {
         $this->dispatch('report-updated');
     }
 
-    /**
-     * WR-02: the CSV export CTA is a real Livewire action (not a plain
-     * `<a href>`) so it can participate in `wire:loading`/`wire:target`,
-     * mirroring `Modules\Tax\Internal\Http\Livewire\TaxPage::exportCsv()`
-     * verbatim. Reads through the same `$this->currentDefinition()` the
-     * table/chart render from, so the download can never disagree with
-     * what's on screen.
-     */
+    // A real Livewire action (not a plain <a href>) so it can participate
+    // in wire:loading/wire:target; reads through the same
+    // currentDefinition() the table/chart render from, so the download
+    // can never disagree with what's on screen.
     public function export(ResponseFactory $responses, ReportCsvExporter $exporter, CurrentUser $currentUser): StreamedResponse
     {
         if (! $currentUser->isAuthenticated()) {
-            // Defensive branch — 'auth' middleware already blocks unauthenticated access.
+            // Defensive branch: the 'auth' middleware already blocks
+            // unauthenticated access before this method ever runs.
             return new StreamedResponse(static function (): void {});
         }
 
@@ -244,12 +212,9 @@ final class ReportBuilder extends Component
         $user = $currentUser->user();
         $definition = $this->currentDefinition();
 
-        // The "custom" period preset requires both dates; while the user is
-        // mid-selection (Custom range chosen, dates not both filled yet)
-        // resolving the period would throw — render the friendly empty
-        // state instead of a 500 (Rule 2: robustness the plan's own
-        // acceptance criteria implicitly requires — "empty selection shows
-        // the friendly empty state, not an error").
+        // The "custom" preset requires both dates; while the user is
+        // mid-selection (dates not both filled yet) resolving the period
+        // would throw, so render the friendly empty state instead of a 500.
         $customIncomplete = $definition->periodPreset === 'custom'
             && ($definition->customFrom === null || $definition->customFrom === '' || $definition->customTo === null || $definition->customTo === '');
 
@@ -377,11 +342,10 @@ final class ReportBuilder extends Component
      */
     private function availableCounterparties(DatabaseManager $db, int $userId, SensitiveColumnCodec $codec, Session $session): array
     {
-        // D-06 (14.1-10): no longer ORDER BY the ciphertext display_name
-        // column — SQL order over ciphertext is meaningless once
-        // encryption is enabled. A stable orderBy('id') keeps row
-        // iteration deterministic; the real, user-facing order is the
-        // post-decrypt usort() below.
+        // No ORDER BY on the ciphertext display_name column — SQL order
+        // over ciphertext is meaningless once encryption is enabled. A
+        // stable orderBy('id') keeps row iteration deterministic; the
+        // real, user-facing order is the post-decrypt usort() below.
         $rows = $db->connection()
             ->table('counterparties')
             ->where('user_id', $userId)

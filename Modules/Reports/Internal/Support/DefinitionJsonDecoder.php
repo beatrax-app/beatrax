@@ -4,16 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Internal\Support;
 
-/**
- * Decodes a `saved_reports.definition` JSON column value into a
- * string-keyed array, tolerating malformed/non-JSON input by returning an
- * empty array rather than throwing (Rule 2 — a corrupt row must never break
- * a read-side listing).
- *
- * Extracted (IN-02) from the identical private `decodeDefinition()` methods
- * previously duplicated verbatim in `PinnedReportsQuery` and
- * `SavedReportsQuery` — both now call this single implementation.
- */
+// Tolerates malformed/non-JSON input by returning an empty array rather
+// than throwing — a corrupt row must never break a read-side listing.
+// Shared by PinnedReportsQuery and SavedReportsQuery.
 final class DefinitionJsonDecoder
 {
     /**

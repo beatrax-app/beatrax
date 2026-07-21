@@ -8,16 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Core\Public\Concerns\BelongsToUser;
 
 /**
- * A user-saved report definition, optionally pinned to the dashboard
- * (Req 9/10, D-02). `definition` carries the full report definition payload
- * (metric/dimension/period/filters/currencyMode/viz/compare) as JSON.
- *
- * This model exists for the Sync/write-action Eloquent paths; aggregation
- * reads stay raw DatabaseManager per project convention (see
- * Modules\Reports\Internal\Aggregation\*Query classes).
- *
- * The `BelongsToUser` trait adds a global UserScope so resolving a foreign
- * `saved_reports.id` (client-supplied) safely returns nothing.
+ * @link ../../../.docs/features/reports/architecture.md
  *
  * @property int $id
  * @property int|null $user_id

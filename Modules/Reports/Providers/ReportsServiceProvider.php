@@ -8,22 +8,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 
 /**
- * Single-owner provider for the Reports module.
- *
- * CRITICAL: This provider is the SOLE owner of every Phase 999.6 binding
- * (mirrors the Phase 11 SyncServiceProvider / Phase 13.5 MigrationServiceProvider
- * single-owner precedent). Downstream plans in this phase never edit this
- * file — their classes are wired here behind `class_exists()` guards,
- * referenced by runtime-built FQCN string so this provider stays parseable
- * and PHPStan-clean before those classes exist. This file is written ONCE in
- * this Wave-0 plan and never re-edited by later plans.
- *
- * Service bind inventory (by implementing plan):
- *   Aggregation: ReportAggregator, TimeBucketGenerator
- *   CSV export: ReportCsvExporter
- *   Write actions: SaveReport, UpdateReport, DeleteReport, TogglePin
- *   Livewire components: reports.report-builder, reports.reports-index,
- *   reports.pinned-reports-row
+ * @link ../../../.docs/features/reports/architecture.md
  */
 final class ReportsServiceProvider extends ServiceProvider
 {
@@ -52,7 +37,8 @@ final class ReportsServiceProvider extends ServiceProvider
         $this->singletonIfExists(self::REPORT_AGGREGATOR_CLASS);
         $this->singletonIfExists(self::TIME_BUCKET_GENERATOR_CLASS);
         $this->singletonIfExists(self::REPORT_CSV_EXPORTER_CLASS);
-        // Actions are stateless — safe as singletons, mirrors StartMigrationRun.
+        // Actions are stateless — safe as singletons, avoiding a fresh
+        // instantiation per request.
         $this->singletonIfExists(self::SAVE_REPORT_CLASS);
         $this->singletonIfExists(self::UPDATE_REPORT_CLASS);
         $this->singletonIfExists(self::DELETE_REPORT_CLASS);
@@ -71,9 +57,8 @@ final class ReportsServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'reports');
         }
 
-        // Downstream plans in this phase: builder/index/pinned-row Livewire
-        // components. Registered the moment each class exists on disk, no
-        // re-edit of this file needed.
+        // Builder/index/pinned-row Livewire components, each registered
+        // only once its class exists on disk.
         if (class_exists(self::REPORT_BUILDER_CLASS)) {
             $livewire->component('reports.report-builder', self::REPORT_BUILDER_CLASS);
         }
@@ -85,13 +70,8 @@ final class ReportsServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Register a singleton for a class that may not exist yet (forward-looking
-     * injection point for a later plan in this phase). The class name arrives
-     * as a runtime-built string so PHPStan does not fold the class_exists()
-     * guard to an impossible type. Copied verbatim from
-     * Modules\Sync\Providers\SyncServiceProvider::singletonIfExists().
-     */
+    // The class name arrives as a runtime-built string so PHPStan does not
+    // fold the class_exists() guard to an impossible type.
     private function singletonIfExists(string $class): void
     {
         if (class_exists($class)) {

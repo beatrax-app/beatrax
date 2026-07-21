@@ -7,22 +7,7 @@ namespace Modules\Reports\Public\Dto;
 use Spatie\LaravelData\Data;
 
 /**
- * The full, user-composed report definition — metric x dimension x period x
- * filters x currency mode x viz x compare. This is the exact shape persisted
- * as `saved_reports.definition` JSON (Req 9): saving a report is
- * `$definition->toArray()` into that column, reopening it is
- * `ReportDefinition::from($row->definition)`.
- *
- * `ReportAggregator::run()` (later waves) takes this DTO plus a User and
- * returns a `ReportResultDto`. `ReportCsvExporter::export()` and every viz
- * partial read the same DTO, so the builder table, the four chart forms, and
- * the CSV export can never disagree about what was asked for.
- *
- * T-999.6-06: this DTO is a transport contract only, never a trust boundary
- * — filter ids (`accounts`/`categories`/`counterparties`) carried in a
- * persisted/reopened definition are re-validated against the current user's
- * ownership at query time by the aggregation queries (Plans 04/06), exactly
- * like `SearchFilters` is re-validated by `SearchQuery::applyFilters()`.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class ReportDefinition extends Data
 {
@@ -60,13 +45,9 @@ final class ReportDefinition extends Data
         public readonly string $amountDirection = 'both',
     ) {}
 
-    /**
-     * Deterministic kebab-case slug for CSV download filenames, e.g.
-     * "spend-category-this-month". Never localized/translated — purely a
-     * filesystem-safe identifier derived from the definition's own field
-     * values (no random/time component, so the same definition always
-     * yields the same slug).
-     */
+    // Deterministic kebab-case slug for CSV download filenames, e.g.
+    // "spend-category-this-month" — never localized, no random/time
+    // component, so the same definition always yields the same slug.
     public function slug(): string
     {
         $parts = [$this->metric, $this->dimension, $this->periodPreset];

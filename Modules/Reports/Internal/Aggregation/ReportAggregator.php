@@ -13,35 +13,7 @@ use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
 
 /**
- * The Reports module's central Public-facing aggregation entry point
- * (Req 2/3/4/5/13) — every consumer (builder, CSV export, saved/pinned
- * reports, later plans) calls `run()` and never talks to a dimension query,
- * `CurrencyModeApplier`, or `PeriodComparison` collaborator directly.
- *
- * Dispatch shape: `net_worth` (dimension ignored, a time series) is split
- * from the three transaction metrics (spend/income/net) FIRST, then a
- * `match` on `$definition->dimension` picks the one Plan 04 grouped query
- * matching the requested dimension. `net` is NOT composed here from
- * separately-run spend/income totals — every Plan 04 dimension query
- * already implements 'net' natively as `SUM(settled_amount_minor)` over
- * `type IN ('expense','income')`, so passing `metric: 'net'` straight
- * through already nets income against spend per group with zero extra
- * composition logic (the canonical type-based definition locked in Plan 04,
- * 999.6-RESEARCH.md Pitfall 1).
- *
- * T-999.6-06/T-999.6-14: `accounts`/`categories`/`counterparties` filter
- * ids from a persisted `ReportDefinition` are passed straight into the
- * Plan 04 dimension queries' own `whereIn(...)` predicates, which sit
- * ALONGSIDE each query's existing `where('user_id', $user->id)` guard — a
- * foreign id can therefore never widen a result to another user's rows, it
- * can only ever narrow (or zero) the CALLING user's own already-scoped
- * result. No separate pre-validation query is needed; the ownership guard
- * is structural, mirroring the "foreign id -> empty result" convention
- * documented across this codebase's read models (999.6-PATTERNS.md "Cross-
- * user isolation guard"). `amountMin`/`amountMax`/`amountDirection` ARE
- * wired into every dimension query's own row-level `ABS(settled_amount_minor)`
- * predicate (closing the gap deferred by this plan's original SUMMARY.md) —
- * see `dimensionRows()`.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class ReportAggregator
 {
@@ -68,11 +40,10 @@ final class ReportAggregator
             return $result;
         }
 
-        // WR-04: pass the FULL previous-period ReportResultDto (rows AND
-        // FX-exclusion metadata) through to PeriodComparison, not just
-        // ->rows — otherwise a previous period with an unconvertible
-        // currency would silently vanish from hasExcludedAccounts/
-        // accountsWithoutRate on the final compare DTO below.
+        // Pass the FULL previous-period ReportResultDto (rows and
+        // FX-exclusion metadata) through, not just ->rows — otherwise an
+        // unconvertible previous-period currency would silently vanish
+        // from the final compare DTO's exclusion counters below.
         $comparison = $this->periodComparison->compare(
             $period,
             $result->rows,
@@ -99,10 +70,10 @@ final class ReportAggregator
     {
         $queryForCurrency = fn (string $currency): array => $this->dimensionRows($user, $period, $definition, $currency);
 
-        // CR-02: discoverCurrencies() must see the SAME accounts/
-        // categories/counterparties filters the dimension query itself
-        // applies, so a filtered report only ever discovers currencies
-        // that can actually produce rows.
+        // discoverCurrencies() must see the same accounts/categories/
+        // counterparties filters the dimension query itself applies, so a
+        // filtered report only ever discovers currencies that can
+        // actually produce rows.
         return $this->currencyModeApplier->apply(
             $user,
             $period,
@@ -120,11 +91,10 @@ final class ReportAggregator
      */
     private function dimensionRows(User $user, Period $period, ReportDefinition $definition, string $currency): array
     {
-        // Cross-cutting amount filter (formerly deferred, see class
-        // docblock): a row-level ABS(settled_amount_minor) predicate
-        // honoring amountDirection in/out/both, threaded into every
-        // dimension query so totals/chart/table/CSV never silently ignore
-        // an active amount filter.
+        // A row-level ABS(settled_amount_minor) predicate honoring
+        // amountDirection in/out/both, threaded into every dimension query
+        // so totals/chart/table/CSV never silently ignore an active
+        // amount filter.
         $amountMinMinor = self::amountToMinor($definition->amountMin);
         $amountMaxMinor = self::amountToMinor($definition->amountMax);
 
@@ -182,15 +152,8 @@ final class ReportAggregator
         };
     }
 
-    /**
-     * Converts a `ReportDefinition->amountMin`/`amountMax` decimal string
-     * (e.g. "10.00") to a signed-free minor-unit int, mirroring
-     * `Modules\Search\Public\Services\SearchQuery::applyFilters()`'s own
-     * amountMin/amountMax-to-minor conversion (the only other place in this
-     * codebase that turns a user-facing decimal amount string into a
-     * `ABS(settled_amount_minor)` predicate) so the two filter UIs behave
-     * identically.
-     */
+    // Mirrors Search's SearchQuery::applyFilters() amountMin/amountMax-to-
+    // minor conversion so the two filter UIs behave identically.
     private static function amountToMinor(?string $amount): ?int
     {
         if ($amount === null || $amount === '') {
@@ -214,11 +177,10 @@ final class ReportAggregator
         $hasExcluded = false;
         $excludedTotal = 0;
         foreach ($points as $point) {
-            // Net worth is a balance, not a flow: the DTO-level total is the
-            // MOST RECENT sample point (the series' own last row), never a
-            // sum-across-points (which would double-count every account's
-            // balance once per bucket) — overwritten on every iteration so
-            // the LAST point wins.
+            // Net worth is a balance, not a flow: the DTO-level total is
+            // the most recent sample point, never a sum-across-points
+            // (which would double-count every account's balance once per
+            // bucket) — overwritten each iteration so the last point wins.
             $totalMinor = $point->totalMinor;
             $currency = $point->currency;
             if ($point->excludedCount > 0) {

@@ -15,32 +15,7 @@ use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
 
 /**
- * Applies a report's `currencyMode` ('base' | 'original') to a Plan 04
- * dimension query and assembles the resulting `ReportResultDto` (Req 4/5).
- *
- * Neither this class nor its caller ever hardcodes a currency list: every
- * call FIRST discovers the distinct `settled_currency` values actually
- * present for the user+period+metric via a fresh, user-scoped `SELECT
- * DISTINCT settled_currency` read, then re-runs the caller-supplied
- * dimension query once per discovered currency.
- *
- * 'base' mode: converts each currency's rows via
- * `ExchangeRateService::convertToBase()` and merges same-group rows across
- * currencies into one base-currency total per group. A row whose currency
- * has no available rate is EXCLUDED from the total and COUNTED
- * (`hasExcludedAccounts`/`accountsWithoutRate`) — NEVER a silent 1:1
- * fallback (T-999.6-07). This is the transaction-metric analogue of
- * `NetWorthSeriesQuery`'s own never-1:1 guard — a DISTINCT code path
- * (`CurrencyModeExclusionTest` vs Plan 05's `FxExclusionTest`), because this
- * class converts `ReportResultRow` group totals (already summed in SQL),
- * never per-account balances.
- *
- * 'original' mode: never converts. Every discovered currency's rows are
- * returned unconverted and concatenated — a group present in more than one
- * currency yields one row PER currency (never merged; summing raw minor
- * units across different currencies would silently corrupt the total). No
- * FX exclusion is possible in this mode, so `hasExcludedAccounts`/
- * `accountsWithoutRate` always stay false/0.
+ * @link ../../../../.docs/features/reports/architecture.md
  */
 final class CurrencyModeApplier
 {
@@ -53,7 +28,7 @@ final class CurrencyModeApplier
      * @param  string  $metric  'spend' | 'income' | 'net'
      * @param  string  $currencyMode  'base' | 'original'
      * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency  Re-runs the caller's chosen dimension query, scoped to one settled_currency at a time.
-     * @param  list<int>  $accountIds  CR-02: the SAME accounts/categories/counterparties filters the dimension query itself applies — must be threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows.
+     * @param  list<int>  $accountIds  the same accounts/categories/counterparties filters the dimension query itself applies, threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows
      * @param  list<int>  $categoryIds
      * @param  list<int>  $counterpartyIds
      */
@@ -76,16 +51,11 @@ final class CurrencyModeApplier
         };
     }
 
+    // Applies the same accounts/categories/counterparties filters the
+    // caller's dimension query applies, so a filtered report never
+    // discovers a currency that only exists on a filtered-out dimension.
+    // Ordered deterministically rather than left to unordered DISTINCT.
     /**
-     * CR-02: applies the SAME accounts/categories/counterparties filters the
-     * caller's dimension query applies, so a filtered report (e.g.
-     * `accounts: [A]`) never discovers a currency that only exists on a
-     * FILTERED-OUT account/category/counterparty — which previously made
-     * `applyOriginal()` pick a "primary" currency that could produce zero
-     * rows for the filtered result. Ordered deterministically
-     * (`orderBy('settled_currency')`) rather than left to unordered
-     * `DISTINCT` output.
-     *
      * @param  list<int>  $accountIds
      * @param  list<int>  $categoryIds
      * @param  list<int>  $counterpartyIds
@@ -138,10 +108,10 @@ final class CurrencyModeApplier
                 $money = Money::ofMinor($row->amountMinor, $currency);
                 $conversion = $this->fx->convertToBase($money, $baseCurrency);
 
-                // Never a silent 1:1 fallback (T-999.6-07): a passthrough
-                // whose converted currency still differs from the target
-                // means no rate was available at all — exclude + count,
-                // exactly like NetWorthSeriesQuery's own never-1:1 guard.
+                // Never a silent 1:1 fallback: a passthrough whose converted
+                // currency still differs from the target means no rate was
+                // available at all — exclude + count, exactly like
+                // NetWorthSeriesQuery's own never-1:1 guard.
                 if ($conversion->converted->currency() !== $baseCurrency) {
                     $hasExcluded = true;
                     $excludedCount++;
@@ -178,18 +148,11 @@ final class CurrencyModeApplier
         );
     }
 
+    // No conversion. The DTO-level currency/totalMinor are picked after
+    // running every currency's query — the currency with the largest
+    // absolute total among the actual result rows, never a "first
+    // discovered currency" guess that could land on a filtered-to-zero row.
     /**
-     * No conversion — every discovered currency's rows are returned
-     * unconverted, concatenated across currencies. The DTO-level
-     * `currency`/`totalMinor` are picked AFTER running every currency's
-     * query (CR-02): the currency with the largest absolute total among
-     * the ACTUAL result rows — never a "first discovered currency" guess
-     * made before the filtered dimension query has even run, which could
-     * pick a currency the filters reduce to zero rows (e.g. `$0.00`/wrong-
-     * currency total next to a non-empty table). Every currency's true,
-     * unconverted total remains available per-row via `rows` regardless of
-     * how many currencies are present or which one is "primary".
-     *
      * @param  list<string>  $currencies
      * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency
      */
