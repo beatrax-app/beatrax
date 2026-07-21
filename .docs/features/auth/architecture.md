@@ -55,9 +55,15 @@ paths into the auth corpus:
   phone-readable alphabet), `RecoveryCodeFormatter`, `RecoveryCodeNormalizer`,
   `RecoveryCodeAuthenticator` (the single sanctioned consume-on-success
   path).
-- **Internal/Http/Livewire/** — the seven Livewire pages (`LoginPage`,
+- **Internal/Http/Livewire/** — the Livewire pages (`LoginPage`,
   `SignupPage`, `ResetPasswordPage`, `ChangePasswordPage`,
-  `RecoveryCodesDisplay`, `AddUserPage`, `ManageUserPage`).
+  `RecoveryCodesDisplay`, `AddUserPage`, `ManageUserPage`, `LockScreen`,
+  `AppLockSettingsSection`, `AppLockKeyProbe`). All are constructor-free:
+  the project's strict-rules PHPStan ruleset forbids property-based
+  constructor injection on Livewire `Component` subclasses (and bans
+  `auth()`/`Auth::user()`/facade lookups project-wide), so every service
+  collaborator arrives as a parameter on the action method and on
+  `render()` instead.
 - **Internal/Http/Middleware/** — `FirstUserOnlyMiddleware` (gates the
   `/signup` route so it disappears the moment the owner exists),
   `ForcePasswordChangeMiddleware` (pushed onto the `auth` middleware
@@ -285,6 +291,36 @@ cannot be unwrapped (e.g. a stale wrap after an account-password change),
 the session starts locked instead and the PIN/biometric restores the key
 via the lock screen — never the incoherent unlocked/key-less state. This
 priming is a no-op when the lock is not enabled for the user.
+
+### Lock screen (`LockScreen` Livewire page)
+
+The `/lock` route offers exactly three actions — PIN pad, biometric
+prompt, sign out — and nothing else. PIN digits are never rendered in an
+`<input>`; the DOM only shows bullet glyphs, so no autocomplete,
+clipboard, or OS password-manager capture can occur. The digits
+accumulate client-side in transient Alpine state rather than a public
+Livewire property, so they never appear in the `wire:snapshot` DOM
+attribute or in a Livewire update response — the full PIN crosses the
+wire exactly once, as a `submit()` method argument, forwarded straight to
+`PinVerificationService`.
+
+An active backoff window is checked *before* the PIN itself, so even a
+correct PIN submitted during the window must not be reported as
+"incorrect" — the copy distinguishes "too many attempts, try again in Ns"
+from "incorrect PIN, N attempts remaining". The biometric prompt is
+dispatched only on an explicit button tap, never on render, so the
+browser's native biometric UI never auto-fires.
+
+### Dev-console key-release probe (`AppLockKeyProbe`)
+
+A Developer-Console-only Livewire component that makes the data-key
+release gate visually inspectable: it exercises the exact Public contract
+downstream encryption features consume (`AppLockKeyService::release()`
+returns the data key when the session is unlocked, null when locked)
+without any of those features needing to be deployed to verify the gate
+works. It renders only a truncated SHA-256 fingerprint of the key, never
+the raw bytes, and is mounted exclusively behind the `developer`
+middleware — it must never appear on any non-developer surface.
 
 ### Transport notes
 
