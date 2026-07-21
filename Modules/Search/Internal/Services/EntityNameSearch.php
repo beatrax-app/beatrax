@@ -11,26 +11,12 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
-/**
- * Name-only LIKE search across palette entity types (D-28).
- *
- * Searches: counterparties (display_name + slug), categories (name),
- * recurring series (detected_name + display_name_override), goals (name), pots (name).
- *
- * Each type is capped at 3 results; the order follows the UI-SPEC palette
- * section ordering. All reads go through the entity's public table — never
- * through any module's Internal class (BoundaryArchTest enforcement, T-08-08).
- *
- * Returns a flat list of tagged entity rows ready for the palette "entities"
- * section in PaletteSearchEndpoint.
- */
+// Name-only search across palette entity types: counterparties are
+// decrypt-then-substring matched (display_name is ciphertext once
+// encryption is enabled); categories/goals/pots/recurring stay
+// LIKE-matched. Every read goes through the entity's public table.
 final class EntityNameSearch
 {
-    /**
-     * Max counterparty matches returned — mirrors every other entity type's
-     * `limit(3)` here. Applied in PHP (not SQL) now that the match itself
-     * happens post-decrypt (CRYPT-01/D-06).
-     */
     private const COUNTERPARTY_MATCH_LIMIT = 3;
 
     public function __construct(
@@ -54,19 +40,10 @@ final class EntityNameSearch
         /** @var list<array{id: int, type: string, label: string, url: string}> $results */
         $results = [];
 
-        // 1. Counterparties — decrypt-then-substring on display_name (CRYPT-01/
-        // D-06). display_name is ciphertext at rest once encryption is
-        // enabled, so a raw `where(...,'LIKE',...)` on the stored column can
-        // never match plaintext user input. Converted to the decrypt-then-
-        // match template (`CounterpartyIndexQuery::forUser()` precedent):
-        // fetch the user's counterparties — a naturally small, per-user
-        // bounded set, unlike `transactions` — decrypt `display_name` per
-        // row, and substring-match in PHP. `decryptValue()` is a documented
-        // pass-through no-op when encryption is not enabled, so this stays
-        // behavior-identical to the old LIKE for a plaintext user. The
-        // limit(3) cap moves from SQL to PHP since matching now happens
-        // post-decrypt; `each()` returning false stops iteration early once
-        // the cap is hit.
+        // Fetch the user's counterparties — a naturally small,
+        // per-user bounded set — decrypt display_name per row, and
+        // substring-match in PHP; the limit(3) cap moves from SQL to
+        // PHP since matching now happens post-decrypt.
         $matchCount = 0;
         $encryptionEnabled = $this->encryptionService->isEnabled($user->id);
         $this->db->connection()
@@ -86,11 +63,9 @@ final class EntityNameSearch
 
                 $result = $this->codec->decryptValue('counterparties', 'display_name', $stored, $user->id, $this->session);
 
-                // WR-18: when encryption is enabled, a decrypted:false result is
-                // ciphertext (rekey/epoch gap, or a locked app-lock) — skip this
-                // row rather than substring-matching against a ciphertext blob
-                // (a silently-missed suggestion). Non-encryption users keep the
-                // plaintext pass-through.
+                // A decrypted:false result under encryption is
+                // ciphertext (rekey/epoch gap, or a locked app-lock) —
+                // skip rather than substring-matching a ciphertext blob.
                 if ($encryptionEnabled && ! $result['decrypted']) {
                     return true;
                 }
@@ -114,13 +89,14 @@ final class EntityNameSearch
                 return true;
             });
 
-        // 2. Categories — name LIKE query, result URL: /transactions?category={id}
         $this->db->connection()
             ->table('categories')
             ->where(static function (object $q) use ($user): void {
                 /** @var Builder $q */
+                // Own rows OR global (seeded, null-user) categories —
+                // every user sees the shared seeded set.
                 $q->where('user_id', $user->id)
-                    ->orWhereNull('user_id'); // include global (seeded) categories
+                    ->orWhereNull('user_id');
             })
             ->where('name', 'LIKE', $like)
             ->limit(3)
@@ -137,7 +113,6 @@ final class EntityNameSearch
                 ];
             });
 
-        // 3. Goals — name LIKE query, result URL: /goals (no detail page)
         $this->db->connection()
             ->table('goals')
             ->where('user_id', $user->id)
@@ -156,7 +131,6 @@ final class EntityNameSearch
                 ];
             });
 
-        // 4. Pots — name LIKE query, result URL: /pots (no detail page)
         $this->db->connection()
             ->table('pots')
             ->where('user_id', $user->id)
@@ -175,7 +149,6 @@ final class EntityNameSearch
                 ];
             });
 
-        // 5. Recurring series — detected_name or display_name_override, URL: /recurring/series/{id}
         $this->db->connection()
             ->table('recurring_series')
             ->where('user_id', $user->id)

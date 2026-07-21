@@ -4,16 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Search\Public\Dto;
 
-/**
- * Typed filter parameter object consumed by SearchQuery::search().
- *
- * Mirrors the #[Url] filter property set on TransactionsList so the same
- * filter state (from URL params) can be passed through the public API
- * without leaking Livewire internals.
- *
- * All properties are optional/nullable and default to their "no filter"
- * value so callers need only set the active dimensions.
- */
+// Mirrors TransactionsList's #[Url] filter property set so the same
+// filter state (from URL params) can pass through the public API
+// without leaking Livewire internals. Every property defaults to its
+// "no filter" value.
 final readonly class SearchFilters
 {
     /**
@@ -37,17 +31,11 @@ final readonly class SearchFilters
         public string $amountDirection = 'both',
     ) {}
 
-    /**
-     * Returns a SearchFilters instance with no active filters.
-     */
     public static function empty(): self
     {
         return new self;
     }
 
-    /**
-     * Returns true when at least one filter dimension is non-default.
-     */
     public function isActive(): bool
     {
         return $this->accounts !== []
