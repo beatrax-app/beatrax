@@ -11,20 +11,10 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 
-/**
- * Read model for the Budgets page. Joins each (user, category) budget against
- * the spend it accrued in the current period and derives the progress bucket.
- *
- * Spend is `SUM(-settled_amount_minor)` over outflow rows (settled_amount_minor
- * < 0) whose `posted_at` falls in the user's current period and whose
- * `settled_currency` matches the budget currency — the same sign + period
- * convention the dashboard's top-categories panel uses. The aggregate runs as
- * one grouped query, then is matched to budgets in PHP, so the page issues two
- * indexed queries regardless of how many categories are budgeted.
- */
 final class BudgetProgressQuery
 {
-    /** Fraction of a budget at/above which the bar turns amber. */
+    // Fraction of a budget at/above which the bar turns amber (legacy
+    // category_budgets progress read model).
     private const NEAR_THRESHOLD = 0.8;
 
     public function __construct(
@@ -45,8 +35,8 @@ final class BudgetProgressQuery
             ->join('categories as c', 'c.id', '=', 'b.category_id')
             ->where('b.user_id', $user->id)
             // Defence in depth: only surface budgets whose category is the
-            // user's own or a global one, so a mis-keyed row can never leak a
-            // foreign category's name across the user boundary.
+            // user's own or a global one, so a mis-keyed row can never
+            // leak a foreign category's name across the user boundary.
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('c.user_id')->orWhere('c.user_id', $user->id);
             })
@@ -58,9 +48,9 @@ final class BudgetProgressQuery
         }
 
         // Delegates to the shared legs ∪ unsplit-parents read model so a
-        // split transaction's legs — not its parent row — count toward
-        // budget spend (Req 4 / D-02). Already keyed "categoryId|currency",
-        // matching what the loop below expects.
+        // split transaction's legs -- not its parent row -- count toward
+        // budget spend. Already keyed "categoryId|currency", matching what
+        // the loop below expects.
         $spendByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
 
         $rows = [];
@@ -96,10 +86,7 @@ final class BudgetProgressQuery
     }
 
     /**
-     * Expense categories available to budget (the user's own + global tree),
-     * as id => name, for the "add a budget" picker.
-     *
-     * @return array<int, string>
+     * @return array<int, string> category id => name
      */
     public function expenseCategories(User $user): array
     {
@@ -119,12 +106,9 @@ final class BudgetProgressQuery
         return $options;
     }
 
-    /**
-     * Whether $categoryId is a category this user is allowed to budget — i.e.
-     * one of their own or a global EXPENSE category. The page must call this
-     * before writing a budget: the Livewire category id is client-supplied, so
-     * the picker's allow-list is not an authorization boundary on its own.
-     */
+    // The picker's allow-list is not an authorization boundary on its own:
+    // every write path must call this since the Livewire category id is
+    // client-supplied.
     public function canBudget(User $user, int $categoryId): bool
     {
         return array_key_exists($categoryId, $this->expenseCategories($user));

@@ -10,6 +10,7 @@ the operational notes a reader needs to extend or debug it safely.
 | Module | What it does | Deep dives |
 |---|---|---|
 | [`auth`](auth/architecture.md) | Per-user authentication, recovery codes, owner-resets-partner, the no-SMTP password-reset posture | [architecture](auth/architecture.md) · [code](auth/code.md) · [specs](auth/specs.md) · [tests](auth/how-to-test.md) |
+| [`budgets`](budgets/architecture.md) | Zero-based envelope budgeting — genesis-to-target carryover fold, move-money between envelopes, per-envelope over-budget nudges | [architecture](budgets/architecture.md) |
 | [`categorization`](categorization/architecture.md) | Rule-based classifier + per-user merchant memory, the seeded default-rule corpus, the receipt-vs-statement conflict resolver | [architecture](categorization/architecture.md) · [code](categorization/code.md) · [specs](categorization/specs.md) · [tests](categorization/how-to-test.md) |
 | [`chains`](chains/architecture.md) | Cross-source funding chains — PayPal funding (deterministic + ASN-direct + fuzzy) + ICS bulk-iDEAL settlement, the chain-links ledger and review queue | [architecture](chains/architecture.md) · [code](chains/code.md) · [specs](chains/specs.md) · [tests](chains/how-to-test.md) |
 | [`community`](community/architecture.md) | Bundled YAML corpus + crowd-sourced merchant identification, the suggest-mapping GitHub Compare flow, the github.com-only OpenExternalUrlAction | [architecture](community/architecture.md) · [code](community/code.md) · [specs](community/specs.md) · [tests](community/how-to-test.md) |

@@ -10,8 +10,6 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Models\Category;
 
 /**
- * A monthly spending budget for one (user, category).
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $category_id

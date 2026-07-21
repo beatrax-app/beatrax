@@ -10,28 +10,14 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\EnvelopeMoveRow;
 use Modules\Ledger\Public\Dto\Period;
 
-/**
- * Read model over the append-only `envelope_moves` ledger (D-02/D-19),
- * mirroring `Modules\Pots\Public\Services\PotBalanceQuery`'s SUM-at-read
- * discipline: there is no stored balance column anywhere — a category's
- * `net_moved` for a period is always `SUM(amount_minor)` over its own rows
- * for that period, derived fresh on every read.
- *
- * Every method takes an explicit `$userId`/`$user` and filters `WHERE
- * user_id = ?` before anything else — no reliance on a global UserScope for
- * this cross-module Public service (T-13.2-03-01, mirrors PotBalanceQuery /
- * BudgetProgressQuery precedent).
- */
+// Read model over the append-only envelope_moves ledger, mirroring
+// PotBalanceQuery's SUM-at-read discipline: there is no stored balance
+// column anywhere -- a category's net_moved for a period is always
+// SUM(amount_minor) over its own rows, derived fresh on every read.
 final class EnvelopeBalanceQuery
 {
     public function __construct(private readonly DatabaseManager $db) {}
 
-    /**
-     * Returns the signed `SUM(amount_minor)` for one envelope's own
-     * `envelope_moves` rows in one period — CarryoverQuery's `netMoved`
-     * input (D-05: `available = assigned + carried_in + net_moved - spent`).
-     * Returns 0 when no move rows exist for the (user, category, period).
-     */
     public function netMoved(int $userId, int $categoryId, Period $period): int
     {
         $value = $this->db->connection()
@@ -45,16 +31,6 @@ final class EnvelopeBalanceQuery
     }
 
     /**
-     * Returns up to `$limit` of this envelope's own moves for one period,
-     * newest-first, feeding the per-envelope recent-moves + undo UI (D-19).
-     *
-     * `direction` is derived from `kind` ('move_in' => 'in', 'move_out' =>
-     * 'out'). `counterpartCategoryName` is resolved via a permitted category
-     * read (`user_id IS NULL OR user_id = ?`, mirroring `BudgetProgressQuery`
-     * /`PotBalanceQuery`'s cross-user category-visibility guard) — every
-     * envelope move has a real counterpart category (D-02, NOT NULL +
-     * cascadeOnDelete), so this is never null for a live row.
-     *
      * @return list<EnvelopeMoveRow>
      */
     public function recentMovesFor(int $userId, int $categoryId, Period $period, int $limit = 10): array
@@ -109,18 +85,10 @@ final class EnvelopeBalanceQuery
         return $result;
     }
 
+    // Batched variant of recentMovesFor(): loads up to $limit recent moves
+    // for many categories in ONE query, avoiding the N+1 of calling
+    // recentMovesFor() once per envelope on every render.
     /**
-     * Batched variant of `recentMovesFor()` (IN-01): loads up to `$limit`
-     * recent moves for MANY categories in ONE query, bucketed by category id
-     * in PHP — the same shape CarryoverQuery's batchAssignments/batchMoves use.
-     * Avoids the N+1 of calling `recentMovesFor()` once per envelope on every
-     * render.
-     *
-     * Every returned category id (including one with no moves) maps to a
-     * possibly-empty list, so callers can index the result directly. Per-
-     * category ordering and `$limit` semantics mirror `recentMovesFor()`
-     * exactly (newest-first by created_at then id, capped in PHP).
-     *
      * @param  list<int>  $categoryIds
      * @return array<int, list<EnvelopeMoveRow>> category_id => recent moves
      */

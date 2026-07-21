@@ -10,11 +10,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Models\Category;
 
 /**
- * A per-(user, category) envelope setting. Holds `overspend_mode` (D-03):
- * 'reduce_to_budget' | 'carry_negative', and the D-20 over-budget notify
- * threshold `threshold_percent` (nullable — null means "use the default",
- * `CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT`). Both settings' lifetime
- * is the envelope, not any month.
+ * @link ../../../.docs/features/budgets/architecture.md
  *
  * @property int $id
  * @property int $user_id
