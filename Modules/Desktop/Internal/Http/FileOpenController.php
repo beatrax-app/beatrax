@@ -9,38 +9,7 @@ use Illuminate\Http\Response;
 use Modules\Desktop\Internal\Native\FileOpenIntake;
 
 /**
- * HTTP entry point for an OS file-open intent that arrives via the
- * Electron main process.
- *
- * The published Electron project (`nativephp/electron/src/main/index.js`)
- * POSTs the file path to this route when:
- *
- *   - cold-start argv parsing finds a `.csv` / `.eml` path (Windows / Linux),
- *   - `app.on('second-instance')` fires with such a path on the
- *     running instance.
- *
- * The macOS `app.on('open-file')` path is handled by NativePHP's own
- * plugin, which fires a Laravel `\Native\Desktop\Events\App\OpenFile`
- * event — `HandleNativeOpenFile` subscribes and feeds the same
- * `FileOpenIntake`. Both paths converge on one validation boundary.
- *
- * Security:
- *
- *   - The route sits behind `['web']` only — NOT `auth`. A file-open
- *     received while the user is logged out must still reach the
- *     intake so the pending-intent flow can save it across the login
- *     round-trip (D-04). The intake itself rejects malicious / unknown
- *     paths before any work is done.
- *   - CSRF protection from the `web` middleware group protects the
- *     route from a forged cross-origin POST (T-15-11). The Electron
- *     main process is the only legitimate caller and runs in-process
- *     against the loopback PHP server.
- *   - The controller does NOT execute the path, read it directly, or
- *     pass it to a shell. It hands the string to `FileOpenIntake`,
- *     which canonicalises, allow-lists, size-limits, and emits — or
- *     rejects silently.
- *
- * Constructor DI: the intake collaborator is injected; no facade calls.
+ * @link ../../../../.docs/features/desktop/architecture.md
  */
 final class FileOpenController
 {
