@@ -14,31 +14,17 @@ use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
 
 /**
- * Settings section (mobile) for cold-start biometric unlock — enable/disable.
- *
- * Enrollment is PIN-rooted (Decision: PIN floor): enabling requires the user
- * to re-enter their PIN NOW, which both confirms intent and yields the live
- * data key that gets wrapped into the enclave. Disabling clears the enclave
- * entry. The section only functions on a biometric-capable build (the vault is
- * unavailable on web/desktop → the row shows an empty-state and no toggle).
- *
- * Mirrors `Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection`'s
- * structure (Validate attrs, method-DI actions, flash message) and the
- * calm-slate visual contract.
+ * @link ../../../../../.docs/features/mobile/architecture.md
  */
 final class ColdStartBiometricSettingsSection extends Component
 {
-    /** Whether cold-start biometric unlock is currently enrolled. */
     public bool $enrolled = false;
 
-    /** Whether the enclave-backed vault is available on this build/device. */
     public bool $available = false;
 
-    /** PIN entered to authorize enable (4–10 digits). */
     #[Validate('nullable|regex:/^[0-9]{4,10}$/')]
     public string $pin = '';
 
-    /** Rose-tinted status/error line shown above the row. */
     public string $flashMessage = '';
 
     public function mount(
@@ -50,9 +36,6 @@ final class ColdStartBiometricSettingsSection extends Component
         $this->enrolled = $this->available && $enrollment->isEnrolled($currentUser->id());
     }
 
-    /**
-     * Enable: re-verify the PIN and wrap the live data key into the enclave.
-     */
     public function enable(
         CurrentUser $currentUser,
         ColdStartEnrollmentService $enrollment,
@@ -87,9 +70,6 @@ final class ColdStartBiometricSettingsSection extends Component
         $this->enrolled = true;
     }
 
-    /**
-     * Disable: clear the enclave entry and reset the enrollment flag.
-     */
     public function disable(
         CurrentUser $currentUser,
         ColdStartEnrollmentService $enrollment,

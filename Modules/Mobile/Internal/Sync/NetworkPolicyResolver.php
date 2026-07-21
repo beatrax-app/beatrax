@@ -9,37 +9,16 @@ use Native\Mobile\Facades\Network;
 use RuntimeException;
 
 /**
- * D-09/D-10 mobile network policy: sync on ANY network by default (D-09,
- * including cellular), unless the user has explicitly enabled "Pause sync
- * on cellular" (D-10, default OFF). Mirrors `RelayConfig`'s file-backed
- * read/write shape (15-PATTERNS.md §NetworkPolicyResolver) — never `.env`.
- *
- * Wraps `nativephp/mobile-network`'s `Network::status()` behind ONE
- * class_exists()-guarded call so `LanSyncClient`/`MobileSyncTriggerService`
- * consult a single policy object rather than touching the native facade
- * directly — mirrors how `RelayClient` consults `RelayConfig`, never reads
- * `relay.json` itself. `nativephp/mobile-network` is present under
- * `mobile-app/vendor/` (the on-device Composer root) but NOT under the
- * repo-root `vendor/` the host test/CI toolchain runs against — the
- * class_exists() guard is load-bearing, not defensive boilerplate.
+ * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class NetworkPolicyResolver
 {
-    /** Sub-path within appPath() for the D-10 toggle file. */
     private const string CONFIG_SUB = 'mobile/network-policy.json';
 
-    /**
-     * Whether a sync tick should proceed right now, per D-09/D-10.
-     *
-     * D-09: sync on ANY network by default, including cellular.
-     * D-10: when "pause on cellular" is enabled AND the current connection
-     * is positively confirmed as expensive/cellular, skip.
-     *
-     * Defaults to "sync now" whenever the current connection type cannot be
-     * positively confirmed (native plugin unavailable, status() returns
-     * null, or the field is absent) — the pause gate only fires on a
-     * positive cellular/expensive signal, never on ambiguity.
-     */
+    // Sync on any network by default, including cellular, unless the
+    // pause-on-cellular toggle is enabled AND the current connection is
+    // positively confirmed as expensive/cellular. Defaults to "sync now"
+    // whenever the connection type cannot be positively confirmed.
     public function shouldSyncNow(): bool
     {
         if (! $this->pauseOnCellular()) {
@@ -49,11 +28,6 @@ final class NetworkPolicyResolver
         return ! $this->isCurrentConnectionExpensive();
     }
 
-    /**
-     * Whether the D-10 "Pause sync on cellular" toggle is enabled.
-     *
-     * Absent file / absent key = OFF (D-10 default: sync everywhere).
-     */
     public function pauseOnCellular(): bool
     {
         $path = UserDataPathService::appPath(self::CONFIG_SUB);
@@ -76,10 +50,6 @@ final class NetworkPolicyResolver
     }
 
     /**
-     * Persist the D-10 toggle to `mobile/network-policy.json`. Never
-     * `.env` — mirrors `RelayConfig::setEndpointUrl()`'s file-backed write
-     * shape (mkdir 0700 → write with LOCK_EX).
-     *
      * @throws RuntimeException on an I/O failure.
      */
     public function setPauseOnCellular(bool $enabled): void
@@ -101,11 +71,8 @@ final class NetworkPolicyResolver
         }
     }
 
-    /**
-     * Reads the current connection status via `nativephp/mobile-network`,
-     * class_exists()-guarded so tests / plain web / desktop contexts never
-     * fatal (RESEARCH.md's cross-cutting native-facade discipline).
-     */
+    // class_exists()-guarded so tests/plain web/desktop contexts never
+    // fatal.
     private function isCurrentConnectionExpensive(): bool
     {
         if (! class_exists(Network::class)) {
@@ -113,11 +80,9 @@ final class NetworkPolicyResolver
         }
 
         $status = Network::status();
-        // `Native\Mobile\Facades\Network` is not installed in this
-        // toolchain's Composer root (only mobile-app/vendor has it — see
-        // the class_exists() guard above), so its return type cannot be
-        // resolved statically here; narrow the resulting `mixed` via
-        // is_object() rather than a bare null check.
+        // The facade is not installed in this toolchain's Composer root,
+        // so its return type cannot be resolved statically here; narrow
+        // the resulting `mixed` via is_object() rather than a bare null check.
         if (! is_object($status)) {
             return false;
         }

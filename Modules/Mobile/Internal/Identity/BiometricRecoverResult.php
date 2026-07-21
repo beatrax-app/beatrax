@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Identity;
 
 /**
- * Outcome of a {@see BiometricKeyVault::recover()} attempt.
- *
- * Models the platform split from the spike: iOS resolves synchronously
- * (`recovered` carries the data key inline), Android resolves asynchronously
- * (`pendingAsync` — the key arrives later via the `BiometricVault.Recovered`
- * event, which `MobileLockScreen` listens for). The remaining statuses let the
- * caller distinguish "user cancelled / failed" (stay put, use PIN) from
- * "nothing enrolled" (silent) from "not on a biometric-capable build".
+ * @see BiometricKeyVault::recover()
+ * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class BiometricRecoverResult
 {
@@ -22,10 +16,10 @@ final class BiometricRecoverResult
 
     public const CANCELED = 'canceled';
 
-    /** Biometric authentication actively FAILED (wrong finger, lockout) or a
-     *  transient native error — distinct from MISSING (nothing enrolled). The
-     *  device IS enrolled; the caller must stay put and offer the PIN, never
-     *  conclude "no cold-start credential exists". */
+    // Biometric authentication actively failed (wrong finger, lockout) or
+    // a transient native error - distinct from MISSING (nothing
+    // enrolled). The device IS enrolled; the caller must stay put and
+    // offer the PIN, never conclude "no cold-start credential exists".
     public const FAILED = 'failed';
 
     public const MISSING = 'missing';

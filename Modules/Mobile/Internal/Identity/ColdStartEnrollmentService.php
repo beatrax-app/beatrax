@@ -8,17 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Services\MobileLockGateway;
 
 /**
- * Orchestrates cold-start biometric enrollment / disable on mobile.
- *
- * Enrollment is opt-in and PIN-rooted (Decision: the PIN remains the
- * enrollment root even though biometric becomes the unlock root): the user
- * must re-enter their PIN, which both proves knowledge AND yields the live
- * data key to wrap into the enclave-gated vault. Disable clears the enclave
- * entry so a stale blob can never recover a key.
- *
- * Uses only Public seams: {@see MobileLockGateway} (Auth Public) for the PIN
- * re-verification + the enrollment flag, and {@see BiometricKeyVault} (same
- * module) for the enclave. It never touches Auth internals or the DB directly.
+ * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class ColdStartEnrollmentService
 {
@@ -27,13 +17,10 @@ final class ColdStartEnrollmentService
         private readonly MobileLockGateway $gateway,
     ) {}
 
-    /**
-     * Enable cold-start biometric unlock: re-verify the PIN to obtain the live
-     * data key, store its biometric-wrapped copy in the enclave, and record the
-     * enrollment. Returns false when the vault is unavailable (not a
-     * biometric-capable build), the PIN is wrong, or the native store fails —
-     * in every failure case NOTHING is enrolled.
-     */
+    // Re-verifies the PIN to obtain the live data key, stores its
+    // biometric-wrapped copy in the enclave, and records the enrollment.
+    // Returns false when the vault is unavailable, the PIN is wrong, or
+    // the native store fails - in every failure case nothing is enrolled.
     public function enroll(int $userId, string $pin, Session $session): bool
     {
         if (! $this->vault->isAvailable()) {
@@ -48,9 +35,8 @@ final class ColdStartEnrollmentService
         }
 
         $ok = $this->vault->enroll($dataKey);
-        // Zero the live data-key copy once it has been wrapped into the enclave
-        // (the caller contract on PinVerificationService::verify / the
-        // AppLockPassphraseChanged SECURITY note).
+        // Zero the live data-key copy once it has been wrapped into the
+        // enclave.
         sodium_memzero($dataKey);
 
         if (! $ok) {
@@ -62,19 +48,12 @@ final class ColdStartEnrollmentService
         return true;
     }
 
-    /**
-     * Disable cold-start biometric unlock: clear the enclave entry and reset
-     * the enrollment flag. Idempotent and safe to call when not enrolled.
-     */
     public function disable(int $userId): void
     {
         $this->vault->clear();
         $this->gateway->markColdStartEnrolled($userId, false);
     }
 
-    /**
-     * True when the user currently has a cold-start biometric enrollment.
-     */
     public function isEnrolled(int $userId): bool
     {
         return $this->gateway->isColdStartEnrolled($userId);

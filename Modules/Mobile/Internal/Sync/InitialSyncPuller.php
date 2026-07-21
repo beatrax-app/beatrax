@@ -15,48 +15,7 @@ use Modules\Sync\Public\Services\HistoryReprojector;
 use Psr\Log\LoggerInterface;
 
 /**
- * Idempotent, resumable full-history initial-sync pull (R5 / D-03 / D-04,
- * MOBILE-01/MOBILE-02).
- *
- * `pull()` drives ONE bounded step of the Plan 05 transport
- * (`MobileSyncTriggerService::syncOnce()`, KEK-gated, LAN-then-relay) and,
- * after that step, persists the durable `mobile_sync_progress` cursor
- * (records_applied / records_expected / last_hlc_l / last_hlc_c / phase) —
- * NEVER a Livewire property or session value alone (RESEARCH Pattern 3 /
- * Pitfall 5). A cold-started process (an app-kill mid-pull, or the first-
- * attempt iOS Local Network Privacy denial from Plan 05) re-instantiates
- * this class with zero in-memory state and resumes exactly where the
- * durable cursor left off.
- *
- * ## Progress bookkeeping (watermark-resumed, no new dedup logic)
- *
- * Rather than trusting `syncOnce()`'s opaque bool alone for progress
- * display, `pull()` recomputes the TRUE local applied-count on every step
- * via `PeerCatchUpExchanger::opsAfterWatermark()` — the exact same
- * watermark-scoped local-op query the wire protocol itself uses — read
- * against the cursor's OWN persisted `last_hlc_l`/`last_hlc_c` (not the
- * device's write-only `hlc_clock_state`). This rides the op-log's existing
- * HLC-ordered, idempotent-on-replay storage (`OpLogReplayer`/
- * `SyncSession::receiveOps()`, unchanged) for correctness — no new
- * dedup/resume logic is invented here; a repeated `pull()` call over
- * already-counted entries advances nothing, because the watermark only
- * ever moves forward.
- *
- * `syncOnce() === true` is the sole completion signal: it means the FULL
- * bidirectional `PeerCatchUpExchanger` exchange (both `CATCH_UP_COMPLETE`
- * messages) finished in that step, so whatever is locally applied at that
- * moment IS the final `records_expected` (the phone has no way to learn
- * the peer's total record count ahead of a completed exchange — the wire
- * protocol carries only a per-response `frame_count`, not a running total).
- * `syncOnce() === false` (retryable) or `null` (KEK-absent, RESEARCH
- * Anti-Pattern #3 — skip, never cache the key) leave the cursor's
- * `records_expected` as a monotonically-growing best-effort estimate so
- * the UI's percent never regresses.
- *
- * All progress math is plain integers (no float).
- *
- * @internal Plan 08 — read by `SetupProgressScreen`. Already forward-
- *           registered by the Plan 01 `MobileServiceProvider`.
+ * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class InitialSyncPuller
 {
@@ -72,12 +31,9 @@ final class InitialSyncPuller
         private readonly LoggerInterface $logger,
     ) {}
 
+    // Safe to call repeatedly (e.g. from a Livewire wire:poll tick) -
+    // once phase reaches complete this is a cheap idempotent no-op.
     /**
-     * Run ONE bounded pull step for $userId and persist the durable cursor.
-     *
-     * Safe to call repeatedly (e.g. from a Livewire `wire:poll` tick) —
-     * once `phase` reaches `complete` this is a cheap idempotent no-op.
-     *
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string}
      */
     public function pull(
@@ -88,16 +44,13 @@ final class InitialSyncPuller
     ): array {
         $identity = $this->identityLoader->load($userId, $session);
         if ($identity === null) {
-            // RESEARCH Anti-Pattern #3: locked / no KEK / sync never enabled
-            // — skip entirely. Data stays encrypted; the cursor is left
-            // untouched (never advance progress on an attempt that never
-            // happened).
+            // Locked / no key / sync never enabled - skip entirely. Data
+            // stays encrypted; the cursor is left untouched.
             return $this->progress($userId);
         }
 
         $peerDeviceId = $this->resolvePeerDeviceId($userId, $identity->deviceId);
         if ($peerDeviceId === null) {
-            // No confirmed peer yet — nothing to pull from.
             return $this->progress($userId);
         }
 
@@ -110,7 +63,8 @@ final class InitialSyncPuller
         $result = $this->trigger->syncOnce($userId, $session, $lanHost, $lanPort);
 
         if ($result === null) {
-            // KEK became unavailable mid-flow (race) — skip, no mutation.
+            // The key became unavailable mid-flow (race) - skip, no
+            // mutation.
             return $this->toProgressArray($cursor);
         }
 
@@ -126,28 +80,19 @@ final class InitialSyncPuller
 
         $keysInstalled = $this->keyringIsNonEmpty($userId);
 
-        // Phase 15 import-join (Task 4, O1): the FIRST pull() step to observe
-        // a non-empty GDK keyring (the desktop's delivered epochs — possibly
-        // just installed by THIS step's LanSyncClient post-catch-up receive
-        // leg) re-projects the entire persisted op-log so any entry that
-        // arrived (and was quarantined gdk_decrypt_failed) BEFORE the keyring
-        // was populated now decrypts and projects. Runs at most once per
-        // (user, peer) cursor (reprojected_at guards the repeat), synchronously
-        // INLINE before phase is allowed to read 'complete'.
+        // The FIRST pull() step to observe a non-empty keyring re-projects
+        // the entire persisted op-log so any entry quarantined before the
+        // keyring was populated now decrypts and projects. Runs at most
+        // once per (user, peer) cursor, synchronously before completion.
         $reprojectedAt = $cursor['reprojected_at'];
         if ($reprojectedAt === null && $keysInstalled) {
             try {
                 $this->reprojector->reproject($userId);
                 $reprojectedAt = $this->clock->now()->toIso8601String();
             } catch (\Throwable $e) {
-                // LOW-02 (15-import-join-REVIEW.md): a re-projection failure
-                // must NOT crash the setup-screen poll. Log and leave
-                // reprojected_at NULL; completion stays gated on it below, so
-                // the next pull() retries (graceful degradation, matching the
-                // rest of the delivery path). NOTE: no hard attempt cap — a
-                // genuinely un-projectable entry keeps setup blocking with
-                // logged errors rather than crash-looping; a bounded cap would
-                // need a dedicated cursor column (deferred).
+                // A re-projection failure must not crash the setup-screen
+                // poll. Log and leave reprojected_at null; completion
+                // stays gated on it below, so the next pull() retries.
                 $this->logger->error('InitialSyncPuller: history re-projection failed; will retry on the next pull.', [
                     'user_id' => $userId,
                     'exception' => $e,
@@ -155,14 +100,10 @@ final class InitialSyncPuller
             }
         }
 
-        // LOW-01 (15-import-join-REVIEW.md): finishing the sync leg
-        // ($result === true) is necessary but NOT sufficient for an IMPORT —
-        // 'complete' also requires the desktop's epochs INSTALLED
-        // ($keysInstalled) AND the history re-projected ($reprojectedAt), else
-        // a relay-only / not-yet-delivered import would report complete and
-        // land on a dashboard of gdk_decrypt_failed rows. A create-account /
-        // self-minting peer has a non-empty keyring from its OWN epoch and a
-        // cheap successful reproject, so it completes normally.
+        // Finishing the sync leg is necessary but not sufficient for an
+        // import - completion also requires the desktop's epochs
+        // installed AND the history re-projected, else a relay-only or
+        // not-yet-delivered import would report complete prematurely.
         $isComplete = $result === true && $keysInstalled && $reprojectedAt !== null;
 
         $phase = $isComplete ? 'complete' : 'pulling';
@@ -180,17 +121,10 @@ final class InitialSyncPuller
         ];
     }
 
-    /**
-     * True once `sync_encryption_state.current_epoch` is set for $userId —
-     * a plain, non-secret integer pointer (T-14-01: never key material) the
-     * SAME signal `GdkKeyringService::appendEpoch()`/`setCurrentEpoch()`
-     * writes on every successful epoch install (self-mint OR a delivered
-     * desktop wrap). Read directly via a raw table query rather than
-     * `Modules\Sync\Internal\Crypto\GdkKeyringService` — that class is
-     * off-limits to this module directly (BoundaryRule has no per-file
-     * ignore); a bare table read of a public, non-secret column crosses no
-     * module boundary.
-     */
+    // A plain, non-secret integer pointer - read directly via a raw
+    // table query rather than GdkKeyringService (off-limits to this
+    // module directly); a bare read of a public, non-secret column
+    // crosses no module boundary.
     private function keyringIsNonEmpty(int $userId): bool
     {
         $currentEpoch = $this->db->connection()
@@ -201,14 +135,10 @@ final class InitialSyncPuller
         return $currentEpoch !== null;
     }
 
+    // Reads the durable progress cursor without driving a new pull step,
+    // so a cold-started process renders at the true resumed percent on
+    // its very first paint - never a default-0 flash.
     /**
-     * Read the durable progress cursor WITHOUT driving a new pull step.
-     *
-     * `SetupProgressScreen::mount()` calls this so a cold-started process
-     * renders at the TRUE resumed percent on its very first paint — never
-     * a default-0 flash (RESEARCH Pattern 3 / Pitfall 5, UI-SPEC
-     * Copywriting).
-     *
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string}
      */
     public function progress(int $userId): array
@@ -235,12 +165,8 @@ final class InitialSyncPuller
         ];
     }
 
-    /**
-     * Resolve the single confirmed non-self peer device_id for $userId
-     * (single-household pairing, Phase 12 — mirrors
-     * `LanSyncClient::resolvePeerStaticKeyHex()`'s own "first confirmed
-     * non-self device" resolution; multi-peer selection is out of scope).
-     */
+    // Resolves the single confirmed non-self peer device_id (single-
+    // household pairing); multi-peer selection is out of scope.
     private function resolvePeerDeviceId(int $userId, string $localDeviceId): ?string
     {
         $confirmed = $this->registryService->deviceKeys($userId);
@@ -310,9 +236,8 @@ final class InitialSyncPuller
         $now = $this->clock->now()->toIso8601String();
 
         // loadOrCreateCursor() above guarantees a row already exists for
-        // this (user_id, peer_device_id) pair — a plain UPDATE, never a
-        // second insert path (UNIQUE(user_id, peer_device_id) is the
-        // one-durable-cursor-per-pair invariant, Plan 01 migration).
+        // this (user_id, peer_device_id) pair - a plain UPDATE, never a
+        // second insert path.
         $this->db->connection()
             ->table('mobile_sync_progress')
             ->where('user_id', $userId)
@@ -328,16 +253,11 @@ final class InitialSyncPuller
             ]);
     }
 
+    // Counts how many local op_log_entries rows exist strictly after
+    // ($lastHlcL, $lastHlcC), and the max (hlc_l, hlc_c) among them. A
+    // repeated call against an unchanged watermark returns 0 - the
+    // watermark only ever advances, so this never double-counts.
     /**
-     * Count how many LOCAL op_log_entries rows exist strictly after
-     * ($lastHlcL, $lastHlcC) for $userId, and the max (hlc_l, hlc_c) among
-     * them — via `PeerCatchUpExchanger::opsAfterWatermark()` (the same
-     * watermark-scoped query the wire protocol itself uses) +
-     * `TransportFramer::decode()`. A repeated call against an unchanged
-     * watermark returns 0 — the watermark only ever advances, so this
-     * never double-counts (no new dedup logic; rides the existing
-     * HLC-ordered storage).
-     *
      * @return array{0: int, 1: int, 2: int} [count, maxHlcL, maxHlcC]
      */
     private function countAppliedSince(int $userId, int $lastHlcL, int $lastHlcC): array
@@ -376,10 +296,8 @@ final class InitialSyncPuller
         ];
     }
 
-    /**
-     * Plain-integer percent, clamped [0, 100]. Returns 0 when the expected
-     * total is unknown or zero (never a division by zero, never a float).
-     */
+    // Plain-integer percent, clamped [0, 100]. Returns 0 when the
+    // expected total is unknown or zero (never a division by zero).
     private static function percentOf(int $applied, ?int $expected): int
     {
         if ($expected === null || $expected <= 0) {

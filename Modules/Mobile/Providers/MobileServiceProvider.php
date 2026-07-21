@@ -11,76 +11,39 @@ use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 
 /**
- * Single-owner provider for the Mobile module.
- *
- * CRITICAL: This provider (plus `Routes/web.php`, `Routes/console.php`, and
- * the `phpstan.neon` native-facade allow-list) is the ONLY wiring surface
- * every later Phase 15 wave needs. Plans 04-11 create the named Internal/
- * Livewire/Commands classes; this provider automatically wires them via
- * `class_exists()`-guarded blocks the moment they exist. No downstream
- * plan ever edits this file, `Routes/web.php`, `Routes/console.php`, or
- * `phpstan.neon` again — mirrors `Modules\Sync\Providers\SyncServiceProvider`'s
- * own docblock precedent (STATE [11-02]).
- *
- * Service bind inventory (by implementing plan):
- *   Plan 04: MobileFirstLaunchBootstrap (on-device migrate-on-launch, no daemon)
- *   Plan 05: LanSyncClient, NetworkPolicyResolver, MobileSyncTriggerService
- *   Plan 06: BiometricUnlockBridge, MobileLockScreen (Livewire)
- *   Plan 07: QrScanBridge, MobilePairingScan (Livewire)
- *   Plan 08: InitialSyncPuller, SetupProgressScreen (Livewire)
- *   Plan 09: MobilePullCommand (artisan command, `sync:mobile-pull`)
- *   Plan 10: SyncScreen (Livewire)
- *   15-onboarding: MobileWelcomeScreen (Livewire, first-run welcome)
- *
- * Every future class is referenced by a runtime-built FQCN string (never a
- * `use` import / `::class` literal) so this provider stays PHPStan-clean
- * before each class ships — identical idiom to `SyncServiceProvider`'s
- * `singletonIfExists()` helper, copied verbatim below.
+ * @link ../../../.docs/features/mobile/architecture.md
  */
 final class MobileServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Plan 04: on-device first-launch migration bootstrap. Stateless
-        // (wraps the console Kernel migrator), safe as a singleton.
+        // Stateless (wraps the console Kernel migrator), safe as a
+        // singleton.
         $this->singletonIfExists('Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap');
 
-        // Plan 05: sync transport + orchestration services.
         $syncNamespace = 'Modules\Mobile\Internal\Sync\\';
         foreach ([
             'LanSyncClient',
             'NetworkPolicyResolver',
             'MobileSyncTriggerService',
-            'InitialSyncPuller', // Plan 08
+            'InitialSyncPuller',
         ] as $syncClass) {
             $this->singletonIfExists($syncNamespace.$syncClass);
         }
 
-        // Plan 06: biometric-unlock native bridge.
         $this->singletonIfExists('Modules\Mobile\Internal\Identity\BiometricUnlockBridge');
-
-        // Cold-start biometric unlock vault (enclave-gated data-key recovery).
         $this->singletonIfExists('Modules\Mobile\Internal\Identity\BiometricKeyVault');
-
-        // Cold-start biometric enrollment / disable orchestration.
         $this->singletonIfExists('Modules\Mobile\Internal\Identity\ColdStartEnrollmentService');
-
-        // Plan 07: QR-scan native bridge.
         $this->singletonIfExists('Modules\Mobile\Internal\Pairing\QrScanBridge');
 
-        // Plan 09: mobile background-pull artisan command (also registered
-        // in boot() via $this->commands([...]) once it exists).
+        // Also registered in boot() via $this->commands([...]) once it
+        // exists.
         $this->singletonIfExists('Modules\Mobile\Commands\MobilePullCommand');
 
-        // At-rest key custody on the on-device runtime: route the unlocked
-        // data key through the iOS Keychain / Android Keystore
-        // (nativephp/mobile-secure-storage) instead of the plaintext session
-        // copy, overriding the Auth NullKeyCustodian default. Guarded on the
-        // mobile-runtime signal + facade availability (the plugin lives only
-        // in mobile-app/vendor) so the repo-root toolchain and the desktop
-        // bundle keep their own custody bindings. The custodian itself
-        // re-checks the same guard, so a mis-resolution degrades to
-        // pass-through rather than erroring.
+        // Routes the unlocked data key through the iOS Keychain/Android
+        // Keystore instead of the plaintext session copy, overriding the
+        // Auth NullKeyCustodian default. The custodian itself re-checks
+        // the same guard, so a mis-resolution degrades to pass-through.
         if (class_exists('Native\Mobile\Facades\SecureStorage') && getenv('NATIVEPHP_PLATFORM') !== false) {
             $this->app->singleton(
                 KeyCustodian::class,
@@ -91,10 +54,10 @@ final class MobileServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events): void
     {
-        // Cold-start biometric: invalidate the enclave blob if the app-lock
-        // data key ever rotates (oldKek !== newKek). Runtime FQCN strings +
-        // class_exists guard keep this provider clean before the class ships,
-        // mirroring SyncServiceProvider's RewrapGdkOnPassphraseChange wiring.
+        // Cold-start biometric: invalidate the enclave blob if the
+        // app-lock data key ever rotates (oldKek !== newKek). Runtime FQCN
+        // strings + class_exists guard keep this provider clean before
+        // the class ships.
         $clearListener = 'Modules\Mobile\Internal\Identity\ClearColdStartVaultOnKeyRotation';
         if (class_exists($clearListener)) {
             $events->listen('Modules\Auth\Public\Events\AppLockPassphraseChanged', [$clearListener, 'handle']);
@@ -116,11 +79,10 @@ final class MobileServiceProvider extends ServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         }
 
-        // Plans 06/07/08/10: the four mobile-only Livewire full-page
-        // screens. Registered by runtime FQCN so this provider stays
-        // PHPStan-clean before each plan ships its component; the moment
-        // the class exists it is wired to the Livewire tag Routes/web.php
-        // references by string.
+        // The mobile-only Livewire full-page screens. Registered by
+        // runtime FQCN so this provider stays PHPStan-clean before each
+        // component ships; the moment the class exists it is wired to
+        // the Livewire tag Routes/web.php references by string.
         if (class_exists(LivewireManager::class)) {
             /** @var LivewireManager $livewire */
             $livewire = $this->app->make(LivewireManager::class);
@@ -141,21 +103,17 @@ final class MobileServiceProvider extends ServiceProvider
             }
         }
 
-        // Plan 09: mobile background-pull artisan command. class_exists-
-        // guarded so the provider stays clean before Plan 09 ships it.
+        // class_exists-guarded so the provider stays clean before it
+        // ships.
         $pullCommand = 'Modules\Mobile\Commands\MobilePullCommand';
         if (class_exists($pullCommand)) {
             $this->commands([$pullCommand]);
         }
     }
 
-    /**
-     * Register a singleton for a class that may not exist yet (forward-
-     * looking wave wiring). The class name arrives as a runtime-built
-     * string so PHPStan does not fold the class_exists() guard to an
-     * impossible type. Copied verbatim from
-     * `Modules\Sync\Providers\SyncServiceProvider::singletonIfExists()`.
-     */
+    // Registers a singleton for a class that may not exist yet. The class
+    // name arrives as a runtime-built string so PHPStan does not fold the
+    // class_exists() guard to an impossible type.
     private function singletonIfExists(string $class): void
     {
         if (class_exists($class)) {
@@ -163,13 +121,10 @@ final class MobileServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Register a Livewire full-page component for a class that may not
-     * exist yet. Routed through this separate method (rather than an
-     * inline `class_exists()` check in the calling foreach loop) so
-     * PHPStan does not narrow `$fqcn` to a literal-string union over the
-     * loop's array values and fold the guard to an impossible type.
-     */
+    // Routed through this separate method (rather than an inline
+    // class_exists() check in the calling foreach loop) so PHPStan does
+    // not narrow $fqcn to a literal-string union over the loop's array
+    // values and fold the guard to an impossible type.
     private function registerLivewireComponentIfExists(LivewireManager $livewire, string $tag, string $fqcn): void
     {
         if (class_exists($fqcn)) {
