@@ -12,25 +12,12 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 
-/**
- * Inline dashboard "Fixed monthly payments" card. Sources its row set
- * from `FixedPaymentsViewQuery::topByMonthlyEquivalent` (the top six
- * approved series by absolute monthly equivalent across both expense
- * and income directions) and ships an "All series / This month only"
- * filter persisted via `#[Url(as: 'fp-filter')]` so the user's choice
- * survives page refresh and is shareable.
- *
- * Method-parameter DI on every action and on `render()` —
- * constructor injection is banned on Livewire Component subclasses by
- * phpstan-strict-rules.
- */
+// Method-parameter DI on every action and on render() — constructor
+// injection is banned on Livewire Component subclasses.
 final class FixedPaymentsCard extends Component
 {
-    /**
-     * `all` (default) or `this-month` — the dashboard tile filter.
-     * Persisted as a query-string variable so the user's choice
-     * survives reloads + is shareable via URL.
-     */
+    // `all` (default) or `this-month`. Persisted as a query-string
+    // variable so the user's choice survives reloads and is shareable.
     #[Url(as: 'fp-filter')]
     public string $filter = 'all';
 
@@ -48,10 +35,9 @@ final class FixedPaymentsCard extends Component
         $user = $currentUser->user();
 
         // Push the date filter into the query so the limit clips the
-        // matching set, not the unfiltered population. The unfiltered
-        // population could otherwise be entirely outside the current
-        // month, surfacing the "no series" empty state on a card that
-        // genuinely has rows to show.
+        // matching set, not the unfiltered population — otherwise a card
+        // with real rows to show could surface the "no series" empty
+        // state whenever the unfiltered set falls outside this month.
         $monthStart = null;
         $monthEnd = null;
         if ($this->filter === 'this-month') {

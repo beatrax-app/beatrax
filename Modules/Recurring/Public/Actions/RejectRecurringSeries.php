@@ -11,17 +11,12 @@ use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+// Rejection is permanent until the user un-rejects from the review-queue
+// tab; the detector skips rejected clusters on subsequent sweeps so a
+// rejected series never re-prompts on its own.
+
 /**
- * Promotes a recurring_series row from pending / approved /
- * cadence_changed / snoozed to rejected. Idempotent when already
- * rejected. Rejection is permanent until the user un-rejects from
- * the dedicated review-queue tab; the detector skips rejected
- * clusters on subsequent sweeps so a rejected series never
- * re-prompts on its own.
- *
- * Rejection does NOT mutate any transaction row — the
- * `noTransactionWritesFromRecurring` arch invariant covers this
- * statically.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class RejectRecurringSeries
 {

@@ -10,20 +10,13 @@ use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+// The state-machine transition carries the snoozed_until patch in its
+// $extraColumns map so the state flip and the snooze timestamp land in
+// the same row-locked transaction and audit row — the row is never
+// observed in a "future snooze date, original state" intermediate.
+
 /**
- * Promotes a pending / approved series to snoozed. The state-machine
- * transition carries the `snoozed_until` patch in its $extraColumns
- * map so the state flip and the snooze timestamp land inside the
- * same row-locked transaction and the same audit row — the row can
- * never be observed in a "future snooze date, original state"
- * intermediate.
- *
- * Idempotent when re-snoozing to the exact same target timestamp
- * (silent no-op). Cross-user invocation raises NotFoundHttpException.
- *
- * No Public event — downstream listeners narrate detected / approved /
- * rejected / cadence_flipped transitions only; snooze is a UI-only
- * deferral that downstream surfaces ignore.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class SnoozeRecurringSeries
 {

@@ -10,15 +10,7 @@ use Modules\Recurring\Models\RecurringSeries;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Promotes a rejected series back to pending so the next detector
- * sweep can re-surface it. Silent no-op when the series is not
- * currently in the rejected state (matches the ChainLink un-reject
- * pattern).
- *
- * No event is dispatched on un-reject — downstream listeners narrate
- * detected / approved / rejected / cadence_flipped transitions only.
- *
- * Cross-user invocation raises NotFoundHttpException (404).
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class UnRejectRecurringSeries
 {

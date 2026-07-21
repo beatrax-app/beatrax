@@ -20,28 +20,7 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use stdClass;
 
 /**
- * Expense-side recurring series detector.
- *
- * Reads transactions of type `expense`, `fee`, `refund` for the user
- * inside the detection window (per-user `recurring_detection_window_months`
- * with an 18-month default). Clusters rows by
- * `(counterparty_normalized, original_currency)` — original-currency
- * clustering keeps a USD subscription stable when the settled EUR
- * amount drifts with FX rate noise.
- *
- * For each cluster the detector applies a variance-tolerance filter
- * (default ±25% of the cluster median absolute amount), runs the
- * cadence inferrer, skips `irregular` cadences, and either inserts a
- * new pending series row or refreshes the metrics on an existing one.
- * Approved series whose cadence class flips through this pass are
- * transitioned to `cadence_changed` via the state machine and a
- * RecurringSeriesCadenceFlipped event is dispatched. Rejected series
- * are never touched — rejection is permanent until un-rejected from
- * the review surface.
- *
- * Occurrence rows are inserted via raw INSERT-OR-IGNORE on the
- * `(recurring_series_id, transaction_id)` UNIQUE constraint so a
- * second pass over the same fixture is idempotent.
+ * @link ../../../../.docs/features/recurring/architecture.md
  */
 final class ExpenseSeriesDetector implements SeriesDetector
 {
@@ -141,12 +120,9 @@ final class ExpenseSeriesDetector implements SeriesDetector
             $cadenceResult['cadence'],
         );
 
-        // Look up by direction + cluster_key only — the cluster_key
-        // already encodes the cadence and currency tokens, so the
-        // (user_id, direction, cluster_key, latest_currency) UNIQUE
-        // constraint is the natural seam to dedupe against. A cadence
-        // flip on an approved row will resolve here because the
-        // cluster_key tokens carry the new cadence class.
+        // cluster_key already encodes cadence + currency, so it's the
+        // natural dedupe seam; a cadence flip on an approved row resolves
+        // here since the cluster_key tokens carry the new cadence class.
         /** @var RecurringSeries|null $existingBySameCluster */
         $existingBySameCluster = RecurringSeries::query()
             ->where('user_id', $user->id)
@@ -155,13 +131,10 @@ final class ExpenseSeriesDetector implements SeriesDetector
             ->where('latest_currency', $currency)
             ->first();
 
-        // Also look for an existing row for this counterparty+currency
-        // that was created at a different cadence (so cadence-flip can
-        // be detected on the existing row instead of inserting a new
-        // one). Matches on the persisted `cluster_counterparty_key`
-        // (the normalized counterparty for the expense detector) so
-        // the seam is symmetric with the income detector and is not
-        // affected if `detected_name` is ever decorated separately.
+        // Also matches on the persisted cluster_counterparty_key so a
+        // cadence-flip is detected on the existing row rather than
+        // inserting a new one, symmetric with the income detector and
+        // unaffected if detected_name is ever decorated separately.
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
@@ -195,23 +168,18 @@ final class ExpenseSeriesDetector implements SeriesDetector
         }
 
         if ($existing->state === 'rejected') {
-            // Rejection covers the entire (counterparty, currency)
-            // pair — every cadence variant. The lookup hits via
-            // cluster_counterparty_key + latest_currency, so a
-            // freshly-clustering quarterly pattern for a merchant
-            // the user previously rejected at a monthly cadence is
-            // intentionally suppressed. The user un-rejects from the
-            // review queue to bring the merchant back; partial
-            // cadence-only un-rejection is not supported.
+            // Rejection covers the whole (counterparty, currency) pair
+            // across every cadence variant, so a freshly-clustering
+            // quarterly pattern for a merchant rejected at a monthly
+            // cadence is intentionally suppressed too.
             return;
         }
 
         if ($existing->state === 'snoozed') {
-            // Snooze is a "hide for now" affordance; refreshing the
-            // metrics in the background would surface a different
-            // amount than the one the user paused on. The
-            // snooze-expiry pass on the next sweep flips snoozed →
-            // pending and the next normal refresh then runs.
+            // Refreshing metrics in the background would surface a
+            // different amount than the one the user paused on; the
+            // next sweep's snooze-expiry pass flips snoozed -> pending
+            // first, and normal refresh resumes after that.
             return;
         }
 
@@ -231,11 +199,9 @@ final class ExpenseSeriesDetector implements SeriesDetector
     }
 
     /**
-     * Returns the variance tolerance percent stored on an existing
-     * approved/pending/cadence_changed series for this user +
-     * counterparty + currency, or null when no such series exists yet.
-     * Used to honour user-edited tolerance values during the next
-     * sweep so a widened tolerance does not fragment the cluster.
+     * @return int|null the variance tolerance percent stored on an existing series for this
+     *                  (user, counterparty, currency), or null when none exists yet — honours user-edited
+     *                  tolerance values on the next sweep so a widened tolerance does not fragment the cluster
      */
     private function existingToleranceFor(User $user, string $counterparty, string $currency): ?int
     {
@@ -370,7 +336,6 @@ final class ExpenseSeriesDetector implements SeriesDetector
 
         $previousCadence = $series->cadence;
 
-        // Metric-style write — leaves the state column untouched.
         $connection->table('recurring_series')
             ->where('id', $series->id)
             ->update([

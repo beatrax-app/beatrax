@@ -10,16 +10,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Ledger\Models\Transaction;
 
+// Re-running the detector sweep is idempotent thanks to the
+// UNIQUE(recurring_series_id, transaction_id) schema constraint.
+
 /**
- * Eloquent model for the recurring_series_occurrences table — the per-
- * series link to the underlying transaction rows that contributed to
- * the cluster.
- *
- * Each row captures one observation along with the observed amount and
- * currency at that point in time. Re-running the detector sweep is
- * idempotent thanks to the UNIQUE(recurring_series_id, transaction_id)
- * schema constraint.
- *
  * @property int $id
  * @property int|null $user_id
  * @property int $recurring_series_id

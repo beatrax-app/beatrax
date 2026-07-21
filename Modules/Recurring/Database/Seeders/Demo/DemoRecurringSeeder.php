@@ -10,63 +10,17 @@ use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 
-/**
- * Pre-registers a set of `recurring_series` rows for the primary demo
- * user covering every lifecycle state the `/recurring` review surface,
- * the dashboard's "fixed payments" panel, and the drift-alert quiet-
- * period engine render against:
- *
- *   - Spotify Premium  — €10.99 monthly streaming   (approved)
- *   - Netflix          — €14.99 monthly streaming   (approved)
- *   - Sport City       — €25.00 monthly gym         (approved)
- *   - KPN              — €45.00 monthly bill        (approved)
- *   - Old Magazine sub — €7.50 monthly (paused)     (snoozed)
- *   - Cancelled VPN    — €4.99 monthly (cancelled)  (rejected)
- *
- * Plus an audit trail of three `recurring_series_transitions` rows
- * covering the lifecycle transitions the production state machine
- * narrates: a `missed-occurrence` snooze, an `amount-change` cadence
- * flip, and a `cadence-shift` re-detection.
- *
- * Idempotency: the table's `(user_id, direction, cluster_key,
- * latest_currency)` UNIQUE is keyed on the same tuple this seeder
- * sets, so `updateOrCreate` keyed on `(user_id, direction,
- * cluster_key, latest_currency)` reuses the existing row on a second
- * seed run. Transition rows are upserted via the
- * `(recurring_series_id, transitioned_at, transition_reason)` triple
- * as the idempotency key in code (no DB UNIQUE; append-only schema).
- *
- * State transitions normally route through the
- * `RecurringSeriesStateMachine`; the seeder lands rows already in the
- * target state because the demo data models "what an established user
- * already has on file", not "what the detector just surfaced for
- * review". The boundary arch test only blocks
- * `RecurringSeries::query()->update(['state' => …])`, never
- * `updateOrCreate`, so the seed path stays legal.
- */
+// updateOrCreate() reuses the existing row on a second seed run.
+// Transitions bypass RecurringSeriesStateMachine since the demo data
+// models a pre-established user's file, not a fresh detector surface —
+// the boundary arch test only blocks a direct state update.
 final class DemoRecurringSeeder
 {
-    /**
-     * Per-series static data — kept inline so a future "add another
-     * demo subscription" change is a one-line edit. `clusterKey` is
-     * the detector's deterministic identity for the series (the
-     * tuple of cadence + counterparty); the production detector
-     * builds it from a few raw transaction columns, the demo seeder
-     * hand-picks values that won't collide with any future detector
-     * output.
-     *
-     * Note that `recurring_series` requires Currency values to be
-     * present in the `currencies` table — the demo command seeds
-     * `EUR` via CurrenciesSeeder before reaching this step, so the
-     * FK target is guaranteed.
-     *
-     * Allowed states (DB-enforced): pending / approved / rejected /
-     * snoozed / cadence_changed. The demo set covers approved (the
-     * happy path), snoozed (user paused the series), and rejected
-     * (user cancelled the series).
-     *
-     * @var list<array{detectedName: string, displayName: string, latestAmountMinor: int, cadence: string, dayOfMonth: int, clusterKey: string, state: string}>
-     */
+    // clusterKey values are hand-picked to avoid colliding with any future
+    // real detector output. recurring_series requires Currency values
+    // present in the currencies table — the demo command seeds EUR via
+    // CurrenciesSeeder before reaching this step, so the FK target holds.
+    /** @var list<array{detectedName: string, displayName: string, latestAmountMinor: int, cadence: string, dayOfMonth: int, clusterKey: string, state: string}> */
     private const SERIES = [
         [
             'detectedName' => 'Spotify AB',
@@ -124,13 +78,9 @@ final class DemoRecurringSeeder
         ],
     ];
 
-    /**
-     * Lifecycle transitions narrated by the production state machine.
-     * Each row targets a series by its cluster_key (look-up below) so
-     * the seeder stays decoupled from auto-incremented primary keys.
-     *
-     * @var list<array{clusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}>
-     */
+    // Each row targets a series by its cluster_key so the seeder stays
+    // decoupled from auto-incremented primary keys.
+    /** @var list<array{clusterKey: string, fromState: string, toState: string, reason: string, actor: string, ageDays: int, notes: ?string}> */
     private const TRANSITIONS = [
         [
             'clusterKey' => 'demo:nrc:monthly:750',
@@ -183,15 +133,10 @@ final class DemoRecurringSeeder
             ->count();
     }
 
-    /**
-     * Idempotently insert the demo lifecycle-transition rows. Look up
-     * each target series by cluster_key (deterministic across runs) and
-     * skip when the matching transition row is already present. The
-     * append-only schema has no DB-level UNIQUE on transitions so the
-     * seeder keys on `(recurring_series_id, transition_reason)` in
-     * application code — sufficient because the demo set carries one
-     * transition per (series, reason) tuple by design.
-     */
+    // The append-only schema has no DB-level UNIQUE on transitions, so
+    // this keys on (recurring_series_id, transition_reason) in application
+    // code — sufficient since the demo set carries one transition per
+    // (series, reason) tuple by design.
     private function upsertTransitionsForUser(User $user): void
     {
         $today = CarbonImmutable::today();

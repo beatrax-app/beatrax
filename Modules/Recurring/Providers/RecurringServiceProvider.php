@@ -39,28 +39,9 @@ use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 
-/**
- * Wires the Recurring module.
- *
- * register() binds every in-tree service as a singleton (state
- * machine, detectors, queries, Public Actions, sweep job) and tags
- * the concrete detectors under `recurring.detector` so the sweep
- * job receives them via iterable injection on `handle()`.
- *
- * boot() conditionally loads the module's migrations, routes, and
- * views, registers the four Livewire SFCs (RecurringPage,
- * RecurringReviewPage, RecurringSeriesDetailPage, FixedPaymentsCard),
- * and installs the top-nav badge composer via
- * `registerTopNavBadgeComposer()`. The badge composer injects
- * `recurringPendingCount` into `core::livewire.top-nav` through the
- * ViewFactoryContract — the global `view()` helper is forbidden by
- * project convention.
- *
- * The dashboard fixed-payments card is rendered directly via the
- * `@livewire('recurring.fixed-payments-card')` directive on the
- * dashboard view, so the provider does not register a composer for
- * it.
- */
+// The dashboard fixed-payments card is rendered directly via the
+// @livewire('recurring.fixed-payments-card') directive on the dashboard
+// view, so this provider registers no composer for it.
 final class RecurringServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -77,25 +58,10 @@ final class RecurringServiceProvider extends ServiceProvider
             IncomeSeriesDetector::class,
         ], 'recurring.detector');
 
-        // Bind DetectRecurringSeriesJob::handle()'s resolution explicitly.
-        // The method takes `iterable $detectors`, which Container::call
-        // cannot auto-resolve (iterable is the pseudo-type Traversable|
-        // array with no class to instantiate; contextual class-bindings
-        // do not fire for method calls). Both the sync queue driver
-        // (used in tests) and the database queue worker (production)
-        // dispatch via Dispatcher::dispatchNow → Container::call, so
-        // binding the method here covers every dispatch path.
-        //
-        // CRYPT-01 (14.1-08): Session/AppLockKeyService/
-        // EncryptionMigrationService are resolved here too, so BOTH real
-        // dispatch origins (RecurringPage::reDetect()'s dispatchSync AND
-        // the routes/console.php daily scheduler's queued dispatch) reach
-        // handle() with their true per-run context — a request has an
-        // unlocked Session (KEK present); the queue worker's Session was
-        // never unlocked (KEK absent). LoggerInterface is resolved here
-        // too so the KEK-absence warning actually reaches the log in
-        // production (previously unwired — bare `handle()` test callers
-        // are unaffected since all four new parameters are nullable).
+        // Bind handle()'s resolution explicitly: it takes `iterable
+        // $detectors`, which Container::call cannot auto-resolve. The extra
+        // args let both real dispatch origins reach handle() with their
+        // true per-run context (see DetectRecurringSeriesJob's @link).
         $this->app->bindMethod(
             [DetectRecurringSeriesJob::class, 'handle'],
             static function (DetectRecurringSeriesJob $job, Container $c): void {
@@ -148,17 +114,10 @@ final class RecurringServiceProvider extends ServiceProvider
         $this->registerTopNavBadgeComposer();
     }
 
-    /**
-     * Inject the top-nav `Recurring` pending-suggestion count into
-     * `core::livewire.top-nav` via the View Factory contract.
-     *
-     * The contract is resolved through `$this->app->make()` to keep
-     * the DI-only invariant visible at the call site; the global
-     * `view()` helper is forbidden in module code.
-     *
-     * The composer only fires when the top-nav view actually renders,
-     * meaning at most once per HTTP request that surfaces the nav.
-     */
+    // Resolved through $this->app->make() to keep the DI-only invariant
+    // visible at the call site; the global view() helper is forbidden.
+    // The composer only fires when the top-nav view actually renders, at
+    // most once per HTTP request that surfaces the nav.
     private function registerTopNavBadgeComposer(): void
     {
         $app = $this->app;
