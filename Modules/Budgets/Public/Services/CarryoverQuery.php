@@ -17,66 +17,20 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Psr\Log\LoggerInterface;
 
 /**
- * The genesis-to-target iterative fold — the one genuinely new algorithm in
- * Phase 13.2 (D-08/D-09/D-10). Walks every period from the user's envelope-
- * activation genesis anchor (`users.envelope_activated_at`) forward to the
- * requested target period, carrying forward exactly two pieces of running
- * state: a single unassigned pool (`poolCarry`) and a per-category
- * `carriedIn` map. Every input (assignments, moves, settings, spend, income)
- * is read fresh from current ledger state on every call — nothing is
- * persisted or incrementally mutated, which is what makes re-running an
- * unchanged import (or editing/splitting a past transaction) idempotent by
- * construction (Req 9).
- *
- * D-12a (implicit envelopes): every live expense category is iterated every
- * period — via `BudgetProgressQuery::expenseCategories()` — never just the
- * categories that happen to have an `envelope_assignments`/`envelope_settings`
- * row, so an unassigned-but-spending category still surfaces as an overspent
- * €0-assigned envelope instead of silently vanishing (Pitfall 5).
- *
- * D-12b (genesis): when `envelope_activated_at` is null (pre-cutover), this
- * returns an all-zero result rather than walking from account inception.
- *
- * D-12c (horizon): the walk is bounded `genesis..min(target, current+12)` —
- * it never walks further into the future than 12 periods past "now", closing
- * the unbounded-past/future-walk DoS surface (T-13.2-03-03).
- *
- * Every read carries an explicit `WHERE user_id = ?` (T-13.2-03-01) — no
- * reliance on a global UserScope for this cross-module Public service.
- *
- * NOTE on memoization: this class is bound as a request-lifetime singleton
- * (`BudgetsServiceProvider`) so the grid, the sticky to-budget header, and
- * the dashboard glance card share one container instance per HTTP request.
- * It deliberately does NOT cache fold results across separate calls to
- * `forUserAndPeriod()` keyed only by (userId, targetPeriodStart): the
- * Wave 0-pinned `CarryoverQueryTest`/`CarryoverQueryOverspendTest` suites
- * interleave writes (assign/unassign/toggle-overspend-mode) with repeated
- * reads of the SAME (user, period) via the SAME container instance, and a
- * literal instance-property cache would silently serve stale figures after
- * those writes — a correctness regression Req 9 (idempotent LIVE recompute)
- * exists specifically to prevent. Every call is a fresh, pure, request-scoped
- * fold over current data (batch-loaded per table, not per period); the
- * "memoized per request" property of D-09 is satisfied by the fold being
- * inexpensive and bounded (genesis..current+12), not by an unsafe result
- * cache. See 13.2-03-SUMMARY.md for the full rationale.
+ * @link ../../../../.docs/features/budgets/architecture.md
  */
 final class CarryoverQuery
 {
     private const CURRENCY = 'EUR';
 
-    /**
-     * D-20: the default over-budget notify threshold (percent) for an envelope
-     * with no explicit `envelope_settings.threshold_percent`. Single source of
-     * the default — the effective value is resolved here and surfaced on
-     * `EnvelopeRow::$notifyThresholdPercent`, which plan 18-07's nudge job
-     * reads already-resolved. Unrelated to any bar-colour bucket.
-     */
+    // The default over-budget notify threshold (percent) for an envelope
+    // with no explicit envelope_settings.threshold_percent. Single source
+    // of the default -- surfaced on EnvelopeRow::$notifyThresholdPercent,
+    // which the nudge job reads already-resolved.
     public const DEFAULT_NOTIFY_THRESHOLD_PERCENT = 90;
 
-    /** D-12c: future horizon bound, in periods past "now". */
     private const FUTURE_HORIZON_PERIODS = 12;
 
-    /** Defensive cap on the number of periods a single fold will walk (T-13.2-03-03). */
     private const MAX_WALK_PERIODS = 1000;
 
     public function __construct(
@@ -97,7 +51,7 @@ final class CarryoverQuery
         $genesisInstant = $this->genesisAnchorFor($user);
 
         if ($genesisInstant === null) {
-            // D-12b: no envelope activation yet — every period is
+            // No envelope activation yet -- every period is
             // genesis-equivalent; nothing to fold over.
             return ['toBudgetMinor' => 0, 'overspentCount' => 0, 'rows' => []];
         }
@@ -114,9 +68,8 @@ final class CarryoverQuery
             $targetBounded = $maxPeriod;
         }
         if ($targetBounded->start->lessThan($genesisPeriod->start)) {
-            // Nothing before genesis (D-12b) — clamp the walk to genesis
-            // itself rather than walking backwards or reading pre-activation
-            // history.
+            // Nothing before genesis -- clamp the walk to genesis itself
+            // rather than walking backwards or reading pre-activation history.
             $targetBounded = $genesisPeriod;
         }
 
@@ -144,8 +97,8 @@ final class CarryoverQuery
             $movedByCategory = $movedByPeriod[$periodKey] ?? [];
 
             // Single round trip per period (already legs ∪ unsplit-parents
-            // safe — never a fresh GROUP BY, per D-11 / the double-count
-            // trap this phase must not reintroduce).
+            // safe -- never a fresh GROUP BY that could double-count a
+            // split transaction's spend).
             $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
             $income = $this->glance->incomeForPeriod($user, $period, self::CURRENCY);
 
@@ -169,14 +122,9 @@ final class CarryoverQuery
                 $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
                 $carriedInForCategory = $carriedIn[$categoryId] ?? 0;
 
-                // CR-01: envelopes are EUR-only (D-25), but the ledger can
-                // hold settled spend in other currencies (USD Google Play, a
-                // non-EUR ICS merchant charge). Sum that dropped remainder so
-                // the grid can SURFACE it rather than vanish it. It is
-                // deliberately NOT added to $spent/$available and NOT counted
-                // as an overspend — that would be a currency collapse, which
-                // the multi-currency-from-v1 constraint forbids. This is a
-                // "there is spend not shown here" flag, not a EUR figure.
+                // Sums this category's non-EUR settled spend so the grid can
+                // surface it rather than vanish it -- see architecture.md
+                // ("nonEurSpentMinor") for why this is never folded in.
                 $nonEurSpent = 0;
                 $prefix = "{$categoryId}|";
                 foreach ($spentByKey as $key => $minor) {
@@ -196,8 +144,8 @@ final class CarryoverQuery
                 $notifyThreshold = $notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
 
                 if ($available < 0 && $mode === 'reduce_to_budget') {
-                    // D-10: default toggle resets to 0 next period and debits
-                    // the pool exactly once per overspent envelope per period.
+                    // Resets to 0 next period and debits the pool exactly
+                    // once per overspent envelope per period.
                     $shortfallMoney = $shortfallMoney->plus($availableMoney);
                     $nextCarriedIn[$categoryId] = 0;
                 } else {
@@ -239,11 +187,10 @@ final class CarryoverQuery
         }
 
         if ($result === null) {
-            // IN-02: the walk ended before reaching targetBounded — only
-            // possible if MAX_WALK_PERIODS tripped first (the target is bounded
-            // to current+12, so this is unreachable in practice). Log the
-            // anomaly rather than silently returning a wrong all-zero answer;
-            // do not throw — a degraded read is safer than a fatal budgets page.
+            // Only possible if MAX_WALK_PERIODS tripped first (unreachable
+            // in practice, since target is bounded to current+12). Log the
+            // anomaly and degrade to all-zero rather than throw -- a
+            // degraded read is safer than a fatal budgets page.
             $this->log->warning('CarryoverQuery fold hit the walk cap before reaching the target period; returning all-zero.', [
                 'user_id' => $user->id,
                 'genesis' => $genesisPeriod->start->toDateString(),
@@ -257,13 +204,9 @@ final class CarryoverQuery
         return $result;
     }
 
-    /**
-     * Resolves the per-user genesis anchor via a raw, explicitly-scoped read
-     * of `users.envelope_activated_at` (Pitfall 2 / D-12b) — read via the
-     * query builder rather than the Eloquent `User` model so this Public
-     * service never depends on `Modules\Core\Models\User` carrying a cast
-     * for a column owned by this phase's migration.
-     */
+    // Reads via the query builder rather than the Eloquent User model so
+    // this Public service never depends on Modules\Core\Models\User
+    // carrying a cast for a column owned by this module's migration.
     private function genesisAnchorFor(User $user): ?CarbonImmutable
     {
         $raw = $this->db->connection()
@@ -301,10 +244,6 @@ final class CarryoverQuery
     }
 
     /**
-     * Batch-loads every `envelope_assignments` row across the whole
-     * genesis..target range in ONE query, bucketed by period in PHP
-     * (RESEARCH.md performance shape — never one query per period per table).
-     *
      * @return array<string, array<int, int>> "Y-m-d" period_start => category_id => assigned_minor
      */
     private function batchAssignments(User $user, Period $genesis, Period $target): array
@@ -327,9 +266,6 @@ final class CarryoverQuery
     }
 
     /**
-     * Batch-loads `SUM(amount_minor) GROUP BY period_start, category_id`
-     * across the whole genesis..target range in ONE query.
-     *
      * @return array<string, array<int, int>> "Y-m-d" period_start => category_id => net_moved_minor
      */
     private function batchMoves(User $user, Period $genesis, Period $target): array
@@ -355,12 +291,6 @@ final class CarryoverQuery
     }
 
     /**
-     * Reads every `envelope_settings` row for the user in ONE query and
-     * returns two per-category maps: the overspend mode and the EFFECTIVE
-     * (already null-coalesced to `DEFAULT_NOTIFY_THRESHOLD_PERCENT`) over-budget
-     * notify threshold. Combined into one read so the fold never issues a
-     * second query against the same small table.
-     *
      * @return array{modes: array<int, string>, thresholds: array<int, int>}
      */
     private function envelopeSettings(User $user): array

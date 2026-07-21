@@ -9,23 +9,10 @@ use Livewire\LivewireManager;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Budgets\Public\Services\BudgetProgressQuery;
 
-/**
- * Wires the Budgets module: the read-model query as a singleton, and the
- * conditional load of migrations / routes / views plus the BudgetsPage
- * Livewire component.
- *
- * CRITICAL: This provider is the SOLE owner of every Phase 13.2 envelope
- * binding (mirrors the Phase 11 SyncServiceProvider single-owner
- * precedent). Downstream plans never edit this file — their classes are
- * wired here behind `class_exists()` guards, referenced by runtime-built
- * FQCN string so this provider stays parseable and PHPStan-clean before
- * those classes exist.
- *
- * Envelope binding inventory (by implementing plan):
- *   Plan 03: CarryoverQuery (singleton, D-09 request-scoped memoization)
- *   Plan 07: EnvelopeGlanceCard Livewire component
- *   (EnvelopeWriter is a plain autowired service — no singleton needed.)
- */
+// This provider is the sole owner of every envelope-budgeting binding.
+// Classes are wired behind class_exists() guards, referenced by
+// runtime-built FQCN string, so this provider stays parseable and
+// PHPStan-clean even when referenced classes don't exist yet.
 final class BudgetsServiceProvider extends ServiceProvider
 {
     private const CARRYOVER_QUERY_CLASS = 'Modules\Budgets\Public\Services\CarryoverQuery';
@@ -36,8 +23,8 @@ final class BudgetsServiceProvider extends ServiceProvider
     {
         $this->app->singleton(BudgetProgressQuery::class);
 
-        // Plan 03 injection point: CarryoverQuery mirrors BudgetProgressQuery's
-        // existing singleton (D-09) so it is built at most once per request.
+        // CarryoverQuery mirrors BudgetProgressQuery's own singleton so it is
+        // built at most once per request.
         if (class_exists(self::CARRYOVER_QUERY_CLASS)) {
             $this->app->singleton(self::CARRYOVER_QUERY_CLASS);
         }
@@ -57,8 +44,8 @@ final class BudgetsServiceProvider extends ServiceProvider
 
         $livewire->component('budgets.budgets-page', BudgetsPage::class);
 
-        // Plan 07 injection point: dashboard glance-card component, mirrors
-        // GoalsServiceProvider's 'goals.summary-card' registration.
+        // Dashboard glance-card component, mirrors GoalsServiceProvider's
+        // 'goals.summary-card' registration.
         if (class_exists(self::ENVELOPE_GLANCE_CARD_CLASS)) {
             $livewire->component('budgets.envelope-glance-card', self::ENVELOPE_GLANCE_CARD_CLASS);
         }

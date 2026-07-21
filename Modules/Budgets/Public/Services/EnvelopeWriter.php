@@ -19,32 +19,7 @@ use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 
 /**
- * The single write path for zero-based envelope budgeting (Req 1/4/5/6/8).
- *
- * Mirrors PotWriter/BudgetWriter's shapes exactly, with one deliberate
- * omission: `move()` carries NO balance guard (Req 8) — a move may take the
- * source envelope negative and that is the intended, correct behavior for
- * zero-based budgeting (RESEARCH.md Pitfall 1, the highest-risk trap in this
- * phase).
- *
- * Responsibilities:
- *  - `setAssigned()`: upserts one (user, category, period) row, PK-preserving
- *    on edit (D-01). Setting the amount to zero DELETES the row rather than
- *    storing a zero (D-06 absence == 0) and dispatches a 'delete' event, not
- *    an 'edit' with value 0 — the two converge differently under per-
- *    (table,pk,field) LWW sync merge.
- *  - `move()` / `undoMove()`: a paired debit/credit row written in one DB
- *    transaction (D-02), NEVER balance-guarded. Undo hard-deletes both
- *    paired rows (mirrors the tombstone-undo precedent in
- *    TransactionDetail::reclassify).
- *  - `setOverspendMode()`: upserts one (user, category) envelope_settings row.
- *  - `copyFromPeriod()`: reproduces each prior-period assigned amount into a
- *    new period for envelopes that had one; never-assigned envelopes stay
- *    unassigned (Req 6).
- *  - Every client-supplied category id is re-validated server-side via
- *    `BudgetProgressQuery::canBudget()` before any write (IDOR — T-13.2-04-01).
- *  - Every Envelope*Mutated event is dispatched AFTER its DB transaction
- *    commits, never from inside it (WR-06 contract).
+ * @link ../../../../.docs/features/budgets/architecture.md
  */
 final class EnvelopeWriter
 {
@@ -58,10 +33,6 @@ final class EnvelopeWriter
     ) {}
 
     /**
-     * Set the assigned amount for (user, category, period). Upserts a row
-     * via a PK-preserving update-in-place when one already exists (D-01);
-     * setting `$minor` to 0 deletes the row instead of storing a zero (D-06).
-     *
      * @throws InvalidArgumentException category not owned/global (IDOR)
      */
     public function setAssigned(User $user, int $categoryId, CarbonImmutable $periodStart, int $minor): void
@@ -78,14 +49,10 @@ final class EnvelopeWriter
         $event = null;
 
         $this->db->connection()->transaction(function () use ($user, $categoryId, $periodDate, $minor, &$event): void {
-            // Raw query-builder reads/writes here — NOT the EnvelopeAssignment
-            // Eloquent model — deliberately: the model's `period_start` cast
-            // ('date') serializes on save() using the connection grammar's
-            // full datetime format ("Y-m-d H:i:s"), embedding a spurious
-            // "00:00:00" suffix (the exact Plan 03 CarryoverQuery pitfall).
-            // A plain-date string written here keeps period_start queryable
-            // by exact string equality and matches what assertDatabaseHas
-            // expects (Rule 1 fix — see 13.2-04-SUMMARY.md).
+            // Raw query-builder reads/writes here, NOT the EnvelopeAssignment
+            // Eloquent model -- its 'date' cast would embed a spurious
+            // "00:00:00" suffix on save(), breaking the fold's exact
+            // where('period_start', 'Y-m-d') string match (architecture.md).
             $connection = $this->db->connection();
 
             /** @var \stdClass|null $existing */
@@ -162,9 +129,6 @@ final class EnvelopeWriter
     }
 
     /**
-     * Toggle the overspend-carry behavior for (user, category) — upserts one
-     * envelope_settings row (D-03).
-     *
      * @throws InvalidArgumentException category not owned/global (IDOR), or
      *                                  an unrecognised mode
      */
@@ -229,27 +193,10 @@ final class EnvelopeWriter
         }
     }
 
+    // Server-side bounds check 1..200 -- a tampered Livewire payload cannot
+    // persist an out-of-range value even though the column is
+    // unsignedTinyInteger (which alone would reject only negative/>255).
     /**
-     * Set the D-20 over-budget notify threshold for (user, category) — upserts
-     * one envelope_settings row (the live per-envelope settings home now that
-     * `category_budgets` is write-dead post-cutover). `null` clears the
-     * explicit threshold back to "use the default"
-     * (`CarryoverQuery::DEFAULT_NOTIFY_THRESHOLD_PERCENT`).
-     *
-     * T-18-04: server-side bounds check `1..200`, mirroring
-     * `AnomalySettingsSection::save()`'s discipline — a tampered Livewire
-     * payload cannot persist an out-of-range value. The column is
-     * `unsignedTinyInteger`, so a negative or >255 value could not land even
-     * if this check were bypassed.
-     *
-     * T-18-05: the write is scoped by an explicit `user_id` predicate resolved
-     * from `$user`; the client supplies only `$categoryId`, which is
-     * re-validated against the current user via `assertCategoryAccessible()`.
-     *
-     * When no settings row exists yet, one is created carrying the D-12a
-     * default `overspend_mode` ('reduce_to_budget') alongside the threshold —
-     * an explicit default-mode row is behaviourally identical to no row.
-     *
      * @throws InvalidArgumentException category not owned/global (IDOR), or an
      *                                  out-of-range threshold
      */
@@ -316,18 +263,9 @@ final class EnvelopeWriter
         }
     }
 
-    /**
-     * Reproduce every assigned amount from `$fromPeriod` into `$toPeriod`
-     * (Req 6) — an envelope that was never assigned in `$fromPeriod` stays
-     * unassigned in `$toPeriod`. Delegates to `setAssigned()` per envelope so
-     * IDOR-guarding, PK-preservation, and event dispatch stay in one place.
-     *
-     * IN-04 precondition: this NEVER overwrites an assignment that already
-     * exists in `$toPeriod`. Any category already assigned in the target
-     * period is skipped, so calling this on a partially-assigned target is
-     * safe (the sole caller `copyLastMonth` only offers it on an empty target,
-     * but the public method no longer trusts that).
-     */
+    // Never overwrites an assignment that already exists in $toPeriod, so
+    // calling this on a partially-assigned target is safe even though the
+    // sole caller only offers it on an empty target.
     public function copyFromPeriod(User $user, Period $fromPeriod, Period $toPeriod): void
     {
         // Batch-load the target period's already-assigned categories once so
@@ -361,16 +299,6 @@ final class EnvelopeWriter
     }
 
     /**
-     * Move money between two envelopes in the same period: writes a debit
-     * row on the source (`kind: 'move_out'`) and a credit row on the target
-     * (`kind: 'move_in'`) in ONE DB transaction, sharing one timestamp
-     * (D-02). Moves never touch Σassigned / the pool — to-budget is
-     * unchanged (D-05).
-     *
-     * Deliberately carries NO balance guard (Req 8 / RESEARCH.md Pitfall 1):
-     * a move that takes the source envelope negative SUCCEEDS. No
-     * over-allocation-style exception exists anywhere in this method.
-     *
      * @return int the stable `envelope_moves.id` of the source (debit) row —
      *             pass this to `undoMove()` to reverse the whole pair
      *
@@ -395,7 +323,7 @@ final class EnvelopeWriter
         /** @var array{debitId: int, creditId: int}|null $ids */
         $ids = null;
 
-        // WR-04: one shared correlation id for both paired rows, so undoMove()
+        // One shared correlation id for both paired rows, so undoMove()
         // matches the counterpart deterministically rather than by
         // second-precision created_at.
         $groupId = (string) Str::uuid();
@@ -474,17 +402,8 @@ final class EnvelopeWriter
         return $ids['debitId'];
     }
 
-    /**
-     * Undo a move: hard-deletes BOTH paired `envelope_moves` rows (the row
-     * identified by `$moveId` plus its counterpart, matched by the shared
-     * timestamp + swapped category/counterpart + opposite-signed amount) and
-     * dispatches `EnvelopeMoveMutated('delete')` for EACH row's own pk
-     * (mirrors the tombstone-undo precedent in
-     * `TransactionDetail::reclassify`).
-     *
-     * A foreign or missing move id is a silent no-op (mirrors
-     * `PotWriter::archive`'s cross-user handling).
-     */
+    // A foreign or missing move id is a silent no-op (mirrors
+    // PotWriter::archive's cross-user handling).
     public function undoMove(User $user, int $moveId): void
     {
         $connection = $this->db->connection();
@@ -506,11 +425,10 @@ final class EnvelopeWriter
         $createdAtRaw = $row->created_at;
         $groupId = is_string($row->move_group_id) && $row->move_group_id !== '' ? $row->move_group_id : null;
 
-        // WR-04: match the paired counterpart by its shared move_group_id when
-        // present — deterministic even when two moves between the same pair,
-        // amount, and period share a wall-clock second. Legacy rows written
-        // before move_group_id existed have a null group id and fall back to
-        // the original created_at-based match.
+        // Matches the paired counterpart by its shared move_group_id when
+        // present -- deterministic even when two moves share a wall-clock
+        // second. Legacy rows written before move_group_id existed fall
+        // back to the original created_at-based match.
         $pairQuery = $connection->table('envelope_moves')
             ->where('user_id', $user->id)
             ->where('id', '!=', $moveId);
@@ -543,16 +461,10 @@ final class EnvelopeWriter
         }
     }
 
-    /**
-     * Parse a user-entered amount into positive integer minor units, or null
-     * if invalid. Handles the Dutch grouped form "1.234,56" and the plain
-     * forms "1234.56" / "50,00" / "50": the rightmost of '.'/',' is the
-     * decimal separator and the other is thousands. The whole part is capped
-     * at 12 digits so the cents arithmetic cannot overflow PHP_INT_MAX.
-     *
-     * COPIED VERBATIM from BudgetWriter (proven, unit-tested). Do not
-     * re-implement.
-     */
+    // Handles the Dutch grouped form "1.234,56" and the plain forms
+    // "1234.56" / "50,00" / "50": the rightmost of '.'/',' is the decimal
+    // separator and the other is thousands. Copied verbatim from
+    // BudgetWriter (proven, unit-tested) -- do not re-implement.
     public function parseAmount(string $value): ?int
     {
         $normalised = str_replace([' ', "\u{00A0}"], '', trim($value));
@@ -585,11 +497,6 @@ final class EnvelopeWriter
     // -------------------------------------------------------------------------
 
     /**
-     * Re-validate that `$categoryId` is one the user may budget — one of
-     * their own or a global EXPENSE category (T-13.2-04-01 IDOR guard).
-     * Never trust a client-supplied category id just because it appeared in
-     * a rendered `<select>`.
-     *
      * @throws InvalidArgumentException
      */
     private function assertCategoryAccessible(User $user, int $categoryId): void
