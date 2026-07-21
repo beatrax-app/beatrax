@@ -16,27 +16,12 @@ use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+// Cross-user 404 is enforced at mount time (throws NotFoundHttpException,
+// not 403) so the route resolver never signals that a slug exists in
+// another user's namespace. The body then routes to the profile-tabs
+// partial matching the resolved profile's type.
 /**
- * `/counterparties/{slug}` type-aware profile. Resolves the slug
- * (scoped to the authenticated user) and branches the body into the
- * matching per-type partial under `livewire/profile-tabs/`.
- *
- * Cross-user 404 is enforced at mount-time: a slug owned by another
- * user (or missing) throws `NotFoundHttpException`, so the route
- * resolver renders a 404 — not a 403 — and emits no signal that the
- * slug exists in another user's namespace.
- *
- * Per-type body routing:
- *
- *   - merchant     → profile-tabs/merchant
- *   - personal     → profile-tabs/personal (privacy banner + IBAN reveal)
- *   - bank         → profile-tabs/bank
- *   - government   → profile-tabs/government (tax-year breakdown)
- *   - self_account → profile-tabs/self (stub redirect — no tab bar)
- *   - unknown      → profile-tabs/unknown (no Chains tab, Label CTA)
- *
- * No constructor DI; phpstan-strict-rules bans it on Livewire
- * Component subclasses. Method-parameter DI throughout.
+ * @link ../../../../../.docs/features/counterparties/architecture.md
  */
 final class CounterpartyProfile extends Component
 {
@@ -111,7 +96,9 @@ final class CounterpartyProfile extends Component
             ? $recurring->approvedSeriesForCounterparty($profile->id, $user)
             : [];
 
-        // Batch-load tax state for recent-activity rows (Pitfall 1).
+        // Batch-loads tax-tag state for every recent-activity row in one
+        // query rather than one per row, avoiding an N+1 pattern when the
+        // tax badge renders across the whole list.
         $recentActivity = $query->recentActivity($cpModel, 10);
         $recentIds = array_map(static fn (object $row): int => is_numeric($row->id) ? (int) $row->id : 0, $recentActivity->all());
         $taxState = $this->taxTagStateFor($recentIds, $taxTagQuery, $currentUser);

@@ -13,29 +13,16 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Read-side queue for `/counterparties/triage` — surfaces every
- * `type=unknown` counterparty awaiting identification, ranks them by
- * recency + transaction volume, and computes a per-row suggestion
- * banner shape using the existing MerchantNameResolver chain.
- *
- * The triage page renders these as a focused single-card queue with
- * keyboard-first ergonomics (Y / N / S / →). The `unknownCountForUser`
- * method feeds the sidebar amber badge.
- *
- * Cross-user posture: every read carries an explicit
- * `where('user_id', $user->id)` filter at the raw query-builder
- * boundary. The BelongsToUser global scope on the Counterparty model
- * is a secondary guard — the explicit filter is load-bearing because
- * the suggestion pipeline runs in HTTP-bound contexts where the scope
- * fires, but the rest of the codebase relies on the explicit filter
- * being present regardless.
+ * @link ../../../../.docs/features/counterparties/architecture.md
  */
 final readonly class CounterpartyTriageQueue
 {
-    /** Recency / volume scan cap so the per-render cost stays bounded. */
+    // Recency/volume scan cap so the per-render cost stays bounded
+    // regardless of how many unknown counterparties the user has.
     private const SCAN_LIMIT = 200;
 
-    /** Suggestion thresholds: high = ≥80% match; medium = ≥60% match. */
+    // Suggestion confidence thresholds — see the confidence ladder at
+    // the @link above.
     private const CONFIDENCE_HIGH = 80;
 
     private const CONFIDENCE_MEDIUM = 60;
@@ -47,23 +34,18 @@ final readonly class CounterpartyTriageQueue
         private Session $session,
     ) {}
 
+    // When $queueFirstId resolves to an unknown counterparty for this
+    // user, that row is pinned to the front of the queue (matches the
+    // ?queue_first={id} link from unknown index cards).
     /**
-     * Returns the ordered queue of unknown counterparties for the user.
-     * When `$queueFirstId` is provided AND the id resolves to an
-     * unknown counterparty for this user, that row is pinned to the
-     * front of the queue (matches the `?queue_first={id}` link from
-     * unknown index cards).
-     *
      * @return list<Counterparty>
      */
     public function forUser(User $user, ?int $queueFirstId = null): array
     {
-        // Walk the raw query builder + hydrate into Counterparty
-        // models. Eloquent's `Builder->orderByDesc(...)` triggers a
-        // PHPStan `staticMethod.dynamicCall` warning because the
-        // builder is dynamic; the raw query builder + `hydrate(...)`
-        // keeps the static-analysis surface clean while preserving
-        // the model-rich return type.
+        // Raw query builder + hydrate(): Eloquent's dynamic
+        // orderByDesc() triggers a PHPStan staticMethod.dynamicCall
+        // warning, which this sidesteps while preserving the model-rich
+        // return type.
         $rawRows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
             ->where('type', 'unknown')
@@ -98,21 +80,9 @@ final readonly class CounterpartyTriageQueue
         return array_merge([$head], $tail);
     }
 
-    /**
-     * Computes a `TriageSuggestion` for the given unknown counterparty
-     * by walking its recent transaction descriptions through the
-     * `MerchantNameResolver`. Returns null when no description matches
-     * a known merchant — the triage page then renders the manual-label
-     * section without a suggestion banner.
-     *
-     * Confidence ladder:
-     *   - high   when ≥80% of recent transactions resolve to the same merchant
-     *   - medium when ≥60% match
-     *   - low    when at least one match but below 60%
-     *
-     * The reasoning sub-line is load-bearing per UI-SPEC — the
-     * suggestion is never rendered without it.
-     */
+    // Returns null when no description matches a known merchant; the
+    // triage page then renders the manual-label section without a
+    // suggestion banner. See the confidence ladder at the class @link.
     public function suggestionFor(Counterparty $unknown): ?TriageSuggestion
     {
         if ($unknown->user_id === null) {
@@ -136,12 +106,10 @@ final readonly class CounterpartyTriageQueue
             if ($description === '') {
                 continue;
             }
-            // CRYPT-01 (14.1-13): decrypt each candidate description before
-            // matching — the description arrives ciphertext at rest once
-            // encryption is enabled, and substring/corpus matching against
-            // ciphertext always misses. Pass-through no-op for a
-            // non-encrypted user; the candidate set stays bounded to the
-            // limit(20) read above (no query widening).
+            // Decrypt each candidate before matching — substring/corpus
+            // matching against ciphertext always misses. A pass-through
+            // no-op for a non-encrypted user; the candidate set stays
+            // bounded to the limit(20) read above.
             $description = $this->codec->decryptValue('transactions', 'description', $description, $unknown->user_id, $this->session)['value'];
             $total++;
             $resolved = $this->merchantResolver->resolve($description, $unknown->user_id);
@@ -182,11 +150,8 @@ final readonly class CounterpartyTriageQueue
         );
     }
 
-    /**
-     * Returns the count of unknown counterparties for the user. Feeds
-     * the sidebar `Triage` amber badge — hidden when zero, surfaced
-     * otherwise so the user always sees how much triage work remains.
-     */
+    // Feeds the sidebar Triage amber badge — hidden when zero, surfaced
+    // otherwise so the user always sees how much triage work remains.
     public function unknownCountForUser(User $user): int
     {
         return $this->db->connection()->table('counterparties')

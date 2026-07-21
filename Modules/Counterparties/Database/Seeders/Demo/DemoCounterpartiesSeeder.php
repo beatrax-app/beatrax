@@ -12,45 +12,17 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
-/**
- * Walks every demo-tagged transaction and invokes the production
- * `CounterpartyResolver` — exactly the same code path the import
- * pipeline runs — so the resulting Counterparty rows mirror what a
- * real user's import would have produced. The seeder never
- * short-circuits the resolver chain; that is intentional: the
- * `/counterparties` UI surfaces, the type-chip statistics, and the
- * Triage queue would all read fundamentally different demo data if
- * the rows were hand-rolled.
- *
- * Idempotency: `CounterpartyResolver::resolve()` upserts via
- * `firstOrCreate(user_id, slug)` on every call, so running the demo
- * seeder twice converges on the same Counterparty row set without
- * duplicates. Demo transactions already carry stable fingerprints
- * across runs so the resolver's input is identical run-over-run.
- *
- * The seeder skips `transfer_in` rows whose paired `transfer_out`
- * the resolver already classified as `self_account` (i.e. the
- * ASN→PayPal top-up legs). The self-account branch never writes a
- * counterparty row, so re-iterating would be wasted work; the skip
- * is bookkeeping only.
- */
+// Walks every demo transaction through the production CounterpartyResolver,
+// never short-circuited, so the resulting rows mirror a real import rather
+// than being hand-rolled. Resolutions with a null counterpartyId (e.g. the
+// self_account branch) are skipped when stamping transactions.counterparty_id.
 final class DemoCounterpartiesSeeder
 {
+    // Per-user merchant-alias seed list mirroring what a user would build by
+    // hand via Settings -> Aliases; without it every demo merchant falls
+    // through to type=unknown and the type-chip strip never shows a
+    // `merchant` bucket. Shared across demo users (same Dutch retailers).
     /**
-     * Per-user merchant-alias seed list. The resolver's step-3
-     * (`MerchantNameResolver`) walks per-user generalized patterns
-     * first — so the same alias table the user would normally build
-     * by hand through Settings → Aliases is what the demo seeder
-     * pre-populates here. Without this set every merchant row would
-     * fall through to type=`unknown` and the demo dataset would have
-     * no `merchant` rows to render in the type-chip strip on the
-     * /counterparties page.
-     *
-     * Pattern → friendly-name. Stored once per demo user so the
-     * resolver's per-user explicit `where('user_id', $userId)` walk
-     * finds them. The same dataset is shared across both demo users
-     * because both interact with the same Dutch retailers.
-     *
      * @var list<array{generalized: string, friendly: string}>
      */
     private const MERCHANT_ALIASES = [
@@ -85,23 +57,11 @@ final class DemoCounterpartiesSeeder
         private readonly CounterpartyResolver $resolver,
     ) {}
 
+    // Seeds bank + self_account rows the resolver chain alone never produces
+    // for the demo dataset (its PayPal/bank-fee IBANs aren't in the
+    // known-institution seed list), so the type-chip strip shows all six
+    // legal type buckets. updateOrCreate on (user_id, slug) keeps re-seeds idempotent.
     /**
-     * Per-user `bank` + `self_account` counterparty rows. The
-     * production resolver short-circuits the `self_account` branch
-     * before any upsert (intentional — self-account transfers do not
-     * surface as a counterparty profile), and `bank` rows are only
-     * written by the KnownCounterpartyIban resolver branch when a
-     * recognised institution IBAN is in the seed list. The demo
-     * dataset's PayPal funding + bank-fee IBANs are not in that seed
-     * list, so without an explicit seed the dataset never carries
-     * `bank` or `self_account` rows and the type-chip strip on the
-     * `/counterparties` page would render only four of the six legal
-     * type buckets.
-     *
-     * Idempotency: `updateOrCreate` keyed on `(user_id, slug)` matches
-     * the UNIQUE on the counterparties table so a second seed run
-     * reuses the existing row.
-     *
      * @var list<array{type: string, slug: string, displayName: string, iban: ?string, merchantName: ?string}>
      */
     private const EXTRA_COUNTERPARTIES = [
@@ -165,10 +125,6 @@ final class DemoCounterpartiesSeeder
             ->count();
     }
 
-    /**
-     * Idempotently insert the bank + self_account rows that close the
-     * type-coverage gap left by the resolver chain on the demo dataset.
-     */
     private function seedExtraTypeCoverageForUser(User $user): void
     {
         foreach (self::EXTRA_COUNTERPARTIES as $row) {
@@ -188,13 +144,9 @@ final class DemoCounterpartiesSeeder
         }
     }
 
-    /**
-     * Idempotent insert of every demo-friendly merchant alias for the
-     * given user. The `(user_id, pattern)` composite UNIQUE on the
-     * merchant_aliases table guarantees a second seed run skips
-     * existing rows; the seeder uses `updateOrInsert` so the keying
-     * is explicit.
-     */
+    // The (user_id, pattern) composite UNIQUE on merchant_aliases guarantees
+    // a second seed run skips existing rows; updateOrInsert makes the
+    // keying explicit rather than relying on an insert-and-catch pattern.
     private function seedAliasesForUser(User $user): void
     {
         $now = (new \DateTimeImmutable)->format('Y-m-d H:i:s');
@@ -230,13 +182,10 @@ final class DemoCounterpartiesSeeder
             $canonical = $this->reconstructCanonical($tx);
             $resolution = $this->resolver->resolve($canonical, $user);
 
-            // `resolve()` returns null only when the input carries
-            // neither IBAN nor name nor description — pathological
-            // data the demo seeder never produces. The conditional
-            // upsert below also covers the `self_account` branch:
-            // a non-null DTO with a null counterpartyId means the
-            // resolver short-circuited before writing, so there is
-            // nothing to stamp on the transaction either.
+            // Null means the input carried neither IBAN, name, nor
+            // description (data this seeder never produces); a non-null
+            // resolution with a null counterpartyId is the self_account
+            // short-circuit — either way there is nothing to stamp.
             if ($resolution === null || $resolution->counterpartyId === null) {
                 continue;
             }
@@ -248,24 +197,18 @@ final class DemoCounterpartiesSeeder
         }
     }
 
-    /**
-     * Rebuild the CanonicalTransaction shape from a persisted
-     * Transaction model. The resolver only reads a subset of the
-     * fields (type, counterpartyIban, counterpartyName, description),
-     * but the DTO requires the full constructor signature so we
-     * populate everything from the persisted row.
-     */
+    // The resolver only reads a subset of fields (type, counterpartyIban,
+    // counterpartyName, description), but the DTO's constructor is not
+    // partial, so every field is populated from the persisted row.
     private function reconstructCanonical(Transaction $tx): CanonicalTransaction
     {
         $paymentType = $tx->payment_type instanceof PaymentType
             ? $tx->payment_type
             : PaymentType::Unknown;
 
-        // SQLite returns DECIMAL columns as strings inside the
-        // attribute bag but ConnectionResolver-cast values arrive as
-        // floats here; the DTO insists on `?string`. Coerce the
-        // attribute to a string when present so the DTO contract is
-        // honoured regardless of the underlying driver's choice.
+        // The attribute bag can hold this as either a string or a float
+        // depending on the driver; the DTO insists on `?string`, so coerce
+        // it when present.
         $fxRateUsed = $tx->fx_rate_used;
         if ($fxRateUsed !== null && ! is_string($fxRateUsed)) {
             $fxRateUsed = (string) $fxRateUsed;

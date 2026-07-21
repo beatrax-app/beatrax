@@ -21,86 +21,18 @@ use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
+// The default CounterpartyResolver implementation — the seven-step
+// precedence chain (self-account, known-IBAN bridge, merchant, personal,
+// government, bank-fee, unknown) is documented in full at the @link below.
 /**
- * Default `CounterpartyResolver` implementation — walks the seven-step
- * precedence chain that maps a CanonicalTransaction onto a canonical
- * Counterparty row.
- *
- * Chain ordering (first match wins):
- *
- *   1. Self-account check — the user's own account IBANs
- *      short-circuit to type=`self_account` and DO NOT materialise a
- *      counterparties row (the profile page routes back to the
- *      account view instead). The DTO carries counterpartyId=null
- *      and slug=`''` so callers can branch on the missing primary
- *      key without inspecting the type field.
- *   2. Known-counterparty-IBAN bridge — institution IBANs (PayPal
- *      Luxembourg, ICS at ABN AMRO) resolve to type=`bank`. The
- *      bridge consults `ResolvesKnownCounterpartyIban`; when the
- *      institution IBAN is registered the resolver also reads the
- *      `notes` column on `known_counterparty_ibans` directly so the
- *      display name reflects the institution's legal entity rather
- *      than the user's own account name. The bridge contract returns
- *      the user's own Account because it was designed for
- *      account-routing in the Chains module; the display-name lookup
- *      via the direct table read sidesteps a contract widening
- *      that the bridge module would otherwise need.
- *   3. Merchant resolution — the description is run through
- *      `MerchantNameResolver` and a hit produces type=`merchant`.
- *      The merchant resolver already walks five sub-steps
- *      (per-user exact / per-user generalised / community exact /
- *      community generalised / null); this resolver simply consumes
- *      its output.
- *   4. Personal-IBAN heuristic — any valid SEPA IBAN paired with a
- *      personal-looking counterparty name appearing on a
- *      transfer_out / transfer_in row resolves to type=`personal`
- *      with the privacy default: the slug is the kebab-cased
- *      display name only; the IBAN IS preserved on the
- *      `iban` column but never echoed into the slug.
- *   5. Government keyword fallback — descriptions or counterparty
- *      names matching one of the government agency rules loaded from
- *      `resources/corpus/government/<country>.yaml` resolve to
- *      type=`government`. Rules support literal substrings and `regex:`
- *      patterns (see CorpusPatternMatcher).
- *   6. Description-keyword bank-fee fallback — descriptions matching one
- *      of the bank-fee rules loaded from
- *      `resources/corpus/bank-fees/<country>.yaml` resolve to type=`bank`
- *      with metadata.subcategory=`fee`.
- *   7. Unresolved — type=`unknown`, the IBAN (when present) is
- *      preserved on the Counterparty row for the Triage queue.
- *
- * Slug strategy: kebab-cased display name, with per-user collision
- * suffixing (`bol`, `bol-2`, `bol-3`, …). The DB-layer UNIQUE on
- * (user_id, slug) plus the suffix-walk in `resolveSlugForUpsert()`
- * guarantees no two rows for the same user share a slug.
- *
- * Cross-user posture: every raw query carries an explicit
- * `where('user_id', $user->id)` filter. The BelongsToUser global
- * scope on the Counterparty model is a secondary guard that only
- * fires under an HTTP-bound request; the resolver runs from import
- * pipeline / queue / console contexts where the scope is silent and
- * the explicit filter is load-bearing.
- *
- * Idempotency: every non-`self_account` branch upserts via
- * `firstOrCreate` keyed on (user_id, slug). A second resolution of
- * the same transaction returns the same counterpartyId without
- * issuing an INSERT.
- *
- * Event emission: every successful upsert dispatches
- * `CounterpartyResolved` with (counterpartyId, userId, type). The
- * v1.0.0 cut ships zero listeners; future audit / merge /
- * notification surfaces subscribe without a resolver rewrite.
+ * @link ../../../../.docs/features/counterparties/architecture.md
  */
 final class CounterpartyResolverService implements CounterpartyResolver
 {
-    /**
-     * Single-token markers that disqualify a counterparty name from
-     * the personal-IBAN heuristic. The list is short by design: the
-     * heuristic is a catch-all that only fires after the merchant
-     * resolver (step 3) has already had a chance to match. Anything
-     * carrying one of these legal-entity markers is far more likely
-     * to be a small-business merchant than a personal P2P transfer.
-     */
+    // Single-token markers that disqualify a name from the personal-IBAN
+    // heuristic (step 4, which only fires after merchant resolution has
+    // already had a chance to match) — these are far more likely to
+    // signal a small-business merchant than a personal P2P transfer.
     private const MERCHANT_NAME_MARKERS = [
         'BV',
         'B.V.',
@@ -121,12 +53,9 @@ final class CounterpartyResolverService implements CounterpartyResolver
         'LLC',
     ];
 
-    /**
-     * Transaction types that the personal-IBAN heuristic accepts.
-     * The heuristic only fires on cross-account P2P-shaped rows so a
-     * merchant transaction that happens to carry a Dutch IBAN does
-     * not get mis-classified as personal.
-     */
+    // Restricts the personal-IBAN heuristic to cross-account P2P-shaped
+    // rows, so a merchant transaction carrying a Dutch IBAN is never
+    // mis-classified as personal.
     private const PERSONAL_TRANSACTION_TYPES = [
         'transfer_in',
         'transfer_out',
@@ -148,43 +77,36 @@ final class CounterpartyResolverService implements CounterpartyResolver
     {
         $userId = $user->id;
 
-        // Step 1: self-account check. Short-circuits before any upsert.
         $selfAccount = $this->resolveSelfAccount($tx, $userId);
         if ($selfAccount !== null) {
             return $selfAccount;
         }
 
-        // Step 2: known-counterparty-IBAN bridge (PayPal LU / ICS at ABN AMRO).
         $bridge = $this->resolveKnownBridge($tx, $user, $userId);
         if ($bridge !== null) {
             return $bridge;
         }
 
-        // Step 3: merchant resolution via MerchantNameResolver.
         $merchant = $this->resolveMerchant($tx, $userId);
         if ($merchant !== null) {
             return $merchant;
         }
 
-        // Step 4: personal-IBAN heuristic with privacy default.
         $personal = $this->resolvePersonal($tx, $userId);
         if ($personal !== null) {
             return $personal;
         }
 
-        // Step 5: government keyword fallback.
         $government = $this->resolveGovernment($tx, $userId);
         if ($government !== null) {
             return $government;
         }
 
-        // Step 6: bank-fee keyword fallback.
         $bankFee = $this->resolveBankFee($tx, $userId);
         if ($bankFee !== null) {
             return $bankFee;
         }
 
-        // Step 7: unresolved → type=unknown, IBAN preserved for triage.
         return $this->resolveUnknown($tx, $userId);
     }
 
@@ -231,11 +153,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return null;
         }
 
-        // The bridge contract returns the user's own Account because it
-        // was originally designed for cross-account chain routing. For
-        // counterparty display purposes the legal-entity notes on the
-        // known_counterparty_ibans row are far more informative than
-        // the user's account name, so we read them directly here.
+        // The bridge contract returns the user's own Account (built for
+        // Chains routing); read the legal-entity notes directly instead,
+        // since they are far more informative for display than the
+        // user's own account name.
         $notes = $this->db->connection()
             ->table('known_counterparty_ibans')
             ->where('user_id', $userId)
@@ -287,11 +208,9 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return null;
         }
 
-        // Any structurally valid SEPA/IBAN account (mod-97 checksum + the
-        // country's BBAN length, via jschaedl/iban-validation) paired with a
-        // personal-looking name counts as a personal P2P transfer — not just
-        // Dutch IBANs. The personal-name guard below keeps small-business
-        // counterparties from being mis-typed.
+        // Any structurally valid SEPA IBAN (mod-97 + BBAN length, not just
+        // Dutch) paired with a name that clears the small-business marker
+        // guard below counts as a personal P2P transfer.
         $iban = $this->normaliseIban($tx->counterpartyIban);
         if ($iban === null || ! $this->ibanValidator->validate($iban)) {
             return null;
@@ -347,12 +266,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
         );
     }
 
+    // Shared engine for the YAML-rule classification steps (government,
+    // bank-fee); $build supplies the step-specific display name and
+    // metadata for the matched rule.
     /**
-     * Shared engine for the YAML-rule classification steps (government,
-     * bank-fee): match the transaction's haystack against each rule in
-     * order and upsert the first hit. The $build callback supplies the
-     * step-specific display name and metadata for the matched rule.
-     *
      * @param  list<ClassificationRule>  $rules
      * @param  callable(ClassificationRule): array{0: string, 1: array<string, mixed>}  $build
      */
@@ -398,11 +315,9 @@ final class CounterpartyResolverService implements CounterpartyResolver
         $hasIban = $iban !== null;
         $hasDescription = $description !== null && trim($description) !== '';
 
-        // A transaction that carries nothing at all — no counterparty
-        // name, no counterparty IBAN, and no description — is
-        // pathological and has nothing to surface in the Triage
-        // queue. Returning null leaves it without a counterparty_id;
-        // the writer layer still records the underlying row.
+        // Nothing to surface in the Triage queue for a transaction with
+        // no name, IBAN, or description; null leaves it without a
+        // counterparty_id, but the writer layer still records the row.
         if (! $hasName && ! $hasIban && ! $hasDescription) {
             return null;
         }
@@ -426,11 +341,6 @@ final class CounterpartyResolverService implements CounterpartyResolver
     }
 
     /**
-     * Upserts a Counterparty row keyed on (user_id, slug); fires the
-     * `CounterpartyResolved` event on every call. Idempotency is the
-     * contract — calling resolve() twice on the same transaction
-     * returns the same counterpartyId without issuing a second INSERT.
-     *
      * @param  array<string, mixed>  $metadata
      */
     private function upsert(
@@ -444,14 +354,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
         $baseSlug = $this->slugify($displayName);
         $slug = $this->resolveSlugForUpsert($userId, $baseSlug, $displayName);
 
-        // CRYPT-01 (D-02b): display_name/merchant_name/iban are encrypted at
-        // this creation-time direct write via the Sync Public
-        // SensitiveColumnCodec — pass-through when encryption is not
-        // enabled for this user. counterparty_normalized/slug/type are
-        // NEVER passed through the codec (matching/routing keys stay
-        // plaintext, per D-02b). Only fires on a genuine INSERT —
-        // firstOrCreate() leaves an already-existing row's stored
-        // ciphertext untouched.
+        // display_name/merchant_name/iban route through the codec (a
+        // no-op when encryption is disabled); slug/type stay plaintext as
+        // matching/routing keys. firstOrCreate() means an existing row's
+        // stored ciphertext is left untouched.
         $row = Counterparty::query()->firstOrCreate(
             [
                 'user_id' => $userId,
@@ -483,27 +389,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
         );
     }
 
-    /**
-     * Returns the slug to use for the upsert.
-     *
-     * When an existing row already owns (user_id, base_slug) AND
-     * matches the same display_name (per-user-canonical), the
-     * existing slug is reused — that is the idempotency case. When
-     * the base slug is taken by a row with a different display_name,
-     * a numeric suffix is appended (`bol-2`, `bol-3`, …) until a free
-     * slot is found. The walk is bounded; per-user UNIQUE on
-     * (user_id, slug) keeps the suffix space finite in practice.
-     *
-     * [Rule 1] Once display_name is encrypted at rest (CRYPT-01), the
-     * stored value read off `counterparties.display_name` is ciphertext
-     * and can never `===` the plaintext `$displayName` being resolved —
-     * a naive comparison would treat every already-resolved counterparty
-     * as "taken by a different name" on every re-import, silently
-     * fragmenting one merchant into `bol`, `bol-2`, `bol-3`, … forever.
-     * The stored value is decrypted (rotation-safe, try-every-epoch; a
-     * pass-through no-op when encryption is not enabled) before the
-     * comparison.
-     */
+    // The stored display_name is decrypted before the identity comparison
+    // (see the slug-strategy note at the @link above) so an already-
+    // resolved counterparty is never wrongly treated as "taken by a
+    // different name" just because the column is now ciphertext.
     private function resolveSlugForUpsert(
         int $userId,
         string $baseSlug,
@@ -544,25 +433,17 @@ final class CounterpartyResolverService implements CounterpartyResolver
         }
     }
 
-    /**
-     * Decrypts a stored `counterparties.display_name` value for the
-     * idempotency comparison above. Never throws — a tampered/undecryptable
-     * value falls back to the raw stored (ciphertext) string, which simply
-     * fails the `===` comparison and falls through to slug suffixing
-     * (safe: it can never falsely collide with a plaintext $displayName).
-     */
+    // Never throws — an undecryptable value falls back to the raw
+    // ciphertext string, which simply fails the identity comparison above
+    // and falls through to slug suffixing.
     private function decryptDisplayName(string $stored, int $userId): string
     {
         return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, $this->session)['value'];
     }
 
-    /**
-     * Builds a kebab-case slug from a display name. The character
-     * class strips punctuation and accents to a lowercase ASCII
-     * approximation; whitespace and underscores collapse into single
-     * `-` separators. Result is bounded to the column's 128-char
-     * UNIQUE-index width.
-     */
+    // Strips punctuation/accents to a lowercase ASCII approximation and
+    // collapses whitespace/underscores into single `-` separators; bounded
+    // to the column's 128-char UNIQUE-index width.
     private function slugify(string $value): string
     {
         $ascii = (string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
@@ -577,11 +458,6 @@ final class CounterpartyResolverService implements CounterpartyResolver
         return substr($trimmed, 0, 128);
     }
 
-    /**
-     * Normalises an IBAN to its bank-portable form: uppercased,
-     * whitespace stripped. Returns null on empty input so the
-     * caller can short-circuit cleanly.
-     */
     private function normaliseIban(?string $iban): ?string
     {
         if ($iban === null) {
@@ -606,11 +482,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
     private function governmentDisplayName(ClassificationRule $rule, CanonicalTransaction $tx): string
     {
-        // When a literal pattern appears verbatim in the counterparty name
-        // (e.g. "GEMEENTE UTRECHT" or "BELASTINGDIENST APELDOORN"), surface
-        // the fuller name so the city/office is preserved. Regex patterns
-        // can't be substring-checked, so they fall through to the rule's
-        // canonical name.
+        // When a literal pattern appears verbatim in the name (e.g.
+        // "GEMEENTE UTRECHT"), surface the fuller name so the city/office
+        // is preserved; regex patterns can't be substring-checked, so
+        // they fall through to the rule's canonical name.
         $name = $tx->counterpartyName;
         $trimmedName = is_string($name) ? trim($name) : '';
 

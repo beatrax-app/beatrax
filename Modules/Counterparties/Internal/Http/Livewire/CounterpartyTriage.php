@@ -15,29 +15,12 @@ use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 /**
- * `/counterparties/triage` focused single-card queue for labelling
- * unknown counterparties. Keyboard-first ergonomics:
- *
- *   Y → accept current suggestion + advance
- *   N → reject suggestion + focus manual-label section
- *   S → skip for now (re-queues at end of session)
- *   → → next unknown
- *   Esc → close triage (return to /counterparties)
- *
- * The keyboard bindings respect the input-carve-out documented in
- * `resources/views/layouts/app.blade.php` — when focus is inside an
- * INPUT / TEXTAREA / contentEditable element, the keys go to the field
- * not the handler. The view layer attaches the listeners on the wire
- * root with Alpine focus-state tracking so the carve-out is honoured.
- *
- * Progress copy is rendered verbatim per UI-SPEC:
- *   `{seen} of {total} · {percent} % · ~{minutes} min remaining`
- *
- * No constructor DI; method-parameter DI throughout.
+ * @link ../../../../../.docs/features/counterparties/architecture.md
  */
 final class CounterpartyTriage extends Component
 {
-    /** Estimated minutes-per-unknown for the "~{minutes} min remaining" copy. */
+    // Empirical estimate driving the "~{minutes} min remaining" copy on
+    // the triage progress bar.
     private const MINUTES_PER_UNKNOWN = 0.4;
 
     public int $currentIndex = 0;
@@ -98,18 +81,10 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        // Promote the unknown row to a merchant counterparty using the
-        // suggested name. The resolver's collision-suffixing rule (see
-        // CounterpartyResolverService) is bypassed here because the
-        // accept path operates on an existing row's id; the
-        // (user_id, slug) UNIQUE is preserved by keeping the unknown
-        // row's slug intact and only flipping its type + display_name.
-        //
-        // CRYPT-01 (14.1-13): route display_name/merchant_name through
-        // the codec before save() — mirrors
-        // CounterpartyResolverService::upsert()'s encryptAttrs() call on
-        // the normal create path. Pass-through no-op for a
-        // non-encrypted user.
+        // The resolver's collision-suffixing rule is bypassed here: the
+        // accept path reuses the row's existing slug (only type and
+        // display_name flip), preserving the (user_id, slug) UNIQUE. The
+        // codec call mirrors the normal create path; a no-op for non-encrypted users.
         $encrypted = $codec->encryptAttrs('counterparties', [
             'display_name' => $suggestion->suggestedCounterpartyName,
             'merchant_name' => $suggestion->suggestedCounterpartyName,
@@ -163,8 +138,8 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        // CRYPT-01 (14.1-13): route display_name/merchant_name through
-        // the codec before save(), mirroring acceptSuggestion() above.
+        // Routes display_name/merchant_name through the codec before
+        // save(), mirroring acceptSuggestion() above.
         $attrs = ['display_name' => $name];
         if ($type === 'merchant') {
             $attrs['merchant_name'] = $name;
@@ -231,11 +206,8 @@ final class CounterpartyTriage extends Component
         ]);
     }
 
-    /**
-     * Resolves the currently-rendered unknown counterparty. Returns
-     * null when the queue is empty or the cursor has walked past the
-     * last item — the wire actions then no-op rather than throwing.
-     */
+    // Returns null when the queue is empty or the cursor has walked past
+    // the last item; wire actions then no-op rather than throwing.
     private function resolveCurrent(CurrentUser $currentUser, CounterpartyTriageQueue $queue): ?Counterparty
     {
         $items = $queue->forUser($currentUser->user(), $this->queueFirstId);
@@ -250,9 +222,6 @@ final class CounterpartyTriage extends Component
     }
 
     /**
-     * Recent transactions tied to the current unknown — feeds the
-     * `Recent transactions on this IBAN` section of the triage card.
-     *
      * @return list<\stdClass>
      */
     private function recentTransactionsFor(
@@ -275,11 +244,10 @@ final class CounterpartyTriage extends Component
             ->limit(5)
             ->get(['id', 'posted_at', 'description', 'amount_minor']);
 
-        // CR-05: `transactions.description` is a SensitiveFieldRegistry column
-        // stored as AEAD ciphertext at rest. The raw query builder applies no
-        // cast, so decrypt each row before it reaches the view (mirroring
-        // CounterpartyTriageQueue::suggestionFor()). decryptValue never throws
-        // and is a pass-through no-op for non-encryption users.
+        // transactions.description is a SensitiveFieldRegistry column stored
+        // as AEAD ciphertext; the raw query builder applies no cast, so
+        // decrypt each row before it reaches the view (mirrors
+        // CounterpartyTriageQueue::suggestionFor()). Pass-through no-op otherwise.
         return array_values($rows->map(function (\stdClass $tx) use ($codec, $userId, $session): \stdClass {
             if (is_string($tx->description) && $tx->description !== '') {
                 $tx->description = $codec->decryptValue(

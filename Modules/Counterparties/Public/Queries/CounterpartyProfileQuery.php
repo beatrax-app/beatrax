@@ -14,22 +14,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Read-side query powering `/counterparties/{slug}` — the type-aware
- * profile page. The shell Livewire component branches the body view
- * into the matching per-type partial based on `CounterpartyProfileDto::type`.
- *
- * Cross-user posture is the load-bearing 404 contract: a slug owned
- * by a different user MUST return null (the route resolver then maps
- * this to a `404` not a `403`, so no signal is emitted that the slug
- * exists in another user's set). The `BelongsToUser` global scope on
- * the Counterparty model is honoured here as a defense-in-depth
- * secondary check; the explicit `where('user_id', ...)` filter on the
- * raw query is the primary scope.
- *
- * Personal-IBAN privacy default: `bySlug` returns the IBAN in the
- * DTO, but every page-rendering path branches on the user's explicit
- * Show IBAN click before echoing the value. The slug column never
- * carries the IBAN.
+ * @link ../../../../.docs/features/counterparties/architecture.md
  */
 final readonly class CounterpartyProfileQuery
 {
@@ -40,11 +25,6 @@ final readonly class CounterpartyProfileQuery
         private Session $session,
     ) {}
 
-    /**
-     * Returns the profile DTO for the slug, scoped to the user.
-     * Returns null when the slug is unknown OR belongs to another user
-     * — the route resolver then renders a 404.
-     */
     public function bySlug(User $user, string $slug): ?CounterpartyProfileDto
     {
         $cp = Counterparty::query()
@@ -78,10 +58,9 @@ final readonly class CounterpartyProfileQuery
         $firstSeen = $lifetimeTotals !== null ? ($lifetimeTotals->first_seen ?? null) : null;
         $lastSeen = $lifetimeTotals !== null ? ($lifetimeTotals->last_seen ?? null) : null;
 
-        // CRYPT-01 (D-02b) read-side decrypt — display_name/merchant_name/
-        // iban are ciphertext at rest once encryption is enabled for the
-        // user; decryptRow tries every keyring epoch (rotation-safe) and
-        // is a pass-through no-op otherwise.
+        // Read-side decrypt: decryptRow tries every keyring epoch
+        // (rotation-safe) and is a pass-through no-op when encryption is
+        // not enabled for the user.
         $decrypted = $this->codec->decryptRow('counterparties', [
             'display_name' => $cp->display_name,
             'merchant_name' => $cp->merchant_name,
@@ -106,12 +85,9 @@ final readonly class CounterpartyProfileQuery
         );
     }
 
+    // Lets another surface (e.g. the recurring series detail page)
+    // deep-link to a profile without loading the full profile DTO.
     /**
-     * Minimal identity (slug + display name + type) for a counterparty id, or
-     * null when it does not belong to the user. Lets another surface — e.g. the
-     * recurring series detail page — deep-link to a profile without loading the
-     * full profile DTO.
-     *
      * @return array{slug: string, displayName: string, type: string}|null
      */
     public function identityForId(User $user, int $id): ?array
@@ -134,13 +110,11 @@ final readonly class CounterpartyProfileQuery
         ];
     }
 
+    // Batched variant of identityForId resolved in a single query; missing
+    // or cross-user ids are silently absent from the result map, letting
+    // list surfaces (the calendar's entry map) hydrate deep-links without
+    // N per-id lookups.
     /**
-     * Batched variant of `identityForId` — minimal identity (slug +
-     * display name + type) per counterparty id, resolved in a single
-     * query. Missing or cross-user ids are silently absent from the
-     * result map. Lets list surfaces (the calendar's entry map) hydrate
-     * deep-links without N per-id lookups.
-     *
      * @param  list<int>  $ids
      * @return array<int, array{slug: string, displayName: string, type: string}>
      */
@@ -180,13 +154,11 @@ final readonly class CounterpartyProfileQuery
         return $map;
     }
 
+    // Batched existence check behind the calendar's cluster-key fallback
+    // (a series with no occurrence-linked counterparty may still match a
+    // counterparty by cluster_counterparty_key == slug). Unknown or
+    // cross-user slugs are silently absent from the result map.
     /**
-     * Resolve counterparty ids for a list of slugs in one query — the
-     * batched existence check behind the calendar's cluster-key fallback
-     * (a series with no occurrence-linked counterparty may still match a
-     * counterparty by `cluster_counterparty_key` == slug). Unknown or
-     * cross-user slugs are silently absent from the result map.
-     *
      * @param  list<string>  $slugs
      * @return array<string, int>
      */
@@ -216,12 +188,9 @@ final readonly class CounterpartyProfileQuery
         return $map;
     }
 
+    // Rows feed both the Overview Recent-activity strip and the
+    // Transactions tab body.
     /**
-     * Returns up to `$limit` most-recent transactions tied to the
-     * counterparty, ordered newest-first. Each row is a stdClass with
-     * the columns the Overview Recent activity strip + the Transactions
-     * tab body render.
-     *
      * @return Collection<int, stdClass>
      */
     public function recentActivity(Counterparty $cp, int $limit = 10): Collection
@@ -236,8 +205,8 @@ final readonly class CounterpartyProfileQuery
             ->limit($limit)
             ->get(['id', 'posted_at', 'description', 'amount_minor', 'currency']);
 
-        // CRYPT-01 (D-02b) read-side decrypt — description is ciphertext
-        // at rest once encryption is enabled; pass-through no-op otherwise.
+        // Read-side decrypt; a pass-through no-op when encryption is not
+        // enabled for the user.
         $decrypted = $rows->map(function (stdClass $row) use ($userId): stdClass {
             if (is_string($row->description)) {
                 $row->description = $this->codec->decryptValue('transactions', 'description', $row->description, $userId, $this->session)['value'];
@@ -250,10 +219,6 @@ final readonly class CounterpartyProfileQuery
     }
 
     /**
-     * Returns the per-category breakdown for the counterparty's last
-     * 12 months. Each row carries `category_id`, `category_name`, and
-     * the signed `total_minor` sum.
-     *
      * @return Collection<int, stdClass>
      */
     public function categoryBreakdown(Counterparty $cp): Collection
@@ -273,15 +238,9 @@ final readonly class CounterpartyProfileQuery
         return new Collection($rows->all());
     }
 
-    /**
-     * Returns a funding-chain summary for merchant counterparties.
-     *
-     * Returns a `ChainSummary` when the counterparty has a non-empty
-     * `metadata.funding_chain` payload (the cross-module Chains
-     * lookup that lands with plan 17-06c writes this key). Returns
-     * null otherwise — the merchant Overview body then renders the
-     * verbatim empty-state copy from UI-SPEC.
-     */
+    // Returns null when metadata.funding_chain is absent/empty (the
+    // cross-module Chains lookup that writes this key is a follow-up
+    // plan); the merchant Overview body then renders its empty-state copy.
     public function fundingChainSummary(Counterparty $cp): ?ChainSummary
     {
         $metadata = is_array($cp->metadata) ? $cp->metadata : [];
@@ -308,10 +267,6 @@ final readonly class CounterpartyProfileQuery
     }
 
     /**
-     * Returns annual breakdown rows for government counterparties
-     * (Belastingdienst, Gemeente, CJIB, etc.). Each row carries the
-     * `year` integer and the signed `total_minor` sum.
-     *
      * @return Collection<int, stdClass>
      */
     public function taxYearBreakdown(Counterparty $cp): Collection
