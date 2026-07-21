@@ -18,32 +18,7 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 /**
- * Read model for the wizard's preview step (Req 11/12): computes the five
- * mapped counts (categories, accounts, counterparties, transactions, budget
- * months) plus the grouped unmapped-items summary, purely from
- * `migration_staging_*` — never a domain table (staging IS the preview
- * state, D-06).
- *
- * Every read goes through raw `DatabaseManager` `table()->where()` calls
- * (never a chained dynamic Eloquent ordering call) to stay clean under
- * `phpstan-strict-rules`' `staticMethod.dynamicCall` — the same discipline
- * `Modules\Goals\Public\Services\GoalProgressQuery` established (RESEARCH.md
- * Pitfall 5 / PATTERNS.md Shared Patterns).
- *
- * Cross-user isolation (T-13.5-14): every query below carries an explicit
- * `user_id` guard; a foreign-owned run resolves to a `ModelNotFoundException`
- * (translated to a 404, never a 403, per this codebase's ASVS V4 convention)
- * before any count query runs.
- *
- * 13.5-HUMAN-UAT.md Test 3a/3b/3c gap-fix: a `'conflict'` group item is no
- * longer a pre-baked `display_label`/`reason` string from `CheckForUpdates`
- * — this class now resolves a human entity name (e.g. "Groceries · January
- * 2026 budget" instead of the raw internal "Budget_assignment
- * budgeted_minor"), formats money-shaped values as currency (via the SAME
- * `Modules\Ledger\Public\ValueObjects\Money` formatter the rest of the app
- * uses, e.g. "€ 300,00"), and writes copy that reflects the conflict's
- * CURRENT resolution (default keep-local) rather than a fixed "local value
- * kept" string that went stale the moment a user picked "Take source".
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class PreviewSummaryBuilder
 {
@@ -96,16 +71,10 @@ final class PreviewSummaryBuilder
             ->distinct()
             ->count('period_start');
 
-        // WR-06: distinguish "never staged" from "staged but genuinely
-        // empty" via migration_runs.status rather than an all-zero-counts
-        // heuristic. `StartMigrationRun` only ever creates a row with
-        // status 'parsed' AFTER parsing+staging has already succeeded (D-06/
-        // D-07), so 'parsed'/'confirmed'/'needs_attention' all mean staging
-        // genuinely completed — a brand-new, completely empty source budget
-        // file legitimately produces all-zero counts there, which is a
-        // valid (if uneventful) preview, not an error. Only a 'discarded'
-        // run has had its staging deliberately truncated (DiscardMigrationRun),
-        // which IS "nothing to preview" for a real reason.
+        // Distinguishes "never staged" from "staged but genuinely empty" via
+        // migration_runs.status rather than an all-zero-counts heuristic —
+        // only a 'discarded' run has had its staging deliberately truncated;
+        // every other status means staging genuinely completed.
         if (self::toStr($run->status) === 'discarded') {
             throw new MigrationRunNotParsedException($migrationRunId);
         }
@@ -142,7 +111,7 @@ final class PreviewSummaryBuilder
         foreach ($rows as $row) {
             $itemType = self::toStr($row->item_type);
             if (! isset($groups[$itemType])) {
-                continue; // defensive: unknown item_type never renders (schema allow-list is 'category'|'payee'|'extra'|'conflict')
+                continue;
             }
 
             $groups[$itemType][] = $itemType === 'conflict'
@@ -174,10 +143,9 @@ final class PreviewSummaryBuilder
         $currency = $row->currency !== null ? self::toStr($row->currency) : null;
         $resolution = $row->resolution !== null ? self::toStr($row->resolution) : 'keep_local';
 
-        // Pre-gap-fix rows (or a defensive fallback for a malformed row)
-        // have no structured entity_type/field_name — fall back to the
-        // legacy pre-baked display_label/reason rather than rendering a
-        // blank label.
+        // A malformed row with no structured entity_type/field_name falls
+        // back to the legacy pre-baked display_label/reason rather than
+        // rendering a blank label.
         if ($entityType === '' || $fieldName === '') {
             return [
                 'id' => self::toInt($row->id),
@@ -202,15 +170,11 @@ final class PreviewSummaryBuilder
         ];
     }
 
-    /**
-     * Human copy naming the actual entity and field (13.5-HUMAN-UAT.md Test
-     * 3b — replaces the raw "Budget_assignment budgeted_minor" internal
-     * shape). Falls back to the field name alone when the entity itself
-     * cannot be resolved (defensive — every conflict is recorded against an
-     * already-mapped entity, so this should not normally happen).
-     */
     private function conflictLabel(Connection $connection, User $user, string $sourceProduct, string $entityType, string $fieldName, ?string $sourceExternalId): string
     {
+        // Defensive fallback to the field name alone — every conflict is
+        // recorded against an already-mapped entity, so a null id here
+        // should not normally happen.
         if ($sourceExternalId === null) {
             return ucfirst($entityType).' '.$fieldName;
         }
@@ -268,11 +232,9 @@ final class PreviewSummaryBuilder
             return 'Transaction '.$fieldLabel;
         }
 
-        // 14.1-16 gap-fix (T-14.1-16): decrypt-for-display, mirroring the
-        // Cluster 1 / plan 10 precedent (e.g. UncategorizedTriageQuery) —
-        // a null-guarded pass-through call; SensitiveColumnCodec itself is
-        // already a plaintext-user no-op, so no separate is-encrypted
-        // branch is needed here.
+        // Decrypt-for-display: a null-guarded pass-through call, since
+        // SensitiveColumnCodec is already a plaintext-user no-op, so no
+        // separate is-encrypted branch is needed here.
         $counterpartyName = $txn->counterparty_name === null
             ? null
             : $this->codec->decryptValue('transactions', 'counterparty_name', self::toStr($txn->counterparty_name), $user->id, $this->session)['value'];
@@ -311,14 +273,11 @@ final class PreviewSummaryBuilder
         return is_numeric($value) ? (int) $value : null;
     }
 
-    /**
-     * Resolution-aware explanatory copy (13.5-HUMAN-UAT.md Test 3c): no
-     * longer a fixed "local value kept" string — reflects whichever choice
-     * is CURRENTLY selected, so picking "Take source" immediately updates
-     * what this line says will happen at Confirm.
-     */
     private function conflictReason(string $resolution, bool $isMoney, ?string $currency, ?string $localRaw, ?string $sourceRaw, ?string $baselineRaw): string
     {
+        // Reflects whichever choice is CURRENTLY selected, so picking "Take
+        // source" immediately updates what this line says will happen at
+        // Confirm — never a fixed "local value kept" string.
         $intro = $resolution === 'take_source'
             ? "The new export's value will be applied when you confirm — your local value will be replaced."
             : 'Your local value will be kept — the new export\'s value will not be applied.';
@@ -332,12 +291,6 @@ final class PreviewSummaryBuilder
         );
     }
 
-    /**
-     * Formats a conflict value for display (13.5-HUMAN-UAT.md Test 3a): a
-     * money-shaped field renders via the SAME `Money` value object the rest
-     * of the app uses (e.g. "€ 300,00"), never a raw minor-unit integer; a
-     * non-money field renders the string verbatim, quoted.
-     */
     private function formatConflictValue(?string $raw, bool $isMoney, ?string $currency): string
     {
         if ($raw === null) {

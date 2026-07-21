@@ -7,16 +7,7 @@ namespace Modules\Migration\Internal\Parsers\Support;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
 /**
- * Reconstructs YNAB4/nYNAB split-leg groups from the `"Split (n/m)"` memo
- * convention (RESEARCH.md Pitfall 2) — the CSV export carries no explicit
- * parent/child link column, only consecutive rows sharing the same
- * (Account, Date, Payee) whose `Memo` matches the Split convention.
- *
- * Deliberately conservative: only rows that are BOTH memo-tagged AND
- * adjacent under the same (Account, Date, Payee) key collapse into a group.
- * A lone memo-tagged row (group size 1) is left ungrouped — a genuine split
- * always has >=2 legs, so a singleton is more likely a coincidental "Split"
- * substring in an otherwise plain memo than a real reconstruction target.
+ * @link ../../../../../.docs/features/migration/architecture.md
  */
 final class YnabSplitReconstructor
 {
@@ -28,8 +19,6 @@ final class YnabSplitReconstructor
     }
 
     /**
-     * Groups consecutive same-(Account, Date, Payee) split-memo rows.
-     *
      * @param  array<int, array<string, string>>  $rows  Register rows, in file order, 0-indexed.
      * @return list<list<int>> Each entry is an ordered list of row indexes belonging to one split group (size >= 2).
      */
@@ -70,17 +59,14 @@ final class YnabSplitReconstructor
     }
 
     /**
-     * Sum-sanity guard (Pitfall 2): a reconstructed group must have at least
-     * one leg and the legs must not net to zero (a degenerate/miscategorized
-     * grouping). A full running-balance cross-check needs an adjacent
-     * non-split anchor row this class does not have visibility into — this
-     * guard catches the structurally-impossible cases (empty group, legs
-     * that exactly cancel) without over-claiming a stronger proof.
-     *
      * @param  list<int>  $legAmountsMinor  Signed minor amounts, one per leg.
      */
     public function assertSumSane(array $legAmountsMinor): void
     {
+        // A full running-balance cross-check needs an adjacent non-split
+        // anchor row this class does not have visibility into — this guard
+        // catches only the structurally-impossible cases (empty group, legs
+        // that exactly cancel) without over-claiming a stronger proof.
         if ($legAmountsMinor === []) {
             throw new UnrecognizedMigrationFileException('reconstructed split group has zero legs');
         }

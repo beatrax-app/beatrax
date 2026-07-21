@@ -21,44 +21,15 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
- * Step 1 of the wizard (Req 1/11): the user picks a source product (YNAB4 /
- * nYNAB / Actual Budget), uploads a ZIP export, and on submit the file is
- * extracted (`ZipExtractor` — built in Plan 03 but never wired until this
- * plan, exactly per `StartMigrationRun`'s own docblock: "extracting an
- * uploaded ZIP ... happens upstream of this action, in the wizard's own
- * upload-handling step (Plan 08)"), parsed, and staged. Nothing is written
- * to a domain table by this component — either `StartMigrationRun` (first
- * import) or `CheckForUpdates` (reconciliation) owns that boundary.
- *
- * Mirrors `Modules\Import\Internal\Http\Livewire\UploadWizard`'s shape:
- * `WithFileUploads`, a locked-format-on-reconcile `<select>`, `rules()`
- * enforcing size + extension, a `submit()` that logs the full trace on any
- * Throwable and surfaces the verbatim Req 1 rose-banner copy, never the raw
- * exception message.
- *
- * Reconciliation entry (Req 10): when mounted with `?reconcile_of={run}`,
- * the query param is resolved against THIS user's own confirmed runs only
- * (T-13.5-24) — a foreign, unconfirmed, or missing run id is silently
- * ignored (falls back to a first-time-import mount) rather than erroring,
- * since this route carries no per-entity id and must stay reachable by any
- * authenticated user (T-13.5-04 precedent). On submit with a resolved
- * `$reconcileOf`, this calls `CheckForUpdates($reconcileOf, $user,
- * $sourceProduct, $extractedPath)` directly — matching the ACTUAL Plan 07
- * interface (`CheckForUpdates` stages the newer export itself internally),
- * not the plan's own now-stale prose describing a separate pre-staged
- * `$newRunId` argument (see 13.5-07-SUMMARY.md's documented "Interface
- * Deviation from Plan Prose").
+ * @link ../../../../../.docs/features/migration/architecture.md
  */
 final class NewMigration extends Component
 {
     use WithFileUploads;
 
-    /**
-     * Upload-size ceiling for a migration export ZIP. `ZipExtractor` itself
-     * enforces the post-extraction decompression cap (200 MB total
-     * uncompressed, T-13.5-05 zip-bomb guard); this rule rejects an
-     * obviously-oversized upload before it ever reaches disk.
-     */
+    // Rejects an obviously-oversized upload before it ever reaches disk;
+    // ZipExtractor itself separately enforces the post-extraction
+    // decompression cap.
     private const MAX_UPLOAD_KB = 204800;
 
     public ?TemporaryUploadedFile $file = null;
@@ -66,21 +37,16 @@ final class NewMigration extends Component
     #[Validate('required|in:ynab4,nynab,actual')]
     public string $sourceProduct = 'ynab4';
 
-    /**
-     * Set (and the format `<select>` locked) when mounted with a
-     * `?reconcile_of={run}` query parameter that resolves to one of this
-     * user's own CONFIRMED runs. Null for a first-time import.
-     */
+    // Set (and the format <select> locked) when mounted with a
+    // ?reconcile_of={run} query parameter that resolves to one of this
+    // user's own CONFIRMED runs. Null for a first-time import.
     public ?int $reconcileOf = null;
 
     public bool $formatLocked = false;
 
-    /**
-     * One-shot error surfaced inline when parse-or-stage raises (corrupt
-     * file, unknown format, zip-bomb/zip-slip guard trip). Mirrors
-     * `UploadWizard::$uploadError`'s shape; the exact Req 1 Copywriting
-     * Contract string, never the raw exception message.
-     */
+    // One-shot error surfaced inline when parse-or-stage raises (corrupt
+    // file, unknown format, zip-bomb/zip-slip guard trip) — a fixed
+    // user-facing string, never the raw exception message.
     public ?string $uploadError = null;
 
     public function mount(Request $request, CurrentUser $currentUser): void
@@ -111,15 +77,10 @@ final class NewMigration extends Component
     public function rules(): array
     {
         return [
-            // IN-01: `extensions:zip` only checks the CLIENT-supplied
-            // filename extension; `mimes:zip` additionally sniffs the
-            // uploaded file's REAL content via `finfo` and checks it
-            // against zip's registered MIME types (application/zip,
-            // application/x-zip, application/x-zip-compressed) — a file
-            // renamed to `whatever.zip` that isn't actually a ZIP is now
-            // rejected here with a precise message, rather than only later
-            // via `ZipExtractor`'s `ZipArchive::open()` failure (still the
-            // authoritative check either way; this is defense-in-depth).
+            // extensions:zip checks the client-supplied filename extension;
+            // mimes:zip additionally sniffs the real content via finfo — see
+            // the architecture doc's "Wizard pages" section for why both
+            // run as defence-in-depth against a renamed non-ZIP file.
             'file' => ['required', 'file', 'max:'.self::MAX_UPLOAD_KB, 'extensions:zip', 'mimes:zip'],
             'sourceProduct' => ['required', 'in:ynab4,nynab,actual'],
         ];
@@ -184,14 +145,9 @@ final class NewMigration extends Component
                     ? $checkForUpdates($this->reconcileOf, $user, $this->sourceProduct, $extractedPath)
                     : $startMigrationRun($user, $this->sourceProduct, $extractedPath, $originalFilename);
             } finally {
-                // WR-01: extract() itself can throw partway (disk full,
-                // permission error, a corrupt entry ZipArchive::open()
-                // didn't already reject) — this finally now wraps the
-                // extract() call too (not just the parse-or-stage call), so
-                // cleanup() still runs and removes whatever ZipExtractor
-                // already tracked, even when extract() is what threw.
-                // Safe to call when nothing was extracted (no-op) and safe
-                // to call twice.
+                // Wraps extract() too (not just parse-or-stage), so cleanup()
+                // still runs even when extract() itself threw partway — safe
+                // to call when nothing was extracted, and safe twice.
                 $extractor->cleanup();
             }
         } catch (Throwable $e) {
@@ -219,13 +175,10 @@ final class NewMigration extends Component
         return $views->make('migration::livewire.new-migration');
     }
 
-    /**
-     * Sanitises an uploaded filename to a safe `[A-Za-z0-9_-]+\.zip` shape —
-     * the user-supplied original name is never used to construct disk paths
-     * directly. Mirrors `UploadWizard::sanitiseFilename()`.
-     */
     private function sanitiseFilename(string $original): string
     {
+        // Reduces to a safe [A-Za-z0-9_-]+.zip shape — the user-supplied
+        // original name is never used to construct disk paths directly.
         $stem = pathinfo($original, PATHINFO_FILENAME);
         $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
         $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;

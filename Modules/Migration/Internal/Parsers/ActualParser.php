@@ -25,33 +25,7 @@ use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use PDOException;
 
 /**
- * `ParsesMigrationSource` implementation for Actual Budget's export
- * (`db.sqlite` + `metadata.json` inside a ZIP — RESEARCH.md Format Schemas).
- * The only one of the three format parsers whose extracted directory is a
- * SQLite database rather than a CSV pair: this class drives
- * `ActualSqliteReader` — a wholly separate read-only `Pdo\Sqlite` connection
- * (Pitfall 6/T-13.5-09) reading Actual's resolved `v_transactions`/
- * `v_categories`/`v_payees` VIEWS (Pitfall 1), never the raw tables.
- *
- * Unlike YNAB4/nYNAB (no stable per-entity id in the CSV export — natural-key
- * fallback per D-10), Actual carries real UUIDs for every entity, so
- * `sourceExternalId` throughout this parser is simply the Actual row id —
- * no natural-key synthesis needed.
- *
- * Req 8 scope (Open Questions 2/3/4, resolved in 13.5-RESEARCH.md and this
- * plan's DOCUMENTED ASSUMPTIONS):
- *  - Currency (Open Q2): read from `preferences.currencyCode`; if absent,
- *    fall back to the user's `base_currency` and emit an "assumed
- *    {currency}" `UnmappedItemDto`.
- *  - Goals (Open Q3): `categories.goal_def`'s flat monthly/by-date subset
- *    maps to a `MigrationGoalDto` via `ActualGoalDefInterpreter`; anything
- *    else (multi-step templates, percentage-of-income schedules) becomes an
- *    `UnmappedItemDto('extra')` — never a lossy flat approximation.
- *  - Schedules (Open Q4): descoped to note-only — every `schedules` row
- *    becomes exactly one `MigrationScheduleDto` (note preserved) AND one
- *    `UnmappedItemDto('extra')`; `Modules\Recurring` is never touched.
- *  - Saved-report/`custom_reports` rows: no beatrax equivalent at all —
- *    always an `UnmappedItemDto('extra')`.
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class ActualParser implements ParsesMigrationSource
 {
@@ -109,13 +83,10 @@ final class ActualParser implements ParsesMigrationSource
         /** @var Collection<int, MigrationCategoryDto> $categories */
         $categories = new Collection;
 
-        // WR-03: materialize each Category Group as a real parent Category
-        // BEFORE any of its member categories (PromoteStagingToDomain::
-        // promoteCategories() processes staged rows in insertion order, so
-        // every parent row must land before its children) — Actual's group
-        // id is a stable UUID, reused verbatim as the parent's
-        // sourceExternalId, so `parentSourceExternalId` below resolves it
-        // directly rather than discarding the group structure flat.
+        // Materializes each Category Group as a real parent Category BEFORE
+        // any of its member categories (promoteCategories() processes staged
+        // rows in insertion order) — Actual's group id is a stable UUID,
+        // reused verbatim as the parent's sourceExternalId.
         foreach ($reader->categoryGroups() as $group) {
             $categories->push(new MigrationCategoryDto(
                 sourceExternalId: $group['id'],
@@ -154,7 +125,7 @@ final class ActualParser implements ParsesMigrationSource
         foreach ($reader->payees() as $row) {
             $payeeIsTransfer[$row['id']] = $row['transfer_acct'] !== null;
             if ($row['transfer_acct'] !== null) {
-                continue; // synthetic transfer-marker payee, never a real payee (Req 6)
+                continue;
             }
             $payees->push(new MigrationPayeeDto(
                 sourceExternalId: $row['id'],
@@ -256,21 +227,16 @@ final class ActualParser implements ParsesMigrationSource
     }
 
     /**
-     * Groups `is_child` rows under their `is_parent` sibling (Actual's
-     * explicit parent/child columns — substantially simpler than YNAB's
-     * memo-convention split reconstruction) and yields each non-child row
-     * lazily. The internal `$rows` array is a lightweight structural work
-     * buffer (mirrors `AbstractYnabParser`'s identical precedent — Plan 03);
-     * this method's OWN return value is the genuine
-     * `Generator<MigrationTransactionDto>` D-05 requires, never
-     * `iterator_to_array()`'d by this parser itself.
-     *
      * @param  list<array{id: string, is_parent: bool, is_child: bool, parent_id: ?string, account: string, category: ?string, amount: int, payee: ?string, notes: ?string, date: int, transfer_id: ?string, cleared: bool, reconciled: bool}>  $rows
      * @param  array<string, bool>  $payeeIsTransfer
      * @return Generator<int, MigrationTransactionDto>
      */
     private function buildTransactionsGenerator(array $rows, string $currency, array $payeeIsTransfer): Generator
     {
+        // Groups is_child rows under their is_parent sibling (Actual's
+        // explicit parent/child columns) and yields each non-child row
+        // lazily — this method's own return value is the genuine Generator
+        // the caller streams, never iterator_to_array()'d by this parser.
         /** @var array<string, list<int>> $childrenByParent */
         $childrenByParent = [];
         foreach ($rows as $i => $row) {
@@ -281,7 +247,7 @@ final class ActualParser implements ParsesMigrationSource
 
         foreach ($rows as $i => $row) {
             if ($row['is_child']) {
-                continue; // emitted inline as part of its parent's splits
+                continue;
             }
 
             if ($row['is_parent']) {
@@ -346,7 +312,7 @@ final class ActualParser implements ParsesMigrationSource
             postedAt: $this->parseActualDate($parentRow['date']),
             amount: Money::ofMinor($parentRow['amount'], $currency),
             payeeSourceExternalId: $isTransfer ? null : $payeeId,
-            categorySourceExternalId: null, // category lives on each leg for a split parent
+            categorySourceExternalId: null,
             description: $parentRow['notes'],
             clearedStatus: $this->mapClearedStatus($parentRow['cleared'], $parentRow['reconciled']),
             sourceRowIndex: $index,

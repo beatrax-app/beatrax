@@ -27,47 +27,10 @@ use RuntimeException;
 use stdClass;
 
 /**
- * Promotes one migration run's `migration_staging_*` rows into the user's
- * real domain tables through the six existing public writers, in the
- * mandatory fixed order (RESEARCH.md architecture diagram):
- *
- *   categories -> budget grid (EnvelopeWriter::setAssigned) -> accounts ->
- *   (ResolvesCounterparties::run THEN RecordTransactions) -> splits
- *   (SaveTransactionSplit) -> transfer sweep (pairOrphansForUser) -> goals
- *   (GoalWriter, Actual only).
- *
- * Bounded-not-atomic (mirrors `Modules\Import\Public\Actions\ConfirmImport`):
- * every step below runs its own per-entity writes OUTSIDE one giant
- * transaction — a multi-year promote must never be a single unbounded DB
- * transaction. Transactions are additionally chunked (`chunkById(500, ...)`,
- * never collapsed into one whole in-memory result set) mirroring
- * `RecordTransactions::persistChunk()`'s `CHUNK_SIZE = 500` convention.
- *
- * Idempotency gate (Req 9, D-08/D-09): EVERY step first asks
- * `SourceMapWriter::resolve()` whether this source entity was already
- * promoted by an earlier confirm of the identical export. A hit means the
- * entity is reused (its beatrax id) and NO further writes happen for it —
- * this is what makes a re-run of the identical export a true no-op across
- * categories/accounts/transactions, not merely "safe to call again" via each
- * writer's own internal upsert semantics. Budget-grid rows are the one
- * deliberate exception: `EnvelopeWriter::setAssigned()` is already idempotent
- * by value (re-setting the same amount is a no-op with no new row/event), so
- * no separate resolve-gate is needed there.
- *
- * Transaction-parent granularity source-map (documented simplification):
- * `migration_source_map` records ONE row per promoted transaction (not one
- * per split leg) — `SaveTransactionSplit::save()` has a `void` return (no leg
- * ids to map), and the parent-level resolve-gate above already fully
- * protects split-leg re-run idempotency (an already-mapped parent is skipped
- * before its legs are ever touched again). A `transfer_pair` source_map
- * entity type is likewise not separately recorded: each transfer LEG already
- * gets its own `'transaction'` source_map row, which is enough for Plan 07 to
- * relocate either leg individually; `pair_transaction_id` on the transaction
- * rows themselves is what Req 5's linkage actually rests on.
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class PromoteStagingToDomain
 {
-    /** Mirrors `RecordTransactions::CHUNK_SIZE` — never one unbounded pass. */
     private const CHUNK_SIZE = 500;
 
     public function __construct(
@@ -85,10 +48,8 @@ final class PromoteStagingToDomain
 
     /**
      * @param  list<string>  $skipBudgetAssignmentKeys  `{categoryExternalId}|{period_start}` composite keys
-     *                                                  to leave byte-for-byte untouched (Plan 07 reconciliation
-     *                                                  conflicts — D-12/D-13). Empty for a normal first-time
-     *                                                  confirm; `ConfirmMigration`'s call site never supplies
-     *                                                  this, preserving its exact prior behavior.
+     *                                                  to leave byte-for-byte untouched (reconciliation conflicts).
+     *                                                  Empty for a normal first-time confirm.
      */
     public function promote(int $runId, User $user, array $skipBudgetAssignmentKeys = []): PromoteResult
     {
@@ -134,11 +95,9 @@ final class PromoteStagingToDomain
      */
     private function promoteCategories(int $runId, User $user, string $sourceProduct): array
     {
-        // WR-03: ordered by id (== staging-insert order) so a group's
-        // synthetic parent row — always staged before its children, see
-        // AbstractYnabParser::addCategoryGroup()/ActualParser::buildBatch()
-        // — is guaranteed to already be in $idMap by the time a child row
-        // resolves its parent_source_external_id below.
+        // Ordered by id (== staging-insert order) so a group's synthetic
+        // parent row is guaranteed to already be in $idMap by the time a
+        // child row resolves its parent_source_external_id below.
         $rows = $this->db->connection()->table('migration_staging_categories')
             ->where('user_id', $user->id)
             ->where('migration_run_id', $runId)
@@ -209,7 +168,7 @@ final class PromoteStagingToDomain
     /**
      * @param  array<string, int>  $categoryIdMap
      * @param  list<string>  $skipKeys  `{categoryExternalId}|{period_start}` composite keys to leave
-     *                                  untouched (Plan 07 reconciliation conflicts — D-12/D-13).
+     *                                  untouched (reconciliation conflicts).
      */
     private function promoteBudgetAssignments(int $runId, User $user, string $sourceProduct, array $categoryIdMap, array $skipKeys = []): void
     {
@@ -229,20 +188,18 @@ final class PromoteStagingToDomain
             $periodStart = CarbonImmutable::parse(self::toStr($row->period_start));
 
             if (in_array($categoryExternalId.'|'.$periodStart->toDateString(), $skipKeys, true)) {
-                // Reconciliation conflict (Req 10/D-12): the local value ALSO
-                // diverged from the baseline, so this row's source change is
-                // applied to NOTHING — the beatrax value stays byte-for-byte
-                // untouched until the user resolves it (D-14 keep-local
-                // default is enforced by ThreeWayMergeResolver/CheckForUpdates,
-                // not here).
+                // Reconciliation conflict: the local value ALSO diverged from
+                // the baseline, so this row's source change is applied to
+                // NOTHING — the beatrax value stays untouched until the user
+                // resolves it via ThreeWayMergeResolver/CheckForUpdates.
                 continue;
             }
 
             $minor = self::toInt($row->budgeted_minor);
 
-            // setAssigned() is idempotent by value (Req 3/D-06): re-setting
-            // the same amount on a re-run is a no-op — no separate
-            // resolve-gate needed here, unlike categories/accounts/txns.
+            // setAssigned() is idempotent by value: re-setting the same
+            // amount on a re-run is a no-op — no separate resolve-gate
+            // needed here, unlike categories/accounts/transactions.
             $this->envelopeWriter->setAssigned($user, $categoryId, $periodStart, $minor);
 
             $assignmentId = $this->db->connection()->table('envelope_assignments')
@@ -251,8 +208,8 @@ final class PromoteStagingToDomain
                 ->where('period_start', $periodStart->toDateString())
                 ->value('id');
 
-            // A zero-minor assignment DELETES the row (D-06 absence == 0) —
-            // nothing persisted to map.
+            // A zero-minor assignment DELETES the row (absence == 0) —
+            // nothing persisted to map in that case.
             if ($assignmentId !== null) {
                 $externalId = $categoryExternalId.'|'.$periodStart->toDateString();
 
@@ -303,12 +260,10 @@ final class PromoteStagingToDomain
                     'name' => $name,
                     'slug' => $this->uniqueSlug('accounts', $user, $name),
                     'kind' => self::toStr($row->kind),
-                    // No real bank IBAN exists for a migrated account —
-                    // synthesize a deterministic, per-user-unique pseudo-IBAN
-                    // literal (mirrors the codebase's existing 'PAYPAL' /
-                    // 'ICS-CARD' / 'CASH...' synthetic-IBAN convention) so
-                    // Transfers\PairsTransferLegs can still match this
-                    // account's transfer legs by IBAN like any other.
+                    // No real bank IBAN exists for a migrated account — this
+                    // synthesizes a deterministic pseudo-IBAN (mirrors the
+                    // codebase's 'PAYPAL'/'ICS-CARD' convention) so
+                    // PairsTransferLegs can still match by IBAN like any other.
                     'iban' => self::syntheticIban($externalId),
                     'default_currency' => $currency,
                 ]);
@@ -421,8 +376,8 @@ final class PromoteStagingToDomain
 
                 // RecordResult::$duplicates is inspected below (per-row, via
                 // the fingerprint-lookup miss) rather than trusted as a bare
-                // count — CR-02: a genuine collision must be traceable back
-                // to the exact staged row that lost, not merely tallied.
+                // count — a genuine collision must be traceable back to the
+                // exact staged row that lost, not merely tallied.
                 ($this->recordTransactions)($newCanonicals, $user);
 
                 $fingerprintsByIndex = [];
@@ -444,15 +399,10 @@ final class PromoteStagingToDomain
                         : null;
 
                     if ($transactionId === null) {
-                        // CR-02: RecordTransactions silently dropped this row
-                        // as a fingerprint-duplicate of an unrelated row (a
-                        // genuine cross-source coincidence, now vanishingly
-                        // rare since buildCanonicalTransaction() seeds a
-                        // distinct bookedAt per staged row). Surface it as a
-                        // visible unmapped item instead of silently counting
-                        // it as a success — nothing (source-map, split legs,
-                        // payee resolution) is ever linked/attached for this
-                        // row.
+                        // RecordTransactions silently dropped this row as a
+                        // fingerprint-duplicate of an unrelated row (rare
+                        // since buildCanonicalTransaction() seeds a distinct
+                        // bookedAt) — surfaced as a visible unmapped item.
                         $this->db->connection()->table('migration_staging_unmapped_items')->insert([
                             'user_id' => $user->id,
                             'migration_run_id' => $runId,
@@ -465,7 +415,6 @@ final class PromoteStagingToDomain
                         continue;
                     }
 
-                    // cleared_status -> status (Req 4):
                     // CanonicalTransaction::toAttributes() always stamps
                     // 'cleared' for a non-'manual' sourceFormat, so the real
                     // staged status is applied explicitly right after insert.
@@ -621,20 +570,10 @@ final class PromoteStagingToDomain
 
         $postedAt = CarbonImmutable::parse(self::toStr($row->posted_at));
 
-        // CR-02: none of the three migration source formats carry a
-        // transaction time-of-day, so postedAt/valueDate are always
-        // midnight. FingerprintComposer's dedup tuple relies on bookedAt's
-        // second-resolution to disambiguate two otherwise-identical same-day
-        // rows (its own docblock) — feeding it the same midnight value for
-        // every row defeats that entirely and causes RecordTransactions to
-        // silently drop the second of two genuinely distinct transactions.
-        // Seed bookedAt with a deterministic sub-day offset derived from the
-        // staged row's own stable primary key (self::CHUNK_SIZE-bounded
-        // chunks are still processed in ascending id order via chunkById),
-        // so two distinct staged rows get distinct bookedAt values and
-        // therefore distinct fingerprints. postedAt/valueDate stay exactly
-        // the user-facing date-only value — only bookedAt (an internal
-        // dedup/ordering signal, never displayed) gets the synthetic offset.
+        // Seeds bookedAt with a deterministic sub-day offset derived from the
+        // staged row's own stable id, so two same-day rows get distinct
+        // fingerprints — see the architecture doc's "Idempotency" section
+        // for why a shared midnight value would defeat FingerprintComposer.
         $bookedAt = $postedAt->addSeconds(self::toInt($row->id) % 86400);
 
         return new CanonicalTransaction(
@@ -725,16 +664,12 @@ final class PromoteStagingToDomain
         return $normalized === '' ? NormalizeStage::NO_COUNTERPARTY : $normalized;
     }
 
-    /**
-     * Finds-or-creates a single per-(user, sourceProduct) synthetic
-     * `import_runs` row so migrated transactions can satisfy
-     * `transactions.import_run_id`'s required FK — mirrors
-     * `Modules\CashBook\Internal\Actions\RecordManualTransaction::manualRunId()`'s
-     * identical synthetic-fixture precedent (a manual cash entry needs the
-     * same FK satisfied and is likewise not a real file import).
-     */
     private function migrationImportRunId(User $user, string $sourceProduct): int
     {
+        // Finds-or-creates a single per-(user, sourceProduct) synthetic
+        // import_runs row so migrated transactions can satisfy
+        // transactions.import_run_id's required FK (mirrors CashBook's
+        // manual-entry synthetic-fixture precedent).
         $sourceFormat = 'migration_'.$sourceProduct;
         $connection = $this->db->connection();
 
@@ -789,8 +724,7 @@ final class PromoteStagingToDomain
                 // beatrax's Goal model requires a non-null target_date; a
                 // dateless flat goal_def cannot be represented without
                 // inventing one, so it is surfaced as unmapped instead of a
-                // lossy approximation (mirrors the non-flat goal_def "extra"
-                // convention the parser itself already applies).
+                // lossy approximation.
                 $this->db->connection()->table('migration_staging_unmapped_items')->insert([
                     'user_id' => $user->id,
                     'migration_run_id' => $runId,
@@ -854,22 +788,11 @@ final class PromoteStagingToDomain
         return $slug;
     }
 
-    /**
-     * Deterministic, per-user-unique pseudo-IBAN literal for a migrated
-     * account (no real bank IBAN exists for this data). Short enough to fit
-     * `accounts.iban`'s 34-char column comfortably.
-     */
     private static function syntheticIban(string $sourceExternalId): string
     {
         return 'MIG'.strtoupper(hash('crc32b', $sourceExternalId));
     }
 
-    /**
-     * Formats a positive integer-minor amount as the plain decimal string
-     * `GoalWriter::parseAmount()` accepts (e.g. `200.00`). Goal amounts are
-     * always positive per `ActualGoalDefInterpreter`'s own `$amount > 0`
-     * guard; the sign is still handled defensively.
-     */
     private static function minorToDecimalString(int $minor): string
     {
         $sign = $minor < 0 ? '-' : '';

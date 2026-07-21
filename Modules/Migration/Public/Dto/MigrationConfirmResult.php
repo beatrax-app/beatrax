@@ -7,9 +7,7 @@ namespace Modules\Migration\Public\Dto;
 use Spatie\LaravelData\Data;
 
 /**
- * Outcome of `ConfirmMigration`. Mirrors `Modules\Import\Public\Dto\
- * ImportConfirmResult`'s shape — the wizard's results page renders these
- * counts directly.
+ * @link ../../../../.docs/features/migration/architecture.md
  */
 final class MigrationConfirmResult extends Data
 {

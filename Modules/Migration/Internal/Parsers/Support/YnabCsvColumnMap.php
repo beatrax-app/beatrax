@@ -7,19 +7,7 @@ namespace Modules\Migration\Internal\Parsers\Support;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
 /**
- * Header allow-list + category-column resolution shared by `Ynab4Parser` and
- * `NynabParser` — RESEARCH.md's Format Schemas section identifies the
- * combined `"Category Group/Category"` column (nYNAB) vs the separate
- * `"Master Category"`/`"Sub Category"` columns (YNAB4) as the ONLY confirmed
- * divergence between the two formats; every other column and convention
- * (splits, transfers, cleared codes, amount format) is identical, which is
- * why this class takes `$format` per call rather than being format-bound —
- * a single shared instance serves both parsers.
- *
- * Stateless / singleton-safe. Every `assert*Header()` method throws
- * `UnrecognizedMigrationFileException` naming BOTH the expected column and
- * the full found header list (Req 1 / Open Q1's documented column
- * allow-list assumption) — never a partial/silent skip.
+ * @link ../../../../../.docs/features/migration/architecture.md
  */
 final class YnabCsvColumnMap
 {
@@ -53,17 +41,15 @@ final class YnabCsvColumnMap
     }
 
     /**
-     * Resolves one Register.csv row's category group + name per format:
-     * YNAB4 reads the two separate `Master Category`/`Sub Category` cells;
-     * nYNAB splits the single combined `"Category Group/Category"` cell
-     * (e.g. `"Frequent: Groceries"`) on the first `:` . A transfer row
-     * (whose category columns are blank) resolves to `[null, '']`.
-     *
      * @param  array<string, string>  $row
      * @return array{0: ?string, 1: string}
      */
     public function categoryGroupAndName(array $row, string $format): array
     {
+        // YNAB4 reads the two separate Master Category/Sub Category cells;
+        // nYNAB splits the single combined "Category Group/Category" cell
+        // (e.g. "Frequent: Groceries") on the first ':'. A transfer row
+        // resolves to [null, ''].
         if ($format === 'ynab4') {
             $group = trim($row['Master Category'] ?? '');
             $name = trim($row['Sub Category'] ?? '');
