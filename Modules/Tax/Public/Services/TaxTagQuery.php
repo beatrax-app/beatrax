@@ -13,15 +13,7 @@ use Modules\Tax\Public\Dto\TaxTagData;
 use Modules\Tax\Public\Dto\TaxYearSummary;
 
 /**
- * Lightweight tagged-state lookup service for badge surfaces, dashboard, and nav.
- *
- * This is the PUBLIC query service: its methods are consumed cross-module by
- * badge partials, the dashboard tile, and the sidebar nav count.
- *
- * Security:
- *  - Every query scopes to `user_id = $userId` before returning data (T-07-06).
- *  - `forTransactionIds` uses a single `whereIn` query for the full batch
- *    so callers never issue N+1 queries (D-03 Pitfall 1).
+ * @link ../../../../.docs/features/tax/architecture.md
  */
 final class TaxTagQuery
 {
@@ -31,21 +23,9 @@ final class TaxTagQuery
         private readonly Session $session,
     ) {}
 
+    // Whole-transaction only (see the @link above for why); callers that
+    // need leg-aware state use forTransactionIdsWithLegs() instead.
     /**
-     * Return a map of transactionId → TaxTagData for the given ids.
-     *
-     * Only TAGGED ids appear in the result. Callers treat absence as "untagged".
-     * Single `whereIn` query regardless of batch size — N+1 prevention.
-     *
-     * WHOLE-TRANSACTION ONLY (Phase 13.3 Finding A): filters to
-     * `transaction_split_id IS NULL`. Leg rows carry the PARENT
-     * transaction_id (Phase 13.1 D-06a), so without this filter a tag on
-     * ONE leg of a split would light up the whole-transaction badge for
-     * the parent row — and the whole-tx untag path (which also scopes to
-     * `whereNull('transaction_split_id')`, see UntagTransaction) would then
-     * match zero rows on click, a silent no-op. Callers that need
-     * leg-aware state use `forTransactionIdsWithLegs()` instead.
-     *
      * @param  array<int>  $transactionIds
      * @return array<int, TaxTagData>
      */
@@ -85,21 +65,6 @@ final class TaxTagQuery
     }
 
     /**
-     * Batch-load per-LEG tax tag state for the given transaction ids
-     * (Phase 13.1 D-06a).
-     *
-     * Returns a map keyed by "{transactionId}:{transactionSplitId}" for a
-     * leg-scoped tag, or "{transactionId}:whole" for a whole-transaction
-     * tag, so the split editor can render each leg's tax badge
-     * independently by (transactionId, transactionSplitId). Only TAGGED
-     * pairs appear — callers treat absence as "untagged", mirroring
-     * forTransactionIds()'s existing absence convention.
-     *
-     * Single `whereIn` query regardless of batch size — N+1 prevention,
-     * matching forTransactionIds()'s D-03 Pitfall 1 guard. This method does
-     * NOT replace forTransactionIds() — unsplit callers keep using that
-     * whole-transaction-only method unchanged.
-     *
      * @param  array<int>  $transactionIds
      * @return array<string, TaxTagData>
      */
@@ -142,13 +107,8 @@ final class TaxTagQuery
         return $map;
     }
 
-    /**
-     * Booked (calendar) year of a transaction, or null when the transaction
-     * does not exist or belongs to another user.
-     *
-     * Used by the tag picker to decide whether to render the D-10
-     * year-assignment row (booked year ≠ current tax year).
-     */
+    // Used by the tag picker to decide whether to render the
+    // year-assignment row (booked year != current tax year).
     public function bookedYearFor(int $userId, int $transactionId): ?int
     {
         $bookedAt = $this->db->connection()
@@ -166,16 +126,8 @@ final class TaxTagQuery
         return $year > 0 ? $year : null;
     }
 
-    /**
-     * Compact year summary (count + total) for the sidebar / dashboard.
-     *
-     * Uses COALESCE to respect tax_year_override for each tagged row.
-     *
-     * totalMinor is the DEDUCTIONS total only (non-income rows), matching
-     * the /tax cockpit's headline "Total deductions" KPI — folding income
-     * and deductions into one absolute sum produced a figure that matched
-     * neither number on /tax (IN-08). count still covers ALL tagged items.
-     */
+    // totalMinor is the deductions total only (see the @link above for
+    // why); count covers every tagged item regardless of type.
     public function summaryForUser(int $userId, int $year): TaxYearSummary
     {
         $row = $this->db->connection()
@@ -196,19 +148,13 @@ final class TaxTagQuery
         );
     }
 
-    /**
-     * Count of OTHER untagged transactions for the same counterparty in the tax year.
-     *
-     * Used by TaxPage after a tag action to show "Also tag N more from [Gym] this year?".
-     * Returns BatchTagSuggestion with untaggedCount=0 when the transaction has no counterparty.
-     *
-     * The count EXCLUDES the just-tagged transaction itself (D-03).
-     */
+    // Feeds TaxPage's "Also tag N more from [Gym] this year?" banner;
+    // returns untaggedCount=0 when the transaction has no counterparty.
+    // The count excludes the just-tagged transaction itself.
     public function untaggedCountForCounterparty(int $userId, int $transactionId, int $taxYear): BatchTagSuggestion
     {
         $connection = $this->db->connection();
 
-        // Resolve counterparty_id of the just-tagged transaction (user-scoped).
         $tx = $connection
             ->table('transactions')
             ->where('id', $transactionId)
@@ -225,9 +171,8 @@ final class TaxTagQuery
 
         $cpId = self::toInt($tx->counterparty_id);
 
-        // Resolve counterparty name. CRYPT-01 (D-02b) read-side decrypt —
-        // display_name is ciphertext at rest once encryption is enabled;
-        // pass-through no-op otherwise.
+        // Read-side decrypt — display_name is ciphertext at rest once
+        // encryption is enabled; a pass-through no-op otherwise.
         $cpRow = $connection
             ->table('counterparties')
             ->where('id', $cpId)
@@ -237,7 +182,6 @@ final class TaxTagQuery
             ? $this->codec->decryptValue('counterparties', 'display_name', $cpRow->display_name, $userId, $this->session)['value']
             : '';
 
-        // Count OTHER untagged transactions for this counterparty in the effective tax year.
         $untaggedCount = $connection
             ->table('transactions AS t')
             ->leftJoin('tax_transaction_tags AS tag', static function (JoinClause $join) use ($userId): void {
@@ -262,11 +206,6 @@ final class TaxTagQuery
     }
 
     /**
-     * Fetch the ids of untagged transactions for a given counterparty + tax year.
-     *
-     * Used by HandlesTaxTagging::applyBatchTag to tag all siblings in one pass.
-     * Scoped to $userId — returns only rows owned by this user (T-07-20).
-     *
      * @return list<int>
      */
     public function untaggedIdsForCounterparty(int $userId, int $counterpartyId, int $taxYear): array
@@ -292,11 +231,8 @@ final class TaxTagQuery
         return $result;
     }
 
-    /**
-     * Decrypts a raw `tax_transaction_tags.note` stored value, or returns
-     * null when the stored value isn't a non-empty string. Never throws —
-     * a pass-through no-op when encryption is not enabled for this user.
-     */
+    // Returns null when the stored value isn't a non-empty string; never
+    // throws — a pass-through no-op when encryption is not enabled.
     private function decryptNoteOrNull(mixed $value, int $userId): ?string
     {
         if (! is_string($value) || $value === '') {

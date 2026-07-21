@@ -11,14 +11,7 @@ use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
 use Modules\Tax\Public\Dto\TaxYearData;
 
 /**
- * Public facade for the grouped tax-year query service.
- *
- * Delegates all work to the internal implementation so consumers
- * (including TaxPage, exporters, and the year-switcher) can resolve this
- * class through the IoC container without reaching into Modules\Tax\Internal.
- *
- * This class is the singleton registered in TaxServiceProvider; the internal
- * class carries the full query logic and is only visible inside the Tax module.
+ * @link ../../../../.docs/features/tax/architecture.md
  */
 final class TaxYearQuery
 {
@@ -29,8 +22,6 @@ final class TaxYearQuery
     ) {}
 
     /**
-     * Return grouped tax-year data for a user and effective tax year.
-     *
      * @see InternalTaxYearQuery::forUser()
      */
     public function forUser(int $userId, int $year): TaxYearData
@@ -39,8 +30,6 @@ final class TaxYearQuery
     }
 
     /**
-     * Return distinct effective tax years for a user in descending order.
-     *
      * @return array<int>
      */
     public function availableYears(int $userId): array

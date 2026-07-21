@@ -10,38 +10,12 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\TaxYearData;
 
+// Amounts are always summed from settled_amount_minor (settled EUR); no
+// floating-point arithmetic on money values anywhere in this class. See
+// the linked doc for year resolution, leg-aware amounts, the
+// supersession policy, and category-name resolution.
 /**
- * Query service: grouped per-year tax data with COALESCE year-override resolution.
- *
- * All reads are scoped to a single user via `where('tag.user_id', $userId)` as
- * the first filter on every query — structural ownership guard (T-07-05).
- *
- * Year resolution uses COALESCE(tag.tax_year_override, CAST(strftime('%Y', t.booked_at)
- * AS INTEGER)) so that a manually-overridden tax year always takes precedence
- * over the booked date (D-10, T-07-07).
- *
- * Amounts are always summed from settled_amount_minor (settled EUR). No
- * floating-point arithmetic is performed on money values in this class.
- *
- * Leg-aware (Phase 13.1 D-06a): a tag scoped to one leg of a split
- * transaction (`tag.transaction_split_id` NOT NULL) reports the LEG's own
- * `settled_amount_minor` via `LEFT JOIN transaction_splits AS ts ON ts.id =
- * tag.transaction_split_id` + `COALESCE(ts.settled_amount_minor,
- * t.settled_amount_minor)` — never the whole parent's amount. This is a
- * tax-correctness requirement: a €80 transaction split €60 Groceries
- * (tagged deductible) / €20 Household (not tagged) must export €60, not
- * €80 and not €0.
- *
- * SUPERSESSION POLICY (locked default): once a transaction has ANY
- * leg-scoped tag, its whole-transaction tag row (transaction_split_id IS
- * NULL) is excluded from these results — it is not deleted anywhere, just
- * no longer surfaced/exported, so a stale pre-split tag can never
- * double-report alongside its legs.
- *
- * The category name shown for a leg-scoped tag resolves from
- * `tag.deduction_category_id` (the TAX deduction category) — never from the
- * leg's own `category_id` (the SPEND category on `transaction_splits`).
- * These are distinct concepts and must not be conflated.
+ * @link ../../../../.docs/features/tax/architecture.md
  */
 final class TaxYearQuery
 {
@@ -51,21 +25,10 @@ final class TaxYearQuery
         private readonly Session $session,
     ) {}
 
-    /**
-     * Return grouped tax-year data for a user and effective tax year.
-     *
-     * Rows are grouped by deduction_category_id (NULL rows land in a
-     * trailing "no category" group). The `$categories` array in the
-     * returned DTO has the shape:
-     *   [ 'id' => int|null, 'name' => string|null, 'shortName' => string|null,
-     *     'subtotalMinor' => int, 'rows' => list<array<string,mixed>> ]
-     *
-     * Income vs deduction split: `type = 'income'` counts toward
-     * incomeTotalMinor; all other types toward deductionsTotalMinor.
-     * Amounts are stored signed in the DB (expenses negative); this method
-     * uses abs() to produce unsigned subtotals and totals that match the
-     * UI's "you spent X" language.
-     */
+    // Rows group by deduction_category_id (NULL rows land in a trailing
+    // "no category" group). type='income' counts toward incomeTotalMinor,
+    // everything else toward deductionsTotalMinor; abs() converts the
+    // signed stored amounts to the UI's unsigned "you spent X" totals.
     public function forUser(int $userId, int $year): TaxYearData
     {
         $connection = $this->db->connection();
@@ -73,16 +36,18 @@ final class TaxYearQuery
         $rawRows = $connection
             ->table('tax_transaction_tags AS tag')
             ->join('transactions AS t', 't.id', '=', 'tag.transaction_id')
-            // Leg-aware amount resolution (D-06a): a leg-scoped tag joins to
-            // its own transaction_splits row; a whole-tx tag's ts.* columns
-            // are NULL and the COALESCE below falls back to the parent.
+            // A leg-scoped tag joins to its own transaction_splits row; a
+            // whole-tx tag's ts.* columns are NULL and the COALESCE below
+            // falls back to the parent.
             ->leftJoin('transaction_splits AS ts', 'ts.id', '=', 'tag.transaction_split_id')
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->leftJoin('accounts AS a', 'a.id', '=', 't.account_id')
             ->leftJoin('counterparties AS cp', 'cp.id', '=', 't.counterparty_id')
-            // T-07-05: user scope is the first filter, never omitted.
+            // User scope is the first filter on every query, never
+            // omitted — a structural ownership guard.
             ->where('tag.user_id', $userId)
-            // D-10 / T-07-07: effective year via COALESCE override.
+            // Effective year resolves via the COALESCE override rather
+            // than the raw booked date.
             ->whereRaw(
                 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
                 [$year],
@@ -138,7 +103,8 @@ final class TaxYearQuery
             );
         }
 
-        // Group rows by category id (null → trailing "no category" group).
+        // Group rows by category id; a null id lands in the trailing
+        // "no category" group built separately below.
         /** @var array<string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}> $groups */
         $groups = [];
         /** @var array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}|null $noCategory */
@@ -152,17 +118,18 @@ final class TaxYearQuery
             $transactionType = self::toStr($row->transaction_type);
             $isIncome = $transactionType === 'income';
 
-            // Totals — use abs() to convert signed minor amounts to unsigned.
+            // abs() converts the signed stored minor amount to the
+            // unsigned total the UI expects.
             if ($isIncome) {
                 $incomeTotal += abs($minor);
             } else {
                 $deductionsTotal += abs($minor);
             }
 
-            // CRYPT-01 (D-02b) read-side decrypt — the tax cockpit /
-            // CSV / PDF export reads description/counterparty display
-            // name/iban/note, all of which are ciphertext at rest once
-            // encryption is enabled; pass-through no-op otherwise.
+            // Read-side decrypt — the tax cockpit / CSV / PDF export reads
+            // description/counterparty display name/iban/note, all
+            // ciphertext at rest once encryption is enabled; a pass-through
+            // no-op otherwise.
             $rowData = [
                 'transactionId' => self::toInt($row->transaction_id),
                 'transactionSplitId' => $row->transaction_split_id !== null ? self::toInt($row->transaction_split_id) : null,
@@ -187,7 +154,8 @@ final class TaxYearQuery
             ];
 
             if ($row->category_id === null) {
-                // Accumulate into the trailing no-category group.
+                // Accumulate into the trailing no-category group, created
+                // lazily on first encounter.
                 if ($noCategory === null) {
                     $noCategory = [
                         'id' => null,
@@ -215,7 +183,6 @@ final class TaxYearQuery
             }
         }
 
-        // Build ordered categories list: named groups first, then "no category" trailing.
         $categories = array_values($groups);
         if ($noCategory !== null) {
             $categories[] = $noCategory;
@@ -231,10 +198,6 @@ final class TaxYearQuery
     }
 
     /**
-     * Return distinct effective tax years for a user in descending order.
-     *
-     * Effective year = COALESCE(tax_year_override, CAST(strftime('%Y', booked_at) AS INTEGER)).
-     *
      * @return array<int>
      */
     public function availableYears(int $userId): array
@@ -259,12 +222,8 @@ final class TaxYearQuery
         return $years;
     }
 
-    /**
-     * Decrypts a raw stored (possibly mixed-type stdClass property) value
-     * for the given sensitive (table, field) pair, or returns null when
-     * the stored value isn't a non-empty string. Never throws — a
-     * pass-through no-op when encryption is not enabled for this user.
-     */
+    // Returns null when the stored value isn't a non-empty string; never
+    // throws — a pass-through no-op when encryption is not enabled.
     private function decryptOrNull(string $table, string $field, mixed $value, int $userId): ?string
     {
         if (! is_string($value) || $value === '') {

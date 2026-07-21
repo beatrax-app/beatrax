@@ -18,28 +18,12 @@ use Modules\Tax\Public\Services\TaxYearQuery;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * `/tax` year cockpit — year switcher, grouped category sections,
- * export buttons, and guided empty states.
- *
- * Method-parameter DI on every action and on mount/render — constructor
- * injection is banned on Livewire Component subclasses by phpstan-strict-rules
- * (same pattern as GoalsPage, DriftPage, TaxSettingsSection).
- *
- * TAX-02 / D-09: Grouped deduction-category sections with per-category
- * subtotals + grand totals in settled EUR.
- * TAX-03 / D-16: Export CSV and Export PDF stream-download buttons.
- * D-22: Seasonal year default — Jan–Apr → previous year; May–Dec → current year.
- * D-23: Guided empty states (first-visit + empty-year).
- * T-07-16: exportCsv/exportPdf pass CurrentUser to user-scoped services only.
- * T-07-17: Unauthenticated render branch returns an empty view (route group
- *   adds 'auth' middleware; this is a defence-in-depth fallback).
+ * @link ../../../../../.docs/features/tax/architecture.md
  */
 final class TaxPage extends Component
 {
-    /**
-     * Active tax year. 0 means "use seasonal default" — resolved in mount().
-     * #[Url] so deep links (?year=2025) and back-button work (D-22).
-     */
+    // 0 means "use seasonal default," resolved in mount(). #[Url] so deep
+    // links (?year=2025) and the back button work.
     #[Url(as: 'year', except: 0)]
     public int $year = 0;
 
@@ -51,24 +35,18 @@ final class TaxPage extends Component
 
         if ($this->year === 0) {
             $now = $clock->now();
-            // D-22: Jan–Apr = aangifte season → previous year; May–Dec → current year.
             $this->year = $now->month <= 4
                 ? $now->year - 1
                 : $now->year;
         }
     }
 
-    /**
-     * Export tagged transactions for the current year as a D-15 audit CSV.
-     * T-07-16: passes the acting user to the user-scoped exporter only.
-     */
     public function exportCsv(
         ResponseFactory $responses,
         TaxCsvExporter $exporter,
         CurrentUser $currentUser,
     ): StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
-            // Defensive branch — 'auth' middleware blocks unauthenticated access.
             return new StreamedResponse(static function (): void {});
         }
 
@@ -84,10 +62,6 @@ final class TaxPage extends Component
         );
     }
 
-    /**
-     * Export tagged transactions for the current year as a D-14 A4 PDF.
-     * T-07-16: passes the acting user to the user-scoped renderer only.
-     */
     public function exportPdf(
         ResponseFactory $responses,
         TaxPdfRenderer $renderer,
@@ -115,8 +89,9 @@ final class TaxPage extends Component
         ViewFactory $views,
         DatabaseManager $db,
     ): View {
-        // Defence-in-depth: 'auth' middleware makes this unreachable for guests,
-        // but guard anyway so an unauthenticated render degrades gracefully (T-07-17).
+        // Defense-in-depth: the route group's 'auth' middleware makes this
+        // unreachable for guests, but guard anyway so an unauthenticated
+        // render degrades gracefully.
         if (! $currentUser->isAuthenticated()) {
             $view = $views->make('tax::livewire.tax-page', [
                 'data' => null,
@@ -134,9 +109,9 @@ final class TaxPage extends Component
         $data = $query->forUser($user->id, $this->year);
         $availableYears = $query->availableYears($user->id);
 
-        // Determine if this is a "first visit" (no tax country set).
-        // Read from DB (not the model) since tax_country_code is not typed on User.
-        // TaxSettingsSection writes this column via DatabaseManager::update().
+        // Read from the DB, not the model, since tax_country_code is not
+        // typed on User; TaxSettingsSection writes it via DatabaseManager
+        // directly.
         $taxCountryCode = $db->connection()
             ->table('users')
             ->where('id', $user->id)

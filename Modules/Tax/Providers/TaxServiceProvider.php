@@ -24,49 +24,37 @@ use Modules\Tax\Public\Services\TaxTagQuery;
 use Modules\Tax\Public\Services\TaxYearQuery;
 
 /**
- * Wires the Tax module: migrations, routes, views, Livewire components,
- * and ALL service singleton binds.
- *
- * Service bind inventory (by implementing plan):
- *   Plan 01: TagTransaction, UntagTransaction
- *   Plan 02: TaxYearQuery, TaxTagQuery
- *   Plan 03: TaxCsvExporter, TaxPdfRenderer
- *   Plan 04: TaxCorpusLoader (Internal), TaxCategoryWriter (Internal)
- *   Wizard tax-country step: TaxCountrySetup (Public facade)
+ * @link ../../../.docs/features/tax/architecture.md
  */
 final class TaxServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Plan 01 actions
         $this->app->singleton(TagTransaction::class);
         $this->app->singleton(UntagTransaction::class);
 
-        // Plan 02 query services
         $this->app->singleton(TaxYearQuery::class);
         $this->app->singleton(TaxTagQuery::class);
 
-        // Plan 03 exporters
         $this->app->singleton(TaxCsvExporter::class);
         $this->app->singleton(TaxPdfRenderer::class);
 
-        // Plan 04 corpus + category writer (Internal classes)
         $this->app->singleton(TaxCorpusLoader::class);
         $this->app->singleton(TaxCategoryWriter::class);
 
-        // Public category-writer facade — the surface consumed by the
-        // HandlesTaxTagging trait inside other modules' components (WR-07).
+        // The surface consumed by HandlesTaxTagging inside other modules'
+        // components.
         $this->app->singleton(\Modules\Tax\Public\Services\TaxCategoryWriter::class);
 
-        // Public country-setup surface for cross-module consumers
-        // (the Onboarding wizard's tax-country step).
+        // Cross-module consumers, e.g. the Onboarding wizard's
+        // tax-country step.
         $this->app->singleton(TaxCountrySetup::class);
     }
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        // WR-06: drop the per-user nav-counts cache on every tag/untag so
-        // the sidebar tax_tagged badge refreshes promptly.
+        // Drops the per-user nav-counts cache on every tag/untag so the
+        // sidebar tax_tagged badge refreshes promptly.
         $events->listen(TransactionTagged::class, [InvalidateNavCounts::class, 'handle']);
         $events->listen(TransactionUntagged::class, [InvalidateNavCounts::class, 'handle']);
 
@@ -83,10 +71,8 @@ final class TaxServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'tax');
         }
 
-        // Plan 04: Tax settings section (country choice + category CRUD)
         $livewire->component('tax.settings-section', TaxSettingsSection::class);
 
-        // Plan 05: /tax cockpit page + dashboard summary card
         $livewire->component('tax.tax-page', TaxPage::class);
         $livewire->component('tax.summary-card', TaxSummaryCard::class);
     }

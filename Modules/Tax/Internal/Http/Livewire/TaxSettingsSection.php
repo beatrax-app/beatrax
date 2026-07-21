@@ -14,33 +14,23 @@ use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Settings Tax section component.
- *
- * Exposes country selection + deduction category CRUD in the settings page.
- * Follows the SettingsPage pattern: NO constructor DI — collaborators arrive
- * as parameters on each action/render method.
- *
- * Allow-listed country codes (D-07, T-07-12): nl, de, be, fr, gb, us.
- * Switching country is additive — never deletes existing categories or tags.
+ * @link ../../../../../.docs/features/tax/architecture.md
  */
 final class TaxSettingsSection extends Component
 {
-    /** @var list<string> Allowed country codes (T-07-12). */
+    /**
+     * @var list<string>
+     */
     private const ALLOWED_COUNTRIES = ['nl', 'de', 'be', 'fr', 'gb', 'us'];
 
-    /** Current tax country code or empty string when unset. */
     public string $taxCountryCode = '';
 
-    /** Inline category add form — name input. */
     public string $newCategoryName = '';
 
-    /** Inline error message for the add form. */
     public string $addError = '';
 
-    /** Inline error message for the rename affordance (WR-11). */
     public string $renameError = '';
 
-    /** Success flash. */
     public bool $addSuccess = false;
 
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
@@ -56,10 +46,6 @@ final class TaxSettingsSection extends Component
         $this->taxCountryCode = is_string($code) ? $code : '';
     }
 
-    /**
-     * Set the user's tax country and seed the corpus categories for the new
-     * country (additive — never deletes existing categories, D-07, T-07-12).
-     */
     public function setTaxCountry(
         string $code,
         CurrentUser $currentUser,
@@ -68,16 +54,13 @@ final class TaxSettingsSection extends Component
         TaxCategoryWriter $writer,
     ): void {
         if (! in_array($code, self::ALLOWED_COUNTRIES, strict: true)) {
-            // Out-of-allow-list codes are silently ignored (T-07-12).
             return;
         }
 
         $user = $currentUser->user();
 
-        // Seed the new country's categories (INSERT-only, never deletes).
         $writer->seedFromCorpus($user, $code);
 
-        // Persist the preference.
         $db->connection()->table('users')
             ->where('id', $user->id)
             ->update([
@@ -88,9 +71,6 @@ final class TaxSettingsSection extends Component
         $this->taxCountryCode = $code;
     }
 
-    /**
-     * Add a user-created category via the inline form.
-     */
     public function addCategory(CurrentUser $currentUser, TaxCategoryWriter $writer): void
     {
         $this->addError = '';
@@ -111,10 +91,8 @@ final class TaxSettingsSection extends Component
         }
     }
 
-    /**
-     * Rename a category inline (WR-11: guards against empty and duplicate
-     * names with a friendly inline error instead of an uncaught exception).
-     */
+    // Guards against empty and duplicate names with a friendly inline
+    // error instead of an uncaught exception.
     public function renameCategory(
         int $categoryId,
         string $name,
@@ -123,18 +101,17 @@ final class TaxSettingsSection extends Component
     ): void {
         $this->renameError = '';
 
+        // A NotFoundHttpException here means a cross-user attempt; every
+        // catch in this class silently ignores it in the UI layer rather
+        // than surfacing a signal that the id exists.
         try {
             $writer->rename($currentUser->user()->id, $categoryId, $name);
         } catch (NotFoundHttpException) {
-            // Cross-user attempt — silently ignore in the UI layer.
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             $this->renameError = $e->getMessage();
         }
     }
 
-    /**
-     * Archive a category.
-     */
     public function archiveCategory(
         int $categoryId,
         CurrentUser $currentUser,
@@ -143,14 +120,9 @@ final class TaxSettingsSection extends Component
         try {
             $writer->archive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
-            // Cross-user attempt — silently ignore in the UI layer.
         }
     }
 
-    /**
-     * Restore an archived category to active (WR-11 — archiving is
-     * reversible from the Archived disclosure).
-     */
     public function unarchiveCategory(
         int $categoryId,
         CurrentUser $currentUser,
@@ -159,7 +131,6 @@ final class TaxSettingsSection extends Component
         try {
             $writer->unarchive($currentUser->user()->id, $categoryId);
         } catch (NotFoundHttpException) {
-            // Cross-user attempt — silently ignore in the UI layer.
         }
     }
 

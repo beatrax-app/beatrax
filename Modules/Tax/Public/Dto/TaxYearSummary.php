@@ -6,11 +6,6 @@ namespace Modules\Tax\Public\Dto;
 
 use Spatie\LaravelData\Data;
 
-/**
- * Compact year summary for sidebar / dashboard tiles.
- *
- * Produced by TaxYearQuery (Plan 02).
- */
 final class TaxYearSummary extends Data
 {
     public function __construct(

@@ -9,23 +9,15 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 
-/**
- * Loads the bundled per-country tax deduction category corpus from
- * `resources/corpus/tax/{cc}.yaml`. Each file contains an `entries:` list
- * where every entry has at minimum a `key` (corpus slug) and a `name`.
- *
- * Failure modes are tolerated and logged — never thrown — following the
- * CorpusYamlReader convention established in the Community module:
- *   - Unknown country code (no file) → returns [].
- *   - Missing or malformed YAML file → logs warning, returns [].
- *   - Root has no `entries:` list → logs warning, returns [].
- *
- * T-07-11 mitigated: Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE prevents native-tag
- * object instantiation in the bundled corpus files.
- */
+// Failure modes are tolerated and logged, never thrown, following the
+// CorpusYamlReader convention from the Community module: unknown
+// country / malformed YAML / missing entries all log a warning and
+// return []. PARSE_EXCEPTION_ON_INVALID_TYPE guards against native-tag object instantiation.
 final class TaxCorpusLoader
 {
-    /** @var list<string> Allow-listed country codes. */
+    /**
+     * @var list<string>
+     */
     private const ALLOWED_COUNTRIES = ['nl', 'de', 'be', 'fr', 'gb', 'us'];
 
     public function __construct(
@@ -33,9 +25,7 @@ final class TaxCorpusLoader
     ) {}
 
     /**
-     * Load the deduction category entries for the given country code.
-     *
-     * @param  string  $countryCode  ISO-3166 alpha-2, lowercase (e.g. 'nl')
+     * @param  string  $countryCode  ISO 3166 alpha-2, lowercase (e.g. 'nl')
      * @return list<array<int|string, mixed>> Each entry has at least 'key' and 'name'.
      */
     public function loadForCountry(string $countryCode): array
@@ -43,7 +33,8 @@ final class TaxCorpusLoader
         $code = strtolower(trim($countryCode));
 
         if (! in_array($code, self::ALLOWED_COUNTRIES, strict: true)) {
-            // Unknown country code: not an error — caller may probe for availability.
+            // Not an error — the caller may be probing an unavailable
+            // country for availability.
             return [];
         }
 
