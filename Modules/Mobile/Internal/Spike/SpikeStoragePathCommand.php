@@ -34,7 +34,7 @@ final class SpikeStoragePathCommand extends Command
             [
                 ['getenv(NATIVEPHP_STORAGE_PATH)', $this->render($storageEnv)],
                 ['getenv(NATIVEPHP_PLATFORM)', $this->render($platformEnv)],
-                ['storage_path()', storage_path()],
+                ['laravel storagePath()', $this->getLaravel()->storagePath()],
                 ['UserDataPathService::databasePath()', $this->paths->databasePath()],
                 ['UserDataPathService::storagePath()', $this->paths->storagePath()],
             ],

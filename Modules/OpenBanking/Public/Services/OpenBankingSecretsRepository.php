@@ -9,6 +9,7 @@ use Illuminate\Filesystem\Filesystem;
 use JsonException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -20,7 +21,9 @@ use Throwable;
  */
 class OpenBankingSecretsRepository
 {
-    private const PATH_RELATIVE = 'app/secrets/open-banking.json';
+    // Relative to the storage/app root that UserDataPathService::appPath()
+    // resolves (respecting NATIVEPHP_STORAGE_PATH) — no leading `app/`.
+    private const PATH_RELATIVE = 'secrets/open-banking.json';
 
     private const DIR_MODE = 0700;
 
@@ -80,6 +83,24 @@ class OpenBankingSecretsRepository
             bankScaHost: self::stringOrNull($data['bank_sca_host'] ?? null),
             institutionId: self::stringOrNull($data['institution_id'] ?? null),
         );
+    }
+
+    // The non-null companion to load(): call sites that cannot proceed
+    // without persisted credentials (e.g. the EB HTTP boundary, which needs
+    // them to sign every request) get them here rather than declaring their
+    // own `OpenBankingCredentials`-returning helper — Req 10 keeps this
+    // repository the single source that fabricates the credential DTO, so
+    // the credential-source arch guard stays a straight-line invariant.
+    public function loadOrThrow(): OpenBankingCredentials
+    {
+        $credentials = $this->load();
+        if ($credentials === null) {
+            throw new RuntimeException(
+                'OpenBankingSecretsRepository: no Enable Banking application credentials are persisted.'
+            );
+        }
+
+        return $credentials;
     }
 
     // A missing file is treated as already-cleared, so this action is
@@ -274,7 +295,7 @@ class OpenBankingSecretsRepository
 
     private function absolutePath(): string
     {
-        return storage_path(self::PATH_RELATIVE);
+        return UserDataPathService::appPath(self::PATH_RELATIVE);
     }
 
     private static function stringOrNull(mixed $value): ?string

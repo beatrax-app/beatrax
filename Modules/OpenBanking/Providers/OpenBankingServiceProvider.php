@@ -7,6 +7,7 @@ namespace Modules\OpenBanking\Providers;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
@@ -40,7 +41,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
         $this->app->singleton(OpenBankingConnectionQuery::class);
         $this->app->singleton(
             LoopbackTlsCertificate::class,
-            static fn (): LoopbackTlsCertificate => new LoopbackTlsCertificate(storage_path('app/open-banking-tls')),
+            static fn (): LoopbackTlsCertificate => new LoopbackTlsCertificate(UserDataPathService::appPath('open-banking-tls')),
         );
     }
 
