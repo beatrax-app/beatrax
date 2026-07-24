@@ -148,7 +148,7 @@ foreach ($candidates as $path) {
 
     // Only rewrite a php.js that still uses the corrupting yauzl extraction,
     // so an unrelated future NativePHP php.js is never silently clobbered.
-    if (! str_contains($source, "yauzl")) {
+    if (! str_contains($source, 'yauzl')) {
         fwrite(STDOUT, "nativephp_fix_php_binary_extraction: unexpected php.js shape (no yauzl) — leaving {$path} untouched.\n");
 
         continue;
