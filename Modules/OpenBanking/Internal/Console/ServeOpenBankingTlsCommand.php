@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Internal\Console;
 
 use Illuminate\Console\Command;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
 use Symfony\Component\Process\Process;
@@ -153,7 +154,7 @@ final class ServeOpenBankingTlsCommand extends Command
     {
         $process = new Process(
             [PHP_BINARY, 'artisan', 'serve', '--host=127.0.0.1', '--port='.$backendPort],
-            base_path(),
+            UserDataPathService::projectPath(),
             // Real env vars win over .env (Laravel's immutable loader), so the
             // backend generates same-origin HTTPS URLs for the tunnelled front.
             ['APP_URL' => 'https://127.0.0.1:'.$frontPort],

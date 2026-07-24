@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Services\UserDataPathService;
+
 return [
 
     /*
@@ -38,7 +40,9 @@ return [
     | next (warm) boot once the hook had run.
     |
     | Dropping `realpath()` removes the boot-order dependency entirely:
-    | `storage_path()` always returns a stable, non-empty absolute path
+    | `UserDataPathService::frameworkPath('views')` always returns a stable,
+    | non-empty absolute path (respecting `NATIVEPHP_STORAGE_PATH`, the same
+    | user-data storage root every other path in the app resolves through)
     | whether or not the directory exists, and Blade's compiler
     | auto-creates the compiled-view directory itself on first compile
     | (`Compiler::ensureCompiledDirectoryExists()`), so a not-yet-existing
@@ -51,6 +55,6 @@ return [
     |
     */
 
-    'compiled' => env('VIEW_COMPILED_PATH', storage_path('framework/views')),
+    'compiled' => env('VIEW_COMPILED_PATH', UserDataPathService::frameworkPath('views')),
 
 ];

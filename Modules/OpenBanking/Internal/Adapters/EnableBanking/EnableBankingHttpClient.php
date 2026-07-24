@@ -174,7 +174,7 @@ class EnableBankingHttpClient
      */
     private function postJson(string $path, array $body): array
     {
-        $credentials = $this->loadCredentials();
+        $credentials = $this->secrets->loadOrThrow();
         $url = $this->baseUri().$path;
         $this->assertAllowedUrl($url, $credentials);
         $bearer = $this->jwtSigner->sign($credentials->privateKeyPem, $credentials->applicationId);
@@ -205,7 +205,7 @@ class EnableBankingHttpClient
      */
     private function getJson(string $path, array $query = []): array
     {
-        $credentials = $this->loadCredentials();
+        $credentials = $this->secrets->loadOrThrow();
         $url = $this->baseUri().$path;
         $this->assertAllowedUrl($url, $credentials);
         $bearer = $this->jwtSigner->sign($credentials->privateKeyPem, $credentials->applicationId);
@@ -228,18 +228,6 @@ class EnableBankingHttpClient
         }
 
         return $this->decodeJsonBody((string) $response->getBody(), $url);
-    }
-
-    private function loadCredentials(): OpenBankingCredentials
-    {
-        $credentials = $this->secrets->load();
-        if ($credentials === null) {
-            throw new RuntimeException(
-                'EnableBankingHttpClient: no Enable Banking application credentials are persisted.'
-            );
-        }
-
-        return $credentials;
     }
 
     /**
