@@ -1,6 +1,6 @@
 # Module boundaries
 
-beatrax is structured as eighteen bounded modules under `Modules/`. Each module
+beatrax is structured as thirty-four bounded modules under `Modules/`. Each module
 owns a slice of the domain, exposes a narrow public surface, and is forbidden
 from reaching into another module's internals. This document names the
 modules, describes the shape of the boundary, and lists the arch invariants
@@ -16,7 +16,11 @@ two decisions produced.
 
 | Module | What it owns |
 | --- | --- |
+| `Anomaly` | Per-transaction unusual-charge detection (large-vs-typical, first-time merchant, duplicate-charge) surfaced on `/drift`, with its own state machine, audit-transition table, and suppression rules |
 | `Auth` | Username/password auth, recovery codes, OAuth-secret repository, owner-resets-partner flow, the `force_password_change` posture |
+| `Budgets` | Per-category monthly spending budgets and progress tracking |
+| `Calendar` | Month-grid calendar of transactions and scheduled charges (`CalendarQuery`) |
+| `CashBook` | Manual / cash transaction entry into the canonical ledger |
 | `Categorization` | Rule-based auto-categorization, per-user merchant memory, the categorization-rules CRUD surface, the receipt-vs-statement enrichment conflict resolver |
 | `Chains` | PayPal→funder + ICS bulk-iDEAL settlement chain resolution, the `chain_links` ledger, the per-user `ShouldBeUniqueUntilProcessing` resolver job |
 | `Community` | Optional community-merchant-mapping dataset opt-in toggles + corpus distribution |
@@ -27,12 +31,24 @@ two decisions produced.
 | `DriftAlerts` | Drift detection over recurring series, drift-alert state machine, acknowledge/snooze/what-if-cancel actions |
 | `EmailScan` | Gmail + Microsoft Graph OAuth, per-inbox UID-resume scan state, the inbox-scan state machine, `.eml`/`.mbox` drop-in |
 | `Forecasting` | 30/60/90-day cash-flow projections, scenario mutations (non-persistent), R-7 percentile bands, shortfall windows |
+| `FX` | Multi-currency exchange-rate infrastructure and base-currency conversion |
+| `Goals` | Savings goals with linked-account contribution tracking and projected finish dates |
 | `Import` | The ImportPipeline orchestrator + per-format adapters (ASN CSV/CAMT/MT940, ICS PDF, PayPal CSV), the preview wizard |
 | `Ingestion` | The canonical-transaction DTO + source-adapter registry + statement-summary writer + account-resolver contract |
 | `Ledger` | Transactions, accounts, categories, merchants, import runs, currencies, statement summaries — the canonical store |
+| `Migration` | One-time migration wizard importing a full budget file (YNAB4, nYNAB, or Actual Budget) into beatrax's envelope model |
+| `Mobile` | Mobile client peer (NativePHP-for-Mobile): on-device encrypted SQLite, client-only sync transport (LAN-direct + relay), biometric app-lock, resumable initial sync |
+| `Notifications` | Persistent, deduplicated notification store (deterministic sha256 PK from trigger+subject+occurrence), the `/notifications` inbox, per-device preferences, quiet-hours-defer, proactive + reactive triggers |
 | `Onboarding` | First-run wizard progress tracking + the multi-step onboarding flow |
+| `OpenBanking` | Optional, off-by-default open-banking connector — links ASN/SNS via the Enable Banking aggregator (BYO-key) and lands booked transactions + balances idempotently through the import-preview pipeline |
+| `Position` | The single Public definition of "your current position" (net worth + budgets + upcoming charges + shortfalls), composed from other modules' Public seams; register-only, no routes or views |
+| `Pots` | Virtual savings pots / envelope allocations over real account balances |
 | `Receipts` | Receipt-vs-statement matching (PayPal/ICS/Google-Play receipt parsers), the file-imports table, the matcher-key indexing |
 | `Recurring` | Recurring-series detection (any cadence), the always-suggest-never-auto-apply state machine, the per-series acknowledgement |
+| `Reports` | User-composable report builder (metric × dimension × period × filters × currency × viz) with saved/pinned reports |
+| `Search` | Full-text transaction search and entity-name navigation via an FTS5 trigram index and the ⌘K palette |
+| `Sync` | The CRDT op-log / HLC merge layer — append-only, per-device-signed ops with HLC ordering, LWW-per-field, tombstones, and import dedup over the migrated SQLite schema |
+| `Tax` | Tax-deductible tagging, per-year categorisation, and CSV/PDF export for Dutch IB/OB tax filing |
 | `Transfers` | Self-transfer detection across accounts, transfer-pair resolution |
 
 ## The Public / Internal / Models split
