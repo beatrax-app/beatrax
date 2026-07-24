@@ -4,13 +4,26 @@
 > code-signing for all four distribution targets. **3 of 4 are signing
 > end-to-end; Windows is fully set up and only waiting on an Azure identity-
 > validation clock.** Pick this back up any time — everything needed is below.
+>
+> **Update 2026-07-24 — mobile builds are moving to Bifrost.** The two *mobile*
+> targets (iOS + Android) are migrating their **release/distribution** builds to
+> NativePHP's **Bifrost** cloud, which builds from credentials you upload to its
+> Credentials panel (mint the iOS cert + profile with
+> `mobile-app/scripts/create-ios-signing.sh`), not from local Xcode/gradle. The
+> local App Store Connect API-key wiring in `mobile-app/config/nativephp.php` has
+> been retired (`app_store_connect` block removed); `development_team` /
+> `IOS_TEAM_ID` **stays** because local on-device `native:run` still signs dev
+> builds with it. The two **desktop** targets (macOS, Windows) are unchanged —
+> Bifrost is mobile-only. Setup is paused on a Bifrost bug. The local mobile
+> signing details below are kept for reference and remain the fallback until
+> Bifrost is confirmed green.
 
 ## TL;DR scorecard
 
 | Platform | Status | What's left |
 |---|---|---|
-| **Android** | ✅ Signed | Nothing. Keystore + env + vault done. Optionally run a release build to produce a signed AAB/APK. |
-| **iOS** | ✅ Wired (not yet exercised) | Run one `native:build ios` to confirm automatic distribution signing end-to-end. |
+| **Android** | ✅ Signed (local) → moving to Bifrost | Release build moves to Bifrost cloud (upload the keystore to its Credentials panel). Local keystore + env + vault stay for the fallback path. |
+| **iOS** | ✅ Dev-signing wired → distribution moving to Bifrost | Local `development_team` still signs on-device dev runs. App Store distribution now runs in Bifrost (upload the cert + profile from `scripts/create-ios-signing.sh`). Blocked on a Bifrost bug. |
 | **macOS** | ✅ Signed + notarized + stapled + Gatekeeper-accepted | Nothing. Future builds auto-notarize. Optionally produce a `.dmg`. |
 | **Windows** | ⏳ Blocked on Azure org identity validation (1–20 business days) | Once **Completed**: create cert profile → set 1 env var → build. ~10 min of work. |
 
@@ -69,10 +82,13 @@ is the business identifier — validation was submitted as Organization.
 
 ## Secondary / verification tasks
 
-- **iOS**: the config is wired (automatic signing, Team `NV5645J73B`, existing
-  `Apple Distribution` cert in keychain, ASC API key) but no distribution build
-  has actually run. Run `cd mobile-app && php artisan native:build ios
-  --no-interaction` once to confirm the whole path signs headlessly.
+- **iOS distribution** is now Bifrost's job, so the old "run one local
+  `native:build ios` to confirm headless distribution signing" task is retired.
+  Instead: mint the distribution cert + provisioning profile with
+  `mobile-app/scripts/create-ios-signing.sh` (output lands in git-ignored
+  `mobile-app/build-secrets/`), upload both into Bifrost → Credentials → iOS,
+  then trigger a Bifrost build. Local on-device dev runs (`native:run`) are
+  unaffected — they sign with `development_team` / `IOS_TEAM_ID` as before.
 - **macOS `.dmg`** (optional): this run notarized the `.app` directly (the build
   was interrupted mid-`notarize.js`). Future `native:build mac` runs notarize
   automatically. If you want a distributable `.dmg`, just re-run the mac build

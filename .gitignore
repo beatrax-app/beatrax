@@ -18,6 +18,7 @@
 /storage/app/inbox
 /storage/app/backups
 /storage/app/sync
+/storage/app/secrets
 /storage/app/first-launch.app-key-generated
 /storage/framework/cache/*
 !/storage/framework/cache/.gitignore

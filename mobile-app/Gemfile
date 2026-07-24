@@ -1,0 +1,26 @@
+# fastlane toolchain for the Beatrax mobile app (iOS/Android signing helpers).
+#
+# Installed via bundler rather than Homebrew because Homebrew's fastlane runs
+# under Ruby 4.0.x, where a batch of formerly-default stdlib gems (bigdecimal,
+# csv, logger, ...) were removed — breaking fastlane's isolated gem path.
+# Bundler resolves the complete, self-consistent dependency tree instead.
+#
+# Usage:  cd mobile-app && bundle install
+#         bundle exec fastlane ...   (the signing script uses this automatically)
+source "https://rubygems.org"
+
+gem "fastlane"
+
+# Ruby 3.4+/4.0 de-defaulted these; fastlane's dependency tree still needs them.
+gem "bigdecimal"
+gem "mutex_m"
+gem "csv"
+gem "base64"
+gem "logger"
+gem "ostruct"
+gem "benchmark"
+gem "abbrev"
+gem "fiddle"
+gem "drb"
+gem "observer"
+gem "getoptlong"
