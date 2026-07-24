@@ -91,21 +91,24 @@ return [
     ],
 
     /*
-     * iOS release signing (Phase 15 device-signing). NativePHP's iOS build
-     * uses Xcode AUTOMATIC signing keyed off the Apple Developer Team ID
-     * ({@see PackagesIos::teamId}) + the App Store Connect API key for
-     * headless distribution/notarization ({@see PackagesIos::getAppStoreApiKey}).
-     * All three values come from env so no secret lives in this committed
-     * file; every one of them is stripped from the bundled .env by
-     * `cleanup_env_keys` above. The .p8 lives outside the repo tree at
-     * `APP_STORE_API_KEY_PATH` (git-ignored `.signing/`). The signing cert
-     * itself ("Apple Distribution: Wessel Verheij (NV5645J73B)") + its private
-     * key already live in the login keychain — automatic signing consumes them.
+     * iOS signing is split between local development and cloud distribution.
+     *
+     * LOCAL DEV (kept): `development_team` feeds Xcode AUTOMATIC signing so
+     * `native:run` / `native:build ios` can sign a *development* build for an
+     * on-device run ({@see PackagesIos::teamId}, {@see InstallsIos}). The Team
+     * ID is non-secret, comes from `IOS_TEAM_ID` in the git-ignored env, and is
+     * stripped from the bundled .env by `cleanup_env_keys` above. This must
+     * stay wired or on-device dev runs can no longer sign.
+     *
+     * DISTRIBUTION (moved to Bifrost): App Store builds + signing now run in
+     * NativePHP's Bifrost cloud, which signs with the distribution certificate
+     * + provisioning profile uploaded to its Credentials → iOS panel (minted by
+     * `mobile-app/scripts/create-ios-signing.sh`). Bifrost builds from uploaded
+     * credentials, NOT from this repo's config, so the local App Store Connect
+     * API-key wiring that drove headless `native:package ios
+     * --export-method=app-store` has been retired from here. The
+     * `APP_STORE_API_*` strip rules stay in `cleanup_env_keys` as
+     * defense-in-depth for any stale local env values.
      */
     'development_team' => env('IOS_TEAM_ID'),
-
-    'app_store_connect' => [
-        'api_key_id' => env('APP_STORE_API_KEY_ID'),
-        'api_issuer_id' => env('APP_STORE_API_ISSUER_ID'),
-    ],
 ];

@@ -10,6 +10,7 @@ whether it was built by CI or by a developer's local `php artisan native:build`.
 |---|---|---|
 | `.github/workflows/ci.yml` | Every `pull_request` and every push to `main` | Quality gate: Larastan level 10 strict + Laravel Pint + Pest, across the PHP 8.4 + PHP 8.5 matrix |
 | `.github/workflows/release.yml` | `push: tags: [v*]` only | Re-runs the quality gate, builds three platform installers in parallel, signs the update manifest with Ed25519, publishes the GitHub Release |
+| `.github/workflows/release-build.yml` | `workflow_dispatch` (manual) on an existing tag | Build-only verification: runs the per-platform `native:build` matrix and uploads the installers as workflow artifacts. No smoke test, no publish, no Ed25519 signing, no GitHub Release — use it to compile-check the desktop bundlers or regenerate artifacts for a tag without cutting a release |
 
 Secret-scanning is handled by GitHub's repo-level **secret scanning** + **push
 protection** features (enabled in Settings → Code security), not a workflow.
