@@ -12,6 +12,7 @@ use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Core\Public\Services\SecretsColumnRegistry;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
+use Modules\Mobile\Internal\Http\Livewire\MobileImportBootstrap;
 use Tests\Contracts\Fixtures\Livewire\SyntheticListenerViolator;
 use Tests\Contracts\Fixtures\Livewire\SyntheticPublicPropertyViolator;
 use Tests\Contracts\Fixtures\Livewire\SyntheticQueryStringViolator;
@@ -138,6 +139,18 @@ it('does not allow production Livewire components to expose registry columns via
             // app lock / forgot-PIN re-wrap, D-23). The wire snapshot
             // carries the user's own form input, not stored data.
             'accountPassword',
+        ],
+        MobileImportBootstrap::class => [
+            // `$password` + `$passwordConfirmation` capture the account
+            // the first-user is CREATING on the mobile import device —
+            // the same user-input reasoning as SignupPage (the value is
+            // handed to SignupAction, never an echo of stored data). The
+            // component additionally zeroes both properties (and `$pin`)
+            // the moment submit() consumes them so the plaintext never
+            // lingers in a later wire snapshot; the retry path re-reads
+            // from a server-side-only session stash, never these fields.
+            'password',
+            'passwordConfirmation',
         ],
     ];
 
