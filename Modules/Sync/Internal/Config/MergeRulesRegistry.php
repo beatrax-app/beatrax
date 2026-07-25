@@ -51,18 +51,24 @@ final class MergeRulesRegistry
                     'fingerprint_version',
                 ],
             ],
+            // `merchant_id` is the NOT-NULL-without-default identity FK (user_id
+            // is nullable per the multi-user convention; occurrence_count has a
+            // DB default(0) so it stays OUT of `_create_required`).
             'merchant_memories' => [
                 'occurrence_count' => ['strategy' => 'g_counter', 'nullable' => false],
                 'last_seen_at' => ['strategy' => 'lww', 'nullable' => true],
                 '_delete_wins' => true,
-                '_create_required' => ['counterparty_normalized', 'occurrence_count'],
+                '_create_required' => ['merchant_id'],
             ],
+            // `pattern` is the immutable first-seen raw description and the
+            // per-user identity column (UNIQUE user_id, pattern) — the only
+            // NOT-NULL-without-default string besides the nullable user_id FK.
             'merchant_aliases' => [
                 'generalized_pattern' => ['strategy' => 'lww', 'nullable' => true],
                 'friendly_name' => ['strategy' => 'lww', 'nullable' => true],
                 'merged_from' => ['strategy' => 'or_set', 'nullable' => true],
                 '_delete_wins' => true,
-                '_create_required' => ['counterparty_normalized'],
+                '_create_required' => ['pattern'],
             ],
             // categorization_rules is the PARENT of the multi-condition/
             // multi-action rules engine (see rule_conditions/rule_actions
@@ -75,7 +81,13 @@ final class MergeRulesRegistry
                 'notes' => ['strategy' => 'lww', 'nullable' => true],
                 'hits_count' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
-                '_create_required' => ['priority', 'combinator', 'active', 'hits_count'],
+                // The redesign migration gave priority(default 0),
+                // combinator(default 'all'), active(default true) and
+                // hits_count(default 0) DB defaults, and user_id is nullable —
+                // categorization_rules has NO NOT-NULL-without-default column,
+                // so `_create_required` is empty (a CreateRow inserts on
+                // defaults). MergeRulesRegistrySchemaGuardTest enforces this.
+                '_create_required' => [],
             ],
             // Condition child table; cross-checked against the
             // rule_conditions migration in Modules/Categorization.
@@ -97,34 +109,46 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['rule_id', 'position', 'type', 'payload'],
             ],
+            // `website`/`logo_url` are folded into the `metadata` JSON column —
+            // no dedicated columns exist. `slug` (UNIQUE user_id, slug) is the
+            // identity string; both slug and type are NOT-NULL-without-default.
             'counterparties' => [
-                'display_name' => ['strategy' => 'lww', 'nullable' => true],
+                'display_name' => ['strategy' => 'lww', 'nullable' => false],
                 'type' => ['strategy' => 'lww', 'nullable' => false],
-                'website' => ['strategy' => 'lww', 'nullable' => true],
-                'logo_url' => ['strategy' => 'lww', 'nullable' => true],
                 '_delete_wins' => true,
-                '_create_required' => ['counterparty_normalized', 'type'],
+                '_create_required' => ['slug', 'type'],
             ],
+            // Pot targets live on the linked goal, not on this table — there is
+            // no `target_amount_minor` column here. `name` and `currency` are
+            // the NOT-NULL-without-default columns.
             'pots' => [
                 'name' => ['strategy' => 'lww', 'nullable' => false],
-                'target_amount_minor' => ['strategy' => 'lww', 'nullable' => true],
                 'currency' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'currency'],
             ],
+            // Real money column is `target_minor` (not `target_amount_minor`);
+            // the currency column is `target_currency` (DB default 'EUR', so it
+            // is excluded from `_create_required`); the deadline column is
+            // `target_date`. `name` and `target_minor` are the
+            // NOT-NULL-without-default columns.
             'goals' => [
                 'name' => ['strategy' => 'lww', 'nullable' => false],
-                'target_amount_minor' => ['strategy' => 'lww', 'nullable' => false],
-                'currency' => ['strategy' => 'lww', 'nullable' => false],
-                'target_month' => ['strategy' => 'lww', 'nullable' => true],
+                'target_minor' => ['strategy' => 'lww', 'nullable' => false],
+                'target_currency' => ['strategy' => 'lww', 'nullable' => false],
+                'target_date' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
-                '_create_required' => ['name', 'target_amount_minor', 'currency'],
+                '_create_required' => ['name', 'target_minor'],
             ],
+            // `default_currency` carries a DB default('EUR') so it MUST NOT
+            // appear in `_create_required` (same trap as saved_reports.pinned /
+            // envelope_settings.overspend_mode). name/kind/iban are the
+            // NOT-NULL-without-default columns.
             'accounts' => [
                 'name' => ['strategy' => 'lww', 'nullable' => false],
                 'default_currency' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => false,
-                '_create_required' => ['name', 'kind', 'iban', 'default_currency'],
+                '_create_required' => ['name', 'kind', 'iban'],
             ],
             'categories' => [
                 'name' => ['strategy' => 'lww', 'nullable' => false],
