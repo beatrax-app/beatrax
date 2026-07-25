@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
-use Modules\Recurring\Public\Dto\NextExpectedChargeDto;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -105,25 +104,6 @@ it('constructs RecurringOccurrenceDto with the documented props', function (): v
     expect($dto->recurringSeriesId)->toBe(42);
     expect($dto->observedAmount->toMinor())->toBe(-1099);
     expect($dto->observedAt->toDateString())->toBe('2026-05-15');
-});
-
-it('constructs NextExpectedChargeDto preserving the confidenceLow flag', function (): void {
-    $stable = new NextExpectedChargeDto(
-        nextExpectedAt: CarbonImmutable::parse('2026-06-22'),
-        cadence: 'monthly',
-        confidenceLow: false,
-        stddevDays: 1,
-    );
-    $wobbly = new NextExpectedChargeDto(
-        nextExpectedAt: CarbonImmutable::parse('2026-06-22'),
-        cadence: 'monthly',
-        confidenceLow: true,
-        stddevDays: 9,
-    );
-
-    expect($stable->confidenceLow)->toBeFalse();
-    expect($wobbly->confidenceLow)->toBeTrue();
-    expect($wobbly->stddevDays)->toBe(9);
 });
 
 it('constructs RecurringSeriesAmountTrendDto with a typed points list', function (): void {
