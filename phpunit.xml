@@ -13,8 +13,11 @@
                  emits "Cannot add file ... as it was already
                  added to test suite" WARN noise on every pest
                  run. -->
+            <directory>Modules/Anomaly/tests/Unit</directory>
             <directory>Modules/Core/tests/Unit</directory>
+            <directory>Modules/Goals/tests/Unit</directory>
             <directory>Modules/Ledger/tests/Unit</directory>
+            <directory>Modules/Pots/tests/Unit</directory>
             <directory>Modules/Ingestion/tests/Unit</directory>
             <directory>Modules/Import/tests/Unit</directory>
             <directory>Modules/Categorization/tests/Unit</directory>
@@ -37,8 +40,11 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <directory>Modules/Anomaly/tests/Feature</directory>
             <directory>Modules/Core/tests/Feature</directory>
+            <directory>Modules/Goals/tests/Feature</directory>
             <directory>Modules/Ledger/tests/Feature</directory>
+            <directory>Modules/Pots/tests/Feature</directory>
             <directory>Modules/Ingestion/tests/Feature</directory>
             <directory>Modules/Import/tests/Feature</directory>
             <directory>Modules/Categorization/tests/Feature</directory>
