@@ -133,12 +133,6 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'slug', 'kind'],
             ],
-            'category_budgets' => [
-                'monthly_limit_minor' => ['strategy' => 'lww', 'nullable' => false],
-                'currency' => ['strategy' => 'lww', 'nullable' => false],
-                '_delete_wins' => true,
-                '_create_required' => ['category_id', 'monthly_limit_minor', 'currency'],
-            ],
             // `transaction_split_id` replays so a leg-scoped tax tag carries
             // its leg scope on a peer — without it, a per-leg deduction would
             // collapse into a whole-transaction tag and corrupt exported tax
@@ -151,10 +145,10 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['transaction_id'],
             ],
-            // Leg table for split transactions — do NOT replicate the
-            // category_budgets monthly_limit_minor/budget_minor typo above;
-            // TransactionSplitsRegistryColumnsTest asserts this stays a subset
-            // of the migration's actual NOT-NULL-without-default columns.
+            // Leg table for split transactions — `_create_required` must stay a
+            // subset of the migration's actual NOT-NULL-without-default columns
+            // (each name must match a real column). TransactionSplitsRegistryColumnsTest
+            // asserts this invariant.
             'transaction_splits' => [
                 'category_id' => ['strategy' => 'lww', 'nullable' => false],
                 'settled_amount_minor' => ['strategy' => 'lww', 'nullable' => false],
@@ -163,9 +157,9 @@ final class MergeRulesRegistry
                 '_create_required' => ['transaction_id', 'category_id', 'settled_amount_minor', 'settled_currency'],
             ],
             // One mutable snapshot row per (user_id, category_id,
-            // period_start) — do NOT replicate the category_budgets
-            // monthly_limit_minor/budget_minor typo above;
-            // EnvelopeAssignmentsRegistryColumnsTest guards this.
+            // period_start) — every `_create_required` name must match a real
+            // NOT-NULL-without-default column on the migration.
+            // EnvelopeAssignmentsRegistryColumnsTest guards this invariant.
             'envelope_assignments' => [
                 'assigned_minor' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
