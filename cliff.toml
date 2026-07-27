@@ -1,0 +1,39 @@
+# Release notes, generated from the commit history on tag.
+
+[changelog]
+header = "# Changelog\n\n"
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | upper_first }}
+{% for commit in commits %}
+- {{ commit.message | split(pat="\n") | first | upper_first }}\
+{% if commit.breaking %} **(breaking)**{% endif %}
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+# Unconventional commits are kept rather than dropped: notes that silently
+# omit work are worse than an untidy "Other" section.
+filter_unconventional = false
+protect_breaking_commits = true
+
+commit_parsers = [
+  { message = "^.*!:", group = "<!-- 0 -->Breaking changes" },
+  { body = ".*BREAKING CHANGE", group = "<!-- 0 -->Breaking changes" },
+  { message = "^feat", group = "<!-- 1 -->Features" },
+  { message = "^fix", group = "<!-- 2 -->Fixes" },
+  { message = "^perf", group = "<!-- 3 -->Performance" },
+  { message = "^security", group = "<!-- 4 -->Security" },
+  { message = "^refactor", group = "<!-- 5 -->Refactor" },
+  { message = "^test", group = "<!-- 6 -->Tests" },
+  { message = "^docs", group = "<!-- 7 -->Documentation" },
+  { message = "^style", group = "<!-- 8 -->Formatting" },
+  { message = "^ci", group = "<!-- 9 -->Continuous integration" },
+  { message = "^build", group = "<!-- 10 -->Build system" },
+  { message = "^chore\\(deps\\)", group = "<!-- 11 -->Dependencies" },
+  { message = "^chore", group = "<!-- 12 -->Chores" },
+  { message = ".*", group = "<!-- 13 -->Other" },
+]
