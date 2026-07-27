@@ -1,13 +1,20 @@
 # Release notes, generated from the commit history on tag.
+#
+# A scope is shown as the component a change touched, so the published notes
+# can be filtered by it. Scopes that carry no letters are working references
+# rather than component names and are left out.
 
 [changelog]
 header = "# Changelog\n\n"
 body = """
+{% set repo = "https://github.com/beatrax-app/beatrax" %}\
 {% for group, commits in commits | group_by(attribute="group") %}
 ### {{ group | striptags | upper_first }}
-{% for commit in commits %}
-- {{ commit.message | split(pat="\n") | first | upper_first }}\
-{% if commit.breaking %} **(breaking)**{% endif %}
+{% for commit in commits %}\
+- {% if commit.scope and commit.scope is matching("[a-zA-Z]") %}*({{ commit.scope }})* {% endif %}\
+{{ commit.message | split(pat="\n") | first | upper_first }}\
+{% if commit.breaking %} **(breaking)**{% endif %}\
+{% if commit.id %} ([`{{ commit.id | truncate(length=7, end="") }}`]({{ repo }}/commit/{{ commit.id }})){% endif %}
 {% endfor %}
 {% endfor %}
 """
@@ -28,12 +35,15 @@ commit_parsers = [
   { message = "^perf", group = "<!-- 3 -->Performance" },
   { message = "^security", group = "<!-- 4 -->Security" },
   { message = "^refactor", group = "<!-- 5 -->Refactor" },
-  { message = "^test", group = "<!-- 6 -->Tests" },
-  { message = "^docs", group = "<!-- 7 -->Documentation" },
-  { message = "^style", group = "<!-- 8 -->Formatting" },
-  { message = "^ci", group = "<!-- 9 -->Continuous integration" },
-  { message = "^build", group = "<!-- 10 -->Build system" },
-  { message = "^chore\\(deps\\)", group = "<!-- 11 -->Dependencies" },
-  { message = "^chore", group = "<!-- 12 -->Chores" },
-  { message = ".*", group = "<!-- 13 -->Other" },
+  { message = "^chore\\(deps\\)", group = "<!-- 6 -->Dependencies" },
+  # Housekeeping. Real work, but not what a release is announcing, and on a
+  # release the size of a major version it is what pushes the notes past the
+  # length a release body accepts.
+  { message = "^test", skip = true },
+  { message = "^docs", skip = true },
+  { message = "^style", skip = true },
+  { message = "^ci", skip = true },
+  { message = "^build", skip = true },
+  { message = "^chore", skip = true },
+  { message = ".*", group = "<!-- 7 -->Other" },
 ]
