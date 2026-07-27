@@ -148,10 +148,9 @@ final class Camt053Adapter implements SourceAdapter
     private function readMessage(string $localPath): Message
     {
         // XXE mitigation: deny ALL external entities — with XSD validation
-        // disabled nothing legitimate needs to resolve, so any external entity
-        // (file, scheme-less, or any network/wrapper scheme) is hostile and the
-        // loader returns null unconditionally (full rationale in the Ingestion
-        // architecture doc).
+        // disabled nothing legitimate needs to resolve, so any entity (file,
+        // scheme-less, or any network/wrapper scheme) is hostile and the loader
+        // returns null unconditionally. Full rationale in the linked doc.
         libxml_set_external_entity_loader(
             static fn (?string $publicId, ?string $systemId, array $context): ?string => null
         );

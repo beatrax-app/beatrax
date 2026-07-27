@@ -33,11 +33,10 @@ final class RuleApplier
         'tax_tag' => 'tax_tag',
     ];
 
-    // Per-instance User memo, keyed by userId. A single ReapplyRulesJob run
-    // resolves this RuleApplier once and folds every chunk + matched row
-    // through it, so without memoization applyAtReapply reloads the SAME user
-    // from the DB once per matched row. Keyed (not a single slot) so a
-    // hypothetically instance-reused across two users stays correct.
+    // Per-instance User memo, keyed by userId. One ReapplyRulesJob run folds
+    // every chunk through a single RuleApplier, so without this applyAtReapply
+    // reloads the same user once per matched row. Keyed rather than a single
+    // slot so an instance reused across two users stays correct.
     /** @var array<int, User> */
     private array $userCache = [];
 

@@ -81,12 +81,10 @@ final class MergeRulesRegistry
                 'notes' => ['strategy' => 'lww', 'nullable' => true],
                 'hits_count' => ['strategy' => 'lww', 'nullable' => false],
                 '_delete_wins' => true,
-                // The redesign migration gave priority(default 0),
-                // combinator(default 'all'), active(default true) and
-                // hits_count(default 0) DB defaults, and user_id is nullable —
-                // categorization_rules has NO NOT-NULL-without-default column,
-                // so `_create_required` is empty (a CreateRow inserts on
-                // defaults). MergeRulesRegistrySchemaGuardTest enforces this.
+                // priority, combinator, active and hits_count all carry DB
+                // defaults and user_id is nullable, so categorization_rules has
+                // no NOT-NULL-without-default column and a CreateRow inserts on
+                // defaults alone. MergeRulesRegistrySchemaGuardTest enforces it.
                 '_create_required' => [],
             ],
             // Condition child table; cross-checked against the
@@ -127,10 +125,9 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'currency'],
             ],
-            // Real money column is `target_minor` (not `target_amount_minor`);
-            // the currency column is `target_currency` (DB default 'EUR', so it
-            // is excluded from `_create_required`); the deadline column is
-            // `target_date`. `name` and `target_minor` are the
+            // Money column is `target_minor` (not `target_amount_minor`) and the
+            // deadline is `target_date`. `target_currency` defaults to 'EUR' in
+            // the DB, leaving `name` and `target_minor` as the only
             // NOT-NULL-without-default columns.
             'goals' => [
                 'name' => ['strategy' => 'lww', 'nullable' => false],
