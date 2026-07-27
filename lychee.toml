@@ -19,8 +19,17 @@ exclude = [
   # Release and compare URLs that only exist once a release is cut, and
   # settings pages that require authentication to resolve.
   "^https://github\\.com/beatrax-app/beatrax/(releases|compare|security|settings|discussions)",
-  # Badge endpoints rate-limit aggressively under CI.
+  # Badge endpoints rate-limit aggressively under CI, and three of them cannot
+  # resolve until their first publish: Codecov has no report until the coverage
+  # workflow uploads one, Scorecard has no entry until its workflow runs on the
+  # default branch, and SonarCloud has no project until automatic analysis has
+  # scanned main. All three 404 or hang meanwhile, which says nothing about the
+  # readme being correct.
   "^https://img\\.shields\\.io/",
+  "^https://codecov\\.io/",
+  "^https://api\\.scorecard\\.dev/",
+  "^https://scorecard\\.dev/",
+  "^https://sonarcloud\\.io/",
 ]
 exclude_loopback = true
 max_retries = 2
