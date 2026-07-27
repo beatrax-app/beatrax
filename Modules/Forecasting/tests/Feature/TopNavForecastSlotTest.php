@@ -107,7 +107,7 @@ it('renders the Forecast slot without a badge when forecastShortfallCount=0', fu
         ->assertOk()
         ->assertSeeText('Forecast')
         ->assertDontSee('bg-rose-50');
-});
+})->todo('16-01 replaced the top-nav with the app sidebar, so the rose-50 pill this asserts the absence of no longer ships at all — the same reason the two assertions below are deferred. It also asserts too broadly to be revived as-is: "bg-rose-50" matches inside the "hover:bg-rose-50" carried by unrelated components on the dashboard, so the negative held only while none of them rendered. The follow-up plan that re-introduces the .side-badge.alert pill gives this a marker specific to the badge.');
 
 it('renders the rose-50 pill with the ↘ glyph when shortfallCount >= 1', function (): void {
     $account = tnfsAsnAccount($this->user, 'sf-'.bin2hex(random_bytes(3)));

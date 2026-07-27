@@ -1,5 +1,4 @@
 {
-    "Pots": true,
     "Auth": true,
     "Budgets": true,
     "CashBook": true,
@@ -15,7 +14,11 @@
     "Ledger": true,
     "Migration": true,
     "Mobile": true,
+    "Notifications": true,
     "Onboarding": true,
+    "OpenBanking": true,
+    "Position": true,
+    "Pots": true,
     "Reports": true,
     "Search": true,
     "Sync": true,
