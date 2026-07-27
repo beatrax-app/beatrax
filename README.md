@@ -9,6 +9,9 @@
 <p align="center">
   <a href="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml"><img alt="shared checks" src="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml/badge.svg"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=beatrax-app_beatrax"><img alt="quality gate" src="https://sonarcloud.io/api/project_badges/measure?project=beatrax-app_beatrax&metric=alert_status"></a>
+  <a href="https://codecov.io/gh/beatrax-app/beatrax"><img alt="coverage" src="https://codecov.io/gh/beatrax-app/beatrax/branch/main/graph/badge.svg"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/beatrax-app/beatrax"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/beatrax-app/beatrax/badge"></a>
   <img alt="License: Hippocratic 3.0" src="https://img.shields.io/badge/license-Hippocratic--3.0-blue.svg">
   <img alt="PHP 8.5+" src="https://img.shields.io/badge/php-8.5%2B-777bb4.svg">
   <img alt="Laravel 13" src="https://img.shields.io/badge/laravel-13.x-ff2d20.svg">

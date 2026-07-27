@@ -1,0 +1,45 @@
+# OpenSSF Scorecard — supply-chain posture, published to the public
+# scorecard.dev viewer and uploaded to code scanning.
+#
+# `branch_protection_rule` is one of the triggers because several checks read
+# the branch ruleset, so a protection change should re-score immediately rather
+# than wait for the weekly run. Those checks need a token that can read
+# repository administration, which the default GITHUB_TOKEN cannot — hence
+# SCORECARD_TOKEN.
+name: scorecard
+
+on:
+  workflow_dispatch:
+  branch_protection_rule:
+  schedule:
+    - cron: "0 6 * * 1"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          repo_token: ${{ secrets.SCORECARD_TOKEN }}
+          results_file: results.sarif
+          results_format: sarif
+          # Publishing is what makes the badge resolve on scorecard.dev.
+          publish_results: true
+
+      - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+        with:
+          sarif_file: results.sarif

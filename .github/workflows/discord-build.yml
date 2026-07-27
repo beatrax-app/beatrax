@@ -5,7 +5,7 @@ name: discord-build
 
 on:
   workflow_run:
-    workflows: [ci, release, release-dispatch, shared, triage, awaiting-maintainer, labels, stale]
+    workflows: [ci, coverage, release, release-dispatch, scorecard, shared, triage, awaiting-maintainer, labels, stale]
     types: [completed]
 
 permissions:

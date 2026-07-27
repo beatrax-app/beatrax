@@ -1,0 +1,87 @@
+# Coverage, reported to Codecov.
+#
+# Deliberately a separate workflow rather than a step in the PR gate: coverage
+# needs an instrumenting extension, and running the full suite under pcov costs
+# several minutes the gate should not pay on every push. The gate answers "is
+# this correct"; this answers "how much is covered", and the two can move at
+# different speeds.
+#
+# The repository is public, so the upload authenticates through the runner's
+# OIDC token and needs no Codecov secret.
+name: coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: Europe/Amsterdam
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install poppler-utils (pdftotext)
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+          # pcov rather than xdebug: it is markedly faster for line coverage,
+          # which is all Codecov consumes here.
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Cache Composer packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.composer/cache
+          key: composer-coverage-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-coverage-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build Vite assets
+        # Feature tests render views that resolve URLs through the Vite
+        # manifest, so it has to exist before the suite runs.
+        run: npm run build
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+          mkdir -p database
+          touch database/database.sqlite
+          mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+          chmod -R u+rwX storage bootstrap/cache
+
+      - name: Pest with coverage
+        env:
+          APP_ENV: testing
+        run: php artisan test --coverage-clover=coverage.xml
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+        with:
+          files: coverage.xml
+          use_oidc: true
+          fail_ci_if_error: false
