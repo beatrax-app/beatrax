@@ -489,11 +489,31 @@ jobs:
                   config: cliff.toml
                   args: --latest --strip header
 
+            # A release body over the API's limit is rejected outright, and
+            # a major version spanning hundreds of commits gets there. Trim
+            # to the last whole entry that fits and point at the full log.
+            - name: Fit the release notes to the API limit
+              id: notes
+              env:
+                  NOTES: ${{ steps.cliff.outputs.content }}
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  limit=124000
+                  printf '%s' "$NOTES" > notes.md
+                  if [ "$(wc -c < notes.md)" -gt "$limit" ]; then
+                      head -c "$limit" notes.md | sed '$d' > notes.trimmed
+                      printf '\n\n_Trimmed to fit. The complete log for %s is on the [commit history](%s/commits/%s)._\n' \
+                          "$TAG" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "$TAG" >> notes.trimmed
+                      mv notes.trimmed notes.md
+                      echo "Release notes trimmed to $limit bytes." >> "$GITHUB_STEP_SUMMARY"
+                  fi
+
             - name: Publish the GitHub Release
               uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
               with:
                   tag_name: ${{ github.ref_name }}
-                  body: ${{ steps.cliff.outputs.content }}
+                  body_path: notes.md
                   # The repo has "immutable releases" enabled, which
                   # rejects asset uploads after a Release transitions
                   # to published. softprops uploads its asset list
