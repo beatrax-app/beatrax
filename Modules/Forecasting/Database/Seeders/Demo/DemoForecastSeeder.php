@@ -6,6 +6,8 @@ namespace Modules\Forecasting\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
+use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
+use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
 use Modules\Forecasting\Models\ForecastShortfallWindow;
@@ -14,6 +16,10 @@ use Modules\Ledger\Models\Account;
 
 final class DemoForecastSeeder
 {
+    public function __construct(
+        private readonly ProjectionPipeline $pipeline,
+    ) {}
+
     /**
      * @var list<array{name: string, description: string}>
      */
@@ -42,9 +48,33 @@ final class DemoForecastSeeder
             $this->upsertBaseCaseShortfall($primary, $baseCase);
         }
 
+        foreach ($users as $user) {
+            $this->projectAllHorizons($user);
+        }
+
         return ForecastScenario::query()
             ->whereIn('user_id', array_map(static fn (User $u): int => $u->id, $users))
             ->count();
+    }
+
+    // On a real install ProjectForecastJob is dispatched by the import and
+    // scenario listeners. The demo seeder writes its rows straight to the DB
+    // and fires no events, so without projecting here forecast_runs stays
+    // empty and every forecast surface renders its computing sentinel.
+    private function projectAllHorizons(User $user): void
+    {
+        $scenarioIds = ForecastScenario::query()
+            ->where('user_id', $user->id)
+            ->pluck('id')
+            ->all();
+
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonDays) {
+            $this->pipeline->project($user, null, $horizonDays);
+
+            foreach ($scenarioIds as $scenarioId) {
+                $this->pipeline->project($user, (int) $scenarioId, $horizonDays);
+            }
+        }
     }
 
     /**

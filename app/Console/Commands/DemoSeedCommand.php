@@ -6,9 +6,11 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\DatabaseManager;
+use Modules\Anomaly\Database\Seeders\Demo\DemoAnomalyAlertsSeeder;
 use Modules\Auth\Database\Seeders\Demo\DemoRecoveryCodesSeeder;
 use Modules\Budgets\Database\Seeders\Demo\DemoEnvelopeBudgetsSeeder;
 use Modules\Categorization\Database\Seeders\DefaultCategoryTreeSeeder;
+use Modules\Categorization\Database\Seeders\Demo\DemoCategorizationRulesSeeder;
 use Modules\Categorization\Database\Seeders\Demo\DemoMerchantMemorySeeder;
 use Modules\Chains\Database\Seeders\Demo\DemoChainsSeeder;
 use Modules\Community\Database\Seeders\Demo\DemoCommunityMappingsSeeder;
@@ -18,16 +20,21 @@ use Modules\Counterparties\Database\Seeders\Demo\DemoCounterpartiesSeeder;
 use Modules\DriftAlerts\Database\Seeders\Demo\DemoDriftAlertsSeeder;
 use Modules\EmailScan\Database\Seeders\Demo\DemoEmailScanSeeder;
 use Modules\Forecasting\Database\Seeders\Demo\DemoForecastSeeder;
+use Modules\Goals\Database\Seeders\Demo\DemoGoalsSeeder;
 use Modules\Import\Database\Seeders\Demo\DemoMerchantAliasesSeeder;
 use Modules\Ledger\Database\Seeders\CurrenciesSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoAccountsSeeder;
+use Modules\Ledger\Database\Seeders\Demo\DemoTransactionSplitsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransactionsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoTransferPairsSeeder;
 use Modules\Ledger\Database\Seeders\Demo\DemoUsersSeeder;
 use Modules\Notifications\Database\Seeders\Demo\DemoNotificationsSeeder;
 use Modules\Onboarding\Database\Seeders\Demo\DemoWizardProgressSeeder;
+use Modules\Pots\Database\Seeders\Demo\DemoPotsSeeder;
 use Modules\Receipts\Database\Seeders\Demo\DemoReceiptsSeeder;
 use Modules\Recurring\Database\Seeders\Demo\DemoRecurringSeeder;
+use Modules\Reports\Database\Seeders\Demo\DemoSavedReportsSeeder;
+use Modules\Tax\Database\Seeders\Demo\DemoTaxTagsSeeder;
 
 // Developer-only tool standing up a realistic-looking demo install
 // across every seeder in the constructor list below. Every transaction
@@ -65,6 +72,13 @@ final class DemoSeedCommand extends Command
         private readonly DemoMerchantMemorySeeder $merchantMemory,
         private readonly DemoMerchantAliasesSeeder $merchantAliases,
         private readonly DemoNotificationsSeeder $notifications,
+        private readonly DemoGoalsSeeder $goals,
+        private readonly DemoPotsSeeder $pots,
+        private readonly DemoTaxTagsSeeder $taxTags,
+        private readonly DemoCategorizationRulesSeeder $categorizationRules,
+        private readonly DemoTransactionSplitsSeeder $transactionSplits,
+        private readonly DemoSavedReportsSeeder $savedReports,
+        private readonly DemoAnomalyAlertsSeeder $anomalyAlerts,
     ) {
         parent::__construct();
     }
@@ -163,12 +177,53 @@ final class DemoSeedCommand extends Command
         $fileImportCount = $this->receipts->run($userMap);
         $this->info(sprintf('  %d demo file-import rows present', $fileImportCount));
 
+        $this->line('Seeding demo savings goals…');
+        $goalCount = $this->goals->run($userMap);
+        $this->info(sprintf('  %d demo goals present', $goalCount));
+
+        // Pots resolve their goal link by name, so they follow the goals
+        // seeder. Envelope activation earlier only archives category-linked
+        // pots, leaving these goal-linked ones live.
+        $this->line('Seeding demo savings pots + allocations…');
+        $potCount = $this->pots->run($userMap);
+        $this->info(sprintf('  %d demo pots present', $potCount));
+
+        $this->line('Adopting the NL deduction corpus + tagging tax-relevant demo transactions…');
+        $taxTagCount = $this->taxTags->run($userMap);
+        $this->info(sprintf('  %d demo tax tags present', $taxTagCount));
+
+        $this->line('Authoring demo categorization rules…');
+        $ruleCount = $this->categorizationRules->run($userMap);
+        $this->info(sprintf('  %d demo categorization rules present', $ruleCount));
+
+        $this->line('Splitting demo transactions across categories…');
+        $splitCount = $this->transactionSplits->run($userMap);
+        $this->info(sprintf('  %d demo split legs present', $splitCount));
+
+        $this->line('Saving demo report definitions…');
+        $reportCount = $this->savedReports->run($userMap);
+        $this->info(sprintf('  %d demo saved reports present', $reportCount));
+
+        // Runs the real detectors over the seeded ledger, so it follows
+        // every transaction/split write above rather than sitting with the
+        // other alert seeders further up.
+        $this->line('Running anomaly detection across the demo ledger…');
+        $anomalyCount = $this->anomalyAlerts->run($userMap);
+        $this->info(sprintf('  %d demo anomaly alerts detected', $anomalyCount));
+
         // Runs last — references series/budget-category/account/drift-alert
         // rows seeded above, dispatching the real trigger events with
         // delivery suppressed so no OS notification ever fires here.
         $this->line('Seeding demo notification inbox (all 8 types, mixed read/unread/dismissed/resolved/dead-link)…');
         $notificationCount = $this->notifications->run($userMap);
         $this->info(sprintf('  %d demo notifications present', $notificationCount));
+
+        // The search index is written by a TransactionImported listener, which
+        // the seeders never fire — every row above was inserted directly. A
+        // rebuild is what makes the seeded ledger findable from the palette
+        // and the transactions search box.
+        $this->line('Rebuilding the full-text search index over the demo ledger…');
+        $this->call('search:reindex', ['--force' => true]);
 
         $this->newLine();
         $this->info('Demo dataset is ready. Log in as demo-1@beatrax.local (password: demo-only).');
@@ -221,6 +276,44 @@ final class DemoSeedCommand extends Command
             // owned by an ImportRun; wiping them explicitly (rather than
             // relying only on the users-cascade below) lets a partial
             // reset still finish.
+            $connection->table('anomaly_alert_transitions')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('anomaly_alerts')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('saved_reports')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            // Rule children hang off rule_id rather than user_id, so they
+            // are cleared through their parent rules' ids.
+            $ruleIds = $connection->table('categorization_rules')
+                ->whereIn('user_id', $demoUserIds)
+                ->pluck('id')
+                ->all();
+            if ($ruleIds !== []) {
+                $connection->table('rule_actions')->whereIn('rule_id', $ruleIds)->delete();
+                $connection->table('rule_conditions')->whereIn('rule_id', $ruleIds)->delete();
+                $connection->table('categorization_rules')->whereIn('id', $ruleIds)->delete();
+            }
+            // Pot movements precede pots, and pots precede goals, so a
+            // partial reset never leaves a movement pointing at a deleted
+            // pot or a pot pointing at a deleted goal.
+            $connection->table('pot_movements')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('pots')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('goals')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('tax_transaction_tags')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
+            $connection->table('tax_deduction_categories')
+                ->whereIn('user_id', $demoUserIds)
+                ->delete();
             $connection->table('envelope_moves')
                 ->whereIn('user_id', $demoUserIds)
                 ->delete();
