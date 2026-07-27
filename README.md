@@ -165,121 +165,34 @@ the deeper "is this manifest authentic?" check, see
 
 ## Screenshots
 
-A walk through the app — most are short gifs that step through 2–3
-distinct states, the rest are stills.
+A full walkthrough of every surface — the setup wizard end to end, the
+dashboard, transactions, envelope budgets, the cash-flow forecast,
+counterparties and funding chains, drift and anomaly alerts, tax, goals
+and pots — lives on the website, alongside short recordings of the
+multi-step flows:
 
-### Setup wizard
-
-A seven-step first-run flow: welcome → bank → PayPal → ICS card →
-email → review & commit → done. Each connector step is skippable so
-you can come back to it later from Settings.
-
-![Setup wizard walkthrough](.docs/assets/screenshots/setup-wizard.gif)
-
-### Dashboard
-
-The "this month at a glance" view with the cash-flow forecast
-highlight, in/out/net at the top, drift alerts, and email-scan health.
-
-![Dashboard](.docs/assets/screenshots/dashboard.png)
-
-### Transactions
-
-Browse, filter, and recategorize inline. Flip between **EUR only** and
-**Original currency** to reveal what a charge really cost — an app-store
-purchase settles in USD but the bank charge is in EUR, and the toggle
-shows both.
-
-![Transactions](.docs/assets/screenshots/transactions.gif)
-
-### Categorization
-
-A keyboard-driven inbox for transactions that landed without a category.
-Pick a category per row (1–9 hotkeys assign the top categories,
-arrow-keys move, Enter saves), then **Save categories** commits the
-batch — and the rules ripple out to similar future imports.
-
-![Categorization](.docs/assets/screenshots/categorization.gif)
-
-### Counterparties
-
-Every merchant, bank, person, or self-account that has ever moved
-money in or out — with type chips, 12-month totals, average per
-month, and a sparkline of recent activity. Drill in for the full
-profile, recent transactions, aliases, and any detected funding
-chain.
-
-![Counterparties](.docs/assets/screenshots/counterparties.gif)
-
-### Triage
-
-When a transaction belongs to an IBAN beatrax has never seen, it lands
-here as an unknown counterparty with its recent activity. Type a
-display name, pick a type (Merchant / Personal / Bank / Government /
-Self), and one keystroke labels every transaction sharing that IBAN.
-
-![Triage](.docs/assets/screenshots/triage.gif)
-
-### Recurring
-
-Approved subscriptions and fixed payments at a glance, with the
-monthly total computed across currencies. Each series opens a detail
-page with an amount-over-time chart and every occurrence.
-
-![Recurring](.docs/assets/screenshots/recurring.gif)
-
-### Drift alerts
-
-Approved recurring series whose latest charge moved outside your
-threshold land here — with prior → current amounts, annualized
-impact, and quick actions (acknowledge, snooze, model a cancellation,
-or mark as already-cancelled). Acknowledged alerts flow into
-**History**.
-
-![Drift alerts](.docs/assets/screenshots/drift.gif)
-
-### Forecast
-
-30 / 60 / 90-day cash-flow projection across every account. Toggle
-between the aggregate line and per-account range-area charts, and
-overlay what-if scenarios (e.g. a summer-holiday cash outflow) to see
-the dip before it happens.
-
-![Forecast](.docs/assets/screenshots/forecast.gif)
-
-### Chains review
-
-PayPal → bank and card → bank funding-chain resolutions, so you can see
-what really paid for what.
-
-![Chains review](.docs/assets/screenshots/chains.png)
-
-### Command palette
-
-`⌘K` from anywhere to jump to a page, run a command, or invoke an
-action. Type-ahead filters across views, dev commands, and actions —
-artisan commands, system snapshot, profile, and more.
-
-![Command palette](.docs/assets/screenshots/palette.gif)
-
-### Dev Console
-
-The diagnostic panel for inspecting ingestion state, queue health,
-SQL, logs, and the SQLite WAL — only visible when developer mode is
-on.
-
-![Dev Console](.docs/assets/screenshots/dev-console.png)
+**[beatrax.app](https://beatrax.app)**
 
 Contributors capturing fresh screenshots can populate a representative
-demo dataset with `php artisan demo:seed --reset` once that command
-lands in an upcoming release.
+demo dataset first with `php artisan demo:seed --reset`.
 
 ## Project status
 
-beatrax is in active development on the v0.x line. The shape and
-behaviour visible in this repository today is the work that the v1.0.0
-release will bundle. See the release page on GitHub for the latest
-download.
+**v1.3.0 "Local & in sync"** is the current release (14 June 2026) — FX
+conversion, savings goals and pots, an installable PWA, PIN and biometric
+app-lock, the bills calendar, tax tagging with per-year export, full-text
+search, and anomaly alerts.
+
+**v2.0** is in active development and is what this repository holds today:
+local-first end-to-end-encrypted peer-to-peer device sync, a proactive
+notification inbox, an optional open-banking connector, envelope
+(zero-based) budgeting, split transactions, account reconciliation, a
+general rules engine, migration importers for YNAB and Actual, and a
+custom report builder. Wiring the mobile client as a fully synced peer and
+app-store distribution are the remaining pieces.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full history and the releases page
+on GitHub for the latest download.
 
 ## Contributing
 

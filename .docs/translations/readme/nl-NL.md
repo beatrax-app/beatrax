@@ -153,129 +153,34 @@ zie [de verificatie-runbook →](../../runbooks/verify-release.md).
 
 ## Schermafbeeldingen
 
-Een rondleiding door de app — de meeste zijn korte gifs die 2 à 3
-verschillende toestanden laten zien, de rest is een stilstaand beeld.
+Een volledige rondleiding langs elk scherm — de setup-wizard van begin
+tot eind, het dashboard, transacties, envelop-budgetten, de
+kasstroomprognose, tegenpartijen en betaalketens, drift- en
+anomalie-alerts, belasting, doelen en potjes — staat op de website,
+samen met korte opnames van de meerstapsflows:
 
-### Setup-wizard
+**[beatrax.app](https://beatrax.app)**
 
-Een onboardingflow van zeven stappen: welkom → bank → PayPal →
-ICS-creditcard → e-mail → controleren & vastleggen → klaar. Elke
-koppelstap is overslaanbaar, dus je kunt er later vanuit Instellingen
-op terugkomen.
-
-![Setup-wizard walkthrough](../../assets/screenshots/setup-wizard.gif)
-
-### Dashboard
-
-De "deze maand in één oogopslag"-weergave met het cashflow-prognose
-hoogtepunt, in/uit/netto bovenaan, drift-alerts en de status van het
-e-mail-scannen.
-
-![Dashboard](../../assets/screenshots/dashboard.png)
-
-### Transacties
-
-Bladeren, filteren en transacties direct herzien. Wissel tussen
-**Alleen EUR** en **Oorspronkelijke valuta** om te zien wat een
-afschrijving écht heeft gekost — Google Play wordt in USD afgerekend
-maar de ASN-afschrijving is in EUR, en de toggle laat allebei zien.
-
-![Transacties](../../assets/screenshots/transactions.gif)
-
-### Categorisatie
-
-Een toetsenbordgestuurde inbox voor transacties die zonder categorie
-binnenkwamen. Kies een categorie per regel (1–9 zijn sneltoetsen voor
-de meestgebruikte categorieën, pijltjestoetsen verplaatsen de focus,
-Enter slaat op), klik dan op **Categorieën opslaan** om de batch vast
-te leggen — en de regels rimpelen door naar vergelijkbare toekomstige
-imports.
-
-![Categorisatie](../../assets/screenshots/categorization.gif)
-
-### Tegenpartijen
-
-Elke handelaar, bank, persoon of eigen rekening die ooit geld in of
-uit heeft gestuurd — met typechips, 12-maandsaldo's, gemiddelde per
-maand en een sparkline van recente activiteit. Klik door voor het
-volledige profiel, recente transacties, aliassen en eventueel
-gedetecteerde financieringsketens.
-
-![Tegenpartijen](../../assets/screenshots/counterparties.gif)
-
-### Triage
-
-Wanneer een transactie tot een IBAN behoort die beatrax nog nooit
-heeft gezien, belandt die hier als onbekende tegenpartij met de
-recente activiteit erbij. Typ een weergavenaam, kies een type
-(Handelaar / Persoonlijk / Bank / Overheid / Eigen rekening), en met
-één toetsaanslag worden alle transacties op die IBAN gelabeld.
-
-![Triage](../../assets/screenshots/triage.gif)
-
-### Terugkerend
-
-Goedgekeurde abonnementen en vaste betalingen in één oogopslag, met
-het maandtotaal berekend over alle valuta heen. Elke reeks opent een
-detailpagina met een grafiek van het bedrag in de tijd en alle
-voorkomens.
-
-![Terugkerend](../../assets/screenshots/recurring.gif)
-
-### Drift-alerts
-
-Goedgekeurde terugkerende reeksen waarvan de laatste afschrijving
-buiten je drempel valt komen hier binnen — met de vorige → huidige
-bedragen, jaarlijkse impact, en snelle acties (bevestigen, snoozen,
-een opzegging doorrekenen, of markeren als reeds opgezegd).
-Bevestigde alerts stromen door naar **Historie**.
-
-![Drift-alerts](../../assets/screenshots/drift.gif)
-
-### Prognose
-
-30- / 60- / 90-daagse cashflow-prognose over al je rekeningen.
-Schakel tussen de geaggregeerde lijn en per-rekening range-area
-grafieken, en leg what-if-scenario's eroverheen (bijvoorbeeld een
-uitgave voor de zomervakantie) om het dip-moment te zien voordat het
-gebeurt.
-
-![Prognose](../../assets/screenshots/forecast.gif)
-
-### Ketens-overzicht
-
-PayPal → ASN en ICS → ASN financieringsketens, zodat je ziet wat er
-nu écht voor wat heeft betaald.
-
-![Ketens-overzicht](../../assets/screenshots/chains.png)
-
-### Commandopalet
-
-`⌘K` vanaf elke pagina om naar een view te springen, een commando te
-draaien of een actie te starten. Type-ahead filtert over views, dev-
-commando's en acties — artisan-commando's, system snapshot, profiel
-en meer.
-
-![Commandopalet](../../assets/screenshots/palette.gif)
-
-### Dev-console
-
-Het diagnostiekpaneel om de staat van imports, queue-gezondheid, SQL,
-logs en de SQLite WAL te inspecteren — alleen zichtbaar wanneer
-ontwikkelaarsmodus aan staat.
-
-![Dev-console](../../assets/screenshots/dev-console.png)
-
-Bijdragers die nieuwe schermafbeeldingen willen maken kunnen een
-representatieve demo-dataset opzetten met `php artisan demo:seed
---reset` zodra dat commando in een komende release landt.
+Wie zelf nieuwe schermafbeeldingen maakt, kan eerst een representatieve
+demodataset opzetten met `php artisan demo:seed --reset`.
 
 ## Project-status
 
-beatrax is in actieve ontwikkeling op de v0.x-lijn. De vorm en het
-gedrag dat je nu in deze repository ziet is het werk dat de
-v1.0.0-release zal bundelen. Zie de release-pagina op GitHub voor de
-laatste download.
+**v1.3.0 "Local & in sync"** is de huidige release (14 juni 2026) —
+valuta-omrekening, spaardoelen en potjes, een installeerbare PWA,
+app-vergrendeling met pincode en biometrie, de rekeningenkalender,
+belastinglabels met jaarexport, full-tekst zoeken en anomalie-alerts.
+
+**v2.0** is in actieve ontwikkeling en is wat deze repository vandaag
+bevat: local-first end-to-end-versleutelde peer-to-peer apparaatsynchronisatie,
+een proactieve notificatie-inbox, een optionele open-banking-koppeling,
+envelop-budgettering (zero-based), gesplitste transacties, rekening-reconciliatie,
+een algemene regels-engine, migratie-importers voor YNAB en Actual, en een
+eigen rapportbouwer. De mobiele client als volwaardige sync-peer en
+distributie via de app stores zijn de resterende onderdelen.
+
+Zie [CHANGELOG.md](../../../CHANGELOG.md) voor de volledige geschiedenis en
+de releases-pagina op GitHub voor de laatste download.
 
 ## Bijdragen
 
