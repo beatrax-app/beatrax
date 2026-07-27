@@ -9,7 +9,8 @@ buildable on demand.
 - [Docker](https://docs.docker.com/get-docker/) — the PHP 8.5 toolchain is defined in
   `docker-compose.yml` and `docker/php8.5/Dockerfile`. Everything PHP-related runs via
   `docker compose run --rm php …`, so PHP and Composer do not need to be on the host.
-- Node 20 LTS or later, with `npm`. The Docker image does not bundle Node.
+- Node 22 or later, with `npm` — the version in `.nvmrc`, which is also what CI runs.
+  The Docker image does not bundle Node.
 - `git`, with commit signing configured if you intend to push.
 
 The project is pinned to PHP 8.5 for development; the Docker image targets exactly that
@@ -124,3 +125,48 @@ first install of a published release.
 For Windows and Linux targets, run `php artisan native:build win` or `native:build
 linux` on the corresponding OS. Cross-platform builds from macOS are not supported by
 the underlying tooling.
+
+## The mobile shell
+
+`mobile-app/` is a **second Composer root**, not a subdirectory of the first. It has its
+own `vendor/`, and it depends on `nativephp/mobile` where the repo root depends on
+`nativephp/desktop` — the two host packages hard-conflict, which is the whole reason
+for the split. The domain code is shared into it by symlink (`Modules/`, `app/`,
+`resources/`, `database/`, `routes/`, `public/`, `tests/`), so a change to a module is
+picked up by both roots with no copying.
+
+Working on it needs its own install:
+
+```sh
+cd mobile-app
+composer install
+cp ../.env.example .env
+php artisan key:generate
+```
+
+### The plugin credentials
+
+The NativePHP **mobile** plugins are a paid distribution behind HTTP basic auth, so
+`composer install` in `mobile-app/` fails with a 401 until Composer knows the licence:
+
+```sh
+composer config --global http-basic.plugins.nativephp.com <licence-email> <licence-key>
+```
+
+`--global` keeps it in `~/.composer/auth.json` and out of the repository. A
+project-local `auth.json` is gitignored precisely so it cannot be committed, but the
+global file is the safer habit. CI supplies the same pair through the
+`NATIVEPHP_LICENSE_EMAIL` and `NATIVEPHP_LICENSE_KEY` repository secrets.
+
+### Running its tests
+
+The mobile shell has its own Pest testsuite, scoped to the module that owns it:
+
+```sh
+cd mobile-app
+vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only
+```
+
+`repo-root-only` marks assertions that resolve paths relative to the repository root —
+run from here they would look for `mobile-app/mobile-app/…`. The repo-root suite runs
+them; this one skips them.
