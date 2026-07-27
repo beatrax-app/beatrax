@@ -10,8 +10,7 @@
   <img alt="License: Hippocratic 3.0" src="https://img.shields.io/badge/license-Hippocratic--3.0-blue.svg">
   <img alt="PHP 8.5+" src="https://img.shields.io/badge/php-8.5%2B-777bb4.svg">
   <img alt="Laravel 13" src="https://img.shields.io/badge/laravel-13.x-ff2d20.svg">
-  <img alt="Status: v1.x" src="https://img.shields.io/badge/status-v1.x-brightgreen.svg">
-  <a href="CHANGELOG.md"><img alt="Changelog" src="https://img.shields.io/badge/changelog-keep--a--changelog-0a7ea4.svg"></a>
+  <img alt="Status: v1.3 shipped · v2.0 in development" src="https://img.shields.io/badge/v1.3%20shipped%20%C2%B7%20v2.0%20in%20development-brightgreen.svg">
 </p>
 
 <p align="center">
@@ -191,8 +190,8 @@ general rules engine, migration importers for YNAB and Actual, and a
 custom report builder. Wiring the mobile client as a fully synced peer and
 app-store distribution are the remaining pieces.
 
-See [CHANGELOG.md](CHANGELOG.md) for the full history and the releases page
-on GitHub for the latest download.
+See the releases page on GitHub for the full history and the latest
+download.
 
 ## Contributing
 

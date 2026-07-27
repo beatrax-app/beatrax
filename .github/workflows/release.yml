@@ -435,6 +435,10 @@ jobs:
         steps:
             - name: Check out the source
               uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+              with:
+                  # git-cliff walks the tag history to build the release
+                  # notes; a shallow clone would leave it with one commit.
+                  fetch-depth: 0
 
             - name: Set up PHP (libsodium for manifest signing)
               uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2
@@ -478,23 +482,18 @@ jobs:
                       ' -- "$manifest"
                   done
 
-            - name: Extract release notes from CHANGELOG.md
-              run: |
-                  set -euo pipefail
-                  # CHANGELOG.md is the single source of truth for release
-                  # notes. Extract the section matching this tag and hand it to
-                  # softprops as body_path. A tag with no matching changelog
-                  # section fails the release on purpose — add the entry first.
-                  php scripts/changelog-section.php "${{ github.ref_name }}" \
-                      > release-notes.md
-                  echo "----- release notes -----"
-                  cat release-notes.md
+            - name: Generate release notes (git-cliff)
+              id: cliff
+              uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5  # v4.8.0
+              with:
+                  config: cliff.toml
+                  args: --latest --strip header
 
             - name: Publish the GitHub Release
               uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
               with:
                   tag_name: ${{ github.ref_name }}
-                  body_path: release-notes.md
+                  body: ${{ steps.cliff.outputs.content }}
                   # The repo has "immutable releases" enabled, which
                   # rejects asset uploads after a Release transitions
                   # to published. softprops uploads its asset list

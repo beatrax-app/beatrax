@@ -109,11 +109,11 @@ Blade, and test investment goes into backend correctness.
 1. Open the pull request against `main`.
 2. Fill in the PR template. CODEOWNERS is auto-configured and will
    request the right reviewer.
-3. Add a line to the `## [Unreleased]` section of `CHANGELOG.md` for any
-   user-visible change (under `Added`, `Changed`, `Fixed`, `Removed`, or
-   `Performance`). `CHANGELOG.md` is the single source of truth for release
-   notes — the GitHub Release body is generated from it at tag time, so an
-   omitted entry simply will not appear in the release.
+3. Write the commit subject as a conventional commit (`feat:`, `fix:`,
+   `docs:`, `refactor:`, `perf:`, `test:`, `ci:`, `build:`, `chore:`). Release
+   notes are generated from the commit log at tag time, so the subject is what
+   a reader will see. Mark a breaking change with `!` after the type, or a
+   `BREAKING CHANGE:` trailer.
 4. Wait for CI to go green. The PHP 8.5 quality gate (Pint, Larastan
    level 10, Pest) must pass before review starts.
 5. Address review feedback inline; push fixups as new commits (no

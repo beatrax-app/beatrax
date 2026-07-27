@@ -179,8 +179,8 @@ een algemene regels-engine, migratie-importers voor YNAB en Actual, en een
 eigen rapportbouwer. De mobiele client als volwaardige sync-peer en
 distributie via de app stores zijn de resterende onderdelen.
 
-Zie [CHANGELOG.md](../../../CHANGELOG.md) voor de volledige geschiedenis en
-de releases-pagina op GitHub voor de laatste download.
+Zie de releases-pagina op GitHub voor de volledige geschiedenis en de
+laatste download.
 
 ## Bijdragen
 
