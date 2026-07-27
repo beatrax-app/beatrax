@@ -172,7 +172,14 @@
         </testsuite>
     </testsuites>
     <php>
-        <ini name="memory_limit" value="1G"/>
+        <!-- The architecture tests parse every file under Modules/ and app/ with
+             php-parser and hold the ASTs for the duration of the assertion, so
+             peak memory tracks the size of the codebase rather than the size of
+             any one test. Thirty-four modules outgrew the previous 1G ceiling,
+             which failed the whole suite during construction rather than as a
+             test failure. Headroom, not a measured peak: a value tuned to the
+             current tree would need re-tuning at the next module. -->
+        <ini name="memory_limit" value="4G"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:vQc4qXIjcS1Wt2kPQzGpL3yvqW6CrLqzqkEYqFqW7DA="/>
         <!-- force="true" so asset()/route() URLs in rendered-HTML snapshots are

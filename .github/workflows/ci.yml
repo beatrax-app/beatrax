@@ -186,14 +186,10 @@ jobs:
             # from the `plugins.nativephp.com` Composer repository
             # (`mobile-app/composer.json` `repositories.nativephp-plugins`,
             # 15-03-SUMMARY.md). `composer install` below cannot resolve them
-            # without http-basic credentials. Before this job can succeed, add
-            # two repository secrets under Settings > Secrets and variables >
-            # Actions:
-            #   NATIVEPHP_LICENSE_EMAIL — the plugins.nativephp.com account email
-            #   NATIVEPHP_LICENSE_KEY   — that account's license/API key
-            # (the same credential pair already resolved locally from the
-            # developer's own `~/.composer/auth.json` — 15-03-SUMMARY.md; no
-            # project-local auth.json exists and none should ever be committed).
+            # without http-basic credentials. Two repository secrets supply
+            # them — NATIVEPHP_LICENSE_EMAIL and NATIVEPHP_LICENSE_KEY — and
+            # they are set. Composer reads the pair from the environment; no
+            # project-local auth.json exists and none should ever be committed.
             COMPOSER_AUTH: >-
                 {"http-basic":{"plugins.nativephp.com":{"username":"${{ secrets.NATIVEPHP_LICENSE_EMAIL }}","password":"${{ secrets.NATIVEPHP_LICENSE_KEY }}"}}}
         steps:
@@ -217,8 +213,9 @@ jobs:
                       composer-mobile-${{ runner.os }}-${{ matrix.php }}-
 
             - name: Install Composer dependencies (mobile-app/ root)
+              # Credentials come from the job-level COMPOSER_AUTH above.
               working-directory: mobile-app
-              run: composer install --prefer-dist --no-interaction --no-progress
+              run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
 
             - name: Prepare environment for the mobile-scoped Pest pass
               # mobile-app/.env is gitignored (own, machine-local — mirrors
@@ -226,13 +223,19 @@ jobs:
               # There is no mobile-app/.env.example; the repo-root one is the
               # single source of truth for required keys and is copied in,
               # same shape as the desktop `quality` job's own env prep above.
+              #
+              # The key is written directly rather than minted with
+              # `artisan key:generate`, for the same reason as the desktop job:
+              # that command boots the framework, and provider registration
+              # reaches the encrypter it is supposed to be creating a key for.
               working-directory: mobile-app
               run: |
                   cp ../.env.example .env
-                  php artisan key:generate --ansi
+                  printf 'APP_KEY=base64:%s\n' "$(openssl rand -base64 32)" >> .env
                   mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   touch database/database.sqlite
                   chmod -R u+rwX storage bootstrap/cache
+                  php artisan package:discover --ansi
 
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
               # T-15-34: the mobile shell must never silently pick up a
