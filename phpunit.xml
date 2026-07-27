@@ -105,11 +105,16 @@
         <testsuite name="EmailScanFeature">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Feature</directory>
         </testsuite>
-        <testsuite name="EmailScanContracts">
-            <directory suffix="Test.php">./Modules/EmailScan/tests/Contracts</directory>
-        </testsuite>
         <testsuite name="EmailScanIntegration">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Integration</directory>
+        </testsuite>
+        <!-- The only Integration tree without a testsuite, so its two smoke
+             tests ran nowhere: not in CI, not locally, not even to be skipped.
+             They are tagged `integration` to be excluded on a host without
+             poppler, which is a different thing from never being collected.
+             Every job that runs tests installs poppler-utils. -->
+        <testsuite name="IngestionIntegration">
+            <directory suffix="Test.php">./Modules/Ingestion/tests/Integration</directory>
         </testsuite>
         <testsuite name="OpenBankingUnit">
             <directory suffix="Test.php">./Modules/OpenBanking/tests/Unit</directory>
@@ -167,9 +172,12 @@
         <testsuite name="Reports Feature">
             <directory suffix="Test.php">./Modules/Reports/tests/Feature</directory>
         </testsuite>
-        <testsuite name="Reports Contracts">
-            <directory suffix="Test.php">./Modules/Reports/tests/Contracts</directory>
-        </testsuite>
+        <!-- Modules/EmailScan/tests/Contracts and Modules/Reports/tests/Contracts
+             hold a .gitkeep and nothing else. A testsuite that matches no file
+             makes a single-testsuite run exit 1 on "No tests found", which the
+             setup guide tells developers to do. An earlier fix
+             tracked the empty directory to stop the 1-error; the directory was
+             never the problem. The suites come back with their first test. -->
     </testsuites>
     <php>
         <!-- The architecture tests parse every file under Modules/ and app/ with
