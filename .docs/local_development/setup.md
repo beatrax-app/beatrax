@@ -18,7 +18,7 @@ version, so the toolchain is reproducible across machines.
 ## First-time clone
 
 ```sh
-git clone git@github.com:nightworksio/beatrax.git
+git clone git@github.com:beatrax-app/beatrax.git
 cd beatrax
 
 # Build the dev PHP 8.5 image

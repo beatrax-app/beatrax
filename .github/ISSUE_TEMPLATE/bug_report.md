@@ -8,7 +8,7 @@ assignees: []
 
 > **Security vulnerability?** Do not open a public issue. Use GitHub's
 > private vulnerability reporting:
-> <https://github.com/nightworksio/beatrax/security/advisories/new>.
+> <https://github.com/beatrax-app/beatrax/security/advisories/new>.
 > See [SECURITY.md](../../SECURITY.md) for the full disclosure policy.
 
 ## What happened

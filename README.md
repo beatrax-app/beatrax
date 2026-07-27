@@ -7,6 +7,8 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml"><img alt="shared checks" src="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml/badge.svg"></a>
   <img alt="License: Hippocratic 3.0" src="https://img.shields.io/badge/license-Hippocratic--3.0-blue.svg">
   <img alt="PHP 8.5+" src="https://img.shields.io/badge/php-8.5%2B-777bb4.svg">
   <img alt="Laravel 13" src="https://img.shields.io/badge/laravel-13.x-ff2d20.svg">
@@ -14,7 +16,9 @@
 </p>
 
 <p align="center">
-  <strong>🇬🇧 English</strong> · <a href=".docs/translations/readme/nl-NL.md">🇳🇱 Nederlands</a>
+  <a href="https://beatrax.app">Website</a> ·
+  <a href="https://github.com/beatrax-app/spec">Specification</a> ·
+  <a href="https://discord.gg/FYuV9CbTHR">Discord</a>
 </p>
 
 ## What is beatrax?
@@ -103,7 +107,7 @@ an Intel bundle there under Rosetta 2 emulation routinely overruns the
 job timeout. Until that changes, Intel Mac users build from source:
 
 ```sh
-git clone git@github.com:nightworksio/beatrax.git
+git clone git@github.com:beatrax-app/beatrax.git
 cd beatrax
 composer install
 npm ci
@@ -195,14 +199,34 @@ download.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+This project's specification is **canonical**: every change cites an
+identifier that already exists in it, and a behavioural change's spec
+pull request merges first. Before your first PR, read
+[CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) if you are
+working with an AI assistant, and the
+[contributing guide](https://github.com/beatrax-app/spec/blob/main/50-governance/contributing.md).
+
+Implementation detail — which class, which file, which table — lives in
+[`.docs/`](.docs/00-index.md). Behaviour, requirements, and architecture
+contracts live in the [spec](https://github.com/beatrax-app/spec). Where
+the two disagree, the spec wins.
 
 ## License + ethics
 
 beatrax is licensed under the [Hippocratic License 3.0](LICENSE). It's
 source-available, not OSI-approved — see [NOTICE.md](NOTICE.md) for the
-rationale.
+rationale and the
+[longer rationale](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md)
+in the spec.
 
 ## Security
 
 Report vulnerabilities via [Security Policy](SECURITY.md).
+
+---
+
+<p align="center">
+  <a href="https://nightworks.io">NightWorks.io</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://discord.gg/FYuV9CbTHR">Discord</a>
+</p>

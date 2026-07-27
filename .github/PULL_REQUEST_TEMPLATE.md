@@ -4,6 +4,18 @@ below to help the maintainer review quickly. Keep the description
 focused on what changed and why; the diff itself shows how.
 -->
 
+## Specification citation
+
+<!--
+Required. The governance gate reads this body AND your commit trailers,
+and fails if an identifier does not resolve on beatrax-app/spec.
+Routine maintenance (dependency bumps, formatting, pipeline mechanics)
+cites GOV-R12. Changing behaviour the spec does not describe? Open a PR
+there first — that is a spec gap, not a gate problem.
+-->
+
+Spec:
+
 ## Summary
 
 - (1-3 bullets describing what this PR changes)
@@ -27,8 +39,13 @@ no issue):
 - [ ] `vendor/bin/pint --test` is clean (code style)
 - [ ] `vendor/bin/phpstan analyse --memory-limit=1G` is green at Larastan level 10 strict
 - [ ] `php artisan test --parallel` is green (Pest)
-- [ ] Documentation updated where behaviour changed (`.docs/` or in-repo READMEs)
-- [ ] An ADR was added under `.docs/adr/` if this PR makes an architectural decision
+- [ ] Every commit is signed off (`git commit -s`) and carries a `Spec:` trailer
+- [ ] Implementation detail updated in `.docs/`; behaviour and requirements
+      updated in [the spec](https://github.com/beatrax-app/spec) — and the spec
+      PR merged first if this changes behaviour
+- [ ] A decision record was added to the spec's `00-overview/decisions/` if this
+      PR makes an architectural decision
+- [ ] AI assistance disclosed, if significant
 - [ ] No `.env`, secrets, or large binary fixtures were committed by accident
 
 ## Hippocratic License 3.0 — contribution acknowledgement

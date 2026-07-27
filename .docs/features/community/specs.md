@@ -104,7 +104,7 @@ The behavioural contract for the `Community` module.
 
 - `config('community.github_compare_base')` — the base URL the
   Compare-URL builder uses. Default
-  `https://github.com/nightworksio/beatrax/compare/main`, overridable
+  `https://github.com/beatrax-app/beatrax/compare/main`, overridable
   via the `BEATRAX_GITHUB_COMPARE_BASE` env var without a code
   change. This is the single configuration knob the public-release
   boundary needs to flip the repo destination at publication.

@@ -127,7 +127,7 @@ final class SettingsPage extends Component
     // install, or recovery if a future auto-update fails to apply).
     public function openReleasesPage(OpenExternalUrlAction $opener): void
     {
-        $opener('https://github.com/nightworksio/beatrax/releases/latest');
+        $opener('https://github.com/beatrax-app/beatrax/releases/latest');
     }
 
     public function toggleFxOnline(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
