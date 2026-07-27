@@ -195,24 +195,32 @@ jobs:
                   restore-keys: |
                       composer-mobile-${{ runner.os }}-${{ matrix.php }}-
 
+            - name: Lay down the mobile environment
+              # Before the install, not after. Composer's post-autoload-dump
+              # hook runs `artisan package:discover`, which boots the framework
+              # — and a boot with no .env and no writable framework directories
+              # fails resolving `request`. A fresh clone has neither, because
+              # mobile-app/.env is gitignored (machine-local, mirroring the
+              # developer's own setup) and there is no mobile-app/.env.example:
+              # the repo-root one is the single source of truth for the keys.
+              #
+              # Nothing here needs the framework, so it can run before Composer
+              # has put one there.
+              working-directory: mobile-app
+              run: |
+                  cp ../.env.example .env
+                  mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+                  touch database/database.sqlite
+                  chmod -R u+rwX storage bootstrap/cache
+
             - name: Install Composer dependencies (mobile-app/ root)
               # Credentials come from the job-level COMPOSER_AUTH above.
               working-directory: mobile-app
               run: composer install --prefer-dist --no-interaction --no-progress
 
-            - name: Prepare environment for the mobile-scoped Pest pass
-              # mobile-app/.env is gitignored (own, machine-local — mirrors
-              # the developer's own local setup, 15-TOPOLOGY-SPIKE-FINDINGS.md).
-              # There is no mobile-app/.env.example; the repo-root one is the
-              # single source of truth for required keys and is copied in,
-              # same shape as the desktop `quality` job's own env prep above.
+            - name: Mint the mobile application key
               working-directory: mobile-app
-              run: |
-                  cp ../.env.example .env
-                  php artisan key:generate --ansi
-                  mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
-                  touch database/database.sqlite
-                  chmod -R u+rwX storage bootstrap/cache
+              run: php artisan key:generate --ansi
 
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
               # T-15-34: the mobile shell must never silently pick up a
