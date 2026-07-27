@@ -61,7 +61,7 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - name: Build Vite assets
         # Feature tests render views that resolve URLs through the Vite

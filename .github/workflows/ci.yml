@@ -86,7 +86,7 @@ jobs:
                   cache: npm
 
             - name: Install npm dependencies
-              run: npm ci
+              run: npm ci --ignore-scripts
 
             - name: Build Vite assets
               # Many Blade views call `@vite([...])` which resolves URLs
@@ -207,7 +207,7 @@ jobs:
               # Without this every view render in the mobile suite returns 500
               # with ViteManifestNotFoundException — thirty tests, none of whose
               # messages mention Vite.
-              run: npm ci && npm run build
+              run: npm ci --ignore-scripts && npm run build
 
             - name: Lay down the mobile environment
               # Before the install, not after. Composer's post-autoload-dump
