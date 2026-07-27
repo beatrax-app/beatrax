@@ -1,4 +1,4 @@
-# Coverage, reported to Codecov.
+# Coverage, measured here and reported to SonarCloud.
 #
 # Deliberately a separate workflow rather than a step in the PR gate: coverage
 # needs an instrumenting extension, and running the full suite under pcov costs
@@ -6,8 +6,10 @@
 # this correct"; this answers "how much is covered", and the two can move at
 # different speeds.
 #
-# The repository is public, so the upload authenticates through the runner's
-# OIDC token and needs no Codecov secret.
+# Coverage reaches SonarCloud only through a CI-run scan: automatic analysis
+# does not accept an imported report, so the two are mutually exclusive. If the
+# coverage figure on the badge stays empty, automatic analysis is still on for
+# the project and needs turning off in SonarCloud's settings.
 name: coverage
 
 on:
@@ -28,6 +30,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Install poppler-utils (pdftotext)
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils
@@ -79,9 +82,9 @@ jobs:
           APP_ENV: testing
         run: php artisan test --coverage-clover=coverage.xml
 
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
-        with:
-          files: coverage.xml
-          use_oidc: true
-          fail_ci_if_error: false
+      - name: SonarCloud scan
+        # Needs the full history: Sonar attributes new code to the commits that
+        # introduced it, and a shallow clone leaves it guessing.
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
