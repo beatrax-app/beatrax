@@ -5,7 +5,8 @@
   feature deep-dive should match.
 
   Keep each section short — half a page total. The detail belongs in
-  `specs.md` (behavioural contracts) and `code.md` (file references).
+  `code.md` (file references) and `how-to-test.md` (test recipes and
+  the behavioural contracts each test holds).
 -->
 
 # `<ModuleName>` — architecture

@@ -47,7 +47,7 @@ are **no longer here**. They are in the spec:
 | `.docs/cicd/` | [40-quality/ci-cd.md](https://github.com/beatrax-app/spec/blob/main/40-quality/ci-cd.md) · [70-operations/releasing.md](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md) |
 | `.docs/research/` | The decisions those findings produced, in [00-overview/decisions/](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/) |
 | `.docs/history/` | [00-overview/roadmap.md](https://github.com/beatrax-app/spec/blob/main/00-overview/roadmap.md) · [90-appendix/provenance.md](https://github.com/beatrax-app/spec/blob/main/90-appendix/provenance.md) |
-| `.docs/features/*/specs.md` | [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/) |
+| `.docs/features/*/specs.md` | Behaviour and requirements in [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/); the test each contract maps to folded into the module's `how-to-test.md` |
 
 ## Conventions
 
