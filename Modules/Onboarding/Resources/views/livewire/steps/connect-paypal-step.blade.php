@@ -20,19 +20,22 @@
     other parse-time failure.
 --}}
 <section class="wiz-step wiz-step-connect-paypal" aria-labelledby="wiz-connect-paypal-h1">
-    <p class="wiz-eyebrow">💸 Step 3 — Your PayPal account</p>
+    <x-onboarding::wiz-eyebrow step="connect-paypal" glyph="💸">Your PayPal account</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-paypal-h1" class="wiz-h1">
         Connect your PayPal account
     </h1>
     <p class="wiz-lede">
-        Drop your PayPal <em>Rapport Transactiegegevens</em> CSV (the per-transaction details export). The Saldorapport balance report won't work — we need per-event data.
+        Drop your PayPal transaction details export — listed as
+        <em lang="nl">Rapport Transactiegegevens</em> in a Dutch PayPal account. The
+        balance report (<span lang="nl">Saldorapport</span>) won't work — we need
+        per-event data.
     </p>
 
     <div class="mini-steps">
         <x-onboarding::mini-step glyph="🔐" label="Log in" sub="paypal.com" state="done" />
-        <x-onboarding::mini-step glyph="📑" label="Custom statements" sub="Aangepast → Betalingen" state="done" />
+        <x-onboarding::mini-step glyph="📑" label="Custom statements" sub="Aangepast → Betalingen" subLang="nl" state="done" />
         <x-onboarding::mini-step glyph="📅" label="Pick a range" sub="Last 12 months" state="now" />
-        <x-onboarding::mini-step glyph="⬇️" label="Download" sub="Rapport Transactiegegevens (CSV)" state="upcoming" />
+        <x-onboarding::mini-step glyph="⬇️" label="Download as CSV" sub="Rapport Transactiegegevens" subLang="nl" state="upcoming" />
     </div>
 
     <div class="format-chips" aria-label="PayPal exports as CSV only">
@@ -42,7 +45,7 @@
 
     <x-onboarding::drop-zone
         wire-model="activityCsv"
-        lead="Drop your Rapport Transactiegegevens CSV here"
+        lead="Drop your transaction details CSV here"
         sublink="or browse for a file"
         glyph="📥"
         accept=".csv"

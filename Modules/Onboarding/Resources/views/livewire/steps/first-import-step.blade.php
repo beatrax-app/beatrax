@@ -61,7 +61,7 @@
 @endphp
 <section class="wiz-step wiz-step-first-import" aria-labelledby="wiz-first-import-h1">
     <x-onboarding::wiz-card :wide="true">
-        <p class="wiz-eyebrow">📥 Step 5 — Review &amp; commit</p>
+        <x-onboarding::wiz-eyebrow step="first-import" glyph="📥">Review &amp; commit</x-onboarding::wiz-eyebrow>
         <h1 id="wiz-first-import-h1" class="wiz-h1">
             Review everything we found
         </h1>

@@ -12,7 +12,7 @@
     listener) once the modal saves credentials successfully.
 --}}
 <section class="wiz-step wiz-step-connect-email" aria-labelledby="wiz-connect-email-h1">
-    <p class="wiz-eyebrow">✉️ Step 4 — Receipts from email (optional)</p>
+    <x-onboarding::wiz-eyebrow step="connect-email" glyph="✉️">Receipts from email (optional)</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-email-h1" class="wiz-h1">
         Let beatrax watch for purchase emails
     </h1>
