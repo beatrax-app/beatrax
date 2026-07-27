@@ -124,7 +124,7 @@ Sets the `payment_type` enum (`ideal`, `direct_debit`, `card_payment`,
 in `Modules/Import/Internal/Parsers/` (see
 [Payment-type hinters](../features/import/architecture.md#payment-type-hinters)
 for the per-source lexeme/code tables). The
-[`paymentTypeHinterContract`](#) arch invariant requires every `*Hinter`
+The `paymentTypeHinterContract` arch invariant requires every `*Hinter`
 class under `Modules/Import/Internal/Parsers/` to implement the
 `PaymentTypeHinter` contract, which is what makes this stage's plug-in
 extension point safe. The stage is pure/stateless and bound as a

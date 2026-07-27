@@ -199,7 +199,7 @@ The behavioural contract for the `Import` module.
 - **A starting-balance detector returning a non-empty list
   for a file the user actually expected to be empty** — the
   aggregator returns the first non-empty list; if CAMT.053
-  + MT940 disagree, CAMT.053 wins by registration order.
+  - MT940 disagree, CAMT.053 wins by registration order.
 - **A pending enrichment for a transaction that was deleted** —
   `ApplyEnrichments` is a no-op for missing target rows; the
   enrichment is dropped, logged, and the import continues.

@@ -215,5 +215,5 @@ The behavioural contract for the `Community` module.
   `consult_corpus`, `share_suggestions`. Default `false` on both for
   every new user.
 - No environment flag changes the privacy posture: the HTTPS scheme
-  + `github.com` allow-list in `OpenExternalUrlAction` are hard-
+  - `github.com` allow-list in `OpenExternalUrlAction` are hard-
   coded, not config-driven.

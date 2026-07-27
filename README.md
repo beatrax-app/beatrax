@@ -63,11 +63,12 @@ you.
 ## Shoutouts
 
 ### Thanks, mom
+
 I want to start off with thanking my mom (Bea - for anyone who wondered where the name was based on), who's been the inspiration for making this.
 
 ### Get Shit Done (GSD) / Claude Code
 
-There's a few things I wanted to try out with this project, and one of them was doing everything through prompting, and the quality of what can be delivered is amazing with GSD and Claude. Check GSD out here: https://github.com/gsd-build/get-shit-done
+There's a few things I wanted to try out with this project, and one of them was doing everything through prompting, and the quality of what can be delivered is amazing with GSD and Claude. Check GSD out here: <https://github.com/gsd-build/get-shit-done>
 
 ### Laravel / NativePHP
 

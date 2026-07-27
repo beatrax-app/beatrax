@@ -9,7 +9,7 @@ isolation.
 - **What they test:** every per-source helper class against
   fixture inputs — amount parsers (Asn / Ics / Paypal),
   date parsers, column maps, header profiles, the MT940 lexer
-  + Tag 61 + Tag 86 parsers, the PayPal CSV language profile +
+  - Tag 61 + Tag 86 parsers, the PayPal CSV language profile +
   rollup, the PDF text extractor (smoke).
 - **Common stubs:** unit tests are pure-function; no stubs
   needed. The exception types are asserted by class, not by
@@ -82,7 +82,7 @@ composer test
   payment type; ship the change with a covering unit test.
 - **`UnsupportedPaypalCsvLanguageException`** — the export was
   in an unsupported language. Either add the language profile
-  + column map for the new language, or change the PayPal
+  - column map for the new language, or change the PayPal
   export language to one already supported (en, nl).
 - **`PdfExtractionFailed` on a fresh ICS PDF** — the
   underlying text extractor produced zero positional hits.

@@ -326,8 +326,8 @@ plists from `deploy/launchd/*.plist` to `~/Library/LaunchAgents/`,
 substituting `{{ABS_PHP_BINARY}}` / `{{ABS_PROJECT_ROOT}}` at install
 time. The Redis plist is optional (`--without-redis`, for when Docker
 Desktop auto-starts the container on login). `bootstrapPlist()` is
-`protected` (not `private`) so `InstallLaunchdCommandTest` can subclass
-+ override it to capture the intended `launchctl bootstrap` target
+`protected` (not `private`) so `InstallLaunchdCommandTest` can
+subclass - override it to capture the intended `launchctl bootstrap` target
 without mutating the developer's real launchd; a non-zero
 `launchctl bootstrap` exit is a warning, not a hard failure, since it
 also fires for "already loaded" on re-install.
@@ -412,8 +412,8 @@ Backup & restore CLI (`db:backup` / `db:restore`):
 
 `BackupDatabaseCommand` produces a consistent SQLite backup via
 `VACUUM INTO`, validates the output with `PRAGMA integrity_check`, and
-applies the retention sweep (`BackupRetentionPolicy`: 7 newest dailies
-+ 4 most-recent Sundays). Each successful run writes a `.meta.json`
+applies the retention sweep (`BackupRetentionPolicy`: 7 newest
+dailies - 4 most-recent Sundays). Each successful run writes a `.meta.json`
 sidecar at chmod 0600 capturing the source `PRAGMA data_version`, so a
 follow-up call without `--force` can smart-skip when no commits
 happened since the last backup. Mechanics worth calling out:

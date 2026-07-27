@@ -8,8 +8,8 @@ isolation.
 - **Location:** `Modules/Forecasting/tests/Unit/` (when present)
 - **What they test:** each pipeline collaborator in isolation —
   `BalanceAnchorResolver` against fixture accounts; `RangeProjector`
-  + `CadenceJitter` against synthetic recurring series; `DailyFold`
-  + `Percentile` against fixed contribution lists; `ScenarioApplier`
+  - `CadenceJitter` against synthetic recurring series; `DailyFold`
+  - `Percentile` against fixed contribution lists; `ScenarioApplier`
   against typed payload variants; `ShortfallDetector` against
   curve fixtures crossing buffer thresholds; the
   `ForecastRunStateMachine` transitions + the

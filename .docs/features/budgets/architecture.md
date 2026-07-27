@@ -67,6 +67,7 @@ explicit `WHERE user_id = ?` — no reliance on a global `UserScope` for
 this cross-module Public service.
 
 Per-envelope availability is `available = assigned + carriedIn + netMoved
+
 - spent`. When an envelope's availability goes negative, its
 `overspend_mode` decides what happens to the shortfall at period-end:
 `reduce_to_budget` (the default) debits the pool once for the shortfall

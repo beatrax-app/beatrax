@@ -104,7 +104,7 @@ Modules/Core/
 - **Scopes/**
   - `UserScope::apply($builder, $model)` — `where('user_id',
     CurrentUser::id())`. Skipped when the auth factory is unbound (CLI
-    + tests not in HTTP context).
+    - tests not in HTTP context).
 - **Services/**
   - `SystemClock` — production `Clock`.
   - `CurrentUserService` — production `CurrentUser`. Throws

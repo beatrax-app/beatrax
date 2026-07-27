@@ -200,7 +200,7 @@ change.
 - [Ingestion pipeline](ingestion-pipeline.md) — the end-to-end flow from
   raw source file to canonical `Transaction` row, crossing the
   `Import` → `Ingestion` → `Ledger` modules and the `Categorization`
-  + `Counterparties` boundaries.
+  - `Counterparties` boundaries.
 - [Chain resolution](chain-resolution.md) — the read-mostly resolver that
   reaches across `Ledger`, `Counterparties`, and `Chains` without writing
   outside its own `chain_links` table.

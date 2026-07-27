@@ -46,6 +46,7 @@ Today's guarantee: *the DK cannot be recovered without knowledge of the PIN*
 *device + enrolled face/finger is sufficient* ("something you are / have").
 
 Consequences to accept explicitly:
+
 - A coerced/again-enrolled biometric, or an attacker who can add a fingerprint
   to an unlocked device, becomes a key-recovery path. This is mitigated by
   invalidate-on-enrollment-change (see §4), not eliminated.
@@ -79,9 +80,11 @@ path can read the wrap without the prompt.
 
 That gives two implementation tiers:
 
-### Tier A — Proper (enclave-bound). Recommended if we do this at all.
+### Tier A — Proper (enclave-bound). Recommended if we do this at all
+
 Requires native changes (fork the plugin or ship a small custom NativePHP
 plugin):
+
 - **iOS:** create the Keychain item with
   `SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, [.biometryCurrentSet], …)` and read it with an `LAContext`. The
   enclave itself refuses to release the bytes without a fresh Face ID/Touch ID,
@@ -96,7 +99,8 @@ an upstream PR to `nativephp/mobile-secure-storage` adding an
 `accessControl: biometric` option. This is the scope driver and the reason
 this is its own phase, not a follow-on to this session's work.
 
-### Tier B — Pragmatic (no native changes). Weaker; document the limit.
+### Tier B — Pragmatic (no native changes). Weaker; document the limit
+
 Store the DK wrap in the existing (device-unlock-gated) SecureStorage entry,
 gate its *retrieval* behind `Biometrics::prompt()`. The bool is bypassable in
 principle, but on a **locked, sandboxed, single-user device** the residual

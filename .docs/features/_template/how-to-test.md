@@ -93,7 +93,6 @@ and the assertion — see
   section maps it onto the code.
 -->
 
-
 The behavioural contract for the module. A reader who is about to
 change something here should be able to confirm, by reading this file
 plus the linked tests, what the module is supposed to do and what it

@@ -165,7 +165,7 @@ The behavioural contract for the `Categorization` module.
   `tests/Unit/DefaultCategorizationRuleSeederTest.php`)
 - **The matched-rule counter is monotonic under concurrent imports.**
   `ApplyAutoCategoryStage` uses `UPDATE … SET hits_count = hits_count
-  + 1` (atomic), not read-modify-write.
+  - 1` (atomic), not read-modify-write.
 - **The CRUD surface for rules respects per-user scope.**
   `CreateCategorizationRule` / `UpdateCategorizationRule` /
   `DeleteCategorizationRule` filter by `user_id`; a cross-user mutate

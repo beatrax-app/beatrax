@@ -164,7 +164,7 @@ The behavioural contract for the `Core` module.
 - **Every non-loopback request raises 404.** `LoopbackOnly` middleware
   inspects `SERVER_ADDR`; if a non-loopback IP is set, it throws
   `NotFoundHttpException`. Requests with no `SERVER_ADDR` pass (CLI
-  + Pest fixtures). The detection covers IPv4 127.0.0.0/8, IPv6
+  - Pest fixtures). The detection covers IPv4 127.0.0.0/8, IPv6
   `::1`, and the IPv4-mapped-IPv6 `::ffff:127.x.x.x` form on
   binary-form (`inet_pton`) comparison.
 - **Every authenticated response carries `Cache-Control: no-store`.**

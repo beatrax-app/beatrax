@@ -25,7 +25,7 @@ isolation.
   - The pipeline stage end-to-end against a real DB
     (`ResolveCounterpartyStageTest`).
   - The garbage-collector job's two-key preservation + the NULL-out
-    + DELETE ordering (`CounterpartyGarbageCollectorJobTest`).
+    - DELETE ordering (`CounterpartyGarbageCollectorJobTest`).
   - The three Livewire pages (`CounterpartyIndexTest`,
     `CounterpartyProfileTest`, `CounterpartyTriageTest`).
   - The per-user view preference (`UserPreferencesCounterpartyViewTest`).

@@ -48,6 +48,7 @@ import requires regenerating the MT940).
 ## Mapping consistency
 
 This fixture, `asn-camt053-sample-1.xml`, and `asn-cross-format/february.csv`
+
 + `asn-cross-format/february.camt053.xml` are anonymised through **the same
 shared mapping**. The same real counterparty resolves to the same synthetic
 merchant in every output:
@@ -127,16 +128,16 @@ GVC keywords inside `?20–?29` the parser must promote:
 
 ## Caveats
 
-- Opening and closing balances are synthetic (running sum recomputed at
++ Opening and closing balances are synthetic (running sum recomputed at
   write time). The `statement_summaries` table will record these values
   per import_run even though they don't match the originating CAMT's
   3-month balance window — that is correct behaviour for a single-statement
   MT940 import.
-- The `:20:` file reference is the static literal `ASN-SYN-MT940-001`;
++ The `:20:` file reference is the static literal `ASN-SYN-MT940-001`;
   real ASN exports use a bank-generated reference per export. This does
   not affect parser tests because `:20:` content is opaque per the
   protocol.
-- Transaction-type ids (`NTRF`, `NDDT`, `NMSC`, `SCHG`) are derived from
++ Transaction-type ids (`NTRF`, `NDDT`, `NMSC`, `SCHG`) are derived from
   the CAMT `BkTxCd/Domn/Fmly/Cd` family using the conventional ASN MT940
   family-to-id mapping. A real ASN export may emit slightly different
   `:61:` ids in edge cases; the parser must treat the 4-char id as
