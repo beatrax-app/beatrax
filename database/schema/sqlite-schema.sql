@@ -1390,15 +1390,6 @@ USING fts5(
 /* transaction_search_fts(
   search_body
 ) */;
-CREATE TABLE IF NOT EXISTS 'transaction_search_fts_data'(id INTEGER PRIMARY KEY, block BLOB);
-CREATE TABLE IF NOT EXISTS 'transaction_search_fts_idx'(
-  segid,
-  term,
-  pgno,
-  PRIMARY KEY(segid, term)
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS 'transaction_search_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB);
-CREATE TABLE IF NOT EXISTS 'transaction_search_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS "anomaly_alerts"(
   "id" integer primary key autoincrement not null,
   "user_id" integer,
