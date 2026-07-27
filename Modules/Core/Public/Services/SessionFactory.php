@@ -11,15 +11,10 @@ use LogicException;
 /**
  * @link ../../../../.docs/architecture/module-boundaries.md
  */
-// Defers session resolution to the moment a session is actually needed.
-//
-// Sessions are configured encrypted, so resolving one builds the encrypter,
-// which requires an application key. Artisan constructs every registered
-// command just to list them, and a command that reaches a session-holding
-// service therefore made `key:generate` require the key it exists to create.
-//
-// Depending on this instead of on Session keeps the constructor cheap: nothing
-// is resolved until a request-scoped code path invokes it.
+// Sessions are configured encrypted, so resolving one builds the encrypter and
+// needs an application key. Depending on this instead of on Session keeps a
+// constructor cheap enough for Artisan to build every command just to list
+// them — which is what `key:generate` has to survive to mint that key.
 final class SessionFactory
 {
     private function __construct(
