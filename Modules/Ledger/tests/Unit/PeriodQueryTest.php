@@ -27,7 +27,7 @@ function fakeClock(string $instant): Clock
 /**
  * Builds an anonymous CurrentUser that returns a fixed periodStartDay.
  */
-function fakeCurrentUser(int $periodStartDay): CurrentUser
+function periodQueryCurrentUser(int $periodStartDay): CurrentUser
 {
     return new class($periodStartDay) implements CurrentUser
     {
@@ -40,7 +40,7 @@ function fakeCurrentUser(int $periodStartDay): CurrentUser
 
         public function user(): User
         {
-            throw new LogicException('fakeCurrentUser does not produce a real User');
+            throw new LogicException('periodQueryCurrentUser does not produce a real User');
         }
 
         public function periodStartDay(): int
@@ -56,7 +56,7 @@ function fakeCurrentUser(int $periodStartDay): CurrentUser
 }
 
 it('builds a calendar-month period when period_start_day=1', function (): void {
-    $query = new PeriodQuery(fakeClock('2026-05-12T10:00:00Z'), fakeCurrentUser(1));
+    $query = new PeriodQuery(fakeClock('2026-05-12T10:00:00Z'), periodQueryCurrentUser(1));
     $period = $query->current();
 
     expect($period->start->toDateString())->toBe('2026-05-01');
@@ -65,7 +65,7 @@ it('builds a calendar-month period when period_start_day=1', function (): void {
 });
 
 it('builds a salary-cycle period (start_day=25) when instant is past day 25', function (): void {
-    $query = new PeriodQuery(fakeClock('2026-05-26T00:00:00Z'), fakeCurrentUser(25));
+    $query = new PeriodQuery(fakeClock('2026-05-26T00:00:00Z'), periodQueryCurrentUser(25));
     $period = $query->containing(CarbonImmutable::parse('2026-05-26T00:00:00Z'));
 
     expect($period->start->toDateString())->toBe('2026-05-25');
@@ -73,7 +73,7 @@ it('builds a salary-cycle period (start_day=25) when instant is past day 25', fu
 });
 
 it('builds the prior salary-cycle period (start_day=25) when instant is before day 25', function (): void {
-    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), fakeCurrentUser(25));
+    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), periodQueryCurrentUser(25));
     $period = $query->containing(CarbonImmutable::parse('2026-05-12T00:00:00Z'));
 
     expect($period->start->toDateString())->toBe('2026-04-25');
@@ -81,7 +81,7 @@ it('builds the prior salary-cycle period (start_day=25) when instant is before d
 });
 
 it('previous() rewinds one window', function (): void {
-    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), fakeCurrentUser(1));
+    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), periodQueryCurrentUser(1));
     $current = $query->current();
     $previous = $query->previous($current);
 
@@ -90,7 +90,7 @@ it('previous() rewinds one window', function (): void {
 });
 
 it('next() advances one window', function (): void {
-    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), fakeCurrentUser(1));
+    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), periodQueryCurrentUser(1));
     $current = $query->current();
     $next = $query->next($current);
 
@@ -99,7 +99,7 @@ it('next() advances one window', function (): void {
 });
 
 it('clamps period_start_day to the 1..28 window', function (): void {
-    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), fakeCurrentUser(99));
+    $query = new PeriodQuery(fakeClock('2026-05-12T00:00:00Z'), periodQueryCurrentUser(99));
     $period = $query->current();
 
     // Clamped to day 28; instant 12 is before 28 → previous month.
@@ -124,7 +124,7 @@ dataset('period_sweep', function () {
 });
 
 it('period contains the instant for every (start_day, instant) pair', function (int $startDay, string $instant): void {
-    $query = new PeriodQuery(fakeClock($instant), fakeCurrentUser($startDay));
+    $query = new PeriodQuery(fakeClock($instant), periodQueryCurrentUser($startDay));
     $period = $query->containing(CarbonImmutable::parse($instant));
 
     expect($period->start->lessThanOrEqualTo(CarbonImmutable::parse($instant)))->toBeTrue();
