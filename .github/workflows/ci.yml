@@ -195,6 +195,20 @@ jobs:
                   restore-keys: |
                       composer-mobile-${{ runner.os }}-${{ matrix.php }}-
 
+            - name: Set up Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+              with:
+                  node-version: '22'
+                  cache: npm
+
+            - name: Build Vite assets
+              # mobile-app/public is a symlink to the repo-root public/, so the
+              # manifest is built once at the root and both shells read it.
+              # Without this every view render in the mobile suite returns 500
+              # with ViteManifestNotFoundException — thirty tests, none of whose
+              # messages mention Vite.
+              run: npm ci && npm run build
+
             - name: Lay down the mobile environment
               # Before the install, not after. Composer's post-autoload-dump
               # hook runs `artisan package:discover`, which boots the framework
