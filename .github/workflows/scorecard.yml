@@ -2,22 +2,19 @@
 # scorecard.dev viewer and uploaded to code scanning.
 #
 # `branch_protection_rule` is one of the triggers because several checks read
-# the branch ruleset, so a protection change should re-score immediately rather
-# than wait for the weekly run. Those checks need a token that can read
-# repository administration, which the default GITHUB_TOKEN cannot — hence
-# SCORECARD_TOKEN.
+# the branch protection, so a protection change should re-score immediately
+# rather than wait for the weekly run.
 #
-# **A classic PAT needs the full `repo` scope, held by a repository admin.**
-# `public_repo` does not cover it, even though this repository is public:
-# reading branch protection and rulesets is an admin-scoped API, and `repo` is
-# the scope that carries it. Add `read:org` too if org-level rulesets are ever
-# used to protect the default branch.
+# **No personal access token.** This repository is protected by repository
+# rulesets, not classic branch protection — `branches/main/protection` returns
+# "Branch not protected" while `rulesets` returns the active "main protection"
+# rule. Scorecard reads rulesets with the workflow's own GITHUB_TOKEN, and its
+# maintainers recommend exactly that. A PAT is only needed to detect *classic*
+# branch protection, which we do not use, so adding one would put a broad,
+# long-lived credential in org secrets to buy nothing.
 #
-# (The fine-grained equivalent is `Administration: Read-only` on this repository
-# alongside the mandatory `Metadata: Read-only`.)
-#
-# The failure mode is worth knowing because it is silent: the action still exits
-# zero and the workflow still goes green, while Branch-Protection scores -1 with
+# The failure mode is worth knowing because it is silent: the action exits zero
+# and the workflow goes green while a check it could not perform scores -1 with
 # "internal error: error during branchesHandler.setup". The verify step below
 # turns that into a visible warning instead of a quietly wrong badge.
 name: scorecard
@@ -48,7 +45,7 @@ jobs:
 
       - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
         with:
-          repo_token: ${{ secrets.SCORECARD_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           results_file: results.sarif
           results_format: sarif
           # Publishing is what makes the badge resolve on scorecard.dev.
@@ -84,7 +81,7 @@ jobs:
 
           for entry in broken:
               print(f'::warning::scorecard check could not run — {entry}')
-          print('::warning::SCORECARD_TOKEN likely lacks the `repo` scope (classic) or Administration: Read-only (fine-grained).')
+          print('::warning::if this names Branch-Protection, check the repository is still ruleset-protected — Scorecard reads rulesets with the default token.')
 
           summary = os.environ.get('GITHUB_STEP_SUMMARY')
           if summary:
@@ -93,8 +90,7 @@ jobs:
                   for entry in broken:
                       fh.write(f'- `{entry}`\n')
                   fh.write('\nThese score -1 and drag the published badge down. '
-                           'Reading branch protection and rulesets is an admin-scoped API '
-                           'even on a public repo, so `SCORECARD_TOKEN` needs the full '
-                           '`repo` scope if it is a classic PAT — `public_repo` does not '
-                           'cover it — or `Administration: Read-only` if fine-grained.\n')
+                           'Branch-Protection reads repository rulesets with the default '
+                           'GITHUB_TOKEN; if it appears here, confirm the default branch '
+                           'is still ruleset-protected rather than reaching for a PAT.\n')
           PY
