@@ -1,13 +1,5 @@
-# Ownership rules for the beatrax repository.
-#
-# Paths listed here require explicit review from the listed owner before
-# any pull request that touches them can be merged. The targeted patterns
-# below are deliberately narrow so that day-to-day pull requests do not
-# all require an extra approval — only the release pipeline, the
-# ownership file itself, and the NativePHP prebuild hooks gate on the
-# owner because each of those paths can ship code or alter the build
-# artifact that users download.
+# GENERATED from beatrax-app/spec 70-operations/maintainers.toml — do not edit by hand.
+# Regenerate: python3 scripts/gen_codeowners.py <repo>
 
-/.github/workflows/                 @lessevv
-/.github/CODEOWNERS                 @lessevv
-/scripts/nativephp_*.php            @lessevv
+* @lessevv
+
