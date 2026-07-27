@@ -6,6 +6,17 @@
 # than wait for the weekly run. Those checks need a token that can read
 # repository administration, which the default GITHUB_TOKEN cannot — hence
 # SCORECARD_TOKEN.
+#
+# **A fine-grained token needs `Administration: Read-only` on this repository**,
+# plus the mandatory `Metadata: Read-only`. Administration is the permission that
+# grants the branch-protection and ruleset reads; `Contents` and `Metadata` alone
+# are not enough. (A classic PAT needs full `repo` scope for the same reason —
+# `public_repo` does not cover it, even on a public repository.)
+#
+# The failure mode is worth knowing because it is silent: the action still exits
+# zero and the workflow still goes green, while Branch-Protection scores -1 with
+# "internal error: error during branchesHandler.setup". The verify step below
+# turns that into a visible warning instead of a quietly wrong badge.
 name: scorecard
 
 on:
@@ -43,3 +54,44 @@ jobs:
       - uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         with:
           sarif_file: results.sarif
+
+      - name: Verify the admin-scoped checks actually ran
+        # Scorecard reports a check it could not perform as score -1 and still
+        # exits zero, so without this the badge silently under-reports and
+        # nobody finds out. A warning rather than a failure: the score is
+        # informational, and a token problem should not block a merge.
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+
+          with open('results.sarif', encoding='utf-8') as fh:
+              sarif = json.load(fh)
+
+          broken = []
+          for run in sarif.get('runs', []):
+              for result in run.get('results', []):
+                  rule = result.get('ruleId', '')
+                  text = (result.get('message', {}) or {}).get('text', '')
+                  if 'internal error' in text.lower():
+                      broken.append(f'{rule}: {text.strip()[:140]}')
+
+          if not broken:
+              print('every check produced a real result.')
+              sys.exit(0)
+
+          for entry in broken:
+              print(f'::warning::scorecard check could not run — {entry}')
+          print('::warning::SCORECARD_TOKEN likely lacks Administration: Read-only on this repository.')
+
+          summary = os.environ.get('GITHUB_STEP_SUMMARY')
+          if summary:
+              with open(summary, 'a', encoding='utf-8') as fh:
+                  fh.write('### Scorecard checks that could not run\n\n')
+                  for entry in broken:
+                      fh.write(f'- `{entry}`\n')
+                  fh.write('\nThese score -1 and drag the published badge down. '
+                           'Reading branch protection and rulesets is an admin-scoped API '
+                           'even on a public repo: a fine-grained `SCORECARD_TOKEN` needs '
+                           '`Administration: Read-only` on this repository alongside the '
+                           'mandatory `Metadata: Read-only`.\n')
+          PY
