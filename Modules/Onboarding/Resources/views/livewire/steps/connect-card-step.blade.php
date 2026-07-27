@@ -13,7 +13,7 @@
     preview screen to read back.
 --}}
 <section class="wiz-step wiz-step-connect-card" aria-labelledby="wiz-connect-card-h1">
-    <p class="wiz-eyebrow">💳 Step 3 — Your credit card (ICS)</p>
+    <x-onboarding::wiz-eyebrow step="connect-card" glyph="💳">Your credit card (ICS)</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-card-h1" class="wiz-h1">
         Grab your monthly statement PDFs
     </h1>
@@ -23,7 +23,7 @@
 
     <div class="mini-steps">
         <x-onboarding::mini-step glyph="🔐" label="Log in" sub="mijn.icscards.nl" state="done" />
-        <x-onboarding::mini-step glyph="📑" label="Open afschriften" sub="Left navigation" state="done" />
+        <x-onboarding::mini-step glyph="📑" label="Open statements" sub="Afschriften" subLang="nl" state="done" />
         <x-onboarding::mini-step glyph="📅" label="Pick months" sub="One PDF per month" state="now" />
         <x-onboarding::mini-step glyph="⬇️" label="Download" sub="PDF" state="upcoming" />
     </div>

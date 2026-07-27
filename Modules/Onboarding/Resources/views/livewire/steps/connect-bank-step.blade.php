@@ -54,7 +54,7 @@
     };
 @endphp
 <section class="wiz-step wiz-step-connect-bank" aria-labelledby="wiz-connect-bank-h1">
-    <p class="wiz-eyebrow">🏦 Step 2 — Your bank {{ $eyebrowSuffix }}</p>
+    <x-onboarding::wiz-eyebrow step="connect-bank" glyph="🏦">Your bank {{ $eyebrowSuffix }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-bank-h1" class="wiz-h1">
         Grab a statement, then drop it below
     </h1>
