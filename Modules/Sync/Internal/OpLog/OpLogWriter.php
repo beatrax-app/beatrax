@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\OpLog;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use LogicException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
@@ -37,7 +37,7 @@ final class OpLogWriter
         private readonly SensitiveFieldRegistry $sensitiveFields,
         private readonly OpLogFieldCrypto $fieldCrypto,
         private readonly GdkKeyringService $keyring,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {
         $this->restoreClockState();
     }
@@ -113,7 +113,7 @@ final class OpLogWriter
     private function tryCurrentEpoch(): ?GdkEpoch
     {
         try {
-            return $this->keyring->currentEpoch($this->userId, $this->session);
+            return $this->keyring->currentEpoch($this->userId, ($this->session)());
         } catch (LogicException|RuntimeException) {
             return null;
         }

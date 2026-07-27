@@ -6,6 +6,7 @@ namespace Modules\Desktop\Internal\Listeners;
 
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Public\Services\SessionFactory;
 
 // Locks the session immediately (no grace period) when the native
 // window is hidden or closed — the OS app-switcher snapshot must never
@@ -18,7 +19,7 @@ final class LockOnWindowHideOrClose
 {
     public function __construct(
         private readonly AppLockKeyService $keyService,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     // Accepts both WindowHidden and WindowClosed via the object type
@@ -26,6 +27,6 @@ final class LockOnWindowHideOrClose
     // itself is never inspected.
     public function handle(object $event): void
     {
-        $this->keyService->withhold($this->session);
+        $this->keyService->withhold(($this->session)());
     }
 }

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Receipts\Public\Actions;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use JsonException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -38,7 +38,7 @@ final class ApplyReceiptConflictResolution
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function __invoke(User $user, string $choice): int
@@ -98,7 +98,7 @@ final class ApplyReceiptConflictResolution
                 // is left untouched, and this no-ops for a
                 // non-encrypted user.
                 if (is_string($incoming) && in_array($fieldName, self::ENCRYPTED_FIELDS, true)) {
-                    $incoming = $this->codec->encryptValue('transactions', $fieldName, $incoming, $user->id, $this->session);
+                    $incoming = $this->codec->encryptValue('transactions', $fieldName, $incoming, $user->id, ($this->session)());
                 }
 
                 $this->db->connection()

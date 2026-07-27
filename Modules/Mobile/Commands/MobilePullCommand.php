@@ -7,6 +7,7 @@ namespace Modules\Mobile\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -24,7 +25,10 @@ final class MobilePullCommand extends Command
 
     public function __construct(
         private readonly MobileSyncTriggerService $trigger,
-        private readonly Session $session,
+        // A factory, not the session itself: resolving a session builds the
+        // encrypter, and this class is reachable from a console command that
+        // Artisan constructs merely to list it.
+        private readonly SessionFactory $session,
         private readonly DatabaseManager $db,
         private readonly ?LoggerInterface $logger = null,
     ) {
@@ -54,7 +58,7 @@ final class MobilePullCommand extends Command
     // LAN target, falling straight to the off-LAN relay leg.
     private function runOneBoundedBurstFor(int $userId): void
     {
-        $result = $this->trigger->syncOnce($userId, $this->session);
+        $result = $this->trigger->syncOnce($userId, ($this->session)());
 
         if ($result === null) {
             $this->logger?->info('sync:mobile-pull: no usable device identity — tick skipped cleanly.', [

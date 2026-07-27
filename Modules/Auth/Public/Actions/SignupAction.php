@@ -8,7 +8,6 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Hashing\Hasher;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -17,6 +16,7 @@ use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Services\SessionFactory;
 
 /**
  * @link ../../../../.docs/features/auth/architecture.md
@@ -33,7 +33,7 @@ final class SignupAction
         private readonly AuthManager $auth,
         private readonly RecoveryCodeGenerator $codeGenerator,
         private readonly Clock $clock,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly Dispatcher $events,
     ) {}
 
@@ -113,7 +113,7 @@ final class SignupAction
         $guard = $this->auth->guard();
         $guard->login($result['user']);
 
-        $this->session->put('auth.signup.recovery_codes_plain', $result['codesPlain']);
+        ($this->session)()->put('auth.signup.recovery_codes_plain', $result['codesPlain']);
 
         return $result;
     }

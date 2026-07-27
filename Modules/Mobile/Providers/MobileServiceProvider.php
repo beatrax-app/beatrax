@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Mobile\Providers;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 
 /**
@@ -37,8 +39,12 @@ final class MobileServiceProvider extends ServiceProvider
         $this->singletonIfExists('Modules\Mobile\Internal\Pairing\QrScanBridge');
 
         // Also registered in boot() via $this->commands([...]) once it
-        // exists.
-        $this->singletonIfExists('Modules\Mobile\Commands\MobilePullCommand');
+        // exists. Built explicitly rather than autowired so the session is
+        // passed as a factory: it is configured encrypted, and Artisan
+        // constructs every command just to list them.
+        if (class_exists(MobilePullCommand::class)) {
+            $this->app->singleton(MobilePullCommand::class);
+        }
 
         // Routes the unlocked data key through the iOS Keychain/Android
         // Keystore instead of the plaintext session copy, overriding the

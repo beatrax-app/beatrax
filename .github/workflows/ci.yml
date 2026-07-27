@@ -77,13 +77,7 @@ jobs:
                       composer-${{ runner.os }}-${{ matrix.php }}-
 
             - name: Install Composer dependencies
-              # `--no-scripts`, because the post-autoload-dump hook runs
-              # `artisan package:discover`, and provider registration reaches
-              # a binding that resolves the encrypter — which throws without
-              # an application key. The key cannot exist yet: minting it needs
-              # the framework this step is installing. So the scripts run
-              # after the environment is prepared, below.
-              run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+              run: composer install --prefer-dist --no-interaction --no-progress
 
             - name: Set up Node
               uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
@@ -118,24 +112,13 @@ jobs:
               # `bootstrap/cache` to be writable. The tree is created
               # explicitly so a fresh CI checkout does not fail with
               # `failed to chmod temp file` or framework cache errors.
-              #
-              # The key is written directly rather than minted with
-              # `artisan key:generate`, because that command boots the
-              # framework and provider registration reaches the encrypter —
-              # so the command that exists to create a key cannot run without
-              # one. Writing it here breaks that cycle with no boot at all.
               run: |
                   cp .env.example .env
-                  printf 'APP_KEY=base64:%s\n' "$(openssl rand -base64 32)" >> .env
+                  php artisan key:generate --ansi
                   mkdir -p database
                   touch database/database.sqlite
                   mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   chmod -R u+rwX storage bootstrap/cache
-
-            - name: Discover packages
-              # The Composer install above skipped its scripts; now that an
-              # application key exists, run the discovery they would have.
-              run: php artisan package:discover --ansi
 
             - name: Pint (code-style)
               run: vendor/bin/pint --test
@@ -215,7 +198,7 @@ jobs:
             - name: Install Composer dependencies (mobile-app/ root)
               # Credentials come from the job-level COMPOSER_AUTH above.
               working-directory: mobile-app
-              run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+              run: composer install --prefer-dist --no-interaction --no-progress
 
             - name: Prepare environment for the mobile-scoped Pest pass
               # mobile-app/.env is gitignored (own, machine-local — mirrors
@@ -223,19 +206,13 @@ jobs:
               # There is no mobile-app/.env.example; the repo-root one is the
               # single source of truth for required keys and is copied in,
               # same shape as the desktop `quality` job's own env prep above.
-              #
-              # The key is written directly rather than minted with
-              # `artisan key:generate`, for the same reason as the desktop job:
-              # that command boots the framework, and provider registration
-              # reaches the encrypter it is supposed to be creating a key for.
               working-directory: mobile-app
               run: |
                   cp ../.env.example .env
-                  printf 'APP_KEY=base64:%s\n' "$(openssl rand -base64 32)" >> .env
+                  php artisan key:generate --ansi
                   mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   touch database/database.sqlite
                   chmod -R u+rwX storage bootstrap/cache
-                  php artisan package:discover --ansi
 
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
               # T-15-34: the mobile shell must never silently pick up a

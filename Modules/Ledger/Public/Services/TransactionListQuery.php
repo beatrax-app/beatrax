@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Dto\TransactionListPage;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -25,7 +25,7 @@ final class TransactionListQuery
         private readonly Clock $clock,
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function recent(
@@ -161,7 +161,7 @@ final class TransactionListQuery
         // enabled for this user.
         $counterpartyName = $row->counterparty_name === null
             ? null
-            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, $this->session)['value'];
+            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, ($this->session)())['value'];
         $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
             ? self::toString($row->counterparty_slug)
             : null;

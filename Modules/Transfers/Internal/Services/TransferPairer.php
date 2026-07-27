@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Transfers\Internal\Services;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Transaction;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -27,7 +27,7 @@ final class TransferPairer implements PairsTransferLegs
         private readonly Clock $clock,
         private readonly ResolvesKnownCounterpartyIban $aliasResolver,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
@@ -69,7 +69,7 @@ final class TransferPairer implements PairsTransferLegs
                 'counterparty_iban',
                 $tx->counterparty_iban,
                 $user->id,
-                $this->session,
+                ($this->session)(),
             );
 
             // decryptValue never throws — on failure it returns the raw
@@ -270,7 +270,7 @@ final class TransferPairer implements PairsTransferLegs
                 'counterparty_iban',
                 $storedCandidateIban,
                 $userId,
-                $this->session,
+                ($this->session)(),
             );
 
             // Skip a candidate whose IBAN failed to decrypt rather than
