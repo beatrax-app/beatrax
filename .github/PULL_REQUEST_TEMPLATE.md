@@ -45,7 +45,6 @@ no issue):
       PR merged first if this changes behaviour
 - [ ] A decision record was added to the spec's `00-overview/decisions/` if this
       PR makes an architectural decision
-- [ ] AI assistance disclosed, if significant
 - [ ] No `.env`, secrets, or large binary fixtures were committed by accident
 
 ## Hippocratic License 3.0 — contribution acknowledgement

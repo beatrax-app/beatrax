@@ -136,8 +136,9 @@ Identifiers never appear in code comments — they belong in the commit
 trailer and the PR body, which is where the gate reads them.
 
 If you are working with an AI assistant, [AGENTS.md](AGENTS.md) is the
-guide, and the assistance is disclosed in the PR body. It is welcome and
-it is not held to a different standard.
+guide it should read. Beyond that, an AI is a tool like any other: a pull
+request is judged on the code, not on what produced it. There is nothing
+to declare, and review is there for a reason.
 
 ## Pull request flow
 

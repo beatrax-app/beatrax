@@ -1,0 +1,27 @@
+# Link-check configuration. A broken link in the documentation is a real
+# defect: the comment policy's M6 rule means source files link into `.docs/`,
+# so a dead path is not cosmetic.
+exclude_path = [
+  "vendor",
+  "node_modules",
+  "mobile-app",
+  "storage",
+  "public/build",
+  "nativephp",
+  "composer.lock",
+  "package-lock.json",
+  ".planning",
+]
+exclude = [
+  # Discord rejects unauthenticated invite HEAD requests; the invite is
+  # verified by hand, not by CI.
+  "^https://discord\\.gg/",
+  # Release and compare URLs that only exist once a release is cut, and
+  # settings pages that require authentication to resolve.
+  "^https://github\\.com/beatrax-app/beatrax/(releases|compare|security|settings|discussions)",
+  # Badge endpoints rate-limit aggressively under CI.
+  "^https://img\\.shields\\.io/",
+]
+exclude_loopback = true
+max_retries = 2
+accept = ["200", "206", "429"]

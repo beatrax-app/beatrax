@@ -76,9 +76,11 @@ An IMAP library is not a shortcut here; it is a specification violation.
 - Behaviour change? **The spec PR merged first**
   ([change-lifecycle](https://github.com/beatrax-app/spec/blob/main/50-governance/change-lifecycle.md)).
 - The [definition of done](https://github.com/beatrax-app/spec/blob/main/40-quality/definition-of-done.md) is met.
-- AI assistance is disclosed in the PR body (`GOV-R24`). It is welcome and it is
-  not second-class — but the reviewer needs to know which failure modes to look
-  for.
+
+A pull request is judged on whether it satisfies the requirement it cites,
+passes the gates, and is code somebody can maintain. Which tools you used to
+write it is not a property of the change, and nobody needs to be told. Review is
+there for a reason.
 
 ## Commits
 

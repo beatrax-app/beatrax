@@ -1,0 +1,113 @@
+[default]
+# Hotkey mockup notation like [e]rror, [s]earch in keyboard-shortcut examples,
+# and SQL verbs written with a capitalised keyword plus an English suffix —
+# the tokeniser splits "JOINed" into "JOI" + "Ned" and flags the tail.
+extend-ignore-re = ["\\[[a-z]\\][a-zA-Z]+", "JOINed"]
+
+[default.extend-words]
+beatrax = "beatrax"
+Beatrax = "Beatrax"
+# Dutch statement vocabulary that appears verbatim in parser examples.
+Betaalautomaat = "Betaalautomaat"
+Geldautomaat = "Geldautomaat"
+Bankstorting = "Bankstorting"
+Incasso = "Incasso"
+Overboeking = "Overboeking"
+Saldo = "Saldo"
+aangifte = "aangifte"
+Afschriftnummer = "Afschriftnummer"
+Volgnummer = "Volgnummer"
+Omschrijving = "Omschrijving"
+Categorie = "Categorie"
+# Institution names as they are actually spelled.
+# Split on the capital, so the exception is the part the dictionary rejects.
+Regio = "Regio"
+# Library and protocol names the dictionary does not carry.
+Livewire = "Livewire"
+NativePHP = "NativePHP"
+Larastan = "Larastan"
+Volt = "Volt"
+Flux = "Flux"
+genkgo = "genkgo"
+nwidart = "nwidart"
+Argon2id = "Argon2id"
+XChaCha20 = "XChaCha20"
+BLAKE2b = "BLAKE2b"
+mDNS = "mDNS"
+iDEAL = "iDEAL"
+YNAB = "YNAB"
+nYNAB = "nYNAB"
+
+# Dutch statement and demo-data vocabulary that appears verbatim in adapters,
+# seeders, and assertions — these are the strings the parsers actually match.
+Mobiel = "Mobiel"
+Salaris = "Salaris"
+Pensioen = "Pensioen"
+Periode = "Periode"
+Stichting = "Stichting"
+STICHTING = "STICHTING"
+Supermarkt = "Supermarkt"
+SUPERMARKT = "SUPERMARKT"
+Supermarkten = "Supermarkten"
+Adres = "Adres"
+Provincie = "Provincie"
+Thuis = "Thuis"
+Aand = "Aand"
+informatie = "informatie"
+als = "als"
+mis = "mis"
+juni = "juni"
+juli = "juli"
+oktober = "oktober"
+
+# ISO 20022 element names and truncated SQL keywords asserted on literally.
+OTHR = "OTHR"
+Othr = "Othr"
+BCK = "BCK"
+bck = "bck"
+Bse = "Bse"
+FND = "FND"
+INSER = "INSER"
+UPDAT = "UPDAT"
+DELET = "DELET"
+SELEC = "SELEC"
+
+# Words the dictionary lacks that are correct in this codebase.
+unparseable = "unparseable"
+Unparseable = "Unparseable"
+invokable = "invokable"
+appliable = "appliable"
+encrypter = "encrypter"
+COSE = "COSE"
+
+# Test-local identifiers and abbreviations asserted on literally.
+nwe = "nwe"
+NWE = "NWE"
+USERA = "USERA"
+usera = "usera"
+ND = "ND"
+SMAL = "SMAL"
+Caf = "Caf"
+
+[files]
+# Vendored, generated, and fixture trees are not ours to spell-check. Bank
+# statement fixtures and the merchant corpus carry real-world strings in a
+# dozen languages, deliberately unedited — correcting them would break the
+# parsers they exist to exercise.
+extend-exclude = [
+  "vendor/",
+  "node_modules/",
+  "mobile-app/",
+  "storage/",
+  "public/build/",
+  "nativephp/",
+  "composer.lock",
+  "package-lock.json",
+  "*.min.js",
+  "*.min.css",
+  "**/tests/fixtures/",
+  "resources/corpus/",
+  "database/seeders/data/",
+  "scripts/anonymize_*.php",
+  "scripts/synthesise_*.php",
+]
