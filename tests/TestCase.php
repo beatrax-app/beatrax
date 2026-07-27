@@ -6,7 +6,6 @@ namespace Tests;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Ledger\Models\Account;
 
 /**
@@ -67,65 +66,6 @@ abstract class TestCase extends BaseTestCase
         ]);
         $this->app['config']->set('cache.locks_store', 'array');
 
-        $this->purgePerUserState();
-    }
-
-    /**
-     * RefreshDatabase rolls back the database; it does not roll back the disk.
-     *
-     * The paths below are keyed by user id, and RefreshDatabase restarts those
-     * ids from 1 for every test — so without this a test inherits the previous
-     * test's encrypted keyring for "its" user, cannot decrypt it with a session
-     * that never held that key, and fails in a way that depends on which tests
-     * ran before it. That is what made DevicesAndSyncEncryptionUiTest pass
-     * alone and fail in the suite.
-     *
-     * Only per-user state is purged. Fixture trees the suite reads from are
-     * left alone.
-     */
-    private function purgePerUserState(): void
-    {
-        foreach ([
-            'sync/gdk',
-            'sync/backups',
-            'sync/relay.json',
-            'secrets',
-            'open-banking-tls',
-            'mobile/network-policy.json',
-            'first-launch.app-key-generated',
-        ] as $relative) {
-            self::deleteRecursively(UserDataPathService::appPath($relative));
-        }
-    }
-
-    private static function deleteRecursively(string $path): void
-    {
-        // Never follow a symlink out of the tree, and never recurse into one.
-        if (is_link($path)) {
-            @unlink($path);
-
-            return;
-        }
-
-        if (is_file($path)) {
-            @unlink($path);
-
-            return;
-        }
-
-        if (! is_dir($path)) {
-            return;
-        }
-
-        foreach (scandir($path) ?: [] as $entry) {
-            if ($entry === '.' || $entry === '..') {
-                continue;
-            }
-
-            self::deleteRecursively($path.DIRECTORY_SEPARATOR.$entry);
-        }
-
-        @rmdir($path);
     }
 
     /**
