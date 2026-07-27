@@ -7,11 +7,14 @@
 # repository administration, which the default GITHUB_TOKEN cannot — hence
 # SCORECARD_TOKEN.
 #
-# **A fine-grained token needs `Administration: Read-only` on this repository**,
-# plus the mandatory `Metadata: Read-only`. Administration is the permission that
-# grants the branch-protection and ruleset reads; `Contents` and `Metadata` alone
-# are not enough. (A classic PAT needs full `repo` scope for the same reason —
-# `public_repo` does not cover it, even on a public repository.)
+# **A classic PAT needs the full `repo` scope, held by a repository admin.**
+# `public_repo` does not cover it, even though this repository is public:
+# reading branch protection and rulesets is an admin-scoped API, and `repo` is
+# the scope that carries it. Add `read:org` too if org-level rulesets are ever
+# used to protect the default branch.
+#
+# (The fine-grained equivalent is `Administration: Read-only` on this repository
+# alongside the mandatory `Metadata: Read-only`.)
 #
 # The failure mode is worth knowing because it is silent: the action still exits
 # zero and the workflow still goes green, while Branch-Protection scores -1 with
@@ -81,7 +84,7 @@ jobs:
 
           for entry in broken:
               print(f'::warning::scorecard check could not run — {entry}')
-          print('::warning::SCORECARD_TOKEN likely lacks Administration: Read-only on this repository.')
+          print('::warning::SCORECARD_TOKEN likely lacks the `repo` scope (classic) or Administration: Read-only (fine-grained).')
 
           summary = os.environ.get('GITHUB_STEP_SUMMARY')
           if summary:
@@ -91,7 +94,7 @@ jobs:
                       fh.write(f'- `{entry}`\n')
                   fh.write('\nThese score -1 and drag the published badge down. '
                            'Reading branch protection and rulesets is an admin-scoped API '
-                           'even on a public repo: a fine-grained `SCORECARD_TOKEN` needs '
-                           '`Administration: Read-only` on this repository alongside the '
-                           'mandatory `Metadata: Read-only`.\n')
+                           'even on a public repo, so `SCORECARD_TOKEN` needs the full '
+                           '`repo` scope if it is a classic PAT — `public_repo` does not '
+                           'cover it — or `Administration: Read-only` if fine-grained.\n')
           PY
