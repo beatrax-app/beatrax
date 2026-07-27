@@ -64,9 +64,12 @@ env:
     # electron-builder's pre-publish dry-runs; `-p never` keeps
     # it from pushing directly — softprops/action-gh-release
     # owns the actual upload.
+    # Owner and repo are read from the GitHub context rather than
+    # hardcoded, so an organisation move cannot silently point the
+    # updater feed at the previous owner.
     NATIVEPHP_UPDATER_PROVIDER: github
-    GITHUB_OWNER: nightworksio
-    GITHUB_REPO: beatrax
+    GITHUB_OWNER: ${{ github.repository_owner }}
+    GITHUB_REPO: ${{ github.event.repository.name }}
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
