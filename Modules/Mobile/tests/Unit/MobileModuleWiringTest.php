@@ -63,12 +63,30 @@ it('creates the mobile_sync_progress durable-cursor table with the expected colu
     expect(str_contains($indexSql, 'user_id') && str_contains($indexSql, 'peer_device_id'))->toBeTrue();
 });
 
-it('declares the three Mobile testsuites in phpunit.xml', function (): void {
-    $xml = (string) file_get_contents(base_path('phpunit.xml'));
+// This used to require Mobile, MobileUnit and MobileFeature all be declared,
+// which pinned the bug: the latter two re-listed Mobile's own directories, and
+// PHPUnit answers a file claimed twice with a warning that exits the run 1 with
+// nothing failing. It now pins the invariant that was actually wanted.
+it('declares the Mobile testsuite, and no two testsuites claim the same directory', function (): void {
+    $config = new SimpleXMLElement((string) file_get_contents(base_path('phpunit.xml')));
 
-    foreach (['Mobile', 'MobileUnit', 'MobileFeature'] as $suite) {
-        expect($xml)->toContain('name="'.$suite.'"');
+    $names = [];
+    $claims = [];
+
+    foreach ($config->testsuites->testsuite as $suite) {
+        $names[] = (string) $suite['name'];
+
+        foreach ($suite->directory as $directory) {
+            $claims[trim((string) $directory)][] = (string) $suite['name'];
+        }
     }
+
+    expect($names)->toContain('Mobile');
+
+    $shared = array_filter($claims, static fn (array $owners): bool => count($owners) > 1);
+
+    expect($shared)->toBe([], 'A directory claimed by two testsuites makes every run that loads both exit 1, '
+        .'with no failing test to point at: '.json_encode($shared));
 });
 
 it('forward-registers every future Internal/Livewire/command FQCN in MobileServiceProvider', function (): void {
