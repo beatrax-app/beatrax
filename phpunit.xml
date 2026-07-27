@@ -147,15 +147,18 @@
             <directory suffix="Test.php">./Modules/Sync/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Sync/tests/Unit</directory>
         </testsuite>
+        <!-- Mobile is the composite of these two directories. It used to sit
+             alongside MobileUnit and MobileFeature, which listed the same two
+             directories again, and PHPUnit refuses to add a file to a second
+             suite: every one of the 23 Mobile feature tests raised "Cannot add
+             file ... as it was already added", and a run carrying those
+             warnings exits 1 with zero failing tests. Only a run that loads
+             more than one suite can trip it, so every single-suite run was
+             green and the full suite was red for no visible reason.
+             `vendor/bin/pest Modules/Mobile/tests/Unit` still runs a subset. -->
         <testsuite name="Mobile">
             <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
-        </testsuite>
-        <testsuite name="MobileUnit">
-            <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
-        </testsuite>
-        <testsuite name="MobileFeature">
-            <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
         </testsuite>
         <testsuite name="MigrationUnit">
             <directory suffix="Test.php">./Modules/Migration/tests/Unit</directory>
