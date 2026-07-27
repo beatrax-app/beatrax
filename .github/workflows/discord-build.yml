@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   notify:
-    uses: beatrax-app/spec/.github/workflows/discord-notify.yml@main
+    uses: beatrax-app/spec/.github/workflows/discord-notify.yml@v1
     with:
       title: "${{ github.event.workflow_run.name }} · ${{ github.event.workflow_run.head_branch }}"
       body: "${{ github.event.repository.name }} — ${{ github.event.workflow_run.conclusion }} · ${{ github.event.workflow_run.head_sha }}"

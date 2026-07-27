@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   announce:
-    uses: beatrax-app/spec/.github/workflows/discord-notify.yml@main
+    uses: beatrax-app/spec/.github/workflows/discord-notify.yml@v1
     with:
       content: ${{ vars.DISCORD_RELEASE_ROLE_ID && format('<@&{0}>', vars.DISCORD_RELEASE_ROLE_ID) || '' }}
       title: "beatrax ${{ github.event.release.tag_name }}"

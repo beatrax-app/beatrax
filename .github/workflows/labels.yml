@@ -12,4 +12,4 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: beatrax-app/spec/.github/workflows/label-sync.yml@main
+    uses: beatrax-app/spec/.github/workflows/label-sync.yml@v1

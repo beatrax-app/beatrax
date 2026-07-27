@@ -55,12 +55,14 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$' \
-            || { echo "::error::version must be X.Y.Z or X.Y.Z-rc.N, got '${VERSION}'."; exit 1; }
+          # Any semver prerelease identifier is a preview tag, matching what
+          # release.yml actually keys on (a hyphen anywhere in the ref name).
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+            || { echo "::error::version must be X.Y.Z or X.Y.Z-<prerelease>, got '${VERSION}'."; exit 1; }
           python3 - <<'PY'
           import os, sys, tomllib, pathlib
           version = os.environ["VERSION"]
-          base = version.split("-rc.")[0]
+          base, _, pre = version.partition("-")
           path = pathlib.Path(".spec-canonical/70-operations/versions") / f"{base}.toml"
           if not path.exists():
               sys.exit(f"::error::no manifest at 70-operations/versions/{base}.toml — stage the version first.")
@@ -68,12 +70,14 @@ jobs:
           status, repos, goals = m.get("status"), m.get("repos", []), m.get("goals", [])
           if "beatrax" not in repos:
               sys.exit(f"::error::{base}.toml does not cut this repo (repos = {repos}).")
-          # A release candidate rides a staged version; a stable tag needs every
-          # goal satisfied, which is what `releasable` means (staging.md).
-          wanted = ("staged", "releasable") if "-rc." in version else ("releasable",)
+          # A preview tag rides a staged version — the point of a preview is to
+          # exercise goals that are not all satisfied yet. A stable tag needs
+          # every goal satisfied, which is what `releasable` means (staging.md).
+          wanted = ("staged", "releasable") if pre else ("releasable",)
           if status not in wanted:
-              sys.exit(f"::error::{base}.toml is '{status}'; needs one of {wanted}.")
-          print(f"{base}.toml is '{status}' with {len(goals)} locked goals.")
+              sys.exit(f"::error::{base}.toml is '{status}'; a {'preview' if pre else 'stable'} tag needs one of {wanted}.")
+          kind = f"preview ({pre})" if pre else "stable"
+          print(f"{base}.toml is '{status}' with {len(goals)} locked goals — {kind} tag accepted.")
           PY
 
       - name: The tag does not already exist

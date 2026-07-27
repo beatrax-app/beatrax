@@ -67,30 +67,41 @@ gh repo edit beatrax-app/beatrax \
 | Issues | ON | Bug reports + feature requests |
 | Discussions | ON | Community Q&A (default categories: Announcements, General, Ideas, Polls, Q&A, Show and tell — prune unused) |
 
-### Dependabot — security updates (works on private)
+### Security updates (works on private)
 
-Vulnerability alerts + automated security fixes (free on private):
+Vulnerability alerts + automated security fixes are a platform toggle and
+stay on regardless of which bot proposes version updates:
 
 ```bash
 gh api -X PUT repos/beatrax-app/beatrax/vulnerability-alerts
 gh api -X PUT repos/beatrax-app/beatrax/automated-security-fixes
 ```
 
-### Dependabot — version updates (works on private)
+### Version updates — Renovate
 
-Config committed at [`../../.github/dependabot.yml`](../../.github/dependabot.yml).
-Covers three ecosystems on a weekly Monday-morning Europe/Amsterdam
-cadence:
+Config committed at [`../../renovate.json`](../../renovate.json), which
+extends the organisation preset in `beatrax-app/.github`. One preset, one
+cadence, one commit convention across every repo — the same reason the
+CI workflows are shared rather than copied.
 
-- **composer** at `/` — Laravel, modules, brick/money, etc. Grouped:
-  `laravel` (laravel/livewire/spatie/nwidart), `dev-tooling` (larastan,
-  phpstan, pestphp, pint).
-- **npm** at `/` — Vite, Tailwind, ApexCharts, Axios, Fuse.js. Grouped:
-  `build-tooling` (vite + vite plugins + concurrently), `tailwind`.
-- **github-actions** at `/` — actions/checkout, setup-php, etc.
+The preset supplies the schedule, the `Spec: GOV-R12` trailer and
+sign-off every commit needs to pass the governance gate, the
+`dependencies` label, and the rule that groups every non-major update
+into a single pull request.
 
-PR limit: 5 (composer + npm) / 3 (github-actions). Labels:
-`dependencies` + ecosystem tag.
+This repository adds only what is specific to it:
+
+- `nativephp/`, `mobile-app/`, `vendor/` and `node_modules/` are ignored —
+  the Electron toolchain is vendor-managed by NativePHP and tracked there.
+- Majors of `laravel/framework`, `livewire/livewire` and
+  `nwidart/laravel-modules` are grouped and labelled `release-blocker`:
+  they are one deliberate piece of work, never a drive-by.
+- `php` itself is not proposed. The runtime is pinned to what the bundle
+  ships, so a bump is a platform decision
+  ([platform-matrix](https://github.com/beatrax-app/spec/blob/main/20-architecture/platform-matrix.md)).
+
+Renovate needs the GitHub App installed on the organisation; there is no
+per-repo switch to flip beyond committing this file.
 
 ### Issue + PR templates (works on private; fully effective once public)
 

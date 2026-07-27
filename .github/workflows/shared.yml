@@ -14,19 +14,19 @@ jobs:
   # The governance gate: a citation is present and every cited identifier
   # resolves on the canonical spec (REPO-R1).
   spec-check:
-    uses: beatrax-app/spec/.github/workflows/spec-check.yml@main
+    uses: beatrax-app/spec/.github/workflows/spec-check.yml@v1
 
   hygiene:
-    uses: beatrax-app/spec/.github/workflows/hygiene.yml@main
+    uses: beatrax-app/spec/.github/workflows/hygiene.yml@v1
 
   security:
-    uses: beatrax-app/spec/.github/workflows/security.yml@main
+    uses: beatrax-app/spec/.github/workflows/security.yml@v1
 
   dco:
-    uses: beatrax-app/spec/.github/workflows/dco.yml@main
+    uses: beatrax-app/spec/.github/workflows/dco.yml@v1
 
   commitlint:
-    uses: beatrax-app/spec/.github/workflows/commitlint.yml@main
+    uses: beatrax-app/spec/.github/workflows/commitlint.yml@v1
 
   # The sticky comment linking each cited identifier to its defining file
   # (GOV-R22). Skipped for fork PRs, whose token cannot write a comment.
@@ -35,10 +35,10 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: beatrax-app/spec/.github/workflows/spec-references.yml@main
+    uses: beatrax-app/spec/.github/workflows/spec-references.yml@v1
 
   labeler:
     permissions:
       contents: read
       pull-requests: write
-    uses: beatrax-app/spec/.github/workflows/labeler.yml@main
+    uses: beatrax-app/spec/.github/workflows/labeler.yml@v1
