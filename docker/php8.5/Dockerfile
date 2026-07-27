@@ -27,9 +27,11 @@ RUN install-php-extensions \
 
 # git + unzip let composer fetch/extract dist packages; poppler-utils
 # provides `pdftotext`, which spatie/pdf-to-text shells out to in the
-# Receipts ingestion path (and its tests).
+# Receipts ingestion path (and its tests). sqlite3 is the CLI Laravel's
+# schema loader shells out to when replaying database/schema/sqlite-schema.sql,
+# so without it `artisan migrate` aborts on a fresh database.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip poppler-utils \
+    && apt-get install -y --no-install-recommends git unzip poppler-utils sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
