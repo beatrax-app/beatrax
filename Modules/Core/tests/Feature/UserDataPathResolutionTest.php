@@ -158,7 +158,10 @@ it('resolves to today\'s project-rooted paths when no NativePHP storage env is s
 
     expect($this->app->configurationIsCached())->toBeFalse();
 
-    expect(UserDataPathService::databaseFile())->toBe(database_path('database.sqlite'));
-    expect(UserDataPathService::backupsPath())->toBe(storage_path('app/backups'));
-    expect(UserDataPathService::secretsPath())->toBe(storage_path('app/secrets'));
+    // base_path() rather than storage_path(): this pins the unset-env
+    // fallback, which is projectRoot()/storage. storage_path() is relocated
+    // per test so nothing on disk outlives its test.
+    expect(UserDataPathService::databaseFile())->toBe(base_path('database/database.sqlite'));
+    expect(UserDataPathService::backupsPath())->toBe(base_path('storage/app/backups'));
+    expect(UserDataPathService::secretsPath())->toBe(base_path('storage/app/secrets'));
 });

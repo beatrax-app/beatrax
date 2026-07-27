@@ -65,7 +65,10 @@ it('storageBase() does not branch on NATIVEPHP_PLATFORM alone, but databaseFile(
     putenv('NATIVEPHP_PLATFORM=ios');
 
     expect(UserDataPathService::storageBase())->toBe($unsignaledStorageBase);
-    expect(UserDataPathService::storageBase())->toBe(storage_path());
+    // base_path() rather than storage_path(): this pins the unset-env
+    // fallback, which is projectRoot()/storage. storage_path() is relocated
+    // per test so nothing on disk outlives its test.
+    expect(UserDataPathService::storageBase())->toBe(base_path('storage'));
 
     // databaseFile() branches on platform() alone — it no longer matches the
     // unsignaled (base_path()-derived) value once NATIVEPHP_PLATFORM is set.

@@ -38,11 +38,18 @@ it('resolves the SQLite database file under the project root when the env var is
 });
 
 it('resolves storage-rooted accessors under the project storage dir when the env var is unset (local-dev parity)', function (): void {
-    expect(UserDataPathService::storageBase())->toBe(storage_path());
-    expect(UserDataPathService::backupsPath())->toBe(storage_path('app/backups'));
-    expect(UserDataPathService::secretsPath())->toBe(storage_path('app/secrets'));
-    expect(UserDataPathService::frameworkPath('sessions'))->toBe(storage_path('framework/sessions'));
-    expect(UserDataPathService::appPath())->toBe(storage_path('app'));
+    // Asserted against base_path() rather than storage_path(): the fallback
+    // this test pins is literally projectRoot()/storage, and storage_path() is
+    // movable — the suite relocates it per test so nothing on disk outlives the
+    // test that wrote it. Comparing the fallback to a value that moves would
+    // make this test about the harness instead of about the service.
+    $projectStorage = base_path('storage');
+
+    expect(UserDataPathService::storageBase())->toBe($projectStorage);
+    expect(UserDataPathService::backupsPath())->toBe($projectStorage.'/app/backups');
+    expect(UserDataPathService::secretsPath())->toBe($projectStorage.'/app/secrets');
+    expect(UserDataPathService::frameworkPath('sessions'))->toBe($projectStorage.'/framework/sessions');
+    expect(UserDataPathService::appPath())->toBe($projectStorage.'/app');
 });
 
 it('resolves every storage-rooted accessor under NATIVEPHP_STORAGE_PATH when it is set', function (): void {

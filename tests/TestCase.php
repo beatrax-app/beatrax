@@ -30,6 +30,26 @@ abstract class TestCase extends BaseTestCase
     protected ?User $fixtureUser = null;
 
     /**
+     * A private storage root per test, so nothing on disk outlives its test.
+     *
+     * RefreshDatabase rolls back the database and leaves the disk alone. The
+     * sync keyring is written to a file named for the user id, and
+     * RefreshDatabase restarts those ids from 1 in every test — so a test
+     * inherited the previous test's encrypted keyring for "its" user, could not
+     * decrypt it with a session that had never held that key, and failed
+     * depending only on what ran before it.
+     *
+     * Isolating beats purging. An earlier attempt deleted the keyrings between
+     * tests and broke the writer, which stages a file and renames it into
+     * place. An empty root of its own leaves nothing to delete and nothing to
+     * race.
+     *
+     * Tests that sandbox the root themselves keep working: their beforeEach
+     * runs after this and wins, and tearDown only removes what it created.
+     */
+    private ?string $isolatedStorageRoot = null;
+
+    /**
      * Redirect the `redis` cache store to the array driver during
      * tests so any `Cache::driver('redis')` call (e.g. inside
      * `ResolveChainLinksJob::uniqueVia()`) returns an in-memory
@@ -66,6 +86,65 @@ abstract class TestCase extends BaseTestCase
         ]);
         $this->app['config']->set('cache.locks_store', 'array');
 
+        $this->isolatedStorageRoot = sys_get_temp_dir()
+            .DIRECTORY_SEPARATOR.'beatrax-test-'.bin2hex(random_bytes(8))
+            .DIRECTORY_SEPARATOR.'storage';
+
+        // The framework's own directories, or view compilation and the log
+        // channel have nowhere to write.
+        foreach (['app', 'logs', 'framework/cache', 'framework/sessions', 'framework/views'] as $dir) {
+            @mkdir($this->isolatedStorageRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $dir), 0777, true);
+        }
+
+        // Both path APIs have to agree. Production code resolves through
+        // UserDataPathService, which reads the env var; tests assert through
+        // Laravel's storage_path(). Moving only one splits them, and the
+        // assertion then looks at a directory the code never wrote to.
+        putenv('NATIVEPHP_STORAGE_PATH='.$this->isolatedStorageRoot);
+        $this->app->useStoragePath($this->isolatedStorageRoot);
+        $this->app['config']->set('view.compiled', $this->isolatedStorageRoot.'/framework/views');
+    }
+
+    protected function tearDown(): void
+    {
+        putenv('NATIVEPHP_STORAGE_PATH');
+
+        if (is_string($this->isolatedStorageRoot)) {
+            self::removeTree(dirname($this->isolatedStorageRoot));
+            $this->isolatedStorageRoot = null;
+        }
+
+        parent::tearDown();
+    }
+
+    // Refuses to walk anything outside the system temp directory, so a
+    // mis-set root can never reach a real tree.
+    private static function removeTree(string $path): void
+    {
+        $tmp = realpath(sys_get_temp_dir());
+        $real = realpath($path);
+
+        if ($tmp === false || $real === false || ! str_starts_with($real, $tmp.DIRECTORY_SEPARATOR)) {
+            return;
+        }
+
+        foreach (scandir($real) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $child = $real.DIRECTORY_SEPARATOR.$entry;
+
+            if (is_dir($child) && ! is_link($child)) {
+                self::removeTree($child);
+
+                continue;
+            }
+
+            @unlink($child);
+        }
+
+        @rmdir($real);
     }
 
     /**

@@ -183,6 +183,13 @@ it('logs and continues when view:cache throws so a single broken view does not s
     Window::fake()->alwaysReturnWindows([new NativeWindow('main')]);
 
     $kernel = Mockery::mock(ConsoleKernel::class);
+    // boot() runs EnsureAppKey first, which mints a key unless the
+    // first-launch sentinel is already on disk. Allowed explicitly: the suite
+    // gives each test a private storage root, so the sentinel is never
+    // inherited from a previous run and this call always happens. It used to
+    // be suppressed by a leftover file, which made this mock's strictness a
+    // matter of what had run before it.
+    $kernel->shouldReceive('call')->with('key:generate', ['--force' => true])->andReturn(0);
     $kernel->shouldReceive('call')->with('view:cache')->andThrow(new RuntimeException('boom'));
     app()->instance(ConsoleKernel::class, $kernel);
 
