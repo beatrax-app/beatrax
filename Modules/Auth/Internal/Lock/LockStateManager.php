@@ -47,6 +47,16 @@ final class LockStateManager
         $session->forget(self::DATA_KEY_SESSION);
     }
 
+    // Releases a lock flag stranded on a session whose user has no enabled
+    // lock, which no PIN or biometric could ever clear. Stores no data key:
+    // such a user never had one, so the session is left in exactly the shape
+    // a fresh sign-in produces.
+    public function clearStaleLock(Session $session): void
+    {
+        $session->put(self::SESSION_KEY, false);
+        $session->forget(self::DATA_KEY_SESSION);
+    }
+
     // The caller (typically PinVerificationService) is responsible for
     // sodium_memzero()-ing its local copy of $dataKey after calling this.
     public function unlock(Session $session, string $dataKey): void

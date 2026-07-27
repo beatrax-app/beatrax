@@ -6,15 +6,30 @@ namespace Modules\Auth\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 
-// Consumed by the authenticated layout to decide whether to emit
-// window.beatraxIdleMs, the value lock.js uses to arm the idle watcher.
-// Null (lock disabled / no config row) tells the layout to omit it, so
-// lock.js no-ops the idle tracker for users without a lock.
+// Sole source of truth for "does this session have a lock at all",
+// read by the authenticated layout (to emit window.beatraxIdleMs) and
+// by LockEngageController (to refuse a lock it could never unlock), so
+// the client and server halves of that gate cannot drift apart.
+/**
+ * @link ../../../../.docs/features/auth/architecture.md
+ */
 final class AppLockClientConfig
 {
     public function __construct(
         private readonly DatabaseManager $db,
     ) {}
+
+    // No config row, or lock_enabled off, means no PIN hash and no
+    // enrolled biometric — nothing that could release a locked session.
+    public function isEnabled(int $userId): bool
+    {
+        $row = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->first(['lock_enabled']);
+
+        return $row !== null && (bool) $row->lock_enabled;
+    }
 
     public function idleTimeoutMs(int $userId): ?int
     {

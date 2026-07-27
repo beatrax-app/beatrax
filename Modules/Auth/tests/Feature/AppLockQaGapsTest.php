@@ -277,6 +277,16 @@ it('POST /lock/engage locks the session and returns 204', function (): void {
     ]);
     $this->actingAs($user);
 
+    DB::connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => true,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'last_activity_at' => CarbonImmutable::now()->toDateTimeString(),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
     // Session is unlocked.
     $response = $this->withSession([LockStateManager::SESSION_KEY => false])
         ->postJson(route('auth.lock.engage'));
@@ -289,6 +299,59 @@ it('POST /lock/engage locks the session and returns 204', function (): void {
     /** @var LockStateManager $lockState */
     $lockState = $this->app->make(LockStateManager::class);
     expect($lockState->isLocked($session))->toBeTrue();
+});
+
+it('POST /lock/engage leaves a user with no lock configured unlocked', function (): void {
+    $user = User::query()->create([
+        'username' => 'engage-no-lock-user',
+        'password' => bcrypt('engage-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    // No user_app_lock_configs row: this user has no PIN hash and no enrolled
+    // biometric, so locking them would strand the session on a lock screen
+    // whose only working control is Sign out.
+    $this->withSession([LockStateManager::SESSION_KEY => false])
+        ->postJson(route('auth.lock.engage'))
+        ->assertStatus(204);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var LockStateManager $lockState */
+    $lockState = $this->app->make(LockStateManager::class);
+    expect($lockState->isLocked($session))->toBeFalse();
+});
+
+it('POST /lock/engage leaves a user whose lock is disabled unlocked', function (): void {
+    $user = User::query()->create([
+        'username' => 'engage-lock-off-user',
+        'password' => bcrypt('engage-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    DB::connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => false,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'last_activity_at' => CarbonImmutable::now()->toDateTimeString(),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    // A tab left open from before the lock was turned off must not be able to
+    // re-engage it.
+    $this->withSession([LockStateManager::SESSION_KEY => false])
+        ->postJson(route('auth.lock.engage'))
+        ->assertStatus(204);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var LockStateManager $lockState */
+    $lockState = $this->app->make(LockStateManager::class);
+    expect($lockState->isLocked($session))->toBeFalse();
 });
 
 it('POST /lock/engage while already locked is a no-op returning 204', function (): void {
@@ -304,4 +367,49 @@ it('POST /lock/engage while already locked is a no-op returning 204', function (
         ->postJson(route('auth.lock.engage'));
 
     $response->assertStatus(204);
+});
+
+it('releases a locked session whose user has no enabled lock instead of redirecting', function (): void {
+    $user = User::query()->create([
+        'username' => 'stranded-user',
+        'password' => bcrypt('stranded-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    // A session stranded by a tab open from before the lock was disabled, or
+    // by a pre-fix client: no config row means no PIN and no biometric, so
+    // /lock could never be cleared and Sign out would be the only exit.
+    $this->withSession([LockStateManager::SESSION_KEY => true])
+        ->get('/help/data-locations')
+        ->assertOk();
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    /** @var LockStateManager $lockState */
+    $lockState = $this->app->make(LockStateManager::class);
+    expect($lockState->isLocked($session))->toBeFalse();
+});
+
+it('still redirects a locked session whose user has an enabled lock', function (): void {
+    $user = User::query()->create([
+        'username' => 'genuinely-locked-user',
+        'password' => bcrypt('locked-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    DB::connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => true,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'last_activity_at' => CarbonImmutable::now()->toDateTimeString(),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $this->withSession([LockStateManager::SESSION_KEY => true])
+        ->get('/help/data-locations')
+        ->assertRedirect(route('auth.lock'));
 });

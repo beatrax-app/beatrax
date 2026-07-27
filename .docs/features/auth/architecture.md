@@ -379,6 +379,39 @@ own unlock screen back to the desktop/web `auth.lock` route). Biometric
 the session data key, which a locked session never has, so exempting it
 would only widen the locked-session surface for no benefit.
 
+### Engaging the lock requires an enabled lock
+
+`lock.js` drops the privacy veil and starts a 30-second grace timer when
+the window is backgrounded or blurred; when that timer elapses it posts
+to `/lock/engage`, which withholds the session key and marks the session
+locked. `AppLockMiddleware` tests the session lock flag *before* it loads
+the user's lock config, so a session locked this way stays locked
+regardless of whether a lock was ever configured.
+
+For a user who has never enabled the app-lock that combination is a
+lockout: there is no PIN hash to verify against and no enrolled
+biometric credential, so `/lock` renders a PIN pad that nothing can
+open and `Sign out` is the only working control. The same hazard applies
+to the veil on its own — once its grace window elapses the veil is only
+ever lifted by a successful unlock.
+
+The invariant is therefore that **a user without an enabled lock is
+never veiled and never locked**, enforced at two levels:
+
+- **Client.** `lock.js` reads `window.beatraxIdleMs`, which the
+  authenticated layout emits only when the lock is enabled (via
+  `AppLockClientConfig::idleTimeoutMs()`). When it is absent the store
+  registers neither the idle watcher nor the `visibilitychange` / `blur`
+  veil-and-grace listeners, so `_serverLock()` is never reached.
+- **Server.** `LockEngageController` calls
+  `AppLockClientConfig::isEnabled()` and returns `204` without touching
+  the session when the lock is off. This is the authoritative check: a
+  stale tab left open from before the lock was disabled, a second
+  window, or a replayed request must not be able to strand the session.
+
+`AppLockClientConfig` is the single place either layer asks whether a
+lock exists, so the two checks cannot drift apart.
+
 ### Cross-module Public seams
 
 **`KeyCustodian`** (`Public/Contracts/KeyCustodian.php`) is the custody
