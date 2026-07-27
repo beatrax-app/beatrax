@@ -1,0 +1,15 @@
+# Generous grace, easy reopen.
+name: stale
+on:
+  schedule:
+    - cron: "30 1 * * *"
+permissions:
+  contents: read
+
+jobs:
+  stale:
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    uses: beatrax-app/spec/.github/workflows/stale.yml@main

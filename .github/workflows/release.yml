@@ -221,7 +221,8 @@ jobs:
               run: |
                   set -euo pipefail
                   cd nativephp/electron/dist
-                  INSTALLER=$(ls *.dmg | head -1)
+                  INSTALLER=$(find . -maxdepth 1 -name "*.dmg" -print -quit)
+                  INSTALLER=${INSTALLER#./}
                   if [ -z "$INSTALLER" ]; then
                       echo "No .dmg found in nativephp/electron/dist/"
                       exit 1
@@ -315,7 +316,8 @@ jobs:
               run: |
                   set -euo pipefail
                   cd nativephp/electron/dist
-                  INSTALLER=$(ls *.exe | head -1)
+                  INSTALLER=$(find . -maxdepth 1 -name "*.exe" -print -quit)
+                  INSTALLER=${INSTALLER#./}
                   if [ -z "$INSTALLER" ]; then
                       echo "No .exe found in nativephp/electron/dist/"
                       exit 1
@@ -398,7 +400,8 @@ jobs:
               run: |
                   set -euo pipefail
                   cd nativephp/electron/dist
-                  INSTALLER=$(ls *.AppImage | head -1)
+                  INSTALLER=$(find . -maxdepth 1 -name "*.AppImage" -print -quit)
+                  INSTALLER=${INSTALLER#./}
                   if [ -z "$INSTALLER" ]; then
                       echo "No .AppImage found in nativephp/electron/dist/"
                       exit 1
@@ -476,6 +479,7 @@ jobs:
                   fi
                   for manifest in "${MANIFESTS[@]}"; do
                       echo "Signing ${manifest}"
+                      # shellcheck disable=SC2016  # inline PHP: $body is a PHP variable, not a shell one
                       php -r '
                           $body = file_get_contents($argv[1]);
                           if ($body === false) { fwrite(STDERR, "could not read " . $argv[1]); exit(1); }
@@ -603,6 +607,7 @@ jobs:
                           exit 1
                       fi
                       echo "Verifying ${manifest}"
+                      # shellcheck disable=SC2016  # inline PHP: $body is a PHP variable, not a shell one
                       PUBLIC_HEX="$PUBLIC_HEX" php -r '
                           $body = file_get_contents($argv[1]);
                           $sigHex = trim((string) file_get_contents($argv[1] . ".sig"));

@@ -1,0 +1,129 @@
+# The pre-tag checklist, run as a check instead of remembered.
+#
+# The release train is staged in the spec: a version is a locked set of
+# requirement identifiers recorded in 70-operations/versions/<version>.toml, and
+# it moves planned → staged → releasable → released (staging.md). This workflow
+# refuses a version the spec does not yet call `releasable`, so the tag cannot
+# get ahead of the goals it is supposed to be delivering.
+#
+# It deliberately does NOT push the tag. The spec's process is that a human
+# signs and pushes it (releasing.md), and the release workflow triggers only on
+# a tag push (REPO-R26) — a bot-pushed tag would be unsigned, and a tag pushed
+# with the default token would not trigger the build at all.
+name: release-preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to check, e.g. 2.0.0 — without the leading v."
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate to maintainers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          perm=$(gh api "repos/${REPO}/collaborators/${ACTOR}/permission" --jq '.permission')
+          case "$perm" in
+            admin|maintain) echo "${ACTOR} is a maintainer (${perm})." ;;
+            *) echo "::error::${ACTOR} lacks maintainer permission (${perm})."; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check out the canonical spec
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          repository: beatrax-app/spec
+          ref: main
+          path: .spec-canonical
+
+      - name: The version is releasable in the spec
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$' \
+            || { echo "::error::version must be X.Y.Z or X.Y.Z-rc.N, got '${VERSION}'."; exit 1; }
+          python3 - <<'PY'
+          import os, sys, tomllib, pathlib
+          version = os.environ["VERSION"]
+          base = version.split("-rc.")[0]
+          path = pathlib.Path(".spec-canonical/70-operations/versions") / f"{base}.toml"
+          if not path.exists():
+              sys.exit(f"::error::no manifest at 70-operations/versions/{base}.toml — stage the version first.")
+          m = tomllib.loads(path.read_text(encoding="utf-8"))
+          status, repos, goals = m.get("status"), m.get("repos", []), m.get("goals", [])
+          if "beatrax" not in repos:
+              sys.exit(f"::error::{base}.toml does not cut this repo (repos = {repos}).")
+          # A release candidate rides a staged version; a stable tag needs every
+          # goal satisfied, which is what `releasable` means (staging.md).
+          wanted = ("staged", "releasable") if "-rc." in version else ("releasable",)
+          if status not in wanted:
+              sys.exit(f"::error::{base}.toml is '{status}'; needs one of {wanted}.")
+          print(f"{base}.toml is '{status}' with {len(goals)} locked goals.")
+          PY
+
+      - name: The tag does not already exist
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse --verify --quiet "refs/tags/v${VERSION}" >/dev/null; then
+            echo "::error::tag v${VERSION} already exists; a tag is never moved."; exit 1
+          fi
+
+      - name: The ruleset's required checks still name jobs that run
+        # A renamed job silently stops being required (OPS-R18), which is the
+        # failure this check exists to catch before a release rather than after.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          required=$(gh api "repos/${REPO}/rulesets" --jq \
+            '[.[] | .id] | .[]' 2>/dev/null | while read -r id; do
+              gh api "repos/${REPO}/rulesets/${id}" --jq \
+                '.rules[]? | select(.type=="required_status_checks")
+                 | .parameters.required_status_checks[]?.context' 2>/dev/null
+            done | sort -u)
+          if [ -z "$required" ]; then
+            echo "::warning::no required status checks found on any ruleset — REPO-R8 expects them."
+            exit 0
+          fi
+          echo "Required checks currently configured:"
+          while IFS= read -r check; do echo "  - ${check}"; done <<< "$required"
+          echo
+          echo "Confirm by eye that each still names a job in ci.yml / shared.yml."
+
+      - name: Next steps
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          {
+            echo "### Preflight passed for v${VERSION}"
+            echo
+            echo "Remaining steps are the maintainer's, by hand:"
+            echo
+            echo '1. Confirm the commit subjects since the last tag read as release notes.'
+            echo '2. Confirm any breaking change has release-note prominence (OPS-R12).'
+            echo '3. Sign and push the tag — it is what triggers the build:'
+            echo
+            echo '   ```sh'
+            echo "   git tag -s v${VERSION} -m 'beatrax v${VERSION}'"
+            echo "   git push origin v${VERSION}"
+            echo '   ```'
+            echo
+            echo '4. Verify the signed manifest by hand, then publish the draft.'
+            echo '5. Mark the version released in the spec manifest.'
+          } >> "$GITHUB_STEP_SUMMARY"
