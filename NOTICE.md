@@ -48,7 +48,7 @@ clearly.
 
 For the longer-form reasoning — including why we didn't pay for code-signing
 certificates and what that means for install-time security warnings — see
-[`.docs/legal/license-rationale.md`](.docs/legal/license-rationale.md).
+[`.docs/legal/license-rationale.md`](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md).
 
 ## composer.json `license` field
 

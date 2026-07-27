@@ -2,7 +2,7 @@
 
 Reproduces the GitHub security posture on a freshly-cloned or freshly-
 forked instance of this repo. Companion file:
-[`../cicd/branch-protection.md`](../cicd/branch-protection.md).
+[`../cicd/branch-protection.md`](https://github.com/beatrax-app/spec/blob/main/30-repos/README.md#the-repo-r-namespace).
 
 GitHub gates several features behind GitHub Pro on private repos
 (branch-protection rulesets, secret scanning, CodeQL default setup,
@@ -124,7 +124,7 @@ Run all of these immediately after
 
 ### 1. Branch-protection ruleset
 
-See [`../cicd/branch-protection.md`](../cicd/branch-protection.md) —
+See [`../cicd/branch-protection.md`](https://github.com/beatrax-app/spec/blob/main/30-repos/README.md#the-repo-r-namespace) —
 copy the ruleset JSON and POST it.
 
 ### 2. Secret scanning + push protection (free on public)

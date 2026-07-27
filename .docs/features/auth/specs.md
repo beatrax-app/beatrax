@@ -47,7 +47,7 @@ The behavioural contract for the `Auth` module.
 - **The CLI escape hatch (`diederik:reset-password`) is the only path
   that bypasses the recovery-code requirement.** It is operator-only —
   it requires shell access to the SQLite file's host. See
-  [ADR 0010](../../adr/0010-recovery-codes-no-smtp.md).
+  [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
   (`tests/Feature/ResetPasswordCommandTest.php`)
 - **Passwords are at least twelve characters.** Every write path
   (`SignupAction`, `AddUserAction`, `ResetPasswordAction`,

@@ -3,8 +3,7 @@
 declare(strict_types=1);
 
 /**
- * @link ../../.docs/adr/0011-code-comment-policy.md
- * @link ../../.docs/conventions/code-comments.md
+ * @link ../../.docs/conventions/00-index.md
  */
 
 /** @return list<string> absolute paths to in-scope backend PHP files */

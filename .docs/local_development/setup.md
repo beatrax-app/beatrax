@@ -98,7 +98,7 @@ docker compose run --rm php vendor/bin/phpstan analyse --memory-limit=1G
 The PR gate runs the same three commands on every push. Green locally usually means
 green in CI; the two known divergences (PHP 8.4 vs 8.5 axis, and CI's stricter
 `fail-fast` posture for release builds) are documented in
-[`../cicd/release-workflow.md`](../cicd/release-workflow.md).
+[`../cicd/release-workflow.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 
 ## Build the desktop bundle locally
 

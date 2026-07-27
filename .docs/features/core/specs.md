@@ -8,7 +8,7 @@ The behavioural contract for the `Core` module.
   scope to the user.** The `UserScope` global scope is the single
   read-side guard; every authenticated query inherits it. The arch
   invariant `everyUserScopedModelUsesBelongsToUser` enforces the trait
-  composition. (See [ADR 0008](../../adr/0008-multi-user-belongstouser.md).)
+  composition. (See [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md).)
 - **`CurrentUser::user()` never returns `null`.** If no guard user is
   bound, the service throws `NotAuthenticatedException`; downstream
   code can assume a real `User` instance after a successful resolve.
@@ -64,7 +64,7 @@ The behavioural contract for the `Core` module.
   to every connection.** `SqliteOptimizationsProvider` registers the
   listener; a connection that bypasses the listener (test harness
   shortcut) is detectable via `PRAGMA journal_mode`. (See
-  [ADR 0005](../../adr/0005-sqlite-wal.md).)
+  [ADR 0005](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0005-sqlite-wal.md).)
 - **The `UserInstalled` event must be dispatched in two distinct
   contexts: signup ceremony and `beatrax:install` re-run.** Listeners
   MUST be idempotent — the install command's "re-seed reference data"
@@ -140,4 +140,4 @@ The behavioural contract for the `Core` module.
   skipped-update-version list.
 - `BEATRAX_RUNTIME=local` (env) — Dev-mode runtime distinguisher
   several modules respect (`DevMode` for surface gates, `Queue` for
-  driver). See [ADR 0007](../../adr/0007-database-queue-driver.md).
+  driver). See [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md).

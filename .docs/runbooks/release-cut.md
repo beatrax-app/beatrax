@@ -5,8 +5,8 @@ pushing a git tag — the release pipeline is the only path that produces a publ
 build.
 
 For the underlying mechanics of what the workflow does after you push the tag, see
-[`../cicd/release-workflow.md`](../cicd/release-workflow.md). For the version policy
-and channel semantics, see [`../cicd/release-cadence.md`](../cicd/release-cadence.md).
+[`../cicd/release-workflow.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md). For the version policy
+and channel semantics, see [`../cicd/release-cadence.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 
 ## Before pushing the tag
 
@@ -20,7 +20,7 @@ and channel semantics, see [`../cicd/release-cadence.md`](../cicd/release-cadenc
 3. Pick the version. The version follows semver inside the `v0.x` series — bug fixes
    bump the patch, feature additions bump the minor. The series stays on `0` until the
    explicit graduation moment described in
-   [`../cicd/release-cadence.md`](../cicd/release-cadence.md).
+   [`../cicd/release-cadence.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 
 ## Push the tag
 

@@ -9,9 +9,9 @@ re-categorizations. The result is high-precision, low-recall on day one
 full coverage as the user's manual corrections accumulate.
 
 The structural decisions this categorizer operates inside are
-[ADR 0001](../adr/0001-modular-architecture.md) (the Categorization module
+[ADR 0001](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0001-modular-architecture.md) (the Categorization module
 sits behind a public-contract surface) and
-[ADR 0002](../adr/0002-di-only-rule.md) (the per-user rule and memory
+[ADR 0002](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0002-di-only-rule.md) (the per-user rule and memory
 collaborators are constructor-injected).
 
 ## The two layers
@@ -22,7 +22,7 @@ A `categorization_rules` row encodes one match condition (description
 substring, counterparty IBAN, counterparty name regex, amount range,
 payment-type filter, ...) and one assignment (the `category_id` to
 apply on match). Every row carries `user_id` — rules are per-user, never
-shared (see [ADR 0008](../adr/0008-multi-user-belongstouser.md)).
+shared (see [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md)).
 
 Each rule carries a **specificity score** computed at save time from the
 shape of the conditions: more conditions = higher specificity; narrower

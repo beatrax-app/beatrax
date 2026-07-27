@@ -31,7 +31,7 @@ use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
  * `sensitive-column-guard-allowlist.php`. Never allowlist a genuinely
  * broken site — fix it instead.
  *
- * @link ../../../../.docs/adr/0011-code-comment-policy.md
+ * @link ../../../../.docs/conventions/00-index.md
  */
 
 /** @return list<string> bare column names derived from the registry's {table}.{column} pairs */

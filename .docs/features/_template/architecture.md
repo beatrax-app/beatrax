@@ -28,7 +28,7 @@ Answers:
 
 Cross-link to the relevant ADR(s) when the existence of the module
 maps to a recorded decision (e.g. `Modules/Desktop/` exists because of
-[ADR 0006](../../adr/0006-nativephp-desktop-shell.md)).
+[ADR 0006](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0006-nativephp-desktop-shell.md)).
 
 ## Module boundary
 

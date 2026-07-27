@@ -93,7 +93,7 @@ xattr -d com.apple.quarantine /Applications/beatrax.app
 
 > Like most independent macOS apps, beatrax isn't signed with an Apple
 > Developer ID — we don't pay Apple $99/year just to avoid the
-> first-launch dialog. [Why we made this choice →](.docs/legal/license-rationale.md#no-paid-signing)
+> first-launch dialog. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 
 #### Intel Macs (x86_64)
 
@@ -129,7 +129,7 @@ first time you open it — that's expected.
 
 > SmartScreen reputation builds up over time as more people open
 > beatrax. After a few weeks, the warning will stop appearing for new
-> users automatically. [Why we made this choice →](.docs/legal/license-rationale.md#no-paid-signing)
+> users automatically. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 
 ### Installing on Linux
 
