@@ -41,19 +41,55 @@ immediately and `vendor/` written inside the container lands back on the host.
 
 ## Initialise the database
 
-The project ships SQLite as the only supported database. Migrations run against a single
-file at `database/database.sqlite`:
+The project ships SQLite as the only supported database, in a single file at
+`database/database.sqlite`.
+
+> **Every data command through Docker needs `-e DB_CONNECTION=sqlite`.**
+>
+> `docker-compose.yml` sets `DB_CONNECTION: sqlite_testing` on the container, because
+> the test suite needs a real environment variable to beat `phpunit.xml`'s `<env>`. That
+> connection is `:memory:`. Without the override, `migrate` and `beatrax:install`
+> **appear to succeed** — they print the full migration list, they report the user they
+> created — and then the container exits and every byte of it is gone. What you are left
+> with is a zero-byte `database/database.sqlite` and the impression that you are set up.
+>
+> The first honest error arrives later, from `demo:seed`: *no such table: users*.
 
 ```sh
 # Create the empty SQLite file (Laravel's migrate command does not create it for you)
 touch database/database.sqlite
 
 # Apply every migration
-docker compose run --rm php php artisan migrate
+docker compose run --rm -e DB_CONNECTION=sqlite php php artisan migrate
 
-# Optional: enable WAL mode for the local DB — see database.md
-docker compose run --rm php php artisan beatrax:install
+# Enable WAL mode, create the owner account, re-dispatch the seed listeners
+docker compose run --rm -e DB_CONNECTION=sqlite php php artisan beatrax:install \
+    --username=dev --password='choose-something-better'
 ```
+
+`--username` and `--password` are only needed when running non-interactively, which is
+what `docker compose run` does by default; omit them and the command refuses with
+*"username is required"* rather than prompting. `--period-start-day` defaults to 1.
+
+Confirm it actually landed, rather than trusting the output:
+
+```sh
+sqlite3 database/database.sqlite "select count(*) from sqlite_master where type='table';"
+# 98 or thereabouts. Zero means the override was missing.
+```
+
+## A demo dataset to look at
+
+An empty install is hard to judge. `demo:seed` fills it with a representative ledger —
+two users, five accounts, ~165 transactions, chains, recurring series, forecasts, drift
+and anomaly alerts, notifications, and a rebuilt search index:
+
+```sh
+docker compose run --rm -e DB_CONNECTION=sqlite php php artisan demo:seed --reset
+```
+
+It finishes by printing the login it created (`demo-1@beatrax.local`). `--reset` clears
+any previous demo rows first, so it is safe to re-run.
 
 `beatrax:install` is idempotent. It enables WAL mode + `synchronous=NORMAL` on the
 SQLite file, ensures the owner user exists (creating one with a prompted password if
