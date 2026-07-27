@@ -85,12 +85,10 @@ class OpenBankingSecretsRepository
         );
     }
 
-    // The non-null companion to load(): call sites that cannot proceed
-    // without persisted credentials (e.g. the EB HTTP boundary, which needs
-    // them to sign every request) get them here rather than declaring their
-    // own `OpenBankingCredentials`-returning helper — Req 10 keeps this
-    // repository the single source that fabricates the credential DTO, so
-    // the credential-source arch guard stays a straight-line invariant.
+    // The non-null companion to load(), for call sites that cannot proceed
+    // without persisted credentials (the EB HTTP boundary signs every request
+    // with them). Fabricating the DTO only here keeps this repository the
+    // single credential source the arch guard checks for.
     public function loadOrThrow(): OpenBankingCredentials
     {
         $credentials = $this->load();
