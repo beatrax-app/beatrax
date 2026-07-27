@@ -5,13 +5,17 @@
 # the branch protection, so a protection change should re-score immediately
 # rather than wait for the weekly run.
 #
-# **No personal access token.** This repository is protected by repository
-# rulesets, not classic branch protection — `branches/main/protection` returns
-# "Branch not protected" while `rulesets` returns the active "main protection"
-# rule. Scorecard reads rulesets with the workflow's own GITHUB_TOKEN, and its
-# maintainers recommend exactly that. A PAT is only needed to detect *classic*
-# branch protection, which we do not use, so adding one would put a broad,
-# long-lived credential in org secrets to buy nothing.
+# The token falls back. This repository is protected by a repository ruleset,
+# not classic branch protection — `branches/main/protection` answers "Branch not
+# protected" while `rulesets` returns the active "main protection" rule — and
+# Scorecard reads rulesets with the workflow's own GITHUB_TOKEN. So the default
+# is sufficient here and the expression degrades to it when no secret is set.
+#
+# SCORECARD_TOKEN is used when present: it is a classic PAT with `repo` scope,
+# which additionally covers classic branch protection should any repository in
+# the organisation use it. That scope is broad and long-lived, which is the
+# trade being made knowingly — the fallback exists so a rotation that empties
+# the secret degrades to a working run rather than a broken one.
 #
 # The failure mode is worth knowing because it is silent: the action exits zero
 # and the workflow goes green while a check it could not perform scores -1 with
@@ -45,7 +49,7 @@ jobs:
 
       - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.SCORECARD_TOKEN || secrets.GITHUB_TOKEN }}
           results_file: results.sarif
           results_format: sarif
           # Publishing is what makes the badge resolve on scorecard.dev.
