@@ -63,19 +63,10 @@ across several banks, cards, PayPal, and recurring app-store
 subscriptions and have given up on reconciling them by hand, this is for
 you.
 
-## Shoutouts
+## Thanks, mom
 
-### Thanks, mom
-
-I want to start off with thanking my mom (Bea - for anyone who wondered where the name was based on), who's been the inspiration for making this.
-
-### Get Shit Done (GSD) / Claude Code
-
-There's a few things I wanted to try out with this project, and one of them was doing everything through prompting, and the quality of what can be delivered is amazing with GSD and Claude. Check GSD out here: <https://github.com/gsd-build/get-shit-done>
-
-### Laravel / NativePHP
-
-Among alot of other amazing packages (and for sure check out the composer.json), I'd like to highlight Laravel and NativePHP - it's amazing how far the PHP language has come in the last few years, and what you can do with it.
+Thanks to my mom — Bea, for anyone who wondered where the name came
+from — who was the inspiration for making this.
 
 ## Install
 
@@ -122,7 +113,7 @@ php artisan native:build mac x64
 # Installer lands at nativephp/electron/dist/beatrax-<version>-x64.dmg
 ```
 
-Full local-dev prerequisites (Docker, Node 20+, PHP 8.5) are in
+Full local-dev prerequisites (Docker, Node 22+, PHP 8.5) are in
 [.docs/local_development/setup.md](.docs/local_development/setup.md).
 
 ### Installing on Windows
@@ -190,7 +181,9 @@ conversion, savings goals and pots, an installable PWA, PIN and biometric
 app-lock, the bills calendar, tax tagging with per-year export, full-text
 search, and anomaly alerts.
 
-**v2.0** is in active development and is what this repository holds today:
+**v2.0** is staged and is what this repository holds today — its locked
+goals are in the
+[version manifest](https://github.com/beatrax-app/spec/blob/main/70-operations/versions/2.0.0.toml):
 local-first end-to-end-encrypted peer-to-peer device sync, a proactive
 notification inbox, an optional open-banking connector, envelope
 (zero-based) budgeting, split transactions, account reconciliation, a
