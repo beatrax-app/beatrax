@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 // Wave 0 RED — implemented by plan 05-02
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
@@ -34,6 +36,19 @@ it('redirects to auth.lock when the session is locked', function (): void {
         'period_start_day' => 1,
     ]);
     $this->actingAs($user);
+
+    // The lock must actually be enabled: a locked session belonging to a user
+    // with no lock is released rather than redirected, since no PIN or
+    // biometric exists that could ever clear it.
+    DB::connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => true,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'last_activity_at' => CarbonImmutable::now()->toDateTimeString(),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
 
     /** @var AppLockMiddleware $middleware */
     $middleware = $this->app->make(AppLockMiddleware::class);

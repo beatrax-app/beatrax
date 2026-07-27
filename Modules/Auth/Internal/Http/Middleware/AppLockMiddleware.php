@@ -59,7 +59,24 @@ final readonly class AppLockMiddleware
             $session = $request->session();
             $routeName = $request->route()?->getName();
 
+            $userId = $this->currentUser->user()->id;
+
             if ($this->lockState->isLocked($session)) {
+                $lockedConfig = $this->resolveConfig($session, $userId);
+
+                // A locked session whose user has no enabled lock can never be
+                // opened -- no PIN hash to verify against, no enrolled
+                // biometric. Release it rather than redirect, so a session
+                // locked before the lock was turned off is not stranded.
+                if ($lockedConfig === null || ! $lockedConfig['lock_enabled']) {
+                    $this->lockState->clearStaleLock($session);
+
+                    /** @var Response $response */
+                    $response = $next($request);
+
+                    return $response;
+                }
+
                 if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
                     return new RedirectResponse($this->urls->route('auth.lock'));
                 }
@@ -70,7 +87,6 @@ final readonly class AppLockMiddleware
                 return $response;
             }
 
-            $userId = $this->currentUser->user()->id;
             $config = $this->resolveConfig($session, $userId);
 
             if ($config !== null && $config['lock_enabled']) {

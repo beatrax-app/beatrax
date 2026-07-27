@@ -31,6 +31,17 @@ const GRACE_MS = 30000; // D-18: 30 s grace window
 
 const IDLE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'scroll', 'wheel'];
 
+/**
+ * Whether an app lock exists for this session.
+ *
+ * window.beatraxIdleMs is emitted by the authenticated layout only when
+ * lock_enabled is on, so its presence is the single client-side signal that a
+ * lock exists to be engaged — and, crucially, unlocked again.
+ */
+function _lockEnabled() {
+    return typeof window.beatraxIdleMs === 'number' && window.beatraxIdleMs > 0;
+}
+
 // Minimum interval between activity-heartbeat POSTs (WR-04). The server no
 // longer counts Livewire update traffic (wire:poll etc.) as user activity, so
 // genuine interaction on Livewire-heavy pages must be reported explicitly.
@@ -256,6 +267,16 @@ document.addEventListener('alpine:init', () => {
                         this.hideVeil();
                     }
                 };
+            }
+
+            // Veil and grace are lock machinery, not standalone privacy
+            // features: _startGrace() ends in _serverLock(), and a veil whose
+            // grace window has elapsed is only ever lifted by a successful
+            // unlock. Arming either for a user with no lock strands them
+            // behind a PIN pad that no PIN opens — the same invariant the
+            // idle tracker already honours below.
+            if (!_lockEnabled()) {
+                return;
             }
 
             // Visibility change: background → show veil + start grace.
