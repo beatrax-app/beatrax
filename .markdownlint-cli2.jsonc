@@ -21,6 +21,8 @@
     "public/**",
     "bootstrap/cache/**",
     "nativephp/**",
-    ".planning/**"
+    ".planning/**",
+    // Tool-local design notes, not project documentation.
+    ".claude/**"
   ]
 }
