@@ -1,8 +1,9 @@
 # Calls the reusable workflows the spec repo defines once for the whole
-# organisation (Q-R20, REPO-R1 to REPO-R4). First-party reusables are referenced
-# on the default branch, not SHA-pinned: they are org-owned code gated by this
-# org's own review, and pinning them would mean a one-line fix to a shared check
-# needed a pin bump in every consumer before it took effect (ADR-0012).
+# organisation (Q-R20, REPO-R1 to REPO-R4). First-party reusables ride a moving
+# major-version tag: a fix to a shared check reaches every consumer on its next
+# run, and a breaking change cuts v2 so repositories migrate one at a time
+# (ADR-0021). Third-party actions are still pinned to a full SHA (ADR-0012), and
+# the `action pins` step in the shared hygiene workflow enforces both halves.
 name: shared
 
 on: [pull_request]
