@@ -7,6 +7,7 @@ namespace Modules\Goals\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Goals\Models\Goal;
@@ -18,6 +19,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class GoalProjectionService
 {
+    use CoercesScalars;
+
     private const int TRAILING_WINDOW_DAYS = 90;
 
     private const int HORIZON_LIMIT_DAYS = 90;
@@ -67,7 +70,7 @@ final class GoalProjectionService
         // denominator.
         $windowSum = 0;
         foreach ($rows as $r) {
-            $money = Money::ofMinor(self::toInt($r->amount_minor), self::toStr($r->currency));
+            $money = Money::ofMinor(self::toInt($r->amount_minor), self::toString($r->currency));
             $result = $this->fx->convertToBase($money, $goal->target_currency);
             $windowSum += $result->converted->toMinor();
         }
@@ -117,15 +120,5 @@ final class GoalProjectionService
             $daysToFinish <= 60 => 60,
             default => 90,
         };
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Internal\StateMachines;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\Exceptions\InvalidForecastRunTransitionException;
 use Modules\Forecasting\Models\ForecastRun;
@@ -15,6 +16,8 @@ use RuntimeException;
  */
 final readonly class ForecastRunStateMachine
 {
+    use CoercesScalars;
+
     /**
      * @return array<string, list<string>>
      */
@@ -93,15 +96,5 @@ final readonly class ForecastRunStateMachine
         if (! in_array($toStatus, $allowed, strict: true)) {
             throw InvalidForecastRunTransitionException::forTransition($runId, $currentStatus, $toStatus);
         }
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

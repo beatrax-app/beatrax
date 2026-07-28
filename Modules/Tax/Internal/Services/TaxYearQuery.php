@@ -6,6 +6,7 @@ namespace Modules\Tax\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\TaxYearData;
@@ -19,6 +20,8 @@ use Modules\Tax\Public\Dto\TaxYearData;
  */
 final class TaxYearQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
@@ -115,7 +118,7 @@ final class TaxYearQuery
 
         foreach ($rawRows as $row) {
             $minor = self::toInt($row->settled_amount_minor);
-            $transactionType = self::toStr($row->transaction_type);
+            $transactionType = self::toString($row->transaction_type);
             $isIncome = $transactionType === 'income';
 
             // abs() converts the signed stored minor amount to the
@@ -140,17 +143,17 @@ final class TaxYearQuery
                 'description' => $this->decryptOrNull('transactions', 'description', $row->description, $userId),
                 'note' => $this->decryptOrNull('tax_transaction_tags', 'note', $row->note, $userId),
                 'settledAmountMinor' => $minor,
-                'settledCurrency' => self::toStr($row->settled_currency),
+                'settledCurrency' => self::toString($row->settled_currency),
                 'amountMinor' => self::toInt($row->amount_minor),
-                'currency' => self::toStr($row->currency),
+                'currency' => self::toString($row->currency),
                 'transactionType' => $transactionType,
                 'categoryId' => $row->category_id !== null ? self::toInt($row->category_id) : null,
                 'categoryName' => self::toStrOrNull($row->category_name),
                 'categoryShortName' => self::toStrOrNull($row->category_short_name),
                 'taxYearOverride' => $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
-                'sourceFormat' => self::toStr($row->source_format),
+                'sourceFormat' => self::toString($row->source_format),
                 'importRunId' => self::toInt($row->import_run_id),
-                'fingerprint' => self::toStr($row->fingerprint),
+                'fingerprint' => self::toString($row->fingerprint),
             ];
 
             if ($row->category_id === null) {
@@ -231,16 +234,6 @@ final class TaxYearQuery
         }
 
         return $this->codec->decryptValue($table, $field, $value, $userId, ($this->session)())['value'];
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 
     private static function toStrOrNull(mixed $value): ?string

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\EnvelopeMoveRow;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 
 // Read model over the append-only envelope_moves ledger, mirroring
@@ -16,6 +17,8 @@ use Modules\Ledger\Public\Dto\Period;
 // SUM(amount_minor) over its own rows, derived fresh on every read.
 final class EnvelopeBalanceQuery
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     public function netMoved(int $userId, int $categoryId, Period $period): int
@@ -59,13 +62,13 @@ final class EnvelopeBalanceQuery
 
         $result = [];
         foreach ($rows as $row) {
-            $direction = self::toStr($row->kind) === 'move_in' ? 'in' : 'out';
+            $direction = self::toString($row->kind) === 'move_in' ? 'in' : 'out';
 
             $createdAtRaw = $row->created_at ?? null;
             $createdAt = '';
             if ($createdAtRaw !== null && $createdAtRaw !== '') {
                 try {
-                    $createdAt = CarbonImmutable::parse(self::toStr($createdAtRaw))->format('Y-m-d H:i');
+                    $createdAt = CarbonImmutable::parse(self::toString($createdAtRaw))->format('Y-m-d H:i');
                 } catch (\Throwable) {
                     $createdAt = '';
                 }
@@ -76,7 +79,7 @@ final class EnvelopeBalanceQuery
                 direction: $direction,
                 amountMinor: self::toInt($row->amount_minor),
                 counterpartCategoryId: self::toInt($row->counterpart_category_id),
-                counterpartCategoryName: self::toStr($row->counterpart_category_name),
+                counterpartCategoryName: self::toString($row->counterpart_category_name),
                 memo: is_string($row->memo) ? $row->memo : null,
                 createdAt: $createdAt,
             );
@@ -131,13 +134,13 @@ final class EnvelopeBalanceQuery
                 continue;
             }
 
-            $direction = self::toStr($row->kind) === 'move_in' ? 'in' : 'out';
+            $direction = self::toString($row->kind) === 'move_in' ? 'in' : 'out';
 
             $createdAtRaw = $row->created_at ?? null;
             $createdAt = '';
             if ($createdAtRaw !== null && $createdAtRaw !== '') {
                 try {
-                    $createdAt = CarbonImmutable::parse(self::toStr($createdAtRaw))->format('Y-m-d H:i');
+                    $createdAt = CarbonImmutable::parse(self::toString($createdAtRaw))->format('Y-m-d H:i');
                 } catch (\Throwable) {
                     $createdAt = '';
                 }
@@ -148,22 +151,12 @@ final class EnvelopeBalanceQuery
                 direction: $direction,
                 amountMinor: self::toInt($row->amount_minor),
                 counterpartCategoryId: self::toInt($row->counterpart_category_id),
-                counterpartCategoryName: self::toStr($row->counterpart_category_name),
+                counterpartCategoryName: self::toString($row->counterpart_category_name),
                 memo: is_string($row->memo) ? $row->memo : null,
                 createdAt: $createdAt,
             );
         }
 
         return $buckets;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 
 // Top-nav "Inboxes" badge feed: sums discovered-sender candidates
@@ -14,6 +15,8 @@ use Modules\Core\Public\Contracts\Clock;
 // sender absent from the panel) plus inboxes needing re-auth.
 final class InboxesBadgeCount
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -61,10 +64,5 @@ final class InboxesBadgeCount
         }
 
         return self::toInt($row->total);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

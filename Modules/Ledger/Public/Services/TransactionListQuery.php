@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Dto\TransactionListPage;
@@ -21,6 +22,8 @@ use stdClass;
  */
 final class TransactionListQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly Clock $clock,
         private readonly DatabaseManager $db,
@@ -192,15 +195,5 @@ final class TransactionListQuery
             secondaryAmount: $secondaryAmount,
             counterpartySlug: $counterpartySlug,
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

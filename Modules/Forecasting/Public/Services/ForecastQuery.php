@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Dto\ForecastDto;
@@ -21,6 +22,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final readonly class ForecastQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -219,14 +222,5 @@ final readonly class ForecastQuery
             ->where('user_id', $userId)
             ->where('account_id', $accountId)
             ->sum('amount_minor');
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

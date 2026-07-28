@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Reports\Internal\Support\PinOrderCompactor;
 use Modules\Reports\Models\SavedReport;
@@ -19,6 +20,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class TogglePin
 {
+    use CoercesScalars;
+
     private const MAX_PINS = 3;
 
     public function __construct(
@@ -113,10 +116,5 @@ final class TogglePin
         }
 
         return $report;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

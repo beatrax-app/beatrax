@@ -10,6 +10,7 @@ use Illuminate\Database\Query\JoinClause;
 use Modules\Calendar\Public\Dto\CalendarDayDto;
 use Modules\Calendar\Public\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Forecasting\Public\Services\ForecastQuery;
@@ -24,6 +25,8 @@ use stdClass;
  */
 final readonly class CalendarQuery
 {
+    use CoercesScalars;
+
     // ON kinds (checking/savings/cash/PayPal) are included in the spendable
     // balance default; OFF kinds (ICS credit-card family) are excluded since
     // their liability already shows up via the bulk-iDEAL settlement leg.
@@ -806,19 +809,5 @@ final readonly class CalendarQuery
         }
 
         return $map;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

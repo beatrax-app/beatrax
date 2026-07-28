@@ -6,12 +6,15 @@ namespace Modules\Categorization\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Core\Public\Concerns\CoercesScalars;
 
 /**
  * @link ../../../../.docs/features/categorization/architecture.md
  */
 final class DeactivateRulesOnReferentDelete
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     public function handleCategoryDeleting(Model $category): void
@@ -48,11 +51,6 @@ final class DeactivateRulesOnReferentDelete
                 .')',
             [$userId, $actionType, '$.'.$payloadKey, $referentId],
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toNullableInt(mixed $value): ?int

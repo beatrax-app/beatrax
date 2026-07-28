@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -28,6 +29,8 @@ use stdClass;
  */
 final class SearchQuery
 {
+    use CoercesScalars;
+
     // SQLite's highlight()/snippet() do not HTML-escape surrounding
     // text, so matches are marked with these control-char sentinels
     // (never present in transaction text) instead of literal <mark> —
@@ -691,16 +694,6 @@ final class SearchQuery
     private function formatMinorAmount(int $minor, string $currency): string
     {
         return Money::ofMinor($minor, $currency)->format();
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 
     /**

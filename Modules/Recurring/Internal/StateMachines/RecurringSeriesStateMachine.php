@@ -6,6 +6,7 @@ namespace Modules\Recurring\Internal\StateMachines;
 
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Models\RecurringSeries;
 
@@ -14,6 +15,8 @@ use Modules\Recurring\Models\RecurringSeries;
  */
 final class RecurringSeriesStateMachine
 {
+    use CoercesScalars;
+
     // Per-state allowed-target map. A transition not present here raises
     // InvalidStateTransitionException — no "any state -> any state" escape
     // hatch, no same-state re-entry (idempotent no-ops live in Public
@@ -111,11 +114,6 @@ final class RecurringSeriesStateMachine
         }
     }
 
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
     private static function toIntOrNull(mixed $value): ?int
     {
         if ($value === null) {
@@ -131,14 +129,5 @@ final class RecurringSeriesStateMachine
         // stringly-numeric '0' as null so the transitions audit row's
         // FK never points at a phantom user_id=0.
         return $int > 0 ? $int : null;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

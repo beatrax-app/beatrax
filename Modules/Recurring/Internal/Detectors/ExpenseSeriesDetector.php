@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
@@ -24,6 +25,8 @@ use stdClass;
  */
 final class ExpenseSeriesDetector implements SeriesDetector
 {
+    use CoercesScalars;
+
     private const DEFAULT_WINDOW_MONTHS = 2;
 
     private const DEFAULT_VARIANCE_TOLERANCE_PERCENT = 25;
@@ -69,8 +72,8 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $groups = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $counterparty = self::toStringNullable($row->counterparty_normalized);
-            $currency = self::toStringNullable($row->currency);
+            $counterparty = self::toString($row->counterparty_normalized);
+            $currency = self::toString($row->currency);
             if ($counterparty === '' || $currency === '') {
                 continue;
             }
@@ -106,7 +109,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
 
         $timestamps = [];
         foreach ($filtered as $row) {
-            $timestamps[] = CarbonImmutable::parse(self::toStringNullable($row->posted_at));
+            $timestamps[] = CarbonImmutable::parse(self::toString($row->posted_at));
         }
         $cadenceResult = $this->cadenceInferrer->infer($timestamps);
         if ($cadenceResult['cadence'] === 'irregular') {
@@ -399,7 +402,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
                 'user_id' => $userId,
                 'recurring_series_id' => $seriesId,
                 'transaction_id' => self::toInt($row->id),
-                'observed_at' => self::toStringNullable($row->posted_at),
+                'observed_at' => self::toString($row->posted_at),
                 'observed_amount_minor' => self::toInt($row->amount_minor),
                 'observed_currency' => $currency,
                 'created_at' => $now,
@@ -426,22 +429,5 @@ final class ExpenseSeriesDetector implements SeriesDetector
             'yearly' => (int) round($latestAmountMinor / 12),
             default => null,
         };
-    }
-
-    private static function toStringNullable(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-        if (is_scalar($value)) {
-            return (string) $value;
-        }
-
-        return '';
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

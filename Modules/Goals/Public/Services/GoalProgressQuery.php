@@ -7,6 +7,7 @@ namespace Modules\Goals\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Dto\GoalProgressRow;
@@ -19,6 +20,8 @@ use stdClass;
  */
 final class GoalProgressQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
@@ -91,7 +94,7 @@ final class GoalProgressQuery
             if (isset($linkedPotBalances[$goalId])) {
                 $potMinor = $linkedPotBalances[$goalId]['balance'];
                 $potCurrency = $linkedPotBalances[$goalId]['currency'];
-                $targetCurrency = self::toStr($row->target_currency);
+                $targetCurrency = self::toString($row->target_currency);
 
                 if ($potCurrency !== '' && $potCurrency !== $targetCurrency) {
                     $money = Money::ofMinor($potMinor, $potCurrency);
@@ -116,15 +119,15 @@ final class GoalProgressQuery
 
             $rows[] = new GoalProgressRow(
                 id: self::toInt($row->id),
-                name: self::toStr($row->name),
+                name: self::toString($row->name),
                 accountId: $row->account_id !== null ? self::toInt($row->account_id) : null,
                 accountName: $accountName,
                 targetMinor: $targetMinor,
                 contributedMinor: $contributedMinor,
-                currency: self::toStr($row->target_currency),
+                currency: self::toString($row->target_currency),
                 fractionComplete: $fractionComplete,
                 targetDate: self::toDateStr($row->target_date),
-                status: self::toStr($row->status),
+                status: self::toString($row->status),
                 progressState: $progressState,
                 projectedFinishDate: $projectedDate,
                 projectionBeyondHorizon: $beyondHorizon,
@@ -144,12 +147,12 @@ final class GoalProgressQuery
             'id' => self::toInt($row->id),
             'user_id' => null,
             'account_id' => $row->account_id !== null ? self::toInt($row->account_id) : null,
-            'name' => self::toStr($row->name),
+            'name' => self::toString($row->name),
             'target_minor' => self::toInt($row->target_minor),
-            'target_currency' => self::toStr($row->target_currency),
-            'start_date' => self::toStr($row->start_date),
-            'target_date' => isset($row->target_date) ? self::toStr($row->target_date) : CarbonImmutable::today()->addYear()->toDateString(),
-            'status' => self::toStr($row->status),
+            'target_currency' => self::toString($row->target_currency),
+            'start_date' => self::toString($row->start_date),
+            'target_date' => isset($row->target_date) ? self::toString($row->target_date) : CarbonImmutable::today()->addYear()->toDateString(),
+            'status' => self::toString($row->status),
         ]);
 
         return $goal;
@@ -170,7 +173,7 @@ final class GoalProgressQuery
 
         $contributedMinor = 0;
         foreach ($rows as $r) {
-            $money = Money::ofMinor(self::toInt($r->amount_minor), self::toStr($r->currency));
+            $money = Money::ofMinor(self::toInt($r->amount_minor), self::toString($r->currency));
             $result = $this->fx->convertToBase($money, $goal->target_currency);
             $contributedMinor += $result->converted->toMinor();
         }
@@ -178,22 +181,12 @@ final class GoalProgressQuery
         return $contributedMinor;
     }
 
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
-    }
-
     // Normalises a raw DB date value to a 'Y-m-d' string, regardless of
     // whether the driver returns 'Y-m-d' or 'Y-m-d H:i:s'. Returns '' for an
     // empty/unparseable value.
     private static function toDateStr(mixed $value): string
     {
-        $raw = self::toStr($value);
+        $raw = self::toString($value);
         if ($raw === '') {
             return '';
         }

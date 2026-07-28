@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Concerns\CoercesScalars;
 
 // Writes the earliest opening balance per account into
 // accounts.starting_balance_minor + starting_balance_date. Re-running
@@ -12,6 +13,8 @@ use Illuminate\Database\DatabaseManager;
 // user-confirmed override survives later imports.
 final class BackfillStartingBalanceFromStatementSummaries
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
     ) {}
@@ -75,15 +78,5 @@ final class BackfillStartingBalanceFromStatementSummaries
         }
 
         return substr($raw, 0, $spacePos);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

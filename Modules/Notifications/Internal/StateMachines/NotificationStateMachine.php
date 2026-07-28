@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\StateMachines;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use RuntimeException;
 
@@ -13,6 +14,8 @@ use RuntimeException;
  */
 final class NotificationStateMachine
 {
+    use CoercesScalars;
+
     /**
      * @var array<string, list<string>>
      */
@@ -65,10 +68,5 @@ final class NotificationStateMachine
                 "Illegal notifications transition for id={$notificationId}: {$currentState} -> {$toState}",
             );
         }
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Events\TransactionMutated;
 
@@ -17,6 +18,8 @@ use Modules\Sync\Public\Events\TransactionMutated;
  */
 final class ReconciliationWriter
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -153,10 +156,5 @@ final class ReconciliationWriter
         if (! $exists) {
             throw new InvalidArgumentException('Account not owned by the authenticated user.');
         }
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

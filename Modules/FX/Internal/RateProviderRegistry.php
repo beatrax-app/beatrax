@@ -6,6 +6,7 @@ namespace Modules\FX\Internal;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Contracts\RateProvider;
 use Modules\FX\Public\Exceptions\AllProvidersFailed;
 use Modules\FX\Public\Exceptions\RateFetchException;
@@ -15,6 +16,8 @@ use Modules\FX\Public\Exceptions\RateFetchException;
  */
 final class RateProviderRegistry
 {
+    use CoercesScalars;
+
     private const int CIRCUIT_OPEN_THRESHOLD = 3;
 
     /** @param list<RateProvider> $providers Sorted by priority() DESC at injection time. */
@@ -89,11 +92,6 @@ final class RateProviderRegistry
         // fails more often than once per 6h would slide its window forever and
         // the circuit would never auto-heal after the outage ends.
         $this->cache->increment($cacheKey);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private function resetCircuit(string $providerKey): void

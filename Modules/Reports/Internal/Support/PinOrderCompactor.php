@@ -6,6 +6,7 @@ namespace Modules\Reports\Internal\Support;
 
 use Illuminate\Database\ConnectionInterface;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 
 // Re-numbers a user's remaining pinned saved_reports rows to a dense 1..N
 // pin_order sequence, returning only the rows whose order changed. Shared
@@ -13,6 +14,8 @@ use Modules\Core\Models\User;
 // DB transaction as the mutation that changed the pinned set.
 final class PinOrderCompactor
 {
+    use CoercesScalars;
+
     /**
      * @return list<array{id: int, pin_order: int}>
      */
@@ -39,10 +42,5 @@ final class PinOrderCompactor
         }
 
         return $changed;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

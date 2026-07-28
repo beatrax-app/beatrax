@@ -7,6 +7,7 @@ namespace Modules\Chains\Internal\Resolvers;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -17,6 +18,8 @@ use stdClass;
  */
 final class RetypeByAliasResolver
 {
+    use CoercesScalars;
+
     // Bounds the size of any single WHERE id IN (...) statement regardless
     // of how many rows the decrypt-then-match pass queues.
     private const UPDATE_BATCH_SIZE = 500;
@@ -213,11 +216,6 @@ final class RetypeByAliasResolver
         }
 
         return $touched;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toStringOrNull(mixed $value): ?string

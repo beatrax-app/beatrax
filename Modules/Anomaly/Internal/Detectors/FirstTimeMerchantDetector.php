@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Internal\Detectors;
 use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Internal\Support\RobustStatistics;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
@@ -14,6 +15,8 @@ use Modules\Core\Public\Contracts\Clock;
  */
 final readonly class FirstTimeMerchantDetector
 {
+    use CoercesScalars;
+
     // Lower than the per-merchant thin-history cutoff: the overall
     // distribution is the user's whole spend, so a handful of points
     // already establishes a typical band. Below this the detector abstains.
@@ -93,11 +96,6 @@ final readonly class FirstTimeMerchantDetector
         // overall p95 fires (the percentile collapses toward the sample
         // max for thin overall history). {@see RobustStatistics::exceedsPercentile}
         return RobustStatistics::exceedsPercentile($absMinor, $sample, RobustStatistics::CATEGORY_PERCENTILE);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toIntOrNull(mixed $value): ?int

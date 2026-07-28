@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
@@ -20,6 +21,8 @@ use stdClass;
  */
 final class NetWorthSeriesQuery
 {
+    use CoercesScalars;
+
     // Must match Forecasting's NetWorthQuery::EXCLUDED_KINDS exactly, so
     // this series' account set stays consistent with the dashboard card.
     private const EXCLUDED_KINDS = ['paypal_funding'];
@@ -96,11 +99,6 @@ final class NetWorthSeriesQuery
         }
 
         return [$total, $excludedCount];
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toStr(mixed $value): string

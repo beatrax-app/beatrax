@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 
 /**
@@ -12,6 +13,8 @@ use Modules\Ledger\Public\Dto\Period;
  */
 final class SpendByCategoryQuery
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     /**
@@ -90,7 +93,7 @@ final class SpendByCategoryQuery
             ->get(['t.category_id', 't.settled_currency', $connection->raw('SUM(-t.settled_amount_minor) AS spend_minor')]);
 
         foreach ($unsplit as $row) {
-            $key = self::toInt($row->category_id).'|'.self::toStr($row->settled_currency);
+            $key = self::toInt($row->category_id).'|'.self::toString($row->settled_currency);
             $map[$key] = ($map[$key] ?? 0) + self::toInt($row->spend_minor);
         }
 
@@ -107,20 +110,10 @@ final class SpendByCategoryQuery
             ->get(['ts.category_id', 'ts.settled_currency', $connection->raw('SUM(-ts.settled_amount_minor) AS spend_minor')]);
 
         foreach ($legs as $row) {
-            $key = self::toInt($row->category_id).'|'.self::toStr($row->settled_currency);
+            $key = self::toInt($row->category_id).'|'.self::toString($row->settled_currency);
             $map[$key] = ($map[$key] ?? 0) + self::toInt($row->spend_minor);
         }
 
         return $map;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

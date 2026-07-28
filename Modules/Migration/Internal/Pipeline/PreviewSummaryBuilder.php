@@ -9,6 +9,7 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
@@ -22,6 +23,8 @@ use stdClass;
  */
 final class PreviewSummaryBuilder
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
@@ -75,7 +78,7 @@ final class PreviewSummaryBuilder
         // migration_runs.status rather than an all-zero-counts heuristic —
         // only a 'discarded' run has had its staging deliberately truncated;
         // every other status means staging genuinely completed.
-        if (self::toStr($run->status) === 'discarded') {
+        if (self::toString($run->status) === 'discarded') {
             throw new MigrationRunNotParsedException($migrationRunId);
         }
 
@@ -85,7 +88,7 @@ final class PreviewSummaryBuilder
             counterpartiesCount: $counterpartiesCount,
             transactionsCount: $transactionsCount,
             budgetMonthsCount: $budgetMonthsCount,
-            unmapped: $this->groupedUnmapped($connection, $migrationRunId, $user, self::toStr($run->source_product)),
+            unmapped: $this->groupedUnmapped($connection, $migrationRunId, $user, self::toString($run->source_product)),
         );
     }
 
@@ -109,7 +112,7 @@ final class PreviewSummaryBuilder
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $itemType = self::toStr($row->item_type);
+            $itemType = self::toString($row->item_type);
             if (! isset($groups[$itemType])) {
                 continue;
             }
@@ -118,8 +121,8 @@ final class PreviewSummaryBuilder
                 ? $this->conflictItem($connection, $user, $sourceProduct, $row)
                 : [
                     'id' => self::toInt($row->id),
-                    'label' => self::toStr($row->display_label),
-                    'reason' => self::toStr($row->reason),
+                    'label' => self::toString($row->display_label),
+                    'reason' => self::toString($row->reason),
                     'resolution' => 'keep_local',
                 ];
         }
@@ -137,11 +140,11 @@ final class PreviewSummaryBuilder
      */
     private function conflictItem(Connection $connection, User $user, string $sourceProduct, stdClass $row): array
     {
-        $entityType = $row->entity_type !== null ? self::toStr($row->entity_type) : '';
-        $fieldName = $row->field_name !== null ? self::toStr($row->field_name) : '';
-        $sourceExternalId = $row->source_external_id !== null ? self::toStr($row->source_external_id) : null;
-        $currency = $row->currency !== null ? self::toStr($row->currency) : null;
-        $resolution = $row->resolution !== null ? self::toStr($row->resolution) : 'keep_local';
+        $entityType = $row->entity_type !== null ? self::toString($row->entity_type) : '';
+        $fieldName = $row->field_name !== null ? self::toString($row->field_name) : '';
+        $sourceExternalId = $row->source_external_id !== null ? self::toString($row->source_external_id) : null;
+        $currency = $row->currency !== null ? self::toString($row->currency) : null;
+        $resolution = $row->resolution !== null ? self::toString($row->resolution) : 'keep_local';
 
         // A malformed row with no structured entity_type/field_name falls
         // back to the legacy pre-baked display_label/reason rather than
@@ -149,16 +152,16 @@ final class PreviewSummaryBuilder
         if ($entityType === '' || $fieldName === '') {
             return [
                 'id' => self::toInt($row->id),
-                'label' => self::toStr($row->display_label),
-                'reason' => self::toStr($row->reason),
+                'label' => self::toString($row->display_label),
+                'reason' => self::toString($row->reason),
                 'resolution' => $resolution,
             ];
         }
 
         $isMoney = ConflictValueCodec::isMoneyField($fieldName);
-        $localRaw = $row->local_value !== null ? self::toStr($row->local_value) : null;
-        $sourceRaw = $row->source_value !== null ? self::toStr($row->source_value) : null;
-        $baselineRaw = $row->baseline_value !== null ? self::toStr($row->baseline_value) : null;
+        $localRaw = $row->local_value !== null ? self::toString($row->local_value) : null;
+        $sourceRaw = $row->source_value !== null ? self::toString($row->source_value) : null;
+        $baselineRaw = $row->baseline_value !== null ? self::toString($row->baseline_value) : null;
 
         $label = $this->conflictLabel($connection, $user, $sourceProduct, $entityType, $fieldName, $sourceExternalId);
 
@@ -237,14 +240,14 @@ final class PreviewSummaryBuilder
         // separate is-encrypted branch is needed here.
         $counterpartyName = $txn->counterparty_name === null
             ? null
-            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toStr($txn->counterparty_name), $user->id, ($this->session)())['value'];
+            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($txn->counterparty_name), $user->id, ($this->session)())['value'];
         $description = $txn->description === null
             ? null
-            : $this->codec->decryptValue('transactions', 'description', self::toStr($txn->description), $user->id, ($this->session)())['value'];
+            : $this->codec->decryptValue('transactions', 'description', self::toString($txn->description), $user->id, ($this->session)())['value'];
 
         $identifier = $counterpartyName !== null ? $counterpartyName
             : ($description !== null ? $description : 'Transaction');
-        $date = $txn->posted_at !== null ? CarbonImmutable::parse(self::toStr($txn->posted_at))->format('j M Y') : null;
+        $date = $txn->posted_at !== null ? CarbonImmutable::parse(self::toString($txn->posted_at))->format('j M Y') : null;
 
         return $date !== null ? "{$identifier} · {$date} {$fieldLabel}" : "{$identifier} {$fieldLabel}";
     }
@@ -302,15 +305,5 @@ final class PreviewSummaryBuilder
         }
 
         return '"'.$raw.'"';
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

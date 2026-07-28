@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
 use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
@@ -18,6 +19,8 @@ use Modules\Ledger\Public\ValueObjects\Money;
  */
 final class NetWorthQuery
 {
+    use CoercesScalars;
+
     private const EXCLUDED_KINDS = ['paypal_funding'];
 
     public function __construct(
@@ -112,10 +115,5 @@ final class NetWorthQuery
             hasStaleRates: $hasStaleRates,
             accountsWithoutRate: $accountsWithoutRate,
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

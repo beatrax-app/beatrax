@@ -6,6 +6,7 @@ namespace Modules\DriftAlerts\Internal\StateMachines;
 
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Models\DriftAlert;
 use RuntimeException;
@@ -15,6 +16,8 @@ use RuntimeException;
  */
 final class DriftAlertStateMachine
 {
+    use CoercesScalars;
+
     // No "any state -> any state" escape hatch and no same-state re-entry
     // (idempotent no-ops live in Public Actions, never here); acknowledged
     // and dismissed_cancelled are terminal (empty target arrays).
@@ -112,11 +115,6 @@ final class DriftAlertStateMachine
         }
     }
 
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
     /**
      * @return int|null a positive int, or null for a corrupted/zero/negative/non-numeric
      *                  raw drift_alerts.user_id value (see the class @link for the swallow-to-null
@@ -133,10 +131,5 @@ final class DriftAlertStateMachine
         $int = (int) $value;
 
         return $int > 0 ? $int : null;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

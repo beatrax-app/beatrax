@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
@@ -20,6 +21,8 @@ use stdClass;
  */
 final readonly class NotificationPreferenceQuery
 {
+    use CoercesScalars;
+
     /** @var list<string> */
     private const ALLOWED_CADENCES = ['daily', 'weekly', 'off'];
 
@@ -185,20 +188,6 @@ final readonly class NotificationPreferenceQuery
     private static function toBool(mixed $value): bool
     {
         return (bool) (is_numeric($value) ? (int) $value : $value);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 
     private static function toStringOrNull(mixed $value): ?string

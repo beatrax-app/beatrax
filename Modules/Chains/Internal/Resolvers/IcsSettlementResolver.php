@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
@@ -26,6 +27,8 @@ use stdClass;
  */
 final class IcsSettlementResolver
 {
+    use CoercesScalars;
+
     // Symmetric tolerance arms: the larger of ±€5 absolute or ±2% of the
     // statement total decides whether a delta auto-confirms.
     public const AMOUNT_TOLERANCE_MINOR = 500;
@@ -487,17 +490,5 @@ final class IcsSettlementResolver
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');
-    }
-
-    // SQLite returns scalars as strings via stdClass attributes; this
-    // guards the int cast to keep the strict-rules cast.int lint satisfied.
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
     }
 }

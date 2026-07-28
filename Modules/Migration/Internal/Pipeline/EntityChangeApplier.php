@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -21,6 +22,8 @@ use stdClass;
  */
 final class EntityChangeApplier
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SourceMapWriter $sourceMapWriter,
@@ -129,25 +132,25 @@ final class EntityChangeApplier
         $canonical = new CanonicalTransaction(
             userId: $user->id,
             accountId: self::toInt($row->account_id),
-            type: self::toStr($row->type),
-            postedAt: CarbonImmutable::parse(self::toStr($row->posted_at)),
-            bookedAt: CarbonImmutable::parse(self::toStr($row->booked_at)),
-            valueDate: CarbonImmutable::parse(self::toStr($row->value_date)),
+            type: self::toString($row->type),
+            postedAt: CarbonImmutable::parse(self::toString($row->posted_at)),
+            bookedAt: CarbonImmutable::parse(self::toString($row->booked_at)),
+            valueDate: CarbonImmutable::parse(self::toString($row->value_date)),
             amountMinor: $newAmountMinor,
-            currency: self::toStr($row->currency),
+            currency: self::toString($row->currency),
             settledAmountMinor: self::toInt($row->settled_amount_minor),
-            settledCurrency: self::toStr($row->settled_currency),
-            fxRateUsed: $row->fx_rate_used !== null ? self::toStr($row->fx_rate_used) : null,
-            counterpartyName: $row->counterparty_name !== null ? self::toStr($row->counterparty_name) : null,
-            counterpartyIban: $row->counterparty_iban !== null ? self::toStr($row->counterparty_iban) : null,
-            counterpartyNormalized: self::toStr($row->counterparty_normalized),
+            settledCurrency: self::toString($row->settled_currency),
+            fxRateUsed: $row->fx_rate_used !== null ? self::toString($row->fx_rate_used) : null,
+            counterpartyName: $row->counterparty_name !== null ? self::toString($row->counterparty_name) : null,
+            counterpartyIban: $row->counterparty_iban !== null ? self::toString($row->counterparty_iban) : null,
+            counterpartyNormalized: self::toString($row->counterparty_normalized),
             normalizationVersion: self::toInt($row->normalization_version),
-            description: $row->description !== null ? self::toStr($row->description) : null,
+            description: $row->description !== null ? self::toString($row->description) : null,
             categoryId: $row->category_id !== null ? self::toInt($row->category_id) : null,
-            sourceFormat: self::toStr($row->source_format),
+            sourceFormat: self::toString($row->source_format),
             importRunId: self::toInt($row->import_run_id),
             sourceRowIndex: self::toInt($row->source_row_index),
-            sourceRef: $row->source_ref !== null ? self::toStr($row->source_ref) : null,
+            sourceRef: $row->source_ref !== null ? self::toString($row->source_ref) : null,
         );
 
         $fingerprint = $this->fingerprints->compose($canonical);
@@ -206,15 +209,5 @@ final class EntityChangeApplier
             'budget_assignment' => 'envelope_assignment',
             default => $entityType,
         };
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

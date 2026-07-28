@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Internal\Queries\SeriesAccountResolver;
@@ -22,6 +23,8 @@ use stdClass;
  */
 final readonly class RecurringSeriesQuery
 {
+    use CoercesScalars;
+
     // The aliases every join in this class shares. Naming them keeps the
     // `o.` and `t.` prefixes scattered through the column lists below
     // anchored to one definition rather than to whichever string a given
@@ -573,19 +576,5 @@ final readonly class RecurringSeriesQuery
             : null;
 
         return RecurringSeriesDtoMapper::hydrate($row, $chainLinkId);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

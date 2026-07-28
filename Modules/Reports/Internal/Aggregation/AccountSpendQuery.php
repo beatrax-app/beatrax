@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
@@ -17,6 +18,8 @@ use stdClass;
  */
 final class AccountSpendQuery
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     /**
@@ -101,7 +104,7 @@ final class AccountSpendQuery
         $map = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $map[self::toInt($row->id)] = self::toStr($row->name);
+            $map[self::toInt($row->id)] = self::toString($row->name);
         }
 
         return $map;
@@ -130,15 +133,5 @@ final class AccountSpendQuery
             'income', 'net' => 'SUM(settled_amount_minor)',
             default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
         };
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

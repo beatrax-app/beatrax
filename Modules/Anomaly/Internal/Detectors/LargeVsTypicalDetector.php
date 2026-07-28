@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Internal\Detectors;
 use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Internal\Support\RobustStatistics;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
@@ -14,6 +15,8 @@ use Modules\Core\Public\Contracts\Clock;
  */
 final readonly class LargeVsTypicalDetector
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -148,11 +151,6 @@ final readonly class LargeVsTypicalDetector
         $floor = max((float) RobustStatistics::MAD_FLOOR_MINOR, $median * 0.01);
 
         return (int) $floor;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toIntOrNull(mixed $value): ?int

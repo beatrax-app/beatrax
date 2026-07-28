@@ -6,6 +6,7 @@ namespace Modules\Migration\Internal\Services;
 
 use Generator;
 use JsonException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use PDO;
 use Pdo\Sqlite as PdoSqlite;
 use PDOStatement;
@@ -16,6 +17,8 @@ use RuntimeException;
  */
 final class ActualSqliteReader
 {
+    use CoercesScalars;
+
     private const MAX_JSON_BYTES = 65536;
 
     private const MAX_JSON_DEPTH = 20;
@@ -49,8 +52,8 @@ final class ActualSqliteReader
         $rows = [];
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
             $rows[] = [
-                'id' => self::toStr($row['id']),
-                'name' => self::toStr($row['name']),
+                'id' => self::toString($row['id']),
+                'name' => self::toString($row['name']),
                 'is_income' => self::toBool($row['is_income']),
                 'hidden' => self::toBool($row['hidden']),
             ];
@@ -76,8 +79,8 @@ final class ActualSqliteReader
         $rows = [];
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
             $rows[] = [
-                'id' => self::toStr($row['id']),
-                'name' => self::toStr($row['name']),
+                'id' => self::toString($row['id']),
+                'name' => self::toString($row['name']),
                 'is_income' => self::toBool($row['is_income']),
                 'group' => self::toNullableStr($row['group']),
                 'goal_def' => self::toNullableStr($row['goal_def']),
@@ -99,7 +102,7 @@ final class ActualSqliteReader
 
         $rows = [];
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
-            $rows[] = ['id' => self::toStr($row['id']), 'name' => self::toStr($row['name'])];
+            $rows[] = ['id' => self::toString($row['id']), 'name' => self::toString($row['name'])];
         }
 
         return $rows;
@@ -122,8 +125,8 @@ final class ActualSqliteReader
         $rows = [];
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
             $rows[] = [
-                'id' => self::toStr($row['id']),
-                'name' => self::toStr($row['name']),
+                'id' => self::toString($row['id']),
+                'name' => self::toString($row['name']),
                 'transfer_acct' => self::toNullableStr($row['transfer_acct']),
             ];
         }
@@ -147,11 +150,11 @@ final class ActualSqliteReader
 
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
             yield [
-                'id' => self::toStr($row['id']),
+                'id' => self::toString($row['id']),
                 'is_parent' => self::toBool($row['is_parent']),
                 'is_child' => self::toBool($row['is_child']),
                 'parent_id' => self::toNullableStr($row['parent_id']),
-                'account' => self::toStr($row['account']),
+                'account' => self::toString($row['account']),
                 'category' => self::toNullableStr($row['category']),
                 'amount' => self::toInt($row['amount']),
                 'payee' => self::toNullableStr($row['payee']),
@@ -202,7 +205,7 @@ final class ActualSqliteReader
         $rows = [];
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
             $rows[] = [
-                'category' => self::toStr($row['category']),
+                'category' => self::toString($row['category']),
                 'month' => self::toInt($row['month']),
                 'amount' => self::toInt($row['amount']),
             ];
@@ -237,7 +240,7 @@ final class ActualSqliteReader
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
             $conditionsJson = self::toNullableStr($row['conditions']) ?? '';
             $rows[] = [
-                'id' => self::toStr($row['id']),
+                'id' => self::toString($row['id']),
                 'name' => self::toNullableStr($row['name']),
                 'conditionsSummary' => $this->summarizeConditions($this->boundedJsonDecode($conditionsJson)),
             ];
@@ -269,7 +272,7 @@ final class ActualSqliteReader
             if ($goalDef === null || $goalDef === '') {
                 continue;
             }
-            $rows[] = ['category_id' => self::toStr($row['id']), 'goal_def' => $goalDef];
+            $rows[] = ['category_id' => self::toString($row['id']), 'goal_def' => $goalDef];
         }
 
         return $rows;
@@ -291,7 +294,7 @@ final class ActualSqliteReader
 
         $rows = [];
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
-            $rows[] = ['id' => self::toStr($row['id']), 'name' => self::toStr($row['name'])];
+            $rows[] = ['id' => self::toString($row['id']), 'name' => self::toString($row['name'])];
         }
 
         return $rows;
@@ -404,19 +407,9 @@ final class ActualSqliteReader
         return $row;
     }
 
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
-    }
-
     private static function toNullableStr(mixed $value): ?string
     {
-        return $value === null ? null : self::toStr($value);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
+        return $value === null ? null : self::toString($value);
     }
 
     private static function toBool(mixed $value): bool

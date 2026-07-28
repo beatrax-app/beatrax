@@ -8,11 +8,14 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\BudgetProgressRow;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 
 final class BudgetProgressQuery
 {
+    use CoercesScalars;
+
     // Fraction of a budget at/above which the bar turns amber (legacy
     // category_budgets progress read model).
     private const NEAR_THRESHOLD = 0.8;
@@ -56,7 +59,7 @@ final class BudgetProgressQuery
         $rows = [];
         foreach ($budgets as $budget) {
             $categoryId = self::toInt($budget->category_id);
-            $currency = self::toStr($budget->currency);
+            $currency = self::toString($budget->currency);
             $budgetMinor = self::toInt($budget->budget_minor);
             // Budgets are EUR and track EUR-settled spend (the app's
             // consolidated value). Spend whose settled_currency differs from
@@ -73,7 +76,7 @@ final class BudgetProgressQuery
 
             $rows[] = new BudgetProgressRow(
                 categoryId: $categoryId,
-                name: self::toStr($budget->name),
+                name: self::toString($budget->name),
                 budgetMinor: $budgetMinor,
                 spentMinor: $spentMinor,
                 currency: $currency,
@@ -100,7 +103,7 @@ final class BudgetProgressQuery
 
         $options = [];
         foreach ($rows as $row) {
-            $options[self::toInt($row->id)] = self::toStr($row->name);
+            $options[self::toInt($row->id)] = self::toString($row->name);
         }
 
         return $options;
@@ -112,15 +115,5 @@ final class BudgetProgressQuery
     public function canBudget(User $user, int $categoryId): bool
     {
         return array_key_exists($categoryId, $this->expenseCategories($user));
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

@@ -6,6 +6,7 @@ namespace Modules\Migration\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
@@ -13,6 +14,8 @@ use Modules\Core\Public\Contracts\Clock;
  */
 final class SourceMapWriter
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -153,10 +156,5 @@ final class SourceMapWriter
             is_bool($value) => $value ? '1' : '0',
             default => (string) $value,
         };
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

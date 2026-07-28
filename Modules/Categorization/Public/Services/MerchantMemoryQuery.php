@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\MerchantMemoryDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 
 // Joins the merchants table on (user_id, normalized_name) because
 // CanonicalTransaction + transactions carry no merchant_id column —
@@ -17,6 +18,8 @@ use Modules\Core\Models\User;
 // time. merchants enforces UNIQUE(user_id, normalized_name).
 final readonly class MerchantMemoryQuery
 {
+    use CoercesScalars;
+
     public function __construct(private DatabaseManager $db) {}
 
     public function latestForCounterpartyNormalized(User $user, string $counterpartyNormalized): ?MerchantMemoryDto
@@ -119,10 +122,5 @@ final readonly class MerchantMemoryQuery
         }
 
         return $map;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

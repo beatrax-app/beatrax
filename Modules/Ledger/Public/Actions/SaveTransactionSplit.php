@@ -11,6 +11,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
@@ -26,6 +27,8 @@ use stdClass;
  */
 final class SaveTransactionSplit implements SavesTransactionSplit
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
@@ -54,11 +57,11 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         // Reconciled lock: reuses the already user-scoped parent load
         // above — no extra query. TransactionDetail's catch blocks
         // convert this into a warn toast, staying warn-first end-to-end.
-        if (self::toStr($parent->status) === 'reconciled') {
+        if (self::toString($parent->status) === 'reconciled') {
             throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
         }
 
-        $parentType = self::toStr($parent->type);
+        $parentType = self::toString($parent->type);
         if (! SplittableTypes::contains($parentType)) {
             throw new InvalidArgumentException("Transaction type '{$parentType}' is not splittable.");
         }
@@ -106,7 +109,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             }
 
             $parentMinor = self::toInt($freshParent->settled_amount_minor);
-            $currency = self::toStr($freshParent->settled_currency);
+            $currency = self::toString($freshParent->settled_currency);
 
             $sum = Money::ofMinor(0, $currency);
             foreach ($legs as $leg) {
@@ -291,7 +294,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
 
             // Reconciled lock: reuses the already user-scoped parent
             // load above — no extra query.
-            if (self::toStr($parent->status) === 'reconciled') {
+            if (self::toString($parent->status) === 'reconciled') {
                 throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
             }
 
@@ -341,16 +344,6 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         ));
     }
 
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
-    }
-
     // $newValue's PHP type determines which normalization applies to
     // the raw DB value before comparing. string|null fields (note) are
     // canonicalised so '' and null compare equal, or leg notes would
@@ -361,8 +354,8 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             return self::toInt($oldValue) !== $newValue;
         }
 
-        $old = $oldValue === null ? null : self::toStr($oldValue);
-        $new = $newValue === null ? null : self::toStr($newValue);
+        $old = $oldValue === null ? null : self::toString($oldValue);
+        $new = $newValue === null ? null : self::toString($newValue);
 
         return self::normalizeNote($old) !== self::normalizeNote($new);
     }

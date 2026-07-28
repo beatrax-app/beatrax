@@ -15,6 +15,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
@@ -28,6 +29,7 @@ use Throwable;
  */
 final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 {
+    use CoercesScalars;
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
@@ -353,13 +355,5 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         } catch (Throwable) {
             return $clock->now()->toDateTimeImmutable();
         }
-    }
-
-    // Numeric coercion for raw query-builder column values: SQLite
-    // returns scalars as strings via stdClass attributes, so this
-    // guards the int cast to keep the strict-rules cast.int lint happy.
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Categorization\Public\Dto\CategoryOption;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
 
 // Visibility rule: a row is offered when its user_id is null (the seeded
@@ -17,6 +18,8 @@ use stdClass;
 // foreign user's category never leaks the foreign parent name.
 final class CategoryOptionsQuery
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     /**
@@ -65,15 +68,5 @@ final class CategoryOptionsQuery
             path: $path,
             displayOrder: self::toInt($row->display_order),
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

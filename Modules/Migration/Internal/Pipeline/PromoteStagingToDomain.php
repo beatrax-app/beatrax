@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Goals\Public\Services\GoalWriter;
@@ -31,6 +32,8 @@ use stdClass;
  */
 final class PromoteStagingToDomain
 {
+    use CoercesScalars;
+
     private const CHUNK_SIZE = 500;
 
     public function __construct(
@@ -110,7 +113,7 @@ final class PromoteStagingToDomain
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $externalId = self::toStr($row->source_external_id);
+            $externalId = self::toString($row->source_external_id);
             $resolved = $this->sourceMapWriter->resolve($user, $sourceProduct, 'category', $externalId);
 
             if ($resolved === null) {
@@ -121,8 +124,8 @@ final class PromoteStagingToDomain
                         ?? $this->sourceMapWriter->resolve($user, $sourceProduct, 'category', $parentExternalId);
                 }
 
-                $name = self::toStr($row->name);
-                $kind = self::toStr($row->kind);
+                $name = self::toString($row->name);
+                $kind = self::toString($row->kind);
 
                 /** @var Category $category */
                 $category = Category::query()->create([
@@ -179,13 +182,13 @@ final class PromoteStagingToDomain
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $categoryExternalId = self::toStr($row->source_category_external_id);
+            $categoryExternalId = self::toString($row->source_category_external_id);
             $categoryId = $categoryIdMap[$categoryExternalId] ?? null;
             if ($categoryId === null) {
                 continue;
             }
 
-            $periodStart = CarbonImmutable::parse(self::toStr($row->period_start));
+            $periodStart = CarbonImmutable::parse(self::toString($row->period_start));
 
             if (in_array($categoryExternalId.'|'.$periodStart->toDateString(), $skipKeys, true)) {
                 // Reconciliation conflict: the local value ALSO diverged from
@@ -247,19 +250,19 @@ final class PromoteStagingToDomain
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $externalId = self::toStr($row->source_external_id);
+            $externalId = self::toString($row->source_external_id);
             $resolved = $this->sourceMapWriter->resolve($user, $sourceProduct, 'account', $externalId);
 
             if ($resolved === null) {
-                $name = self::toStr($row->name);
-                $currency = self::toStr($row->currency);
+                $name = self::toString($row->name);
+                $currency = self::toString($row->currency);
 
                 /** @var Account $account */
                 $account = Account::query()->create([
                     'user_id' => $user->id,
                     'name' => $name,
                     'slug' => $this->uniqueSlug('accounts', $user, $name),
-                    'kind' => self::toStr($row->kind),
+                    'kind' => self::toString($row->kind),
                     // No real bank IBAN exists for a migrated account — this
                     // synthesizes a deterministic pseudo-IBAN (mirrors the
                     // codebase's 'PAYPAL'/'ICS-CARD' convention) so
@@ -342,7 +345,7 @@ final class PromoteStagingToDomain
 
                 /** @var stdClass $row */
                 foreach ($rows as $row) {
-                    $externalId = self::toStr($row->source_external_id);
+                    $externalId = self::toString($row->source_external_id);
                     $alreadyMapped = $this->sourceMapWriter->resolve($user, $sourceProduct, 'transaction', $externalId);
 
                     if ($alreadyMapped !== null) {
@@ -407,8 +410,8 @@ final class PromoteStagingToDomain
                             'user_id' => $user->id,
                             'migration_run_id' => $runId,
                             'item_type' => 'extra',
-                            'source_external_id' => self::toStr($row->source_external_id),
-                            'display_label' => 'Transaction: '.($row->description !== null ? self::toStr($row->description) : '(no description)'),
+                            'source_external_id' => self::toString($row->source_external_id),
+                            'display_label' => 'Transaction: '.($row->description !== null ? self::toString($row->description) : '(no description)'),
                             'reason' => 'This transaction collided with another already-recorded transaction (identical fingerprint) and was not imported.',
                         ]);
 
@@ -421,18 +424,18 @@ final class PromoteStagingToDomain
                     $this->db->connection()->table('transactions')
                         ->where('id', $transactionId)
                         ->where('user_id', $user->id)
-                        ->update(['status' => self::toStr($row->cleared_status)]);
+                        ->update(['status' => self::toString($row->cleared_status)]);
 
                     $this->sourceMapWriter->record(
                         $user,
                         $sourceProduct,
                         'transaction',
-                        self::toStr($row->source_external_id),
+                        self::toString($row->source_external_id),
                         null,
                         'transaction',
                         $transactionId,
                         [
-                            'description' => $row->description !== null ? self::toStr($row->description) : '',
+                            'description' => $row->description !== null ? self::toString($row->description) : '',
                             'amount_minor' => (string) self::toInt($row->amount_minor),
                         ],
                     );
@@ -493,7 +496,7 @@ final class PromoteStagingToDomain
         $legRows = $this->db->connection()->table('migration_staging_transactions')
             ->where('user_id', $user->id)
             ->where('migration_run_id', $runId)
-            ->where('parent_source_external_id', self::toStr($parentRow->source_external_id))
+            ->where('parent_source_external_id', self::toString($parentRow->source_external_id))
             ->orderBy('id')
             ->get();
 
@@ -513,7 +516,7 @@ final class PromoteStagingToDomain
                 'id' => null,
                 'category_id' => $legCategoryId,
                 'settled_amount_minor' => self::toInt($legRow->settled_amount_minor),
-                'note' => $legRow->description !== null ? self::toStr($legRow->description) : null,
+                'note' => $legRow->description !== null ? self::toString($legRow->description) : null,
             ];
         }
 
@@ -540,7 +543,7 @@ final class PromoteStagingToDomain
         array $accountIdMap,
         array $payeeNameMap,
     ): CanonicalTransaction {
-        $accountExternalId = self::toStr($row->account_source_external_id);
+        $accountExternalId = self::toString($row->account_source_external_id);
         $accountId = $accountIdMap[$accountExternalId] ?? null;
         if ($accountId === null) {
             throw new RuntimeException("Migration promote: no resolved account for staged transaction account '{$accountExternalId}'.");
@@ -568,7 +571,7 @@ final class PromoteStagingToDomain
         $categoryExternalId = $row->category_source_external_id;
         $categoryId = is_string($categoryExternalId) ? ($categoryIdMap[$categoryExternalId] ?? null) : null;
 
-        $postedAt = CarbonImmutable::parse(self::toStr($row->posted_at));
+        $postedAt = CarbonImmutable::parse(self::toString($row->posted_at));
 
         // Seeds bookedAt with a deterministic sub-day offset derived from the
         // staged row's own stable id, so two same-day rows get distinct
@@ -584,20 +587,20 @@ final class PromoteStagingToDomain
             bookedAt: $bookedAt,
             valueDate: $postedAt,
             amountMinor: $amountMinor,
-            currency: self::toStr($row->currency),
+            currency: self::toString($row->currency),
             settledAmountMinor: self::toInt($row->settled_amount_minor),
-            settledCurrency: self::toStr($row->settled_currency),
+            settledCurrency: self::toString($row->settled_currency),
             fxRateUsed: null,
             counterpartyName: $counterpartyName,
             counterpartyIban: $counterpartyIban,
             counterpartyNormalized: $counterpartyNormalized,
             normalizationVersion: $this->fingerprints->version(),
-            description: $row->description !== null ? self::toStr($row->description) : null,
+            description: $row->description !== null ? self::toString($row->description) : null,
             categoryId: $categoryId,
             sourceFormat: 'migration_'.$sourceProduct,
             importRunId: $this->migrationImportRunId($user, $sourceProduct),
             sourceRowIndex: 0,
-            sourceRef: 'migration:'.$sourceProduct.':'.self::toStr($row->source_external_id),
+            sourceRef: 'migration:'.$sourceProduct.':'.self::toString($row->source_external_id),
         );
     }
 
@@ -616,7 +619,7 @@ final class PromoteStagingToDomain
             return null;
         }
 
-        $partnerAccountExternalId = self::toStr($partnerRow->account_source_external_id);
+        $partnerAccountExternalId = self::toString($partnerRow->account_source_external_id);
         $partnerAccountId = $accountIdMap[$partnerAccountExternalId] ?? null;
         if ($partnerAccountId === null) {
             return null;
@@ -646,7 +649,7 @@ final class PromoteStagingToDomain
         /** @var stdClass $row */
         foreach ($rows as $row) {
             if (is_string($row->source_external_id) && $row->source_external_id !== '') {
-                $map[$row->source_external_id] = self::toStr($row->normalized_name);
+                $map[$row->source_external_id] = self::toString($row->normalized_name);
             }
         }
 
@@ -711,14 +714,14 @@ final class PromoteStagingToDomain
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $categoryExternalId = self::toStr($row->category_source_external_id);
+            $categoryExternalId = self::toString($row->category_source_external_id);
             $resolved = $this->sourceMapWriter->resolve($user, $sourceProduct, 'goal', $categoryExternalId);
             if ($resolved !== null) {
                 continue;
             }
 
             $targetDate = $row->target_date;
-            $name = self::toStr($row->name);
+            $name = self::toString($row->name);
 
             if (! is_string($targetDate) || $targetDate === '') {
                 // beatrax's Goal model requires a non-null target_date; a
@@ -800,15 +803,5 @@ final class PromoteStagingToDomain
         $frac = abs($minor) % 100;
 
         return sprintf('%s%d.%02d', $sign, $whole, $frac);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

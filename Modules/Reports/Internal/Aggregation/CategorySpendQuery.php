@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
@@ -17,6 +18,8 @@ use stdClass;
  */
 final class CategorySpendQuery
 {
+    use CoercesScalars;
+
     // SQL GROUP BY category_id already returns one NULL-keyed group; this
     // just gives it a non-colliding array key distinct from any real
     // (positive) autoincrement category id.
@@ -237,7 +240,7 @@ final class CategorySpendQuery
         while (isset($byId[$current]) && ! isset($visited[$current]) && $depth < $maxDepth) {
             $visited[$current] = true;
             $row = $byId[$current];
-            array_unshift($parts, self::toStr($row->name));
+            array_unshift($parts, self::toString($row->name));
             $parentId = $row->parent_id === null ? null : self::toInt($row->parent_id);
             if ($parentId === null) {
                 break;
@@ -247,15 +250,5 @@ final class CategorySpendQuery
         }
 
         return implode(' / ', $parts);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Modules\Anomaly\Internal\Mapping\AnomalyAlertDtoMapper;
 use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use stdClass;
@@ -19,6 +20,8 @@ use stdClass;
  */
 final readonly class AnomalyAlertQuery
 {
+    use CoercesScalars;
+
     // 25 rows shown plus 1 look-ahead row the caller uses to decide
     // whether a "next page" cursor exists; the look-ahead row is never
     // rendered.
@@ -243,10 +246,5 @@ final readonly class AnomalyAlertQuery
             array_map(static fn (mixed $r): string => is_string($r) ? $r : '', $decoded),
             static fn (string $r): bool => $r !== '',
         ));
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

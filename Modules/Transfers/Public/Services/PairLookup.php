@@ -6,12 +6,15 @@ namespace Modules\Transfers\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 
 /**
  * @link ../../../../.docs/features/transfers/architecture.md
  */
 final class PairLookup
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
     ) {}
@@ -39,10 +42,5 @@ final class PairLookup
         }
 
         return self::toInt($row->pair_transaction_id);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

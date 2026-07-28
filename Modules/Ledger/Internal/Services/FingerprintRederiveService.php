@@ -6,6 +6,7 @@ namespace Modules\Ledger\Internal\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use stdClass;
@@ -16,6 +17,8 @@ use stdClass;
 // (or returns a failure outcome untouched on collision).
 final class FingerprintRederiveService
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
         private readonly DatabaseManager $db,
@@ -153,11 +156,6 @@ final class FingerprintRederiveService
         );
     }
 
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
     /**
      * @template T of int|null
      *
@@ -171,11 +169,6 @@ final class FingerprintRederiveService
         }
 
         return is_numeric($value) ? (int) $value : $fallback;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 
     private static function toStringOrNull(mixed $value): ?string

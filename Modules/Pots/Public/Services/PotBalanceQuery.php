@@ -7,6 +7,7 @@ namespace Modules\Pots\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Pots\Public\Dto\PotMovementRow;
@@ -18,6 +19,8 @@ use Modules\Pots\Public\Dto\ReconciliationRow;
  */
 final class PotBalanceQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly AccountBalanceQuery $accountBalance,
@@ -102,7 +105,7 @@ final class PotBalanceQuery
         foreach ($rows as $row) {
             $result[self::toInt($row->goal_id)] = [
                 'balance' => $this->balanceForPot(self::toInt($row->id), $user),
-                'currency' => self::toStr($row->currency),
+                'currency' => self::toString($row->currency),
             ];
         }
 
@@ -244,14 +247,14 @@ final class PotBalanceQuery
                 $counterpartPotName = null;
                 if ($counterpartPotId !== null) {
                     $counterpartPotName = isset($potNameById[$counterpartPotId])
-                        ? self::toStr($potNameById[$counterpartPotId])
+                        ? self::toString($potNameById[$counterpartPotId])
                         : null;
                 }
 
                 $createdAt = '';
                 if ($m->created_at !== null && $m->created_at !== '') {
                     try {
-                        $createdAt = CarbonImmutable::parse(self::toStr($m->created_at))->format('Y-m-d H:i');
+                        $createdAt = CarbonImmutable::parse(self::toString($m->created_at))->format('Y-m-d H:i');
                     } catch (\Throwable) {
                         $createdAt = '';
                     }
@@ -259,9 +262,9 @@ final class PotBalanceQuery
 
                 $recentMovements[] = new PotMovementRow(
                     id: self::toInt($m->id),
-                    kind: self::toStr($m->kind),
+                    kind: self::toString($m->kind),
                     amountMinor: self::toInt($m->amount_minor),
-                    currency: self::toStr($m->currency),
+                    currency: self::toString($m->currency),
                     counterpartPotId: $counterpartPotId,
                     counterpartPotName: $counterpartPotName,
                     memo: is_string($m->memo) ? $m->memo : null,
@@ -278,7 +281,7 @@ final class PotBalanceQuery
                 $spent = (int) $connection->table('transactions')
                     ->where('user_id', $user->id)
                     ->where('category_id', $categoryId)
-                    ->where('settled_currency', self::toStr($pot->currency))
+                    ->where('settled_currency', self::toString($pot->currency))
                     ->where('settled_amount_minor', '<', 0)
                     ->where('posted_at', '>=', $period->start->toDateString())
                     ->where('posted_at', '<', $period->endExclusive->toDateString())
@@ -288,12 +291,12 @@ final class PotBalanceQuery
 
             $rows[] = new PotRow(
                 id: $potId,
-                name: self::toStr($pot->name),
+                name: self::toString($pot->name),
                 accountId: self::toInt($pot->account_id),
-                accountName: self::toStr($pot->account_name),
+                accountName: self::toString($pot->account_name),
                 balanceMinor: $balanceMinor,
-                currency: self::toStr($pot->currency),
-                status: self::toStr($pot->status),
+                currency: self::toString($pot->currency),
+                status: self::toString($pot->status),
                 goalId: $pot->goal_id !== null ? self::toInt($pot->goal_id) : null,
                 goalName: is_string($pot->goal_name) ? $pot->goal_name : null,
                 categoryId: $categoryId,
@@ -304,15 +307,5 @@ final class PotBalanceQuery
         }
 
         return $rows;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

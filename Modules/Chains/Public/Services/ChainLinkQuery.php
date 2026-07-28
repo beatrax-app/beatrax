@@ -15,6 +15,7 @@ use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
 use Modules\Chains\Public\Dto\SeriesFunderLink;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -26,6 +27,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ChainLinkQuery
 {
+    use CoercesScalars;
+
     private const MAX_DEPTH = 5;
 
     private const COUNTERPARTY_SLUG = 'counterparties.slug as counterparty_slug';
@@ -608,16 +611,6 @@ final class ChainLinkQuery
         }
 
         return $lines;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 
     private static function toFloat(mixed $value): float

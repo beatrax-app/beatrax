@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Internal\StateMachines;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use RuntimeException;
 
@@ -19,6 +20,8 @@ use RuntimeException;
  */
 final class AnomalyAlertStateMachine
 {
+    use CoercesScalars;
+
     // A transition not present in this map raises
     // InvalidStateTransitionException — there is no "any state -> any
     // state" escape hatch. `dismissed => [open]` is the one diverging
@@ -120,11 +123,6 @@ final class AnomalyAlertStateMachine
         }
     }
 
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
     // An id of 0, negative, or non-numeric is never a real user; this
     // silently degrades to null on the audit-row FK rather than throwing,
     // so a corrupted source row never blocks the state transition itself.
@@ -139,10 +137,5 @@ final class AnomalyAlertStateMachine
         $int = (int) $value;
 
         return $int > 0 ? $int : null;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }
