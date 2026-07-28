@@ -242,6 +242,14 @@
         <exclude>
             <directory suffix=".php">Modules/*/Database/Migrations</directory>
             <directory suffix=".php">Modules/*/tests</directory>
+            <!-- A .blade.php file matches the .php suffix above, so the clover
+                 report carried 24658 template lines that pcov can never mark
+                 as covered: Blade compiles to storage/framework/views/ and the
+                 coverage lands on the compiled file, never on this path. They
+                 are rendered and asserted on by the suite; they simply cannot
+                 be measured here. -->
+            <directory suffix=".blade.php">Modules/*/Resources/views</directory>
+            <directory suffix=".blade.php">resources/views</directory>
         </exclude>
     </source>
 </phpunit>
