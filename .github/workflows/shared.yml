@@ -1,0 +1,44 @@
+# Calls the reusable workflows the spec repo defines once for the whole
+# organisation (Q-R20, REPO-R1 to REPO-R4). First-party reusables are referenced
+# on the default branch, not SHA-pinned: they are org-owned code gated by this
+# org's own review, and pinning them would mean a one-line fix to a shared check
+# needed a pin bump in every consumer before it took effect (ADR-0012).
+name: shared
+
+on: [pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  # The governance gate: a citation is present and every cited identifier
+  # resolves on the canonical spec (REPO-R1).
+  spec-check:
+    uses: beatrax-app/spec/.github/workflows/spec-check.yml@v1
+
+  hygiene:
+    uses: beatrax-app/spec/.github/workflows/hygiene.yml@v1
+
+  security:
+    uses: beatrax-app/spec/.github/workflows/security.yml@v1
+
+  dco:
+    uses: beatrax-app/spec/.github/workflows/dco.yml@v1
+
+  commitlint:
+    uses: beatrax-app/spec/.github/workflows/commitlint.yml@v1
+
+  # The sticky comment linking each cited identifier to its defining file
+  # (GOV-R22). Skipped for fork PRs, whose token cannot write a comment.
+  spec-references:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: beatrax-app/spec/.github/workflows/spec-references.yml@v1
+
+  labeler:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: beatrax-app/spec/.github/workflows/labeler.yml@v1

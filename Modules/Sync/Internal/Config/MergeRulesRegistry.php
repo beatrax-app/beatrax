@@ -84,7 +84,7 @@ final class MergeRulesRegistry
                 // priority, combinator, active and hits_count all carry DB
                 // defaults and user_id is nullable, so categorization_rules has
                 // no NOT-NULL-without-default column and a CreateRow inserts on
-                // defaults alone. MergeRulesRegistrySchemaGuardTest enforces it.
+                // defaults alone. RuleSchemaMigrationTest asserts the emptiness.
                 '_create_required' => [],
             ],
             // Condition child table; cross-checked against the

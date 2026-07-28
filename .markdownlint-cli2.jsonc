@@ -1,0 +1,28 @@
+{
+  // Rule set is the org's; see beatrax-app/spec .markdownlint.jsonc.
+  "config": {
+    "MD014": false,
+    "MD060": false,
+    "MD013": false,
+    "MD033": false,
+    "MD040": false,
+    "MD041": false,
+    "MD024": { "siblings_only": true },
+    "MD036": false,
+    "MD029": false
+  },
+  // Vendored and generated trees are not ours to lint.
+  "ignores": [
+    "vendor/**",
+    "node_modules/**",
+    "**/node_modules/**",
+    "mobile-app/**",
+    "storage/**",
+    "public/**",
+    "bootstrap/cache/**",
+    "nativephp/**",
+    ".planning/**",
+    // Tool-local design notes, not project documentation.
+    ".claude/**"
+  ]
+}

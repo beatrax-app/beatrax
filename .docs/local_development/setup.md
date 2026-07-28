@@ -9,7 +9,8 @@ buildable on demand.
 - [Docker](https://docs.docker.com/get-docker/) — the PHP 8.5 toolchain is defined in
   `docker-compose.yml` and `docker/php8.5/Dockerfile`. Everything PHP-related runs via
   `docker compose run --rm php …`, so PHP and Composer do not need to be on the host.
-- Node 20 LTS or later, with `npm`. The Docker image does not bundle Node.
+- Node 22 or later, with `npm` — the version in `.nvmrc`, which is also what CI runs.
+  The Docker image does not bundle Node.
 - `git`, with commit signing configured if you intend to push.
 
 The project is pinned to PHP 8.5 for development; the Docker image targets exactly that
@@ -18,7 +19,7 @@ version, so the toolchain is reproducible across machines.
 ## First-time clone
 
 ```sh
-git clone git@github.com:nightworksio/beatrax.git
+git clone git@github.com:beatrax-app/beatrax.git
 cd beatrax
 
 # Build the dev PHP 8.5 image
@@ -40,19 +41,55 @@ immediately and `vendor/` written inside the container lands back on the host.
 
 ## Initialise the database
 
-The project ships SQLite as the only supported database. Migrations run against a single
-file at `database/database.sqlite`:
+The project ships SQLite as the only supported database, in a single file at
+`database/database.sqlite`.
+
+> **Every data command through Docker needs `-e DB_CONNECTION=sqlite`.**
+>
+> `docker-compose.yml` sets `DB_CONNECTION: sqlite_testing` on the container, because
+> the test suite needs a real environment variable to beat `phpunit.xml`'s `<env>`. That
+> connection is `:memory:`. Without the override, `migrate` and `beatrax:install`
+> **appear to succeed** — they print the full migration list, they report the user they
+> created — and then the container exits and every byte of it is gone. What you are left
+> with is a zero-byte `database/database.sqlite` and the impression that you are set up.
+>
+> The first honest error arrives later, from `demo:seed`: *no such table: users*.
 
 ```sh
 # Create the empty SQLite file (Laravel's migrate command does not create it for you)
 touch database/database.sqlite
 
 # Apply every migration
-docker compose run --rm php php artisan migrate
+docker compose run --rm -e DB_CONNECTION=sqlite php php artisan migrate
 
-# Optional: enable WAL mode for the local DB — see database.md
-docker compose run --rm php php artisan beatrax:install
+# Enable WAL mode, create the owner account, re-dispatch the seed listeners
+docker compose run --rm -e DB_CONNECTION=sqlite php php artisan beatrax:install \
+    --username=dev --password='choose-something-better'
 ```
+
+`--username` and `--password` are only needed when running non-interactively, which is
+what `docker compose run` does by default; omit them and the command refuses with
+*"username is required"* rather than prompting. `--period-start-day` defaults to 1.
+
+Confirm it actually landed, rather than trusting the output:
+
+```sh
+sqlite3 database/database.sqlite "select count(*) from sqlite_master where type='table';"
+# 98 or thereabouts. Zero means the override was missing.
+```
+
+## A demo dataset to look at
+
+An empty install is hard to judge. `demo:seed` fills it with a representative ledger —
+two users, five accounts, ~165 transactions, chains, recurring series, forecasts, drift
+and anomaly alerts, notifications, and a rebuilt search index:
+
+```sh
+docker compose run --rm -e DB_CONNECTION=sqlite php php artisan demo:seed --reset
+```
+
+It finishes by printing the login it created (`demo-1@beatrax.local`). `--reset` clears
+any previous demo rows first, so it is safe to re-run.
 
 `beatrax:install` is idempotent. It enables WAL mode + `synchronous=NORMAL` on the
 SQLite file, ensures the owner user exists (creating one with a prompted password if
@@ -98,7 +135,7 @@ docker compose run --rm php vendor/bin/phpstan analyse --memory-limit=1G
 The PR gate runs the same three commands on every push. Green locally usually means
 green in CI; the two known divergences (PHP 8.4 vs 8.5 axis, and CI's stricter
 `fail-fast` posture for release builds) are documented in
-[`../cicd/release-workflow.md`](../cicd/release-workflow.md).
+[`../cicd/release-workflow.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 
 ## Build the desktop bundle locally
 
@@ -124,3 +161,48 @@ first install of a published release.
 For Windows and Linux targets, run `php artisan native:build win` or `native:build
 linux` on the corresponding OS. Cross-platform builds from macOS are not supported by
 the underlying tooling.
+
+## The mobile shell
+
+`mobile-app/` is a **second Composer root**, not a subdirectory of the first. It has its
+own `vendor/`, and it depends on `nativephp/mobile` where the repo root depends on
+`nativephp/desktop` — the two host packages hard-conflict, which is the whole reason
+for the split. The domain code is shared into it by symlink (`Modules/`, `app/`,
+`resources/`, `database/`, `routes/`, `public/`, `tests/`), so a change to a module is
+picked up by both roots with no copying.
+
+Working on it needs its own install:
+
+```sh
+cd mobile-app
+composer install
+cp ../.env.example .env
+php artisan key:generate
+```
+
+### The plugin credentials
+
+The NativePHP **mobile** plugins are a paid distribution behind HTTP basic auth, so
+`composer install` in `mobile-app/` fails with a 401 until Composer knows the licence:
+
+```sh
+composer config --global http-basic.plugins.nativephp.com <licence-email> <licence-key>
+```
+
+`--global` keeps it in `~/.composer/auth.json` and out of the repository. A
+project-local `auth.json` is gitignored precisely so it cannot be committed, but the
+global file is the safer habit. CI supplies the same pair through the
+`NATIVEPHP_LICENSE_EMAIL` and `NATIVEPHP_LICENSE_KEY` repository secrets.
+
+### Running its tests
+
+The mobile shell has its own Pest testsuite, scoped to the module that owns it:
+
+```sh
+cd mobile-app
+vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only
+```
+
+`repo-root-only` marks assertions that resolve paths relative to the repository root —
+run from here they would look for `mobile-app/mobile-app/…`. The repo-root suite runs
+them; this one skips them.

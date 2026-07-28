@@ -38,13 +38,17 @@ it('registers NativeServiceProvider in the mobile provider manifest (mobile-app/
 
     expect($manifest)->toContain('use App\Providers\NativeServiceProvider;');
     expect($manifest)->toContain('NativeServiceProvider::class');
-});
+    // ->group('repo-root-only'): both manifest paths are resolved relative to
+    // the repo root. Run from the mobile-app root they resolve to
+    // mobile-app/mobile-app/… and to the mobile manifest respectively, so the
+    // assertions describe a tree that is not the one under test.
+})->group('repo-root-only');
 
 it('does NOT register NativeServiceProvider in the desktop provider manifest (bootstrap/providers.php)', function (): void {
     $manifest = (string) file_get_contents(base_path('bootstrap/providers.php'));
 
     expect($manifest)->not->toContain('NativeServiceProvider');
-});
+})->group('repo-root-only');
 
 it('NativeServiceProvider::plugins() lists all 6 registered NativePHP mobile plugin providers', function (): void {
     $provider = new NativeServiceProvider(app());

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Modules\Search\Public\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\QueryParser;
@@ -46,7 +46,7 @@ final class SearchQuery
         private readonly QueryParser $parser,
         private readonly DidYouMeanSuggester $suggester,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
@@ -383,10 +383,10 @@ final class SearchQuery
             $storedDescription = $row->description ?? null;
 
             $nameResult = is_string($storedName) && $storedName !== ''
-                ? $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $userId, $this->session)
+                ? $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $userId, ($this->session)())
                 : ['value' => '', 'decrypted' => true];
             $descriptionResult = is_string($storedDescription) && $storedDescription !== ''
-                ? $this->codec->decryptValue('transactions', 'description', $storedDescription, $userId, $this->session)
+                ? $this->codec->decryptValue('transactions', 'description', $storedDescription, $userId, ($this->session)())
                 : ['value' => '', 'decrypted' => true];
 
             // A decrypted:false result under encryption is ciphertext
@@ -626,7 +626,7 @@ final class SearchQuery
         // pass-through no-op otherwise.
         $counterpartyName = $row->counterparty_name === null
             ? null
-            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, $this->session)['value'];
+            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, ($this->session)())['value'];
 
         $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
             ? self::toString($row->counterparty_slug)

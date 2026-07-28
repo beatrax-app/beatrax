@@ -16,7 +16,7 @@ use Modules\Core\Models\User;
  * correct enable/disable/idle-timeout flows and D-23 confirmation logic.
  */
 
-function settingsSectionUser(string $username = 'settings-user'): User
+function appLockSettingsUser(string $username = 'settings-user'): User
 {
     return User::query()->create([
         'username' => $username,
@@ -26,7 +26,7 @@ function settingsSectionUser(string $username = 'settings-user'): User
 }
 
 it('AppLockSettingsSection component is registered and mounts for an authenticated user', function (): void {
-    $user = settingsSectionUser();
+    $user = appLockSettingsUser();
     $this->actingAs($user);
 
     Livewire::test(AppLockSettingsSection::class)
@@ -34,7 +34,7 @@ it('AppLockSettingsSection component is registered and mounts for an authenticat
 });
 
 it('user with no lock can enable it by setting a valid PIN with matching confirmation and account password', function (): void {
-    $user = settingsSectionUser('enable-user');
+    $user = appLockSettingsUser('enable-user');
     $this->actingAs($user);
 
     /** @var AppLockProvisioner $provisioner */
@@ -54,7 +54,7 @@ it('user with no lock can enable it by setting a valid PIN with matching confirm
 });
 
 it('rejects a PIN shorter than 4 digits with the correct error copy', function (): void {
-    $user = settingsSectionUser('short-pin-user');
+    $user = appLockSettingsUser('short-pin-user');
     $this->actingAs($user);
 
     /** @var AppLockProvisioner $provisioner */
@@ -71,7 +71,7 @@ it('rejects a PIN shorter than 4 digits with the correct error copy', function (
 });
 
 it('rejects mismatched PIN confirmation with the correct error copy', function (): void {
-    $user = settingsSectionUser('mismatch-user');
+    $user = appLockSettingsUser('mismatch-user');
     $this->actingAs($user);
 
     /** @var AppLockProvisioner $provisioner */
@@ -88,7 +88,7 @@ it('rejects mismatched PIN confirmation with the correct error copy', function (
 });
 
 it('changing the idle timeout preset persists without requiring PIN confirmation', function (): void {
-    $user = settingsSectionUser('idle-user');
+    $user = appLockSettingsUser('idle-user');
     $this->actingAs($user);
 
     /** @var DatabaseManager $db */
@@ -110,7 +110,7 @@ it('changing the idle timeout preset persists without requiring PIN confirmation
 });
 
 it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (CR-01)', function (): void {
-    $user = settingsSectionUser('deenroll-user');
+    $user = appLockSettingsUser('deenroll-user');
     $this->actingAs($user);
 
     /** @var AppLockProvisioner $provisioner */
@@ -161,7 +161,7 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
 });
 
 it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled', function (): void {
-    $user = settingsSectionUser('disable-user');
+    $user = appLockSettingsUser('disable-user');
     $this->actingAs($user);
 
     /** @var AppLockProvisioner $provisioner */

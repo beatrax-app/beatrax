@@ -103,8 +103,13 @@ it('shows the last-successful-sync EVEN when the last attempt failed, and never 
     $user = otpUser('otp-panel-failed-attempt');
     $this->actingAs($user);
     otpSeedSecrets();
+    // Captured once, then both seeded and asserted against. Recomputing
+    // `now()` for the assertion raced the render: a clock tick between the two
+    // calls yielded timestamps a second or two apart and failed the run.
+    $lastSuccessfulSync = CarbonImmutable::now()->subDays(2);
+
     otpSeedConnection($user, [
-        'last_successful_sync_at' => CarbonImmutable::now()->subDays(2)->toDateTimeString(),
+        'last_successful_sync_at' => $lastSuccessfulSync->toDateTimeString(),
         'last_attempt_at' => CarbonImmutable::now()->subHour()->toDateTimeString(),
         'last_attempt_status' => 'consent_failed',
     ]);
@@ -117,7 +122,7 @@ it('shows the last-successful-sync EVEN when the last attempt failed, and never 
     // The freshness signal itself must reflect the OLD successful sync,
     // never advanced by the failed attempt (Req 7).
     expect($component->get('lastSuccessfulSyncAtIso'))
-        ->toBe(CarbonImmutable::now()->subDays(2)->toIso8601String());
+        ->toBe($lastSuccessfulSync->toIso8601String());
 });
 
 it('hides the last-attempt row when the last attempt succeeded', function (): void {

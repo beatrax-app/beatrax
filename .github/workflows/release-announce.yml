@@ -1,0 +1,35 @@
+# Announce a published release to the #releases channel, mentioning the opt-in
+# role when DISCORD_RELEASE_ROLE_ID is set — never @everyone (OPS-R23).
+#
+# Fires on `published`, not on draft creation. A stable tag creates a draft that
+# a human reviews and publishes, so nothing is announced until the release is
+# real and downloadable (releasing.md, ADR-0019). A release-candidate tag
+# publishes immediately and therefore announces immediately, which is correct:
+# the preview channel is a real channel.
+#
+# A breaking change belongs in the release body with release-note prominence
+# (OPS-R12) — for v2.0 that is the category-linked-pot retirement and the manual
+# re-assignment it requires (ADR-0017). The body is the generated notes, so that
+# prominence is won in the commit subjects, not here.
+name: release-announce
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    uses: beatrax-app/spec/.github/workflows/discord-notify.yml@v1
+    with:
+      content: ${{ vars.DISCORD_RELEASE_ROLE_ID && format('<@&{0}>', vars.DISCORD_RELEASE_ROLE_ID) || '' }}
+      title: "beatrax ${{ github.event.release.tag_name }}"
+      body: ${{ github.event.release.body }}
+      url: ${{ github.event.release.html_url }}
+      color: "5793266"
+      # #releases is a Forum channel: open a thread per release, named for it.
+      thread: "beatrax ${{ github.event.release.tag_name }}"
+    secrets:
+      webhook: ${{ secrets.DISCORD_ANNOUNCE_WEBHOOK }}

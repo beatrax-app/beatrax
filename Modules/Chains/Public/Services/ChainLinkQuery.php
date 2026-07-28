@@ -15,6 +15,7 @@ use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
 use Modules\Chains\Public\Dto\SeriesFunderLink;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -34,7 +35,10 @@ final class ChainLinkQuery
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        // A factory, not the session itself: resolving a session builds the
+        // encrypter, and this class is reachable from a console command that
+        // Artisan constructs merely to list it.
+        private readonly SessionFactory $session,
     ) {}
 
     public function forTransaction(int $transactionId, User $user): ChainTree
@@ -306,7 +310,7 @@ final class ChainLinkQuery
             return '';
         }
 
-        return $this->codec->decryptValue('transactions', 'counterparty_name', $stored, $userId, $this->session)['value'];
+        return $this->codec->decryptValue('transactions', 'counterparty_name', $stored, $userId, ($this->session)())['value'];
     }
 
     private function confidenceTier(string $state, string $resolver, float $confidence): string

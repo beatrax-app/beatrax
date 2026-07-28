@@ -1,0 +1,112 @@
+# Coverage, measured here and reported to SonarCloud.
+#
+# Deliberately a separate workflow rather than a step in the PR gate: coverage
+# needs an instrumenting extension, and running the full suite under pcov costs
+# several minutes the gate should not pay on every push. The gate answers "is
+# this correct"; this answers "how much is covered", and the two can move at
+# different speeds.
+#
+# Coverage reaches SonarCloud only through a CI-run scan: automatic analysis
+# does not accept an imported report, so the two are mutually exclusive. If the
+# coverage figure on the badge stays empty, automatic analysis is still on for
+# the project and needs turning off in SonarCloud's settings.
+name: coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: Europe/Amsterdam
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install poppler-utils (pdftotext)
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+          # pcov rather than xdebug: markedly faster for line coverage, which
+          # is all an imported clover report carries.
+          coverage: pcov
+          tools: composer:v2
+          # pcov instruments one directory tree and defaults to app/. Almost
+          # every line of this codebase is under Modules/, so the report was
+          # measuring 2 covered statements out of 72882 and SonarCloud read it,
+          # correctly, as 0.4% coverage. These go in php.ini rather than on the
+          # command line because `artisan test` runs Pest in a child process,
+          # which does not inherit the parent's -d flags.
+          ini-values: pcov.directory=., pcov.exclude="~(vendor|node_modules)~"
+
+      - name: Cache Composer packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.composer/cache
+          key: composer-coverage-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-coverage-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Build Vite assets
+        # Feature tests render views that resolve URLs through the Vite
+        # manifest, so it has to exist before the suite runs.
+        run: npm run build
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+          mkdir -p database
+          touch database/database.sqlite
+          mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+          chmod -R u+rwX storage bootstrap/cache
+
+      - name: Pest with coverage
+        env:
+          APP_ENV: testing
+        run: php artisan test --coverage-clover=coverage.xml
+
+      # SonarCloud refuses a CI analysis while automatic analysis is on, and
+      # automatic analysis will not accept an imported coverage report — so the
+      # two are mutually exclusive and CI has to be the one that wins. This is
+      # the API call the Analysis Method page makes; it is idempotent.
+      - name: Make CI analysis authoritative
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          # The credential goes in on stdin rather than argv: a token passed as
+          # `curl -u` is readable in the process table for the life of the call,
+          # and gitleaks flags the pattern for exactly that reason.
+          printf 'user = "%s:"\n' "$SONAR_TOKEN" | curl -sS -X POST --config - \
+            "https://sonarcloud.io/api/autoscan/activation?projectKey=beatrax-app_beatrax&enable=false" \
+            -w '\nHTTP %{http_code}\n'
+
+      - name: SonarCloud scan
+        # Needs the full history: Sonar attributes new code to the commits that
+        # introduced it, and a shallow clone leaves it guessing.
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

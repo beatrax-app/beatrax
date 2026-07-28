@@ -41,10 +41,10 @@ it('launches the system browser for a valid https://github.com URL', function ()
     /** @var OpenExternalUrlAction $action */
     $action = $this->app->make(OpenExternalUrlAction::class);
 
-    $action('https://github.com/nightworksio/beatrax/compare/main...suggest-abc?expand=1&body=foo');
+    $action('https://github.com/beatrax-app/beatrax/compare/main...suggest-abc?expand=1&body=foo');
 
     expect($this->shell->openExternalCalls)->toContain(
-        'https://github.com/nightworksio/beatrax/compare/main...suggest-abc?expand=1&body=foo'
+        'https://github.com/beatrax-app/beatrax/compare/main...suggest-abc?expand=1&body=foo'
     );
 });
 
@@ -52,7 +52,7 @@ it('rejects an http:// URL', function (): void {
     /** @var OpenExternalUrlAction $action */
     $action = $this->app->make(OpenExternalUrlAction::class);
 
-    expect(fn () => $action('http://github.com/nightworksio/beatrax/compare/main'))
+    expect(fn () => $action('http://github.com/beatrax-app/beatrax/compare/main'))
         ->toThrow(InvalidArgumentException::class);
     expect($this->shell->openExternalCalls)->toBe([]);
 });

@@ -16,7 +16,7 @@ module — `Chains`, `Recurring`, `Forecasting`, `DriftAlerts`,
 `Counterparties` — reads from this module's tables; every adapter in
 `Ingestion` and every parser in `Import` ultimately funnels through
 `RecordsTransactions` here. The cross-cutting design lives in the
-[data-model architecture topic](../../architecture/data-model.md);
+[data-model architecture topic](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md);
 this page describes the module's surface.
 
 The "this period at a glance" query is the dashboard's load-bearing

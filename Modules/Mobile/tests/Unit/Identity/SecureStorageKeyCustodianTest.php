@@ -56,7 +56,7 @@ class FakeSecureStorageCustodian extends SecureStorageKeyCustodian
     }
 }
 
-function fakeCurrentUser(int $id): CurrentUser
+function secureStorageCurrentUser(int $id): CurrentUser
 {
     $user = Mockery::mock(CurrentUser::class);
     $user->shouldReceive('id')->andReturn($id);
@@ -67,21 +67,21 @@ function fakeCurrentUser(int $id): CurrentUser
 // --- Off-device fallback (identity) -----------------------------------------
 
 it('degrades store() to pass-through when the mobile runtime is unavailable', function (): void {
-    $custodian = new SecureStorageKeyCustodian(fakeCurrentUser(1));
+    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1));
     $raw = str_repeat("\x2a", 32);
 
     expect($custodian->store($raw))->toBe($raw);
 });
 
 it('round-trips a key through store()/read() on the fallback path', function (): void {
-    $custodian = new SecureStorageKeyCustodian(fakeCurrentUser(1));
+    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1));
     $raw = random_bytes(32);
 
     expect($custodian->read($custodian->store($raw)))->toBe($raw);
 });
 
 it('forget() is a safe no-op off-device', function (): void {
-    $custodian = new SecureStorageKeyCustodian(fakeCurrentUser(1));
+    $custodian = new SecureStorageKeyCustodian(secureStorageCurrentUser(1));
 
     expect(fn () => $custodian->forget('beatrax.session.data_key.1'))->not->toThrow(Throwable::class);
 });
@@ -89,7 +89,7 @@ it('forget() is a safe no-op off-device', function (): void {
 // --- On-device (fake Keychain) ----------------------------------------------
 
 it('stores the key under a per-user slot and returns the slot name as the handle', function (): void {
-    $custodian = new FakeSecureStorageCustodian(fakeCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
     $raw = random_bytes(32);
 
     $handle = $custodian->store($raw);
@@ -101,22 +101,22 @@ it('stores the key under a per-user slot and returns the slot name as the handle
 });
 
 it('round-trips the key through the native store on-device', function (): void {
-    $custodian = new FakeSecureStorageCustodian(fakeCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
     $raw = random_bytes(32);
 
     expect($custodian->read($custodian->store($raw)))->toBe($raw);
 });
 
 it('scopes the slot per user so two users never collide', function (): void {
-    $a = new FakeSecureStorageCustodian(fakeCurrentUser(7));
-    $b = new FakeSecureStorageCustodian(fakeCurrentUser(9));
+    $a = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
+    $b = new FakeSecureStorageCustodian(secureStorageCurrentUser(9));
 
     expect($a->store(random_bytes(32)))->toBe('beatrax.session.data_key.7')
         ->and($b->store(random_bytes(32)))->toBe('beatrax.session.data_key.9');
 });
 
 it('falls back to the raw key when the native set() fails', function (): void {
-    $custodian = new FakeSecureStorageCustodian(fakeCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
     $custodian->setSucceeds = false;
     $raw = random_bytes(32);
 
@@ -128,21 +128,21 @@ it('falls back to the raw key when the native set() fails', function (): void {
 });
 
 it('returns null (not the slot name) when the entry is missing/evicted', function (): void {
-    $custodian = new FakeSecureStorageCustodian(fakeCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
 
     // A slot-shaped handle whose entry was never written / was evicted.
     expect($custodian->read('beatrax.session.data_key.7'))->toBeNull();
 });
 
 it('returns null (not garbage) when the stored value is not valid base64', function (): void {
-    $custodian = new FakeSecureStorageCustodian(fakeCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
     $custodian->slots['beatrax.session.data_key.7'] = 'not+valid+base64+!!!';
 
     expect($custodian->read('beatrax.session.data_key.7'))->toBeNull();
 });
 
 it('forget() deletes the native slot', function (): void {
-    $custodian = new FakeSecureStorageCustodian(fakeCurrentUser(7));
+    $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
     $handle = $custodian->store(random_bytes(32));
     expect($custodian->slots)->toHaveKey($handle);
 

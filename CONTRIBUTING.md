@@ -103,12 +103,49 @@ Blade, and test investment goes into backend correctness.
   GitHub account) before you push.
 - Linear history is required on `main` — no merge commits. Pull
   requests are merged via squash or rebase.
+- **Every commit is signed off**, matching your author identity — commit
+  with `git commit -s`. The sign-off is your certification that you have
+  the right to submit the change under the project's licence. An AI
+  cannot sign off; if you cannot explain what a change does and why, do
+  not open the pull request.
+- **Every commit carries a specification citation** in a trailer:
+
+  ```text
+  Spec: B5-R13
+  ```
+
+  Several identifiers are fine (`Spec: E1-R9, ADR-0014`). Routine
+  maintenance — dependency bumps, formatting, pipeline mechanics — cites
+  `GOV-R12`, which exists so routine work has an honest answer instead of
+  an invented requirement.
+
+## The specification is canonical
+
+No change lands here unless it cites an identifier that already exists in
+[beatrax-app/spec](https://github.com/beatrax-app/spec). This is enforced
+on every pull request, and it is deliberate friction: the requirement gets
+written by the person who understands the problem, at the moment they
+understand it, rather than reconstructed afterwards from a diff.
+
+**Changing behaviour the spec does not describe?** That is a specification
+gap, not a gate problem. Open a pull request there first, get the
+requirement reviewed and merged, then cite it
+([change-lifecycle](https://github.com/beatrax-app/spec/blob/main/50-governance/change-lifecycle.md)).
+
+Identifiers never appear in code comments — they belong in the commit
+trailer and the PR body, which is where the gate reads them.
+
+If you are working with an AI assistant, [AGENTS.md](AGENTS.md) is the
+guide it should read. Beyond that, an AI is a tool like any other: a pull
+request is judged on the code, not on what produced it. There is nothing
+to declare, and review is there for a reason.
 
 ## Pull request flow
 
 1. Open the pull request against `main`.
-2. Fill in the PR template. CODEOWNERS is auto-configured and will
-   request the right reviewer.
+2. Fill in the PR template. **The specification citation goes in the body
+   as well as in a commit** — the gate reads both. CODEOWNERS is generated
+   from the maintainer registry and will request the right reviewer.
 3. Write the commit subject as a conventional commit (`feat:`, `fix:`,
    `docs:`, `refactor:`, `perf:`, `test:`, `ci:`, `build:`, `chore:`). Release
    notes are generated from the commit log at tag time, so the subject is what
@@ -121,7 +158,7 @@ Blade, and test investment goes into backend correctness.
 6. Once approved, the reviewer (or you, if self-merge is permitted)
    squash-merges. The head branch is auto-deleted after merge.
 
-## What's in scope for v1.x contributions
+## What is in scope
 
 In scope:
 
@@ -135,7 +172,7 @@ In scope:
   `.docs/features/` per-module pages.
 - Accessibility improvements on existing UI surfaces.
 
-Not in scope at v1.0:
+Not in scope:
 
 - Features explicitly listed as "Out of Scope" in the project's roadmap
   documents (telemetry, partner-sharing modes, cloud sync, mobile

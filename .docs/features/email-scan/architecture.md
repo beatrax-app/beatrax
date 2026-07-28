@@ -1094,7 +1094,7 @@ via `@odata.nextLink`; Graph's `$filter` has no `contains` support
 against subject, so `$search` is used instead, which is mutually
 exclusive with `$orderby` (deliberately omitted to stay within Graph's
 documented compatibility envelope — see
-https://learn.microsoft.com/en-us/graph/search-query-parameter).
+<https://learn.microsoft.com/en-us/graph/search-query-parameter>).
 `$search` has no server-side from-address exclusion, so the exclude
 list is applied client-side before returning the page.
 

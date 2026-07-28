@@ -18,7 +18,7 @@ use Modules\Sync\Internal\Crypto\GdkKeyringService;
  * epoch-1 keyring, extracted from the previously-inlined fixture in
  * `Modules/Ledger/tests/Feature/RecordTransactionsEncryptionTest.php`.
  *
- * @link ../../../../.docs/adr/0011-code-comment-policy.md
+ * @link ../../../../.docs/conventions/00-index.md
  */
 trait EnablesEncryptionForUser
 {

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Modules\Categorization\Internal\Services;
 
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Models\RuleAction;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
@@ -50,7 +50,7 @@ final class RuleApplier
         private readonly TagTransaction $tagTransaction,
         private readonly FieldProvenanceWriter $provenance,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     // Folding sequentially over a mutable $tx local makes last-writer-wins
@@ -231,7 +231,7 @@ final class RuleApplier
         // before it becomes an op-log dirtyFields value, or the op-log's
         // own encrypt-on-write would double-encrypt it.
         $finalNote = is_string($finalNoteRaw)
-            ? $this->codec->decryptValue('transactions', 'note', $finalNoteRaw, $user->id, $this->session)['value']
+            ? $this->codec->decryptValue('transactions', 'note', $finalNoteRaw, $user->id, ($this->session)())['value']
             : null;
 
         $this->events->dispatch(new TransactionMutated(
@@ -280,7 +280,7 @@ final class RuleApplier
         // would silently wipe a user-authored tax note; read the existing
         // note (decrypted, mirroring applyNote()) and pass it through unchanged.
         $currentNote = $current !== null && is_string($current->note)
-            ? $this->codec->decryptValue('tax_transaction_tags', 'note', $current->note, $userId, $this->session)['value']
+            ? $this->codec->decryptValue('tax_transaction_tags', 'note', $current->note, $userId, ($this->session)())['value']
             : null;
 
         if ($currentDeductionCategoryId === $deductionCategoryId && $currentYear === $year) {

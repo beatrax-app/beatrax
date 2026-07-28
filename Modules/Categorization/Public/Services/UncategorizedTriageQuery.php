@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Modules\Categorization\Public\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Dto\TriageBatch;
 use Modules\Categorization\Public\Dto\TriageRow;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -22,7 +22,7 @@ final class UncategorizedTriageQuery
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function for(User $user, int $limit = 50, ?int $cursorId = null, ?string $cursorPostedAt = null): TriageBatch
@@ -85,10 +85,10 @@ final class UncategorizedTriageQuery
         // enabled for this user.
         $counterpartyName = $row->counterparty_name === null
             ? null
-            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, $this->session)['value'];
+            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toString($row->counterparty_name), $userId, ($this->session)())['value'];
         $description = $row->description === null
             ? null
-            : $this->codec->decryptValue('transactions', 'description', self::toString($row->description), $userId, $this->session)['value'];
+            : $this->codec->decryptValue('transactions', 'description', self::toString($row->description), $userId, ($this->session)())['value'];
         $counterpartySlug = property_exists($row, 'counterparty_slug') && $row->counterparty_slug !== null
             ? self::toString($row->counterparty_slug)
             : null;

@@ -48,7 +48,7 @@ clearly.
 
 For the longer-form reasoning — including why we didn't pay for code-signing
 certificates and what that means for install-time security warnings — see
-[`.docs/legal/license-rationale.md`](.docs/legal/license-rationale.md).
+[`.docs/legal/license-rationale.md`](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md).
 
 ## composer.json `license` field
 
@@ -70,6 +70,6 @@ attribution), this notice will be updated to reflect the change.
 ## Attribution
 
 - **Hippocratic License 3.0** — Organization for Ethical Source.
-  License text: https://firstdonoharm.dev/version/3/0/full.txt
+  License text: <https://firstdonoharm.dev/version/3/0/full.txt>
 - **Code of Conduct** — Contributor Covenant 2.1.
-  https://www.contributor-covenant.org/version/2/1/code_of_conduct/
+  <https://www.contributor-covenant.org/version/2/1/code_of_conduct/>

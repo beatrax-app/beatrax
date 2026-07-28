@@ -22,7 +22,7 @@ return [
 
     'github_compare_base' => env(
         'BEATRAX_GITHUB_COMPARE_BASE',
-        'https://github.com/nightworksio/beatrax/compare/main',
+        'https://github.com/beatrax-app/beatrax/compare/main',
     ),
 
     /*
@@ -40,7 +40,7 @@ return [
 
     'github_issues_url' => env(
         'BEATRAX_GITHUB_ISSUES_URL',
-        'https://github.com/nightworksio/beatrax/issues',
+        'https://github.com/beatrax-app/beatrax/issues',
     ),
 
     /*

@@ -105,11 +105,16 @@
         <testsuite name="EmailScanFeature">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Feature</directory>
         </testsuite>
-        <testsuite name="EmailScanContracts">
-            <directory suffix="Test.php">./Modules/EmailScan/tests/Contracts</directory>
-        </testsuite>
         <testsuite name="EmailScanIntegration">
             <directory suffix="Test.php">./Modules/EmailScan/tests/Integration</directory>
+        </testsuite>
+        <!-- The only Integration tree without a testsuite, so its two smoke
+             tests ran nowhere: not in CI, not locally, not even to be skipped.
+             They are tagged `integration` to be excluded on a host without
+             poppler, which is a different thing from never being collected.
+             Every job that runs tests installs poppler-utils. -->
+        <testsuite name="IngestionIntegration">
+            <directory suffix="Test.php">./Modules/Ingestion/tests/Integration</directory>
         </testsuite>
         <testsuite name="OpenBankingUnit">
             <directory suffix="Test.php">./Modules/OpenBanking/tests/Unit</directory>
@@ -142,15 +147,18 @@
             <directory suffix="Test.php">./Modules/Sync/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Sync/tests/Unit</directory>
         </testsuite>
+        <!-- Mobile is the composite of these two directories. It used to sit
+             alongside MobileUnit and MobileFeature, which listed the same two
+             directories again, and PHPUnit refuses to add a file to a second
+             suite: every one of the 23 Mobile feature tests raised "Cannot add
+             file ... as it was already added", and a run carrying those
+             warnings exits 1 with zero failing tests. Only a run that loads
+             more than one suite can trip it, so every single-suite run was
+             green and the full suite was red for no visible reason.
+             `vendor/bin/pest Modules/Mobile/tests/Unit` still runs a subset. -->
         <testsuite name="Mobile">
             <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
-        </testsuite>
-        <testsuite name="MobileUnit">
-            <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
-        </testsuite>
-        <testsuite name="MobileFeature">
-            <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
         </testsuite>
         <testsuite name="MigrationUnit">
             <directory suffix="Test.php">./Modules/Migration/tests/Unit</directory>
@@ -167,12 +175,22 @@
         <testsuite name="Reports Feature">
             <directory suffix="Test.php">./Modules/Reports/tests/Feature</directory>
         </testsuite>
-        <testsuite name="Reports Contracts">
-            <directory suffix="Test.php">./Modules/Reports/tests/Contracts</directory>
-        </testsuite>
+        <!-- Modules/EmailScan/tests/Contracts and Modules/Reports/tests/Contracts
+             hold a .gitkeep and nothing else. A testsuite that matches no file
+             makes a single-testsuite run exit 1 on "No tests found", which the
+             setup guide tells developers to do. An earlier fix
+             tracked the empty directory to stop the 1-error; the directory was
+             never the problem. The suites come back with their first test. -->
     </testsuites>
     <php>
-        <ini name="memory_limit" value="1G"/>
+        <!-- The architecture tests parse every file under Modules/ and app/ with
+             php-parser and hold the ASTs for the duration of the assertion, so
+             peak memory tracks the size of the codebase rather than the size of
+             any one test. Thirty-four modules outgrew the previous 1G ceiling,
+             which failed the whole suite during construction rather than as a
+             test failure. Headroom, not a measured peak: a value tuned to the
+             current tree would need re-tuning at the next module. -->
+        <ini name="memory_limit" value="4G"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_KEY" value="base64:vQc4qXIjcS1Wt2kPQzGpL3yvqW6CrLqzqkEYqFqW7DA="/>
         <!-- force="true" so asset()/route() URLs in rendered-HTML snapshots are
@@ -204,4 +222,26 @@
         <env name="SESSION_DRIVER" value="database"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
     </php>
+
+    <!-- Without this, a coverage run warns "No filter is configured, code
+         coverage will not be processed", writes an empty report, and exits 1
+         with every test passing — the same shape of failure as a file claimed
+         by two testsuites. The clover report the coverage workflow hands to
+         SonarCloud was empty for exactly this reason.
+
+         app/ and Modules/ are where the code under test lives. Migrations are
+         schema, replayed by every test and meaningless as a coverage figure;
+         config/, routes/ and database/ stay in sonar.sources so the analyser
+         still reads them, and sit in sonar.coverage.exclusions so they do not
+         count against the number. -->
+    <source>
+        <include>
+            <directory suffix=".php">app</directory>
+            <directory suffix=".php">Modules</directory>
+        </include>
+        <exclude>
+            <directory suffix=".php">Modules/*/Database/Migrations</directory>
+            <directory suffix=".php">Modules/*/tests</directory>
+        </exclude>
+    </source>
 </phpunit>

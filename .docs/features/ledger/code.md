@@ -166,7 +166,7 @@ Migrations (17 total, summarised by purpose):
 - `2026_05_17_020001_recreate_transactions_type_triggers.php`
   — the type-enum trigger refresh.
 - `2026_05_27_000001_add_starting_balance_to_accounts_table.php`
-  + `2026_05_27_000002_backfill_starting_balance_from_statement_summaries.php`
+  - `2026_05_27_000002_backfill_starting_balance_from_statement_summaries.php`
   — the per-account starting-balance addition.
 
 ## Provider wiring

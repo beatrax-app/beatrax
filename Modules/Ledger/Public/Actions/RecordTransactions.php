@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
@@ -32,7 +32,7 @@ final class RecordTransactions implements RecordsTransactions
         private readonly Clock $clock,
         private readonly Dispatcher $events,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function __invoke(iterable $canonical, User $user): RecordResult
@@ -107,7 +107,7 @@ final class RecordTransactions implements RecordsTransactions
                 // touches disk (pass-through no-op when not enabled).
                 // Amount columns are never touched, so SQL SUM()/GROUP
                 // BY keeps working.
-                $attrs = $this->codec->encryptAttrs('transactions', $attrs, $row->userId, $this->session);
+                $attrs = $this->codec->encryptAttrs('transactions', $attrs, $row->userId, ($this->session)());
 
                 $effected = Transaction::insertOrIgnore($attrs);
                 if ($effected === 1) {

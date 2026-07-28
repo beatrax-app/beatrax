@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Pipeline\Stages;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Services\SourceRefRanker;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -24,7 +24,7 @@ final class FingerprintStage
         private readonly DatabaseManager $db,
         private readonly SourceRefRanker $ranker,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function classify(CanonicalTransaction $tx, User $user): FingerprintDisposition
@@ -93,7 +93,7 @@ final class FingerprintStage
 
         $storedName = is_string($existing->counterparty_name) ? $existing->counterparty_name : null;
         if ($storedName !== null) {
-            $storedName = $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $user->id, $this->session)['value'];
+            $storedName = $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $user->id, ($this->session)())['value'];
         }
         if ($storedName !== null && $tx->counterpartyName !== null) {
             if (self::stringsDiffer($storedName, $tx->counterpartyName)) {
@@ -103,7 +103,7 @@ final class FingerprintStage
 
         $storedDescription = is_string($existing->description) ? $existing->description : null;
         if ($storedDescription !== null) {
-            $storedDescription = $this->codec->decryptValue('transactions', 'description', $storedDescription, $user->id, $this->session)['value'];
+            $storedDescription = $this->codec->decryptValue('transactions', 'description', $storedDescription, $user->id, ($this->session)())['value'];
         }
         if ($storedDescription !== null && $tx->description !== null) {
             if (self::stringsDiffer($storedDescription, $tx->description)) {

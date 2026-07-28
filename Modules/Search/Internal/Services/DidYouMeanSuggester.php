@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // Suggests one "did you mean" word (levenshtein <= 2, no spellfix1 in
@@ -25,7 +25,7 @@ final class DidYouMeanSuggester
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
@@ -66,7 +66,7 @@ final class DidYouMeanSuggester
             if (! is_string($name) || $name === '') {
                 continue;
             }
-            $result = $this->codec->decryptValue('transactions', 'counterparty_name', $name, $userId, $this->session);
+            $result = $this->codec->decryptValue('transactions', 'counterparty_name', $name, $userId, ($this->session)());
 
             // A decrypted:false result is ciphertext (rekey/epoch gap,
             // or a locked app-lock) — skip rather than tokenizing a

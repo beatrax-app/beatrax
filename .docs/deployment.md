@@ -9,8 +9,8 @@ internet.
 Two paths are documented:
 
 - **[Docker Compose](#a-docker-compose-recommended)** — one command, bundles
-  Postgres + queue worker + scheduler.
-- **[Bare metal](#b-bare-metal-no-docker)** — clone + PHP + a database, no
+  the web process, queue worker and scheduler.
+- **[Bare metal](#b-bare-metal-no-docker)** — clone + PHP + a SQLite file, no
   Docker.
 
 Both finish with the interactive **`php artisan beatrax:setup`** command, which
@@ -19,13 +19,18 @@ writes `.env`, configures the database, and runs the install.
 ## Requirements
 
 - PHP **8.5** with extensions: `intl`, `pcntl`, `posix`, `pdo_sqlite`,
-  `zip`, `bcmath`, plus `pdo_pgsql` and/or `pdo_mysql` for a server database.
+  `zip`, `bcmath`.
 - `poppler-utils` (`pdftotext`) for PDF statement ingestion.
-- Composer 2, and Node 20+ only if you build front-end assets yourself.
-- A database: **SQLite** (simplest), **PostgreSQL** (recommended for a server),
-  or **MySQL/MariaDB**.
+- Composer 2, and Node 22+ only if you build front-end assets yourself.
+- **SQLite.** It is the only supported database, in every deployment shape.
 
-> Full history is retained forever and never pruned — **back up your database**.
+> **Not PostgreSQL or MySQL, and not by omission.** The schema is SQLite-only:
+> thirty-two migrations use `RAISE(ABORT)` enum-guard triggers, and full-text
+> search is an FTS5 virtual table. `artisan migrate` against a server database
+> fails on the first substantive table. See
+> [ADR-0022](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0022-sqlite-only-schema.md).
+>
+> Full history is retained forever and never pruned — **back up that file**.
 
 ---
 
@@ -33,7 +38,12 @@ writes `.env`, configures the database, and runs the install.
 
 The recipe lives in `deploy/server/`. It builds one app image (FrankenPHP +
 PHP 8.5 + compiled assets, code baked in — no separate nginx/php-fpm) and runs
-it three ways (web, queue worker, scheduler) plus Postgres.
+it three ways: web, queue worker, scheduler. The SQLite file lives on a named
+volume, so it survives `down` and image rebuilds.
+
+A one-shot `migrate` service runs first and the other three wait on it. Without
+that ordering the workers boot against a schema that does not exist and
+crash-loop until someone runs step 4.
 
 ```bash
 COMPOSE="docker compose -f deploy/server/docker-compose.yml"
@@ -49,8 +59,16 @@ $COMPOSE run --rm app php artisan key:generate --show
 # 3. Build + start
 $COMPOSE up -d --build
 
-# 4. Migrate + create your account
+# 4. Create your account (migrations already ran in the `migrate` service)
 $COMPOSE exec app php artisan beatrax:install
+```
+
+Non-interactively — which is what a script or a remote shell gets — pass the
+account in, or the command refuses rather than prompting:
+
+```bash
+$COMPOSE exec app php artisan beatrax:install --no-interaction \
+    --username=you --password='something-long'
 ```
 
 > In Docker, set secrets in `deploy/server/.env` and use **`beatrax:install`**,
@@ -80,7 +98,7 @@ For cloning straight onto a machine that already has PHP 8.5.
 git clone <your-fork-or-this-repo> beatrax && cd beatrax
 composer install --no-dev --optimize-autoloader
 
-# 2. Build front-end assets (needs Node 20+); or copy a prebuilt public/build
+# 2. Build front-end assets (needs Node 22+); or copy a prebuilt public/build
 npm ci && npm run build
 
 # 3. Configure the environment + database + your account (interactive)
@@ -90,18 +108,9 @@ php artisan beatrax:setup
 `beatrax:setup` walks you through:
 
 1. creating `.env` (from `.env.example`) and generating `APP_KEY`;
-2. choosing the database — **SQLite** (a file, zero setup) or **Postgres /
-   MySQL / MariaDB** (you supply host, port, name, user, password);
+2. pointing `DB_DATABASE` at the SQLite file and creating it;
 3. verifying the database is reachable;
 4. running `beatrax:install` (migrations + the single user account).
-
-If you chose a server database, create the database + user first, e.g.:
-
-```sql
-CREATE DATABASE beatrax;
-CREATE USER beatrax WITH PASSWORD '…';
-GRANT ALL PRIVILEGES ON DATABASE beatrax TO beatrax;
-```
 
 ### Serving the app
 

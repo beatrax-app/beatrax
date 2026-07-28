@@ -104,7 +104,7 @@ Modules/Core/
 - **Scopes/**
   - `UserScope::apply($builder, $model)` — `where('user_id',
     CurrentUser::id())`. Skipped when the auth factory is unbound (CLI
-    + tests not in HTTP context).
+    - tests not in HTTP context).
 - **Services/**
   - `SystemClock` — production `Clock`.
   - `CurrentUserService` — production `CurrentUser`. Throws
@@ -139,7 +139,7 @@ Modules/Core/
 - `Internal/Providers/SqliteOptimizationsProvider` — registers a
   connection-resolved listener that runs the WAL + busy_timeout +
   synchronous=NORMAL PRAGMAs on every SQLite connection
-  (see [ADR 0005](../../adr/0005-sqlite-wal.md)).
+  (see [ADR 0005](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0005-sqlite-wal.md)).
 - `Internal/Providers/HealthCheckServiceProvider` — wires the boot
   probes used by `DoctorCommand` and `HealthCheckListener`.
 - `Internal/Console/InstallCommand` — `beatrax:install`. Creates the
@@ -201,10 +201,10 @@ Migrations:
   forced-change flag.
 - `2026_05_12_000002_create_password_reset_tokens_table.php` — kept
   for framework compatibility; never written to (no SMTP-driven
-  password reset; see [ADR 0010](../../adr/0010-recovery-codes-no-smtp.md)).
+  password reset; see [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md)).
 - `2026_05_12_000003_create_sessions_table.php` — `database`-driver
   sessions co-resident with the app schema (see
-  [ADR 0007](../../adr/0007-database-queue-driver.md)).
+  [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md)).
 - `2026_05_13_010001_add_default_currency_view_to_users.php` — per-user
   currency-view preference column.
 - `2026_05_17_010007_add_auto_import_drop_folder_to_users.php` —

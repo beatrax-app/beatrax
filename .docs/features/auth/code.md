@@ -127,12 +127,12 @@ the cross-module "a user just appeared" surface.
   so the partner picks their own password on next sign-in.
 - `Internal/Console/ResetPasswordCommand` — the `diederik:reset-password`
   CLI escape hatch. The user's last-resort recovery path when every
-  recovery code is lost. See [ADR 0010](../../adr/0010-recovery-codes-no-smtp.md).
+  recovery code is lost. See [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
 
 ## Models + migrations
 
 - `Models/UserRecoveryCode` — maps to `user_recovery_codes`. Uses
-  `BelongsToUser` (see [ADR 0008](../../adr/0008-multi-user-belongstouser.md)).
+  `BelongsToUser` (see [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md)).
   Auto-managed timestamps are disabled: the table writes its own
   `created_at` via a SQLite `useCurrent()` default, the only post-insert
   mutation is the `used_at` stamp, and there is no `updated_at` column.

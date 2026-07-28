@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Support;
 
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -23,7 +23,7 @@ final class NotificationWriter
         private readonly Clock $clock,
         private readonly Dispatcher $events,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     /**
@@ -57,7 +57,7 @@ final class NotificationWriter
             'updated_at' => $now,
         ];
 
-        $encrypted = $this->codec->encryptAttrs('notifications', $attrs, $userId, $this->session);
+        $encrypted = $this->codec->encryptAttrs('notifications', $attrs, $userId, ($this->session)());
 
         $affected = $this->db->connection()->table('notifications')->insertOrIgnore($encrypted);
 

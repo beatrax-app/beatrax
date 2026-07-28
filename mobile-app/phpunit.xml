@@ -12,8 +12,8 @@
     Scoped to ONLY the Mobile-owning testsuites — `tests/Pest.php` (symlinked
     from the repo root, see `mobile-app/tests`) still binds every module's
     TestCase at bootstrap time since `Modules/` is shared, but this config
-    intentionally exposes just Mobile/MobileUnit/MobileFeature as runnable
-    suites so the mobile-app-rooted CI job proves "the shell boots + the
+    intentionally exposes just the Mobile suite as runnable so the
+    mobile-app-rooted CI job proves "the shell boots + the
     Mobile module's own shared code passes" without redundantly re-running
     the full desktop-rooted suite from a second root (that job already runs
     at the repo root).
@@ -27,12 +27,6 @@
         <testsuite name="Mobile">
             <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
-        </testsuite>
-        <testsuite name="MobileUnit">
-            <directory suffix="Test.php">./Modules/Mobile/tests/Unit</directory>
-        </testsuite>
-        <testsuite name="MobileFeature">
-            <directory suffix="Test.php">./Modules/Mobile/tests/Feature</directory>
         </testsuite>
     </testsuites>
     <php>

@@ -14,7 +14,7 @@ needs an authentication surface that closes that loop on its own:
 twelve-character passwords, ten single-use recovery codes printed once at
 signup, and a CLI escape hatch (`diederik:reset-password`) when the user
 loses every code and is locked out of the machine. The trade-offs are
-captured in [ADR 0010](../../adr/0010-recovery-codes-no-smtp.md).
+captured in [ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md).
 
 The module also owns the asymmetric "owner / partner" model. The first
 account created on a device is the owner: their `is_developer` flag is set
@@ -24,11 +24,11 @@ first sign-in via the `force_password_change_at_next_login` flag. The same
 owner can reset the partner's password from `/settings/users/{id}`; the
 partner cannot reset the owner. The multi-user data scoping that backs
 that asymmetry — every domain row carries `user_id` — is described in
-[ADR 0008](../../adr/0008-multi-user-belongstouser.md).
+[ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md).
 
 What the module explicitly does NOT do: it never runs the
 "send the user an email link" flow (no SMTP is in scope, see
-[ADR 0010](../../adr/0010-recovery-codes-no-smtp.md)); it never reaches
+[ADR 0010](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0010-recovery-codes-no-smtp.md)); it never reaches
 into another module's tables (a partner has no automatic data — every
 module's `BelongsToUser` rows are owner-scoped by default); and it never
 exposes a cross-user surface (a probe for another user's resources returns

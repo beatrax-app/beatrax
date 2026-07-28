@@ -11,7 +11,7 @@ dropped-onto-the-app file through the import pipeline.
 
 ## What this module is for
 
-NativePHP is the project's desktop shell ([ADR 0006](../../adr/0006-nativephp-desktop-shell.md)).
+NativePHP is the project's desktop shell ([ADR 0006](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0006-nativephp-desktop-shell.md)).
 The architecture decision pinpoints why every other module needs to
 stay NativePHP-free: the shipped bundle runs inside an Electron host;
 the local dev environment, the CI test runs, and any future headless

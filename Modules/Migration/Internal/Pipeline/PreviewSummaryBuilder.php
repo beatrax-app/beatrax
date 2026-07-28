@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Models\MigrationRun;
@@ -25,7 +25,7 @@ final class PreviewSummaryBuilder
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function forRun(int $migrationRunId, User $user): PreviewSummary
@@ -237,10 +237,10 @@ final class PreviewSummaryBuilder
         // separate is-encrypted branch is needed here.
         $counterpartyName = $txn->counterparty_name === null
             ? null
-            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toStr($txn->counterparty_name), $user->id, $this->session)['value'];
+            : $this->codec->decryptValue('transactions', 'counterparty_name', self::toStr($txn->counterparty_name), $user->id, ($this->session)())['value'];
         $description = $txn->description === null
             ? null
-            : $this->codec->decryptValue('transactions', 'description', self::toStr($txn->description), $user->id, $this->session)['value'];
+            : $this->codec->decryptValue('transactions', 'description', self::toStr($txn->description), $user->id, ($this->session)())['value'];
 
         $identifier = $counterpartyName !== null ? $counterpartyName
             : ($description !== null ? $description : 'Transaction');

@@ -8,12 +8,13 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Core\Public\Services\SessionFactory;
 
 final class LogoutAction
 {
     public function __construct(
         private readonly AuthManager $auth,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly LockStateManager $lockState,
     ) {}
 
@@ -23,13 +24,13 @@ final class LogoutAction
         // session's data-key handle but never reaches the custodian, so on
         // the mobile bundle the raw key would otherwise outlive the session
         // in the iOS Keychain / Android Keystore.
-        $this->lockState->lock($this->session);
+        $this->lockState->lock(($this->session)());
 
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();
         $guard->logout();
 
-        $this->session->invalidate();
-        $this->session->regenerateToken();
+        ($this->session)()->invalidate();
+        ($this->session)()->regenerateToken();
     }
 }

@@ -72,7 +72,7 @@ For each Eloquent model owned by the module:
 
 - `Models/ModelName` — what table it maps to, what trait composition
   it has (typically `BelongsToUser`, see
-  [ADR 0008](../../adr/0008-multi-user-belongstouser.md)), what casts
+  [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md)), what casts
   are non-trivial (Money columns, JSON columns, state enums).
 
 For the migration history:

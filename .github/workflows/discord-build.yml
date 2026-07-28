@@ -1,0 +1,23 @@
+# Post every workflow run's outcome to the #build-log channel (OPS-R24).
+# workflow_run executes in the base repo with the org secret available and never
+# in fork-PR code; values reach the reusable as inputs, not shell interpolations.
+name: discord-build
+
+on:
+  workflow_run:
+    workflows: [ci, coverage, release, release-dispatch, scorecard, shared, triage, awaiting-maintainer, labels, stale]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    uses: beatrax-app/spec/.github/workflows/discord-notify.yml@v1
+    with:
+      title: "${{ github.event.workflow_run.name }} · ${{ github.event.workflow_run.head_branch }}"
+      body: "${{ github.event.repository.name }} — ${{ github.event.workflow_run.conclusion }} · ${{ github.event.workflow_run.head_sha }}"
+      url: ${{ github.event.workflow_run.html_url }}
+      color: ${{ github.event.workflow_run.conclusion == 'success' && '3066993' || '15158332' }}
+    secrets:
+      webhook: ${{ secrets.DISCORD_BUILD_WEBHOOK }}

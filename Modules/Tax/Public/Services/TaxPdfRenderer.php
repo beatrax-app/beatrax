@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Services;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Internal\Services\TaxPdfRenderer as InternalTaxPdfRenderer;
 use Modules\Tax\Internal\Services\TaxYearQuery as InternalTaxYearQuery;
@@ -21,7 +21,7 @@ final class TaxPdfRenderer
         private readonly DatabaseManager $db,
         private readonly ViewFactory $views,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function render(User $user, int $year): string

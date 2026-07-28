@@ -58,7 +58,7 @@ gh release view v${VERSION} --json body --jq '.body' \
 ```
 
 If the project ever rotates the publisher key, both the in-bundle constant and the
-release-page footer move in lockstep — see the [Architecture Decision Records](../adr/)
+release-page footer move in lockstep — see the [Architecture Decision Records](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/)
 for the related publisher-trust decisions.
 
 ### Step 2 — Download the manifest and signature
@@ -128,7 +128,7 @@ and the in-manifest SHA-512 gives you the binary's match to that manifest.
 The combination of an in-bundle public key, an Ed25519-signed manifest, and a SHA-512
 chain through to the binary is the project's sole binary-integrity signal in the
 absence of paid OS-level signing. See
-[`../legal/license-rationale.md#no-paid-signing`](../legal/license-rationale.md#no-paid-signing)
+[`../legal/license-rationale.md#no-paid-signing`](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 for the trade-off and
-[`../cicd/release-workflow.md`](../cicd/release-workflow.md) for how the manifest gets
+[`../cicd/release-workflow.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md) for how the manifest gets
 signed in the first place.

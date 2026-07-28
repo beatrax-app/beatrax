@@ -349,4 +349,3 @@ cell never appears as a column name in the per-event Rapport
 Transactiegegevens export, so detecting it yields an actionable "wrong
 export" hint instead of a confusing "language profile not supported"
 fallback.
-

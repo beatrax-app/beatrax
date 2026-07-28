@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Resolvers;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
@@ -13,6 +12,7 @@ use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Account;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -53,7 +53,7 @@ final class IcsSettlementResolver
         private readonly ChainLinkInsertHelper $inserter,
         private readonly ResolvesKnownCounterpartyIban $aliasResolver,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     // Idempotent: re-running produces zero net new chain_links, because
@@ -100,7 +100,7 @@ final class IcsSettlementResolver
             $storedCounterpartyIban = self::toString($transfer->counterparty_iban ?? null);
             $counterpartyIban = $storedCounterpartyIban === ''
                 ? ''
-                : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, $this->session)['value'];
+                : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, ($this->session)())['value'];
             $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
             if ($aliasAccount === null || $aliasAccount->kind !== 'ics_card') {
                 // Not an ASN→ICS hop — other transfer_out rows (bank-to-bank,

@@ -1,41 +1,61 @@
-# beatrax documentation
+# beatrax — repo-local documentation
 
-This tree is the published, version-controlled documentation for beatrax — a local-only
-personal-finance dashboard that resolves the routing chains between banking, ICS Cards,
-PayPal, and Google Play into one canonical view.
+Repo-local technical documentation: the **PHP-specific how**. Product decisions,
+requirements, and architecture contracts live in the specification, which is
+canonical:
 
-The structure mirrors happklaar's `.docs/` layout: a small set of top-level subtrees,
-each with its own `00-index.md` for navigation. Decisions live under `adr/`. Module-level
-deep dives live under `features/`. System-level shape lives under `architecture/`.
-Operational, build, and legal concerns each have their own subtree.
+**[github.com/beatrax-app/spec](https://github.com/beatrax-app/spec)**
 
-Documentation here describes the system as it currently is. Architecture decision records
-under `adr/` carry their own history through Status / Context / Decision / Consequences,
-but the rest of the tree reads as standalone reference — no "we used to do X" prose.
+Code links into this tree (`@link`, never a requirement identifier — `GOV-R6`).
+These pages, in turn, cite the spec. That is the middle layer of the
+[three-layer model](https://github.com/beatrax-app/spec/blob/main/40-quality/code-comments.md).
+
+## The split
+
+| This tree owns | The spec owns |
+|---|---|
+| Which class, which file, which table | Behaviour and requirements |
+| Local development setup and troubleshooting | The quality standards it satisfies |
+| Operational runbooks with real commands | The operations requirements they satisfy |
+| Per-module implementation maps | The component model |
+
+**Where the two disagree, the spec wins** and the page here is the one that gets
+corrected ([REPO-R36](https://github.com/beatrax-app/spec/blob/main/30-repos/beatrax.md#requirements),
+[canonical-spec.md](https://github.com/beatrax-app/spec/blob/main/50-governance/canonical-spec.md)).
 
 ## Subtrees
 
 | Subtree | What it covers |
 |---|---|
-| [Architecture Decision Records](adr/) | Why the system is shaped the way it is |
-| [Architecture](architecture/) | Module boundaries, pipelines, data model |
-| [Conventions](conventions/) | Day-to-day coding rules (e.g. code comments) |
-| [Features](features/) | Per-module deep dives |
-| [CI/CD](cicd/) | Quality gate, release pipeline, branch protection |
-| [Local Development](local_development/) | Setup, database, troubleshooting, dev mode |
-| [Runbooks](runbooks/) | Operational procedures |
-| [Research](research/) | Known hazards, stack rationale, packaging hazards |
-| [History](history/) | Shipped milestones and the lessons that became invariants |
-| [Legal](legal/) | License rationale, data retention |
+| [Architecture](architecture/00-index.md) | How subsystems are built — the ingestion pipeline, chain resolution, categorisation, the module boundary as enforced |
+| [Conventions](conventions/00-index.md) | How code is written here; the comment policy is canonical in the spec |
+| [Features](features/00-index.md) | Per-module implementation maps — what the code does and where it lives |
+| [Local development](local_development/00-index.md) | Setup, database, dev mode, troubleshooting |
+| [Runbooks](runbooks/00-index.md) | Operational procedures with real commands |
+| [Design](design/) | Design notes for subsystems the code links to |
+
+## What moved to the spec
+
+The decision records, the licence and data-retention rationale, the CI/CD and
+release-cadence pages, the stack and hazard research, and the milestone history
+are **no longer here**. They are in the spec:
+
+| Was | Now |
+|---|---|
+| `.docs/adr/` | [00-overview/decisions/](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/) |
+| `.docs/legal/` | [90-appendix/license-rationale.md](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md) · [data-retention.md](https://github.com/beatrax-app/spec/blob/main/90-appendix/data-retention.md) |
+| `.docs/cicd/` | [40-quality/ci-cd.md](https://github.com/beatrax-app/spec/blob/main/40-quality/ci-cd.md) · [70-operations/releasing.md](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md) |
+| `.docs/research/` | The decisions those findings produced, in [00-overview/decisions/](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/) |
+| `.docs/history/` | [00-overview/roadmap.md](https://github.com/beatrax-app/spec/blob/main/00-overview/roadmap.md) · [90-appendix/provenance.md](https://github.com/beatrax-app/spec/blob/main/90-appendix/provenance.md) |
+| `.docs/features/*/specs.md` | Behaviour and requirements in [10-functional/features/](https://github.com/beatrax-app/spec/blob/main/10-functional/features/); the test each contract maps to folded into the module's `how-to-test.md` |
 
 ## Conventions
 
-- **Present tense.** Every file describes the system as it is today. If a behaviour is
-  going away, that goes in an ADR's Consequences section, not in the narrative docs.
-- **Cross-links are relative.** Internal references use paths like `../runbooks/verify-release.md`
-  so the tree renders correctly both on GitHub and in any offline mirror.
-- **One topic per file.** Files are short and focused. A topic that grows past a few
-  screens of prose gets split rather than padded.
-- **Phase-numbered context is allowed.** Where a decision graduated from a phase of work,
-  the ADR may cite the phase number (`Phase 17`, `D-23`) as historical provenance. The
-  rest of the tree avoids those references — they are noise to a first-time reader.
+- **Present tense.** Every file describes the system as it is today. History
+  belongs in the spec's decision records, not in narrative prose here.
+- **Cross-links are relative within this tree**, and absolute to the spec — so a
+  reader can always tell which layer they are being sent to.
+- **One topic per file.** A topic that outgrows a few screens gets split.
+- **No workflow vocabulary.** Phase numbers, plan identifiers, and planning-tool
+  references are not reference documentation; the `noGsdLeakage` invariant fails
+  the build on them.

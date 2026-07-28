@@ -86,7 +86,7 @@ jobs:
                   cache: npm
 
             - name: Install npm dependencies
-              run: npm ci
+              run: npm ci --ignore-scripts
 
             - name: Build Vite assets
               # Many Blade views call `@vite([...])` which resolves URLs
@@ -169,14 +169,10 @@ jobs:
             # from the `plugins.nativephp.com` Composer repository
             # (`mobile-app/composer.json` `repositories.nativephp-plugins`,
             # 15-03-SUMMARY.md). `composer install` below cannot resolve them
-            # without http-basic credentials. Before this job can succeed, add
-            # two repository secrets under Settings > Secrets and variables >
-            # Actions:
-            #   NATIVEPHP_LICENSE_EMAIL — the plugins.nativephp.com account email
-            #   NATIVEPHP_LICENSE_KEY   — that account's license/API key
-            # (the same credential pair already resolved locally from the
-            # developer's own `~/.composer/auth.json` — 15-03-SUMMARY.md; no
-            # project-local auth.json exists and none should ever be committed).
+            # without http-basic credentials. Two repository secrets supply
+            # them — NATIVEPHP_LICENSE_EMAIL and NATIVEPHP_LICENSE_KEY — and
+            # they are set. Composer reads the pair from the environment; no
+            # project-local auth.json exists and none should ever be committed.
             COMPOSER_AUTH: >-
                 {"http-basic":{"plugins.nativephp.com":{"username":"${{ secrets.NATIVEPHP_LICENSE_EMAIL }}","password":"${{ secrets.NATIVEPHP_LICENSE_KEY }}"}}}
         steps:
@@ -199,23 +195,46 @@ jobs:
                   restore-keys: |
                       composer-mobile-${{ runner.os }}-${{ matrix.php }}-
 
-            - name: Install Composer dependencies (mobile-app/ root)
-              working-directory: mobile-app
-              run: composer install --prefer-dist --no-interaction --no-progress
+            - name: Set up Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+              with:
+                  node-version: '22'
+                  cache: npm
 
-            - name: Prepare environment for the mobile-scoped Pest pass
-              # mobile-app/.env is gitignored (own, machine-local — mirrors
-              # the developer's own local setup, 15-TOPOLOGY-SPIKE-FINDINGS.md).
-              # There is no mobile-app/.env.example; the repo-root one is the
-              # single source of truth for required keys and is copied in,
-              # same shape as the desktop `quality` job's own env prep above.
+            - name: Build Vite assets
+              # mobile-app/public is a symlink to the repo-root public/, so the
+              # manifest is built once at the root and both shells read it.
+              # Without this every view render in the mobile suite returns 500
+              # with ViteManifestNotFoundException — thirty tests, none of whose
+              # messages mention Vite.
+              run: npm ci --ignore-scripts && npm run build
+
+            - name: Lay down the mobile environment
+              # Before the install, not after. Composer's post-autoload-dump
+              # hook runs `artisan package:discover`, which boots the framework
+              # — and a boot with no .env and no writable framework directories
+              # fails resolving `request`. A fresh clone has neither, because
+              # mobile-app/.env is gitignored (machine-local, mirroring the
+              # developer's own setup) and there is no mobile-app/.env.example:
+              # the repo-root one is the single source of truth for the keys.
+              #
+              # Nothing here needs the framework, so it can run before Composer
+              # has put one there.
               working-directory: mobile-app
               run: |
                   cp ../.env.example .env
-                  php artisan key:generate --ansi
                   mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   touch database/database.sqlite
                   chmod -R u+rwX storage bootstrap/cache
+
+            - name: Install Composer dependencies (mobile-app/ root)
+              # Credentials come from the job-level COMPOSER_AUTH above.
+              working-directory: mobile-app
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Mint the mobile application key
+              working-directory: mobile-app
+              run: php artisan key:generate --ansi
 
             - name: Assert shared-module discovery (Mobile enabled, Desktop excluded)
               # T-15-34: the mobile shell must never silently pick up a
