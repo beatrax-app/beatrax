@@ -19,17 +19,20 @@ exclude = [
   # Release and compare URLs that only exist once a release is cut, and
   # settings pages that require authentication to resolve.
   "^https://github\\.com/beatrax-app/beatrax/(releases|compare|security|settings|discussions)",
-  # Badge endpoints rate-limit aggressively under CI, and three of them cannot
-  # resolve until their first publish: Codecov has no report until the coverage
-  # workflow uploads one, Scorecard has no entry until its workflow runs on the
-  # default branch, and SonarCloud has no project until automatic analysis has
-  # scanned main. All three 404 or hang meanwhile, which says nothing about the
-  # readme being correct.
+  # Badge endpoints rate-limit aggressively under CI, and they cannot resolve
+  # until their first publish: Scorecard has no entry until its workflow runs
+  # on the default branch, and SonarCloud has no project until a scan lands on
+  # main. They 404 or hang meanwhile, which says nothing about the readme.
   "^https://img\\.shields\\.io/",
-  "^https://codecov\\.io/",
   "^https://api\\.scorecard\\.dev/",
   "^https://scorecard\\.dev/",
   "^https://sonarcloud\\.io/",
+  # The Hippocratic License text, linked from NOTICE.md. The URL is live — it
+  # answers 200 from a browser and from a developer machine — but the host
+  # refuses connections from GitHub's runner ranges, which failed this check on
+  # consecutive runs with "Connection failed" while the link was fine. Checking
+  # it from CI measures the host's firewall, not the licence reference.
+  "^https://firstdonoharm\\.dev/",
 ]
 exclude_loopback = true
 max_retries = 2
