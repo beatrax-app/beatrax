@@ -79,11 +79,11 @@
                             type="button"
                             wire:click="togglePin({{ $row->id }})"
                             aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
-                            aria-label="{{ $row->pinned ? 'Unpin from dashboard' : 'Pin to dashboard' }}"
+                            aria-label="{{ $row->pinned ? 'Pinned — unpin from dashboard' : 'Pin — pin to dashboard' }}"
                             title="{{ $row->pinned ? 'Pinned' : 'Pin to dashboard' }}"
                             class="chip"
                             style="{{ $row->pinned ? 'background: var(--color-text); color: var(--color-text-inverse); border-color: var(--color-text);' : '' }}"
-                        >{{ $row->pinned ? '📌 Pinned' : '📌 Pin' }}</button>
+                        ><span aria-hidden="true">📌</span> {{ $row->pinned ? 'Pinned' : 'Pin' }}</button>
                     </header>
 
                     <p class="cp-recent" style="margin: 0;">{{ $row->summary }}</p>
@@ -145,10 +145,10 @@
                                     type="button"
                                     wire:click="togglePin({{ $row->id }})"
                                     aria-pressed="{{ $row->pinned ? 'true' : 'false' }}"
-                                    aria-label="{{ $row->pinned ? 'Unpin from dashboard' : 'Pin to dashboard' }}"
+                                    aria-label="{{ $row->pinned ? 'Pinned — unpin from dashboard' : 'Pin — pin to dashboard' }}"
                                     class="chip"
                                     style="{{ $row->pinned ? 'background: var(--color-text); color: var(--color-text-inverse); border-color: var(--color-text);' : '' }}"
-                                >{{ $row->pinned ? '📌 Pinned' : '📌 Pin' }}</button>
+                                ><span aria-hidden="true">📌</span> {{ $row->pinned ? 'Pinned' : 'Pin' }}</button>
                             </td>
                             <td style="padding: var(--space-2) var(--space-3); text-align: right;">
                                 <div style="display: inline-flex; align-items: center; gap: var(--space-2);">

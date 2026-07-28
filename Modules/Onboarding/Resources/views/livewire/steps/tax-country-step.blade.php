@@ -22,7 +22,6 @@
             id="wiz-tax-country-select"
             wire:model.live="taxCountryCode"
             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            aria-label="Tax country"
             data-testid="wiz-tax-country-select"
         >
             <option value="">Choose a country…</option>
