@@ -56,9 +56,13 @@
             margin-bottom: 4pt;
         }
 
-        .summary-table td {
+        /* th is included so the row labels keep the cell metrics they had as
+           td, and text-align resets the centring a th would otherwise take. */
+        .summary-table td,
+        .summary-table th {
             padding: 3pt 6pt;
             font-size: 10pt;
+            text-align: left;
         }
 
         table.tx-table {
@@ -119,17 +123,20 @@
 
 {{-- Summary block --}}
 <div class="summary-block">
+    {{-- Two label/value pairs per row, so the header for each value is the
+         cell to its left, not a column heading: th scope="row" says exactly
+         that. The labels were already rendered bold, which is what a th is. --}}
     <table class="summary-table">
         <tr>
-            <td><span class="summary-label">Year:</span></td>
+            <th scope="row" class="summary-label">Year:</th>
             <td>{{ $data->year }}</td>
-            <td><span class="summary-label">Total items:</span></td>
+            <th scope="row" class="summary-label">Total items:</th>
             <td>{{ $data->itemCount }}</td>
         </tr>
         <tr>
-            <td><span class="summary-label">Total deductions:</span></td>
+            <th scope="row" class="summary-label">Total deductions:</th>
             <td>&euro; {{ number_format($data->deductionsTotalMinor / 100, 2, '.', ',') }}</td>
-            <td><span class="summary-label">Total income:</span></td>
+            <th scope="row" class="summary-label">Total income:</th>
             <td>&euro; {{ number_format($data->incomeTotalMinor / 100, 2, '.', ',') }}</td>
         </tr>
     </table>

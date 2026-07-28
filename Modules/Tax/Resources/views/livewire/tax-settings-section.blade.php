@@ -119,7 +119,9 @@
 
         {{-- Add category form --}}
         <div class="mt-3 flex gap-2" data-testid="add-category-form">
+            <label for="new-category-name" class="sr-only">New category name</label>
             <input
+                id="new-category-name"
                 wire:model="newCategoryName"
                 type="text"
                 placeholder="New category name…"
