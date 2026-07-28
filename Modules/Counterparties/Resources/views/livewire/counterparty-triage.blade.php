@@ -69,7 +69,7 @@
     </div>
 
     @if ($queueEmpty)
-        <section class="triage-card" role="region" aria-label="All counterparties labeled">
+        <section class="triage-card" aria-label="All counterparties labeled">
             <h2 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">
                 🎉 All caught up — every counterparty is labeled.
             </h2>

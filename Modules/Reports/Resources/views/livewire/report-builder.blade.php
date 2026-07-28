@@ -162,10 +162,10 @@
                 </div>
                 @if ($periodPreset === 'custom')
                     <div class="srch-date-range mt-2">
-                        <label class="srch-filter-label">From</label>
-                        <input type="date" wire:model.live="customFrom" class="srch-date-input" aria-label="Custom range start" />
-                        <label class="srch-filter-label mt-1">To</label>
-                        <input type="date" wire:model.live="customTo" class="srch-date-input" aria-label="Custom range end" />
+                        <label for="report-custom-from" class="srch-filter-label">From</label>
+                        <input id="report-custom-from" type="date" wire:model.live="customFrom" class="srch-date-input" />
+                        <label for="report-custom-to" class="srch-filter-label mt-1">To</label>
+                        <input id="report-custom-to" type="date" wire:model.live="customTo" class="srch-date-input" />
                     </div>
                 @endif
             </div>

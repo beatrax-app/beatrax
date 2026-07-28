@@ -63,7 +63,10 @@
                                 class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
                             ><span>Copy public key</span></button>
 
-                            <label class="block text-xs font-medium text-slate-500 mt-3 dark:text-slate-400">Redirect URI</label>
+                            {{-- Not a label: what follows is a copy button, not a
+                                 form control, so there is nothing for a label to
+                                 associate with. --}}
+                            <p class="block text-xs font-medium text-slate-500 mt-3 dark:text-slate-400">Redirect URI</p>
                             {{-- IN-04: the redirect URI is carried on a
                                  data-* attribute (HTML-escaped by Blade) and
                                  read via $el.dataset — never string-baked into

@@ -62,7 +62,6 @@
 @endphp
 <section
     class="preview-section"
-    role="region"
     aria-labelledby="preview-section-{{ $section->sourceFormat }}-eyebrow"
 >
     <p

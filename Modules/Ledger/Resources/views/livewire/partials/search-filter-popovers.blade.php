@@ -60,10 +60,14 @@
             @endforeach
 
             <div class="srch-date-range mt-2">
-                <label class="srch-filter-label">From</label>
-                <input type="date" wire:model.live="filterAfter" class="srch-date-input" aria-label="After date" />
-                <label class="srch-filter-label mt-1">To</label>
-                <input type="date" wire:model.live="filterBefore" class="srch-date-input" aria-label="Before date" />
+                {{-- for/id rather than aria-label on the input: the label was
+                     rendered but attached to nothing, and an aria-label that
+                     does not contain the visible text gives the field a name
+                     no one can say out loud to a user looking at "From". --}}
+                <label for="search-filter-after" class="srch-filter-label">From</label>
+                <input id="search-filter-after" type="date" wire:model.live="filterAfter" class="srch-date-input" />
+                <label for="search-filter-before" class="srch-filter-label mt-1">To</label>
+                <input id="search-filter-before" type="date" wire:model.live="filterBefore" class="srch-date-input" />
             </div>
         </div>
     </div>

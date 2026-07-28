@@ -307,14 +307,17 @@
                 </div>
 
                 @if ($scenario instanceof ForecastDto)
-                    <aside class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
+                    {{-- Named because a page may carry more than one complementary
+                         landmark, and a list of unlabelled "complementary" entries
+                         tells a screen-reader user nothing about which is which. --}}
+                    <aside aria-label="Scenario editor" class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
                         @livewire('forecasting.scenario-editor-sidebar', [
                             'scenarioId' => $activeScenarioId,
                         ], key('scenario-sidebar-' . $activeScenarioId))
                     </aside>
                 @elseif ($showConfidenceLegend)
-                    <aside class="rounded-lg border border-slate-200 bg-white p-4 space-y-2 dark:bg-slate-950 dark:border-slate-700" data-testid="confidence-legend">
-                        <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300">Series confidence</h3>
+                    <aside aria-labelledby="confidence-legend-heading" class="rounded-lg border border-slate-200 bg-white p-4 space-y-2 dark:bg-slate-950 dark:border-slate-700" data-testid="confidence-legend">
+                        <h3 id="confidence-legend-heading" class="text-sm font-medium text-slate-700 dark:text-slate-300">Series confidence</h3>
                         @if (count($baseline->seriesConfidence) === 0)
                             <p class="text-xs text-slate-500 dark:text-slate-400">No series contribute to this account's forecast yet.</p>
                         @else
