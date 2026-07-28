@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
@@ -28,6 +29,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ForecastPage extends Component
 {
+    use CoercesScalars;
+
     // 'all' is a sentinel value: it selects the All-accounts aggregate
     // view rather than a specific account id.
     #[Url(as: 'account', except: 'all')]
@@ -613,19 +616,5 @@ final class ForecastPage extends Component
                 ],
             ],
         ];
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Dto\TriageBatch;
 use Modules\Categorization\Public\Dto\TriageRow;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -19,6 +20,8 @@ use stdClass;
 // posted_at values, and a single-column cursor would silently drop them.
 final class UncategorizedTriageQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
@@ -108,15 +111,5 @@ final class UncategorizedTriageQuery
             description: $description,
             counterpartySlug: $counterpartySlug,
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

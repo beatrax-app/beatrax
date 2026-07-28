@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Internal\Pipeline;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Models\ForecastRun;
@@ -19,6 +20,8 @@ use Throwable;
  */
 final readonly class ProjectionPipeline
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private BalanceAnchorResolver $anchor,
@@ -188,19 +191,5 @@ final readonly class ProjectionPipeline
             'horizon_days' => $horizonDays,
             'accounts' => $accountsResult,
         ];
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

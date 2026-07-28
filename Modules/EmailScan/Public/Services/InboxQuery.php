@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\EmailScan\Public\Dto\InboxHealthDto;
 use stdClass;
 
@@ -17,6 +18,8 @@ use stdClass;
 // user's row so the HTTP layer translates it into a 404.
 final class InboxQuery
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     /**
@@ -170,15 +173,5 @@ final class InboxQuery
         }
 
         return is_string($value) ? $value : (is_scalar($value) ? (string) $value : null);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

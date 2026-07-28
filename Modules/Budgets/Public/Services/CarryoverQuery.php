@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Budgets\Public\Dto\EnvelopeRow;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -21,6 +22,8 @@ use Psr\Log\LoggerInterface;
  */
 final class CarryoverQuery
 {
+    use CoercesScalars;
+
     private const CURRENCY = 'EUR';
 
     // The default over-budget notify threshold (percent) for an envelope
@@ -128,7 +131,7 @@ final class CarryoverQuery
                 $nonEurSpent = 0;
                 $prefix = "{$categoryId}|";
                 foreach ($spentByKey as $key => $minor) {
-                    $keyStr = self::toStr($key);
+                    $keyStr = self::toString($key);
                     if (str_starts_with($keyStr, $prefix) && ! str_ends_with($keyStr, '|'.self::CURRENCY)) {
                         $nonEurSpent += self::toInt($minor);
                     }
@@ -219,7 +222,7 @@ final class CarryoverQuery
         }
 
         try {
-            return CarbonImmutable::parse(self::toStr($raw));
+            return CarbonImmutable::parse(self::toString($raw));
         } catch (\Throwable) {
             return null;
         }
@@ -304,7 +307,7 @@ final class CarryoverQuery
         $thresholds = [];
         foreach ($rows as $row) {
             $categoryId = self::toInt($row->category_id);
-            $modes[$categoryId] = self::toStr($row->overspend_mode);
+            $modes[$categoryId] = self::toString($row->overspend_mode);
             $thresholds[$categoryId] = is_numeric($row->threshold_percent ?? null)
                 ? (int) $row->threshold_percent
                 : self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
@@ -315,7 +318,7 @@ final class CarryoverQuery
 
     private static function periodKeyFromRaw(mixed $value): string
     {
-        $raw = self::toStr($value);
+        $raw = self::toString($value);
         if ($raw === '') {
             return '';
         }
@@ -325,15 +328,5 @@ final class CarryoverQuery
         } catch (\Throwable) {
             return $raw;
         }
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

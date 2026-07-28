@@ -13,6 +13,7 @@ use Modules\Categorization\Public\Dto\CategorizationRuleDto;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -23,6 +24,8 @@ use stdClass;
 // boundary — never inside RuleEngine's per-transaction hot loop.
 final readonly class CategorizationRuleQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -300,10 +303,5 @@ final readonly class CategorizationRuleQuery
         }
 
         return $out;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Recurring\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
@@ -15,6 +16,8 @@ use stdClass;
 // fallback), so it's the one field the caller resolves and supplies.
 final class RecurringSeriesDtoMapper
 {
+    use CoercesScalars;
+
     /**
      * @param  stdClass  $row  raw recurring_series row
      * @param  int|null  $resolvedChainLinkId  the chain link the caller
@@ -76,19 +79,5 @@ final class RecurringSeriesDtoMapper
             snoozedUntil: $snoozedUntil,
             latestFxRateUsed: $latestFxRateUsed,
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

@@ -7,6 +7,7 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\TopCategoryRow;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -17,6 +18,8 @@ use stdClass;
  */
 final class TopCategoriesByPeriodQuery
 {
+    use CoercesScalars;
+
     public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
 
     private const MAX_PARENT_DEPTH = 16;
@@ -139,15 +142,5 @@ final class TopCategoriesByPeriodQuery
         }
 
         return implode(' / ', $parts);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

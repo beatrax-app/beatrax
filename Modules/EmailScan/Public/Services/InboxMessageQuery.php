@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Generator;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use stdClass;
 
@@ -17,6 +18,8 @@ use stdClass;
 // validated so a typo call site fails loud, not silently zero rows.
 readonly class InboxMessageQuery
 {
+    use CoercesScalars;
+
     private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];
 
     public function __construct(private DatabaseManager $db) {}
@@ -53,16 +56,6 @@ readonly class InboxMessageQuery
                 fetchedAt: self::toDateTime($row->fetched_at),
             );
         }
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
     }
 
     private static function toNullableString(mixed $value): ?string

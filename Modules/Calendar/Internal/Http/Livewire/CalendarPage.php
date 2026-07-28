@@ -12,6 +12,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\UserPreference;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use stdClass;
@@ -21,6 +22,8 @@ use stdClass;
  */
 final class CalendarPage extends Component
 {
+    use CoercesScalars;
+
     #[Url(as: 'month', except: null)]
     public ?int $month = null;
 
@@ -353,19 +356,5 @@ final class CalendarPage extends Component
         }
 
         return $ints;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

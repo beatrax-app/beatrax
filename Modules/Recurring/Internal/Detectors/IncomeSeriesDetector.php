@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
@@ -31,6 +32,8 @@ use stdClass;
  */
 final class IncomeSeriesDetector implements SeriesDetector
 {
+    use CoercesScalars;
+
     private const DEFAULT_WINDOW_MONTHS = 2;
 
     private const DEFAULT_MIN_AMOUNT_MINOR = 200000;
@@ -92,15 +95,15 @@ final class IncomeSeriesDetector implements SeriesDetector
         $groups = [];
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $counterparty = self::toStringNullable($row->counterparty_normalized);
-            $iban = self::toStringNullable($row->counterparty_iban);
+            $counterparty = self::toString($row->counterparty_normalized);
+            $iban = self::toString($row->counterparty_iban);
             if ($iban !== '' && $session !== null) {
                 // Decrypt BEFORE the value becomes the cluster key — a
                 // no-op pass-through when the value is already plaintext
                 // (not encrypted / no epoch verifies).
                 $iban = $this->codec->decryptValue('transactions', 'counterparty_iban', $iban, $user->id, $session)['value'];
             }
-            $currency = self::toStringNullable($row->currency);
+            $currency = self::toString($row->currency);
             if ($currency === '') {
                 continue;
             }
@@ -151,7 +154,7 @@ final class IncomeSeriesDetector implements SeriesDetector
 
         $timestamps = [];
         foreach ($rows as $row) {
-            $timestamps[] = CarbonImmutable::parse(self::toStringNullable($row->posted_at));
+            $timestamps[] = CarbonImmutable::parse(self::toString($row->posted_at));
         }
         $cadenceResult = $this->cadenceInferrer->infer($timestamps);
         if ($cadenceResult['cadence'] === 'irregular') {
@@ -379,7 +382,7 @@ final class IncomeSeriesDetector implements SeriesDetector
                 'user_id' => $userId,
                 'recurring_series_id' => $seriesId,
                 'transaction_id' => self::toInt($row->id),
-                'observed_at' => self::toStringNullable($row->posted_at),
+                'observed_at' => self::toString($row->posted_at),
                 'observed_amount_minor' => self::toInt($row->amount_minor),
                 'observed_currency' => $currency,
                 'created_at' => $now,
@@ -406,22 +409,5 @@ final class IncomeSeriesDetector implements SeriesDetector
             'yearly' => (int) round($latestAmountMinor / 12),
             default => null,
         };
-    }
-
-    private static function toStringNullable(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-        if (is_scalar($value)) {
-            return (string) $value;
-        }
-
-        return '';
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

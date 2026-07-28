@@ -7,6 +7,7 @@ namespace Modules\Categorization\Internal\Listeners;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Categorization\Public\Events\TransactionCategorized;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Pipeline\NormalizeStage;
 
@@ -15,6 +16,8 @@ use Modules\Import\Public\Pipeline\NormalizeStage;
  */
 final class MerchantMemoryWriter
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -107,10 +110,5 @@ final class MerchantMemoryWriter
         return str_contains($message, 'UNIQUE constraint failed')
             || str_contains($message, 'Duplicate entry')
             || str_contains($message, 'duplicate key value');
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

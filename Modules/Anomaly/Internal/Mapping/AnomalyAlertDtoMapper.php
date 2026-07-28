@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Internal\Mapping;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
 use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -16,6 +17,8 @@ use stdClass;
 // call sites never branch on null.
 final class AnomalyAlertDtoMapper
 {
+    use CoercesScalars;
+
     /**
      * @param  stdClass  $row  raw anomaly_alerts row
      * @param  string|null  $displayName  resolved merchant display string
@@ -92,20 +95,6 @@ final class AnomalyAlertDtoMapper
     private static function toCurrency(mixed $value): string
     {
         return is_string($value) && $value !== '' ? $value : 'EUR';
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 
     private static function toStringOrNull(mixed $value): ?string

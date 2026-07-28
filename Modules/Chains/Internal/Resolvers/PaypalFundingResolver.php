@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -24,6 +25,8 @@ use stdClass;
  */
 final class PaypalFundingResolver
 {
+    use CoercesScalars;
+
     public const AMOUNT_BAND_PERCENT = 2;
 
     public const DATE_WINDOW_DAYS = 3;
@@ -584,15 +587,5 @@ final class PaypalFundingResolver
     private function formatConfidence(float $value): string
     {
         return number_format($value, 3, '.', '');
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

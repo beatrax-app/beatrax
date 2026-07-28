@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Models\RuleAction;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
 
 /**
@@ -15,6 +16,8 @@ use stdClass;
  */
 final class RuleEngine
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     // A rule with combinator = 'all' fires only when every condition
@@ -178,11 +181,6 @@ final class RuleEngine
         $hi = $bound1->lessThanOrEqualTo($bound2) ? $bound2 : $bound1;
 
         return $target->greaterThanOrEqualTo($lo) && $target->lessThanOrEqualTo($hi);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toIntValue(string $value): int

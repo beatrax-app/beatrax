@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\Mapping\DriftAlertDtoMapper;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
@@ -19,6 +20,8 @@ use stdClass;
  */
 final readonly class DriftAlertQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -198,10 +201,5 @@ final readonly class DriftAlertQuery
     private function loadSeriesDisplayNames(User $user, array $seriesIds): array
     {
         return $this->recurringQuery->displayNamesForSeriesIds($seriesIds, $user);
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

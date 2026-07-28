@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultRow;
@@ -18,6 +19,8 @@ use stdClass;
  */
 final class CounterpartySpendQuery
 {
+    use CoercesScalars;
+
     private const NO_COUNTERPARTY_SENTINEL = -1;
 
     public function __construct(
@@ -118,10 +121,5 @@ final class CounterpartySpendQuery
             'income', 'net' => 'SUM(settled_amount_minor)',
             default => throw new InvalidArgumentException("Unknown report metric: {$metric}"),
         };
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }
