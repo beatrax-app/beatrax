@@ -321,7 +321,13 @@
             </div>
         @endif
 
-        <div class="side-account" role="button" tabindex="0">
+        {{--
+            No role or tabindex: this block displays who is signed in and has
+            no action behind it. Announcing it as a button promised assistive
+            technology something that was never wired up, and the tab stop was
+            a dead end on the way to Sign out.
+        --}}
+        <div class="side-account">
             <div class="avatar" aria-hidden="true">{{ $userInitial }}</div>
             <div>
                 <span class="name">{{ $username }}</span>

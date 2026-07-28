@@ -32,7 +32,9 @@
 
     <div class="mt-3 flex items-center gap-1">
         <span class="text-sm text-slate-500 dark:text-slate-400" aria-hidden="true">{{ $symbol }}</span>
+        <label for="buffer-input-{{ $accountId }}" class="sr-only">Minimum buffer for {{ $accountName }}</label>
         <input
+            id="buffer-input-{{ $accountId }}"
             type="text"
             inputmode="decimal"
             pattern="[0-9.,]+"

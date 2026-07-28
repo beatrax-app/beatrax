@@ -203,7 +203,11 @@
                                                     <div class="text-slate-500">pattern — existing: <span class="font-mono">{{ $conflict['existing_generalized_pattern'] ?? '' }}</span> → file: <span class="font-mono">{{ $conflict['entry']['generalized_pattern'] }}</span></div>
                                                 @endif
                                             </div>
+                                            {{-- $loop->index, not the pattern: a pattern is free text and
+                                                 would not survive as an HTML id. --}}
+                                            <label for="conflict-resolution-{{ $loop->index }}" class="sr-only">Resolution for {{ $conflict['entry']['pattern'] }}</label>
                                             <select
+                                                id="conflict-resolution-{{ $loop->index }}"
                                                 wire:model="conflictResolutions.{{ $conflict['entry']['pattern'] }}"
                                                 class="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700"
                                             >

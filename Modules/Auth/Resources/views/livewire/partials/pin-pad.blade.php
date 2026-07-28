@@ -9,7 +9,8 @@
                dots below render from the local `pin`, the buttons mutate it
                locally, and only submitPin() sends the PIN to the server
                (once, as a method argument). Digits are displayed as bullet
-               glyphs in an aria-live region, never as <input type="password">.
+               glyphs in an aria-live region, never as an `input` of type
+               `password`.
                No autocomplete attribute is set. OS password managers and
                screenshot tools see only bullets.
 

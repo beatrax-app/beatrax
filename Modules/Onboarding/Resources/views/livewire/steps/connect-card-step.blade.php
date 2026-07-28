@@ -2,7 +2,7 @@
     Connect-card step — wizard step 3. ICS Cards's consumer portal only
     exports monthly PDF statements, so the user typically downloads
     several months at once and drops them all into one queue. The drop
-    zone wraps a multi-file `<input>`; each queued PDF renders as a
+    zone wraps a multi-file `input`; each queued PDF renders as a
     chip below the drop zone with filename, size, and remove button.
 
     Submission delegates per-file to the existing `RunsImports`

@@ -184,13 +184,12 @@
                                     @elseif ($row->counterpartyIban !== null)
                                         <span class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $row->counterpartyIban }}</span>
                                     @elseif ($row->description !== null)
-                                        <span
+                                        <button
+                                            type="button"
                                             class="desc-fallback"
-                                            tabindex="0"
-                                            role="button"
                                             aria-label="Rename this counterparty"
                                             wire:click="$dispatch('rename-counterparty:open', { raw: @js($row->description), rowIndex: {{ $row->rowIndex }} })"
-                                        >{{ $row->description }}</span>
+                                        >{{ $row->description }}</button>
                                     @else
                                         —
                                     @endif

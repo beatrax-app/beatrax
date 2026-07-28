@@ -180,7 +180,8 @@
                 </div>
             </div>
         <!--[if ENDBLOCK]><![endif]-->
-        <div class="side-account" role="button" tabindex="0">
+        
+        <div class="side-account">
             <div class="avatar" aria-hidden="true">S</div>
             <div>
                 <span class="name">snap-dev</span>

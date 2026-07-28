@@ -89,7 +89,9 @@
                                 </td>
                                 <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->amountMinor, $row->currency) }}</td>
                                 <td class="px-4 py-2">
+                                    <label for="triage-category-{{ $row->transactionId }}" class="sr-only">Category for {{ $row->counterpartyName ?? 'this transaction' }}</label>
                                     <select
+                                        id="triage-category-{{ $row->transactionId }}"
                                         x-on:change="$wire.selectForRow({{ $row->transactionId }}, $event.target.value ? parseInt($event.target.value, 10) : null)"
                                         class="block w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >

@@ -1207,6 +1207,10 @@ td.date,
         padding: 2px 4px;
         border-radius: var(--radius-sm);
         transition: var(--tx-quick);
+        /* The element is a <button>, which centres its text by default; a
+           wrapped description must read from the same edge as the plain-text
+           branches of the same fallback chain. */
+        text-align: inherit;
     }
 
     .desc-fallback:hover,

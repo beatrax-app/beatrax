@@ -9,7 +9,7 @@
      `backfill-window:open` Livewire event. Re-opens via the inline
      [Edit] link on every connected-inbox row.
 
-     The slider is a plain <input type="range"> wired with wire:model.live
+     The slider is a plain `input type="range"` wired with wire:model.live
      so the inline readout updates on every drag tick — the installed
      Flux build does not ship a flux:input.range primitive yet, so the
      hand-rolled range input fills the gap with the same focus chrome. --}}
