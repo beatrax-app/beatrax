@@ -41,7 +41,8 @@
                 wire:click="acknowledge({{ $alert->id }})"
                 wire:loading.attr="disabled"
                 wire:target="acknowledge({{ $alert->id }})"
-                aria-label="Mark system alert #{{ $alert->id }} as resolved"
+                aria-label="Install on next launch — marks system alert #{{ $alert->id }} as resolved"
+                data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-slate-900 text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300"
             >Install on next launch</button>
             <button
@@ -68,7 +69,8 @@
                 wire:click="acknowledge({{ $alert->id }})"
                 wire:loading.attr="disabled"
                 wire:target="acknowledge({{ $alert->id }})"
-                aria-label="Mark system alert #{{ $alert->id }} as resolved"
+                aria-label="Update now — marks system alert #{{ $alert->id }} as resolved"
+                data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-amber-600 text-white hover:bg-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-600 px-3 py-1.5 text-sm font-medium dark:bg-amber-500 dark:hover:bg-amber-400"
             >Update now</button>
             <button
@@ -87,7 +89,8 @@
                 wire:click="acknowledge({{ $alert->id }})"
                 wire:loading.attr="disabled"
                 wire:target="acknowledge({{ $alert->id }})"
-                aria-label="Mark system alert #{{ $alert->id }} as resolved"
+                aria-label="Install on next launch — marks system alert #{{ $alert->id }} as resolved"
+                data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-400 dark:bg-rose-500"
             >Install on next launch</button>
         </div>
@@ -98,7 +101,8 @@
             wire:click="acknowledge({{ $alert->id }})"
             wire:loading.attr="disabled"
             wire:target="acknowledge({{ $alert->id }})"
-            aria-label="Mark system alert #{{ $alert->id }} as resolved"
+            aria-label="Mark as resolved — system alert #{{ $alert->id }}"
+            data-testid="resolve-alert-{{ $alert->id }}"
             @class([
                 'rounded px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-600 dark:hover:bg-rose-400 dark:bg-rose-500' => $alert->severity === 'critical',

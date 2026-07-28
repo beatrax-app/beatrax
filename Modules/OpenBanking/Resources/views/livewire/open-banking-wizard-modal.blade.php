@@ -50,7 +50,6 @@
                             <textarea
                                 id="ob-public-key"
                                 readonly
-                                aria-label="Public key"
                                 class="block w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                                 rows="6"
                                 onclick="this.select()"

@@ -127,14 +127,14 @@
                 <button
                     type="button"
                     wire:click="modelCancelInForecast({{ $alert->driftAlertId }})"
-                    aria-label="Model cancellation in forecast for drift alert {{ $alert->driftAlertId }}"
+                    aria-label="Model cancel — models the cancellation in the forecast for drift alert {{ $alert->driftAlertId }}"
                     class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-900 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                     style="font-variant-numeric: tabular-nums;"
                 >Model cancel ↗</button>
                 <button
                     type="button"
                     wire:click="dismissAsCancelled({{ $alert->driftAlertId }})"
-                    aria-label="Dismiss drift alert {{ $alert->driftAlertId }} as cancelled"
+                    aria-label="I cancelled this — dismisses drift alert {{ $alert->driftAlertId }} as cancelled"
                     class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >I cancelled this</button>
             </div>

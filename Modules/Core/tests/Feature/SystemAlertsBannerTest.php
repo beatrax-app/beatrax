@@ -91,7 +91,11 @@ it('renders the critical backup_corrupt template with its aria-label', function 
 
     Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class)
         ->assertSee('failed integrity check')
-        ->assertSeeHtml('aria-label="Mark system alert #'.$id.' as resolved"')
+        ->assertSeeHtml('data-testid="resolve-alert-'.$id.'"')
+        // This test is about the announced name, so it asserts the name
+        // itself. It leads with the button's visible text so speech input
+        // can act on what the user can read.
+        ->assertSeeHtml('aria-label="Mark as resolved — system alert #'.$id.'"')
         ->assertSeeHtml('border-rose-500');
 });
 
@@ -104,10 +108,10 @@ it('removes a row after acknowledging it', function (): void {
     ]);
 
     $component = Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class);
-    $component->assertSeeHtml('aria-label="Mark system alert #'.$id.' as resolved"');
+    $component->assertSeeHtml('data-testid="resolve-alert-'.$id.'"');
 
     $component->call('acknowledge', $id);
-    $component->assertDontSeeHtml('aria-label="Mark system alert #'.$id.' as resolved"');
+    $component->assertDontSeeHtml('data-testid="resolve-alert-'.$id.'"');
 
     /** @var SystemAlert $row */
     $row = SystemAlert::query()->findOrFail($id);
@@ -131,8 +135,8 @@ it('does not surface another user\'s alerts (cross-user isolation), but shows sy
 
     $component = Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class);
 
-    $component->assertDontSeeHtml('aria-label="Mark system alert #'.$bId.' as resolved"');
-    $component->assertSeeHtml('aria-label="Mark system alert #'.$sysId.' as resolved"');
+    $component->assertDontSeeHtml('data-testid="resolve-alert-'.$bId.'"');
+    $component->assertSeeHtml('data-testid="resolve-alert-'.$sysId.'"');
 });
 
 it('refuses cross-user acknowledge attempts via the action (NotFoundHttpException bubbles)', function (): void {

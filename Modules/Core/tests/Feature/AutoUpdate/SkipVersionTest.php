@@ -123,7 +123,7 @@ it('suppresses a subsequent update.available row for an already-skipped version'
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertDontSeeHtml('aria-label="Mark system alert #'.$secondId.' as resolved"');
+        ->assertDontSeeHtml('data-testid="resolve-alert-'.$secondId.'"');
 });
 
 it('still renders update.available for a different version after skipping one version', function (): void {
@@ -148,7 +148,7 @@ it('still renders update.available for a different version after skipping one ve
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
         ->assertSee('beatrax 0.1.2 is ready')
-        ->assertSeeHtml('aria-label="Mark system alert #'.$newId.' as resolved"');
+        ->assertSeeHtml('data-testid="resolve-alert-'.$newId.'"');
 });
 
 it('does not suppress update.stale or update.critical rows even when their latestVersion is in the skip list', function (): void {
@@ -180,6 +180,6 @@ it('does not suppress update.stale or update.critical rows even when their lates
     ]);
 
     $component = Livewire::actingAs($this->user)->test(SystemAlertsBanner::class);
-    $component->assertSeeHtml('aria-label="Mark system alert #'.$staleId.' as resolved"');
-    $component->assertSeeHtml('aria-label="Mark system alert #'.$criticalId.' as resolved"');
+    $component->assertSeeHtml('data-testid="resolve-alert-'.$staleId.'"');
+    $component->assertSeeHtml('data-testid="resolve-alert-'.$criticalId.'"');
 });

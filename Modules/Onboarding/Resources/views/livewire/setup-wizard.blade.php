@@ -65,7 +65,7 @@
             type="button"
             class="wiz-resume-later"
             wire:click="skipRest"
-            aria-label="Resume the setup wizard later — saves your progress"
+            aria-label="Resume later — saves your progress and closes the setup wizard"
         >
             Resume later →
         </button>
@@ -157,7 +157,7 @@
             wire:click.prevent="openHelp"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Open the beatrax issues page on GitHub"
+            aria-label="Need help? Opens the beatrax issues page on GitHub"
         >
             Need help?
         </a>
