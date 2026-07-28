@@ -634,11 +634,10 @@ final class GraphApiClient implements GraphApiClientContract
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    // This used to explain itself as a seam "a future test subclass could
-    // override" — but the class is final, so that subclass could never exist
-    // and the boundary stayed untestable. The client is injectable instead:
-    // null builds the production one, and a test passes a Guzzle instance
-    // backed by a mock handler.
+    // This called itself a seam "a future test subclass could override", but
+    // the class is final, so that subclass could never exist and the boundary
+    // stayed untestable. Injected instead: null builds the production client,
+    // a test passes one backed by a mock handler.
     private function makeHttpClient(): GuzzleClient
     {
         return $this->httpClient ?? new GuzzleClient([

@@ -10,22 +10,15 @@ use Psr\Http\Client\ClientInterface;
 use RuntimeException;
 use TheNetworg\OAuth2\Client\Provider\Azure;
 
-/**
- * Builds the League provider objects that GoogleOAuthProvider and
- * MicrosoftOAuthProvider talk through.
- *
- * They used to construct these inline, which put the only seam for the token
- * exchange and refresh calls inside a private method. Everything past
- * "build the authorization URL" was therefore unreachable from a test without
- * real network, and it stayed at ~2% covered — the token refresh, the
- * invalid_grant handling that decides whether a user is asked to reconnect,
- * and the userinfo read.
- *
- * $httpClient is the reason this class exists. League treats the HTTP client
- * as an injectable collaborator; left null the provider builds its own Guzzle
- * instance, which is what production wants. A test supplies one backed by a
- * mock handler and drives the whole exchange without a socket.
- */
+// Builds the League provider objects GoogleOAuthProvider and
+// MicrosoftOAuthProvider talk through. They constructed these inline, which
+// put the only seam for the token exchange and refresh inside a private
+// method, leaving both unreachable from a test at ~2% covered.
+
+// $httpClient is why this class exists. League treats the HTTP client as an
+// injectable collaborator; left null the provider builds its own Guzzle
+// instance, which is what production wants. A test supplies one backed by a
+// mock handler and drives the whole exchange without a socket.
 final class OAuthProviderFactory
 {
     public function __construct(
