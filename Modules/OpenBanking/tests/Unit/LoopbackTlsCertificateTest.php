@@ -43,12 +43,13 @@ it('generates a self-signed cert covering the loopback host and localhost', func
         ->and($parsed['validTo_time_t'])->toBeGreaterThan(time() + 86400);
 });
 
-it('writes the private key 0600 inside a 0700 directory with a .gitignore', function (): void {
+it('writes both halves 0600 inside a 0700 directory with a .gitignore', function (): void {
     $cert = new LoopbackTlsCertificate($this->tlsDir);
 
     $paths = $cert->ensure();
 
     expect(substr(sprintf('%o', fileperms($paths['key'])), -4))->toBe('0600')
+        ->and(substr(sprintf('%o', fileperms($paths['cert'])), -4))->toBe('0600')
         ->and(substr(sprintf('%o', fileperms($this->tlsDir)), -4))->toBe('0700')
         ->and($this->tlsDir.'/.gitignore')->toBeFile()
         ->and(file_get_contents($this->tlsDir.'/.gitignore'))->toContain('*');
