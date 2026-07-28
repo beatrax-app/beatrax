@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Models\CardStatement;
+use Modules\Chains\Public\Exceptions\CardStatementNotFoundException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -115,8 +116,11 @@ it('applies the documented lifecycle transition per dataset row', function (int 
 })->with('state_transitions');
 
 it('refuses to apply settlement against another user\'s statement and leaves the row untouched', function (): void {
+    // The cross-user case raises the same type as a genuinely absent row,
+    // on purpose: distinguishing them would confirm that another user's
+    // statement exists.
     expect(fn () => $this->machine->applySettlement($this->statementId, 84732, $this->otherUser))
-        ->toThrow(RuntimeException::class);
+        ->toThrow(CardStatementNotFoundException::class);
 
     // Confirm the row is unchanged — no partial write leaked through
     // the transaction frame.

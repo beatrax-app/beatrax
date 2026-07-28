@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\ChainHintPayload\RefundOfPayload;
@@ -80,7 +81,7 @@ final class CreateChainLinkFromHint
             // upstream (e.g. a resource value sneaking into the
             // payload). Surface it at write time rather than silently
             // writing an empty string into a NOT NULL column.
-            throw new \RuntimeException('Failed to json_encode chain_links.evidence for hint event');
+            throw new EvidenceEncodingFailedException('hint event');
         }
 
         $now = $this->clock->now()->toDateTimeString();

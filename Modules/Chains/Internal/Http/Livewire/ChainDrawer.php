@@ -234,9 +234,12 @@ final class ChainDrawer extends Component
 
         $settledCurrency = self::toString($row->settled_currency ?? null);
         $nativeCurrency = self::toString($row->currency ?? null);
-        $currency = $settledCurrency !== ''
-            ? $settledCurrency
-            : ($nativeCurrency !== '' ? $nativeCurrency : 'EUR');
+        // Settled currency wins, then the native one; EUR is the last resort
+        // for a row that carries neither rather than rendering an empty code.
+        $currency = $settledCurrency !== '' ? $settledCurrency : $nativeCurrency;
+        if ($currency === '') {
+            $currency = 'EUR';
+        }
 
         $amountMinor = self::toInt($row->settled_amount_minor ?? $row->amount_minor ?? null);
 
