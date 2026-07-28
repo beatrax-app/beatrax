@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
@@ -61,7 +62,7 @@ final class ChainLinkInsertHelper
             // resource value sneaking into the evidence array). Loud
             // failure surfaces the bug at write time rather than
             // silently writing the empty string into a NOT NULL column.
-            throw new \RuntimeException('Failed to json_encode chain_links.evidence');
+            throw new EvidenceEncodingFailedException('insert helper');
         }
 
         $connection->table('chain_links')->insert([

@@ -28,6 +28,12 @@ final class ChainLinkQuery
 {
     private const MAX_DEPTH = 5;
 
+    private const COUNTERPARTY_SLUG = 'counterparties.slug as counterparty_slug';
+
+    // The sentinel a missing posted_at collapses to, so an unsorted row
+    // orders first rather than throwing on a null date comparison.
+    private const EPOCH_DATE = '1970-01-01';
+
     // Mirrored in ConfirmChainLink; kept private here because the only
     // consumer is the confirmsRemaining derivation.
     private const AUTO_PROMOTE_THRESHOLD = 3;
@@ -369,7 +375,7 @@ final class ChainLinkQuery
                 'transactions.settled_currency',
                 'transactions.booked_at',
                 'transactions.account_id',
-                'counterparties.slug as counterparty_slug',
+                self::COUNTERPARTY_SLUG,
             ])
             ->first();
 
@@ -408,7 +414,7 @@ final class ChainLinkQuery
         $fromCounterparty = '';
         $fromAmountMinor = 0;
         $fromCurrency = 'EUR';
-        $fromPostedAt = '1970-01-01';
+        $fromPostedAt = self::EPOCH_DATE;
         $fromCounterpartySlug = null;
         $fromRow = $this->db->connection()->table('transactions')
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
@@ -419,7 +425,7 @@ final class ChainLinkQuery
                 'transactions.settled_amount_minor',
                 'transactions.settled_currency',
                 'transactions.posted_at',
-                'counterparties.slug as counterparty_slug',
+                self::COUNTERPARTY_SLUG,
             ])
             ->first();
         if ($fromRow !== null) {
@@ -429,7 +435,7 @@ final class ChainLinkQuery
             $fromCurrency = $cur !== '' ? $cur : 'EUR';
             $fromPostedAt = self::toString($fromRow->posted_at ?? null);
             if ($fromPostedAt === '') {
-                $fromPostedAt = '1970-01-01';
+                $fromPostedAt = self::EPOCH_DATE;
             }
             $fromCounterpartySlug = self::extractCounterpartySlug($fromRow);
         }
@@ -437,7 +443,7 @@ final class ChainLinkQuery
         $toCounterparty = '';
         $toAmountMinor = 0;
         $toCurrency = 'EUR';
-        $toPostedAt = '1970-01-01';
+        $toPostedAt = self::EPOCH_DATE;
         $toCounterpartySlug = null;
         if ($row->to_transaction_id !== null) {
             $toRow = $this->db->connection()->table('transactions')
@@ -449,7 +455,7 @@ final class ChainLinkQuery
                     'transactions.settled_amount_minor',
                     'transactions.settled_currency',
                     'transactions.posted_at',
-                    'counterparties.slug as counterparty_slug',
+                    self::COUNTERPARTY_SLUG,
                 ])
                 ->first();
             if ($toRow !== null) {
@@ -459,7 +465,7 @@ final class ChainLinkQuery
                 $toCurrency = $cur !== '' ? $cur : 'EUR';
                 $toPostedAt = self::toString($toRow->posted_at ?? null);
                 if ($toPostedAt === '') {
-                    $toPostedAt = '1970-01-01';
+                    $toPostedAt = self::EPOCH_DATE;
                 }
                 $toCounterpartySlug = self::extractCounterpartySlug($toRow);
             }
@@ -507,7 +513,7 @@ final class ChainLinkQuery
         $fromCounterparty = '';
         $fromAmountMinor = 0;
         $fromCurrency = 'EUR';
-        $fromPostedAt = '1970-01-01';
+        $fromPostedAt = self::EPOCH_DATE;
         $fromAccountId = 0;
         $fromCounterpartySlug = null;
         $fromRow = $this->db->connection()->table('transactions')
@@ -520,7 +526,7 @@ final class ChainLinkQuery
                 'transactions.settled_amount_minor',
                 'transactions.settled_currency',
                 'transactions.posted_at',
-                'counterparties.slug as counterparty_slug',
+                self::COUNTERPARTY_SLUG,
             ])
             ->first();
         if ($fromRow !== null) {
@@ -531,7 +537,7 @@ final class ChainLinkQuery
             $fromCurrency = $cur !== '' ? $cur : 'EUR';
             $fromPostedAt = self::toString($fromRow->posted_at ?? null);
             if ($fromPostedAt === '') {
-                $fromPostedAt = '1970-01-01';
+                $fromPostedAt = self::EPOCH_DATE;
             }
             $fromCounterpartySlug = self::extractCounterpartySlug($fromRow);
         }

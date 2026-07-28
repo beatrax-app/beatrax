@@ -6,9 +6,9 @@ namespace Modules\Chains\Internal;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Public\Dto\StatementSettlement;
+use Modules\Chains\Public\Exceptions\CardStatementNotFoundException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use RuntimeException;
 
 /**
  * @link ../../../.docs/features/chains/architecture.md
@@ -29,8 +29,7 @@ final class CardStatementStateMachine
     {
         $connection = $this->db->connection();
 
-        /** @var StatementSettlement $result */
-        $result = $connection->transaction(function () use ($connection, $statementId, $deltaMinor, $user): StatementSettlement {
+        return $connection->transaction(function () use ($connection, $statementId, $deltaMinor, $user): StatementSettlement {
             // Promote SQLite's wait-for-writer fence — Laravel opens the
             // transaction in DEFERRED mode by default; the pragma asks
             // SQLite to wait up to 5 seconds for a competing writer
@@ -43,9 +42,7 @@ final class CardStatementStateMachine
                 ->first(['id', 'open_balance_minor', 'state']);
 
             if ($row === null) {
-                throw new RuntimeException(
-                    "card_statement {$statementId} not found for user {$user->id}"
-                );
+                throw new CardStatementNotFoundException($statementId, $user->id);
             }
 
             $prevOpen = self::toInt($row->open_balance_minor);
@@ -75,8 +72,6 @@ final class CardStatementStateMachine
                 newState: $newState,
             );
         });
-
-        return $result;
     }
 
     // Numeric coercion for raw query-builder column values: SQLite returns

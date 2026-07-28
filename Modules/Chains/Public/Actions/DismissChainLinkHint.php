@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Actions;
 
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Exceptions\ChainLinkNotDismissableException;
 use Modules\Core\Models\User;
-use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -29,10 +29,7 @@ final class DismissChainLinkHint
         if ($link->to_transaction_id !== null) {
             // Only hint-shaped rows are dismissable; concrete rows
             // route through ConfirmChainLink / RejectChainLink.
-            throw new RuntimeException(
-                'DismissChainLinkHint refuses chain_link '.$chainLinkId
-                    .' — has a concrete to_transaction_id, use confirm/reject instead.',
-            );
+            throw new ChainLinkNotDismissableException($chainLinkId);
         }
 
         $link->delete();

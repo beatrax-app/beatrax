@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\ChainLink;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
+use Modules\Chains\Public\Exceptions\ChainLinkNotDismissableException;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -158,7 +159,7 @@ it('refuses to dismiss a row with a concrete to_transaction_id (use confirm/reje
     $linkId = (int) $this->db->connection()->table('chain_links')->max('id');
 
     expect(fn () => ($this->dismiss)($linkId, $this->user))
-        ->toThrow(RuntimeException::class);
+        ->toThrow(ChainLinkNotDismissableException::class);
 
     // Row must NOT be deleted by the failed guard.
     expect(ChainLink::query()->where('id', $linkId)->exists())->toBeTrue();
