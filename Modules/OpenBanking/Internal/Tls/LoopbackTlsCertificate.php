@@ -38,8 +38,12 @@ final class LoopbackTlsCertificate
             throw new RuntimeException('Unable to write the loopback TLS certificate to '.$this->directory.'.');
         }
 
+        // Both halves are owner-only. The certificate is public material and
+        // 0644 would be harmless inside a 0700 directory, but nothing outside
+        // this process ever reads it: the serve command hands the path straight
+        // to its own stream context, and the user verifies by fingerprint.
         @chmod($keyPath, 0600);
-        @chmod($certPath, 0644);
+        @chmod($certPath, 0600);
 
         return ['cert' => $certPath, 'key' => $keyPath];
     }
