@@ -72,7 +72,7 @@ read-model queries the UI consumes:
   carries the winning candidate (or "none") between the evaluator and
   the stage.
 - **Internal/Listeners/SeedDefaultCategoryTree** + `SeedDefaultCategorizationRules`
-  + `MerchantMemoryWriter` — the three listeners that wire the module
+  - `MerchantMemoryWriter` — the three listeners that wire the module
   into `UserInstalled` and `TransactionCategorized`.
 - **Internal/Http/Livewire/** — `TriageInbox`, `InlineCategoryPicker`,
   `RulesPage`, `RuleFormModal`, `CategorizationProvenancePanel`,

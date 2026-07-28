@@ -82,7 +82,7 @@ What the module explicitly does NOT do:
   promoted because the `to` endpoint is still NULL).
 - **Services/** — `ChainLinkQuery` (review-queue + open-candidate
   count for the top-nav badge), `CardStatementQuery` (next-settlement
-  + forecast-tile reads).
+  - forecast-tile reads).
 
 `Internal/` houses the resolvers and the lifecycle owners:
 

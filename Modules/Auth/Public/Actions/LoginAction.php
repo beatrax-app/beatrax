@@ -7,9 +7,9 @@ namespace Modules\Auth\Public\Actions;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Hashing\Hasher;
-use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 
 /**
  * @link ../../../../.docs/features/auth/architecture.md
@@ -20,7 +20,7 @@ final class LoginAction
         private readonly Hasher $hasher,
         private readonly AuthManager $auth,
         private readonly AppLockProvisioner $provisioner,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function __invoke(string $usernameInput, string $password, bool $rememberMe): bool
@@ -40,7 +40,7 @@ final class LoginAction
 
         // Establishes coherent lock state while the plaintext password is
         // still in hand (no-op when the lock is not enabled).
-        $this->provisioner->primeSessionAfterLogin($user->id, $password, $this->session);
+        $this->provisioner->primeSessionAfterLogin($user->id, $password, ($this->session)());
 
         return true;
     }

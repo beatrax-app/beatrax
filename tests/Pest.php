@@ -57,6 +57,20 @@ foreach (
         'Modules/Transfers' => Modules\Transfers\Tests\TestCase::class,
     ] as $module => $testCase
 ) {
+    // Only bind a module whose TestCase this Composer root can actually
+    // autoload. The mobile root maps two module test namespaces, not all
+    // thirty-four, and Pest resolves the class the moment it binds one — so
+    // without this guard, running the Mobile suite from mobile-app/ dies on
+    // the first unmapped module with TestCaseClassOrTraitNotFound.
+    //
+    // It survived unnoticed because macOS resolves the psr-4 fallback
+    // Modules/<Name>/Tests/TestCase.php against the real lowercase tests/
+    // directory, and Linux does not. Green on a developer's machine, red on
+    // the runner, for a reason neither message mentions.
+    if (! class_exists($testCase)) {
+        continue;
+    }
+
     pest()->extend($testCase)
         ->use(RefreshDatabase::class)
         ->in(__DIR__.'/../'.$module.'/tests/Feature');

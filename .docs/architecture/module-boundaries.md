@@ -7,9 +7,9 @@ modules, describes the shape of the boundary, and lists the arch invariants
 that enforce it.
 
 The choice to use `nwidart/laravel-modules` as the structural carrier is
-recorded in [ADR 0001](../adr/0001-modular-architecture.md). The DI-only rule
+recorded in [ADR 0001](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0001-modular-architecture.md). The DI-only rule
 that operates inside each module is recorded in
-[ADR 0002](../adr/0002-di-only-rule.md). This file describes the layout those
+[ADR 0002](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0002-di-only-rule.md). This file describes the layout those
 two decisions produced.
 
 ## The modules
@@ -121,14 +121,14 @@ specifically guarding the module-boundary contract. Selected examples:
   `recurring_series.state`, `drift_alerts.state`, and `card_statements.state`.
 - **`noAuthFacadeOrHelper`** — the `Auth` facade and `auth()`/`session()`
   helpers are forbidden across `Modules/*` outside an explicit allow-list.
-  This enforces [ADR 0002](../adr/0002-di-only-rule.md).
+  This enforces [ADR 0002](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0002-di-only-rule.md).
 - **`noFacadeCallsFromCoreConsoleCommands`** /
   **`noLaravelGlobalHelpersInCoreConsoleCommands`** — even the
   Console-bootstrap layer respects the DI-only rule.
 - **`noHorizonImportsInShippedBuildCode`** — Horizon imports are restricted
   to one allow-listed provider that guards itself with the
   `BEATRAX_RUNTIME=local` runtime check (see
-  [ADR 0007](../adr/0007-database-queue-driver.md)).
+  [ADR 0007](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0007-database-queue-driver.md)).
 - **`noNativePhpImportsOutsideDesktopModule`** — `Native\Laravel\*` and
   `Native\Desktop\*` symbols are forbidden outside `Modules/Desktop/`.
 - **`noShellContractOutsideAllowList`** — the narrower
@@ -137,7 +137,7 @@ specifically guarding the module-boundary contract. Selected examples:
 - **`noStoragePathHardCodedOutsideUserDataPathService`** — raw `storage_path()`
   / `database_path()` literals are forbidden outside `UserDataPathService`,
   which is what makes the per-OS user-data-directory paths
-  (see [ADR 0006](../adr/0006-nativephp-desktop-shell.md)) work.
+  (see [ADR 0006](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0006-nativephp-desktop-shell.md)) work.
 - **`paymentTypeHinterContract`** — every `*Hinter` class under
   `Modules/Import/Internal/Parsers/` must implement the `PaymentTypeHinter`
   contract; this is the per-adapter extension hook for the
@@ -146,7 +146,7 @@ specifically guarding the module-boundary contract. Selected examples:
   `merchant_aliases` must carry an explicit `where('user_id', $userId)`
   filter. This is the BelongsToUser arch invariant the trait cannot enforce
   (raw queries bypass Eloquent scopes); see
-  [ADR 0008](../adr/0008-multi-user-belongstouser.md).
+  [ADR 0008](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md).
 - **`everyDevModeRouteAppliesEnsureDeveloperModeMiddleware`** — every route
   under `/dev/*` must carry the `ensureDeveloperMode` middleware.
 - **`darkCompanionUtilitiesOnThemedViews`** — every `bg-white` or
@@ -200,11 +200,11 @@ change.
 - [Ingestion pipeline](ingestion-pipeline.md) — the end-to-end flow from
   raw source file to canonical `Transaction` row, crossing the
   `Import` → `Ingestion` → `Ledger` modules and the `Categorization`
-  + `Counterparties` boundaries.
+  - `Counterparties` boundaries.
 - [Chain resolution](chain-resolution.md) — the read-mostly resolver that
   reaches across `Ledger`, `Counterparties`, and `Chains` without writing
   outside its own `chain_links` table.
 - [Categorization](categorization.md) — the categorizer's two-pass shape
   (rule-based + per-user memory) plus the ≥40% confidence gate.
-- [Data model](data-model.md) — the table-level ERD that the modules
+- [Data model](https://github.com/beatrax-app/spec/blob/main/20-architecture/data-model.md) — the table-level ERD that the modules
   collectively own.

@@ -1,0 +1,29 @@
+# The maintainer queue flag: a PR that passes CI with no review, from a
+# non-maintainer, is flagged and posted to the private maintainer channel; the
+# flag clears when a review lands or the PR closes. Triggers are declared here
+# because a reusable cannot declare its caller's; the behaviour lives in the
+# spec repo. OPS-R22, OPS-R25.
+name: awaiting-maintainer
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+  pull_request_review:
+    types: [submitted]
+  # Fork PRs carry a read-only token under `pull_request`, so the close event has
+  # to run in the base repo's context to be able to edit a label at all.
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  awaiting:
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: beatrax-app/spec/.github/workflows/awaiting-maintainer.yml@v1
+    secrets:
+      DISCORD_MAINTAINERS_WEBHOOK: ${{ secrets.DISCORD_MAINTAINERS_WEBHOOK }}

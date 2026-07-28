@@ -259,7 +259,7 @@ cadence until the horizon end, emitting one `ForecastContribution` per
 occurrence, in one of two tiers:
 
 - **Envelope tier** (default): `magnitude = abs(point)`, `lowMag = magnitude
-  * (1 - tol)`, `highMag = magnitude * (1 + tol)`, then re-applies the
+  - (1 - tol)`,`highMag = magnitude * (1 + tol)`, then re-applies the
   original sign. Dates are the series's own predictable occurrence dates —
   no jitter is applied, since applying it would smear a band across
   uncertainty the series does not carry.

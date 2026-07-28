@@ -27,6 +27,11 @@ it('emits a BoundaryRule error on the bad fixture', function (): void {
         '--no-ansi',
         '--memory-limit=1G',
     ], base_path());
+    // Symfony's Process defaults to 60 seconds, which is an assumption about
+    // an uninstrumented run: under pcov the coverage job takes longer than
+    // that to analyse a single fixture, and the test failed on the clock
+    // rather than on the rule it exists to pin.
+    $process->setTimeout(300);
     $process->run();
 
     $output = $process->getOutput().$process->getErrorOutput();
@@ -46,6 +51,11 @@ it('emits zero errors on the good fixture', function (): void {
         '--no-ansi',
         '--memory-limit=1G',
     ], base_path());
+    // Symfony's Process defaults to 60 seconds, which is an assumption about
+    // an uninstrumented run: under pcov the coverage job takes longer than
+    // that to analyse a single fixture, and the test failed on the clock
+    // rather than on the rule it exists to pin.
+    $process->setTimeout(300);
     $process->run();
 
     $output = $process->getOutput().$process->getErrorOutput();
@@ -64,6 +74,11 @@ it('passes against empty module skeletons at level max', function (): void {
         '--no-ansi',
         '--memory-limit=1G',
     ], base_path());
+    // Symfony's Process defaults to 60 seconds, which is an assumption about
+    // an uninstrumented run: under pcov the coverage job takes longer than
+    // that to analyse a single fixture, and the test failed on the clock
+    // rather than on the rule it exists to pin.
+    $process->setTimeout(300);
     $process->run();
 
     expect($process->getExitCode())->toBe(0);

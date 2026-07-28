@@ -153,7 +153,7 @@ recognises an FX row by:
 
 1. A native-currency suffix in the "Bedrag in vreemde valuta" column
    (e.g. `50,00 USD`).
-2. The next line beginning with the literal `Wisselkoers ` plus the
+2. The next line beginning with the literal `Wisselkoers` plus the
    same currency code.
 
 The settled-EUR amount is in the rightmost data column on the merchant
@@ -281,7 +281,7 @@ Single format observed:
 - **Decimal separator:** comma `,` (e.g. `2,40`, `50,00`, `1,14390`)
 - **Thousands separator:** period `.` (e.g. `1.416,50`, `2.500,00`)
 - **Currency symbol position (EUR):** prefix with a space —
-  `€ 606,96`, `€ 1.416,50`. Always with `€ ` (U+20AC + space) on
+  `€ 606,96`, `€ 1.416,50`. Always with `€` (U+20AC + space) on
   summary lines.
 - **Currency symbol position (non-EUR):** ISO 4217 code as a suffix —
   `50,00 USD`, `8,99 GBP`, `6,00 USD`. No glyph (`$`, `£`, `¥`) appears
@@ -293,7 +293,7 @@ Single format observed:
 
 `IcsAmountParser` must:
 
-1. Strip the `€ ` prefix if present.
+1. Strip the `€` prefix if present.
 2. Remove thousands `.` separators.
 3. Replace the decimal `,` with `.`.
 4. Multiply by 100 and cast to integer for `amount_minor`.

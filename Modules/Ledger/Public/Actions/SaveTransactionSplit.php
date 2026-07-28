@@ -6,12 +6,12 @@ namespace Modules\Ledger\Public\Actions;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -30,7 +30,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         private readonly DatabaseManager $db,
         private readonly Dispatcher $events,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     /**
@@ -375,14 +375,14 @@ final class SaveTransactionSplit implements SavesTransactionSplit
     private function encryptNote(?string $note, int $userId): ?string
     {
         return is_string($note)
-            ? $this->codec->encryptValue('transaction_splits', 'note', $note, $userId, $this->session)
+            ? $this->codec->encryptValue('transaction_splits', 'note', $note, $userId, ($this->session)())
             : $note;
     }
 
     private function decryptNote(mixed $stored, int $userId): ?string
     {
         return is_string($stored)
-            ? $this->codec->decryptValue('transaction_splits', 'note', $stored, $userId, $this->session)['value']
+            ? $this->codec->decryptValue('transaction_splits', 'note', $stored, $userId, ($this->session)())['value']
             : null;
     }
 }

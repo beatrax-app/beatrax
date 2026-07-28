@@ -12,6 +12,7 @@ use Modules\Community\Public\Dto\ClassificationRule;
 use Modules\Community\Public\Services\ClassificationRuleProvider;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Dto\CounterpartyResolutionDto;
@@ -70,7 +71,10 @@ final class CounterpartyResolverService implements CounterpartyResolver
         private readonly ClassificationRuleProvider $ruleProvider,
         private readonly CorpusPatternMatcher $matcher,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        // A factory, not the session itself: resolving a session builds the
+        // encrypter, and this class is reachable from a console command that
+        // Artisan constructs merely to list it.
+        private readonly SessionFactory $session,
     ) {}
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
@@ -369,7 +373,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
                 'iban' => $iban,
                 'merchant_name' => $merchantName,
                 'metadata' => $metadata === [] ? null : $metadata,
-            ], $userId, $this->session),
+            ], $userId, ($this->session)()),
         );
 
         $this->events->dispatch(new CounterpartyResolved(
@@ -438,7 +442,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
     // and falls through to slug suffixing.
     private function decryptDisplayName(string $stored, int $userId): string
     {
-        return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, $this->session)['value'];
+        return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, ($this->session)())['value'];
     }
 
     // Strips punctuation/accents to a lowercase ASCII approximation and

@@ -6,9 +6,9 @@ namespace Modules\Migration\Internal\Pipeline;
 
 use Brick\Money\Exception\MoneyMismatchException;
 use Brick\Money\Money;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Migration\Public\Dto\ConflictDto;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -21,7 +21,7 @@ final class ThreeWayMergeResolver
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function resolve(int $newRunId, User $user, string $sourceProduct): MergeDecision
@@ -260,7 +260,7 @@ final class ThreeWayMergeResolver
             // encrypted user, so comparing it raw against the plaintext
             // $baseline would register a spurious conflict on every re-run.
             $current = is_string($currentRaw)
-                ? $this->codec->decryptValue('transactions', 'description', $currentRaw, $user->id, $this->session)['value']
+                ? $this->codec->decryptValue('transactions', 'description', $currentRaw, $user->id, ($this->session)())['value']
                 : self::toStr($currentRaw);
 
             if ($sNew === $baseline) {

@@ -1,8 +1,8 @@
-# Repo Security Setup — `nightworksio/beatrax`
+# Repo Security Setup — `beatrax-app/beatrax`
 
 Reproduces the GitHub security posture on a freshly-cloned or freshly-
 forked instance of this repo. Companion file:
-[`../cicd/branch-protection.md`](../cicd/branch-protection.md).
+[`../cicd/branch-protection.md`](https://github.com/beatrax-app/spec/blob/main/30-repos/README.md#the-repo-r-namespace).
 
 GitHub gates several features behind GitHub Pro on private repos
 (branch-protection rulesets, secret scanning, CodeQL default setup,
@@ -19,7 +19,7 @@ This runbook splits accordingly:
 ### Repo metadata
 
 ```bash
-gh repo edit nightworksio/beatrax \
+gh repo edit beatrax-app/beatrax \
   --description "Local-first personal finance dashboard that resolves cross-account routing chains across banking, ICS Cards, PayPal, and Google Play." \
   --add-topic personal-finance \
   --add-topic laravel \
@@ -48,7 +48,7 @@ via Settings → General → Social preview once the asset is committed.
 ### Merge & branch hygiene
 
 ```bash
-gh repo edit nightworksio/beatrax \
+gh repo edit beatrax-app/beatrax \
   --enable-projects=false \
   --enable-merge-commit=false \
   --enable-squash-merge=true \
@@ -67,30 +67,41 @@ gh repo edit nightworksio/beatrax \
 | Issues | ON | Bug reports + feature requests |
 | Discussions | ON | Community Q&A (default categories: Announcements, General, Ideas, Polls, Q&A, Show and tell — prune unused) |
 
-### Dependabot — security updates (works on private)
+### Security updates (works on private)
 
-Vulnerability alerts + automated security fixes (free on private):
+Vulnerability alerts + automated security fixes are a platform toggle and
+stay on regardless of which bot proposes version updates:
 
 ```bash
-gh api -X PUT repos/nightworksio/beatrax/vulnerability-alerts
-gh api -X PUT repos/nightworksio/beatrax/automated-security-fixes
+gh api -X PUT repos/beatrax-app/beatrax/vulnerability-alerts
+gh api -X PUT repos/beatrax-app/beatrax/automated-security-fixes
 ```
 
-### Dependabot — version updates (works on private)
+### Version updates — Renovate
 
-Config committed at [`../../.github/dependabot.yml`](../../.github/dependabot.yml).
-Covers three ecosystems on a weekly Monday-morning Europe/Amsterdam
-cadence:
+Config committed at [`../../renovate.json`](../../renovate.json), which
+extends the organisation preset in `beatrax-app/.github`. One preset, one
+cadence, one commit convention across every repo — the same reason the
+CI workflows are shared rather than copied.
 
-- **composer** at `/` — Laravel, modules, brick/money, etc. Grouped:
-  `laravel` (laravel/livewire/spatie/nwidart), `dev-tooling` (larastan,
-  phpstan, pestphp, pint).
-- **npm** at `/` — Vite, Tailwind, ApexCharts, Axios, Fuse.js. Grouped:
-  `build-tooling` (vite + vite plugins + concurrently), `tailwind`.
-- **github-actions** at `/` — actions/checkout, setup-php, etc.
+The preset supplies the schedule, the `Spec: GOV-R12` trailer and
+sign-off every commit needs to pass the governance gate, the
+`dependencies` label, and the rule that groups every non-major update
+into a single pull request.
 
-PR limit: 5 (composer + npm) / 3 (github-actions). Labels:
-`dependencies` + ecosystem tag.
+This repository adds only what is specific to it:
+
+- `nativephp/`, `mobile-app/`, `vendor/` and `node_modules/` are ignored —
+  the Electron toolchain is vendor-managed by NativePHP and tracked there.
+- Majors of `laravel/framework`, `livewire/livewire` and
+  `nwidart/laravel-modules` are grouped and labelled `release-blocker`:
+  they are one deliberate piece of work, never a drive-by.
+- `php` itself is not proposed. The runtime is pinned to what the bundle
+  ships, so a bump is a platform decision
+  ([platform-matrix](https://github.com/beatrax-app/spec/blob/main/20-architecture/platform-matrix.md)).
+
+Renovate needs the GitHub App installed on the organisation; there is no
+per-repo switch to flip beyond committing this file.
 
 ### Issue + PR templates (works on private; fully effective once public)
 
@@ -120,17 +131,17 @@ private-vulnerability-reporting endpoint that lights up in Phase 2.
 ## Phase 2 — Configure on flip (public-only)
 
 Run all of these immediately after
-`gh repo edit nightworksio/beatrax --visibility public` succeeds.
+`gh repo edit beatrax-app/beatrax --visibility public` succeeds.
 
 ### 1. Branch-protection ruleset
 
-See [`../cicd/branch-protection.md`](../cicd/branch-protection.md) —
+See [`../cicd/branch-protection.md`](https://github.com/beatrax-app/spec/blob/main/30-repos/README.md#the-repo-r-namespace) —
 copy the ruleset JSON and POST it.
 
 ### 2. Secret scanning + push protection (free on public)
 
 ```bash
-gh api -X PATCH repos/nightworksio/beatrax \
+gh api -X PATCH repos/beatrax-app/beatrax \
   -f 'security_and_analysis[secret_scanning][status]=enabled' \
   -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
 ```
@@ -146,7 +157,7 @@ What this gives you:
 
 UI-driven — there is no CLI shortcut:
 
-1. Go to `https://github.com/nightworksio/beatrax/settings/security_analysis`.
+1. Go to `https://github.com/beatrax-app/beatrax/settings/security_analysis`.
 2. Under "Code scanning", click "Set up" next to "CodeQL analysis".
 3. Pick "Default" (auto-detected languages — PHP + JavaScript).
 4. Confirm. GitHub commits the workflow and runs the first scan.
@@ -154,13 +165,13 @@ UI-driven — there is no CLI shortcut:
 ### 4. Private vulnerability reporting (free on public)
 
 ```bash
-gh api -X PUT repos/nightworksio/beatrax/private-vulnerability-reporting
+gh api -X PUT repos/beatrax-app/beatrax/private-vulnerability-reporting
 ```
 
 `SECURITY.md` cross-links to it:
 
 > Report security vulnerabilities privately at
-> <https://github.com/nightworksio/beatrax/security/advisories/new>.
+> <https://github.com/beatrax-app/beatrax/security/advisories/new>.
 
 ### 5. CODEOWNERS
 
@@ -199,24 +210,24 @@ Or via Sigstore (`gitsign`) — see GitHub docs on commit signing.
 git log -1 --oneline
 
 # 1. Flip visibility
-gh repo edit nightworksio/beatrax --visibility public
+gh repo edit beatrax-app/beatrax --visibility public
 
 # 2. Apply branch ruleset (see branch-protection.md)
-gh api -X POST repos/nightworksio/beatrax/rulesets --input /tmp/main-ruleset.json
+gh api -X POST repos/beatrax-app/beatrax/rulesets --input /tmp/main-ruleset.json
 
 # 3. Enable secret scanning + push protection
-gh api -X PATCH repos/nightworksio/beatrax \
+gh api -X PATCH repos/beatrax-app/beatrax \
   -f 'security_and_analysis[secret_scanning][status]=enabled' \
   -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
 
 # 4. Enable private vulnerability reporting
-gh api -X PUT repos/nightworksio/beatrax/private-vulnerability-reporting
+gh api -X PUT repos/beatrax-app/beatrax/private-vulnerability-reporting
 
 # 5. CodeQL default setup — UI only, see Step 3 above
-echo "Visit https://github.com/nightworksio/beatrax/settings/security_analysis and enable CodeQL default setup"
+echo "Visit https://github.com/beatrax-app/beatrax/settings/security_analysis and enable CodeQL default setup"
 
 # 6. Verify Discussions categories — UI only
-echo "Review https://github.com/nightworksio/beatrax/discussions/categories and prune any unused"
+echo "Review https://github.com/beatrax-app/beatrax/discussions/categories and prune any unused"
 
 # 7. Add social-preview image — UI only
 echo "Upload resources/brand/social-preview-1280.png via Settings → General → Social preview"

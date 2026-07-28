@@ -1,0 +1,63 @@
+# Area labels applied by the reusable auto-labeler, by changed path. The labels
+# themselves are the canonical set in the spec (70-operations/labels.yml); this
+# file only maps this repo's paths onto them, so the groupings mirror the spec's
+# feature groups A–G rather than inventing a second taxonomy.
+area:ingestion:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Modules/{Ingestion,Import,EmailScan,Receipts,OpenBanking,CashBook,Migration}/**'
+
+area:ledger:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Modules/{Ledger,Categorization,Counterparties,Chains,Transfers,Search}/**'
+
+area:insight:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Modules/{Recurring,DriftAlerts,Anomaly,Forecasting,Calendar,Reports,Notifications,Community,Position}/**'
+
+area:money:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Modules/{Budgets,Goals,Pots,Tax,FX}/**'
+
+area:sync:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Modules/{Sync,Mobile}/**'
+          - 'mobile-app/**'
+
+area:platform:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Modules/{Core,Auth,Desktop,DevMode,Onboarding}/**'
+          - 'app/**'
+          - 'bootstrap/**'
+          - 'config/**'
+          - 'database/**'
+          - 'nativephp/**'
+          - 'deploy/**'
+          - 'docker/**'
+
+area:ux:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'resources/**'
+          - '**/Resources/views/**'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.md', '.docs/**']
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/**', 'scripts/**', 'phpstan*.neon', 'phpunit.xml', 'pint.json', 'cliff.toml']
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: ['composer.json', 'composer.lock', 'package.json', 'package-lock.json', 'renovate.json']
+
+brand:
+  - changed-files:
+      - any-glob-to-any-file: ['resources/brand/**', 'public/**']

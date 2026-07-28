@@ -6,6 +6,7 @@ namespace Modules\Search\Internal\Services;
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
@@ -17,7 +18,10 @@ final class SearchIndexWriter implements SearchIndexWriterContract
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        // A factory, not the session itself: resolving a session builds the
+        // encrypter, and this class is reachable from a console command that
+        // Artisan constructs merely to list it.
+        private readonly SessionFactory $session,
     ) {}
 
     public function upsertForTransaction(int $transactionId, int $actorUserId): void
@@ -43,15 +47,19 @@ final class SearchIndexWriter implements SearchIndexWriterContract
             return;
         }
 
+        // Resolved once per write, and only here — the decrypt calls below
+        // are the sole reason this class needs a session at all.
+        $session = ($this->session)();
+
         // counterparty_name/description are ciphertext at rest once
         // encryption is enabled — decrypt via the Sync codec BEFORE
         // building the search body so FTS5 tokenizes plaintext, never
         // ciphertext.
         $counterparty = is_string($tx->counterparty_name)
-            ? $this->codec->decryptValue('transactions', 'counterparty_name', $tx->counterparty_name, $userId, $this->session)['value']
+            ? $this->codec->decryptValue('transactions', 'counterparty_name', $tx->counterparty_name, $userId, $session)['value']
             : '';
         $description = is_string($tx->description)
-            ? $this->codec->decryptValue('transactions', 'description', $tx->description, $userId, $this->session)['value']
+            ? $this->codec->decryptValue('transactions', 'description', $tx->description, $userId, $session)['value']
             : '';
 
         $tag = $connection
@@ -62,7 +70,7 @@ final class SearchIndexWriter implements SearchIndexWriterContract
             ->first();
 
         $note = ($tag !== null && is_string($tag->note))
-            ? $this->codec->decryptValue('tax_transaction_tags', 'note', $tag->note, $userId, $this->session)['value']
+            ? $this->codec->decryptValue('tax_transaction_tags', 'note', $tag->note, $userId, $session)['value']
             : '';
 
         $newBody = $counterparty.chr(12).$description.chr(12).$note;

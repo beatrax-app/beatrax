@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Search\Internal\Services;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // Name-only search across palette entity types: counterparties are
@@ -22,7 +22,7 @@ final class EntityNameSearch
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly EncryptionMigrationService $encryptionService,
     ) {}
 
@@ -61,7 +61,7 @@ final class EntityNameSearch
                     return true;
                 }
 
-                $result = $this->codec->decryptValue('counterparties', 'display_name', $stored, $user->id, $this->session);
+                $result = $this->codec->decryptValue('counterparties', 'display_name', $stored, $user->id, ($this->session)());
 
                 // A decrypted:false result under encryption is
                 // ciphertext (rekey/epoch gap, or a locked app-lock) —

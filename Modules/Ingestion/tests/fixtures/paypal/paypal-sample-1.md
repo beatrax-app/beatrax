@@ -47,7 +47,7 @@ state).
 - `Omschrijving` event-type strings (the localised NL vocabulary — see
   "Event types observed" below)
 - `Valuta` ISO codes (`EUR`, `USD`)
-- `Bruto ` / `Kosten ` / `Netto` / `Saldo` / `Verzendkosten` / `Btw`
+- `Bruto` / `Kosten` / `Netto` / `Saldo` / `Verzendkosten` / `Btw`
   monetary cells (NL locale — comma decimal, no thousands separator
   visible in this single-month export)
 - `Naam` — the MERCHANT name on the parent payment rows. PayPal's NL
@@ -70,8 +70,8 @@ state).
 | 2 | `Tijdzone` | IANA zone, e.g. `Europe/Berlin` |
 | 3 | `Omschrijving` | Localised NL event-type string (acts as the `Type` column other PayPal exports may name `Type`) |
 | 4 | `Valuta` | ISO 4217 |
-| 5 | `Bruto ` | NL-locale signed decimal-comma amount (trailing space in header is verbatim) |
-| 6 | `Kosten ` | Always `"0,00"` in this export; trailing space verbatim |
+| 5 | `Bruto` | NL-locale signed decimal-comma amount (trailing space in header is verbatim) |
+| 6 | `Kosten` | Always `"0,00"` in this export; trailing space verbatim |
 | 7 | `Netto` | Gross minus Fee |
 | 8 | `Saldo` | Per-row balance — resets to `"0,00"` after each parent-children group is fully settled |
 | 9 | `Transactiereferentie` | Unique per row; the "Transaction ID" rollup key |

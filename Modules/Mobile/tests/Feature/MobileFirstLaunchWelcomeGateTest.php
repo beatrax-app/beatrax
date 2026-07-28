@@ -203,7 +203,10 @@ it('registers MobileEnsureDatabaseReady on the mobile-app root web middleware gr
     expect($source)->toContain('use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;');
     expect($source)->toContain(MobileEnsureDatabaseReady::class);
     expect($source)->toContain('$middleware->web(append: [');
-});
+    // ->group('repo-root-only'): the path is resolved relative to the repo
+    // root, so running from the mobile-app root looks for
+    // mobile-app/mobile-app/bootstrap/app.php.
+})->group('repo-root-only');
 
 // -----------------------------------------------------------------------
 // MobileWelcomeScreen

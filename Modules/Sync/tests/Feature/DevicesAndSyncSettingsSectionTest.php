@@ -21,7 +21,7 @@ uses(RefreshDatabase::class);
  * registration. Failure is "class not found" / "Unable to find component".
  */
 
-function settingsUser(string $username = 'devices-settings-user'): User
+function devicesSyncSettingsUser(string $username = 'devices-settings-user'): User
 {
     return User::query()->create([
         'username' => $username,
@@ -32,7 +32,7 @@ function settingsUser(string $username = 'devices-settings-user'): User
 }
 
 it('mounts with a 200 status for an authenticated user', function (): void {
-    $user = settingsUser();
+    $user = devicesSyncSettingsUser();
     $this->actingAs($user);
 
     Livewire::test(DevicesAndSyncSettingsSection::class)
@@ -40,7 +40,7 @@ it('mounts with a 200 status for an authenticated user', function (): void {
 });
 
 it('blocks enable-sync with the app-lock gate copy when no app-lock is configured (D-02)', function (): void {
-    $user = settingsUser('devices-nolock');
+    $user = devicesSyncSettingsUser('devices-nolock');
     $this->actingAs($user);
 
     Livewire::test(DevicesAndSyncSettingsSection::class)
@@ -49,7 +49,7 @@ it('blocks enable-sync with the app-lock gate copy when no app-lock is configure
 });
 
 it('it_can_rename_a_device', function (): void {
-    $user = settingsUser('devices-rename');
+    $user = devicesSyncSettingsUser('devices-rename');
     $this->actingAs($user);
 
     /** @var DatabaseManager $db */
@@ -87,7 +87,7 @@ it('refreshes the enable-sync gate live when an app-lock-configured event arrive
     // clear the "Set an app lock first" gate without a full page reload. mount()
     // computes appLockConfigured once; the #[On('app-lock-configured')] listener
     // re-evaluates it. Previously the gate stayed stale until a manual refresh.
-    $user = settingsUser('devices-gate-refresh');
+    $user = devicesSyncSettingsUser('devices-gate-refresh');
     $this->actingAs($user);
 
     /** @var DatabaseManager $db */
@@ -118,7 +118,7 @@ it('opens the hosted pairing modal when the open-pairing-modal event is dispatch
     // an event so <flux:modal wire:model="open"> sees a real false→true
     // transition. Previously it mounted already-open behind @if, so Flux never
     // fired and "Pair a new device" appeared to do nothing.
-    $user = settingsUser('devices-modal-open');
+    $user = devicesSyncSettingsUser('devices-modal-open');
     $this->actingAs($user);
 
     Livewire::test(PairingFlowModal::class)
@@ -131,7 +131,7 @@ it('opens the hosted pairing modal when the open-pairing-modal event is dispatch
 it('flags an http:// relay endpoint as insecure and renders the warning, https:// as secure (T-13-08)', function (): void {
     // UAT item 4: entering a non-HTTPS relay URL must surface the amber
     // insecure-connection warning banner; an https:// URL must not.
-    $user = settingsUser('devices-relay-insecure');
+    $user = devicesSyncSettingsUser('devices-relay-insecure');
     $this->actingAs($user);
 
     $relayPath = UserDataPathService::appPath('sync/relay.json');
@@ -172,7 +172,7 @@ it('flags an http:// relay endpoint as insecure and renders the warning, https:/
 });
 
 it('blocks a relay-endpoint save behind the app-lock gate (T-13-18)', function (): void {
-    $user = settingsUser('devices-relay-gate');
+    $user = devicesSyncSettingsUser('devices-relay-gate');
     $this->actingAs($user);
 
     Livewire::test(DevicesAndSyncSettingsSection::class)

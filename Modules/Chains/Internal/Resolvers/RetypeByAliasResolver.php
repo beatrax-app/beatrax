@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Chains\Internal\Resolvers;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -27,7 +27,7 @@ final class RetypeByAliasResolver
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     /**
@@ -116,7 +116,7 @@ final class RetypeByAliasResolver
             'counterparty_iban',
             $storedIban,
             $user->id,
-            $this->session,
+            ($this->session)(),
         )['value'];
 
         $targetKind = $aliasKindByIban[$plainIban] ?? null;

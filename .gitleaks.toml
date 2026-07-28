@@ -1,0 +1,25 @@
+# Secret scanning configuration.
+#
+# Extends the default rule set rather than replacing it — every upstream rule
+# still applies, and this file only records the places where a match is the
+# point rather than a mistake.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic secrets that exist to prove the redaction works."
+paths = [
+  # These tests assert that the dev-console log processor scrubs bearer tokens
+  # and JWTs before they reach the audit log. They need real-shaped tokens to
+  # exercise the matcher: the values are the public jwt.io example token and
+  # literal padding, and removing them would delete the coverage that keeps
+  # real tokens out of the log.
+  '''Modules/DevMode/tests/Unit/RedactSecretsProcessorTest\.php''',
+  '''Modules/DevMode/tests/Unit/RedactSecretsProcessorBaselineTest\.php''',
+  '''Modules/DevMode/tests/Feature/OAuthScrubSetBustTest\.php''',
+  '''Modules/DevMode/tests/Feature/AuditLogWriteTest\.php''',
+  # A deterministic notification key, matched by the generic-api-key rule
+  # because of its shape. It is derived from a user id and a period, and
+  # carries no secret material.
+  '''Modules/Notifications/tests/Feature/NotificationWriterTest\.php''',
+]

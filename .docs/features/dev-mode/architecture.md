@@ -176,7 +176,7 @@ layout to render the ⌘K palette and the sidebar nav-list:
   DoctorPanelPage, SqlPanelPage, SystemSnapshotPage,
   TripleGateModal, CommandPaletteModal, CommandArgPromptModal).
 - **Internal/Listeners/** — `LogQueueLifecycle` (logs `JobProcessed`
-  + `JobFailed` so `/dev/logs` shows completions),
+  - `JobFailed` so `/dev/logs` shows completions),
   `WriteWorkerHeartbeat` (queue-looping closure that bumps the
   heartbeat cache key on every tick), `ResetAdvancedToggleOnLogin`,
   `BustOAuthScrubSetOnSecretChange`.
@@ -209,7 +209,7 @@ and `noUnsanctionedAuditWriter` are anchored here.
   `OAuthSecret` change.
 - `SpatieAuditWriter::write($action, $context)` — opens an activity
   log row scoped to the dev_mode_audit log name. The current user
-  + timestamp + redacted context are part of the canonical row.
+  - timestamp + redacted context are part of the canonical row.
 
 The module raises no Public events; the Internal listeners observe
 framework events (`JobProcessed`, `JobFailed`, `Login`) and the
@@ -350,7 +350,7 @@ Per-page detail that doesn't fit the flow diagrams above:
   lowercase app name `beatrax` (timing-safe `hash_equals`, so
   client-side enable/disable of the button is purely cosmetic). On
   all-three-pass it dispatches `triple-gate:confirmed` with the command
-  + args + typed token; downstream listeners
+  - args + typed token; downstream listeners
   (`DestructiveSpawnController` for artisan, `QueueInspectorPage` for
   bulk-delete) re-validate all three gates a second time so a tampered
   Livewire payload that somehow spoofs the confirmed event still cannot

@@ -28,5 +28,5 @@ it('does not throw when opening an allow-listed external URL outside the native 
 
     // With the NoOp fallback bound, this is a no-op log write — no HTTP call to
     // localhost:4000, so no ConnectionException.
-    $action('https://github.com/nightworksio/beatrax/releases/latest');
+    $action('https://github.com/beatrax-app/beatrax/releases/latest');
 })->throwsNoExceptions();

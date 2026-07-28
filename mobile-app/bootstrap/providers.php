@@ -23,7 +23,9 @@ use Modules\Goals\Providers\GoalsServiceProvider;
 use Modules\Import\Providers\ImportServiceProvider;
 use Modules\Ingestion\Providers\IngestionServiceProvider;
 use Modules\Ledger\Providers\LedgerServiceProvider;
+use Modules\Notifications\Providers\NotificationsServiceProvider;
 use Modules\Onboarding\Providers\OnboardingServiceProvider;
+use Modules\Position\Providers\PositionServiceProvider;
 use Modules\Pots\Providers\PotsServiceProvider;
 use Modules\Receipts\Providers\ReceiptsServiceProvider;
 use Modules\Recurring\Providers\RecurringServiceProvider;
@@ -32,13 +34,21 @@ use Modules\Transfers\Providers\TransfersServiceProvider;
 /*
  * Mobile-app provider manifest.
  *
- * Copied verbatim from the desktop root's `bootstrap/providers.php` with ONE
- * removal: `Modules\Desktop\Providers\DesktopServiceProvider` is NOT registered
- * here. The Desktop module is not an nwidart-discovered module (it has no
- * `module.json`); it is wired ONLY through this hardcoded manifest. Dropping it
- * here is therefore the authoritative lever that keeps `Modules\Desktop` — and
- * its hard dependency on the `nativephp/desktop` Composer package (absent from
- * this root's `vendor/`) — out of the mobile shell entirely.
+ * The desktop root's `bootstrap/providers.php` with exactly one removal and one
+ * addition:
+ *
+ *   - `Modules\Desktop\Providers\DesktopServiceProvider` is NOT registered here.
+ *     The Desktop module is not an nwidart-discovered module (it has no
+ *     `module.json`); it is wired ONLY through this hardcoded manifest. Dropping
+ *     it here is therefore the authoritative lever that keeps `Modules\Desktop`
+ *     — and its hard dependency on the `nativephp/desktop` Composer package
+ *     (absent from this root's `vendor/`) — out of the mobile shell entirely.
+ *   - `App\Providers\NativeServiceProvider` IS registered here and not on the
+ *     desktop root: it carries the NativePHP *mobile* plugin list.
+ *
+ * Anything else diverging is drift, not design. It went unnoticed once already,
+ * because the job that would have caught it could not install its dependencies
+ * and so never reached its tests.
  *
  * The Mobile module itself is NOT listed here: it ships a `module.json` and is
  * loaded by nwidart's FileActivator from this root's `modules_statuses.json`
@@ -76,4 +86,6 @@ return array_values(array_filter([
     OnboardingServiceProvider::class,
     CommunityServiceProvider::class,
     CounterpartiesServiceProvider::class,
+    NotificationsServiceProvider::class,
+    PositionServiceProvider::class,
 ]));

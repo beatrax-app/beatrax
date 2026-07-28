@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Public\Services;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
 use Modules\Tax\Public\Dto\TaxTagData;
@@ -20,7 +20,7 @@ final class TaxTagQuery
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     // Whole-transaction only (see the @link above for why); callers that
@@ -179,7 +179,7 @@ final class TaxTagQuery
             ->first(['display_name']);
 
         $cpName = $cpRow !== null && is_string($cpRow->display_name)
-            ? $this->codec->decryptValue('counterparties', 'display_name', $cpRow->display_name, $userId, $this->session)['value']
+            ? $this->codec->decryptValue('counterparties', 'display_name', $cpRow->display_name, $userId, ($this->session)())['value']
             : '';
 
         $untaggedCount = $connection
@@ -239,7 +239,7 @@ final class TaxTagQuery
             return null;
         }
 
-        return $this->codec->decryptValue('tax_transaction_tags', 'note', $value, $userId, $this->session)['value'];
+        return $this->codec->decryptValue('tax_transaction_tags', 'note', $value, $userId, ($this->session)())['value'];
     }
 
     private static function toInt(mixed $value): int

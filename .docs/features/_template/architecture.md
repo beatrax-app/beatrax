@@ -5,7 +5,8 @@
   feature deep-dive should match.
 
   Keep each section short — half a page total. The detail belongs in
-  `specs.md` (behavioural contracts) and `code.md` (file references).
+  `code.md` (file references) and `how-to-test.md` (test recipes and
+  the behavioural contracts each test holds).
 -->
 
 # `<ModuleName>` — architecture
@@ -28,7 +29,7 @@ Answers:
 
 Cross-link to the relevant ADR(s) when the existence of the module
 maps to a recorded decision (e.g. `Modules/Desktop/` exists because of
-[ADR 0006](../../adr/0006-nativephp-desktop-shell.md)).
+[ADR 0006](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0006-nativephp-desktop-shell.md)).
 
 ## Module boundary
 

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Resolvers;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Services\PairLookup;
@@ -74,7 +74,7 @@ final class PaypalFundingResolver
         private readonly PairLookup $pairLookup,
         private readonly ChainLinkInsertHelper $inserter,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     // Keeps both injected collaborators reachable so PHPStan's onlyWritten
@@ -153,7 +153,7 @@ final class PaypalFundingResolver
         $storedRawPayload = self::toString($row->raw_payload ?? null);
         $plainRawPayload = $storedRawPayload === ''
             ? ''
-            : $this->codec->decryptValue('transactions', 'raw_payload', $storedRawPayload, $user->id, $this->session)['value'];
+            : $this->codec->decryptValue('transactions', 'raw_payload', $storedRawPayload, $user->id, ($this->session)())['value'];
 
         $events = $this->extractEvents($plainRawPayload);
         if ($events === []) {
@@ -296,7 +296,7 @@ final class PaypalFundingResolver
             if ($storedIban === '') {
                 continue;
             }
-            $plainIban = $this->codec->decryptValue('transactions', 'counterparty_iban', $storedIban, $user->id, $this->session)['value'];
+            $plainIban = $this->codec->decryptValue('transactions', 'counterparty_iban', $storedIban, $user->id, ($this->session)())['value'];
             if (! isset($aliasSet[$plainIban])) {
                 continue;
             }
@@ -315,7 +315,7 @@ final class PaypalFundingResolver
         if ($partnerId === 0) {
             return null;
         }
-        $partnerIban = $this->codec->decryptValue('transactions', 'counterparty_iban', self::toString($closest->candidate_iban ?? null), $user->id, $this->session)['value'];
+        $partnerIban = $this->codec->decryptValue('transactions', 'counterparty_iban', self::toString($closest->candidate_iban ?? null), $user->id, ($this->session)())['value'];
         $ambiguous = count($matches) > 1;
 
         $bookedCarbon = CarbonImmutable::parse(self::toString($closest->candidate_booked_at ?? null));

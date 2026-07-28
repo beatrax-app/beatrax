@@ -86,7 +86,7 @@ the module. The module reads them via `CorpusLoader`.
   `Import`.
 - `Internal/Services/GitHubCompareUrlBuilder::build($dto)` — composes
   the URL. Reads `config('community.github_compare_base')`
-  (default `https://github.com/nightworksio/beatrax/compare/main`),
+  (default `https://github.com/beatrax-app/beatrax/compare/main`),
   overridable via `BEATRAX_GITHUB_COMPARE_BASE`. Branch slug is
   `'suggest-' + substr(sha256($pattern), 0, 16)`. Body is a YAML
   snippet, every user-supplied field wrapped in double quotes with

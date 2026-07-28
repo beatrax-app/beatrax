@@ -297,8 +297,12 @@ it('MergeRulesRegistry describes the new categorization_rules/rule_conditions/ru
     expect($rules)->toHaveKey('categorization_rules');
     expect($rules['categorization_rules'])->toHaveKeys(['priority', 'combinator']);
     expect($rules['categorization_rules'])->not->toHaveKeys(['field', 'match', 'value', 'category_id']);
-    expect($rules['categorization_rules']['_create_required'])
-        ->toEqualCanonicalizing(['priority', 'combinator', 'active', 'hits_count']);
+    // Empty, and correctly so: _create_required lists the columns a CreateRow
+    // must carry because the schema would otherwise reject the insert. All four
+    // of priority, combinator, active and hits_count are declared with a DB
+    // default in the redesign migration, so a replayed create needs none of
+    // them. The child tables below are the contrasting case.
+    expect($rules['categorization_rules']['_create_required'])->toBe([]);
 
     expect($rules)->toHaveKey('rule_conditions');
     expect($rules['rule_conditions']['_create_required'])->not->toBeEmpty();

@@ -7,6 +7,11 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml"><img alt="shared checks" src="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml/badge.svg"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=beatrax-app_beatrax"><img alt="quality gate" src="https://sonarcloud.io/api/project_badges/measure?project=beatrax-app_beatrax&metric=alert_status"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=beatrax-app_beatrax"><img alt="coverage" src="https://sonarcloud.io/api/project_badges/measure?project=beatrax-app_beatrax&metric=coverage"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/beatrax-app/beatrax"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/beatrax-app/beatrax/badge"></a>
   <img alt="License: Hippocratic 3.0" src="https://img.shields.io/badge/license-Hippocratic--3.0-blue.svg">
   <img alt="PHP 8.5+" src="https://img.shields.io/badge/php-8.5%2B-777bb4.svg">
   <img alt="Laravel 13" src="https://img.shields.io/badge/laravel-13.x-ff2d20.svg">
@@ -14,7 +19,9 @@
 </p>
 
 <p align="center">
-  <strong>🇬🇧 English</strong> · <a href=".docs/translations/readme/nl-NL.md">🇳🇱 Nederlands</a>
+  <a href="https://beatrax.app">Website</a> ·
+  <a href="https://github.com/beatrax-app/spec">Specification</a> ·
+  <a href="https://discord.gg/FYuV9CbTHR">Discord</a>
 </p>
 
 ## What is beatrax?
@@ -56,18 +63,10 @@ across several banks, cards, PayPal, and recurring app-store
 subscriptions and have given up on reconciling them by hand, this is for
 you.
 
-## Shoutouts
+## Thanks, mom
 
-### Thanks, mom
-I want to start off with thanking my mom (Bea - for anyone who wondered where the name was based on), who's been the inspiration for making this.
-
-### Get Shit Done (GSD) / Claude Code
-
-There's a few things I wanted to try out with this project, and one of them was doing everything through prompting, and the quality of what can be delivered is amazing with GSD and Claude. Check GSD out here: https://github.com/gsd-build/get-shit-done
-
-### Laravel / NativePHP
-
-Among alot of other amazing packages (and for sure check out the composer.json), I'd like to highlight Laravel and NativePHP - it's amazing how far the PHP language has come in the last few years, and what you can do with it.
+Thanks to my mom — Bea, for anyone who wondered where the name came
+from — who was the inspiration for making this.
 
 ## Install
 
@@ -93,7 +92,7 @@ xattr -d com.apple.quarantine /Applications/beatrax.app
 
 > Like most independent macOS apps, beatrax isn't signed with an Apple
 > Developer ID — we don't pay Apple $99/year just to avoid the
-> first-launch dialog. [Why we made this choice →](.docs/legal/license-rationale.md#no-paid-signing)
+> first-launch dialog. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 
 #### Intel Macs (x86_64)
 
@@ -103,7 +102,7 @@ an Intel bundle there under Rosetta 2 emulation routinely overruns the
 job timeout. Until that changes, Intel Mac users build from source:
 
 ```sh
-git clone git@github.com:nightworksio/beatrax.git
+git clone git@github.com:beatrax-app/beatrax.git
 cd beatrax
 composer install
 npm ci
@@ -114,7 +113,7 @@ php artisan native:build mac x64
 # Installer lands at nativephp/electron/dist/beatrax-<version>-x64.dmg
 ```
 
-Full local-dev prerequisites (Docker, Node 20+, PHP 8.5) are in
+Full local-dev prerequisites (Docker, Node 22+, PHP 8.5) are in
 [.docs/local_development/setup.md](.docs/local_development/setup.md).
 
 ### Installing on Windows
@@ -129,7 +128,7 @@ first time you open it — that's expected.
 
 > SmartScreen reputation builds up over time as more people open
 > beatrax. After a few weeks, the warning will stop appearing for new
-> users automatically. [Why we made this choice →](.docs/legal/license-rationale.md#no-paid-signing)
+> users automatically. [Why we made this choice →](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 
 ### Installing on Linux
 
@@ -182,7 +181,9 @@ conversion, savings goals and pots, an installable PWA, PIN and biometric
 app-lock, the bills calendar, tax tagging with per-year export, full-text
 search, and anomaly alerts.
 
-**v2.0** is in active development and is what this repository holds today:
+**v2.0** is staged and is what this repository holds today — its locked
+goals are in the
+[version manifest](https://github.com/beatrax-app/spec/blob/main/70-operations/versions/2.0.0.toml):
 local-first end-to-end-encrypted peer-to-peer device sync, a proactive
 notification inbox, an optional open-banking connector, envelope
 (zero-based) budgeting, split transactions, account reconciliation, a
@@ -195,14 +196,34 @@ download.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+This project's specification is **canonical**: every change cites an
+identifier that already exists in it, and a behavioural change's spec
+pull request merges first. Before your first PR, read
+[CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) if you are
+working with an AI assistant, and the
+[contributing guide](https://github.com/beatrax-app/spec/blob/main/50-governance/contributing.md).
+
+Implementation detail — which class, which file, which table — lives in
+[`.docs/`](.docs/00-index.md). Behaviour, requirements, and architecture
+contracts live in the [spec](https://github.com/beatrax-app/spec). Where
+the two disagree, the spec wins.
 
 ## License + ethics
 
 beatrax is licensed under the [Hippocratic License 3.0](LICENSE). It's
 source-available, not OSI-approved — see [NOTICE.md](NOTICE.md) for the
-rationale.
+rationale and the
+[longer rationale](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md)
+in the spec.
 
 ## Security
 
 Report vulnerabilities via [Security Policy](SECURITY.md).
+
+---
+
+<p align="center">
+  <a href="https://nightworks.io">NightWorks.io</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://discord.gg/FYuV9CbTHR">Discord</a>
+</p>

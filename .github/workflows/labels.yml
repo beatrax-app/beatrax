@@ -1,0 +1,15 @@
+# Keep this repo's labels in sync with the canonical set in the spec (REPO-R6).
+name: labels
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    permissions:
+      contents: read
+      issues: write
+    uses: beatrax-app/spec/.github/workflows/label-sync.yml@v1

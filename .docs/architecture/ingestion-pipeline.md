@@ -12,8 +12,8 @@ governs duplicate handling, and the post-commit boundary that separates
 preview from confirm.
 
 The two structural decisions this pipeline operates inside are
-[ADR 0001](../adr/0001-modular-architecture.md) (module split) and
-[ADR 0002](../adr/0002-di-only-rule.md) (constructor injection only).
+[ADR 0001](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0001-modular-architecture.md) (module split) and
+[ADR 0002](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0002-di-only-rule.md) (constructor injection only).
 
 ## Stages, in order
 
@@ -68,7 +68,7 @@ by PayPal-account email for PayPal rows, by ICS-card-number for ICS rows).
 `Modules\Import\Public\Pipeline\NormalizeStage` is the only public-contract
 stage — other modules MAY invoke it directly. It converts the
 parser-specific `SourceRow` into a `CanonicalTransaction` DTO carrying
-booked-at, amount (`brick/money` per [ADR 0009](../adr/0009-brick-money-multi-currency.md)),
+booked-at, amount (`brick/money` per [ADR 0009](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0009-brick-money-multi-currency.md)),
 currency, counterparty name + IBAN, raw description, account FK, and user
 FK, via four steps:
 
@@ -124,7 +124,7 @@ Sets the `payment_type` enum (`ideal`, `direct_debit`, `card_payment`,
 in `Modules/Import/Internal/Parsers/` (see
 [Payment-type hinters](../features/import/architecture.md#payment-type-hinters)
 for the per-source lexeme/code tables). The
-[`paymentTypeHinterContract`](#) arch invariant requires every `*Hinter`
+The `paymentTypeHinterContract` arch invariant requires every `*Hinter`
 class under `Modules/Import/Internal/Parsers/` to implement the
 `PaymentTypeHinter` contract, which is what makes this stage's plug-in
 extension point safe. The stage is pure/stateless and bound as a

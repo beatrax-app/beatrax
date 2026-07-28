@@ -47,7 +47,7 @@ function settingsVault(bool $available = true): BiometricKeyVault
     };
 }
 
-function settingsUser(string $username): User
+function mobileColdStartSettingsUser(string $username): User
 {
     $user = User::query()->create([
         'username' => $username,
@@ -62,7 +62,7 @@ function settingsUser(string $username): User
 }
 
 it('shows the toggle when the vault is available and reflects not-enrolled', function (): void {
-    settingsUser('settings-available');
+    mobileColdStartSettingsUser('settings-available');
     app()->bind(BiometricKeyVault::class, fn () => settingsVault(available: true));
 
     Livewire::test(ColdStartBiometricSettingsSection::class)
@@ -71,7 +71,7 @@ it('shows the toggle when the vault is available and reflects not-enrolled', fun
 });
 
 it('renders the empty-state (no toggle) when the vault is unavailable', function (): void {
-    settingsUser('settings-unavailable');
+    mobileColdStartSettingsUser('settings-unavailable');
     app()->bind(BiometricKeyVault::class, fn () => settingsVault(available: false));
 
     Livewire::test(ColdStartBiometricSettingsSection::class)
@@ -80,7 +80,7 @@ it('renders the empty-state (no toggle) when the vault is unavailable', function
 });
 
 it('enables with the correct PIN', function (): void {
-    settingsUser('settings-enable');
+    mobileColdStartSettingsUser('settings-enable');
     app()->bind(BiometricKeyVault::class, fn () => settingsVault(available: true));
 
     Livewire::test(ColdStartBiometricSettingsSection::class)
@@ -91,7 +91,7 @@ it('enables with the correct PIN', function (): void {
 });
 
 it('does not enable on a wrong PIN and surfaces a message', function (): void {
-    settingsUser('settings-enable-wrong');
+    mobileColdStartSettingsUser('settings-enable-wrong');
     app()->bind(BiometricKeyVault::class, fn () => settingsVault(available: true));
 
     Livewire::test(ColdStartBiometricSettingsSection::class)
@@ -102,7 +102,7 @@ it('does not enable on a wrong PIN and surfaces a message', function (): void {
 });
 
 it('shows the format message on an empty PIN (distinct from a wrong PIN)', function (): void {
-    settingsUser('settings-empty-pin');
+    mobileColdStartSettingsUser('settings-empty-pin');
     app()->bind(BiometricKeyVault::class, fn () => settingsVault(available: true));
 
     Livewire::test(ColdStartBiometricSettingsSection::class)
@@ -113,7 +113,7 @@ it('shows the format message on an empty PIN (distinct from a wrong PIN)', funct
 });
 
 it('disables an active enrollment', function (): void {
-    $user = settingsUser('settings-disable');
+    $user = mobileColdStartSettingsUser('settings-disable');
     app()->bind(BiometricKeyVault::class, fn () => settingsVault(available: true));
     app(MobileLockGateway::class)->markColdStartEnrolled((int) $user->id, true);
 

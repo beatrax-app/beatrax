@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -27,7 +28,10 @@ final class TagTransaction
         private readonly Clock $clock,
         private readonly FieldProvenanceWriter $provenance,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        // A factory, not the session itself: resolving a session builds the
+        // encrypter, and this class is reachable from a console command that
+        // Artisan constructs merely to list it.
+        private readonly SessionFactory $session,
         private readonly ?SearchIndexWriterContract $searchIndex = null,
     ) {}
 
@@ -194,7 +198,7 @@ final class TagTransaction
     private function encryptNote(?string $note, int $userId): ?string
     {
         return is_string($note)
-            ? $this->codec->encryptValue('tax_transaction_tags', 'note', $note, $userId, $this->session)
+            ? $this->codec->encryptValue('tax_transaction_tags', 'note', $note, $userId, ($this->session)())
             : $note;
     }
 }

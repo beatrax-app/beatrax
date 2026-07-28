@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
 
 /**
@@ -31,7 +32,7 @@ function makeStateRepoBundle(): array
         }
     };
 
-    return ['repo' => new OAuthStateRepository($session, $clock), 'clock' => $clock];
+    return ['repo' => new OAuthStateRepository(SessionFactory::forSession($session), $clock), 'clock' => $clock];
 }
 
 function makeStateRepo(): OAuthStateRepository

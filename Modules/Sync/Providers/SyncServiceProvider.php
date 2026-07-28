@@ -241,7 +241,15 @@ final class SyncServiceProvider extends ServiceProvider
         }
 
         if (class_exists(SyncServeCommand::class)) {
-            $this->app->singleton(SyncServeCommand::class);
+            // The handler is a factory, not an instance: registering a console
+            // command resolves it, and building it reaches the encrypted search
+            // writer — which made every artisan call need an application key,
+            // including the `key:generate` that mints one.
+            $this->app->singleton(SyncServeCommand::class, fn () => new SyncServeCommand(
+                logger: $this->app->make(LoggerInterface::class),
+                handler: fn () => $this->app->make(SyncWebSocketHandler::class),
+                advertiser: $this->app->make(MdnsAdvertiser::class),
+            ));
         }
 
         // Relay mailbox + mDNS advertiser singletons. RelayConfig is

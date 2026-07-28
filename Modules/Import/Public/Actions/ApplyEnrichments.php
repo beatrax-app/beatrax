@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Modules\Import\Public\Actions;
 
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Services\SourceRefRanker;
@@ -33,7 +33,7 @@ final class ApplyEnrichments implements AppliesEnrichments
         private readonly LoggerInterface $logger,
         private readonly Dispatcher $events,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     public function __invoke(array $enrichments, User $user): int
@@ -221,7 +221,7 @@ final class ApplyEnrichments implements AppliesEnrichments
             $updates[$fieldName] = $values['incoming'] ?? null;
         }
 
-        return $this->codec->encryptAttrs('transactions', $updates, $user->id, $this->session);
+        return $this->codec->encryptAttrs('transactions', $updates, $user->id, ($this->session)());
     }
 
     private function loadReceiptConflictPolicy(User $user): string

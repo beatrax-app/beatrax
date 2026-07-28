@@ -36,7 +36,7 @@ What the module explicitly does NOT do:
 - It never reaches a remote network on its own. The single outbound
   exception is `ElectronUpdateChannel`, which fetches the publisher
   update manifest from a fixed URL configured by the bundle (see
-  [ADR 0004](../../adr/0004-local-only-hosting.md)). Even that fetch
+  [ADR 0004](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0004-local-only-hosting.md)). Even that fetch
   is gated by Ed25519 signature verification before any side effect
   fires.
 
@@ -48,7 +48,7 @@ What the module explicitly does NOT do:
   - `BelongsToUser` trait — adds a `user_id` column to `$fillable`,
     registers the `UserScope` global scope, and exposes a
     `user()` belongsTo relation. The arch invariant
-    [`BelongsToUser` everywhere](../../adr/0008-multi-user-belongstouser.md)
+    [`BelongsToUser` everywhere](https://github.com/beatrax-app/spec/blob/main/00-overview/decisions/0008-multi-user-belongstouser.md)
     requires every user-scoped Eloquent model to use this trait.
 - **Contracts/**
   - `Clock` — returns the current time as `CarbonImmutable`. Bound to
@@ -326,8 +326,8 @@ plists from `deploy/launchd/*.plist` to `~/Library/LaunchAgents/`,
 substituting `{{ABS_PHP_BINARY}}` / `{{ABS_PROJECT_ROOT}}` at install
 time. The Redis plist is optional (`--without-redis`, for when Docker
 Desktop auto-starts the container on login). `bootstrapPlist()` is
-`protected` (not `private`) so `InstallLaunchdCommandTest` can subclass
-+ override it to capture the intended `launchctl bootstrap` target
+`protected` (not `private`) so `InstallLaunchdCommandTest` can
+subclass - override it to capture the intended `launchctl bootstrap` target
 without mutating the developer's real launchd; a non-zero
 `launchctl bootstrap` exit is a warning, not a hard failure, since it
 also fires for "already loaded" on re-install.
@@ -412,8 +412,8 @@ Backup & restore CLI (`db:backup` / `db:restore`):
 
 `BackupDatabaseCommand` produces a consistent SQLite backup via
 `VACUUM INTO`, validates the output with `PRAGMA integrity_check`, and
-applies the retention sweep (`BackupRetentionPolicy`: 7 newest dailies
-+ 4 most-recent Sundays). Each successful run writes a `.meta.json`
+applies the retention sweep (`BackupRetentionPolicy`: 7 newest
+dailies - 4 most-recent Sundays). Each successful run writes a `.meta.json`
 sidecar at chmod 0600 capturing the source `PRAGMA data_version`, so a
 follow-up call without `--force` can smart-skip when no commits
 happened since the last backup. Mechanics worth calling out:

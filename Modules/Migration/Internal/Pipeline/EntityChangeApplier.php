@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Services\SourceMapWriter;
@@ -27,7 +27,7 @@ final class EntityChangeApplier
         private readonly FingerprintComposer $fingerprints,
         private readonly LoggerInterface $logger,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     /**
@@ -61,7 +61,7 @@ final class EntityChangeApplier
             // plaintext in an at-rest-encrypted column — see the
             // architecture doc's "Encryption interaction" section for the
             // baseline-snapshot trade-off this implies.
-            $storedFields = $this->codec->encryptAttrs($table, $fields, $user->id, $this->session);
+            $storedFields = $this->codec->encryptAttrs($table, $fields, $user->id, ($this->session)());
 
             $this->db->connection()->table($table)
                 ->where('id', $beatraxId)

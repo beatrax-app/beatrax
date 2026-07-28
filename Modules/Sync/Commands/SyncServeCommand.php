@@ -8,6 +8,7 @@ use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\SocketHttpServer;
 use Amp\Websocket\Server\AllowOriginAcceptor;
 use Amp\Websocket\Server\Websocket;
+use Closure;
 use Illuminate\Console\Command;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
@@ -26,9 +27,10 @@ final class SyncServeCommand extends Command
     /** @var string */
     protected $description = 'Start the long-running Noise/WebSocket sync listener (amphp event loop).';
 
+    /** @param Closure(): SyncWebSocketHandler $handler */
     public function __construct(
         private readonly LoggerInterface $logger,
-        private readonly SyncWebSocketHandler $handler,
+        private readonly Closure $handler,
         private readonly MdnsAdvertiser $advertiser,
     ) {
         parent::__construct();
@@ -46,13 +48,19 @@ final class SyncServeCommand extends Command
         $this->logger->info('sync:serve: starting WebSocket listener.', ['port' => $port]);
 
         try {
+            // Built here rather than injected: constructing it reaches the
+            // encrypted search writer, and a console boot that resolves every
+            // registered command would then need an application key before one
+            // could be minted.
+            $handler = ($this->handler)();
+
             $httpServer = SocketHttpServer::createForDirectAccess($this->logger);
             $httpServer->expose("0.0.0.0:{$port}");
 
             // LAN-only: AllowOriginAcceptor(['*']) skips browser Origin checks.
             // The Noise handshake is the real authentication gate.
             $acceptor = new AllowOriginAcceptor(['*']);
-            $wsServer = new Websocket($httpServer, $this->logger, $acceptor, $this->handler);
+            $wsServer = new Websocket($httpServer, $this->logger, $acceptor, $handler);
 
             $errorHandler = new DefaultErrorHandler;
             $httpServer->start($wsServer, $errorHandler);
@@ -60,7 +68,7 @@ final class SyncServeCommand extends Command
             // advertise() is a best-effort shell-out (dns-sd / avahi-publish-service);
             // it silently no-ops when neither CLI is available, falling through to
             // manual host:port entry or the relay.
-            $this->advertiser->advertise($this->handler->localDeviceId(), $port);
+            $this->advertiser->advertise($handler->localDeviceId(), $port);
 
             $this->logger->info('sync:serve: listener started.', ['port' => $port]);
             $this->info("sync:serve: listening on 0.0.0.0:{$port} (SIGTERM/SIGINT to stop).");

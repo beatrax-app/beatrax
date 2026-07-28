@@ -132,7 +132,7 @@ bindings resolve against.
      `BELASTINGDIENST`, `GEMEENTE`, `RDW`, `CJIB`, `SVB` resolve to
      `type='government'`.
   6. **Description-keyword bank-fee fallback** — descriptions matching
-     `KOSTEN KASOPNAME`, `RENTE`, `KOSTEN ` resolve to
+     `KOSTEN KASOPNAME`, `RENTE`, `KOSTEN` resolve to
      `type='bank'` with `metadata.subcategory='fee'`.
   7. **Unresolved** — `type='unknown'`; IBAN preserved for triage.
 

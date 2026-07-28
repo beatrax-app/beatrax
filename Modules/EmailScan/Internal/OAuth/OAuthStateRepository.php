@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Session\Session;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Throwable;
 
 /**
@@ -23,7 +24,7 @@ final class OAuthStateRepository
     private const MAX_AGE_SECONDS = 600;
 
     public function __construct(
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly Clock $clock,
     ) {}
 
@@ -32,7 +33,7 @@ final class OAuthStateRepository
         $this->assertProvider($provider);
 
         $state = bin2hex(random_bytes(32));
-        $this->session->put($this->sessionKey($provider), [
+        ($this->session)()->put($this->sessionKey($provider), [
             'state' => $state,
             'user_id' => $userId,
             'inbox_id' => $existingInboxId,
@@ -51,7 +52,7 @@ final class OAuthStateRepository
         $this->assertProvider($provider);
 
         $key = $this->sessionKey($provider);
-        $entry = $this->session->pull($key);
+        $entry = ($this->session)()->pull($key);
 
         if (! is_array($entry)) {
             return null;
@@ -103,7 +104,7 @@ final class OAuthStateRepository
     {
         $this->assertProvider($provider);
 
-        $this->session->put(
+        ($this->session)()->put(
             $this->wizardSessionKey($provider),
             $this->clock->now()->toDateTimeString(),
         );

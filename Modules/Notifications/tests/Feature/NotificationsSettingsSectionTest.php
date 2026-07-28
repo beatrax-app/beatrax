@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
  * (D-36): the ~9-control preferences form + the D-35 read-only "Other
  * devices" panel.
  *
- * Local helpers are uniquely named (settingsSectionUser /
+ * Local helpers are uniquely named (notificationsSettingsUser /
  * settingsSeedRegistryDevice) rather than reusing prefUser() /
  * seedRegistryDevice() from NotificationPreferenceQueryTest.php — this file
  * must also pass when run standalone (`pest <this file>`), so it cannot
@@ -26,7 +26,7 @@ uses(RefreshDatabase::class);
  * the full suite runs both.
  */
 
-function settingsSectionUser(string $username): User
+function notificationsSettingsUser(string $username): User
 {
     return User::query()->create([
         'username' => $username,
@@ -55,7 +55,7 @@ function settingsSeedRegistryDevice(DatabaseManager $db, int $userId, string $de
 }
 
 it('mounts showing exactly the D-16/D-19/D-15/D-24 defaults for a device with no preference row', function (): void {
-    $user = settingsSectionUser('settings-defaults');
+    $user = notificationsSettingsUser('settings-defaults');
     settingsSeedRegistryDevice($this->app->make(DatabaseManager::class), $user->id, 'self-device', isSelf: true);
     $this->actingAs($user);
 
@@ -72,7 +72,7 @@ it('mounts showing exactly the D-16/D-19/D-15/D-24 defaults for a device with no
 });
 
 it('persists a valid save and sets $saved, and a re-mount reads the saved values back', function (): void {
-    $user = settingsSectionUser('settings-valid-save');
+    $user = notificationsSettingsUser('settings-valid-save');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -122,7 +122,7 @@ it('persists a valid save and sets $saved, and a re-mount reads the saved values
 });
 
 it('rejects an invalid digest cadence, sets $saveError, persists nothing (T-18-06)', function (): void {
-    $user = settingsSectionUser('settings-bad-cadence');
+    $user = notificationsSettingsUser('settings-bad-cadence');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -138,7 +138,7 @@ it('rejects an invalid digest cadence, sets $saveError, persists nothing (T-18-0
 });
 
 it('rejects a reminder lead time of 0, sets $saveError, persists nothing (T-18-06)', function (): void {
-    $user = settingsSectionUser('settings-lead-0');
+    $user = notificationsSettingsUser('settings-lead-0');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -154,7 +154,7 @@ it('rejects a reminder lead time of 0, sets $saveError, persists nothing (T-18-0
 });
 
 it('rejects a reminder lead time of 31, sets $saveError, persists nothing (T-18-06)', function (): void {
-    $user = settingsSectionUser('settings-lead-31');
+    $user = notificationsSettingsUser('settings-lead-31');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -170,7 +170,7 @@ it('rejects a reminder lead time of 31, sets $saveError, persists nothing (T-18-
 });
 
 it('rejects a malformed quiet-hours time, sets $saveError, persists nothing (T-18-06)', function (): void {
-    $user = settingsSectionUser('settings-bad-time');
+    $user = notificationsSettingsUser('settings-bad-time');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -188,7 +188,7 @@ it('rejects a malformed quiet-hours time, sets $saveError, persists nothing (T-1
 it('dispatches exactly one NotificationPreferenceMutated on a valid save (D-34)', function (): void {
     Event::fake([NotificationPreferenceMutated::class]);
 
-    $user = settingsSectionUser('settings-event');
+    $user = notificationsSettingsUser('settings-event');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -202,7 +202,7 @@ it('dispatches exactly one NotificationPreferenceMutated on a valid save (D-34)'
 });
 
 it('lists a second paired device in the other-devices panel and excludes the self row (D-35)', function (): void {
-    $user = settingsSectionUser('settings-other-devices');
+    $user = notificationsSettingsUser('settings-other-devices');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -234,7 +234,7 @@ it('lists a second paired device in the other-devices panel and excludes the sel
 });
 
 it('renders the empty-state string when no other devices are paired', function (): void {
-    $user = settingsSectionUser('settings-no-other-devices');
+    $user = notificationsSettingsUser('settings-no-other-devices');
     settingsSeedRegistryDevice($this->app->make(DatabaseManager::class), $user->id, 'self-device', isSelf: true);
     $this->actingAs($user);
 
@@ -243,7 +243,7 @@ it('renders the empty-state string when no other devices are paired', function (
 });
 
 it('never changes the other device row when saving locally (D-07/D-35)', function (): void {
-    $user = settingsSectionUser('settings-other-untouched');
+    $user = notificationsSettingsUser('settings-other-untouched');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $user->id, 'self-device', isSelf: true);
@@ -291,8 +291,8 @@ it('never changes the other device row when saving locally (D-07/D-35)', functio
 });
 
 it('never renders user B device rows on user A\'s section (cross-user)', function (): void {
-    $userA = settingsSectionUser('settings-cross-a');
-    $userB = settingsSectionUser('settings-cross-b');
+    $userA = notificationsSettingsUser('settings-cross-a');
+    $userB = notificationsSettingsUser('settings-cross-b');
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     settingsSeedRegistryDevice($db, $userA->id, 'a-self-device', isSelf: true);

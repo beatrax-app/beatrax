@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Services;
 
-use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\TaxYearData;
 
@@ -22,7 +22,7 @@ final class TaxYearQuery
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
-        private readonly Session $session,
+        private readonly SessionFactory $session,
     ) {}
 
     // Rows group by deduction_category_id (NULL rows land in a trailing
@@ -230,7 +230,7 @@ final class TaxYearQuery
             return null;
         }
 
-        return $this->codec->decryptValue($table, $field, $value, $userId, $this->session)['value'];
+        return $this->codec->decryptValue($table, $field, $value, $userId, ($this->session)())['value'];
     }
 
     private static function toInt(mixed $value): int

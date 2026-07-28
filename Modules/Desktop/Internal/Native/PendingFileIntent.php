@@ -6,6 +6,7 @@ namespace Modules\Desktop\Internal\Native;
 
 use Illuminate\Contracts\Session\Session;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 
 // Session-scoped store for a pending OS file-open intent: a logged-out
@@ -19,7 +20,7 @@ final class PendingFileIntent implements RemembersPendingFileIntent
     private const ALLOWED_EXTENSIONS = ['csv', 'eml'];
 
     public function __construct(
-        private readonly Session $session,
+        private readonly SessionFactory $session,
         private readonly Clock $clock,
     ) {}
 
@@ -29,7 +30,7 @@ final class PendingFileIntent implements RemembersPendingFileIntent
             return;
         }
 
-        $this->session->put(self::SESSION_KEY, [
+        ($this->session)()->put(self::SESSION_KEY, [
             'path' => $path,
             'extension' => $extension,
             'remembered_at' => $this->clock->now()->getTimestamp(),
@@ -41,7 +42,7 @@ final class PendingFileIntent implements RemembersPendingFileIntent
      */
     public function pending(): ?array
     {
-        $raw = $this->session->get(self::SESSION_KEY);
+        $raw = ($this->session)()->get(self::SESSION_KEY);
         if (! is_array($raw)) {
             return null;
         }
@@ -71,6 +72,6 @@ final class PendingFileIntent implements RemembersPendingFileIntent
 
     public function clear(): void
     {
-        $this->session->forget(self::SESSION_KEY);
+        ($this->session)()->forget(self::SESSION_KEY);
     }
 }

@@ -7,10 +7,16 @@
 #   docker compose -f deploy/server/docker-compose.yml up -d --build
 #   docker compose -f deploy/server/docker-compose.yml exec app php artisan beatrax:install
 #
-# All app processes (app/queue/scheduler) read the SAME deploy/server/.env via
-# env_file, so APP_KEY + DB credentials stay consistent across containers.
-# (Use `beatrax:install` here, not `beatrax:setup` — setup is for the bare-metal
-# single-process path; in Docker the env_file is the source of truth.)
+# All app processes read the SAME deploy/server/.env via env_file, so APP_KEY
+# stays consistent across containers. (Use `beatrax:install` here, not
+# `beatrax:setup` — setup is for the bare-metal single-process path; in Docker
+# the env_file is the source of truth.)
+#
+# SQLite, not a database server. The schema is SQLite-only: thirty-two
+# migrations use RAISE(ABORT) triggers and search is an FTS5 virtual table, so
+# `migrate` against PostgreSQL fails on the first substantive table. That is the
+# product's position rather than an omission — see ADR-0022. The database file
+# lives on a named volume so it survives `down` and image rebuilds.
 name: beatrax
 
 x-app: &app
@@ -19,39 +25,41 @@ x-app: &app
     dockerfile: deploy/server/Dockerfile
   image: beatrax-app:latest
   env_file: .env
-  depends_on:
-    db:
-      condition: service_healthy
+  volumes:
+    - app-data:/app/database
   restart: unless-stopped
 
 services:
+  # One-shot, and everything else waits on it. Previously the workers started
+  # alongside the app and crash-looped on `relation "cache" does not exist`
+  # until a human ran step 4, because the documented order brings the stack up
+  # before migrating.
+  migrate:
+    <<: *app
+    restart: "no"
+    command: php artisan migrate --force --isolated
+
   app:
     <<: *app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "${HTTP_PORT:-8000}:80"
 
   queue:
     <<: *app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     command: php artisan queue:work --tries=3 --backoff=60 --sleep=3
 
   scheduler:
     <<: *app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     command: php artisan schedule:work
 
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${DB_DATABASE:-beatrax}
-      POSTGRES_USER: ${DB_USERNAME:-beatrax}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-beatrax}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
 volumes:
-  db-data:
+  app-data:

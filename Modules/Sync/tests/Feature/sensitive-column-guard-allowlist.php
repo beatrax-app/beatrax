@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * @link ../../../../.docs/adr/0011-code-comment-policy.md
+ * @link ../../../../.docs/conventions/00-index.md
  *
  * @return array<string, string> repo-relative path => reason the guard's
  *                               bare-column-name scan hits this file safely (no codec routing needed)
