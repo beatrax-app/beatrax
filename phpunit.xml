@@ -222,4 +222,26 @@
         <env name="SESSION_DRIVER" value="database"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
     </php>
+
+    <!-- Without this, a coverage run warns "No filter is configured, code
+         coverage will not be processed", writes an empty report, and exits 1
+         with every test passing — the same shape of failure as a file claimed
+         by two testsuites. The clover report the coverage workflow hands to
+         SonarCloud was empty for exactly this reason.
+
+         app/ and Modules/ are where the code under test lives. Migrations are
+         schema, replayed by every test and meaningless as a coverage figure;
+         config/, routes/ and database/ stay in sonar.sources so the analyser
+         still reads them, and sit in sonar.coverage.exclusions so they do not
+         count against the number. -->
+    <source>
+        <include>
+            <directory suffix=".php">app</directory>
+            <directory suffix=".php">Modules</directory>
+        </include>
+        <exclude>
+            <directory suffix=".php">Modules/*/Database/Migrations</directory>
+            <directory suffix=".php">Modules/*/tests</directory>
+        </exclude>
+    </source>
 </phpunit>
