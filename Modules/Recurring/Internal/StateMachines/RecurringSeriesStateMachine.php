@@ -8,7 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Models\RecurringSeries;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/recurring/architecture.md
@@ -70,9 +69,7 @@ final class RecurringSeriesStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
-                    "RecurringSeriesStateMachine: recurring_series row {$seriesId} not found.",
-                );
+                throw SeriesRowVanishedException::forSeries($seriesId);
             }
 
             $currentState = self::toString($row->state);
@@ -138,6 +135,10 @@ final class RecurringSeriesStateMachine
 
     private static function toString(mixed $value): string
     {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return is_scalar($value) ? (string) $value : '';
     }
 }

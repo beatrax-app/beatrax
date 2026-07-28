@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Recurring\Internal\StateMachines\InvalidStateTransitionException;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
+use Modules\Recurring\Internal\StateMachines\SeriesRowVanishedException;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
 
@@ -115,8 +116,11 @@ it('raises when the series row is missing', function (): void {
     $ghost = RecurringSeries::query()->findOrFail($this->series->id);
     $ghost->delete();
 
+    // The dedicated type is the point: a caller can now tell a row that
+    // vanished mid-flight from a transition the table forbids, which the
+    // shared RuntimeException parent made indistinguishable.
     expect(fn () => $this->machine->transition($ghost, 'approved', 'user_action', 'user'))
-        ->toThrow(RuntimeException::class);
+        ->toThrow(SeriesRowVanishedException::class);
 });
 
 dataset('allowed_transitions', [

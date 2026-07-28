@@ -128,20 +128,16 @@ final class CadenceInferrer
      */
     private static function snapToBand(float $medianDays): string
     {
-        if ($medianDays > 0.0 && $medianDays < self::WEEKLY_MAX_EXCLUSIVE) {
-            return 'weekly';
-        }
-        if ($medianDays >= self::MONTHLY_MIN && $medianDays <= self::MONTHLY_MAX) {
-            return 'monthly';
-        }
-        if ($medianDays >= self::QUARTERLY_MIN && $medianDays <= self::QUARTERLY_MAX) {
-            return 'quarterly';
-        }
-        if ($medianDays >= self::YEARLY_MIN && $medianDays <= self::YEARLY_MAX) {
-            return 'yearly';
-        }
-
-        return 'irregular';
+        // A band table, so it reads as one: each arm is a row, and the gaps
+        // between the bands fall through to irregular rather than being
+        // silently absorbed by whichever comparison came last.
+        return match (true) {
+            $medianDays > 0.0 && $medianDays < self::WEEKLY_MAX_EXCLUSIVE => 'weekly',
+            $medianDays >= self::MONTHLY_MIN && $medianDays <= self::MONTHLY_MAX => 'monthly',
+            $medianDays >= self::QUARTERLY_MIN && $medianDays <= self::QUARTERLY_MAX => 'quarterly',
+            $medianDays >= self::YEARLY_MIN && $medianDays <= self::YEARLY_MAX => 'yearly',
+            default => 'irregular',
+        };
     }
 
     /**
