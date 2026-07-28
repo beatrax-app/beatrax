@@ -13,10 +13,10 @@ it('returns the authenticated user via the configured guard', function (): void 
     $user->id = 42;
     $user->exists = true;
 
-    $guard = $this->createMock(Guard::class);
+    $guard = $this->createStub(Guard::class);
     $guard->method('user')->willReturn($user);
 
-    $factory = $this->createMock(AuthFactory::class);
+    $factory = $this->createStub(AuthFactory::class);
     $factory->method('guard')->willReturn($guard);
 
     $svc = new CurrentUserService($factory);
@@ -28,10 +28,10 @@ it('returns the authenticated user via the configured guard', function (): void 
 });
 
 it('throws NotAuthenticatedException when the guard has no user', function (): void {
-    $guard = $this->createMock(Guard::class);
+    $guard = $this->createStub(Guard::class);
     $guard->method('user')->willReturn(null);
 
-    $factory = $this->createMock(AuthFactory::class);
+    $factory = $this->createStub(AuthFactory::class);
     $factory->method('guard')->willReturn($guard);
 
     $svc = new CurrentUserService($factory);
@@ -46,10 +46,10 @@ it('defaults period_start_day to 1 when the user has not set one', function (): 
     $user->id = 1;
     $user->exists = true;
 
-    $guard = $this->createMock(Guard::class);
+    $guard = $this->createStub(Guard::class);
     $guard->method('user')->willReturn($user);
 
-    $factory = $this->createMock(AuthFactory::class);
+    $factory = $this->createStub(AuthFactory::class);
     $factory->method('guard')->willReturn($guard);
 
     $svc = new CurrentUserService($factory);

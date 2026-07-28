@@ -21,7 +21,7 @@ use Modules\Core\Public\Contracts\Clock;
 beforeEach(function (): void {
     // Freeze the clock so the duration-cutoff arithmetic is deterministic.
     $this->frozenNow = CarbonImmutable::parse('2026-05-20 09:00:00');
-    $clock = $this->createMock(Clock::class);
+    $clock = $this->createStub(Clock::class);
     $clock->method('now')->willReturn($this->frozenNow);
     $this->app->instance(Clock::class, $clock);
 
