@@ -67,7 +67,7 @@
     </div>
 
     @if ($showingDivergenceBanner)
-        <div role="status" aria-live="polite" class="rounded-md border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950" data-testid="opening-balance-divergence-banner">
+        <div aria-atomic="true" aria-live="polite" class="rounded-md border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950" data-testid="opening-balance-divergence-banner">
             <p class="text-sm text-amber-700">
                 This is more than €500 off the balance beatrax computes from your imported transactions. Are you sure?
             </p>

@@ -239,7 +239,7 @@
                         @endphp
                         <div
                             class="split-remaining-bar {{ $remainingMinor === 0 ? 'split-remaining-bar--zero' : ($remainingMinor > 0 ? 'split-remaining-bar--positive' : 'split-remaining-bar--over') }}"
-                            role="status"
+                            aria-atomic="true"
                             aria-live="polite"
                             data-testid="split-remaining-bar"
                         >
@@ -282,7 +282,7 @@
                                 $survivorCat = collect($splitCategories)->firstWhere('id', (int) ($legs[$survivorIdx]['categoryId'] ?? 0));
                                 $survivorName = $survivorCat->path ?? 'this category';
                             @endphp
-                            <div class="flex flex-wrap items-center gap-3" role="status" data-testid="split-remove-to-one-confirm">
+                            <div class="flex flex-wrap items-center gap-3" aria-live="polite" aria-atomic="true" data-testid="split-remove-to-one-confirm">
                                 <span class="text-sm text-slate-700 dark:text-slate-300">
                                     Removing this leaves one category — the transaction becomes {{ $survivorName }}.
                                 </span>
@@ -305,7 +305,7 @@
                         @endif
 
                         @if ($confirmUnsplit)
-                            <div class="space-y-2" role="status" data-testid="split-unsplit-confirm">
+                            <div class="space-y-2" aria-live="polite" aria-atomic="true" data-testid="split-unsplit-confirm">
                                 <p class="text-sm text-slate-700 dark:text-slate-300">Restore as a single category?</p>
                                 <div class="flex flex-wrap items-center gap-3">
                                     @foreach ($legs as $index => $leg)
@@ -410,7 +410,7 @@
                         x-cloak
                         x-transition.opacity
                         class="text-sm text-slate-600"
-                        role="status"
+                        aria-atomic="true"
                         aria-live="polite"
                         x-text="toast"
                     ></span>
@@ -469,7 +469,7 @@
                         @if ($noteSaved)
                             <span
                                 class="text-sm text-emerald-600 dark:text-emerald-400"
-                                role="status"
+                                aria-live="polite" aria-atomic="true"
                                 data-testid="note-saved-indicator"
                             >Saved</span>
                         @endif
