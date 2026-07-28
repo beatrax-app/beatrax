@@ -95,6 +95,9 @@ final class RecurringReviewPage extends Component
                 ($action)($id, $user);
                 $applied++;
             } catch (NotFoundHttpException) {
+                // Deliberately empty: the id belongs to another user, and a
+                // bulk action reports how many rows it applied to rather than
+                // failing the whole batch on one it was never allowed to see.
             }
         }
         $this->selectedIds = [];
@@ -116,6 +119,9 @@ final class RecurringReviewPage extends Component
                 ($action)($id, $user);
                 $applied++;
             } catch (NotFoundHttpException) {
+                // Deliberately empty: the id belongs to another user, and a
+                // bulk action reports how many rows it applied to rather than
+                // failing the whole batch on one it was never allowed to see.
             }
         }
         $this->selectedIds = [];
