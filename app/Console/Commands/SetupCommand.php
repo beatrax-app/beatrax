@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Setup\DatabaseProbe;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
-use PDO;
 use PDOException;
 
 use function Laravel\Prompts\confirm;
@@ -27,7 +27,7 @@ final class SetupCommand extends Command
 
     protected $description = 'Interactively configure this environment (.env + database) for a server deployment.';
 
-    public function handle(Repository $config): int
+    public function handle(Repository $config, DatabaseProbe $probe): int
     {
         intro('beatrax server setup');
 
@@ -73,7 +73,7 @@ final class SetupCommand extends Command
         note('Wrote '.implode(', ', array_keys($env)).' to .env');
 
         if ($driver !== 'sqlite') {
-            $this->verifyDatabase($driver, $env);
+            $this->verifyDatabase($driver, $env, $probe);
         }
 
         if (confirm(label: 'Run database migrations and create your user now (beatrax:install)?', default: true)) {
@@ -147,7 +147,7 @@ final class SetupCommand extends Command
     /**
      * @param  array<string, string>  $env
      */
-    private function verifyDatabase(string $driver, array $env): void
+    private function verifyDatabase(string $driver, array $env, DatabaseProbe $probe): void
     {
         $pdoDriver = $driver === 'pgsql' ? 'pgsql' : 'mysql';
         $dsn = sprintf(
@@ -159,11 +159,15 @@ final class SetupCommand extends Command
         );
 
         try {
-            new PDO($dsn, $env['DB_USERNAME'] ?? '', $env['DB_PASSWORD'] ?? '', [
-                PDO::ATTR_TIMEOUT => 5,
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            ]);
-            $this->components->info('Database connection OK.');
+            $version = $probe->serverVersion(
+                $dsn,
+                $env['DB_USERNAME'] ?? '',
+                $env['DB_PASSWORD'] ?? '',
+            );
+
+            $this->components->info($version === ''
+                ? 'Database connection OK.'
+                : sprintf('Database connection OK (%s %s).', $pdoDriver, $version));
         } catch (PDOException $e) {
             $this->components->warn('Could not connect yet: '.$e->getMessage());
             note('That is fine if the database/user does not exist yet — create it, then re-run setup or `php artisan beatrax:install`.');
