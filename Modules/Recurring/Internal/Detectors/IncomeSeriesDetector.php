@@ -13,10 +13,8 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
-use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
-use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -45,9 +43,10 @@ final class IncomeSeriesDetector implements SeriesDetector
         private readonly Clock $clock,
         private readonly CadenceInferrer $cadenceInferrer,
         private readonly ClusterKeyComposer $clusterKeyComposer,
-        private readonly RecurringSeriesStateMachine $stateMachine,
         private readonly Dispatcher $events,
         private readonly SensitiveColumnCodec $codec,
+        private readonly OccurrenceWriter $occurrences,
+        private readonly SeriesRefresher $refresher,
     ) {}
 
     /**
@@ -148,16 +147,8 @@ final class IncomeSeriesDetector implements SeriesDetector
         string $currency,
         array $rows,
     ): void {
-        if (count($rows) < self::MIN_OCCURRENCES) {
-            return;
-        }
-
-        $timestamps = [];
-        foreach ($rows as $row) {
-            $timestamps[] = CarbonImmutable::parse(self::toString($row->posted_at));
-        }
-        $cadenceResult = $this->cadenceInferrer->infer($timestamps);
-        if ($cadenceResult['cadence'] === 'irregular') {
+        $cadenceResult = $this->qualifyCluster($rows);
+        if ($cadenceResult === null) {
             return;
         }
 
@@ -191,74 +182,52 @@ final class IncomeSeriesDetector implements SeriesDetector
 
         $latestRow = $rows[count($rows) - 1];
         $latestAmount = self::toInt($latestRow->amount_minor);
-        $monthlyEquivalent = self::monthlyEquivalent($latestAmount, $cadenceResult['cadence']);
         $nextExpectedAt = $cadenceResult['next_expected_at'];
 
+        $detected = DetectedSeries::fromCadence($clusterKey, $cadenceResult, $latestAmount, $currency, $rows);
+
         if ($existing === null) {
-            $this->insertNewSeries(
-                $user,
-                $counterpartyNormalized,
-                $counterpartyKey,
-                $currency,
-                $clusterKey,
-                $cadenceResult['cadence'],
-                $latestAmount,
-                $monthlyEquivalent,
-                $nextExpectedAt,
-                $cadenceResult['confidence_low'],
-                $rows,
-            );
+            $this->insertNewSeries($user, $counterpartyNormalized, $counterpartyKey, $detected);
 
             return;
         }
 
-        if ($existing->state === 'rejected') {
-            // Rejection covers the whole (counterparty, currency) pair
-            // across every cadence variant, so a freshly-clustering
-            // quarterly pattern for an income source rejected at a
-            // monthly cadence is intentionally suppressed too.
+        // Both states mean leave this row alone. Rejection covers the whole
+        // (counterparty, currency) pair across every cadence variant; a
+        // snoozed row would surface a different amount than the one the user
+        // paused on, and the next sweep's expiry pass unpauses it first.
+        if (in_array($existing->state, ['rejected', 'snoozed'], true)) {
             return;
         }
 
-        if ($existing->state === 'snoozed') {
-            // Refreshing metrics in the background would surface a
-            // different amount than the one the user paused on; the
-            // next sweep's snooze-expiry pass flips snoozed -> pending
-            // first, and normal refresh resumes after that.
-            return;
-        }
-
-        $this->refreshExistingSeries(
-            $existing,
-            $clusterKey,
-            $counterpartyKey,
-            $cadenceResult['cadence'],
-            $latestAmount,
-            $currency,
-            $monthlyEquivalent,
-            $nextExpectedAt,
-            $cadenceResult['confidence_low'],
-            $rows,
-            $user,
-        );
+        $this->refresher->refresh($existing, $counterpartyKey, $detected, $user, 'income');
     }
 
+    // A cluster qualifies once it has enough occurrences and the intervals
+    // resolve to a real cadence. Null means one of those two tests failed
+    // and there is nothing to record. Income skips the variance filter that
+    // expense applies, so the row list is not narrowed here.
     /**
      * @param  list<stdClass>  $rows
+     * @return array{cadence: 'weekly'|'monthly'|'quarterly'|'yearly'|'irregular', median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}|null
      */
-    private function insertNewSeries(
-        User $user,
-        string $counterpartyNormalized,
-        string $counterpartyKey,
-        string $currency,
-        string $clusterKey,
-        string $cadence,
-        int $latestAmountMinor,
-        ?int $monthlyEquivalentMinor,
-        ?CarbonImmutable $nextExpectedAt,
-        bool $confidenceLow,
-        array $rows,
-    ): void {
+    private function qualifyCluster(array $rows): ?array
+    {
+        if (count($rows) < self::MIN_OCCURRENCES) {
+            return null;
+        }
+
+        $timestamps = [];
+        foreach ($rows as $row) {
+            $timestamps[] = CarbonImmutable::parse(self::toString($row->posted_at));
+        }
+        $cadenceResult = $this->cadenceInferrer->infer($timestamps);
+
+        return $cadenceResult['cadence'] === 'irregular' ? null : $cadenceResult;
+    }
+
+    private function insertNewSeries(User $user, string $counterpartyNormalized, string $counterpartyKey, DetectedSeries $detected): void
+    {
         $now = $this->clock->now()->toDateTimeString();
         $connection = $this->db->connection();
 
@@ -267,147 +236,36 @@ final class IncomeSeriesDetector implements SeriesDetector
             'direction' => 'income',
             'detected_name' => $counterpartyNormalized,
             'state' => 'pending',
-            'cadence' => $cadence,
-            'latest_amount_minor' => $latestAmountMinor,
-            'latest_currency' => $currency,
-            'monthly_equivalent_minor' => $monthlyEquivalentMinor,
+            'cadence' => $detected->cadence,
+            'latest_amount_minor' => $detected->latestAmountMinor,
+            'latest_currency' => $detected->currency,
+            'monthly_equivalent_minor' => $detected->monthlyEquivalentMinor,
             'variance_tolerance_percent' => 25,
-            'next_expected_at' => $nextExpectedAt?->toDateString(),
-            'next_expected_confidence_low' => $confidenceLow,
-            'cluster_key' => $clusterKey,
+            'next_expected_at' => $detected->nextExpectedAt?->toDateString(),
+            'next_expected_confidence_low' => $detected->confidenceLow,
+            'cluster_key' => $detected->clusterKey,
             'cluster_counterparty_key' => $counterpartyKey,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
 
-        $this->insertOccurrenceRows($user->id, $newId, $rows, $currency);
+        $this->occurrences->write($user->id, $newId, $detected->rows, $detected->currency);
 
         $this->events->dispatch(new RecurringSeriesDetected(
             seriesId: $newId,
             userId: $user->id,
             direction: 'income',
             detectedName: $counterpartyNormalized,
-            cadence: $cadence,
+            cadence: $detected->cadence,
         ));
 
         $this->events->dispatch(new RecurringSeriesMetricsRefreshed(
             userId: $user->id,
             recurringSeriesId: $newId,
             direction: 'income',
-            cadence: $cadence,
-            latestAmountMinor: $latestAmountMinor,
-            latestCurrency: $currency,
+            cadence: $detected->cadence,
+            latestAmountMinor: $detected->latestAmountMinor,
+            latestCurrency: $detected->currency,
         ));
-    }
-
-    /**
-     * @param  list<stdClass>  $rows
-     */
-    private function refreshExistingSeries(
-        RecurringSeries $series,
-        string $clusterKey,
-        string $counterpartyKey,
-        string $cadence,
-        int $latestAmountMinor,
-        string $currency,
-        ?int $monthlyEquivalentMinor,
-        ?CarbonImmutable $nextExpectedAt,
-        bool $confidenceLow,
-        array $rows,
-        User $user,
-    ): void {
-        $now = $this->clock->now()->toDateTimeString();
-        $connection = $this->db->connection();
-
-        $previousCadence = $series->cadence;
-
-        $connection->table('recurring_series')
-            ->where('id', $series->id)
-            ->update([
-                'cadence' => $cadence,
-                'cluster_key' => $clusterKey,
-                'cluster_counterparty_key' => $counterpartyKey,
-                'latest_amount_minor' => $latestAmountMinor,
-                'latest_currency' => $currency,
-                'monthly_equivalent_minor' => $monthlyEquivalentMinor,
-                'next_expected_at' => $nextExpectedAt?->toDateString(),
-                'next_expected_confidence_low' => $confidenceLow,
-                'updated_at' => $now,
-            ]);
-
-        $seriesId = $series->id;
-        $this->insertOccurrenceRows($user->id, $seriesId, $rows, $currency);
-
-        if (in_array($series->state, ['approved', 'cadence_changed'], true) && $previousCadence !== $cadence) {
-            /** @var RecurringSeries $fresh */
-            $fresh = RecurringSeries::query()->findOrFail($seriesId);
-            if ($fresh->state === 'approved') {
-                $this->stateMachine->transition(
-                    $fresh,
-                    'cadence_changed',
-                    'detector_cadence_flip',
-                    'detector',
-                );
-
-                $this->events->dispatch(new RecurringSeriesCadenceFlipped(
-                    seriesId: $seriesId,
-                    userId: $user->id,
-                    oldCadence: $previousCadence,
-                    newCadence: $cadence,
-                ));
-            }
-        }
-
-        $this->events->dispatch(new RecurringSeriesMetricsRefreshed(
-            userId: $user->id,
-            recurringSeriesId: $seriesId,
-            direction: 'income',
-            cadence: $cadence,
-            latestAmountMinor: $latestAmountMinor,
-            latestCurrency: $currency,
-        ));
-    }
-
-    /**
-     * @param  list<stdClass>  $rows
-     */
-    private function insertOccurrenceRows(int $userId, int $seriesId, array $rows, string $currency): void
-    {
-        $now = $this->clock->now()->toDateTimeString();
-        $connection = $this->db->connection();
-
-        $payload = [];
-        foreach ($rows as $row) {
-            $payload[] = [
-                'user_id' => $userId,
-                'recurring_series_id' => $seriesId,
-                'transaction_id' => self::toInt($row->id),
-                'observed_at' => self::toString($row->posted_at),
-                'observed_amount_minor' => self::toInt($row->amount_minor),
-                'observed_currency' => $currency,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }
-
-        if ($payload === []) {
-            return;
-        }
-
-        $connection->table('recurring_series_occurrences')->insertOrIgnore($payload);
-    }
-
-    private static function monthlyEquivalent(int $latestAmountMinor, string $cadence): ?int
-    {
-        return match ($cadence) {
-            // 52/12 is the exact weeks-per-month conversion; the
-            // rounded literal 4.33 drifted by ~0.07% (€10.00/wk
-            // projects to €43.33/mo, not €43.30) on every weekly row.
-            'weekly' => (int) round($latestAmountMinor * 52 / 12),
-            'monthly' => $latestAmountMinor,
-            'quarterly' => (int) round($latestAmountMinor / 3),
-            'yearly' => (int) round($latestAmountMinor / 12),
-            default => null,
-        };
     }
 }
