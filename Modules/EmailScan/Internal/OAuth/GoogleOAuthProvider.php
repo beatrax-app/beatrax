@@ -25,6 +25,7 @@ class GoogleOAuthProvider
 
     public function __construct(
         private readonly OAuthSecretsRepository $secrets,
+        private readonly OAuthProviderFactory $providers,
     ) {}
 
     public function getAuthorizationUrl(string $state, string $redirectUri): string
@@ -139,20 +140,7 @@ class GoogleOAuthProvider
 
     private function makeProvider(string $redirectUri): Google
     {
-        $client = $this->secrets->loadProviderClient('gmail');
-        if ($client === null) {
-            throw new RuntimeException(
-                'Google OAuth client is not configured — run the OAuth-client wizard first.',
-            );
-        }
-
-        return new Google([
-            'clientId' => $client['client_id'],
-            'clientSecret' => $client['client_secret'],
-            'redirectUri' => $redirectUri,
-            'accessType' => 'offline',
-            'prompt' => 'consent',
-        ]);
+        return $this->providers->google($redirectUri);
     }
 
     private function readEmailFromToken(Google $provider, string $accessToken): string

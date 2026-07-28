@@ -63,13 +63,10 @@ it('asks Google for a refresh token, which only offline consent returns', functi
         ->and($params['prompt'])->toBe('consent');
 });
 
-// There is no equivalent test for Microsoft's authorization URL. The Azure
-// provider resolves tenant metadata over the network before it will build one,
-// so the URL cannot be produced offline the way Google's can. Asserting on it
-// here would either need the OpenID discovery document faked through a Guzzle
-// client the provider does not expose, or would quietly depend on the runner
-// having internet — a test that passes for the wrong reason. Its guard path is
-// covered below.
+// Microsoft's authorization URL is asserted in MicrosoftOAuthExchangeTest
+// instead, because Azure resolves tenant metadata over the network before it
+// will build one — it needs the transport the factory injects, which the tests
+// here deliberately do without.
 
 it('carries the state through verbatim, since it is the CSRF check', function (string $state): void {
     $this->secrets->saveProviderClient('gmail', 'google-client', 'google-secret', $this->redirect);
