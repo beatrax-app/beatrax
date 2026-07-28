@@ -10,7 +10,7 @@
       3. Add-mutation chip → five-option chooser → per-kind inline
          form.
 --}}
-<aside role="complementary" aria-label="Scenario editor — {{ $scenarioName }}" class="space-y-4">
+<aside aria-label="Scenario editor — {{ $scenarioName }}" class="space-y-4">
     {{-- Header. --}}
     <div>
         @if ($renamingScenario)
