@@ -11,7 +11,7 @@
 <div>
     @if ($flashMessage !== '')
         <aside
-            role="status"
+            aria-live="polite" aria-atomic="true"
             class="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300"
         >
             {{ $flashMessage }}

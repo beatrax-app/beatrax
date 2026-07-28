@@ -84,7 +84,7 @@
         @endphp
         @if ($selfWrapping)
             @if ($isResuming)
-                <div class="wiz-resume-banner-floating" role="status">
+                <div class="wiz-resume-banner-floating" aria-live="polite" aria-atomic="true">
                     Welcome back — let's pick up where you left off.
                 </div>
             @endif
@@ -92,7 +92,7 @@
         @else
             <article class="wiz-card">
                 @if ($isResuming)
-                    <div class="wiz-resume-banner" role="status">
+                    <div class="wiz-resume-banner" aria-live="polite" aria-atomic="true">
                         Welcome back — let's pick up where you left off.
                     </div>
                 @endif

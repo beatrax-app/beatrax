@@ -98,7 +98,7 @@
 
     @if ($flashMessage !== '')
         <div
-            role="status"
+            aria-atomic="true"
             aria-live="polite"
             class="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"
             style="border-color: var(--color-emerald); background: var(--color-emerald-bg); color: var(--color-emerald);"
@@ -268,14 +268,14 @@
                     wire:loading
                     wire:target="metric,dimension,periodPreset,customFrom,customTo,granularity,currencyMode,viz,compare,filterAccounts,filterCategories,filterCounterparties,filterAmountMin,filterAmountMax,filterAmountDir"
                     style="font-size: var(--text-xs); color: var(--color-text-muted);"
-                    role="status"
+                    aria-atomic="true"
                     aria-live="polite"
                 >… Updating</span>
             </div>
 
             @if (! $hasResults)
                 {{-- Friendly empty state (Req: never an error) — rail stays interactive --}}
-                <div class="srch-no-results" role="status">
+                <div class="srch-no-results" aria-live="polite" aria-atomic="true">
                     <p class="srch-no-results__heading">Nothing to show for this selection</p>
                     <p class="srch-no-results__body">Try widening the date range or removing a filter.</p>
                 </div>

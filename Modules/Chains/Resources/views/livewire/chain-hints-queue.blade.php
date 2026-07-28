@@ -32,7 +32,7 @@
     @if ($statusMessage)
         <div
             class="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"
-            role="status"
+            aria-live="polite" aria-atomic="true"
             data-testid="chain-hints-status"
         >
             {{ $statusMessage }}
