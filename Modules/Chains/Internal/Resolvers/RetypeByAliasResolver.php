@@ -127,21 +127,12 @@ final class RetypeByAliasResolver
             return;
         }
 
-        $ownAccountId = self::toInt($row->account_id ?? null);
-        $targetAccountIds = $accountIdsByKind[$targetKind] ?? [];
-        $hasOtherAccount = false;
-        foreach ($targetAccountIds as $targetAccountId) {
-            if ($targetAccountId !== $ownAccountId) {
-                $hasOtherAccount = true;
-                break;
-            }
-        }
-        if (! $hasOtherAccount) {
-            return;
-        }
-
+        // Retyping needs somewhere else to point at: an alias whose only
+        // account is the row's own account describes a transfer to itself,
+        // which is not a transfer.
         $rowId = self::toInt($row->id ?? null);
-        if ($rowId === 0) {
+        $ownAccountId = self::toInt($row->account_id ?? null);
+        if ($rowId === 0 || ! self::hasAccountOtherThan($accountIdsByKind[$targetKind] ?? [], $ownAccountId)) {
             return;
         }
 
@@ -151,6 +142,20 @@ final class RetypeByAliasResolver
         } else {
             $transferInIds[] = $rowId;
         }
+    }
+
+    /**
+     * @param  list<int>  $targetAccountIds
+     */
+    private static function hasAccountOtherThan(array $targetAccountIds, int $ownAccountId): bool
+    {
+        foreach ($targetAccountIds as $targetAccountId) {
+            if ($targetAccountId !== $ownAccountId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

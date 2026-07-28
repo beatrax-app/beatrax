@@ -223,45 +223,62 @@ final class PaypalFundingResolver
     private function asnDirectMatch(stdClass $row, User $user): ?array
     {
         $settledMinor = self::toInt($row->settled_amount_minor ?? null);
-        if ($settledMinor === 0) {
-            return null;
-        }
-
         $bookedAtRaw = self::toString($row->booked_at ?? null);
-        if ($bookedAtRaw === '') {
+        if ($settledMinor === 0 || $bookedAtRaw === '') {
             return null;
         }
-        $center = CarbonImmutable::parse($bookedAtRaw);
-        $windowStart = $center->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
-        $windowEnd = $center->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
 
-        // tx.counterparty_iban is encrypted, so it can't sit in a SQL
-        // equality predicate — the small, plaintext alias set is loaded in
-        // full instead, candidates are narrowed on plaintext dims only,
-        // then each candidate's IBAN is decrypted and matched in PHP.
-        $paypalAliasRows = $this->db->connection()
+        $aliasSet = $this->paypalAliasSet($user);
+        if ($aliasSet === []) {
+            return null;
+        }
+
+        $center = CarbonImmutable::parse($bookedAtRaw);
+        $matches = $this->aliasMatchedCandidates($settledMinor, $center, $aliasSet, $user);
+
+        return $matches === []
+            ? null
+            : $this->asnDirectLink($row, $matches, $center, $settledMinor, $user);
+    }
+
+    // tx.counterparty_iban is encrypted, so it cannot sit in a SQL equality
+    // predicate. The alias set is small and plaintext, so it is loaded whole
+    // and the comparison happens in PHP after decrypting each candidate.
+    /**
+     * @return array<string, bool>
+     */
+    private function paypalAliasSet(User $user): array
+    {
+        $rows = $this->db->connection()
             ->table('known_counterparty_ibans')
             ->where('user_id', $user->id)
             ->where('target_account_kind', 'paypal')
             ->get(['real_iban']);
 
-        /** @var array<string, bool> $aliasSet */
         $aliasSet = [];
-        foreach ($paypalAliasRows as $aliasRow) {
+        foreach ($rows as $aliasRow) {
             /** @var stdClass $aliasRow */
             $realIban = self::toString($aliasRow->real_iban ?? null);
             if ($realIban !== '') {
                 $aliasSet[$realIban] = true;
             }
         }
-        if ($aliasSet === []) {
-            return null;
-        }
 
-        // The left-join on chain_links is the 1:1 enforcement — an ASN row
-        // already cited on another non-rejected paypal_funding link is
-        // excluded. ASN_DIRECT_CANDIDATE_SCAN_LIMIT bounds the decrypt scan
-        // beyond what the amount+date predicate already narrows.
+        return $aliasSet;
+    }
+
+    // The left join is the 1:1 enforcement: an ASN row already cited on
+    // another non-rejected paypal_funding link is excluded. Iteration stops
+    // at two matches because the caller only needs none, one, or ambiguous.
+    /**
+     * @param  array<string, bool>  $aliasSet
+     * @return list<stdClass>
+     */
+    private function aliasMatchedCandidates(int $settledMinor, CarbonImmutable $center, array $aliasSet, User $user): array
+    {
+        $windowStart = $center->subDays(self::DATE_WINDOW_DAYS)->startOfDay()->toDateTimeString();
+        $windowEnd = $center->addDays(self::DATE_WINDOW_DAYS)->endOfDay()->toDateTimeString();
+
         $candidates = $this->db->connection()
             ->table('transactions as tx')
             ->leftJoin('chain_links as existing', function ($join): void {
@@ -283,14 +300,6 @@ final class PaypalFundingResolver
                 'tx.counterparty_iban as candidate_iban',
             ]);
 
-        if ($candidates->isEmpty()) {
-            return null;
-        }
-
-        // Decrypt-then-match: iterate in closest-by-date order (already
-        // sorted by the orderByRaw clause above) and keep only the rows
-        // whose decrypted IBAN is in the alias set. The arm only needs to
-        // know "0", "1", or "≥2" matches, so it stops once 2 are found.
         /** @var list<stdClass> $matches */
         $matches = [];
         foreach ($candidates as $candidate) {
@@ -309,20 +318,24 @@ final class PaypalFundingResolver
             }
         }
 
-        if ($matches === []) {
-            return null;
-        }
+        return $matches;
+    }
 
+    /**
+     * @param  list<stdClass>  $matches
+     * @return ?array<string, mixed>
+     */
+    private function asnDirectLink(stdClass $row, array $matches, CarbonImmutable $center, int $settledMinor, User $user): ?array
+    {
         $closest = $matches[0];
         $partnerId = self::toInt($closest->candidate_id ?? null);
         if ($partnerId === 0) {
             return null;
         }
+
         $partnerIban = $this->codec->decryptValue('transactions', 'counterparty_iban', self::toString($closest->candidate_iban ?? null), $user->id, ($this->session)())['value'];
         $ambiguous = count($matches) > 1;
-
         $bookedCarbon = CarbonImmutable::parse(self::toString($closest->candidate_booked_at ?? null));
-        $dateDeltaDays = abs((int) $bookedCarbon->diffInDays($center, false));
 
         return [
             'from_transaction_id' => self::toInt($row->tx_id ?? null),
@@ -337,10 +350,10 @@ final class PaypalFundingResolver
                 'matched_via' => 'asn_alias_amount_date',
                 'matched_iban' => $partnerIban,
                 'matched_amount_minor' => $settledMinor,
-                'date_delta_days' => $dateDeltaDays,
-                // The true IBAN-matched count (capped at 2), not
-                // $candidates->count() — rows whose decrypted IBAN misses
-                // the alias set never became matches.
+                'date_delta_days' => abs((int) $bookedCarbon->diffInDays($center, false)),
+                // The true IBAN-matched count (capped at 2), not the raw
+                // candidate count — rows whose decrypted IBAN misses the
+                // alias set never became matches.
                 'ambiguous_candidates' => $ambiguous ? count($matches) : null,
                 'signature_hash' => $this->signatureHash(
                     self::toString($row->counterparty_normalized ?? null),

@@ -114,11 +114,28 @@ final class ChainDrawer extends Component
         }
 
         $user = $currentUser->user();
+        $childTxIdsByParent = $this->fanoutParents($tree, $db, $user);
+
+        if ($childTxIdsByParent === []) {
+            return $tree;
+        }
+
+        return $this->nestChildren(
+            $tree,
+            $childTxIdsByParent,
+            $this->loadChildNodes($childTxIdsByParent, $db, $user, $codec, $session),
+        );
+    }
+
+    // Confirmed and candidate only, so rejected legs stay suppressed exactly
+    // as they are in the parent walker.
+    /**
+     * @return array<int, list<int>> child transaction ids per fan-out parent
+     */
+    private function fanoutParents(ChainTree $tree, DatabaseManager $db, User $user): array
+    {
         $nodeIds = array_map(static fn (ChainTreeNode $n): int => $n->transactionId, $tree->nodes);
 
-        // Pulls every outgoing ics_bulk_settle chain_link for the visited
-        // node ids, filtered to confirmed/candidate so rejected legs stay
-        // suppressed exactly as in the parent walker.
         $links = $db->connection()->table('chain_links')
             ->where('user_id', $user->id)
             ->where('kind', 'ics_bulk_settle')
@@ -131,34 +148,30 @@ final class ChainDrawer extends Component
         $rawByParent = [];
         foreach ($links as $link) {
             /** @var stdClass $link */
-            if ($link->to_transaction_id === null) {
-                continue;
-            }
-            $parentId = self::toInt($link->from_transaction_id);
-            $rawByParent[$parentId][] = self::toInt($link->to_transaction_id);
-        }
-
-        // A node is a fan-out parent only with 2+ outgoing ics_bulk_settle
-        // links; a single link is just a normal chain hop and stays in the
-        // flat waterfall list instead of rendering a fan-out container.
-        /** @var array<int, list<int>> $childTxIdsByParent */
-        $childTxIdsByParent = [];
-        foreach ($rawByParent as $parentId => $childIds) {
-            if (count($childIds) >= 2) {
-                $childTxIdsByParent[$parentId] = $childIds;
+            if ($link->to_transaction_id !== null) {
+                $rawByParent[self::toInt($link->from_transaction_id)][] = self::toInt($link->to_transaction_id);
             }
         }
 
-        if ($childTxIdsByParent === []) {
-            return $tree;
-        }
+        // Two or more outgoing links make a fan-out parent. A single link is
+        // an ordinary chain hop and stays in the flat waterfall list rather
+        // than rendering a fan-out container of one.
+        return array_filter($rawByParent, static fn (array $childIds): bool => count($childIds) >= 2);
+    }
 
+    /**
+     * @param  array<int, list<int>>  $childTxIdsByParent
+     * @return array<int, ChainTreeNode>
+     */
+    private function loadChildNodes(array $childTxIdsByParent, DatabaseManager $db, User $user, SensitiveColumnCodec $codec, Session $session): array
+    {
         $allChildIds = [];
         foreach ($childTxIdsByParent as $ids) {
             foreach ($ids as $id) {
                 $allChildIds[$id] = true;
             }
         }
+
         $childRows = $db->connection()->table('transactions')
             ->where('user_id', $user->id)
             ->whereIn('id', array_keys($allChildIds))
@@ -168,16 +181,23 @@ final class ChainDrawer extends Component
                 'account_id',
             ]);
 
-        /** @var array<int, ChainTreeNode> $childNodes */
         $childNodes = [];
         foreach ($childRows as $row) {
             /** @var stdClass $row */
-            $childId = self::toInt($row->id);
-            $childNodes[$childId] = $this->makeChildNode($row, $db, $user, $codec, $session);
+            $childNodes[self::toInt($row->id)] = $this->makeChildNode($row, $db, $user, $codec, $session);
         }
 
-        // Children of a fan-out parent render nested under it, never as
-        // duplicate top-level waterfall cards of their own.
+        return $childNodes;
+    }
+
+    // A fan-out child renders inside its parent's container, so it is
+    // skipped at the top level rather than rendering twice.
+    /**
+     * @param  array<int, list<int>>  $childTxIdsByParent
+     * @param  array<int, ChainTreeNode>  $childNodes
+     */
+    private function nestChildren(ChainTree $tree, array $childTxIdsByParent, array $childNodes): ChainTree
+    {
         $childrenOfFanout = [];
         foreach ($childTxIdsByParent as $ids) {
             foreach ($ids as $id) {
@@ -185,8 +205,6 @@ final class ChainDrawer extends Component
             }
         }
 
-        // Skip nodes that are themselves fan-out children — they render
-        // inside their parent's fan-out container instead.
         $rebuilt = [];
         foreach ($tree->nodes as $node) {
             if (isset($childrenOfFanout[$node->transactionId])) {
@@ -194,11 +212,9 @@ final class ChainDrawer extends Component
             }
 
             $children = [];
-            if (isset($childTxIdsByParent[$node->transactionId])) {
-                foreach ($childTxIdsByParent[$node->transactionId] as $childId) {
-                    if (isset($childNodes[$childId])) {
-                        $children[] = $childNodes[$childId];
-                    }
+            foreach ($childTxIdsByParent[$node->transactionId] ?? [] as $childId) {
+                if (isset($childNodes[$childId])) {
+                    $children[] = $childNodes[$childId];
                 }
             }
 
