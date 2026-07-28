@@ -69,7 +69,7 @@
             <div
                 class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
                 data-testid="camera-unavailable-notice"
-                role="status"
+                aria-live="polite" aria-atomic="true"
             >
                 Camera access is off. Enter the code from the other device instead.
             </div>

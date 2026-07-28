@@ -146,7 +146,7 @@
         @endif
 
         <div class="commit-footer">
-            <p class="commit-counter" role="status" aria-live="polite">
+            <p class="commit-counter" aria-atomic="true" aria-live="polite">
                 <strong class="tabular-nums">{{ $preview->dedupedTotalCount }}</strong>
                 {{ $preview->dedupedTotalCount === 1 ? 'transaction' : 'transactions' }}
                 to commit ·

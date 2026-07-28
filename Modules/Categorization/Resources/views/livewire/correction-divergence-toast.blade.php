@@ -13,7 +13,7 @@
 <div>
     @if ($visible)
         <div
-            role="status"
+            aria-atomic="true"
             aria-live="polite"
             x-data="{ visible: true }"
             x-init="setTimeout(() => { if (visible) { $wire.dismiss(); } }, 8000)"
@@ -52,7 +52,7 @@
         </div>
     @elseif ($flashMessage !== '')
         <div
-            role="status"
+            aria-atomic="true"
             aria-live="polite"
             wire:transition.duration.3000ms
             class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-emerald-200 bg-emerald-50 shadow-lg p-4 text-sm text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200"

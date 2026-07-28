@@ -22,7 +22,7 @@
 
     @if ($flashMessage !== '')
         <div
-            role="status"
+            aria-atomic="true"
             aria-live="polite"
             class="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"
             style="border-color: var(--color-rose); background: var(--color-rose-bg); color: var(--color-rose);"

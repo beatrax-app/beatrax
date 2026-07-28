@@ -64,7 +64,7 @@
                 </div>
                 @break
             @case ('warning')
-                <div role="status" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-4 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
+                <div aria-live="polite" aria-atomic="true" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-4 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
@@ -81,7 +81,7 @@
                 </div>
                 @break
             @default
-                <div role="status" class="rounded-lg border border-slate-200 bg-slate-50 text-slate-700 p-4 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
+                <div aria-live="polite" aria-atomic="true" class="rounded-lg border border-slate-200 bg-slate-50 text-slate-700 p-4 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>

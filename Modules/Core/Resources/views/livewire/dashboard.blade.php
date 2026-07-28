@@ -329,7 +329,7 @@
          visible). --}}
     @if ($reauthInboxCount > 0 && ! $reauthToastDismissed)
         <div
-            role="status"
+            aria-atomic="true"
             aria-live="polite"
             class="fixed bottom-24 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
@@ -371,7 +371,7 @@
          (e.g. the developer retried via the queue inspector). --}}
     @if ($failedChainResolutionExists && $isDeveloper)
         <div
-            role="status"
+            aria-atomic="true"
             aria-live="polite"
             class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >

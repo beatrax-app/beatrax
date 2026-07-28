@@ -56,7 +56,7 @@
     @if ($actionError)
         <div
             class="mb-6 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200"
-            role="status"
+            aria-live="polite" aria-atomic="true"
             data-testid="chain-review-action-error"
         >
             {{ $actionError }}

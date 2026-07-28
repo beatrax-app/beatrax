@@ -126,7 +126,7 @@
     )
         <div
             class="batch-tag-banner"
-            role="status"
+            aria-atomic="true"
             aria-live="polite"
             data-testid="batch-tag-banner"
             style="margin-top: var(--space-3);"
