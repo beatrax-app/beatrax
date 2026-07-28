@@ -113,8 +113,9 @@
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Paste your client ID and client secret</p>
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Client ID</label>
+                                    <label for="gmail-client-id" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Client ID</label>
                                     <input
+                                        id="gmail-client-id"
                                         type="text"
                                         wire:model.live="clientId"
                                         placeholder="123456789-abcdef.apps.googleusercontent.com"
@@ -122,8 +123,9 @@
                                     >
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Client secret</label>
+                                    <label for="gmail-client-secret" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Client secret</label>
                                     <input
+                                        id="gmail-client-secret"
                                         type="password"
                                         wire:model.blur="clientSecret"
                                         placeholder="GOCSPX-..."
@@ -195,8 +197,9 @@
                             <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Paste your application (client) ID and secret</p>
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Application (client) ID</label>
+                                    <label for="microsoft-client-id" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Application (client) ID</label>
                                     <input
+                                        id="microsoft-client-id"
                                         type="text"
                                         wire:model.live="clientId"
                                         placeholder="12345678-1234-1234-1234-123456789abc"
@@ -204,8 +207,9 @@
                                     >
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Client secret value</label>
+                                    <label for="microsoft-client-secret" class="block text-xs font-medium text-slate-500 mb-1 dark:text-slate-400">Client secret value</label>
                                     <input
+                                        id="microsoft-client-secret"
                                         type="password"
                                         wire:model.blur="clientSecret"
                                         placeholder="..."

@@ -1,6 +1,6 @@
 {{--
     Drop zone — the dashed-border target the user drops their statement
-    file onto on each connector step. Wraps the `<input type="file">`
+    file onto on each connector step. Wraps the `input type="file"`
     so the entire dashed area is clickable; the parent step component's
     `wire:model` is supplied via the `:wireModel` prop so the connector
     step keeps ownership of the upload validation rule + extension set.
@@ -16,7 +16,7 @@
                      for ASN; ".pdf" for ICS).
 
     The drop-zone is purely visual — Livewire's `wire:model` on the
-    nested `<input>` is the upload pipeline; no JavaScript drag
+    nested `input` is the upload pipeline; no JavaScript drag
     handlers live here.
 --}}
 @props([

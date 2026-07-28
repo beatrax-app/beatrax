@@ -176,7 +176,9 @@
                                         x-on:click.outside="editing = false"
                                         class="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
                                     >
+                                        <label for="series-name-{{ $row->seriesId }}" class="sr-only">New name for this series</label>
                                         <input
+                                            id="series-name-{{ $row->seriesId }}"
                                             type="text"
                                             x-model="newName"
                                             class="block w-full rounded-md border border-slate-200 px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
