@@ -11,31 +11,30 @@
 
 {{-- ─── Date chip ─────────────────────────────────────────────────────── --}}
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-    <button
-        type="button"
-        x-on:click="open = !open"
-        class="srch-chip {{ ($filterAfter ?? '') !== '' || ($filterBefore ?? '') !== '' ? 'srch-chip--active' : '' }}"
-        :aria-expanded="open"
-    >
+    <span class="srch-chip {{ ($filterAfter ?? '') !== '' || ($filterBefore ?? '') !== '' ? 'srch-chip--active' : '' }}">
+        <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
+            @if (($filterAfter ?? '') !== '' || ($filterBefore ?? '') !== '')
+                @php
+                    $dateLabel = match (true) {
+                        ($filterAfter ?? '') !== '' && ($filterBefore ?? '') !== '' => 'Custom range ×',
+                        ($filterAfter ?? '') !== '' => 'After '.($filterAfter ?? '').' ×',
+                        default => 'Before '.($filterBefore ?? '').' ×',
+                    };
+                @endphp
+                {{ $dateLabel }}
+            @else
+                Date &#9662;
+            @endif
+        </button>
         @if (($filterAfter ?? '') !== '' || ($filterBefore ?? '') !== '')
-            @php
-                $dateLabel = match (true) {
-                    ($filterAfter ?? '') !== '' && ($filterBefore ?? '') !== '' => 'Custom range ×',
-                    ($filterAfter ?? '') !== '' => 'After '.($filterAfter ?? '').' ×',
-                    default => 'Before '.($filterBefore ?? '').' ×',
-                };
-            @endphp
-            <span>{{ $dateLabel }}</span>
-            <span
+            <button
+                type="button"
                 wire:click.stop="$set('filterAfter', ''); $set('filterBefore', '')"
                 class="srch-chip-close"
-                role="button"
                 aria-label="Remove date filter"
-            >&times;</span>
-        @else
-            Date &#9662;
+            >&times;</button>
         @endif
-    </button>
+    </span>
     <div
         x-show="open"
         x-on:click.outside="open = false"
@@ -73,30 +72,29 @@
 {{-- ─── Account chip ───────────────────────────────────────────────────── --}}
 @if (! empty($availableAccounts ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <button
-            type="button"
-            x-on:click="open = !open"
-            class="srch-chip {{ ! empty($filterAccounts ?? []) ? 'srch-chip--active' : '' }}"
-            :aria-expanded="open"
-        >
+        <span class="srch-chip {{ ! empty($filterAccounts ?? []) ? 'srch-chip--active' : '' }}">
+            <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
+                @if (! empty($filterAccounts ?? []))
+                    @php
+                        $acctCount = count($filterAccounts);
+                        $acctLabel = $acctCount === 1
+                            ? collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? "{$acctCount} account"
+                            : "{$acctCount} accounts";
+                    @endphp
+                    {{ $acctLabel }}
+                @else
+                    Account &#9662;
+                @endif
+            </button>
             @if (! empty($filterAccounts ?? []))
-                @php
-                    $acctCount = count($filterAccounts);
-                    $acctLabel = $acctCount === 1
-                        ? collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? "{$acctCount} account"
-                        : "{$acctCount} accounts";
-                @endphp
-                {{ $acctLabel }}
-                <span
+                <button
+                    type="button"
                     wire:click.stop="$set('filterAccounts', [])"
                     class="srch-chip-close"
-                    role="button"
                     aria-label="Remove account filter"
-                >&times;</span>
-            @else
-                Account &#9662;
+                >&times;</button>
             @endif
-        </button>
+        </span>
         <div
             x-show="open"
             x-on:click.outside="open = false"
@@ -142,22 +140,19 @@
             }
         }
     @endphp
-    <button
-        type="button"
-        x-on:click="open = !open"
-        class="srch-chip {{ $amountActive ? 'srch-chip--active' : '' }}"
-        :aria-expanded="open"
-    >
-        {!! $amountLabel !!}
+    <span class="srch-chip {{ $amountActive ? 'srch-chip--active' : '' }}">
+        <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
+            {!! $amountLabel !!}
+        </button>
         @if ($amountActive)
-            <span
+            <button
+                type="button"
                 wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', 'both')"
                 class="srch-chip-close"
-                role="button"
                 aria-label="Remove amount filter"
-            >&times;</span>
+            >&times;</button>
         @endif
-    </button>
+    </span>
     <div
         x-show="open"
         x-on:click.outside="open = false"
@@ -209,30 +204,29 @@
 {{-- ─── Category chip ──────────────────────────────────────────────────── --}}
 @if (! empty($availableCategories ?? []))
     <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
-        <button
-            type="button"
-            x-on:click="open = !open"
-            class="srch-chip {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}"
-            :aria-expanded="open"
-        >
+        <span class="srch-chip {{ ! empty($filterCategories ?? []) ? 'srch-chip--active' : '' }}">
+            <button type="button" class="srch-chip-toggle" x-on:click="open = !open" :aria-expanded="open">
+                @if (! empty($filterCategories ?? []))
+                    @php
+                        $catCount = count($filterCategories);
+                        $catLabel = $catCount === 1
+                            ? collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? "{$catCount} category"
+                            : "{$catCount} categories";
+                    @endphp
+                    {{ $catLabel }}
+                @else
+                    Category &#9662;
+                @endif
+            </button>
             @if (! empty($filterCategories ?? []))
-                @php
-                    $catCount = count($filterCategories);
-                    $catLabel = $catCount === 1
-                        ? collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? "{$catCount} category"
-                        : "{$catCount} categories";
-                @endphp
-                {{ $catLabel }}
-                <span
+                <button
+                    type="button"
                     wire:click.stop="$set('filterCategories', [])"
                     class="srch-chip-close"
-                    role="button"
                     aria-label="Remove category filter"
-                >&times;</span>
-            @else
-                Category &#9662;
+                >&times;</button>
             @endif
-        </button>
+        </span>
         <div
             x-show="open"
             x-on:click.outside="open = false"

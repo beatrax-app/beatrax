@@ -3523,6 +3523,22 @@ td.date,
     font-weight: 500;
 }
 
+/*
+ * The pill is the .srch-chip element; this is the toggle inside it, carrying
+ * no chrome of its own. Splitting them lets the remove control be a sibling
+ * button rather than a button nested inside the toggle button — which is what
+ * the markup used to be, and is invalid: a browser closes the outer button at
+ * the inner one, so the two controls fought over the same click.
+ */
+.srch-chip-toggle {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
 .srch-chip-close {
     display: inline-flex;
     align-items: center;
