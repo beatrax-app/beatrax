@@ -100,3 +100,7 @@ yarn-error.log
 # never tracked in public history — wave 7 of the v1.0 closeout series rewrote
 # every prior commit to strip this directory.
 .planning/
+
+# Pint reuses this to skip files it has already seen unchanged; CI restores
+# it between runs, where it takes the style check from ~175s to ~4s.
+/.pint.cache
