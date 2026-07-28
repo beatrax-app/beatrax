@@ -73,16 +73,38 @@ jobs:
                   coverage: none
                   tools: composer:v2
 
+            # vendor/ itself, not just the download cache. Restoring the
+            # archives still leaves composer to unpack and link ~34s of them on
+            # every job, and there are now seven jobs per run.
             - name: Cache Composer packages
               uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
               with:
-                  path: ~/.composer/cache
+                  path: |
+                      ~/.composer/cache
+                      vendor
                   key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock') }}
                   restore-keys: |
                       composer-${{ runner.os }}-${{ matrix.php }}-
 
+            # Still runs on a cache hit: it is near-instant when vendor/ already
+            # matches the lock file, and it is what fires package:discover to
+            # write bootstrap/cache. Skipping it would save seconds and cost a
+            # missing package manifest.
             - name: Install Composer dependencies
               run: composer install --prefer-dist --no-interaction --no-progress
+
+            # PhpStanBoundaryRuleTest shells out to PHPStan across Modules/ from
+            # inside the suite, so every shard pays for that analysis, not just
+            # the one running the static-analysis job. Cold it is ~125s; with the
+            # result cache restored it is ~3s.
+            - name: Cache PHPStan result cache
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: .phpstan-cache
+                  key: phpstan-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-${{ github.sha }}
+                  restore-keys: |
+                      phpstan-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-
+                      phpstan-${{ runner.os }}-${{ matrix.php }}-
 
             - name: Set up Node
               uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
@@ -125,20 +147,6 @@ jobs:
                   mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   chmod -R u+rwX storage bootstrap/cache
 
-            # Whole-tree checks, so they belong to the run rather than to a
-            # shard. Running them on all three would triple the cost and
-            # report the same answer three times.
-            - name: Pint (code-style)
-              if: matrix.shard == 1
-              run: vendor/bin/pint --test
-
-            - name: Larastan level 10 strict
-              if: matrix.shard == 1
-              # The default 128M memory limit crashes Larastan on this
-              # project — `composer analyse` already pins 1G locally; the
-              # CI step pins the same limit explicitly.
-              run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
-
             - name: Resolve this shard's testsuites
               id: shard
               run: |
@@ -161,24 +169,97 @@ jobs:
                   APP_ENV: testing
               run: php artisan test --parallel --testsuite="${{ steps.shard.outputs.suites }}"
 
+    # Pint and Larastan read the whole tree and do not care about the tests, so
+    # they ran on shard 1 to avoid being repeated three times. That made the
+    # largest shard the critical path: 4.6 minutes against 2.5 for the others,
+    # the difference being these two. Run alongside the shards instead, they
+    # cost nothing on the clock. Neither needs Node, Vite or poppler.
+    static-analysis:
+        name: static analysis (PHP 8.5)
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        env:
+            TZ: Europe/Amsterdam
+        steps:
+            - name: Check out the source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2.37.2
+              with:
+                  php-version: '8.5'
+                  extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Cache Composer packages
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: |
+                      ~/.composer/cache
+                      vendor
+                  key: composer-${{ runner.os }}-8.5-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: |
+                      composer-${{ runner.os }}-8.5-
+
+            - name: Install Composer dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            # Both tools re-check every file from cold and skip the unchanged
+            # ones from warm: Pint 175s to 4s, PHPStan 125s to 3s. The key
+            # carries the commit sha so each run writes a fresh entry, and the
+            # restore-keys fall back to the newest compatible one — a cache
+            # keyed only on the lock file would be written once and never
+            # updated again.
+            - name: Cache Pint results
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: .pint.cache
+                  key: pint-${{ runner.os }}-${{ hashFiles('pint.json', '**/composer.lock') }}-${{ github.sha }}
+                  restore-keys: |
+                      pint-${{ runner.os }}-${{ hashFiles('pint.json', '**/composer.lock') }}-
+                      pint-${{ runner.os }}-
+
+            - name: Cache PHPStan result cache
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: .phpstan-cache
+                  key: phpstan-${{ runner.os }}-8.5-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-${{ github.sha }}
+                  restore-keys: |
+                      phpstan-${{ runner.os }}-8.5-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-
+                      phpstan-${{ runner.os }}-8.5-
+
+            - name: Pint (code-style)
+              run: vendor/bin/pint --test --cache-file=.pint.cache
+
+            - name: Larastan level 10 strict
+              # The default 128M memory limit crashes Larastan on this
+              # project — `composer analyse` already pins 1G locally; the
+              # CI step pins the same limit explicitly.
+              run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
     # The name the branch ruleset requires. Sharding turned one check into
     # three, and a required check has to be one name that means "the suite
     # passed" — so the shards report under their own names and this collapses
-    # them. `always()` is what makes it a gate rather than a formality: without
-    # it a failed shard skips this job, and a skipped required check is not a
-    # failed one, so the pull request would look mergeable.
+    # them, along with the static analysis that used to sit inside them.
+    # `always()` is what makes it a gate rather than a formality: without it a
+    # failed shard skips this job, and a skipped required check is not a failed
+    # one, so the pull request would look mergeable.
     quality:
         name: quality (PHP 8.5)
-        needs: quality-shard
+        needs: [quality-shard, static-analysis]
         if: always()
         runs-on: ubuntu-latest
         steps:
             - name: Collapse the shard results
               env:
-                  RESULT: ${{ needs.quality-shard.result }}
+                  SHARDS: ${{ needs.quality-shard.result }}
+                  STATIC: ${{ needs.static-analysis.result }}
               run: |
-                  echo "shards: $RESULT"
-                  [ "$RESULT" = success ] || exit 1
+                  echo "shards: $SHARDS   static analysis: $STATIC"
+                  [ "$SHARDS" = success ] && [ "$STATIC" = success ] || exit 1
 
     # mobile-app quality gate (15-11-PLAN.md Task 2). The desktop `quality`
     # job above builds from the REPO ROOT; the mobile shell is a SEPARATE

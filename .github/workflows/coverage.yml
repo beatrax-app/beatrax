@@ -39,7 +39,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
+          # Shallow on purpose. Only the scan needs history, to attribute new
+          # code to the commits that introduced it, and it runs in the job
+          # below; a shard just runs tests.
 
       - name: Install poppler-utils (pdftotext)
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils
@@ -61,16 +63,31 @@ jobs:
           # which does not inherit the parent's -d flags.
           ini-values: pcov.directory=., pcov.exclude="~(vendor|node_modules)~"
 
+      # vendor/ as well as the archives — restoring downloads still leaves
+      # composer ~34s of unpacking on each of the three shards.
       - name: Cache Composer packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.composer/cache
+          path: |
+            ~/.composer/cache
+            vendor
           key: composer-coverage-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
             composer-coverage-${{ runner.os }}-
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      # PhpStanBoundaryRuleTest runs PHPStan over Modules/ from inside the
+      # suite, and under pcov it is slower still. ~125s cold, ~3s warm.
+      - name: Cache PHPStan result cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .phpstan-cache
+          key: phpstan-coverage-${{ runner.os }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-${{ github.sha }}
+          restore-keys: |
+            phpstan-coverage-${{ runner.os }}-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-
+            phpstan-coverage-${{ runner.os }}-
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
