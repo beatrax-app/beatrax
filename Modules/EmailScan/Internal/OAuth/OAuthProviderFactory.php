@@ -7,7 +7,6 @@ namespace Modules\EmailScan\Internal\OAuth;
 use League\OAuth2\Client\Provider\Google;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Http\Client\ClientInterface;
-use RuntimeException;
 use TheNetworg\OAuth2\Client\Provider\Azure;
 
 // Builds the League provider objects GoogleOAuthProvider and
@@ -27,7 +26,7 @@ final class OAuthProviderFactory
     ) {}
 
     /**
-     * @throws RuntimeException when the OAuth client has not been configured
+     * @throws OAuthClientNotConfigured when the OAuth client has not been configured
      */
     public function google(string $redirectUri): Google
     {
@@ -43,7 +42,7 @@ final class OAuthProviderFactory
     }
 
     /**
-     * @throws RuntimeException when the OAuth client has not been configured
+     * @throws OAuthClientNotConfigured when the OAuth client has not been configured
      */
     public function microsoft(string $redirectUri): Azure
     {
@@ -61,13 +60,13 @@ final class OAuthProviderFactory
     /**
      * @return array{client_id: string, client_secret: string, redirect_uri: string}
      *
-     * @throws RuntimeException
+     * @throws OAuthClientNotConfigured
      */
     private function clientOrFail(string $provider, string $label): array
     {
         $client = $this->secrets->loadProviderClient($provider);
         if ($client === null) {
-            throw new RuntimeException(
+            throw new OAuthClientNotConfigured(
                 $label.' OAuth client is not configured — run the OAuth-client wizard first.',
             );
         }
