@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Modules\Chains\Internal\Presentation\HintEvidenceSummary;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
 use Modules\Chains\Public\Dto\ChainLinkHintRow;
 use Modules\Chains\Public\Dto\ChainLinkRow;
@@ -48,6 +49,7 @@ final class ChainLinkQuery
         // encrypter, and this class is reachable from a console command that
         // Artisan constructs merely to list it.
         private readonly SessionFactory $session,
+        private readonly HintEvidenceSummary $hintEvidence,
     ) {}
 
     public function forTransaction(int $transactionId, User $user): ChainTree
@@ -545,7 +547,7 @@ final class ChainLinkQuery
             $fromCounterpartySlug = self::extractCounterpartySlug($fromRow);
         }
 
-        $evidenceLines = $this->summariseHintEvidence(
+        $evidenceLines = $this->hintEvidence->forHint(
             self::toString($row->kind ?? null),
             self::toString($row->evidence ?? null),
             $fromCurrency,
@@ -563,54 +565,6 @@ final class ChainLinkQuery
             evidenceLines: $evidenceLines,
             fromCounterpartySlug: $fromCounterpartySlug,
         );
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function summariseHintEvidence(string $kind, string $evidenceJson, string $currency): array
-    {
-        if ($evidenceJson === '') {
-            return [];
-        }
-        $evidence = json_decode($evidenceJson, true);
-        if (! is_array($evidence)) {
-            return [];
-        }
-
-        $lines = [];
-
-        if ($kind === 'ics_bulk_settle') {
-            $tolerance = $evidence['tolerance_used'] ?? null;
-            if (is_string($tolerance) && $tolerance !== '') {
-                $lines[] = 'Tolerance: '.$tolerance;
-            }
-            $delta = $evidence['unaccounted_delta_minor'] ?? null;
-            if (is_numeric($delta)) {
-                $deltaInt = (int) $delta;
-                $lines[] = 'Unaccounted delta: '.Money::ofMinor($deltaInt, $currency)->format('en_US');
-            }
-            $covered = $evidence['covered_count'] ?? null;
-            if (is_numeric($covered)) {
-                $lines[] = 'Covered transactions: '.(int) $covered;
-            }
-            $stmt = $evidence['statement_id'] ?? null;
-            if (is_numeric($stmt)) {
-                $lines[] = 'Card statement #'.(int) $stmt;
-            }
-        } elseif ($kind === 'funded_by_card_hint') {
-            $last4 = $evidence['card_last_four'] ?? null;
-            if (is_string($last4) && $last4 !== '') {
-                $lines[] = 'Card ending in '.$last4;
-            }
-        } elseif ($kind === 'refund_of_hint') {
-            $ref = $evidence['original_reference_id'] ?? null;
-            if (is_string($ref) && $ref !== '') {
-                $lines[] = 'Original order ref: '.$ref;
-            }
-        }
-
-        return $lines;
     }
 
     private static function toFloat(mixed $value): float
