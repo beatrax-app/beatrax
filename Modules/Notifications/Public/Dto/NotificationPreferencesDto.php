@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Public\Dto;
 
+use Modules\Notifications\Public\Enums\DigestCadence;
 use Spatie\LaravelData\Data;
 
 /**
@@ -14,7 +15,7 @@ final class NotificationPreferencesDto extends Data
     public function __construct(
         public readonly bool $remindersEnabled,
         public readonly bool $budgetNudgesEnabled,
-        public readonly string $digestCadence,
+        public readonly DigestCadence $digestCadence,
         public readonly bool $savingsPromptsEnabled,
         public readonly int $reminderLeadDays,
         public readonly bool $quietHoursEnabled,
@@ -34,7 +35,7 @@ final class NotificationPreferencesDto extends Data
         return new self(
             remindersEnabled: true,
             budgetNudgesEnabled: true,
-            digestCadence: 'weekly',
+            digestCadence: DigestCadence::Weekly,
             savingsPromptsEnabled: false,
             reminderLeadDays: 3,
             quietHoursEnabled: false,
