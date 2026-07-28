@@ -56,7 +56,6 @@
 @endphp
 <section
     class="{{ $cardClasses }}"
-    role="region"
     aria-labelledby="balance-card-{{ $accountId }}-h3"
 >
     <div class="balance-card-main">

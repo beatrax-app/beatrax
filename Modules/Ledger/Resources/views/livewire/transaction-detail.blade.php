@@ -183,7 +183,11 @@
                                             data-testid="split-leg-note-{{ $index }}"
                                         >
 
-                                        <label class="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                        {{-- A span, not a label: a label associates with a form
+                                             control, and this wraps a button. The button carries its
+                                             own aria-label, so the visible text beside it is the
+                                             same string rather than a second, unattached name. --}}
+                                        <span class="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                                             <button
                                                 type="button"
                                                 wire:click="toggleLegTax({{ $index }})"
@@ -197,7 +201,7 @@
                                                 <span class="switch__thumb"></span>
                                             </button>
                                             Tax-deductible
-                                        </label>
+                                        </span>
                                     </div>
 
                                     <button

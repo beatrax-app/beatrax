@@ -301,7 +301,6 @@
                 x-transition:leave-start="translate-x-0"
                 x-transition:leave-end="translate-x-full"
                 aria-label="Day detail panel"
-                role="complementary"
                 data-panel="day-panel"
             >
                 @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto])
