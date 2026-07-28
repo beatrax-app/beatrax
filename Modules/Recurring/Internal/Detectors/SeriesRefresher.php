@@ -42,7 +42,7 @@ final readonly class SeriesRefresher
         $this->db->connection()->table('recurring_series')
             ->where('id', $seriesId)
             ->update([
-                'cadence' => $detected->cadence,
+                'cadence' => $detected->cadence->value,
                 'cluster_key' => $detected->clusterKey,
                 'cluster_counterparty_key' => $counterpartyKey,
                 'latest_amount_minor' => $detected->latestAmountMinor,
@@ -55,7 +55,7 @@ final readonly class SeriesRefresher
 
         $this->occurrences->write($user->id, $seriesId, $detected->rows, $detected->currency);
 
-        if ($previousCadence !== $detected->cadence) {
+        if ($previousCadence !== $detected->cadence->value) {
             $this->flipCadence($series, $detected, $user, $previousCadence);
         }
 
@@ -63,7 +63,7 @@ final readonly class SeriesRefresher
             userId: $user->id,
             recurringSeriesId: $seriesId,
             direction: $direction,
-            cadence: $detected->cadence,
+            cadence: $detected->cadence->value,
             latestAmountMinor: $detected->latestAmountMinor,
             latestCurrency: $detected->currency,
         ));
@@ -91,7 +91,7 @@ final readonly class SeriesRefresher
             seriesId: $series->id,
             userId: $user->id,
             oldCadence: $previousCadence,
-            newCadence: $detected->cadence,
+            newCadence: $detected->cadence->value,
         ));
     }
 }

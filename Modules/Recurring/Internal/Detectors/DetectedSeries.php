@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Recurring\Internal\Detectors;
 
 use Carbon\CarbonImmutable;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
 // What a cluster of transactions turned out to be, once the variance
@@ -21,7 +22,7 @@ final readonly class DetectedSeries
      */
     public function __construct(
         public string $clusterKey,
-        public string $cadence,
+        public SeriesCadence $cadence,
         public int $latestAmountMinor,
         public string $currency,
         public ?int $monthlyEquivalentMinor,
@@ -31,7 +32,7 @@ final readonly class DetectedSeries
     ) {}
 
     /**
-     * @param  array{cadence: 'weekly'|'monthly'|'quarterly'|'yearly'|'irregular', median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}  $cadence
+     * @param  array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}  $cadence
      * @param  list<stdClass>  $rows
      */
     public static function fromCadence(string $clusterKey, array $cadence, int $latestAmountMinor, string $currency, array $rows): self
@@ -48,17 +49,17 @@ final readonly class DetectedSeries
         );
     }
 
-    private static function monthlyEquivalent(int $latestAmountMinor, string $cadence): ?int
+    private static function monthlyEquivalent(int $latestAmountMinor, SeriesCadence $cadence): ?int
     {
         return match ($cadence) {
             // 52/12 is the exact weeks-per-month conversion; the rounded
             // literal 4.33 drifted by about 0.07% on every weekly row, so a
             // weekly ten projects to 43.33 a month rather than 43.30.
-            'weekly' => (int) round($latestAmountMinor * 52 / 12),
-            'monthly' => $latestAmountMinor,
-            'quarterly' => (int) round($latestAmountMinor / 3),
-            'yearly' => (int) round($latestAmountMinor / 12),
-            default => null,
+            SeriesCadence::Weekly => (int) round($latestAmountMinor * 52 / 12),
+            SeriesCadence::Monthly => $latestAmountMinor,
+            SeriesCadence::Quarterly => (int) round($latestAmountMinor / 3),
+            SeriesCadence::Yearly => (int) round($latestAmountMinor / 12),
+            SeriesCadence::Irregular => null,
         };
     }
 }

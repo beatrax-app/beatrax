@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Recurring\Internal;
 
 use Carbon\CarbonImmutable;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 
 /**
  * @link ../../../.docs/features/recurring/architecture.md
@@ -36,7 +37,7 @@ final class CadenceInferrer
     /**
      * @param  list<CarbonImmutable>  $sortedTimestamps  ascending
      * @return array{
-     *   cadence: 'weekly'|'monthly'|'quarterly'|'yearly'|'irregular',
+     *   cadence: SeriesCadence,
      *   median_interval_days: float,
      *   next_expected_at: ?CarbonImmutable,
      *   confidence_low: bool,
@@ -47,7 +48,7 @@ final class CadenceInferrer
     {
         if (count($sortedTimestamps) < 2) {
             return [
-                'cadence' => 'irregular',
+                'cadence' => SeriesCadence::Irregular,
                 'median_interval_days' => 0.0,
                 'next_expected_at' => null,
                 'confidence_low' => false,
@@ -91,7 +92,7 @@ final class CadenceInferrer
         // cadence band.
         if (self::exceedsMissedWindowCap($missedFlags)) {
             return [
-                'cadence' => 'irregular',
+                'cadence' => SeriesCadence::Irregular,
                 'median_interval_days' => $provisionalMedian,
                 'next_expected_at' => null,
                 'confidence_low' => true,
@@ -109,7 +110,7 @@ final class CadenceInferrer
         $cadence = self::snapToBand($provisionalMedian);
 
         $nextExpectedAt = null;
-        if ($cadence !== 'irregular') {
+        if ($cadence->isRegular()) {
             $last = $sortedTimestamps[count($sortedTimestamps) - 1];
             $nextExpectedAt = $last->addDays((int) round($refinedMedian));
         }
@@ -123,20 +124,17 @@ final class CadenceInferrer
         ];
     }
 
-    /**
-     * @return 'weekly'|'monthly'|'quarterly'|'yearly'|'irregular'
-     */
-    private static function snapToBand(float $medianDays): string
+    private static function snapToBand(float $medianDays): SeriesCadence
     {
         // A band table, so it reads as one: each arm is a row, and the gaps
         // between the bands fall through to irregular rather than being
         // silently absorbed by whichever comparison came last.
         return match (true) {
-            $medianDays > 0.0 && $medianDays < self::WEEKLY_MAX_EXCLUSIVE => 'weekly',
-            $medianDays >= self::MONTHLY_MIN && $medianDays <= self::MONTHLY_MAX => 'monthly',
-            $medianDays >= self::QUARTERLY_MIN && $medianDays <= self::QUARTERLY_MAX => 'quarterly',
-            $medianDays >= self::YEARLY_MIN && $medianDays <= self::YEARLY_MAX => 'yearly',
-            default => 'irregular',
+            $medianDays > 0.0 && $medianDays < self::WEEKLY_MAX_EXCLUSIVE => SeriesCadence::Weekly,
+            $medianDays >= self::MONTHLY_MIN && $medianDays <= self::MONTHLY_MAX => SeriesCadence::Monthly,
+            $medianDays >= self::QUARTERLY_MIN && $medianDays <= self::QUARTERLY_MAX => SeriesCadence::Quarterly,
+            $medianDays >= self::YEARLY_MIN && $medianDays <= self::YEARLY_MAX => SeriesCadence::Yearly,
+            default => SeriesCadence::Irregular,
         };
     }
 

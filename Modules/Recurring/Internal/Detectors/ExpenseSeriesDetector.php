@@ -14,6 +14,7 @@ use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 use stdClass;
@@ -105,7 +106,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             'expense',
             $counterparty,
             $currency,
-            $cadenceResult['cadence'],
+            $cadenceResult['cadence']->value,
         );
 
         // cluster_key already encodes cadence + currency, so it's the
@@ -161,7 +162,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
     // means one of those three tests failed and there is nothing to record.
     /**
      * @param  list<stdClass>  $rows
-     * @return array{0: list<stdClass>, 1: array{cadence: 'weekly'|'monthly'|'quarterly'|'yearly'|'irregular', median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}}|null
+     * @return array{0: list<stdClass>, 1: array{cadence: SeriesCadence, median_interval_days: float, next_expected_at: ?CarbonImmutable, confidence_low: bool, missed_count: int}}|null
      */
     private function qualifyCluster(User $user, string $counterparty, string $currency, array $rows): ?array
     {
@@ -182,7 +183,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         }
         $cadenceResult = $this->cadenceInferrer->infer($timestamps);
 
-        return $cadenceResult['cadence'] === 'irregular' ? null : [$filtered, $cadenceResult];
+        return $cadenceResult['cadence']->isRegular() ? [$filtered, $cadenceResult] : null;
     }
 
     /**
@@ -256,7 +257,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
             'direction' => 'expense',
             'detected_name' => $counterparty,
             'state' => 'pending',
-            'cadence' => $detected->cadence,
+            'cadence' => $detected->cadence->value,
             'latest_amount_minor' => $detected->latestAmountMinor,
             'latest_currency' => $detected->currency,
             'monthly_equivalent_minor' => $detected->monthlyEquivalentMinor,
@@ -276,14 +277,14 @@ final class ExpenseSeriesDetector implements SeriesDetector
             userId: $user->id,
             direction: 'expense',
             detectedName: $counterparty,
-            cadence: $detected->cadence,
+            cadence: $detected->cadence->value,
         ));
 
         $this->events->dispatch(new RecurringSeriesMetricsRefreshed(
             userId: $user->id,
             recurringSeriesId: $newId,
             direction: 'expense',
-            cadence: $detected->cadence,
+            cadence: $detected->cadence->value,
             latestAmountMinor: $detected->latestAmountMinor,
             latestCurrency: $detected->currency,
         ));
