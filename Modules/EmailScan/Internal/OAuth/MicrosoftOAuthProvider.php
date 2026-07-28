@@ -29,6 +29,7 @@ class MicrosoftOAuthProvider
 
     public function __construct(
         private readonly OAuthSecretsRepository $secrets,
+        private readonly OAuthProviderFactory $providers,
     ) {}
 
     public function getAuthorizationUrl(string $state, string $redirectUri): string
@@ -143,20 +144,7 @@ class MicrosoftOAuthProvider
 
     private function makeProvider(string $redirectUri): Azure
     {
-        $client = $this->secrets->loadProviderClient('microsoft');
-        if ($client === null) {
-            throw new RuntimeException(
-                'Microsoft OAuth client is not configured — run the OAuth-client wizard first.',
-            );
-        }
-
-        return new Azure([
-            'clientId' => $client['client_id'],
-            'clientSecret' => $client['client_secret'],
-            'redirectUri' => $redirectUri,
-            'tenant' => 'common',
-            'defaultEndPointVersion' => '2.0',
-        ]);
+        return $this->providers->microsoft($redirectUri);
     }
 
     private function readEmailFromToken(Azure $provider, AccessTokenInterface $token): string

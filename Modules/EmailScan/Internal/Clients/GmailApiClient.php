@@ -10,6 +10,7 @@ use Google\Service\Exception as GoogleServiceException;
 use Google\Service\Gmail as GmailService;
 use Google\Service\Gmail\Resource\UsersHistory;
 use Google\Service\Gmail\Resource\UsersMessages;
+use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
@@ -31,6 +32,7 @@ final class GmailApiClient implements GmailApiClientContract
         private readonly Clock $clock,
         private readonly EventsDispatcher $events,
         private readonly DatabaseManager $db,
+        private readonly ?GuzzleClient $httpClient = null,
     ) {}
 
     // users.messages.list with q='from:(<a> OR <b> OR ...)' and a
@@ -288,6 +290,13 @@ final class GmailApiClient implements GmailApiClientContract
             'access_token' => $accessToken,
             'expires_in' => 3600,
         ]);
+
+        // The Google SDK builds its own Guzzle instance unless given one, so
+        // this is the only point at which the transport can be replaced. It
+        // stays null in production.
+        if ($this->httpClient instanceof GuzzleClient) {
+            $client->setHttpClient($this->httpClient);
+        }
 
         return new GmailService($client);
     }
