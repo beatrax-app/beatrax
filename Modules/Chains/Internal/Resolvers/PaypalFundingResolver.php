@@ -369,16 +369,14 @@ final class PaypalFundingResolver
     private function fuzzyMatch(stdClass $row, User $user): ?array
     {
         $settledMinor = abs(self::toInt($row->settled_amount_minor ?? null));
-        if ($settledMinor === 0) {
+        $postedAtRaw = self::toString($row->posted_at ?? null);
+        if ($settledMinor === 0 || $postedAtRaw === '') {
             return null;
         }
+
         $normalisedMerchant = $this->fingerprints->normalize(
             self::toString($row->counterparty_normalized ?? null),
         );
-        $postedAtRaw = self::toString($row->posted_at ?? null);
-        if ($postedAtRaw === '') {
-            return null;
-        }
         $postedAt = CarbonImmutable::parse($postedAtRaw);
 
         $amountBand = (int) round($settledMinor * (self::AMOUNT_BAND_PERCENT / 100));
@@ -478,14 +476,8 @@ final class PaypalFundingResolver
      */
     private function extractEvents(string $rawPayload): array
     {
-        if ($rawPayload === '') {
-            return [];
-        }
-        $decoded = json_decode($rawPayload, true);
-        if (! is_array($decoded)) {
-            return [];
-        }
-        $events = $decoded['events'] ?? null;
+        $decoded = $rawPayload === '' ? null : json_decode($rawPayload, true);
+        $events = is_array($decoded) ? ($decoded['events'] ?? null) : null;
         if (! is_array($events)) {
             return [];
         }
