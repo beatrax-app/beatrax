@@ -14,6 +14,7 @@ use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
+use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
@@ -72,7 +73,7 @@ function qhdSavePrefs(User $user, bool $quietHoursEnabled): void
     $prefs = new NotificationPreferencesDto(
         remindersEnabled: true,
         budgetNudgesEnabled: true,
-        digestCadence: 'weekly',
+        digestCadence: DigestCadence::Weekly,
         savingsPromptsEnabled: true,
         reminderLeadDays: 3,
         quietHoursEnabled: $quietHoursEnabled,

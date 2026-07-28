@@ -25,6 +25,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
+use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 use Modules\Position\Internal\Jobs\EmitPositionDigestJob;
@@ -96,7 +97,7 @@ function pttPairDevice(DatabaseManager $db, int $userId, string $deviceId = 'ptt
 }
 
 /**
- * @param  array{remindersEnabled: bool, budgetNudgesEnabled: bool, digestCadence: string, savingsPromptsEnabled: bool}  $overrides
+ * @param  array{remindersEnabled: bool, budgetNudgesEnabled: bool, digestCadence: DigestCadence, savingsPromptsEnabled: bool}  $overrides
  */
 function pttSavePrefs(User $user, array $overrides): void
 {
@@ -317,7 +318,7 @@ it('disabling payment_reminder fires no OS notification for it while the other t
     pttSavePrefs($user, [
         'remindersEnabled' => false,
         'budgetNudgesEnabled' => true,
-        'digestCadence' => 'daily',
+        'digestCadence' => DigestCadence::Daily,
         'savingsPromptsEnabled' => true,
     ]);
 
@@ -335,7 +336,7 @@ it('disabling budget_nudge fires no OS notification for it while the other three
     pttSavePrefs($user, [
         'remindersEnabled' => true,
         'budgetNudgesEnabled' => false,
-        'digestCadence' => 'daily',
+        'digestCadence' => DigestCadence::Daily,
         'savingsPromptsEnabled' => true,
     ]);
 
@@ -353,7 +354,7 @@ it('disabling position_digest (cadence off) fires no OS notification for it whil
     pttSavePrefs($user, [
         'remindersEnabled' => true,
         'budgetNudgesEnabled' => true,
-        'digestCadence' => 'off',
+        'digestCadence' => DigestCadence::Off,
         'savingsPromptsEnabled' => true,
     ]);
 
@@ -371,7 +372,7 @@ it('disabling savings_prompt fires no OS notification for it while the other thr
     pttSavePrefs($user, [
         'remindersEnabled' => true,
         'budgetNudgesEnabled' => true,
-        'digestCadence' => 'daily',
+        'digestCadence' => DigestCadence::Daily,
         'savingsPromptsEnabled' => false,
     ]);
 
