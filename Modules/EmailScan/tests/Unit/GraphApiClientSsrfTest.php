@@ -65,9 +65,9 @@ beforeEach(function (): void {
     };
 
     /** @var EventsDispatcher&MockObject $events */
-    $events = $this->createMock(EventsDispatcher::class);
+    $events = $this->createStub(EventsDispatcher::class);
     /** @var DatabaseManager&MockObject $db */
-    $db = $this->createMock(DatabaseManager::class);
+    $db = $this->createStub(DatabaseManager::class);
 
     $this->client = new GraphApiClient($this->secrets, $this->oauth, $this->clock, $events, $db);
 });
