@@ -43,7 +43,7 @@ function writerUser(string $username): User
 
 beforeEach(function (): void {
     $this->frozenNow = CarbonImmutable::parse('2026-07-18 09:00:00');
-    $clock = $this->createMock(Clock::class);
+    $clock = $this->createStub(Clock::class);
     $clock->method('now')->willReturn($this->frozenNow);
     $this->app->instance(Clock::class, $clock);
 
@@ -205,7 +205,7 @@ it('leaves the first read_at timestamp intact when MarkNotificationRead runs twi
     expect($firstReadAt)->not->toBeNull();
 
     // Advance the clock and mark read again — must be a no-op.
-    $laterClock = $this->createMock(Clock::class);
+    $laterClock = $this->createStub(Clock::class);
     $laterClock->method('now')->willReturn(CarbonImmutable::parse('2026-07-19 10:00:00'));
     $this->app->instance(Clock::class, $laterClock);
     $this->app->forgetInstance(MarkNotificationRead::class);

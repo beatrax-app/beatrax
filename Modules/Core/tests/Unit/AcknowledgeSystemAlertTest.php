@@ -41,7 +41,7 @@ beforeEach(function (): void {
 
     // Freeze the clock so the test asserts a precise acknowledged_at stamp.
     $this->frozenNow = CarbonImmutable::parse('2026-05-20 09:00:00');
-    $clock = $this->createMock(Clock::class);
+    $clock = $this->createStub(Clock::class);
     $clock->method('now')->willReturn($this->frozenNow);
     $this->app->instance(Clock::class, $clock);
 });

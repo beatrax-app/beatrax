@@ -21,9 +21,18 @@ permissions:
   contents: read
 
 jobs:
-  coverage:
+  # Each shard measures its own slice and uploads a clover report; the
+  # `coverage` job below hands all of them to SonarCloud at once. Sonar takes a
+  # comma-separated list of report paths and unions them, so a sharded run
+  # produces the same picture as a single one.
+  coverage-shard:
+    name: coverage shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       TZ: Europe/Amsterdam
     steps:
@@ -84,10 +93,69 @@ jobs:
           mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
           chmod -R u+rwX storage bootstrap/cache
 
+      - name: Resolve this shard's testsuites
+        id: shard
+        run: |
+          suites=$(python3 .github/scripts/shard-testsuites.py --shard "${{ matrix.shard }}" --of 3)
+          echo "suites=$suites" >> "$GITHUB_OUTPUT"
+          echo "shard ${{ matrix.shard }}/3: $suites"
+
       - name: Pest with coverage
         env:
           APP_ENV: testing
-        run: php artisan test --coverage-clover=coverage.xml
+        # Parallel within the shard as well. paratest merges the per-worker
+        # coverage rather than sampling it: serial and parallel runs of the same
+        # suite both reported 6512/72872 covered statements and 569 covered
+        # methods, identical rather than close. A fast report that undercounts
+        # would be worse than a slow one, which is the failure this job just
+        # came out of.
+        run: php artisan test --parallel --testsuite="${{ steps.shard.outputs.suites }}" --coverage-clover=coverage.xml
+
+      - name: Keep this shard's report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-${{ matrix.shard }}
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 1
+
+  # The name the branch ruleset requires, and the only place the scan runs:
+  # SonarCloud takes one analysis per commit, so three shards scanning
+  # independently would race and the last writer would report a third of the
+  # coverage as if it were all of it.
+  coverage:
+    needs: coverage-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Collapse the shard results
+        env:
+          RESULT: ${{ needs.coverage-shard.result }}
+        run: |
+          echo "shards: $RESULT"
+          [ "$RESULT" = success ] || exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Needs the full history: Sonar attributes new code to the commits
+          # that introduced it, and a shallow clone leaves it guessing.
+          fetch-depth: 0
+
+      - name: Collect the shard reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: coverage-*
+          path: coverage-reports
+
+      - name: List what arrived
+        run: |
+          find coverage-reports -name '*.xml' | sort
+          count=$(find coverage-reports -name '*.xml' | wc -l)
+          # A missing report is silent otherwise: Sonar would import what it was
+          # given and publish a confident number covering two thirds of the run.
+          [ "$count" -eq 3 ] || { echo "::error::expected 3 clover reports, found $count"; exit 1; }
 
       # SonarCloud refuses a CI analysis while automatic analysis is on, and
       # automatic analysis will not accept an imported coverage report — so the
@@ -105,8 +173,9 @@ jobs:
             -w '\nHTTP %{http_code}\n'
 
       - name: SonarCloud scan
-        # Needs the full history: Sonar attributes new code to the commits that
-        # introduced it, and a shallow clone leaves it guessing.
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.php.coverage.reportPaths=coverage-reports/coverage-1/coverage.xml,coverage-reports/coverage-2/coverage.xml,coverage-reports/coverage-3/coverage.xml

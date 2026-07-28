@@ -31,14 +31,19 @@ permissions:
     contents: read
 
 jobs:
-    quality:
-        name: quality (PHP ${{ matrix.php }})
+    # Sharded across runners, and each shard runs its share in parallel across
+    # that runner's cores. The two multiply. `quality (PHP 8.5)` below is the
+    # branch ruleset's required check and stays a single stable name, so the
+    # shard count can change without touching branch protection.
+    quality-shard:
+        name: quality shard ${{ matrix.shard }} (PHP ${{ matrix.php }})
         runs-on: ubuntu-latest
         timeout-minutes: 15
         strategy:
             fail-fast: false
             matrix:
                 php: ['8.5']
+                shard: [1, 2, 3]
         env:
             # The app is timezone-pinned to Europe/Amsterdam across every
             # module (recurring detection, drift alerts, forecasting all
@@ -120,27 +125,60 @@ jobs:
                   mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   chmod -R u+rwX storage bootstrap/cache
 
+            # Whole-tree checks, so they belong to the run rather than to a
+            # shard. Running them on all three would triple the cost and
+            # report the same answer three times.
             - name: Pint (code-style)
+              if: matrix.shard == 1
               run: vendor/bin/pint --test
 
             - name: Larastan level 10 strict
+              if: matrix.shard == 1
               # The default 128M memory limit crashes Larastan on this
               # project — `composer analyse` already pins 1G locally; the
               # CI step pins the same limit explicitly.
               run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
-            - name: Pest (full suite)
-              # Runs serially. A handful of Integration tests in
-              # Modules/EmailScan (the EmlBlobStore inbox tree) and
-              # Modules/DevMode (subprocess stdout/err tmp files) race
-              # on shared filesystem paths when paratest splits them
-              # across workers, since neither path is namespaced by
-              # TEST_TOKEN. Local dev iteration still uses --parallel
-              # via `composer test`; CI trades ~3 min of wall-clock
-              # for reliable, race-free signal.
+            - name: Resolve this shard's testsuites
+              id: shard
+              run: |
+                  suites=$(python3 .github/scripts/shard-testsuites.py --shard "${{ matrix.shard }}" --of 3)
+                  echo "suites=$suites" >> "$GITHUB_OUTPUT"
+                  echo "shard ${{ matrix.shard }}/3: $suites"
+
+            - name: Pest (sharded)
+              # Ran serially, whole, because EmailScan's inbox tree and DevMode's
+              # subprocess files raced when paratest split them across workers.
+              # Those paths are no longer shared: the inbox resolves through
+              # storage_path(), and tests/TestCase.php now points the storage
+              # root at a per-test temp directory, so two workers cannot land on
+              # one path. DevMode's files come from tempnam(), unique by
+              # construction. The isolation went in for an unrelated keyring bug
+              # and closed this as a side effect; three consecutive full parallel
+              # runs then reported identical counts.
+              # Full suite: 773s serial, 358s parallel, before sharding.
               env:
                   APP_ENV: testing
-              run: php artisan test
+              run: php artisan test --parallel --testsuite="${{ steps.shard.outputs.suites }}"
+
+    # The name the branch ruleset requires. Sharding turned one check into
+    # three, and a required check has to be one name that means "the suite
+    # passed" — so the shards report under their own names and this collapses
+    # them. `always()` is what makes it a gate rather than a formality: without
+    # it a failed shard skips this job, and a skipped required check is not a
+    # failed one, so the pull request would look mergeable.
+    quality:
+        name: quality (PHP 8.5)
+        needs: quality-shard
+        if: always()
+        runs-on: ubuntu-latest
+        steps:
+            - name: Collapse the shard results
+              env:
+                  RESULT: ${{ needs.quality-shard.result }}
+              run: |
+                  echo "shards: $RESULT"
+                  [ "$RESULT" = success ] || exit 1
 
     # mobile-app quality gate (15-11-PLAN.md Task 2). The desktop `quality`
     # job above builds from the REPO ROOT; the mobile shell is a SEPARATE

@@ -31,7 +31,7 @@ beforeEach(function (): void {
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
     ]);
-    $contract = $this->createMock(CurrentUser::class);
+    $contract = $this->createStub(CurrentUser::class);
     $contract->method('isAuthenticated')->willReturn(true);
     $contract->method('user')->willReturn($user);
     $contract->method('id')->willReturn($user->id);

@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
