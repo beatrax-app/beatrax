@@ -155,16 +155,10 @@ final class ChainsServiceProvider extends ServiceProvider
     // named-arg serialiser shapes.
     private function extractUserIdFromFailedJob(JobFailed $event): ?int
     {
-        $payload = $event->job->payload();
-        $data = $payload['data'] ?? null;
-        if (! is_array($data)) {
-            return null;
-        }
-        $command = $data['command'] ?? null;
-        if (! is_string($command)) {
-            return null;
-        }
-        if (preg_match('/userId[^0-9-]+(-?\d+)/', $command, $matches) !== 1) {
+        $data = $event->job->payload()['data'] ?? null;
+        $command = is_array($data) ? ($data['command'] ?? null) : null;
+
+        if (! is_string($command) || preg_match('/userId[^0-9-]+(-?\d+)/', $command, $matches) !== 1) {
             return null;
         }
 
