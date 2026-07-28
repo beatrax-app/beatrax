@@ -37,7 +37,7 @@
         x-on:keydown.escape="open = false"
         aria-label="Snooze options"
         class="{{ $base }} {{ $size }} bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-    >Snooze ▾</button>
+    >Snooze <span aria-hidden="true">▾</span></button>
     <div
         x-show="open"
         x-cloak

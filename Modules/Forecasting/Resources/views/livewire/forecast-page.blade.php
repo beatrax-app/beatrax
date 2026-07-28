@@ -109,7 +109,10 @@
                 type="button"
                 role="switch"
                 aria-checked="{{ $viewByFunder ? 'true' : 'false' }}"
-                aria-label="View by funder. Collapse chain-resolved series onto the account that actually pays them."
+                {{-- The name is the visible text; the explanation is a
+                     description, so a screen reader announces the label
+                     first and the rationale after it rather than instead. --}}
+                aria-describedby="view-by-funder-hint"
                 wire:click="toggleViewByFunder"
                 @class([
                     'inline-flex items-center gap-2 rounded-md border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm',
@@ -119,6 +122,7 @@
             >
                 <span>View by funder</span>
             </button>
+            <span id="view-by-funder-hint" class="sr-only">Collapse chain-resolved series onto the account that actually pays them.</span>
         </div>
 
         {{-- Scenario picker — baseline radio + one per saved scenario + "+ New scenario" chip. --}}

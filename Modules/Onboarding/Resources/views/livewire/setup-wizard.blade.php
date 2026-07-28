@@ -67,7 +67,7 @@
             wire:click="skipRest"
             aria-label="Resume later — saves your progress and closes the setup wizard"
         >
-            Resume later →
+            Resume later <span aria-hidden="true">→</span>
         </button>
     </header>
 

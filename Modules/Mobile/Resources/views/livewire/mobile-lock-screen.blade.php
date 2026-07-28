@@ -162,7 +162,7 @@
             <button
                 type="button"
                 x-on:click="submitPin()"
-                aria-label="Confirm PIN"
+                aria-label="OK — confirm PIN"
                 class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-100
                        text-white dark:text-slate-900
                        text-sm font-semibold
