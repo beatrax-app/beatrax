@@ -38,7 +38,7 @@ it('infers the expected cadence band', function (array $intervals, string $expec
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', $intervals));
 
-    expect($result['cadence'])->toBe($expectedCadence);
+    expect($result['cadence']->value)->toBe($expectedCadence);
 })->with([
     'weekly · four points · 7d gaps' => [[7, 7, 7], 'weekly'],
     'weekly · lower boundary · 9d gaps' => [[9, 9, 9], 'weekly'],
@@ -61,7 +61,7 @@ it('flags confidence_low when interval stddev exceeds 5 days', function (): void
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [25, 30, 35, 40]));
 
-    expect($result['cadence'])->toBe('monthly');
+    expect($result['cadence']->value)->toBe('monthly');
     expect($result['confidence_low'])->toBeTrue();
 });
 
@@ -69,7 +69,7 @@ it('leaves confidence_low false on tight monthly intervals', function (): void {
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [30, 30, 30, 30]));
 
-    expect($result['cadence'])->toBe('monthly');
+    expect($result['cadence']->value)->toBe('monthly');
     expect($result['confidence_low'])->toBeFalse();
 });
 
@@ -77,7 +77,7 @@ it('counts intervals above the 1.8x missed-interval multiplier as missed', funct
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [30, 65, 30, 30]));
 
-    expect($result['cadence'])->toBe('monthly');
+    expect($result['cadence']->value)->toBe('monthly');
     expect($result['missed_count'])->toBe(1);
 });
 
@@ -95,7 +95,7 @@ it('returns next_expected_at=null when cadence is irregular', function (): void 
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer(cinfTimestamps('2024-01-01', [46, 46, 46]));
 
-    expect($result['cadence'])->toBe('irregular');
+    expect($result['cadence']->value)->toBe('irregular');
     expect($result['next_expected_at'])->toBeNull();
 });
 
@@ -103,7 +103,7 @@ it('returns irregular and zero metrics for the empty-list edge case', function (
     $inferrer = new CadenceInferrer;
     $result = $inferrer->infer([]);
 
-    expect($result['cadence'])->toBe('irregular');
+    expect($result['cadence']->value)->toBe('irregular');
     expect($result['median_interval_days'])->toBe(0.0);
     expect($result['missed_count'])->toBe(0);
     expect($result['confidence_low'])->toBeFalse();
