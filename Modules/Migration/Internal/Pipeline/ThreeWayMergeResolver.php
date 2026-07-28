@@ -8,6 +8,7 @@ use Brick\Money\Exception\MoneyMismatchException;
 use Brick\Money\Money;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Migration\Public\Dto\ConflictDto;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -18,6 +19,8 @@ use stdClass;
  */
 final class ThreeWayMergeResolver
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
@@ -55,10 +58,10 @@ final class ThreeWayMergeResolver
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $categoryExternalId = self::toStr($row->source_category_external_id);
-            $periodStart = self::toStr($row->period_start);
+            $categoryExternalId = self::toString($row->source_category_external_id);
+            $periodStart = self::toString($row->period_start);
             $sourceExternalId = $categoryExternalId.'|'.$periodStart;
-            $currency = self::toStr($row->currency);
+            $currency = self::toString($row->currency);
             $sNewMinor = self::toInt($row->budgeted_minor);
 
             $map = $this->findMap($user, $sourceProduct, 'budget_assignment', $sourceExternalId);
@@ -127,7 +130,7 @@ final class ThreeWayMergeResolver
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $externalId = self::toStr($row->source_external_id);
+            $externalId = self::toString($row->source_external_id);
             $map = $this->findMap($user, $sourceProduct, 'category', $externalId);
             if ($map === null) {
                 continue;
@@ -139,8 +142,8 @@ final class ThreeWayMergeResolver
             }
 
             $categoryId = self::toInt($map->beatrax_id);
-            $sNew = self::toStr($row->name);
-            $current = self::toStr(
+            $sNew = self::toString($row->name);
+            $current = self::toString(
                 $connection->table('categories')->where('id', $categoryId)->where('user_id', $user->id)->value('name')
             );
 
@@ -184,7 +187,7 @@ final class ThreeWayMergeResolver
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $externalId = self::toStr($row->source_external_id);
+            $externalId = self::toString($row->source_external_id);
             $map = $this->findMap($user, $sourceProduct, 'account', $externalId);
             if ($map === null) {
                 continue;
@@ -196,8 +199,8 @@ final class ThreeWayMergeResolver
             }
 
             $accountId = self::toInt($map->beatrax_id);
-            $sNew = self::toStr($row->name);
-            $current = self::toStr(
+            $sNew = self::toString($row->name);
+            $current = self::toString(
                 $connection->table('accounts')->where('id', $accountId)->where('user_id', $user->id)->value('name')
             );
 
@@ -242,7 +245,7 @@ final class ThreeWayMergeResolver
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $externalId = self::toStr($row->source_external_id);
+            $externalId = self::toString($row->source_external_id);
             $map = $this->findMap($user, $sourceProduct, 'transaction', $externalId);
             if ($map === null) {
                 continue;
@@ -254,14 +257,14 @@ final class ThreeWayMergeResolver
             }
 
             $transactionId = self::toInt($map->beatrax_id);
-            $sNew = $row->description !== null ? self::toStr($row->description) : '';
+            $sNew = $row->description !== null ? self::toString($row->description) : '';
             $currentRaw = $connection->table('transactions')->where('id', $transactionId)->where('user_id', $user->id)->value('description');
             // Decrypt-before-compare: the LIVE value is ciphertext under an
             // encrypted user, so comparing it raw against the plaintext
             // $baseline would register a spurious conflict on every re-run.
             $current = is_string($currentRaw)
                 ? $this->codec->decryptValue('transactions', 'description', $currentRaw, $user->id, ($this->session)())['value']
-                : self::toStr($currentRaw);
+                : self::toString($currentRaw);
 
             if ($sNew === $baseline) {
                 continue;
@@ -305,7 +308,7 @@ final class ThreeWayMergeResolver
 
         /** @var stdClass $row */
         foreach ($rows as $row) {
-            $externalId = self::toStr($row->source_external_id);
+            $externalId = self::toString($row->source_external_id);
             $map = $this->findMap($user, $sourceProduct, 'transaction', $externalId);
             if ($map === null) {
                 continue;
@@ -319,7 +322,7 @@ final class ThreeWayMergeResolver
 
             $transactionId = self::toInt($map->beatrax_id);
             $sNewMinor = self::toInt($row->amount_minor);
-            $sourceCurrency = self::toStr($row->currency);
+            $sourceCurrency = self::toString($row->currency);
 
             /** @var stdClass|null $currentRow */
             $currentRow = $connection->table('transactions')
@@ -331,7 +334,7 @@ final class ThreeWayMergeResolver
                 continue;
             }
 
-            $currentCurrency = self::toStr($currentRow->currency);
+            $currentCurrency = self::toString($currentRow->currency);
             $currentMinor = self::toInt($currentRow->amount_minor);
 
             if (self::moneyEquals($sNewMinor, $sourceCurrency, $baselineMinor, $sourceCurrency)) {
@@ -400,15 +403,5 @@ final class ThreeWayMergeResolver
         } catch (MoneyMismatchException) {
             return false;
         }
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toStr(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

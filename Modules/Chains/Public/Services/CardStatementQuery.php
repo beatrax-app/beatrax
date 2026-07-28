@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Public\Dto\NextSettlementDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
@@ -16,6 +17,8 @@ use Modules\Ledger\Public\ValueObjects\Money;
  */
 final class CardStatementQuery
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     public function openForAccount(int $accountId, User $user): ?CardStatement
@@ -98,15 +101,5 @@ final class CardStatementQuery
             statementId: self::toInt($row->statement_id),
             state: self::toString($row->state),
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

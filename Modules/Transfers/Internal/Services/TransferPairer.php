@@ -6,6 +6,7 @@ namespace Modules\Transfers\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
@@ -20,6 +21,8 @@ use stdClass;
  */
 final class TransferPairer implements PairsTransferLegs
 {
+    use CoercesScalars;
+
     private const WINDOW_DAYS = 3;
 
     public function __construct(
@@ -285,11 +288,6 @@ final class TransferPairer implements PairsTransferLegs
         }
 
         return null;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toStringOrNull(mixed $value): ?string

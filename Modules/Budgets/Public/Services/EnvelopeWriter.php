@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Modules\Budgets\Models\EnvelopeSetting;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Ledger\Public\Dto\Period;
@@ -23,6 +24,8 @@ use Modules\Sync\Public\Events\EnvelopeSettingMutated;
  */
 final class EnvelopeWriter
 {
+    use CoercesScalars;
+
     private const CURRENCY = 'EUR';
 
     public function __construct(
@@ -504,10 +507,5 @@ final class EnvelopeWriter
         if (! $this->query->canBudget($user, $categoryId)) {
             throw new InvalidArgumentException('Category not found or not accessible by user.');
         }
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

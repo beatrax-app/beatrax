@@ -12,6 +12,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
@@ -26,6 +27,8 @@ use Throwable;
  */
 final class ReconcilePage extends Component
 {
+    use CoercesScalars;
+
     #[Url(except: '')]
     public ?int $accountId = null;
 
@@ -310,10 +313,5 @@ final class ReconcilePage extends Component
         $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
 
         return $negative ? -$minor : $minor;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

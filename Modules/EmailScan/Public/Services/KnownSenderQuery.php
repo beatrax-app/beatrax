@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\EmailScan\Public\Dto\KnownSenderDto;
 use stdClass;
 
@@ -16,6 +17,8 @@ use stdClass;
 // matcher registry sees seeded patterns before any user overrides.
 final class KnownSenderQuery
 {
+    use CoercesScalars;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     /**
@@ -51,15 +54,5 @@ final class KnownSenderQuery
         }
 
         return $out;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

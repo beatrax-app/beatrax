@@ -6,6 +6,7 @@ namespace Modules\Tax\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Dto\BatchTagSuggestion;
@@ -17,6 +18,8 @@ use Modules\Tax\Public\Dto\TaxYearSummary;
  */
 final class TaxTagQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
@@ -240,11 +243,6 @@ final class TaxTagQuery
         }
 
         return $this->codec->decryptValue('tax_transaction_tags', 'note', $value, $userId, ($this->session)())['value'];
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toStrOrNull(mixed $value): ?string

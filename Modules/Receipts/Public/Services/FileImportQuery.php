@@ -9,6 +9,7 @@ use Generator;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Receipts\Public\Dto\FileImportDto;
 use stdClass;
 
@@ -17,6 +18,8 @@ use stdClass;
 // fully in memory, mirroring InboxMessageQuery::forStatus().
 final readonly class FileImportQuery
 {
+    use CoercesScalars;
+
     private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];
 
     public function __construct(private DatabaseManager $db) {}
@@ -82,16 +85,6 @@ final readonly class FileImportQuery
             matcherKey: self::toNullableString($row->matcher_key ?? null),
             fetchedAt: self::toDateTime($row->fetched_at),
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
     }
 
     private static function toNullableString(mixed $value): ?string

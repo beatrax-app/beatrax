@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use stdClass;
@@ -17,6 +18,8 @@ use stdClass;
  */
 final readonly class FixedPaymentsViewQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private MerchantMemoryQuery $merchantMemory,
@@ -265,19 +268,5 @@ final readonly class FixedPaymentsViewQuery
         usort($rows, static function (RecurringSeriesDto $a, RecurringSeriesDto $b): int {
             return abs($b->monthlyEquivalent->toMinor()) <=> abs($a->monthlyEquivalent->toMinor());
         });
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

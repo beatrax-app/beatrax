@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Public\Dto\CardStatementForecastTile;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\EmailScanHealthTile;
 use Modules\EmailScan\Public\Dto\InboxHealthLine;
@@ -24,6 +25,8 @@ use stdClass;
  */
 final class ThisPeriodAtAGlanceQuery
 {
+    use CoercesScalars;
+
     public const DEFAULT_DISPLAY_CURRENCY = 'EUR';
 
     // A successfully-scanned inbox untouched for over 24h surfaces an
@@ -291,15 +294,5 @@ final class ThisPeriodAtAGlanceQuery
             overallStatus: $overall,
             overflowCount: $overflowCount,
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
     }
 }

@@ -6,6 +6,7 @@ namespace Modules\DriftAlerts\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
@@ -15,6 +16,8 @@ use stdClass;
  */
 final class DriftAlertDtoMapper
 {
+    use CoercesScalars;
+
     /**
      * @param  stdClass  $row  raw drift_alerts row
      * @param  string|null  $seriesDisplayName  resolved series display
@@ -77,19 +80,5 @@ final class DriftAlertDtoMapper
             actionedAt: $actionedAt,
             snoozedUntil: $snoozedUntil,
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Public\Services;
 use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\EmailScan\Models\OAuthSecret;
@@ -19,6 +20,8 @@ use Throwable;
  */
 class OAuthSecretsRepository
 {
+    use CoercesScalars;
+
     private const ALLOWED_PROVIDERS = ['gmail', 'microsoft'];
 
     public function __construct(
@@ -294,11 +297,6 @@ class OAuthSecretsRepository
                 "OAuthSecretsRepository: provider must be 'gmail' or 'microsoft', got '{$provider}'."
             );
         }
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
     }
 
     private static function toDateTime(mixed $value): ?DateTimeImmutable

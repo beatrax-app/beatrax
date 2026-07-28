@@ -6,6 +6,7 @@ namespace Modules\Forecasting\Internal\Mapping;
 
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
@@ -15,6 +16,8 @@ use stdClass;
 
 final readonly class ForecastDtoMapper
 {
+    use CoercesScalars;
+
     /**
      * @param  array<array-key, mixed>  $accountResult
      * @param  list<SeriesConfidenceDto>  $seriesConfidence
@@ -115,19 +118,5 @@ final readonly class ForecastDtoMapper
             'ForecastDtoMapper: missing or non-string %s.',
             $column,
         ));
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

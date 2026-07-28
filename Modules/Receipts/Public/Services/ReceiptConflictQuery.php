@@ -7,12 +7,15 @@ namespace Modules\Receipts\Public\Services;
 use Exception;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 
 // Read-side projection of pending_enrichment_conflicts for the
 // first-conflict toast's mount() fallback. Every read is scoped by
 // user_id, so a foreign conflict can never surface.
 final readonly class ReceiptConflictQuery
 {
+    use CoercesScalars;
+
     public function __construct(private DatabaseManager $db) {}
 
     /**
@@ -61,10 +64,5 @@ final readonly class ReceiptConflictQuery
         }
 
         return null;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

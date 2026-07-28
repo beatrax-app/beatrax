@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use JsonException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Notifications\Public\Dto\NotificationDto;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -20,6 +21,8 @@ use stdClass;
  */
 final readonly class NotificationQuery
 {
+    use CoercesScalars;
+
     // 25 + 1 lookahead, matching the DriftAlertQuery
     // precedent.
     private const PAGE_LIMIT = 26;
@@ -182,15 +185,6 @@ final readonly class NotificationQuery
             glyph: $chip['glyph'],
             typeWord: $chip['word'],
         );
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 
     private static function toCarbon(mixed $value): CarbonImmutable

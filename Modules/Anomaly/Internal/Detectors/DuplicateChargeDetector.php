@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Internal\Detectors;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
@@ -15,6 +16,8 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  */
 final readonly class DuplicateChargeDetector
 {
+    use CoercesScalars;
+
     // Backward-only look-back window: covers the common double-tap /
     // retry pattern without catching a legitimate weekly recurrence
     // (those are additionally excluded via recurring-series membership).
@@ -79,11 +82,6 @@ final readonly class DuplicateChargeDetector
         $bothOnSeries = ($membership[$thisId] ?? false) && ($membership[$siblingId] ?? false);
 
         return ! $bothOnSeries;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 
     private static function toIntOrNull(mixed $value): ?int

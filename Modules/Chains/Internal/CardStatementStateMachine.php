@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Public\Dto\StatementSettlement;
 use Modules\Chains\Public\Exceptions\CardStatementNotFoundException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 
 /**
@@ -15,6 +16,8 @@ use Modules\Core\Public\Contracts\Clock;
  */
 final class CardStatementStateMachine
 {
+    use CoercesScalars;
+
     // Tolerance around zero for the settled state: SQLite decimal rounding
     // plus the EUR-only rounding step in the ICS adapter can leave a
     // one-cent residual that should still count as fully settled.
@@ -72,18 +75,5 @@ final class CardStatementStateMachine
                 newState: $newState,
             );
         });
-    }
-
-    // Numeric coercion for raw query-builder column values: SQLite returns
-    // scalars as strings via stdClass attributes, so this guards the int
-    // cast to keep the strict-rules cast.int lint satisfied.
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
     }
 }

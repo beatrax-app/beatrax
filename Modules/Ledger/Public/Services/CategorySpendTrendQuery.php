@@ -7,6 +7,7 @@ namespace Modules\Ledger\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\CategoryDelta;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\SpendTrend;
@@ -16,6 +17,8 @@ use Modules\Ledger\Public\Dto\SpendTrend;
 // — so the figures reconcile with "this month at a glance".
 final class CategorySpendTrendQuery
 {
+    use CoercesScalars;
+
     private const DISPLAY_CURRENCY = 'EUR';
 
     public function __construct(
@@ -101,10 +104,5 @@ final class CategorySpendTrendQuery
         }
 
         return $names;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

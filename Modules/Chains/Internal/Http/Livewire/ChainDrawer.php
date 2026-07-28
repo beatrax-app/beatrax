@@ -17,6 +17,7 @@ use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -27,6 +28,8 @@ use stdClass;
  */
 final class ChainDrawer extends Component
 {
+    use CoercesScalars;
+
     public ?int $transactionId = null;
 
     public int $fanoutPage = 0;
@@ -266,19 +269,5 @@ final class ChainDrawer extends Component
             confidenceTier: 'Confirmed',
             children: [],
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Public\Dto\AnomalySuppressionRuleDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
@@ -16,6 +17,8 @@ use stdClass;
  */
 final readonly class AnomalySuppressionRuleQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private CounterpartyProfileQuery $counterpartyQuery,
@@ -81,11 +84,6 @@ final readonly class AnomalySuppressionRuleQuery
         return is_string($value) && $value !== '' ? $value : 'EUR';
     }
 
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
     private static function toIntOrNull(mixed $value): ?int
     {
         if (! is_numeric($value)) {
@@ -94,14 +92,5 @@ final readonly class AnomalySuppressionRuleQuery
         $int = (int) $value;
 
         return $int > 0 ? $int : null;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }

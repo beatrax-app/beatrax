@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use JsonException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -22,6 +23,8 @@ use stdClass;
  */
 final class ApplyReceiptConflictResolution
 {
+    use CoercesScalars;
+
     private const ALLOWED_CHOICES = ['prefer_receipt', 'prefer_first_write'];
 
     // Mirrors the four field names FingerprintStage::detectConflicts
@@ -125,10 +128,5 @@ final class ApplyReceiptConflictResolution
             ->where('id', $conflictId)
             ->where('user_id', $user->id)
             ->delete();
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

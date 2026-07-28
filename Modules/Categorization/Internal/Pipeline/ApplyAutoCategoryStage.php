@@ -14,6 +14,7 @@ use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Categorization\Public\Contracts\AppliesAutoCategory;
 use Modules\Categorization\Public\Dto\AutoCategorizationOutcomeDto;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -23,6 +24,8 @@ use Throwable;
  */
 final class ApplyAutoCategoryStage implements AppliesAutoCategory
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly RuleEngine $ruleEngine,
         private readonly RuleApplier $ruleApplier,
@@ -113,10 +116,5 @@ final class ApplyAutoCategoryStage implements AppliesAutoCategory
 
             return AutoCategorizationOutcomeDto::manual($tx);
         }
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

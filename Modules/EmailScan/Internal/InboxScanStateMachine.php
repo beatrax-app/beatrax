@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Internal;
 
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\ScanCursor;
 use RuntimeException;
@@ -15,6 +16,8 @@ use RuntimeException;
  */
 final class InboxScanStateMachine
 {
+    use CoercesScalars;
+
     // Per-attempt backoff schedule in seconds ([60s, 5min, 15min,
     // 1h]); indices past the end clamp to the final entry so a
     // runaway retry count cannot push the delay to infinity.
@@ -242,18 +245,5 @@ final class InboxScanStateMachine
                 "InboxScanStateMachine: inbox {$inboxId} transition '{$currentStatus}' → '{$newStatus}' is not allowed.",
             );
         }
-    }
-
-    // Numeric coercion for raw query-builder column values: SQLite
-    // returns scalars as strings via stdClass attributes, so this
-    // guards the int cast to keep the strict-rules cast.int lint happy.
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

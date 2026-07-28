@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\DiscoveredSenderDto;
 use stdClass;
@@ -18,6 +19,8 @@ use Throwable;
  */
 final class DiscoveredSenderQuery
 {
+    use CoercesScalars;
+
     public const MIN_OCCURRENCES = 2;
 
     // Days back from now() counting toward MIN_OCCURRENCES;
@@ -126,15 +129,5 @@ final class DiscoveredSenderQuery
             lastSeenAt: $lastSeen,
             state: self::toString($row->state),
         );
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : '');
     }
 }

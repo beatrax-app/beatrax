@@ -6,6 +6,7 @@ namespace Modules\Recurring\Internal\Queries;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
 
 // recurring_series carries no account column, so the originating account is
@@ -17,6 +18,8 @@ use stdClass;
  */
 final readonly class SeriesAccountResolver
 {
+    use CoercesScalars;
+
     public function __construct(private DatabaseManager $db) {}
 
     /**
@@ -125,10 +128,5 @@ final readonly class SeriesAccountResolver
         $id = self::toInt($row->id);
 
         return $id > 0 ? $id : null;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
     }
 }

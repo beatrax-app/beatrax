@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
 use Modules\Forecasting\Public\Dto\ScenarioDto;
@@ -18,6 +19,8 @@ use stdClass;
  */
 final readonly class ScenarioQuery
 {
+    use CoercesScalars;
+
     public function __construct(
         private DatabaseManager $db,
         private ForecastDtoMapper $mapper,
@@ -136,19 +139,5 @@ final readonly class ScenarioQuery
     private static function nullableInt(mixed $value): ?int
     {
         return is_numeric($value) ? (int) $value : null;
-    }
-
-    private static function toInt(mixed $value): int
-    {
-        return is_numeric($value) ? (int) $value : 0;
-    }
-
-    private static function toString(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        return is_scalar($value) ? (string) $value : '';
     }
 }
