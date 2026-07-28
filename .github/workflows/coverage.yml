@@ -40,10 +40,17 @@ jobs:
         with:
           php-version: '8.5'
           extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
-          # pcov rather than xdebug: it is markedly faster for line coverage,
-          # which is all Codecov consumes here.
+          # pcov rather than xdebug: markedly faster for line coverage, which
+          # is all an imported clover report carries.
           coverage: pcov
           tools: composer:v2
+          # pcov instruments one directory tree and defaults to app/. Almost
+          # every line of this codebase is under Modules/, so the report was
+          # measuring 2 covered statements out of 72882 and SonarCloud read it,
+          # correctly, as 0.4% coverage. These go in php.ini rather than on the
+          # command line because `artisan test` runs Pest in a child process,
+          # which does not inherit the parent's -d flags.
+          ini-values: pcov.directory=., pcov.exclude="~(vendor|node_modules)~"
 
       - name: Cache Composer packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
