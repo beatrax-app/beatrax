@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
+use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
@@ -22,9 +23,6 @@ use stdClass;
 final readonly class NotificationPreferenceQuery
 {
     use CoercesScalars;
-
-    /** @var list<string> */
-    private const ALLOWED_CADENCES = ['daily', 'weekly', 'off'];
 
     public function __construct(
         private DatabaseManager $db,
@@ -112,7 +110,7 @@ final readonly class NotificationPreferenceQuery
         $values = [
             'reminders_enabled' => $prefs->remindersEnabled,
             'budget_nudges_enabled' => $prefs->budgetNudgesEnabled,
-            'digest_cadence' => $prefs->digestCadence,
+            'digest_cadence' => $prefs->digestCadence->value,
             'savings_prompts_enabled' => $prefs->savingsPromptsEnabled,
             'reminder_lead_days' => $prefs->reminderLeadDays,
             'quiet_hours_enabled' => $prefs->quietHoursEnabled,
@@ -147,12 +145,6 @@ final readonly class NotificationPreferenceQuery
 
     private static function validate(NotificationPreferencesDto $prefs): void
     {
-        if (! in_array($prefs->digestCadence, self::ALLOWED_CADENCES, strict: true)) {
-            throw new InvalidArgumentException(
-                "Invalid digest cadence '{$prefs->digestCadence}' (allowed: daily|weekly|off).",
-            );
-        }
-
         if ($prefs->reminderLeadDays < 1 || $prefs->reminderLeadDays > 30) {
             throw new InvalidArgumentException(
                 "Reminder lead days {$prefs->reminderLeadDays} out of range (1..30).",
@@ -173,7 +165,9 @@ final readonly class NotificationPreferenceQuery
         return new NotificationPreferencesDto(
             remindersEnabled: self::toBool($row->reminders_enabled ?? null),
             budgetNudgesEnabled: self::toBool($row->budget_nudges_enabled ?? null),
-            digestCadence: self::toString($row->digest_cadence ?? null),
+            // A row written before the CHECK constraint, or by hand, falls
+            // back to the default rather than failing the whole read.
+            digestCadence: DigestCadence::tryFrom(self::toString($row->digest_cadence ?? null)) ?? DigestCadence::Weekly,
             savingsPromptsEnabled: self::toBool($row->savings_prompts_enabled ?? null),
             reminderLeadDays: self::toInt($row->reminder_lead_days ?? null),
             quietHoursEnabled: self::toBool($row->quiet_hours_enabled ?? null),

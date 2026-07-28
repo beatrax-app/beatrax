@@ -93,7 +93,7 @@ final class SuppressionEvaluator
             DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER => $prefs->remindersEnabled,
             DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE => $prefs->budgetNudgesEnabled,
             DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT => $prefs->savingsPromptsEnabled,
-            DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST => $prefs->digestCadence !== 'off',
+            DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST => ! $prefs->digestCadence->isOff(),
             // No permissive default arm: an unrecognised trigger type
             // fails loudly at review rather than silently bypassing
             // every toggle and quiet-hours window.

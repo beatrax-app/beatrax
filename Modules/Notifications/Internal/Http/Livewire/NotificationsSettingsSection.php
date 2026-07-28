@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
+use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
 /**
@@ -45,7 +46,7 @@ final class NotificationsSettingsSection extends Component
         $this->remindersEnabled = $dto->remindersEnabled;
         $this->reminderLeadDays = $dto->reminderLeadDays;
         $this->budgetNudgesEnabled = $dto->budgetNudgesEnabled;
-        $this->digestCadence = $dto->digestCadence;
+        $this->digestCadence = $dto->digestCadence->value;
         $this->savingsPromptsEnabled = $dto->savingsPromptsEnabled;
         $this->quietHoursEnabled = $dto->quietHoursEnabled;
         $this->quietHoursFrom = $dto->quietHoursFrom ?? '22:00';
@@ -62,8 +63,10 @@ final class NotificationsSettingsSection extends Component
         $this->saveError = '';
         $this->saved = false;
 
-        $allowedCadences = ['daily', 'weekly', 'off'];
-        if (! in_array($this->digestCadence, $allowedCadences, strict: true)) {
+        // The select posts a string, so the enum is where it stops being
+        // one. A value no case can represent means a tampered payload.
+        $cadence = DigestCadence::tryFrom($this->digestCadence);
+        if ($cadence === null) {
             $this->saveError = "Couldn't save your notification settings. Try again.";
 
             return;
@@ -86,7 +89,7 @@ final class NotificationsSettingsSection extends Component
         $prefs->saveForCurrentDevice($currentUser->user(), new NotificationPreferencesDto(
             remindersEnabled: $this->remindersEnabled,
             budgetNudgesEnabled: $this->budgetNudgesEnabled,
-            digestCadence: $this->digestCadence,
+            digestCadence: $cadence,
             savingsPromptsEnabled: $this->savingsPromptsEnabled,
             reminderLeadDays: $this->reminderLeadDays,
             quietHoursEnabled: $this->quietHoursEnabled,
@@ -123,7 +126,7 @@ final class NotificationsSettingsSection extends Component
             'reminders %s · nudges %s · digest %s · savings %s',
             $onOff($dto->remindersEnabled),
             $onOff($dto->budgetNudgesEnabled),
-            $dto->digestCadence,
+            $dto->digestCadence->value,
             $onOff($dto->savingsPromptsEnabled),
         );
     }

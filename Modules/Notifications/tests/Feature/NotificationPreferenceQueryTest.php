@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Modules\Core\Models\User;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
+use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
 
@@ -68,7 +70,7 @@ it('reads exactly the D-16/D-19/D-15 defaults for a device with no row', functio
 
     expect($prefs->remindersEnabled)->toBeTrue();
     expect($prefs->budgetNudgesEnabled)->toBeTrue();
-    expect($prefs->digestCadence)->toBe('weekly');
+    expect($prefs->digestCadence)->toBe(DigestCadence::Weekly);
     expect($prefs->savingsPromptsEnabled)->toBeFalse();
     expect($prefs->reminderLeadDays)->toBe(3);
     expect($prefs->quietHoursEnabled)->toBeFalse();
@@ -84,7 +86,7 @@ it('returns defaults with a null device id for an unpaired device', function ():
     $prefs = $this->query->forCurrentDevice($user);
 
     expect($prefs->deviceId)->toBeNull();
-    expect($prefs->digestCadence)->toBe('weekly');
+    expect($prefs->digestCadence)->toBe(DigestCadence::Weekly);
     expect($prefs->reminderLeadDays)->toBe(3);
 });
 
@@ -97,7 +99,7 @@ it('round-trips a saved row', function (): void {
     $this->query->saveForCurrentDevice($user, new NotificationPreferencesDto(
         remindersEnabled: false,
         budgetNudgesEnabled: false,
-        digestCadence: 'daily',
+        digestCadence: DigestCadence::Daily,
         savingsPromptsEnabled: true,
         reminderLeadDays: 7,
         quietHoursEnabled: true,
@@ -110,7 +112,7 @@ it('round-trips a saved row', function (): void {
 
     expect($prefs->remindersEnabled)->toBeFalse();
     expect($prefs->budgetNudgesEnabled)->toBeFalse();
-    expect($prefs->digestCadence)->toBe('daily');
+    expect($prefs->digestCadence)->toBe(DigestCadence::Daily);
     expect($prefs->savingsPromptsEnabled)->toBeTrue();
     expect($prefs->reminderLeadDays)->toBe(7);
     expect($prefs->quietHoursEnabled)->toBeTrue();
@@ -163,7 +165,7 @@ it('excludes the self row and includes a peer device in forOtherDevices()', func
     expect($others)->toHaveCount(1);
     expect($others[0]->deviceId)->toBe('peer-device');
     expect($others[0]->deviceName)->toBe('Device peer-device');
-    expect($others[0]->digestCadence)->toBe('off');
+    expect($others[0]->digestCadence)->toBe(DigestCadence::Off);
 });
 
 it('does not let user A read user B preferences', function (): void {
@@ -192,29 +194,34 @@ it('does not let user A read user B preferences', function (): void {
     // User A has no row → must read defaults, NOT user B's stored values.
     $prefsA = $this->query->forCurrentDevice($userA);
 
-    expect($prefsA->digestCadence)->toBe('weekly');
+    expect($prefsA->digestCadence)->toBe(DigestCadence::Weekly);
     expect($prefsA->reminderLeadDays)->toBe(3);
     expect($prefsA->savingsPromptsEnabled)->toBeFalse();
 });
 
-it('throws on an invalid cadence', function (): void {
+it('refuses a cadence the enum cannot represent, at the column', function (): void {
     $user = prefUser('pref-bad-cadence');
     seedRegistryDevice($this->db, $user->id, 'self-device', isSelf: true);
 
-    $prefs = new NotificationPreferencesDto(
+    $this->query->saveForCurrentDevice($user, new NotificationPreferencesDto(
         remindersEnabled: true,
         budgetNudgesEnabled: true,
-        digestCadence: 'monthly',
+        digestCadence: DigestCadence::Weekly,
         savingsPromptsEnabled: false,
         reminderLeadDays: 3,
         quietHoursEnabled: false,
         quietHoursFrom: '22:00',
         quietHoursTo: '08:00',
         hideDetails: false,
-    );
+    ));
 
-    expect(fn () => $this->query->saveForCurrentDevice($user, $prefs))
-        ->toThrow(InvalidArgumentException::class);
+    // The DTO can no longer carry an invalid cadence, so the guarantee this
+    // test protects is the one that still applies to writes coming from
+    // outside the application: the column itself refuses the value (C8-R22).
+    expect(fn () => $this->db->connection()->table('notification_preferences')
+        ->where('user_id', $user->id)
+        ->update(['digest_cadence' => 'monthly']))
+        ->toThrow(QueryException::class);
 });
 
 it('throws on a lead time of 0', function (): void {
@@ -224,7 +231,7 @@ it('throws on a lead time of 0', function (): void {
     $prefs = new NotificationPreferencesDto(
         remindersEnabled: true,
         budgetNudgesEnabled: true,
-        digestCadence: 'weekly',
+        digestCadence: DigestCadence::Weekly,
         savingsPromptsEnabled: false,
         reminderLeadDays: 0,
         quietHoursEnabled: false,
@@ -244,7 +251,7 @@ it('throws on a lead time of 31', function (): void {
     $prefs = new NotificationPreferencesDto(
         remindersEnabled: true,
         budgetNudgesEnabled: true,
-        digestCadence: 'weekly',
+        digestCadence: DigestCadence::Weekly,
         savingsPromptsEnabled: false,
         reminderLeadDays: 31,
         quietHoursEnabled: false,
@@ -264,7 +271,7 @@ it('throws on a malformed quiet-hours time', function (): void {
     $prefs = new NotificationPreferencesDto(
         remindersEnabled: true,
         budgetNudgesEnabled: true,
-        digestCadence: 'weekly',
+        digestCadence: DigestCadence::Weekly,
         savingsPromptsEnabled: false,
         reminderLeadDays: 3,
         quietHoursEnabled: true,
