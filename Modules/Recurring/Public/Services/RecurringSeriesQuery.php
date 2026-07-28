@@ -10,6 +10,8 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
+use Modules\Recurring\Internal\Queries\SeriesAccountResolver;
+use Modules\Recurring\Internal\Support\SeriesIds;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -20,7 +22,18 @@ use stdClass;
  */
 final readonly class RecurringSeriesQuery
 {
-    public function __construct(private DatabaseManager $db) {}
+    // The aliases every join in this class shares. Naming them keeps the
+    // `o.` and `t.` prefixes scattered through the column lists below
+    // anchored to one definition rather than to whichever string a given
+    // query happened to spell.
+    private const string OCCURRENCES = 'recurring_series_occurrences as o';
+
+    private const string TRANSACTIONS = 'transactions as t';
+
+    public function __construct(
+        private DatabaseManager $db,
+        private SeriesAccountResolver $accounts,
+    ) {}
 
     /**
      * @return list<RecurringSeriesDto> strictly `pending` rows only, never `cadence_changed`
@@ -109,14 +122,7 @@ final readonly class RecurringSeriesQuery
      */
     public function statesForSeriesIds(array $seriesIds, User $user): array
     {
-        $clean = [];
-        foreach ($seriesIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
+        $unique = SeriesIds::normalise($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -142,14 +148,7 @@ final readonly class RecurringSeriesQuery
      */
     public function displayNamesForSeriesIds(array $seriesIds, User $user): array
     {
-        $clean = [];
-        foreach ($seriesIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
+        $unique = SeriesIds::normalise($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -181,14 +180,7 @@ final readonly class RecurringSeriesQuery
      */
     public function forSeriesIds(array $seriesIds, User $user): array
     {
-        $clean = [];
-        foreach ($seriesIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
+        $unique = SeriesIds::normalise($seriesIds);
         if ($unique === []) {
             return [];
         }
@@ -300,8 +292,8 @@ final readonly class RecurringSeriesQuery
      */
     public function counterpartyIdForSeries(int $seriesId, User $user): ?int
     {
-        $row = $this->db->connection()->table('recurring_series_occurrences as o')
-            ->join('transactions as t', 't.id', '=', 'o.transaction_id')
+        $row = $this->db->connection()->table(self::OCCURRENCES)
+            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('o.recurring_series_id', $seriesId)
             ->where('o.user_id', $user->id)
             ->whereNotNull('t.counterparty_id')
@@ -329,20 +321,13 @@ final readonly class RecurringSeriesQuery
      */
     public function counterpartyIdsForSeriesIds(array $seriesIds, User $user): array
     {
-        $clean = [];
-        foreach ($seriesIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
+        $unique = SeriesIds::normalise($seriesIds);
         if ($unique === []) {
             return [];
         }
 
-        $rows = $this->db->connection()->table('recurring_series_occurrences as o')
-            ->join('transactions as t', 't.id', '=', 'o.transaction_id')
+        $rows = $this->db->connection()->table(self::OCCURRENCES)
+            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->whereIn('o.recurring_series_id', $unique)
             ->where('o.user_id', $user->id)
             ->whereNotNull('t.counterparty_id')
@@ -378,8 +363,8 @@ final readonly class RecurringSeriesQuery
     public function approvedSeriesForCounterparty(int $counterpartyId, User $user): array
     {
         $ids = $this->db->connection()->table('recurring_series as s')
-            ->join('recurring_series_occurrences as o', 'o.recurring_series_id', '=', 's.id')
-            ->join('transactions as t', 't.id', '=', 'o.transaction_id')
+            ->join(self::OCCURRENCES, 'o.recurring_series_id', '=', 's.id')
+            ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('s.user_id', $user->id)
             ->where('t.counterparty_id', $counterpartyId)
             ->whereIn('s.state', ['approved', 'cadence_changed'])
@@ -434,7 +419,7 @@ final readonly class RecurringSeriesQuery
 
         $effectiveLimit = max(1, $maxPoints);
         $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
-            ->leftJoin('transactions as t', 't.id', '=', 'rso.transaction_id')
+            ->leftJoin(self::TRANSACTIONS, 't.id', '=', 'rso.transaction_id')
             ->where('rso.recurring_series_id', $seriesId)
             ->where('rso.user_id', $user->id)
             ->orderByDesc('rso.observed_at')
@@ -570,74 +555,12 @@ final readonly class RecurringSeriesQuery
      */
     public function accountIdsForSeriesIds(array $seriesIds, User $user): array
     {
-        $clean = [];
-        foreach ($seriesIds as $id) {
-            $i = is_numeric($id) ? (int) $id : 0;
-            if ($i > 0) {
-                $clean[] = $i;
-            }
-        }
-        $unique = array_values(array_unique($clean));
+        $unique = SeriesIds::normalise($seriesIds);
         if ($unique === []) {
             return [];
         }
 
-        $rows = $this->db->connection()->table('recurring_series_occurrences as rso')
-            ->join('transactions as t', 't.id', '=', 'rso.transaction_id')
-            ->where('rso.user_id', $user->id)
-            ->where('t.user_id', $user->id)
-            ->whereIn('rso.recurring_series_id', $unique)
-            ->orderByDesc('rso.observed_at')
-            ->orderByDesc('rso.id')
-            ->get(['rso.recurring_series_id as series_id', 't.account_id as account_id']);
-
-        $map = [];
-        foreach ($rows as $row) {
-            /** @var stdClass $row */
-            $seriesId = self::toInt($row->series_id);
-            if ($seriesId === 0 || isset($map[$seriesId])) {
-                // The first row for each series_id wins thanks to the
-                // ORDER BY rso.observed_at DESC + rso.id DESC ordering.
-                continue;
-            }
-            $map[$seriesId] = self::toInt($row->account_id);
-        }
-
-        // Fallback for zero-occurrence series: assign them to the
-        // user's alphabetically-first account so projections still
-        // produce sensible output. Confirms each id still exists
-        // and belongs to the user before falling back.
-        $missing = array_values(array_diff($unique, array_keys($map)));
-        if ($missing !== []) {
-            $owned = $this->db->connection()->table('recurring_series')
-                ->where('user_id', $user->id)
-                ->whereIn('id', $missing)
-                ->pluck('id');
-            $ownedSet = [];
-            foreach ($owned as $id) {
-                $ownedSet[] = self::toInt($id);
-            }
-            $ownedSet = array_values(array_filter($ownedSet, static fn (int $id): bool => $id > 0));
-
-            if ($ownedSet !== []) {
-                $firstAccount = $this->db->connection()->table('accounts')
-                    ->where('user_id', $user->id)
-                    ->orderBy('name')
-                    ->orderBy('id')
-                    ->first(['id']);
-                if ($firstAccount !== null) {
-                    /** @var stdClass $firstAccount */
-                    $firstAccountId = self::toInt($firstAccount->id);
-                    if ($firstAccountId > 0) {
-                        foreach ($ownedSet as $sid) {
-                            $map[$sid] = $firstAccountId;
-                        }
-                    }
-                }
-            }
-        }
-
-        return $map;
+        return $this->accounts->forSeriesIds($unique, $user);
     }
 
     private function toDto(stdClass $row): RecurringSeriesDto
