@@ -45,6 +45,7 @@ final class GraphApiClient implements GraphApiClientContract
         private readonly Clock $clock,
         private readonly EventsDispatcher $events,
         private readonly DatabaseManager $db,
+        private readonly ?GuzzleClient $httpClient = null,
     ) {}
 
     // Backfill walk over /me/messages with an OData $filter
@@ -633,12 +634,14 @@ final class GraphApiClient implements GraphApiClientContract
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    // Lazily instantiates a Guzzle client as a private factory (rather
-    // than constructor-injected) so a future test subclass could
-    // override the HTTP boundary without changing the constructor.
+    // This used to explain itself as a seam "a future test subclass could
+    // override" — but the class is final, so that subclass could never exist
+    // and the boundary stayed untestable. The client is injectable instead:
+    // null builds the production one, and a test passes a Guzzle instance
+    // backed by a mock handler.
     private function makeHttpClient(): GuzzleClient
     {
-        return new GuzzleClient([
+        return $this->httpClient ?? new GuzzleClient([
             'timeout' => 30,
             'connect_timeout' => 10,
         ]);
