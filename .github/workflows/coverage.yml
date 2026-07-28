@@ -82,6 +82,21 @@ jobs:
           APP_ENV: testing
         run: php artisan test --coverage-clover=coverage.xml
 
+      # SonarCloud refuses a CI analysis while automatic analysis is on, and
+      # automatic analysis will not accept an imported coverage report — so the
+      # two are mutually exclusive and CI has to be the one that wins. This is
+      # the API call the Analysis Method page makes; it is idempotent.
+      - name: Make CI analysis authoritative
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          # The credential goes in on stdin rather than argv: a token passed as
+          # `curl -u` is readable in the process table for the life of the call,
+          # and gitleaks flags the pattern for exactly that reason.
+          printf 'user = "%s:"\n' "$SONAR_TOKEN" | curl -sS -X POST --config - \
+            "https://sonarcloud.io/api/autoscan/activation?projectKey=beatrax-app_beatrax&enable=false" \
+            -w '\nHTTP %{http_code}\n'
+
       - name: SonarCloud scan
         # Needs the full history: Sonar attributes new code to the commits that
         # introduced it, and a shallow clone leaves it guessing.
