@@ -214,3 +214,125 @@ it('unallocated is derived and never read from a stored column (D-01)', function
 
     expect($rec->unallocatedMinor)->toBe($rec->realBalanceMinor - $rec->allocatedMinor);
 });
+
+// ---------------------------------------------------------------------------
+// Goal-linked lookups
+// ---------------------------------------------------------------------------
+
+it('reports the balance and currency of every goal-linked pot', function (): void {
+    $goal = DB::table('goals')->insertGetId([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Holiday',
+        'target_minor' => 100000,
+        'target_currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $linked = Pot::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal,
+        'name' => 'Holiday pot',
+        'currency' => 'EUR',
+        'status' => 'active',
+    ]);
+    potMovement($linked->id, $this->user->id, 7500, 'fund');
+
+    // An unlinked pot must not appear: the map is keyed by goal, and a null
+    // goal_id would collapse every unlinked pot onto one key.
+    $unlinked = Pot::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Loose change',
+        'currency' => 'EUR',
+        'status' => 'active',
+    ]);
+    potMovement($unlinked->id, $this->user->id, 500, 'fund');
+
+    $balances = app(PotBalanceQuery::class)->linkedPotBalancesForUser($this->user);
+
+    expect($balances)->toHaveCount(1)
+        ->and($balances[$goal]['balance'])->toBe(7500)
+        ->and($balances[$goal]['currency'])->toBe('EUR');
+});
+
+it('finds the pot linked to a goal, and reports none when the link is gone', function (): void {
+    $goal = DB::table('goals')->insertGetId([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Holiday',
+        'target_minor' => 100000,
+        'target_currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $pot = Pot::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal,
+        'name' => 'Holiday pot',
+        'currency' => 'EUR',
+        'status' => 'active',
+    ]);
+
+    $query = app(PotBalanceQuery::class);
+
+    expect($query->linkedPotIdForGoal($goal, $this->user))->toBe($pot->id)
+        ->and($query->currencyForLinkedPot($goal, $this->user))->toBe('EUR')
+        ->and($query->linkedPotIdForGoal(999999, $this->user))->toBeNull()
+        ->and($query->currencyForLinkedPot(999999, $this->user))->toBeNull();
+});
+
+it('treats an archived pot as no longer holding its goal', function (): void {
+    $goal = DB::table('goals')->insertGetId([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Holiday',
+        'target_minor' => 100000,
+        'target_currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    Pot::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal,
+        'name' => 'Archived pot',
+        'currency' => 'EUR',
+        'status' => 'archived',
+    ]);
+
+    $query = app(PotBalanceQuery::class);
+
+    expect($query->linkedPotIdForGoal($goal, $this->user))->toBeNull()
+        ->and($query->linkedPotBalancesForUser($this->user))->toBe([]);
+});
+
+it('reports zero allocated for an account with no active pots', function (): void {
+    potAccountTx($this->user->id, $this->account->id, $this->run->id, 25000);
+
+    $rec = app(PotBalanceQuery::class)->reconciliationForAccount($this->account->id, $this->user);
+
+    expect($rec->allocatedMinor)->toBe(0)
+        ->and($rec->unallocatedMinor)->toBe($rec->realBalanceMinor);
+});
+
+it('falls back to a blank name and EUR for an account it cannot see', function (): void {
+    $rec = app(PotBalanceQuery::class)->reconciliationForAccount(999999, $this->user);
+
+    expect($rec->accountName)->toBe('')
+        ->and($rec->currency)->toBe('EUR');
+});
