@@ -31,31 +31,18 @@ final class CategorizationDiverged
         int $newCategoryId,
         int $userId,
     ): ?self {
-        if ($priorProvenance === null) {
+        if ($priorProvenance === null || ($priorProvenance['source'] ?? null) !== 'rule') {
             return null;
         }
 
-        $source = $priorProvenance['source'] ?? null;
-        if ($source !== 'rule') {
-            return null;
-        }
+        $ruleId = self::intFrom($priorProvenance, 'rule_id');
+        $oldCategoryId = self::intFrom($priorProvenance, 'category_id');
 
-        $ruleIdRaw = $priorProvenance['rule_id'] ?? null;
-        if (! is_int($ruleIdRaw) && ! is_numeric($ruleIdRaw)) {
-            return null;
-        }
-        $ruleId = (int) $ruleIdRaw;
-        if ($ruleId === 0) {
-            return null;
-        }
-
-        $oldCategoryRaw = $priorProvenance['category_id'] ?? null;
-        if (! is_int($oldCategoryRaw) && ! is_numeric($oldCategoryRaw)) {
-            return null;
-        }
-        $oldCategoryId = (int) $oldCategoryRaw;
-
-        if ($newCategoryId === $oldCategoryId) {
+        // Every remaining way this is not a still-diverging rule suggestion:
+        // no usable rule id, rule id 0 (which no row carries), no usable prior
+        // category, or a new category that matches the old one and so has not
+        // diverged from anything.
+        if ($ruleId === null || $ruleId === 0 || $oldCategoryId === null || $newCategoryId === $oldCategoryId) {
             return null;
         }
 
@@ -66,5 +53,19 @@ final class CategorizationDiverged
             newCategoryId: $newCategoryId,
             userId: $userId,
         );
+    }
+
+    // An id out of a provenance payload, or null when the key is absent or
+    // holds something that is not a number. The payload is JSON off a column,
+    // so a numeric string is as legitimate as an int — both ids were read this
+    // way, and reading it in one place is what keeps them agreeing.
+    /**
+     * @param  array<string, mixed>  $provenance
+     */
+    private static function intFrom(array $provenance, string $key): ?int
+    {
+        $raw = $provenance[$key] ?? null;
+
+        return is_int($raw) || is_numeric($raw) ? (int) $raw : null;
     }
 }

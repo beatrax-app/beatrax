@@ -25,42 +25,12 @@ final class MerchantMemoryWriter
 
     public function handle(TransactionCategorized $event): void
     {
-        if ($event->categoryId === null) {
+        $merchantId = $event->categoryId === null ? null : $this->merchantIdFor($event);
+        if ($merchantId === null) {
             return;
         }
 
         $connection = $this->db->connection();
-
-        $txRow = $connection
-            ->table('transactions')
-            ->where('user_id', $event->userId)
-            ->where('id', $event->transactionId)
-            ->first(['counterparty_normalized']);
-
-        if ($txRow === null) {
-            return;
-        }
-
-        $normalized = is_string($txRow->counterparty_normalized) ? $txRow->counterparty_normalized : '';
-        if ($normalized === '' || $normalized === NormalizeStage::NO_COUNTERPARTY) {
-            return;
-        }
-
-        $merchantRow = $connection
-            ->table('merchants')
-            ->where('user_id', $event->userId)
-            ->where('normalized_name', $normalized)
-            ->first(['id']);
-
-        if ($merchantRow === null) {
-            return;
-        }
-
-        $merchantId = self::toInt($merchantRow->id);
-        if ($merchantId === 0) {
-            return;
-        }
-
         $now = $this->clock->now()->toDateTimeString();
         $userId = $event->userId;
         $categoryId = $event->categoryId;
@@ -97,6 +67,33 @@ final class MerchantMemoryWriter
                 'last_seen_at' => $now,
                 'updated_at' => $now,
             ]);
+    }
+
+    // The merchant this categorisation should remember against, or null when
+    // there is nothing to remember: the transaction is gone, carries no
+    // counterparty, or matches no merchant row. value() rather than first() so
+    // a missing row and a missing column are one answer.
+    private function merchantIdFor(TransactionCategorized $event): ?int
+    {
+        $connection = $this->db->connection();
+
+        $normalized = self::toString($connection
+            ->table('transactions')
+            ->where('user_id', $event->userId)
+            ->where('id', $event->transactionId)
+            ->value('counterparty_normalized'));
+
+        if ($normalized === '' || $normalized === NormalizeStage::NO_COUNTERPARTY) {
+            return null;
+        }
+
+        $merchantId = self::toInt($connection
+            ->table('merchants')
+            ->where('user_id', $event->userId)
+            ->where('normalized_name', $normalized)
+            ->value('id'));
+
+        return $merchantId === 0 ? null : $merchantId;
     }
 
     private static function isUniqueViolation(QueryException $e): bool
