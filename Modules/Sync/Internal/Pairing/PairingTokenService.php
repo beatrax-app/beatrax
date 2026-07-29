@@ -158,11 +158,7 @@ final class PairingTokenService
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
-        if ($row === null) {
-            return false;
-        }
-
-        if (! is_string($row->token_hash) || ! hash_equals($row->token_hash, $tokenHash)) {
+        if ($row === null || ! $this->tokenHashMatches($row, $tokenHash)) {
             return false;
         }
 
@@ -202,25 +198,14 @@ final class PairingTokenService
     // actually owns. Returns the resulting pairing state (see @link).
     public function confirm(int $tokenId, int $userId, string $confirmingDeviceId): ?string
     {
-        $token = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $tokenId)
-            ->where('user_id', $userId)
-            ->first(['initiator_device_id', 'responder_device_id']);
-
-        if ($token === null) {
+        // An unknown token and a device that owns neither side are the same
+        // refusal: this device has nothing it may confirm on this token.
+        $side = $this->confirmableSideFor($tokenId, $userId, $confirmingDeviceId);
+        if ($side === null) {
             return null;
         }
 
-        $initiatorDeviceId = is_string($token->initiator_device_id) ? $token->initiator_device_id : null;
-        $responderDeviceId = is_string($token->responder_device_id) ? $token->responder_device_id : null;
-
-        if ($initiatorDeviceId !== null && hash_equals($initiatorDeviceId, $confirmingDeviceId)) {
-            $column = 'initiator_confirmed_at';
-        } elseif ($responderDeviceId !== null && hash_equals($responderDeviceId, $confirmingDeviceId)) {
-            $column = 'responder_confirmed_at';
-        } else {
-            return null;
-        }
+        $column = $side.'_confirmed_at';
 
         $now = $this->clock->now()->toIso8601String();
 
@@ -277,11 +262,7 @@ final class PairingTokenService
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
-        if ($row === null) {
-            return false;
-        }
-
-        if (! is_string($row->token_hash) || ! hash_equals($row->token_hash, $tokenHash)) {
+        if ($row === null || ! $this->tokenHashMatches($row, $tokenHash)) {
             return false;
         }
 
@@ -358,11 +339,7 @@ final class PairingTokenService
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
-        if ($row === null) {
-            return null;
-        }
-
-        if (! is_string($row->token_hash) || ! hash_equals($row->token_hash, $tokenHash)) {
+        if ($row === null || ! $this->tokenHashMatches($row, $tokenHash)) {
             return null;
         }
 
@@ -382,18 +359,14 @@ final class PairingTokenService
             return null;
         }
 
-        $initiatorDeviceId = is_string($row->initiator_device_id) ? $row->initiator_device_id : null;
-        $responderDeviceId = is_string($row->responder_device_id) ? $row->responder_device_id : null;
-
-        if ($initiatorDeviceId !== null && hash_equals($initiatorDeviceId, $selfDeviceId)) {
-            $localSide = 'initiator';
-        } elseif ($responderDeviceId !== null && hash_equals($responderDeviceId, $selfDeviceId)) {
-            $localSide = 'responder';
-        } else {
+        $localSide = $this->sideOwnedBy($row, $selfDeviceId);
+        if ($localSide === null) {
             return null;
         }
 
-        $peerBoundDeviceId = $localSide === 'initiator' ? $responderDeviceId : $initiatorDeviceId;
+        $peerBoundDeviceId = $localSide === 'initiator'
+            ? (is_string($row->responder_device_id) ? $row->responder_device_id : null)
+            : (is_string($row->initiator_device_id) ? $row->initiator_device_id : null);
         $peerPublicKeyHex = $localSide === 'initiator'
             ? (is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null)
             : (is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null);
@@ -455,6 +428,43 @@ final class PairingTokenService
         }
 
         return $this->finalizeIfBothConfirmed($freshRow, $userId);
+    }
+
+    // Re-checks the hash the row was located by, in constant time. The WHERE
+    // already matched it, so this guards the column and the query disagreeing
+    // — a stored value that is not a string, or a driver comparison that is
+    // not byte-exact. All three frame handlers asked this, identically.
+    private function tokenHashMatches(\stdClass $row, string $tokenHash): bool
+    {
+        return is_string($row->token_hash) && hash_equals($row->token_hash, $tokenHash);
+    }
+
+    // The side this device may confirm on this token, or null when the token
+    // is unknown or the device owns neither side.
+    private function confirmableSideFor(int $tokenId, int $userId, string $deviceId): ?string
+    {
+        $token = $this->db->connection()->table('pairing_tokens')
+            ->where('id', $tokenId)
+            ->where('user_id', $userId)
+            ->first(['initiator_device_id', 'responder_device_id']);
+
+        return $token === null ? null : $this->sideOwnedBy($token, $deviceId);
+    }
+
+    // Shared head of confirm() and applyPeerConfirm(): which side of the
+    // pairing a device id owns, or null when it owns neither. hash_equals
+    // rather than === because the ids being compared come from a frame the
+    // far side controls.
+    private function sideOwnedBy(\stdClass $row, string $deviceId): ?string
+    {
+        $initiator = is_string($row->initiator_device_id) ? $row->initiator_device_id : null;
+        $responder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
+
+        return match (true) {
+            $initiator !== null && hash_equals($initiator, $deviceId) => 'initiator',
+            $responder !== null && hash_equals($responder, $deviceId) => 'responder',
+            default => null,
+        };
     }
 
     // Shared tail of confirm() and applyPeerConfirm(): both reach the exact
