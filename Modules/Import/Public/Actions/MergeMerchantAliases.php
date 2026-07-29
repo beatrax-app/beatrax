@@ -148,9 +148,6 @@ final class MergeMerchantAliases
             return $value;
         }
 
-        /** @var string $converted */
-        $converted = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
-
-        return $converted;
+        return mb_convert_encoding($value, 'UTF-8', 'UTF-8');
     }
 }

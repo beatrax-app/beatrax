@@ -39,14 +39,11 @@ final class SavingsInsightsQuery
      */
     public function forUser(User $user): array
     {
-        /** @var list<SavingsInsight> $insights */
-        $insights = $this->cache->remember(
+        return $this->cache->remember(
             $this->cacheKey($user),
             self::CACHE_TTL,
             fn (): array => $this->compute($user),
         );
-
-        return $insights;
     }
 
     /**

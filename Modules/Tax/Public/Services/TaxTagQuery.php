@@ -228,10 +228,7 @@ final class TaxTagQuery
             )
             ->pluck('t.id');
 
-        /** @var list<int> $result */
-        $result = array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
-
-        return $result;
+        return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rows->all()));
     }
 
     // Returns null when the stored value isn't a non-empty string; never

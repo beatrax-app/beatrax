@@ -82,8 +82,7 @@ final class DemoForecastSeeder
      */
     private function upsertScenario(User $user, array $row): ForecastScenario
     {
-        /** @var ForecastScenario $scenario */
-        $scenario = ForecastScenario::query()->updateOrCreate(
+        return ForecastScenario::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'name' => $row['name'],
@@ -92,8 +91,6 @@ final class DemoForecastSeeder
                 'description' => $row['description'],
             ],
         );
-
-        return $scenario;
     }
 
     private function upsertWhatIfMutation(User $user, ForecastScenario $whatIf): void

@@ -107,8 +107,7 @@ final class DemoEmailScanSeeder
 
     private function upsertInbox(User $user, string $provider, string $email): Inbox
     {
-        /** @var Inbox $inbox */
-        $inbox = Inbox::query()->updateOrCreate(
+        return Inbox::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'email' => $email,
@@ -119,8 +118,6 @@ final class DemoEmailScanSeeder
                 'backfill_progress' => ['fetched_count' => 42, 'total_estimated' => 100],
             ],
         );
-
-        return $inbox;
     }
 
     private function upsertScanState(
@@ -188,8 +185,7 @@ final class DemoEmailScanSeeder
     ): InboxMessage {
         $now = CarbonImmutable::now();
 
-        /** @var InboxMessage $message */
-        $message = InboxMessage::query()->updateOrCreate(
+        return InboxMessage::query()->updateOrCreate(
             [
                 'inbox_id' => $inbox->id,
                 'provider_message_id' => $providerMessageId,
@@ -204,8 +200,6 @@ final class DemoEmailScanSeeder
                 'fetched_at' => $now->subHours($ageHours - 1),
             ],
         );
-
-        return $message;
     }
 
     private function upsertDiscoveredSender(

@@ -29,14 +29,11 @@ final class NavCountsService
      */
     public function forUser(int $userId): array
     {
-        /** @var array<string, int> $counts */
-        $counts = $this->cache->remember(
+        return $this->cache->remember(
             $this->cacheKey($userId),
             self::CACHE_TTL,
             fn (): array => $this->compute($userId),
         );
-
-        return $counts;
     }
 
     public function forget(int $userId): void

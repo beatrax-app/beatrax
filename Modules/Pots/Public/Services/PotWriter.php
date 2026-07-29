@@ -394,14 +394,11 @@ final class PotWriter
     // Returns null for a cross-user or missing pot.
     private function findOwnedActivePot(User $user, int $potId): ?Pot
     {
-        /** @var Pot|null $pot */
-        $pot = Pot::query()
+        return Pot::query()
             ->withoutGlobalScope(UserScope::class)
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->find($potId);
-
-        return $pot;
     }
 
     /**
