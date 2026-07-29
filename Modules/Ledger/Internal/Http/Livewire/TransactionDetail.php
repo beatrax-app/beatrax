@@ -46,6 +46,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class TransactionDetail extends Component
 {
+    // The one message every reconciled-row guard shows, so the four
+    // guards cannot drift apart in wording.
+    private const RECONCILED_NOTICE = 'This transaction is reconciled. Un-reconcile it to make changes.';
+
     use HandlesClearedStatus;
     use HandlesTaxTagging;
 
@@ -155,7 +159,7 @@ final class TransactionDetail extends Component
         // Reconciled lock: warn-first, no write. Reads the already
         // user-scoped $tx just loaded above — no extra query needed.
         if ($tx->status === 'reconciled') {
-            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
         }
@@ -256,7 +260,7 @@ final class TransactionDetail extends Component
             ->value('status');
 
         if ($status === 'reconciled') {
-            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
         }
@@ -316,7 +320,7 @@ final class TransactionDetail extends Component
             ->value('status');
 
         if ($status === 'reconciled') {
-            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
         }
@@ -397,7 +401,7 @@ final class TransactionDetail extends Component
         }
 
         if ($status === 'reconciled') {
-            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
         }
@@ -448,7 +452,7 @@ final class TransactionDetail extends Component
         }
 
         if ($status === 'reconciled') {
-            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
         }
@@ -770,7 +774,7 @@ final class TransactionDetail extends Component
             ->value('status');
 
         if ($status === 'reconciled') {
-            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
         }

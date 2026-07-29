@@ -89,8 +89,11 @@ final class DemoTransactionSplitsSeeder
         $legs = [];
         foreach ($row['legs'] as $leg) {
             $categoryId = $this->categoryId($leg['categoryPath']);
+            // An unknown category path means this demo row cannot be split
+            // at all, so the whole set is abandoned rather than half-built.
             if ($categoryId === null) {
-                return;
+                $legs = [];
+                break;
             }
             $legs[] = [
                 'id' => null,
@@ -100,7 +103,9 @@ final class DemoTransactionSplitsSeeder
             ];
         }
 
-        $this->splitWriter->save($user, $parentId, $legs);
+        if ($legs !== []) {
+            $this->splitWriter->save($user, $parentId, $legs);
+        }
     }
 
     private function alreadySplit(User $user, int $transactionId): bool

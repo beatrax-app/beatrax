@@ -100,3 +100,28 @@ it('reports an honest toast when a matched statement locks zero in-window rows (
 
     expect(DB::table('transactions')->where('id', $afterWindow->id)->value('status'))->toBe('cleared');
 });
+
+it('refuses to reconcile before the form names an account', function (): void {
+    // accountId is the mount argument, so an unset one is the state the page
+    // opens in from the sidebar rather than from an account row.
+    Livewire::actingAs($this->user)
+        ->test(ReconcilePage::class)
+        ->set('statementBalance', '-50,00')
+        ->set('statementDate', '2026-06-15')
+        ->call('confirmReconcile')
+        ->assertSet('error', 'Choose an account first.');
+});
+
+it('refuses to reconcile on a balance or date it cannot read', function (): void {
+    $this->makeTransaction($this->user, $this->account, $this->run, ['status' => 'cleared', 'amount_minor' => -5000]);
+
+    Livewire::actingAs($this->user)
+        ->test(ReconcilePage::class, ['accountId' => $this->account->id])
+        ->set('statementBalance', 'not a number')
+        ->set('statementDate', '2026-06-15')
+        ->call('confirmReconcile')
+        ->assertSet('error', 'Enter a valid statement balance and date.');
+
+    // Nothing is locked by a refused reconcile.
+    expect(DB::table('transactions')->where('status', 'reconciled')->count())->toBe(0);
+});

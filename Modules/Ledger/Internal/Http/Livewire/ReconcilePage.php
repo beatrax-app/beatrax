@@ -76,17 +76,15 @@ final class ReconcilePage extends Component
     {
         $this->error = '';
 
-        if ($this->accountId === null) {
-            $this->error = 'Choose an account first.';
-
-            return;
-        }
-
         $target = self::parseAmount($this->statementBalance);
         $date = self::parseDate($this->statementDate);
 
-        if ($target === null || $date === null) {
-            $this->error = 'Enter a valid statement balance and date.';
+        // Both are the same answer to the operator: the form is not yet in a
+        // state this can act on, and the message says which part is missing.
+        if ($this->accountId === null || $target === null || $date === null) {
+            $this->error = $this->accountId === null
+                ? 'Choose an account first.'
+                : 'Enter a valid statement balance and date.';
 
             return;
         }
