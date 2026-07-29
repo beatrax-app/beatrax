@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Reports\Internal\Aggregation;
 
 use Carbon\CarbonImmutable;
-use InvalidArgumentException;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 /**
  * @link ../../../../.docs/features/reports/architecture.md
@@ -20,15 +20,13 @@ final class TimeBucketGenerator
     public const MAX_BUCKET_POINTS = 60;
 
     /**
-     * @param  string  $granularity  'monthly' | 'weekly'
      * @return list<Period>
      */
-    public function generate(Period $period, string $granularity): array
+    public function generate(Period $period, ReportGranularity $granularity): array
     {
         return match ($granularity) {
-            'weekly' => $this->generateWeekly($period),
-            'monthly' => $this->generateMonthly($period),
-            default => throw new InvalidArgumentException("Unknown time-bucket granularity: {$granularity}"),
+            ReportGranularity::Weekly => $this->generateWeekly($period),
+            ReportGranularity::Monthly => $this->generateMonthly($period),
         };
     }
 

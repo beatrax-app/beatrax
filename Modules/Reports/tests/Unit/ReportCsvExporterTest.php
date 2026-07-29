@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -57,7 +58,7 @@ function rceDefinition(string $dimension): ReportDefinition
         metric: 'spend',
         dimension: $dimension,
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
     );

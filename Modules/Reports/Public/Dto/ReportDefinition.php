@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Reports\Public\Dto;
 
+use Modules\Reports\Public\Enums\ReportGranularity;
 use Spatie\LaravelData\Data;
 
 /**
@@ -15,7 +16,6 @@ final class ReportDefinition extends Data
      * @param  string  $metric  'spend' | 'income' | 'net' | 'net_worth'
      * @param  string  $dimension  'category' | 'time_bucket' | 'counterparty' | 'account'
      * @param  string  $periodPreset  'this_month' | 'last_3_months' | 'last_6_months' | 'last_12_months' | 'ytd' | 'this_year' | 'custom'
-     * @param  string  $granularity  'monthly' | 'weekly'
      * @param  string  $currencyMode  'base' | 'original'
      * @param  string  $viz  'table' | 'bar' | 'line' | 'donut'
      * @param  ?string  $customFrom  ISO date string (Y-m-d), only meaningful when periodPreset = 'custom'
@@ -31,7 +31,7 @@ final class ReportDefinition extends Data
         public readonly string $metric,
         public readonly string $dimension,
         public readonly string $periodPreset,
-        public readonly string $granularity,
+        public readonly ReportGranularity $granularity,
         public readonly string $currencyMode,
         public readonly string $viz,
         public readonly ?string $customFrom = null,

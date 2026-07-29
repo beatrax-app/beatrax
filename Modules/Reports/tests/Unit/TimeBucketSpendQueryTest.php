@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\TimeBucketSpendQuery;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -109,7 +110,7 @@ it('produces one grouped total per generated monthly bucket, including zero-acti
         label: 'Q1 2026',
     );
 
-    $rows = app(TimeBucketSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', 'monthly');
+    $rows = app(TimeBucketSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', ReportGranularity::Monthly);
 
     expect($rows)->toHaveCount(3);
     expect($rows[0]->amountMinor)->toBe(5_000);

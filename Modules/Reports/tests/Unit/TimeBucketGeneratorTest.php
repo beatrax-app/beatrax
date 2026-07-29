@@ -5,12 +5,13 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\TimeBucketGenerator;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 /*
  * Wave 0 RED stub (999.6-03 Task 2, Req 6/7).
  *
  * Pins Modules\Reports\Internal\Aggregation\TimeBucketGenerator::generate(
- * Period $period, string $granularity): list<Period> — each generated
+ * Period $period, ReportGranularity $granularity): list<Period> — each generated
  * bucket is itself a half-open Period (mirrors PeriodQuery's
  * CarbonImmutable::addMonthNoOverflow() month-stepping idiom), with the
  * last bucket's endExclusive clamped to the overall range's endExclusive
@@ -28,7 +29,7 @@ it('generates 12 half-open monthly buckets for a 12-month span', function (): vo
         label: '2025',
     );
 
-    $buckets = app(TimeBucketGenerator::class)->generate($period, 'monthly');
+    $buckets = app(TimeBucketGenerator::class)->generate($period, ReportGranularity::Monthly);
 
     expect($buckets)->toHaveCount(12);
     expect($buckets[0]->start->toDateString())->toBe('2025-01-01');
@@ -44,7 +45,7 @@ it('generates weekly buckets for a 6-week span', function (): void {
         label: '6 weeks',
     );
 
-    $buckets = app(TimeBucketGenerator::class)->generate($period, 'weekly');
+    $buckets = app(TimeBucketGenerator::class)->generate($period, ReportGranularity::Weekly);
 
     expect($buckets)->toHaveCount(6);
     foreach ($buckets as $bucket) {
@@ -62,7 +63,7 @@ it('clamps the last bucket endExclusive to the overall range endExclusive, never
         label: 'partial month',
     );
 
-    $buckets = app(TimeBucketGenerator::class)->generate($period, 'monthly');
+    $buckets = app(TimeBucketGenerator::class)->generate($period, ReportGranularity::Monthly);
     $last = $buckets[count($buckets) - 1];
 
     expect($last->endExclusive->toDateString())->toBe('2025-01-20');
@@ -76,7 +77,7 @@ it('caps the point count for a multi-year monthly range so charts stay renderabl
         label: '11 years',
     );
 
-    $buckets = app(TimeBucketGenerator::class)->generate($period, 'monthly');
+    $buckets = app(TimeBucketGenerator::class)->generate($period, ReportGranularity::Monthly);
 
     // 132 uncapped monthly buckets (11 years x 12) must be capped to a
     // renderable ceiling — the exact cap is a later-wave decision, this
@@ -96,7 +97,7 @@ it('WR-03: caps a multi-year weekly range to stay under MAX_BUCKET_POINTS by wid
     // 'weekly' branch called stepBuckets() directly with no cap check at
     // all, unlike 'monthly'. Must widen (e.g. to monthly/quarterly)
     // instead, while still fully covering the requested range.
-    $buckets = app(TimeBucketGenerator::class)->generate($period, 'weekly');
+    $buckets = app(TimeBucketGenerator::class)->generate($period, ReportGranularity::Weekly);
 
     expect(count($buckets))->toBeLessThanOrEqual(TimeBucketGenerator::MAX_BUCKET_POINTS);
     expect($buckets)->not->toBeEmpty();

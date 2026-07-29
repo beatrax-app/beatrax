@@ -14,6 +14,7 @@ use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
+use Modules\Reports\Public\Enums\ReportGranularity;
 use stdClass;
 
 /**
@@ -35,12 +36,11 @@ final class NetWorthSeriesQuery
     ) {}
 
     /**
-     * @param  string  $granularity  'monthly' | 'weekly'
      * @return list<NetWorthSeriesPoint>
      */
-    public function forUser(User $user, Period $period, string $granularity = 'monthly'): array
+    public function forUser(User $user, Period $period, ?ReportGranularity $granularity = null): array
     {
-        $buckets = $this->timeBucketGenerator->generate($period, $granularity);
+        $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
         $baseCurrency = $user->base_currency;
 
         /** @var Collection<int, stdClass> $accounts */

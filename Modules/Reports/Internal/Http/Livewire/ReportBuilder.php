@@ -24,6 +24,7 @@ use Modules\Reports\Public\Actions\UpdateReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Dto\ReportResultDto;
 use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Public\Enums\ReportGranularity;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -261,7 +262,7 @@ final class ReportBuilder extends Component
         $this->periodPreset = $definition->periodPreset;
         $this->customFrom = $definition->customFrom ?? '';
         $this->customTo = $definition->customTo ?? '';
-        $this->granularity = $definition->granularity;
+        $this->granularity = $definition->granularity->value;
         $this->currencyMode = $definition->currencyMode;
         $this->viz = $definition->viz;
         $this->compare = $definition->compare;
@@ -279,7 +280,7 @@ final class ReportBuilder extends Component
             metric: $this->metric,
             dimension: $this->dimension,
             periodPreset: $this->periodPreset,
-            granularity: $this->granularity,
+            granularity: ReportGranularity::tryFrom($this->granularity) ?? ReportGranularity::default(),
             currencyMode: $this->currencyMode,
             viz: $this->viz,
             customFrom: $this->customFrom !== '' ? $this->customFrom : null,

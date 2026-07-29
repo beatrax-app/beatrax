@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -115,7 +116,7 @@ function cmeDefinition(string $metric): ReportDefinition
         metric: $metric,
         dimension: 'category',
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         customFrom: '2026-04-01',
@@ -165,7 +166,7 @@ it('currencyMode=original never triggers exclusion — each currency reports its
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'original',
         viz: 'table',
         customFrom: '2026-04-01',
@@ -197,7 +198,7 @@ it('CR-02: currencyMode=original with an account filter reports the correct curr
         metric: 'spend',
         dimension: 'account',
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'original',
         viz: 'table',
         customFrom: '2026-04-01',
