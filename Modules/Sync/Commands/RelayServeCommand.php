@@ -101,23 +101,28 @@ final class RelayServeCommand extends Command
     {
         $method = $request->getMethod();
         $path = $request->getUri()->getPath();
+        $confirmId = $this->confirmIdFrom($method, $path);
 
-        if ($method === 'POST' && $path === '/relay/deliver') {
-            return $this->handleDeliver($request);
+        return match (true) {
+            $method === 'POST' && $path === '/relay/deliver' => $this->handleDeliver($request),
+            $method === 'GET' && $path === '/relay/drain' => $this->handleDrain($request),
+            $confirmId !== null => $this->handleConfirm($request, $confirmId),
+            default => new Response(HttpStatus::NOT_FOUND, ['content-type' => self::JSON_CONTENT_TYPE], '{"error":"not_found"}'),
+        };
+    }
+
+    // The row id from a DELETE /relay/drain/{id}, or null when the request is
+    // not that shape. A non-numeric or empty id is not-found rather than a bad
+    // request: the path simply does not name a row.
+    private function confirmIdFrom(string $method, string $path): ?int
+    {
+        if ($method !== 'DELETE' || ! str_starts_with($path, '/relay/drain/')) {
+            return null;
         }
 
-        if ($method === 'GET' && $path === '/relay/drain') {
-            return $this->handleDrain($request);
-        }
+        $idStr = ltrim(substr($path, strlen('/relay/drain/')), '/');
 
-        if ($method === 'DELETE' && str_starts_with($path, '/relay/drain/')) {
-            $idStr = ltrim(substr($path, strlen('/relay/drain/')), '/');
-            if ($idStr !== '' && ctype_digit($idStr)) {
-                return $this->handleConfirm($request, (int) $idStr);
-            }
-        }
-
-        return new Response(HttpStatus::NOT_FOUND, ['content-type' => self::JSON_CONTENT_TYPE], '{"error":"not_found"}');
+        return $idStr !== '' && ctype_digit($idStr) ? (int) $idStr : null;
     }
 
     // POST /relay/deliver — open submission; the recipient's drain token gates
@@ -126,37 +131,18 @@ final class RelayServeCommand extends Command
     // unauthenticated (see class @link).
     private function handleDeliver(Request $request): Response
     {
-        $rawBody = $request->getBody()->buffer();
-        $body = json_decode($rawBody, true, 512, 0);
-
-        if (! is_array($body)) {
-            return $this->jsonError(HttpStatus::BAD_REQUEST, 'invalid_json');
-        }
-
-        $senderDid = isset($body['sender_did']) && is_string($body['sender_did']) ? $body['sender_did'] : '';
-        $recipientDid = isset($body['recipient_did']) && is_string($body['recipient_did']) ? $body['recipient_did'] : '';
-        $blobB64 = isset($body['blob']) && is_string($body['blob']) ? $body['blob'] : '';
-
-        if ($senderDid === '' || $recipientDid === '' || $blobB64 === '') {
-            return $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_fields');
-        }
-
-        if (! $this->isValidDid($senderDid) || ! $this->isValidDid($recipientDid)) {
-            return $this->jsonError(HttpStatus::UNPROCESSABLE_ENTITY, 'invalid_did');
-        }
-
+        $body = json_decode($request->getBody()->buffer(), true, 512, 0);
+        $senderDid = $this->stringField($body, 'sender_did');
+        $recipientDid = $this->stringField($body, 'recipient_did');
+        $blobB64 = $this->stringField($body, 'blob');
         $blob = base64_decode($blobB64, strict: true);
-        if ($blob === false || $blob === '') {
-            return $this->jsonError(HttpStatus::BAD_REQUEST, 'invalid_blob_encoding');
+
+        $rejection = $this->deliveryRejection($body, $senderDid, $recipientDid, $blobB64, $blob);
+        if ($rejection !== null) {
+            return $rejection;
         }
 
-        // Mirror RelayClient's own cap server-side: a caller that hits this open
-        // endpoint directly (bypassing RelayClient) must not be able to smuggle a
-        // larger-than-intended blob past the client-only check.
-        if (strlen($blob) > RelayClient::MAX_BLOB_BYTES) {
-            return $this->jsonError(HttpStatus::PAYLOAD_TOO_LARGE, 'blob_too_large');
-        }
-
+        /** @var string $blob a non-string was rejected above */
         try {
             $stored = $this->mailbox->deliverIfUnderQuota(
                 $senderDid,
@@ -170,11 +156,40 @@ final class RelayServeCommand extends Command
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'deliver_failed');
         }
 
-        if (! $stored) {
-            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'mailbox_full');
-        }
+        return $stored
+            ? new Response(HttpStatus::ACCEPTED, ['content-type' => self::JSON_CONTENT_TYPE], '{"status":"accepted"}')
+            : $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'mailbox_full');
+    }
 
-        return new Response(HttpStatus::ACCEPTED, ['content-type' => self::JSON_CONTENT_TYPE], '{"status":"accepted"}');
+    // Every way a delivery can be refused, in the order they are reported. The
+    // arms are evaluated top-down and short-circuit, so the blob-length check
+    // never sees the `false` that a bad base64 decode returns.
+    private function deliveryRejection(
+        mixed $body,
+        string $senderDid,
+        string $recipientDid,
+        string $blobB64,
+        string|false $blob,
+    ): ?Response {
+        return match (true) {
+            ! is_array($body) => $this->jsonError(HttpStatus::BAD_REQUEST, 'invalid_json'),
+            $senderDid === '' || $recipientDid === '' || $blobB64 === '' => $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_fields'),
+            ! $this->isValidDid($senderDid) || ! $this->isValidDid($recipientDid) => $this->jsonError(HttpStatus::UNPROCESSABLE_ENTITY, 'invalid_did'),
+            $blob === false || $blob === '' => $this->jsonError(HttpStatus::BAD_REQUEST, 'invalid_blob_encoding'),
+            // Mirrors RelayClient's own cap server-side: a caller hitting this
+            // open endpoint directly must not smuggle a larger-than-intended
+            // blob past the client-only check.
+            strlen($blob) > RelayClient::MAX_BLOB_BYTES => $this->jsonError(HttpStatus::PAYLOAD_TOO_LARGE, 'blob_too_large'),
+            default => null,
+        };
+    }
+
+    // A request field that must be a string, degraded to '' when it is absent
+    // or some other shape — `blob[]=x` builds an array, and treating that as
+    // missing is safer than letting it reach the decoder.
+    private function stringField(mixed $body, string $key): string
+    {
+        return is_array($body) && isset($body[$key]) && is_string($body[$key]) ? $body[$key] : '';
     }
 
     // GET /relay/drain — bearer-token authorized (see class @link); returns up
@@ -194,12 +209,9 @@ final class RelayServeCommand extends Command
         parse_str($query, $params);
         $did = isset($params['did']) && is_string($params['did']) ? $params['did'] : '';
 
-        if ($did === '') {
-            return $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_did');
-        }
-
-        if (! $this->isAuthorized($request, $did)) {
-            return $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized');
+        $rejection = $this->drainRejection($request, $did);
+        if ($rejection !== null) {
+            return $rejection;
         }
 
         try {
@@ -228,6 +240,19 @@ final class RelayServeCommand extends Command
         return new Response(HttpStatus::OK, ['content-type' => self::JSON_CONTENT_TYPE], $json);
     }
 
+    // A drain is refused for one of two reasons, and the order matters: an
+    // empty did is a malformed request, whereas a did that fails the token
+    // check is an unauthorized one. Reporting the second for the first would
+    // tell a caller a missing parameter looked like a credentials problem.
+    private function drainRejection(Request $request, string $did): ?Response
+    {
+        return match (true) {
+            $did === '' => $this->jsonError(HttpStatus::BAD_REQUEST, 'missing_did'),
+            ! $this->isAuthorized($request, $did) => $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized'),
+            default => null,
+        };
+    }
+
     // DELETE /relay/drain/{id} — bearer-token authorized against the row's own
     // recipient (see class @link). Marks the blob delivered (7d TTL) rather than
     // deleting it immediately, so a draining device that crashes before
@@ -237,13 +262,11 @@ final class RelayServeCommand extends Command
         // Resolve the recipient_did (routing metadata only — never the blob) and
         // require a per-device token scoped to that device before it is exposed.
         $recipientDid = $this->mailbox->recipientDidFor($id);
-        if ($recipientDid === null) {
-            // Unknown row id. Return 401 (not 404) so a caller cannot probe which
-            // ids exist without already holding the owning device's token.
-            return $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized');
-        }
 
-        if (! $this->isAuthorized($request, $recipientDid)) {
+        // An unknown row id and an unauthorized caller get the same answer on
+        // purpose: 401 rather than 404, so a caller cannot probe which ids
+        // exist without already holding the owning device's token.
+        if ($recipientDid === null || ! $this->isAuthorized($request, $recipientDid)) {
             return $this->jsonError(HttpStatus::UNAUTHORIZED, 'unauthorized');
         }
 
@@ -268,22 +291,16 @@ final class RelayServeCommand extends Command
     private function isAuthorized(Request $request, string $did): bool
     {
         $expectedToken = $this->config->deriveDeviceToken($did);
-        if ($expectedToken === null) {
-            return false;
-        }
-
         $authHeader = $request->getHeader('authorization');
-        if ($authHeader === null || $authHeader === '') {
-            return false;
-        }
 
-        if (! str_starts_with($authHeader, 'Bearer ')) {
-            return false;
-        }
-
-        $presentedToken = substr($authHeader, strlen('Bearer '));
-
-        return hash_equals($expectedToken, $presentedToken);
+        // hash_equals only runs in the default arm, so the timing-safe compare
+        // is still the only place a configured token is examined.
+        return match (true) {
+            $expectedToken === null => false,
+            $authHeader === null || $authHeader === '' => false,
+            ! str_starts_with($authHeader, 'Bearer ') => false,
+            default => hash_equals($expectedToken, substr($authHeader, strlen('Bearer '))),
+        };
     }
 
     private function isValidDid(string $did): bool
