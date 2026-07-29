@@ -17,10 +17,18 @@
 # trade being made knowingly — the fallback exists so a rotation that empties
 # the secret degrades to a working run rather than a broken one.
 #
-# The failure mode is worth knowing because it is silent: the action exits zero
-# and the workflow goes green while a check it could not perform scores -1 with
-# "internal error: error during branchesHandler.setup". The verify step below
-# turns that into a visible warning instead of a quietly wrong badge.
+# PUBLISHING IS FRAGILE AND FAILS QUIETLY. The OpenSSF API verifies the
+# workflow before accepting a result and refuses one whose scorecard job holds
+# anything but `uses:` steps drawn from a fixed allow-list — checkout,
+# upload-artifact, codeql-action/upload-sarif, scorecard-action,
+# harden-runner. No `run:` steps, no job-level env or defaults, no containers.
+# A rejected publish is a `::warning::` and an exit code of zero, so the
+# workflow stays green while api.scorecard.dev answers 404 and the README
+# badge does not render. That is what happened here: the verify step used to
+# live in this job and cost every publish for as long as it did.
+#
+# So the analysis job holds nothing but allow-listed actions, and the SARIF
+# travels to the verify job as an artifact.
 name: scorecard
 
 on:
@@ -59,11 +67,32 @@ jobs:
         with:
           sarif_file: results.sarif
 
+      # Hands the SARIF to the verify job. upload-artifact is on the OpenSSF
+      # allow-list, so carrying the file out this way costs nothing, where an
+      # inline `run:` step would cost the publish.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 7
+
+  verify:
+    # A separate job because the analysis job may not contain a `run:` step
+    # without the OpenSSF API refusing to publish. Scorecard reports a check
+    # it could not perform as score -1 and still exits zero, so without this
+    # the badge silently under-reports and nobody finds out. A warning rather
+    # than a failure: the score is informational, and a token problem should
+    # not block a merge.
+    needs: analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: scorecard-results
+
       - name: Verify the admin-scoped checks actually ran
-        # Scorecard reports a check it could not perform as score -1 and still
-        # exits zero, so without this the badge silently under-reports and
-        # nobody finds out. A warning rather than a failure: the score is
-        # informational, and a token problem should not block a merge.
         run: |
           python3 - <<'PY'
           import json, os, sys
