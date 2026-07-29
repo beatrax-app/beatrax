@@ -81,36 +81,28 @@ final class CounterpartyResolverService implements CounterpartyResolver
     {
         $userId = $user->id;
 
-        $selfAccount = $this->resolveSelfAccount($tx, $userId);
-        if ($selfAccount !== null) {
-            return $selfAccount;
+        // The order is the classification rule, not an implementation detail:
+        // the first strategy to recognise the transaction wins, and a later
+        // one must never override an earlier. A list so the ordering is one
+        // readable thing rather than a sequence of early returns.
+        $strategies = [
+            fn (): ?CounterpartyResolutionDto => $this->resolveSelfAccount($tx, $userId),
+            fn (): ?CounterpartyResolutionDto => $this->resolveKnownBridge($tx, $user, $userId),
+            fn (): ?CounterpartyResolutionDto => $this->resolveMerchant($tx, $userId),
+            fn (): ?CounterpartyResolutionDto => $this->resolvePersonal($tx, $userId),
+            fn (): ?CounterpartyResolutionDto => $this->resolveGovernment($tx, $userId),
+            fn (): ?CounterpartyResolutionDto => $this->resolveBankFee($tx, $userId),
+        ];
+
+        foreach ($strategies as $strategy) {
+            $resolved = $strategy();
+            if ($resolved !== null) {
+                return $resolved;
+            }
         }
 
-        $bridge = $this->resolveKnownBridge($tx, $user, $userId);
-        if ($bridge !== null) {
-            return $bridge;
-        }
-
-        $merchant = $this->resolveMerchant($tx, $userId);
-        if ($merchant !== null) {
-            return $merchant;
-        }
-
-        $personal = $this->resolvePersonal($tx, $userId);
-        if ($personal !== null) {
-            return $personal;
-        }
-
-        $government = $this->resolveGovernment($tx, $userId);
-        if ($government !== null) {
-            return $government;
-        }
-
-        $bankFee = $this->resolveBankFee($tx, $userId);
-        if ($bankFee !== null) {
-            return $bankFee;
-        }
-
+        // Nothing recognised it, which is a resolution in itself rather than
+        // a failure — the transaction still gets a counterparty.
         return $this->resolveUnknown($tx, $userId);
     }
 
@@ -208,24 +200,12 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
     private function resolvePersonal(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
     {
-        if (! in_array($tx->type, self::PERSONAL_TRANSACTION_TYPES, true)) {
-            return null;
-        }
-
-        // Any structurally valid SEPA IBAN (mod-97 + BBAN length, not just
-        // Dutch) paired with a name that clears the small-business marker
-        // guard below counts as a personal P2P transfer.
         $iban = $this->normaliseIban($tx->counterpartyIban);
-        if ($iban === null || ! $this->ibanValidator->validate($iban)) {
-            return null;
-        }
-
         $name = $tx->counterpartyName;
-        if ($name === null || trim($name) === '') {
-            return null;
-        }
 
-        if (! $this->looksLikePersonalName($name)) {
+        // The null checks stay here rather than moving into the predicate so
+        // both values are narrowed to string for the upsert below.
+        if ($iban === null || $name === null || ! $this->isPersonalTransfer($tx, $iban, $name)) {
             return null;
         }
 
@@ -240,6 +220,17 @@ final class CounterpartyResolverService implements CounterpartyResolver
             merchantName: null,
             metadata: [],
         );
+    }
+
+    // Any structurally valid SEPA IBAN (mod-97 + BBAN length, not just Dutch)
+    // paired with a name that clears the small-business marker guard counts as
+    // a personal P2P transfer.
+    private function isPersonalTransfer(CanonicalTransaction $tx, string $iban, string $name): bool
+    {
+        return in_array($tx->type, self::PERSONAL_TRANSACTION_TYPES, true)
+            && $this->ibanValidator->validate($iban)
+            && trim($name) !== ''
+            && $this->looksLikePersonalName($name);
     }
 
     private function resolveGovernment(CanonicalTransaction $tx, int $userId): ?CounterpartyResolutionDto
@@ -402,39 +393,32 @@ final class CounterpartyResolverService implements CounterpartyResolver
         string $baseSlug,
         string $displayName,
     ): string {
-        $existing = $this->db->connection()
-            ->table('counterparties')
-            ->where('user_id', $userId)
-            ->where('slug', $baseSlug)
-            ->value('display_name');
-
-        if ($existing === null) {
-            return $baseSlug;
-        }
-
-        if (is_string($existing) && $this->decryptDisplayName($existing, $userId) === $displayName) {
+        if ($this->slugIsFreeFor($userId, $baseSlug, $displayName)) {
             return $baseSlug;
         }
 
         $suffix = 2;
-        while (true) {
-            $candidate = $baseSlug.'-'.$suffix;
-            $candidateExisting = $this->db->connection()
-                ->table('counterparties')
-                ->where('user_id', $userId)
-                ->where('slug', $candidate)
-                ->value('display_name');
-
-            if ($candidateExisting === null) {
-                return $candidate;
-            }
-
-            if (is_string($candidateExisting) && $this->decryptDisplayName($candidateExisting, $userId) === $displayName) {
-                return $candidate;
-            }
-
+        while (! $this->slugIsFreeFor($userId, $baseSlug.'-'.$suffix, $displayName)) {
             $suffix++;
         }
+
+        return $baseSlug.'-'.$suffix;
+    }
+
+    // Free means unused, or already held by this same counterparty. The
+    // stored name is decrypted before comparing so a row whose column is now
+    // ciphertext is not mistaken for a different holder. The base slug and
+    // every numbered candidate ask this one question.
+    private function slugIsFreeFor(int $userId, string $slug, string $displayName): bool
+    {
+        $existing = $this->db->connection()
+            ->table('counterparties')
+            ->where('user_id', $userId)
+            ->where('slug', $slug)
+            ->value('display_name');
+
+        return $existing === null
+            || (is_string($existing) && $this->decryptDisplayName($existing, $userId) === $displayName);
     }
 
     // Never throws — an undecryptable value falls back to the raw
@@ -492,26 +476,19 @@ final class CounterpartyResolverService implements CounterpartyResolver
         // they fall through to the rule's canonical name.
         $name = $tx->counterpartyName;
         $trimmedName = is_string($name) ? trim($name) : '';
+        $isRegex = $this->matcher->isRegex($rule->pattern);
 
-        if ($trimmedName !== '' && ! $this->matcher->isRegex($rule->pattern) && stripos($trimmedName, $rule->pattern) !== false) {
-            return $trimmedName;
-        }
-
-        if ($rule->name !== null) {
-            return $rule->name;
-        }
-
-        if ($trimmedName !== '') {
-            return $trimmedName;
-        }
-
-        // A name-less rule matched only the description and has no
-        // counterparty name to fall back on. Title-case a literal pattern;
-        // a regex body (e.g. `RUNDFUNK|ARD ZDF`) is not human copy, so use a
-        // generic label rather than leaking PCRE syntax into the UI/slug.
-        return $this->matcher->isRegex($rule->pattern)
-            ? 'Government'
-            : ucfirst(strtolower($rule->pattern));
+        // The last arm is for a name-less rule that matched only the
+        // description: title-case a literal pattern, but a regex body (e.g.
+        // `RUNDFUNK|ARD ZDF`) is not human copy, so use a generic label rather
+        // than leak PCRE syntax into the UI and the slug.
+        return match (true) {
+            $trimmedName !== '' && ! $isRegex && stripos($trimmedName, $rule->pattern) !== false => $trimmedName,
+            $rule->name !== null => $rule->name,
+            $trimmedName !== '' => $trimmedName,
+            $isRegex => 'Government',
+            default => ucfirst(strtolower($rule->pattern)),
+        };
     }
 
     private function looksLikePersonalName(string $name): bool
@@ -521,19 +498,27 @@ final class CounterpartyResolverService implements CounterpartyResolver
             return false;
         }
 
-        $upper = strtoupper($trimmed);
-        $tokens = preg_split('/\s+/', $upper);
+        $tokens = preg_split('/\s+/', strtoupper($trimmed));
         if ($tokens === false || count($tokens) > 4) {
             return false;
         }
 
+        return ! $this->containsMerchantMarker($tokens);
+    }
+
+    // A marker token is what separates "J VAN DER BERG" from "BERG BV": a
+    // personal name carries none of them.
+    /**
+     * @param  list<string>  $tokens
+     */
+    private function containsMerchantMarker(array $tokens): bool
+    {
         foreach ($tokens as $token) {
-            $clean = trim($token, ',');
-            if (in_array($clean, self::MERCHANT_NAME_MARKERS, true)) {
-                return false;
+            if (in_array(trim($token, ','), self::MERCHANT_NAME_MARKERS, true)) {
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 }
