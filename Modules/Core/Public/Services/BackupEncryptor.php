@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Services;
 
-use RuntimeException;
+use Modules\Core\Public\Exceptions\BackupDecryptionException;
+use Modules\Core\Public\Exceptions\BackupFormatException;
+use Modules\Core\Public\Exceptions\BackupIoException;
 use SodiumException;
 use Throwable;
 
@@ -24,7 +26,7 @@ final class BackupEncryptor
     private const MAX_OPSLIMIT = 10;
 
     /**
-     * @throws RuntimeException on I/O failure
+     * @throws BackupIoException on I/O failure
      * @throws SodiumException on a crypto failure (should not happen for valid input)
      */
     public function encrypt(string $plainPath, string $encPath, string $passphrase): void
@@ -54,7 +56,7 @@ final class BackupEncryptor
             while (true) {
                 $chunk = fread($in, self::CHUNK_SIZE);
                 if ($chunk === false) {
-                    throw new RuntimeException('Read error while encrypting backup.');
+                    throw new BackupIoException('Read error while encrypting backup.');
                 }
                 $isFinal = feof($in);
                 $tag = $isFinal
@@ -73,7 +75,9 @@ final class BackupEncryptor
     }
 
     /**
-     * @throws RuntimeException on a wrong passphrase, tampering, truncation, or a bad header
+     * @throws BackupFormatException when the file is not one of ours, or its header is not readable
+     * @throws BackupDecryptionException on a wrong passphrase, tampering, or truncation
+     * @throws BackupIoException on I/O failure
      */
     public function decrypt(string $encPath, string $plainPath, string $passphrase): void
     {
@@ -86,7 +90,7 @@ final class BackupEncryptor
 
         try {
             if ($this->readExactly($in, strlen(self::MAGIC)) !== self::MAGIC) {
-                throw new RuntimeException('Not a beatrax encrypted backup (bad file header).');
+                throw new BackupFormatException('Not a beatrax encrypted backup (bad file header).');
             }
             $salt = $this->readExactly($in, SODIUM_CRYPTO_PWHASH_SALTBYTES);
             $opslimit = $this->unpackUint('V', $this->readExactly($in, 4));
@@ -97,7 +101,7 @@ final class BackupEncryptor
             try {
                 $state = sodium_crypto_secretstream_xchacha20poly1305_init_pull($streamHeader, $key);
             } catch (SodiumException $e) {
-                throw new RuntimeException('Could not start decryption — the backup header is invalid.', 0, $e);
+                throw new BackupFormatException('Could not start decryption — the backup header is invalid.', 0, $e);
             } finally {
                 sodium_memzero($key);
             }
@@ -107,14 +111,14 @@ final class BackupEncryptor
             while (true) {
                 $block = fread($in, $cipherChunk);
                 if ($block === false) {
-                    throw new RuntimeException('Read error while decrypting backup.');
+                    throw new BackupIoException('Read error while decrypting backup.');
                 }
                 if ($block === '') {
                     break;
                 }
                 $result = sodium_crypto_secretstream_xchacha20poly1305_pull($state, $block);
                 if ($result === false) {
-                    throw new RuntimeException('Decryption failed — wrong passphrase or the backup is corrupted.');
+                    throw new BackupDecryptionException('Decryption failed — wrong passphrase or the backup is corrupted.');
                 }
                 /** @var string $plain */
                 $plain = $result[0];
@@ -128,7 +132,7 @@ final class BackupEncryptor
             }
 
             if (! $sawFinal) {
-                throw new RuntimeException('Decryption failed — the backup is truncated.');
+                throw new BackupDecryptionException('Decryption failed — the backup is truncated.');
             }
         } catch (Throwable $e) {
             fclose($in);
@@ -141,7 +145,7 @@ final class BackupEncryptor
         fclose($out);
         if (! @rename($tmpPath, $plainPath)) {
             @unlink($tmpPath);
-            throw new RuntimeException(sprintf('Could not finalize the decrypted backup at %s.', $plainPath));
+            throw new BackupIoException(sprintf('Could not finalize the decrypted backup at %s.', $plainPath));
         }
     }
 
@@ -152,7 +156,7 @@ final class BackupEncryptor
         // would let a corrupt/hostile file OOM or hang the process pre-auth.
         if ($opslimit <= 0 || $opslimit > self::MAX_OPSLIMIT
             || $memlimit <= 0 || $memlimit > SODIUM_CRYPTO_PWHASH_MEMLIMIT_SENSITIVE) {
-            throw new RuntimeException('The backup header requests Argon2id parameters outside the accepted range.');
+            throw new BackupFormatException('The backup header requests Argon2id parameters outside the accepted range.');
         }
 
         // The 256-bit (KEYBYTES) output is the quantum-safety floor; it is a
@@ -178,7 +182,7 @@ final class BackupEncryptor
             if (is_resource($closeOnFail)) {
                 fclose($closeOnFail);
             }
-            throw new RuntimeException(sprintf('Cannot %s: %s', $what, $path));
+            throw new BackupIoException(sprintf('Cannot %s: %s', $what, $path));
         }
 
         return $handle;
@@ -194,7 +198,7 @@ final class BackupEncryptor
         while ($offset < $length) {
             $written = fwrite($handle, substr($bytes, $offset));
             if ($written === false || $written === 0) {
-                throw new RuntimeException(sprintf('Write error on %s.', $path));
+                throw new BackupIoException(sprintf('Write error on %s.', $path));
             }
             $offset += $written;
         }
@@ -209,7 +213,7 @@ final class BackupEncryptor
         while (strlen($buffer) < $length) {
             $part = fread($handle, max(1, $length - strlen($buffer)));
             if ($part === false || $part === '') {
-                throw new RuntimeException('The encrypted backup ended unexpectedly (truncated header).');
+                throw new BackupFormatException('The encrypted backup ended unexpectedly (truncated header).');
             }
             $buffer .= $part;
         }
@@ -224,7 +228,7 @@ final class BackupEncryptor
     {
         $unpacked = unpack($format, $bytes);
         if ($unpacked === false || ! isset($unpacked[1]) || ! is_int($unpacked[1])) {
-            throw new RuntimeException('The encrypted backup header is malformed.');
+            throw new BackupFormatException('The encrypted backup header is malformed.');
         }
 
         return $unpacked[1];
