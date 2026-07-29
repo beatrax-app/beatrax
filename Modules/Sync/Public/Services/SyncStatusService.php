@@ -21,15 +21,12 @@ final readonly class SyncStatusService
      */
     public function peerStatuses(int $userId): array
     {
-        /** @var array<int, \stdClass> $rows */
-        $rows = $this->db->connection()
+        return $this->db->connection()
             ->table('sync_sessions')
             ->where('user_id', $userId)
             ->orderByDesc('last_seen_at')
             ->get()
             ->all();
-
-        return $rows;
     }
 
     // Priority order: 'error' if any row failed with a message; 'syncing' if

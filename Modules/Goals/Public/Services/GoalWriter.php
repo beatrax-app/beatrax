@@ -43,8 +43,7 @@ final class GoalWriter
         // name, start_date) would silently overwrite an existing same-name
         // same-day goal (e.g. two "Holiday" goals). Bypass the global scope
         // so the authed $user stays authoritative regardless of guard state.
-        /** @var Goal $goal */
-        $goal = Goal::query()->withoutGlobalScope(UserScope::class)->create([
+        return Goal::query()->withoutGlobalScope(UserScope::class)->create([
             'user_id' => $user->id,
             'name' => $name,
             'start_date' => CarbonImmutable::today()->toDateString(),
@@ -54,8 +53,6 @@ final class GoalWriter
             'target_date' => $targetDate,
             'status' => 'active',
         ]);
-
-        return $goal;
     }
 
     /**
@@ -162,13 +159,10 @@ final class GoalWriter
     // context. Returns null for a missing or cross-user id.
     private function findOwnedGoal(User $user, int $goalId): ?Goal
     {
-        /** @var Goal|null $goal */
-        $goal = Goal::query()
+        return Goal::query()
             ->withoutGlobalScope(UserScope::class)
             ->where('user_id', $user->id)
             ->find($goalId);
-
-        return $goal;
     }
 
     /**

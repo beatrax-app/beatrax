@@ -39,10 +39,7 @@ final readonly class SystemAlertQuery
             $arrayRows[] = (array) $row;
         }
 
-        /** @var Collection<int, SystemAlert> $collection */
-        $collection = SystemAlert::hydrate($arrayRows);
-
-        return $collection;
+        return SystemAlert::hydrate($arrayRows);
     }
 
     public function count(?User $user): int
