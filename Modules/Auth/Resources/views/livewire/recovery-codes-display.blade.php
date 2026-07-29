@@ -5,7 +5,7 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">Print these or save them somewhere safe. They will not be shown again.</p>
         </header>
 
-        <div role="region" aria-live="polite" class="grid grid-cols-2 gap-3">
+        <div aria-live="polite" class="grid grid-cols-2 gap-3">
             @foreach ($codes as $code)
                 <div class="bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-lg font-semibold font-mono tabular-nums tracking-wider text-slate-900 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
                     {{ $code }}

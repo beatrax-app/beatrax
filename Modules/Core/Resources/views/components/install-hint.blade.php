@@ -55,10 +55,9 @@
     x-show="shown"
     x-cloak
 >
-    <div
+    <aside
         class="card"
         style="padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);"
-        role="complementary"
         aria-label="Install beatrax"
     >
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3);">
@@ -100,5 +99,5 @@
                 <strong style="color: var(--color-text);">⚡</strong> icon in Safari's share sheet.
             </span>
         </div>
-    </div>
+    </aside>
 </div>

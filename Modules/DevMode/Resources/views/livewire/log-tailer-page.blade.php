@@ -52,7 +52,7 @@
         class="space-y-3"
     >
         {{-- Filter row --}}
-        <div class="flex flex-wrap items-center gap-3" role="region" aria-label="Log filters">
+        <section class="flex flex-wrap items-center gap-3" aria-label="Log filters">
             <div class="flex items-center gap-1" role="group" aria-label="Severity filter">
                 @foreach ($allSeverities as $sev)
                     <button
@@ -100,7 +100,7 @@
             >
                 <span x-text="paused ? 'Resume' : 'Pause'"></span>
             </button>
-        </div>
+        </section>
 
         {{-- Stream-status indicator --}}
         <div class="text-xs text-[var(--color-text-muted)]" x-show="statusMessage" x-cloak>
