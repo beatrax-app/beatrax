@@ -248,6 +248,6 @@ final class TaxTagQuery
             return null;
         }
 
-        return is_string($value) ? $value : (is_scalar($value) ? (string) $value : null);
+        return self::toStringOrNull($value);
     }
 }

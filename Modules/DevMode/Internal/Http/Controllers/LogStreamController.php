@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Logging\LogFileStats;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
@@ -19,6 +20,8 @@ use SplFileObject;
  */
 final readonly class LogStreamController
 {
+    use CoercesScalars;
+
     private const MAX_CONTEXT_RADIUS = 50;
 
     public function __construct(
@@ -45,7 +48,7 @@ final readonly class LogStreamController
         )->validate();
 
         $sinceValue = $payload['since'] ?? 0;
-        $offset = is_int($sinceValue) ? $sinceValue : (is_numeric($sinceValue) ? (int) $sinceValue : 0);
+        $offset = self::toInt($sinceValue);
 
         $clientInodeRaw = $payload['inode'] ?? null;
         $clientInode = is_int($clientInodeRaw)
@@ -103,10 +106,10 @@ final readonly class LogStreamController
         $date = is_string($dateStr) && $dateStr !== '' ? new DateTimeImmutable($dateStr) : new DateTimeImmutable;
 
         $lineValue = $payload['line'] ?? 0;
-        $targetLine = is_int($lineValue) ? $lineValue : (is_numeric($lineValue) ? (int) $lineValue : 0);
+        $targetLine = self::toInt($lineValue);
 
         $radiusValue = $payload['radius'] ?? 0;
-        $radius = is_int($radiusValue) ? $radiusValue : (is_numeric($radiusValue) ? (int) $radiusValue : 0);
+        $radius = self::toInt($radiusValue);
 
         $path = UserDataPathService::dailyLogFile($date);
 

@@ -93,12 +93,12 @@ final readonly class FileImportQuery
             return null;
         }
 
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+        return self::toString($value);
     }
 
     private static function toDateTime(mixed $value): DateTimeImmutable
     {
-        $raw = is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+        $raw = self::toString($value);
         $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $raw);
         if ($dt === false) {
             return new DateTimeImmutable($raw);

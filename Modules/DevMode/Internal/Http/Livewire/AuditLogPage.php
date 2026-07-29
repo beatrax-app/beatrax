@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Core\Public\Concerns\CoercesScalars;
 
 // Lists the most recent dev_mode_audit rows filtered by tier/caller/
 // command, with ?before=<id> cursor pagination. Table columns: command
@@ -19,6 +20,8 @@ use Livewire\Component;
 #[Layout('dev::layouts.dev-shell')]
 final class AuditLogPage extends Component
 {
+    use CoercesScalars;
+
     #[Url(as: 'tier', except: '')]
     public string $tierFilter = '';
 
@@ -135,7 +138,7 @@ final class AuditLogPage extends Component
         /** @var array<int, string> $usernames */
         $usernames = $userRows
             ->mapWithKeys(static function (object $u): array {
-                $id = is_int($u->id) ? $u->id : (int) (is_numeric($u->id) ? $u->id : 0);
+                $id = self::toInt($u->id);
                 $username = is_string($u->username) ? $u->username : '';
 
                 return [$id => $username];
@@ -170,7 +173,7 @@ final class AuditLogPage extends Component
         // defensively so larastan-strict is happy.
         $lastRow = $rows->last();
         $lastIdRaw = $lastRow !== null ? $lastRow->id ?? 0 : 0;
-        $oldestId = is_int($lastIdRaw) ? $lastIdRaw : (is_numeric($lastIdRaw) ? (int) $lastIdRaw : 0);
+        $oldestId = self::toInt($lastIdRaw);
         $hasMore = $rows->count() === self::PAGE_SIZE;
 
         return $views->make('dev::livewire.audit-log-page', [
