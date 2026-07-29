@@ -19,6 +19,8 @@ use Modules\Ledger\Public\Services\FingerprintComposer;
  */
 final class DemoTransactionsSeeder
 {
+    private const AH_COUNTERPARTY = 'Albert Heijn';
+
     // Consecutive calendar months the dataset spans, ending with the
     // current month. Three months of monthly-cadence rows plus the
     // windowed day-offset series produce the documented ~166-row set.
@@ -230,7 +232,7 @@ final class DemoTransactionsSeeder
                     'type' => 'expense',
                     'amountMinor' => $ahAmounts[$i],
                     'description' => 'AH Filiaal 1234 Utrecht',
-                    'counterpartyName' => 'Albert Heijn',
+                    'counterpartyName' => self::AH_COUNTERPARTY,
                     'counterpartyIban' => null,
                     'date' => $cursor,
                     'paymentType' => PaymentType::Pin,
@@ -242,7 +244,7 @@ final class DemoTransactionsSeeder
                         'type' => 'expense',
                         'amountMinor' => intdiv($ahAmounts[$i + 6] ?? -2500, 2),
                         'description' => 'AH To Go Utrecht CS',
-                        'counterpartyName' => 'Albert Heijn',
+                        'counterpartyName' => self::AH_COUNTERPARTY,
                         'counterpartyIban' => null,
                         'date' => $midweek,
                         'paymentType' => PaymentType::Pin,
@@ -761,7 +763,7 @@ final class DemoTransactionsSeeder
                 'type' => 'expense',
                 'amountMinor' => -(($dayOffset * 89) % 3000 + 2500),
                 'description' => 'AH Filiaal 8901 Den Haag',
-                'counterpartyName' => 'Albert Heijn',
+                'counterpartyName' => self::AH_COUNTERPARTY,
                 'counterpartyIban' => null,
                 'date' => $date,
                 'paymentType' => PaymentType::Pin,

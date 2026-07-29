@@ -29,6 +29,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ForecastPage extends Component
 {
+    private const NEUTRAL_INK = '#0F172A';
+
     use CoercesScalars;
 
     // 'all' is a sentinel value: it selects the All-accounts aggregate
@@ -273,7 +275,7 @@ final class ForecastPage extends Component
         $scenario = null;
         $scenarioApexOptions = null;
         $scenarioChartElementId = null;
-        $scenarioPanelColor = '#0F172A';
+        $scenarioPanelColor = self::NEUTRAL_INK;
         /** @var array<int, int> $netDiff */
         $netDiff = [];
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
@@ -337,7 +339,7 @@ final class ForecastPage extends Component
                 $netDiff = $this->computeNetDiff($baseline, $scenario);
                 $scenarioPanelColor = $netDiff[30] > 0
                     ? '#047857'
-                    : ($netDiff[30] < 0 ? '#BE123C' : '#0F172A');
+                    : ($netDiff[30] < 0 ? '#BE123C' : self::NEUTRAL_INK);
             }
 
             // Shared y-axis (RESEARCH Pitfall 2): compute the union range
@@ -345,7 +347,7 @@ final class ForecastPage extends Component
             // y-axis is identical and the visual delta is honest.
             [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $effectiveBufferMinor);
 
-            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, '#0F172A');
+            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, self::NEUTRAL_INK);
             $chartElementId = 'forecast-chart-baseline-'.$selectedAccountId;
 
             if ($scenario !== null) {
@@ -536,7 +538,7 @@ final class ForecastPage extends Component
         ?int $effectiveBufferMinor = null,
         ?float $yMinOverride = null,
         ?float $yMaxOverride = null,
-        string $panelColor = '#0F172A',
+        string $panelColor = self::NEUTRAL_INK,
     ): array {
         $rangeData = [];
         $lineData = [];

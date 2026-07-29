@@ -13,6 +13,8 @@ use Modules\Ledger\Public\Dto\Period;
  */
 final class SpendByCategoryQuery
 {
+    private const TRANSACTIONS_ALIAS = 'transactions as t';
+
     use CoercesScalars;
 
     public function __construct(private readonly DatabaseManager $db) {}
@@ -27,7 +29,7 @@ final class SpendByCategoryQuery
 
         // Unsplit + broken-split parents (see the linked architecture
         // page for the three-case predicate this correlated subquery covers).
-        $unsplitQuery = $connection->table('transactions as t')
+        $unsplitQuery = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
             ->where('t.settled_currency', $currency)
@@ -52,7 +54,7 @@ final class SpendByCategoryQuery
         // (legs carry neither). Legs always carry a required
         // category_id, so includeUncategorized has no bearing here.
         $legs = $connection->table('transaction_splits as ts')
-            ->join('transactions as t', 't.id', '=', 'ts.transaction_id')
+            ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
             ->where('ts.settled_currency', $currency)
             ->where('ts.settled_amount_minor', '<', 0)
@@ -82,7 +84,7 @@ final class SpendByCategoryQuery
 
         // Unsplit + broken-split parents roll up via their own
         // category_id whenever legs don't sum (see forUserAndPeriod).
-        $unsplit = $connection->table('transactions as t')
+        $unsplit = $connection->table(self::TRANSACTIONS_ALIAS)
             ->whereRaw('COALESCE((SELECT SUM(ts.settled_amount_minor) FROM transaction_splits AS ts WHERE ts.transaction_id = t.id), 0) <> t.settled_amount_minor')
             ->where('t.user_id', $userId)
             ->where('t.settled_amount_minor', '<', 0)
@@ -98,7 +100,7 @@ final class SpendByCategoryQuery
         }
 
         $legs = $connection->table('transaction_splits as ts')
-            ->join('transactions as t', 't.id', '=', 'ts.transaction_id')
+            ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'ts.transaction_id')
             ->where('t.user_id', $userId)
             ->where('ts.settled_amount_minor', '<', 0)
             ->where('t.posted_at', '>=', $period->start->toDateString())

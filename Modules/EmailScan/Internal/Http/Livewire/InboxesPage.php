@@ -31,6 +31,8 @@ use Throwable;
  */
 final class InboxesPage extends Component
 {
+    private const INBOX_NOT_FOUND = 'Inbox not found.';
+
     // Populated from the single-use open_backfill_modal session flash
     // the OAuth callback controller writes; when set, the Blade layer
     // auto-dispatches backfill-window:open scoped to this inbox id.
@@ -193,7 +195,7 @@ final class InboxesPage extends Component
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
         if ($health === null) {
-            throw new NotFoundHttpException('Inbox not found.');
+            throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
         }
         $this->dispatch(
             'backfill-window:open',
@@ -221,7 +223,7 @@ final class InboxesPage extends Component
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
         if ($health === null) {
-            throw new NotFoundHttpException('Inbox not found.');
+            throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
         }
         if (in_array($health->status, ['backfilling', 'scanning'], strict: true)) {
             $this->dispatch('toast', message: 'Scan already in progress.');
@@ -245,7 +247,7 @@ final class InboxesPage extends Component
         $user = $currentUser->user();
         $health = $inboxQuery->findForUser($inboxId, $user);
         if ($health === null) {
-            throw new NotFoundHttpException('Inbox not found.');
+            throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
         }
 
         $target = $urls->route('oauth.connect', ['provider' => $health->provider])
