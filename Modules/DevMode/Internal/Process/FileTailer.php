@@ -49,8 +49,8 @@ final readonly class FileTailer
         return min($size - $fromOffset, self::READ_CHUNK_BYTES);
     }
 
-    // The bytes at $fromOffset, or '' when the file cannot be opened, cannot
-    // be seeked, or yields nothing.
+    // The bytes at $fromOffset, or '' when the file cannot be opened, will not
+    // seek to that offset, or yields nothing.
     private function readAt(string $path, int $fromOffset, int $length): string
     {
         $handle = @fopen($path, 'r');
