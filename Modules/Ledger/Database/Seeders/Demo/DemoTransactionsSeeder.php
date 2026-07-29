@@ -97,11 +97,7 @@ final class DemoTransactionsSeeder
         // 3× monthly salary credits (Salaris MijnWerkgever BV) on the
         // 25th of each of the three months in the window.
         $salaryCategory = $this->categoryId('income-salary');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 25, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 25) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'income',
                 'amountMinor' => 385000,
@@ -115,11 +111,7 @@ final class DemoTransactionsSeeder
         }
 
         $rentCategory = $this->categoryId('housing-rent');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 1, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 1) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -125000,
@@ -133,11 +125,7 @@ final class DemoTransactionsSeeder
         }
 
         $internetCategory = $this->categoryId('housing-internet');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 3, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 3) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -4500,
@@ -150,11 +138,7 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 5, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 5) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -5995,
@@ -168,11 +152,7 @@ final class DemoTransactionsSeeder
         }
 
         $membershipsCategory = $this->categoryId('subscriptions-memberships');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 1, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 1) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -2500,
@@ -186,11 +166,7 @@ final class DemoTransactionsSeeder
         }
 
         $healthInsuranceCategory = $this->categoryId('insurance-health');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 28, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 28) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -14250,
@@ -203,11 +179,7 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 27, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 27) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -8500,
@@ -257,19 +229,17 @@ final class DemoTransactionsSeeder
         }
 
         // Jumbo + Lidl + Dirk + Hema diversity — one each per month
-        // (MONTH_SPAN amounts each, oldest month first).
+        // (MONTH_SPAN amounts each, oldest month first). Each list used to
+        // carry a fourth leading amount that nothing could reach: it paired
+        // with the month before the window, which every series then skipped.
         $diversityRows = [
-            ['name' => 'Jumbo', 'description' => 'Jumbo Supermarkt Utrecht', 'amounts' => [-3540, -3211, -2890, -4055], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
-            ['name' => 'Lidl', 'description' => 'Lidl Filiaal 0042', 'amounts' => [-2065, -1989, -2210, -1875], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
-            ['name' => 'Dirk', 'description' => 'Dirk van den Broek', 'amounts' => [-2940, -2755, -3120, -2480], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
-            ['name' => 'HEMA', 'description' => 'HEMA bv Utrecht', 'amounts' => [-1620, -1295, -1750, -2105], 'category' => $this->categoryId('personal-care'), 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'Jumbo', 'description' => 'Jumbo Supermarkt Utrecht', 'amounts' => [-3211, -2890, -4055], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'Lidl', 'description' => 'Lidl Filiaal 0042', 'amounts' => [-1989, -2210, -1875], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'Dirk', 'description' => 'Dirk van den Broek', 'amounts' => [-2755, -3120, -2480], 'category' => $groceriesCategory, 'iban' => null, 'paymentType' => PaymentType::Pin],
+            ['name' => 'HEMA', 'description' => 'HEMA bv Utrecht', 'amounts' => [-1295, -1750, -2105], 'category' => $this->categoryId('personal-care'), 'iban' => null, 'paymentType' => PaymentType::Pin],
         ];
         foreach ($diversityRows as $merchant) {
-            foreach ([3, 2, 1, 0] as $idx => $monthsBack) {
-                $date = $this->dayInMonth($windowStart, 14 + ($monthsBack * 2), $monthsBack);
-                if ($date->lessThan($windowStart)) {
-                    continue;
-                }
+            foreach ($this->monthlyDates($windowStart, 14, olderMonthStride: 2) as $idx => $date) {
                 $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                     'type' => 'expense',
                     'amountMinor' => $merchant['amounts'][$idx] ?? -2500,
@@ -305,11 +275,7 @@ final class DemoTransactionsSeeder
         }
 
         $eatingOutCategory = $this->categoryId('eating-out');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 12, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 12) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -2095,
@@ -339,11 +305,7 @@ final class DemoTransactionsSeeder
         }
 
         $cashCategory = $this->categoryId('cash-withdrawal');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 8, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 8) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -10000,
@@ -361,11 +323,7 @@ final class DemoTransactionsSeeder
         // account; linkUser1Transfers() wires the pair_transaction_id
         // after both legs are written.
         $transfersInternalCategory = $this->categoryId('transfers-internal');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 10, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 10) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'transfer_out',
                 'amountMinor' => -10000,
@@ -382,11 +340,7 @@ final class DemoTransactionsSeeder
         // settles the full ICS card balance for the prior period).
         // The matching ICS credits land on the ICS account; the
         // Chains demo seeder wires the chain_link.
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 18, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 18) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'transfer_out',
                 'amountMinor' => -22500,
@@ -402,11 +356,7 @@ final class DemoTransactionsSeeder
         // Personal P2P transfers — one outgoing to a friend (Maria
         // van Buren) once a month so the personal-counterparty type
         // has data to surface.
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 20, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 20) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'transfer_out',
                 'amountMinor' => -2500,
@@ -508,11 +458,7 @@ final class DemoTransactionsSeeder
         // the ASN account zeroing the card. Three of them across the
         // window. These rows are the `to_transaction` side of the
         // ics_bulk_settle chain.
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 18, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 18) as $date) {
             $inserted += $this->insertTransaction($user, $ics, $run, $rowIndex++, [
                 'type' => 'transfer_in',
                 'amountMinor' => 22500,
@@ -535,11 +481,7 @@ final class DemoTransactionsSeeder
         $inserted = 0;
 
         $musicCategory = $this->categoryId('subscriptions-music');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 11, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 11) as $date) {
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -1099,
@@ -553,11 +495,7 @@ final class DemoTransactionsSeeder
         }
 
         $streamingCategory = $this->categoryId('subscriptions-streaming');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 15, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 15) as $date) {
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -1499,
@@ -601,11 +539,7 @@ final class DemoTransactionsSeeder
         // PayPal→ASN demo chain. Each one is funded by an ASN→PayPal
         // top-up on the same date; the chain_link wires the pair.
         $onlineCategory = $this->categoryId('subscriptions-cloud');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 10, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 10) as $date) {
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -7995,
@@ -621,11 +555,7 @@ final class DemoTransactionsSeeder
         // ASN→PayPal funding (transfer_in). The matching transfer_out
         // sits on the ASN account; linkUser1Transfers() pairs them.
         $transfersInternalCategory = $this->categoryId('transfers-internal');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 10, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 10) as $date) {
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
                 'type' => 'transfer_in',
                 'amountMinor' => 10000,
@@ -718,11 +648,7 @@ final class DemoTransactionsSeeder
         $inserted = 0;
 
         $salaryCategory = $this->categoryId('income-salary');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 25, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 25) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'income',
                 'amountMinor' => 285000,
@@ -736,11 +662,7 @@ final class DemoTransactionsSeeder
         }
 
         $rentCategory = $this->categoryId('housing-rent');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 1, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 1) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -89500,
@@ -771,11 +693,7 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 22, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 22) as $date) {
             $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -6500,
@@ -798,11 +716,7 @@ final class DemoTransactionsSeeder
         $inserted = 0;
 
         $musicCategory = $this->categoryId('subscriptions-music');
-        foreach ([3, 2, 1, 0] as $monthsBack) {
-            $date = $this->dayInMonth($windowStart, 9, $monthsBack);
-            if ($date->lessThan($windowStart)) {
-                continue;
-            }
+        foreach ($this->monthlyDates($windowStart, 9) as $date) {
             $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
                 'type' => 'expense',
                 'amountMinor' => -1099,
@@ -871,16 +785,42 @@ final class DemoTransactionsSeeder
         }
     }
 
-    // Builds the Nth day in the month that is `$monthsBack` months
-    // before the window-anchor month, capped at the month's last day
+    // The date in each month of the window that falls on $dayOfMonth,
+    // oldest month first. Every monthly series in this seeder walks the
+    // window the same way, and writing that walk out per series is what
+    // let dayInMonth() drift away from its own parameter.
+    /**
+     * @param  int  $olderMonthStride  pushes each older month this many days
+     *                                 later, so one merchant's rows do not all
+     *                                 land on the same date of the month
+     * @return list<CarbonImmutable>
+     */
+    private function monthlyDates(CarbonImmutable $windowStart, int $dayOfMonth, int $olderMonthStride = 0): array
+    {
+        $dates = [];
+        for ($monthsBack = self::MONTH_SPAN - 1; $monthsBack >= 0; $monthsBack--) {
+            $dates[] = $this->dayInMonth(
+                $windowStart,
+                $dayOfMonth + ($monthsBack * $olderMonthStride),
+                $monthsBack,
+            );
+        }
+
+        return $dates;
+    }
+
+    // Builds the Nth day in the month that is `$monthsBack` months before
+    // the newest month of the window, capped at that month's last day
     // (day=31 in February clamps to Feb 28/29).
     private function dayInMonth(CarbonImmutable $windowStart, int $day, int $monthsBack): CarbonImmutable
     {
-        // subMonthsNoOverflow so "May 31 − 3 months" lands in February
-        // rather than overflowing into March, which would otherwise
-        // collapse two monthsBack offsets onto the same calendar month
-        // and drop the duplicate via insertOrIgnore.
-        $anchor = CarbonImmutable::today()->subMonthsNoOverflow($monthsBack)->startOfMonth();
+        // Counted forward from $windowStart rather than backward from a
+        // second today(). That read anchored the dates to whenever this ran
+        // instead of to the window run() had fixed: a seed crossing midnight
+        // into a new month shifted every row while windowEnd stayed behind.
+        $anchor = $windowStart
+            ->addMonthsNoOverflow(self::MONTH_SPAN - 1 - $monthsBack)
+            ->startOfMonth();
 
         return $anchor->setDay(min($day, $anchor->daysInMonth));
     }
