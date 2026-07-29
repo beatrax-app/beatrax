@@ -17,6 +17,9 @@ use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Internal\SafeMessage;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
+use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
+use Modules\EmailScan\Public\Exceptions\ProviderTransportException;
+use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
@@ -105,7 +108,7 @@ final class GraphApiClient implements GraphApiClientContract
     public function getRawMessage(int $inboxId, string $providerMessageId): string
     {
         if (preg_match(self::MESSAGE_ID_PATTERN, $providerMessageId) !== 1) {
-            throw new RuntimeException(
+            throw new UnsafeProviderRequestException(
                 'GraphApiClient: provider message id failed allow-list validation.',
             );
         }
@@ -131,7 +134,7 @@ final class GraphApiClient implements GraphApiClientContract
         } catch (BadResponseException $e) {
             throw $this->mapErrorResponse($e->getResponse(), 'GET /me/messages/{id}/$value');
         } catch (GuzzleException $e) {
-            throw new RuntimeException(
+            throw new ProviderTransportException(
                 'GraphApiClient: HTTP error fetching raw message — '.$this->safeMessage($e->getMessage()),
             );
         }
@@ -335,7 +338,7 @@ final class GraphApiClient implements GraphApiClientContract
         } catch (BadResponseException $e) {
             throw $this->mapErrorResponse($e->getResponse(), 'GET '.$url, $expectsDelta);
         } catch (GuzzleException $e) {
-            throw new RuntimeException(
+            throw new ProviderTransportException(
                 'GraphApiClient: HTTP error against '.$url.' — '.$this->safeMessage($e->getMessage()),
             );
         }
@@ -344,7 +347,7 @@ final class GraphApiClient implements GraphApiClientContract
             /** @var mixed $decoded */
             $decoded = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            throw new RuntimeException(
+            throw new ProviderTransportException(
                 'GraphApiClient: failed to decode Graph response JSON ('.$e->getMessage().').',
             );
         }
@@ -478,14 +481,14 @@ final class GraphApiClient implements GraphApiClientContract
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
         if (! is_string($scheme) || strtolower($scheme) !== 'https') {
-            throw new RuntimeException(
+            throw new UnsafeProviderRequestException(
                 'GraphApiClient: refusing to send bearer token over non-HTTPS scheme.',
             );
         }
 
         $host = parse_url($url, PHP_URL_HOST);
         if (! is_string($host) || ! in_array(strtolower($host), self::ALLOWED_HOSTS, strict: true)) {
-            throw new RuntimeException(
+            throw new UnsafeProviderRequestException(
                 'GraphApiClient: refusing to send bearer token to non-Graph host: '
                 .(is_string($host) && $host !== '' ? $host : '(unparseable)'),
             );
@@ -562,7 +565,7 @@ final class GraphApiClient implements GraphApiClientContract
     {
         $creds = $this->secrets->loadInbox($inboxId);
         if ($creds === null) {
-            throw new RuntimeException(
+            throw new InboxNotConfiguredException(
                 "GraphApiClient: no OAuth credentials persisted for inbox {$inboxId}.",
             );
         }

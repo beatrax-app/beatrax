@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
+use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
 uses(RefreshDatabase::class);
 
@@ -19,5 +20,5 @@ it('refuses to reset retry attempts for an inbox with no scan state', function (
     $machine = $this->app->make(InboxScanStateMachine::class);
 
     expect(fn () => $machine->resetRetryAttempts(4242))
-        ->toThrow(RuntimeException::class, 'inbox_scan_state for inbox 4242 folder INBOX not found');
+        ->toThrow(ScanStateNotFoundException::class, 'inbox_scan_state for inbox 4242 folder INBOX not found');
 });
