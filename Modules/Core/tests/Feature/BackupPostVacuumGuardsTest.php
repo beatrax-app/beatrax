@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
@@ -24,6 +25,13 @@ use Tests\Helpers\RealSqliteFixture;
  * substitutes one that reports the failure.
  */
 beforeEach(function (): void {
+    // Frozen for the VACUUM-refusal case below, which occupies the exact path
+    // the command is about to choose. That path carries a seconds-resolution
+    // timestamp, so an unfrozen clock lets the test and the command land in
+    // different seconds on a slow runner — the obstruction misses and the
+    // assertion fails for an unrelated reason.
+    CarbonImmutable::setTestNow('2026-07-29 12:00:00');
+
     $this->sourcePath = RealSqliteFixture::create('backup-guards-source');
 
     /** @var Repository $config */
@@ -40,6 +48,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    CarbonImmutable::setTestNow(null);
     putenv('NATIVEPHP_STORAGE_PATH');
 
     /** @var string $sourcePath */
