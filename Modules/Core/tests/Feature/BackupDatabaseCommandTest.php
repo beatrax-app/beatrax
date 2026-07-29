@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\DB;
 use Tests\Helpers\RealSqliteFixture;
 
 /*
@@ -165,3 +166,47 @@ it('prunes pre-seeded historical backups outside the 7-daily + 4-Sunday keep set
     // among the seed set, so no weekly rescue).
     expect(count($remaining))->toBe(7, 'Expected exactly 7 .sqlite files after pruning.');
 });
+
+// ---------------------------------------------------------------------------
+// Refusals and failure paths
+// ---------------------------------------------------------------------------
+
+// VACUUM INTO interpolates its destination literally rather than binding it,
+// so the command rejects bytes that could break out of the quoted string
+// before it goes anywhere near SQLite. The path is built from the storage
+// root, which is where such a byte would realistically arrive from.
+it('refuses a destination path carrying a byte VACUUM INTO must never see', function (): void {
+    /** @var string $storageRoot */
+    $storageRoot = $this->storageRoot;
+    putenv('NATIVEPHP_STORAGE_PATH='.$storageRoot."\n".'injected');
+
+    expect(fn () => $this->artisan('db:backup', ['--force' => true])->run())
+        ->toThrow(RuntimeException::class, 'unsafe byte');
+});
+
+it('refuses to run against a driver it cannot VACUUM INTO', function (): void {
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.connections.sqlite.driver', 'pgsql');
+
+    expect(fn () => $this->artisan('db:backup', ['--force' => true])->run())
+        ->toThrow(RuntimeException::class, 'only supported on the sqlite driver');
+});
+
+it('refuses to run when no sqlite database path is configured', function (): void {
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.connections.sqlite.database', '');
+
+    expect(fn () => $this->artisan('db:backup', ['--force' => true])->run())
+        ->toThrow(RuntimeException::class, 'is not configured');
+});
+
+// Not covered: the three `=== false` guards in writeSidecar(), and the catch
+// that turns them into a critical alert. They are unreachable under Laravel's
+// error handler, which converts the E_WARNING from file_put_contents(), chmod()
+// and rename() into an ErrorException before the comparison runs — and
+// ErrorException is not a RuntimeException, so the catch does not see it
+// either. Reproduced by pre-creating the .meta.json.tmp path as a directory:
+// the command throws ErrorException and records no alert. That is a defect in
+// the command rather than a gap in this file, so it is not pinned here.

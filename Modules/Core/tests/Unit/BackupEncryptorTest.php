@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Services\BackupEncryptor;
+use Tests\Helpers\FailingStream;
 
 /**
  * @return array{plain: string, enc: string, dec: string, cleanup: Closure}
@@ -132,3 +133,89 @@ it('uses a 256-bit symmetric key (quantum-safe floor)', function (): void {
     // quantum-safe floor — fail loudly here.
     expect(SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_KEYBYTES * 8)->toBe(256);
 });
+
+// ---------------------------------------------------------------------------
+// Failure paths
+//
+// Everything below drives a branch that only opens when the filesystem or the
+// file itself misbehaves. They were unreachable from the suite before: a real
+// file will not fail a read halfway through on request, so the reads and
+// writes go through a stream wrapper that serves real bytes and then refuses.
+// ---------------------------------------------------------------------------
+
+it('refuses to read a backup that is not there', function (): void {
+    $p = backupTmpPaths();
+
+    expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
+        ->toThrow(RuntimeException::class, 'Cannot read encrypted backup');
+
+    $p['cleanup']();
+});
+
+// A file too short to hold even the magic. Distinct from the "not a beatrax
+// backup" case, which has enough bytes to compare and finds the wrong ones.
+it('rejects a file that ends before the header does', function (): void {
+    $p = backupTmpPaths();
+    file_put_contents($p['enc'], 'BTR');
+
+    expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
+        ->toThrow(RuntimeException::class, 'ended unexpectedly');
+
+    $p['cleanup']();
+});
+
+// The decrypt writes to a temp sibling and renames on success. A directory
+// sitting at the destination makes that last rename fail with the plaintext
+// already complete — the one failure that happens after all the crypto worked.
+it('reports a destination it cannot rename onto, and leaves no plaintext', function (): void {
+    $p = backupTmpPaths();
+    file_put_contents($p['plain'], random_bytes(1_000));
+    $enc = new BackupEncryptor;
+    $enc->encrypt($p['plain'], $p['enc'], 'pw');
+
+    mkdir($p['dec']);
+    file_put_contents($p['dec'].'/occupied', 'x');
+
+    expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
+        ->toThrow(RuntimeException::class, 'Could not finalize');
+
+    expect(is_file($p['dec'].'.part'))->toBeFalse();
+
+    @unlink($p['dec'].'/occupied');
+    @rmdir($p['dec']);
+    $p['cleanup']();
+});
+
+it('reports a read that fails while encrypting', function (): void {
+    $p = backupTmpPaths();
+    FailingStream::register();
+    FailingStream::$data = random_bytes(1_000);
+    FailingStream::$failOnRead = 1;
+
+    expect(fn () => (new BackupEncryptor)->encrypt('beatraxfail://source', $p['enc'], 'pw'))
+        ->toThrow(RuntimeException::class, 'Read error while encrypting backup.');
+
+    FailingStream::reset();
+    $p['cleanup']();
+});
+
+it('reports a write that reports zero bytes while encrypting', function (): void {
+    $p = backupTmpPaths();
+    file_put_contents($p['plain'], random_bytes(1_000));
+    FailingStream::register();
+    FailingStream::$failWrites = true;
+
+    expect(fn () => (new BackupEncryptor)->encrypt($p['plain'], 'beatraxfail://sink', 'pw'))
+        ->toThrow(RuntimeException::class, 'Write error on');
+
+    FailingStream::reset();
+    $p['cleanup']();
+});
+
+// Not covered: the `fread() === false` check inside the decrypt loop, and the
+// SodiumException catch around init_pull. Neither is reachable from a test.
+// PHP turns a wrapper's failed read into a short read once its 8 KiB buffer is
+// in play, so the partial block reaches the AEAD and is rejected as corruption
+// instead; and init_pull only raises for a header of the wrong length, which
+// readExactly() has already guaranteed. Both stay as guards against a
+// filesystem or a libsodium that misbehaves in ways PHP will not simulate.
