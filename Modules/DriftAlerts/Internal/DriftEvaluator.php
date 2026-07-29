@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -122,19 +123,21 @@ final readonly class DriftEvaluator
         return ['percent' => 5, 'source' => 'default'];
     }
 
+    // Irregular annualizes to 0 rather than to a guess: a series with no
+    // discernible interval has no meaningful yearly impact, and the zero is
+    // what lets callers short-circuit instead of publishing a number they
+    // made up.
     /**
-     * @return int calendar-year multiplier for the cadence (weekly=52, monthly=12,
-     *             quarterly=4, yearly=1), or 0 for any other cadence (including 'irregular') so
-     *             callers can short-circuit before computing a meaningless annualized impact
+     * @return int calendar-year multiplier for the cadence
      */
-    private function cadenceMultiplierForYear(string $cadence): int
+    private function cadenceMultiplierForYear(SeriesCadence $cadence): int
     {
         return match ($cadence) {
-            'weekly' => 52,
-            'monthly' => 12,
-            'quarterly' => 4,
-            'yearly' => 1,
-            default => 0,
+            SeriesCadence::Weekly => 52,
+            SeriesCadence::Monthly => 12,
+            SeriesCadence::Quarterly => 4,
+            SeriesCadence::Yearly => 1,
+            SeriesCadence::Irregular => 0,
         };
     }
 }

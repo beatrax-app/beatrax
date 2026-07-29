@@ -102,7 +102,7 @@
                                 <span class="ml-2 text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->latestAmount) }}</span>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {{ ucfirst($row->cadence) }}
+                                {{ $row->cadence->label() }}
                                 @if ($row->nextExpectedAt)
                                     · Next {{ $row->nextExpectedAt->format('d M Y') }}
                                 @endif
