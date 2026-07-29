@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
@@ -166,4 +167,49 @@ it('hard-throws instead of writing a keyring when the app-lock KEK is null (weak
 
     expect(fn () => $service->generateAndPersist((int) $user->id, $session))
         ->toThrow(LogicException::class);
+});
+
+// ---------------------------------------------------------------------------
+// Keyring state the file cannot satisfy
+//
+// The keyring and the current_epoch pointer live in two places — an encrypted
+// file and a sync_encryption_state row — so they can disagree. Neither of the
+// disagreements below was exercised, and both are the kind that would
+// otherwise surface as a null dereference somewhere further down.
+// ---------------------------------------------------------------------------
+
+it('refuses to hand out a current epoch when none is recorded', function (): void {
+    $user = gdkUser('gdk-no-epoch-user');
+
+    /** @var GdkKeyringService $service */
+    $service = $this->app->make(GdkKeyringService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    // No generateAndPersist(), so sync_encryption_state has no row at all.
+    expect(fn () => $service->currentEpoch((int) $user->id, $session))
+        ->toThrow(RuntimeException::class, 'No current GDK epoch recorded');
+});
+
+// The pointer moving ahead of the file is the dangerous direction: it means a
+// write landed in one place and not the other, and reading on regardless would
+// encrypt under a key the keyring cannot reproduce.
+it('refuses a current epoch the keyring holds no key for', function (): void {
+    $user = gdkUser('gdk-missing-key-user');
+
+    /** @var GdkKeyringService $service */
+    $service = $this->app->make(GdkKeyringService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $service->generateAndPersist((int) $user->id, $session);
+
+    DB::table('sync_encryption_state')
+        ->where('user_id', $user->id)
+        ->update(['current_epoch' => 99]);
+
+    expect(fn () => $service->currentEpoch((int) $user->id, $session))
+        ->toThrow(RuntimeException::class, 'has no key for current epoch 99');
 });
