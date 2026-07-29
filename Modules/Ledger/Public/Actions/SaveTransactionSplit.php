@@ -27,6 +27,10 @@ use stdClass;
  */
 final class SaveTransactionSplit implements SavesTransactionSplit
 {
+    // A missing row and a cross-user row are deliberately the same
+    // message: telling them apart would confirm the row exists.
+    private const NOT_FOUND_MESSAGE = 'Transaction not found or not owned by user.';
+
     use CoercesScalars;
 
     public function __construct(
@@ -51,7 +55,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             ->first(['id', 'type', 'status', 'settled_amount_minor', 'settled_currency']);
 
         if ($parent === null) {
-            throw new InvalidArgumentException('Transaction not found or not owned by user.');
+            throw new InvalidArgumentException(self::NOT_FOUND_MESSAGE);
         }
 
         // Reconciled lock: reuses the already user-scoped parent load
@@ -105,7 +109,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 ->first(['settled_amount_minor', 'settled_currency']);
 
             if ($freshParent === null) {
-                throw new InvalidArgumentException('Transaction not found or not owned by user.');
+                throw new InvalidArgumentException(self::NOT_FOUND_MESSAGE);
             }
 
             $parentMinor = self::toInt($freshParent->settled_amount_minor);
@@ -289,7 +293,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 ->first(['id', 'status']);
 
             if ($parent === null) {
-                throw new InvalidArgumentException('Transaction not found or not owned by user.');
+                throw new InvalidArgumentException(self::NOT_FOUND_MESSAGE);
             }
 
             // Reconciled lock: reuses the already user-scoped parent
