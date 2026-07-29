@@ -3052,20 +3052,38 @@ td.date,
         margin-bottom: var(--space-3, 12px);
     }
 
-    /* §5 Calendar grid — 7-column Mon–Sun */
-    .cal-grid {
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
+    /* §5 Calendar grid — 7-column Mon–Sun.
+       The grid is a real <table>, so the rounding and the clipping live on a
+       wrapper: `overflow` is unreliable on a table box, and without a frame
+       the corner cells would square off the radius. */
+    .cal-grid-frame {
         border-top: 1px solid var(--color-border);
         border-left: 1px solid var(--color-border);
         border-radius: var(--radius-lg, 0.5rem);
         overflow: hidden;
     }
 
+    .cal-grid {
+        width: 100%;
+        /* Fixed layout is what replaces repeat(7, minmax(0, 1fr)): without it
+           the columns resize to their content and a week with a long entry
+           name would widen its own day. */
+        table-layout: fixed;
+        /* Cells own their right/bottom border and the frame owns top/left, so
+           the borders must not collapse into shared edges. */
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
     /* §6.3 Day cell */
     .cal-cell {
         position: relative;
-        min-height: 96px;
+        /* `min-height` does not apply to table cells; on a <td> `height` is
+           already treated as a minimum, so this is the same 96px floor. */
+        height: 96px;
+        /* Without this, a tall week stretches every cell's content to the
+           middle instead of starting it at the top. */
+        vertical-align: top;
         padding: var(--space-2, 8px);
         border-right: 1px solid var(--color-border);
         border-bottom: 1px solid var(--color-border);
@@ -3411,7 +3429,11 @@ td.date,
  * Day panel hidden entirely at phone width (bottom sheet takes over). */
 @media (max-width: 767px) {
     .cal-cell {
-        min-height: 44px;
+        /* `height` rather than `min-height` for the same reason as the base
+           rule — on a table cell min-height does nothing, and this one
+           carries the D-14 44px touch target, so losing it would shrink
+           every day below the minimum tap size on a phone. */
+        height: 44px;
         padding: var(--space-1, 4px);
     }
 
