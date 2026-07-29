@@ -77,6 +77,7 @@
                     x-cloak
                     x-on:click.outside="open = false"
                     role="listbox"
+                    aria-label="Variance tolerance"
                     class="absolute right-0 z-10 mt-1 w-32 rounded-md border border-slate-200 bg-white p-1 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
                 >
                     @foreach ([10, 25, 50] as $percent)
