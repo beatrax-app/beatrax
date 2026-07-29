@@ -91,7 +91,7 @@
                             <div class="min-w-0 flex-1">
                                 <p class="primary line-clamp-2">{{ $row->displayName() }}</p>
                                 <p class="secondary mt-0.5 truncate">
-                                    {{ ucfirst($row->cadence) }}
+                                    {{ $row->cadence->label() }}
                                     @if ($row->nextExpectedAt)
                                         · {{ $row->nextExpectedAt->format('d M Y') }}
                                     @endif
@@ -128,7 +128,7 @@
                                         class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400' }}"
                                         data-confidence-low="{{ $row->nextExpectedConfidenceLow ? 'true' : 'false' }}"
                                     >
-                                        {{ ucfirst($row->cadence) }}
+                                        {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
                                             · Next {{ $row->nextExpectedAt->format('d M Y') }}
                                         @endif
@@ -168,7 +168,7 @@
                             <div class="min-w-0 flex-1">
                                 <p class="primary line-clamp-2">{{ $row->displayName() }}</p>
                                 <p class="secondary mt-0.5 truncate">
-                                    {{ ucfirst($row->cadence) }}
+                                    {{ $row->cadence->label() }}
                                     @if ($row->nextExpectedAt)
                                         · {{ $row->nextExpectedAt->format('d M Y') }}
                                     @endif
@@ -202,7 +202,7 @@
                                         class="mt-1 text-xs {{ $row->nextExpectedConfidenceLow ? 'italic text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400' }}"
                                         data-confidence-low="{{ $row->nextExpectedConfidenceLow ? 'true' : 'false' }}"
                                     >
-                                        {{ ucfirst($row->cadence) }}
+                                        {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
                                             · Next {{ $row->nextExpectedAt->format('d M Y') }}
                                         @endif

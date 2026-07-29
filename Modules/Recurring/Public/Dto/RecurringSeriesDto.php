@@ -6,6 +6,7 @@ namespace Modules\Recurring\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Spatie\LaravelData\Data;
 
 final class RecurringSeriesDto extends Data
@@ -24,7 +25,7 @@ final class RecurringSeriesDto extends Data
         public readonly string $detectedName,
         public readonly ?string $displayNameOverride,
         public readonly string $state,
-        public readonly string $cadence,
+        public readonly SeriesCadence $cadence,
         public readonly Money $latestAmount,
         public readonly ?Money $eurEquivalent,
         public readonly Money $monthlyEquivalent,

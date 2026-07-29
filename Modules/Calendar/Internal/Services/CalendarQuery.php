@@ -17,6 +17,7 @@ use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 
@@ -200,7 +201,7 @@ final readonly class CalendarQuery
         /** @var list<array{series: RecurringSeriesDto, accountId: int|null}> $candidates */
         $candidates = [];
         foreach ($allSeries as $series) {
-            if ($series->cadence === 'irregular' && $series->nextExpectedAt === null) {
+            if ($series->cadence === SeriesCadence::Irregular && $series->nextExpectedAt === null) {
                 continue;
             }
 
@@ -335,7 +336,8 @@ final readonly class CalendarQuery
             return [];
         }
 
-        if ($series->cadence === 'irregular') {
+        $cadence = $series->cadence;
+        if ($cadence === SeriesCadence::Irregular) {
             if ($next->gte($monthStart) && $next->lte($monthEnd)) {
                 return [$next->startOfDay()];
             }
@@ -347,11 +349,6 @@ final readonly class CalendarQuery
         // (anchor->addMonthsNoOverflow(k) for k = …,-1,0,1,…) rather than
         // chaining no-overflow steps, which permanently loses an end-of-month
         // anchor after the first short month and is non-invertible.
-        $cadence = $series->cadence;
-        if (! in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true)) {
-            return [];
-        }
-
         $anchor = $next->startOfDay();
 
         // Estimate the first occurrence index that could land in the month,
@@ -359,10 +356,10 @@ final readonly class CalendarQuery
         $monthsDelta = ($monthStart->year - $anchor->year) * 12 + ($monthStart->month - $anchor->month);
         $deltaDays = (int) floor(($monthStart->getTimestamp() - $anchor->getTimestamp()) / 86400);
         $k = match ($cadence) {
-            'weekly' => (int) floor($deltaDays / 7) - 1,
-            'monthly' => $monthsDelta - 1,
-            'quarterly' => (int) floor($monthsDelta / 3) - 1,
-            'yearly' => ($monthStart->year - $anchor->year) - 1,
+            SeriesCadence::Weekly => (int) floor($deltaDays / 7) - 1,
+            SeriesCadence::Monthly => $monthsDelta - 1,
+            SeriesCadence::Quarterly => (int) floor($monthsDelta / 3) - 1,
+            SeriesCadence::Yearly => ($monthStart->year - $anchor->year) - 1,
         };
 
         // Occurrence dates are strictly increasing in k, so collect from the
@@ -431,14 +428,14 @@ final readonly class CalendarQuery
 
     // Negative k steps backward; every index is computed from the anchor so
     // short months never permanently shift an end-of-month billing day.
-    private function occurrenceAt(CarbonImmutable $anchor, string $cadence, int $k): ?CarbonImmutable
+    private function occurrenceAt(CarbonImmutable $anchor, SeriesCadence $cadence, int $k): ?CarbonImmutable
     {
         return match ($cadence) {
-            'weekly' => $anchor->addDays(7 * $k),
-            'monthly' => $anchor->addMonthsNoOverflow($k),
-            'quarterly' => $anchor->addMonthsNoOverflow(3 * $k),
-            'yearly' => $anchor->addYearsNoOverflow($k),
-            default => null,
+            SeriesCadence::Weekly => $anchor->addDays(7 * $k),
+            SeriesCadence::Monthly => $anchor->addMonthsNoOverflow($k),
+            SeriesCadence::Quarterly => $anchor->addMonthsNoOverflow(3 * $k),
+            SeriesCadence::Yearly => $anchor->addYearsNoOverflow($k),
+            SeriesCadence::Irregular => null,
         };
     }
 
@@ -632,11 +629,14 @@ final readonly class CalendarQuery
 
     // The window is clamped to half the cadence interval so adjacent
     // expected occurrences can never both match the same observed payment.
-    private function matchWindowDays(?string $cadence): int
+    private function matchWindowDays(?SeriesCadence $cadence): int
     {
+        // Weekly is the only cadence short enough for the clamp to bite —
+        // half of a monthly interval already exceeds the default window. The
+        // string version also carried a 'daily' arm no series could reach:
+        // SeriesCadence has no daily case and never did.
         $cadenceDays = match ($cadence) {
-            'daily' => 1,
-            'weekly' => 7,
+            SeriesCadence::Weekly => 7,
             default => null,
         };
 

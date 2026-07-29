@@ -74,7 +74,7 @@
                         <p class="primary truncate">{{ $row->displayName() }}</p>
                         <p class="secondary mt-0.5 truncate">
                             <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $row->direction }}</span>
-                            <span class="ml-1">{{ ucfirst($row->cadence) }}</span>
+                            <span class="ml-1">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
                                 · chain
                             @endif
@@ -99,7 +99,7 @@
                         >{{ $row->displayName() }}</a>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
                             <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ $row->direction }}</span>
-                            <span class="ml-2">{{ ucfirst($row->cadence) }}</span>
+                            <span class="ml-2">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
                                 <span
                                     class="ml-2 inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"

@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -76,7 +77,7 @@ final readonly class RangeProjector
         }
 
         $cadence = $series->cadence;
-        if (! in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true)) {
+        if ($cadence === SeriesCadence::Irregular) {
             return [];
         }
 
@@ -146,7 +147,7 @@ final readonly class RangeProjector
         }
 
         $cadence = $series->cadence;
-        if (! in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true)) {
+        if ($cadence === SeriesCadence::Irregular) {
             return [];
         }
 
@@ -201,14 +202,14 @@ final readonly class RangeProjector
         return $contributions;
     }
 
-    private function advance(CarbonImmutable $cursor, string $cadence): ?CarbonImmutable
+    private function advance(CarbonImmutable $cursor, SeriesCadence $cadence): ?CarbonImmutable
     {
         return match ($cadence) {
-            'weekly' => $cursor->addDays(7),
-            'monthly' => $cursor->addMonthNoOverflow(),
-            'quarterly' => $cursor->addMonthsNoOverflow(3),
-            'yearly' => $cursor->addYearNoOverflow(),
-            default => null,
+            SeriesCadence::Weekly => $cursor->addDays(7),
+            SeriesCadence::Monthly => $cursor->addMonthNoOverflow(),
+            SeriesCadence::Quarterly => $cursor->addMonthsNoOverflow(3),
+            SeriesCadence::Yearly => $cursor->addYearNoOverflow(),
+            SeriesCadence::Irregular => null,
         };
     }
 }

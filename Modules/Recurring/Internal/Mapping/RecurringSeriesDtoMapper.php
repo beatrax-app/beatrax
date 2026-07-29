@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use stdClass;
 
 // Shared hydrator so RecurringSeriesQuery and FixedPaymentsViewQuery don't
@@ -68,7 +69,11 @@ final class RecurringSeriesDtoMapper
                 ? $displayNameOverride
                 : null,
             state: self::toString($row->state),
-            cadence: self::toString($row->cadence),
+            // from() rather than tryFrom(): a trigger built from
+            // SeriesCadence::values() constrains the column, so a value with
+            // no case is a broken database, and a silent fallback would turn
+            // that into a series which quietly stops projecting.
+            cadence: SeriesCadence::from(self::toString($row->cadence)),
             latestAmount: $latestAmount,
             eurEquivalent: $eurEquivalent,
             monthlyEquivalent: $monthlyEquivalent,

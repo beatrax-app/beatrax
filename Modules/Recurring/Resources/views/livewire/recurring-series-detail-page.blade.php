@@ -43,7 +43,7 @@
                 >{{ ucfirst($series->state) }}</span>
                 <span
                     class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >{{ ucfirst($series->cadence) }}</span>
+                >{{ $series->cadence->label() }}</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($series->latestAmount) }}</span>
                 <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($series->monthlyEquivalent->toMinor()) }}/mo</span>

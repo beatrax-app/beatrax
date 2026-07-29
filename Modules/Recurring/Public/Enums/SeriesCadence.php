@@ -39,4 +39,13 @@ enum SeriesCadence: string
     {
         return $this !== self::Irregular;
     }
+
+    // How the cadence is written in the interface. The templates used to
+    // call ucfirst() on the raw column value, which made every view a place
+    // the vocabulary could be spelled differently; naming it here keeps the
+    // presentation with the thing being presented.
+    public function label(): string
+    {
+        return ucfirst($this->value);
+    }
 }

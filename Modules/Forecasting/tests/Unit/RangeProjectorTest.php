@@ -9,6 +9,7 @@ use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
 use Modules\Forecasting\Internal\Pipeline\RangeProjector;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 
 uses(RefreshDatabase::class);
 
@@ -69,7 +70,10 @@ function rpDtoSeries(array $overrides = []): RecurringSeriesDto
         detectedName: $merged['detectedName'],
         displayNameOverride: $merged['displayNameOverride'],
         state: $merged['state'],
-        cadence: $merged['cadence'],
+        // The helper's overrides array still names cadences as strings, which
+        // keeps each case reading as 'cadence' => 'weekly'; the DTO takes the
+        // enum, so the conversion happens once here rather than in ten cases.
+        cadence: SeriesCadence::from($merged['cadence']),
         latestAmount: $merged['latestAmount'],
         eurEquivalent: $merged['eurEquivalent'],
         monthlyEquivalent: $merged['monthlyEquivalent'],
