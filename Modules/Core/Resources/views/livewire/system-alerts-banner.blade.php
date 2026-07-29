@@ -25,8 +25,7 @@
     system_alerts.message may carry operator-controlled text that we
     treat as untrusted.
 --}}
-<div
-    role="region"
+<section
     aria-label="System alerts"
     {{--
         `px-6` matches the horizontal gutter the main content uses (so
@@ -98,4 +97,4 @@
                 </div>
         @endswitch
     @endforeach
-</div>
+</section>
