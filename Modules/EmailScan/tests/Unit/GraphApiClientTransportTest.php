@@ -15,6 +15,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
+use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 
 /**
@@ -147,7 +148,7 @@ it('refuses a message id that could carry a path traversal', function (string $i
     'traversal' => ['../../me/messages'],
     'slash' => ['AAA/BBB'],
     'space' => ['AAA BBB'],
-])->throws(RuntimeException::class, 'allow-list validation');
+])->throws(UnsafeProviderRequestException::class, 'allow-list validation');
 
 it('carries the delta link forward so the next scan resumes where this one stopped', function (): void {
     $client = ($this->makeClient)([

@@ -12,7 +12,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\EmailScan\Models\OAuthSecret;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
-use RuntimeException;
+use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 use Throwable;
 
 /**
@@ -156,7 +156,7 @@ class OAuthSecretsRepository
             return;
         }
 
-        throw new RuntimeException(
+        throw new ScanStateNotFoundException(
             "OAuthSecretsRepository::rotateRefreshToken inbox id {$inboxId} not found."
         );
     }

@@ -10,6 +10,7 @@ use League\OAuth2\Client\Provider\Google;
 use League\OAuth2\Client\Provider\GoogleUser;
 use League\OAuth2\Client\Token\AccessToken;
 use Modules\EmailScan\Internal\SafeMessage;
+use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 use Throwable;
@@ -87,7 +88,7 @@ class GoogleOAuthProvider
         // allow-list, so the configured one is reused here.
         $client = $this->secrets->loadProviderClient('gmail');
         if ($client === null) {
-            throw new RuntimeException(
+            throw new InboxNotConfiguredException(
                 'Google OAuth client is not configured — run the OAuth-client wizard first.',
             );
         }
@@ -129,7 +130,7 @@ class GoogleOAuthProvider
     {
         $client = $this->secrets->loadProviderClient('gmail');
         if ($client === null) {
-            throw new RuntimeException(
+            throw new InboxNotConfiguredException(
                 'Google OAuth client is not configured — run the OAuth-client wizard first.',
             );
         }
