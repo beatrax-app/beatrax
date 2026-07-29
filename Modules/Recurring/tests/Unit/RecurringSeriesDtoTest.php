@@ -8,6 +8,7 @@ use Modules\Recurring\Public\Contracts\SeriesDetector;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Events\RecurringSeriesApproved;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
@@ -27,7 +28,7 @@ it('constructs RecurringSeriesDto with Money and CarbonImmutable props and the d
         detectedName: 'Netflix',
         displayNameOverride: null,
         state: 'approved',
-        cadence: 'monthly',
+        cadence: SeriesCadence::Monthly,
         latestAmount: Money::ofMinor(-1099, 'EUR'),
         eurEquivalent: null,
         monthlyEquivalent: Money::ofMinor(-1099, 'EUR'),
@@ -51,7 +52,7 @@ it('returns displayNameOverride from displayName when present', function (): voi
         detectedName: 'Some merchant',
         displayNameOverride: 'Netflix',
         state: 'approved',
-        cadence: 'monthly',
+        cadence: SeriesCadence::Monthly,
         latestAmount: Money::ofMinor(-1099, 'EUR'),
         eurEquivalent: null,
         monthlyEquivalent: Money::ofMinor(-1099, 'EUR'),
@@ -72,7 +73,7 @@ it('carries an EUR equivalent when the original currency is not EUR', function (
         detectedName: 'Google Play',
         displayNameOverride: null,
         state: 'approved',
-        cadence: 'monthly',
+        cadence: SeriesCadence::Monthly,
         latestAmount: Money::ofMinor(-499, 'USD'),
         eurEquivalent: Money::ofMinor(-460, 'EUR'),
         monthlyEquivalent: Money::ofMinor(-460, 'EUR'),
