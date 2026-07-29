@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\SecureTempFile;
 
 /*
@@ -59,7 +60,7 @@ it('throws and never leaves the file behind when write() cannot stage content', 
 
     // Deliberately do NOT create $dir, so file_put_contents() fails.
     expect(fn () => SecureTempFile::write($path, 'secret'))
-        ->toThrow(RuntimeException::class, 'Failed to stage secret material');
+        ->toThrow(SecretFileException::class, 'Failed to stage secret material');
 
     expect(file_exists($path))->toBeFalse();
 });
@@ -71,7 +72,7 @@ it('refuses to stage secret material over a directory', function (): void {
     mkdir($path);
 
     expect(fn () => SecureTempFile::write($path, 'secret'))
-        ->toThrow(RuntimeException::class, 'Failed to stage secret material');
+        ->toThrow(SecretFileException::class, 'Failed to stage secret material');
 
     @rmdir($path);
 });

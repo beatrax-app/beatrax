@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 
 uses(RefreshDatabase::class);
@@ -94,7 +95,7 @@ it('translates a libsodium failure while generating a keyring', function (): voi
     $session = $this->app->make(Session::class);
 
     expect(fn () => $service->generateAndPersist((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'Failed to generate GDK keyring');
+        ->toThrow(CryptoOperationFailedException::class, 'GDK keyring generation');
 });
 
 it('translates a libsodium failure while staging the first epoch', function (): void {
@@ -108,7 +109,7 @@ it('translates a libsodium failure while staging the first epoch', function (): 
     $session = $this->app->make(Session::class);
 
     expect(fn () => $service->stageFirstEpoch((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'Failed to generate GDK keyring');
+        ->toThrow(CryptoOperationFailedException::class, 'GDK keyring generation');
 });
 
 // appendEpoch and rewrapUnderNewKek do no conversion of their own — the only
@@ -130,7 +131,7 @@ it('translates a libsodium failure while appending an epoch', function (): void 
     $broken = $this->app->make(GdkKeyringService::class);
 
     expect(fn () => $broken->appendEpoch((int) $user->id, new GdkEpoch(epochId: 2, keyHex: str_repeat('ab', 32)), $session))
-        ->toThrow(RuntimeException::class, 'Failed to append GDK epoch');
+        ->toThrow(CryptoOperationFailedException::class, 'GDK epoch append');
 });
 
 it('translates a libsodium failure while re-wrapping under a new KEK', function (): void {
@@ -149,7 +150,7 @@ it('translates a libsodium failure while re-wrapping under a new KEK', function 
     $broken = $this->app->make(GdkKeyringService::class);
 
     expect(fn () => $broken->rewrapUnderNewKek((int) $user->id, str_repeat('a', 32), str_repeat('b', 32)))
-        ->toThrow(RuntimeException::class, 'Failed to re-wrap GDK keyring');
+        ->toThrow(CryptoOperationFailedException::class, 'GDK keyring re-wrap');
 });
 
 it('translates a libsodium failure while generating a device identity', function (): void {
@@ -163,7 +164,7 @@ it('translates a libsodium failure while generating a device identity', function
     $session = $this->app->make(Session::class);
 
     expect(fn () => $service->generateAndPersist((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'Failed to generate device identity');
+        ->toThrow(CryptoOperationFailedException::class, 'device identity generation');
 });
 
 // The cause is what tells a maintainer which primitive gave up. The operation
@@ -181,7 +182,7 @@ it('keeps the libsodium failure as the cause', function (): void {
     try {
         $service->generateAndPersist((int) $user->id, $session);
         $thrown = null;
-    } catch (RuntimeException $e) {
+    } catch (CryptoOperationFailedException $e) {
         $thrown = $e;
     }
 

@@ -8,7 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
-use RuntimeException;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
@@ -24,7 +24,7 @@ final class DeviceIdentityLoader
     // is locked (no KEK) — callers treat null as "no usable identity right
     // now" and either surface the unlock screen or run keyless.
     /**
-     * @throws RuntimeException on a decrypt / I-O failure of an EXISTING key-file.
+     * @throws SecretFileException on an I/O failure reading an EXISTING key-file.
      */
     public function load(int $userId, Session $session): ?DeviceIdentityDto
     {
@@ -56,7 +56,7 @@ final class DeviceIdentityLoader
             // an ErrorException before the comparison runs.
             $json = @file_get_contents($tmpPath);
             if ($json === false) {
-                throw new RuntimeException('Failed to read the decrypted device identity key-file.');
+                throw SecretFileException::couldNotReadIdentity();
             }
         } finally {
             @unlink($tmpPath);

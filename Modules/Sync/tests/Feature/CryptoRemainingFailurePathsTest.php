@@ -10,6 +10,8 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 
@@ -75,7 +77,7 @@ it('translates a libsodium failure while rotating after a device removal', funct
     $rotation = $this->app->make(GdkRotationService::class);
 
     expect(fn () => $rotation->rotateAndRevoke((int) $user->id, 1, $session))
-        ->toThrow(RuntimeException::class, 'sodium error during rotation');
+        ->toThrow(CryptoOperationFailedException::class, 'GDK rotation');
 });
 
 // finalizeStagedEpoch() is not the only place the keyring is renamed into
@@ -95,7 +97,7 @@ it('reports a keyring it cannot rename into place on first write', function (): 
     $session = $this->app->make(Session::class);
 
     expect(fn () => $service->generateAndPersist((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'Could not finalize the GDK keyring file');
+        ->toThrow(SecretFileException::class, 'Could not finalize the GDK keyring file');
 
     @unlink($encPath.DIRECTORY_SEPARATOR.'occupied');
     @rmdir($encPath);
@@ -141,7 +143,7 @@ it('refuses to read an identity key-file it could not lock down', function (): v
     $loader = loaderWithDecrypt($this->app, $user, $session, static function (string $plainPath): void {});
 
     expect(fn () => $loader->load((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'Cannot chmod secret material');
+        ->toThrow(SecretFileException::class, 'Cannot chmod secret material');
 });
 
 // Two guards in this area stay uncovered, both for reasons no test can work

@@ -8,9 +8,9 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Public\Services\DeviceRegistryService;
-use RuntimeException;
 use SodiumException;
 
 /**
@@ -39,7 +39,7 @@ final class GdkRotationService
      * @throws \LogicException when the app-lock KEK is unavailable (propagated
      *                         from GdkKeyringService — the keyring is never
      *                         touched without the app-lock key).
-     * @throws RuntimeException on a crypto / I-O failure during rotation.
+     * @throws CryptoOperationFailedException on a libsodium failure during rotation.
      */
     public function rotateAndRevoke(int $userId, int $deviceRegistryId, Session $session): void
     {
@@ -113,7 +113,7 @@ final class GdkRotationService
                 }
             });
         } catch (SodiumException $e) {
-            throw new RuntimeException('GdkRotationService::rotateAndRevoke — sodium error during rotation.', 0, $e);
+            throw CryptoOperationFailedException::during('GDK rotation', $e);
         } finally {
             sodium_memzero($rawGdkKey);
         }
@@ -158,7 +158,7 @@ final class GdkRotationService
     /**
      * @throws \LogicException when the app-lock KEK is unavailable
      *                         (propagated from `GdkKeyringService::loadKeyring()`).
-     * @throws RuntimeException on a crypto / I-O failure while wrapping.
+     * @throws CryptoOperationFailedException on a libsodium failure while wrapping.
      */
     public function fanOutAllEpochsToDevice(int $userId, int $newDeviceRegistryId, Session $session): void
     {
@@ -218,7 +218,7 @@ final class GdkRotationService
                 }
             });
         } catch (SodiumException $e) {
-            throw new RuntimeException('GdkRotationService::fanOutAllEpochsToDevice — sodium error during fan-out.', 0, $e);
+            throw CryptoOperationFailedException::during('GDK epoch fan-out to a device', $e);
         }
     }
 

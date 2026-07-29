@@ -11,6 +11,8 @@ use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Exceptions\KeyringStateException;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 uses(RefreshDatabase::class);
 
@@ -191,7 +193,7 @@ it('refuses to hand out a current epoch when none is recorded', function (): voi
 
     // No generateAndPersist(), so sync_encryption_state has no row at all.
     expect(fn () => $service->currentEpoch((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'No current GDK epoch recorded');
+        ->toThrow(KeyringStateException::class, 'No current GDK epoch recorded');
 });
 
 // The pointer moving ahead of the file is the dangerous direction: it means a
@@ -213,7 +215,7 @@ it('refuses a current epoch the keyring holds no key for', function (): void {
         ->update(['current_epoch' => 99]);
 
     expect(fn () => $service->currentEpoch((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'has no key for current epoch 99');
+        ->toThrow(KeyringStateException::class, 'has no key for current epoch 99');
 });
 
 // ---------------------------------------------------------------------------
@@ -245,7 +247,7 @@ it('keeps the staged keyring when it cannot be moved into place', function (): v
     file_put_contents($encPath.DIRECTORY_SEPARATOR.'occupied', 'x');
 
     expect(fn () => $service->finalizeStagedEpoch($stage))
-        ->toThrow(RuntimeException::class, 'Could not finalize');
+        ->toThrow(SecretFileException::class, 'Could not finalize');
 
     expect(is_file($stage->tmpEncPath))->toBeTrue('the staged keyring is the only copy of the epoch key');
 
@@ -283,5 +285,5 @@ it('refuses a keyring payload that decrypts to something other than an object', 
     @unlink($plain);
 
     expect(fn () => $service->currentEpoch((int) $user->id, $session))
-        ->toThrow(RuntimeException::class, 'Corrupt GDK keyring payload');
+        ->toThrow(KeyringStateException::class, 'Corrupt GDK keyring payload');
 });
