@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Exceptions\BackupDecryptionException;
+use Modules\Core\Public\Exceptions\BackupFormatException;
+use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Tests\Helpers\FailingStream;
 
@@ -58,7 +61,7 @@ it('fails to decrypt with the wrong passphrase', function (): void {
     $enc->encrypt($p['plain'], $p['enc'], 'right-passphrase');
 
     expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'wrong-passphrase'))
-        ->toThrow(RuntimeException::class);
+        ->toThrow(BackupDecryptionException::class);
 
     $p['cleanup']();
 });
@@ -75,7 +78,7 @@ it('detects a tampered byte in the ciphertext', function (): void {
     file_put_contents($p['enc'], $bytes);
 
     expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class);
+        ->toThrow(BackupDecryptionException::class);
 
     // A failed decrypt must not leave partial (valid-looking) plaintext behind.
     expect(is_file($p['dec']))->toBeFalse();
@@ -96,7 +99,7 @@ it('rejects out-of-range Argon2id parameters in the header (pre-auth DoS guard)'
     file_put_contents($p['enc'], $bytes);
 
     expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class, 'outside the accepted range');
+        ->toThrow(BackupFormatException::class, 'outside the accepted range');
     expect(is_file($p['dec']))->toBeFalse();
 
     $p['cleanup']();
@@ -112,7 +115,7 @@ it('detects a truncated backup (missing final tag)', function (): void {
     file_put_contents($p['enc'], substr($bytes, 0, strlen($bytes) - 4000));
 
     expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class);
+        ->toThrow(BackupDecryptionException::class);
 
     $p['cleanup']();
 });
@@ -122,7 +125,7 @@ it('rejects a file that is not a beatrax encrypted backup', function (): void {
     file_put_contents($p['enc'], 'this is not an encrypted backup at all');
 
     expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class, 'bad file header');
+        ->toThrow(BackupFormatException::class, 'bad file header');
 
     $p['cleanup']();
 });
@@ -147,7 +150,7 @@ it('refuses to read a backup that is not there', function (): void {
     $p = backupTmpPaths();
 
     expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class, 'Cannot read encrypted backup');
+        ->toThrow(BackupIoException::class, 'Cannot read encrypted backup');
 
     $p['cleanup']();
 });
@@ -159,7 +162,7 @@ it('rejects a file that ends before the header does', function (): void {
     file_put_contents($p['enc'], 'BTR');
 
     expect(fn () => (new BackupEncryptor)->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class, 'ended unexpectedly');
+        ->toThrow(BackupFormatException::class, 'ended unexpectedly');
 
     $p['cleanup']();
 });
@@ -177,7 +180,7 @@ it('reports a destination it cannot rename onto, and leaves no plaintext', funct
     file_put_contents($p['dec'].'/occupied', 'x');
 
     expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class, 'Could not finalize');
+        ->toThrow(BackupIoException::class, 'Could not finalize');
 
     expect(is_file($p['dec'].'.part'))->toBeFalse();
 
@@ -193,7 +196,7 @@ it('reports a read that fails while encrypting', function (): void {
     FailingStream::$failOnRead = 1;
 
     expect(fn () => (new BackupEncryptor)->encrypt('beatraxfail://source', $p['enc'], 'pw'))
-        ->toThrow(RuntimeException::class, 'Read error while encrypting backup.');
+        ->toThrow(BackupIoException::class, 'Read error while encrypting backup.');
 
     FailingStream::reset();
     $p['cleanup']();
@@ -206,7 +209,7 @@ it('reports a write that reports zero bytes while encrypting', function (): void
     FailingStream::$failWrites = true;
 
     expect(fn () => (new BackupEncryptor)->encrypt($p['plain'], 'beatraxfail://sink', 'pw'))
-        ->toThrow(RuntimeException::class, 'Write error on');
+        ->toThrow(BackupIoException::class, 'Write error on');
 
     FailingStream::reset();
     $p['cleanup']();
@@ -237,7 +240,7 @@ it('reports a read that fails on the first ciphertext block', function (): void 
     FailingStream::$failOnRead = 2;
 
     expect(fn () => $enc->decrypt('beatraxfail://ciphertext', $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class, 'Read error while decrypting backup.');
+        ->toThrow(BackupIoException::class, 'Read error while decrypting backup.');
 
     FailingStream::reset();
     $p['cleanup']();
@@ -261,7 +264,7 @@ it('detects a backup truncated on a block boundary', function (): void {
     file_put_contents($p['enc'], substr($bytes, 0, $headerBytes + $blockBytes));
 
     expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
-        ->toThrow(RuntimeException::class, 'truncated');
+        ->toThrow(BackupDecryptionException::class, 'truncated');
 
     expect(is_file($p['dec']))->toBeFalse();
 
@@ -279,7 +282,7 @@ it('closes the source handle when the destination cannot be opened', function ()
     $before = count(get_resources('stream'));
 
     expect(fn () => (new BackupEncryptor)->encrypt($p['plain'], $p['enc'], 'pw'))
-        ->toThrow(RuntimeException::class, 'Cannot write encrypted backup');
+        ->toThrow(BackupIoException::class, 'Cannot write encrypted backup');
 
     expect(count(get_resources('stream')))->toBe($before);
 
