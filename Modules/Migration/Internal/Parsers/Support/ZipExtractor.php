@@ -88,7 +88,10 @@ final class ZipExtractor
         }
 
         $targetDir = UserDataPathService::appPath('migration-extracts/'.uniqid('run-', true));
-        if (! mkdir($targetDir, 0700, true) && ! is_dir($targetDir)) {
+        // Suppressed so the is_dir() race check decides. Unsuppressed, a
+        // concurrent creator's EEXIST warning becomes an ErrorException and
+        // the race the second clause exists to absorb becomes a failure.
+        if (! @mkdir($targetDir, 0700, true) && ! is_dir($targetDir)) {
             $zip->close();
 
             throw new RuntimeException("could not create scoped extraction directory '{$targetDir}'");

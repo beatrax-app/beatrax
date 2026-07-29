@@ -443,7 +443,9 @@ class EncryptionMigrationService
         @mkdir($dir, 0700, true);
 
         $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_premig_'.bin2hex(random_bytes(8)).'.tmp';
-        if (file_put_contents($tmpPlainPath, $json, LOCK_EX) === false) {
+        // Suppressed so the `=== false` check decides; unsuppressed the
+        // E_WARNING becomes an ErrorException first and the guard never ran.
+        if (@file_put_contents($tmpPlainPath, $json, LOCK_EX) === false) {
             throw new RuntimeException('Failed to stage the pre-migration snapshot payload.');
         }
         if (! @chmod($tmpPlainPath, 0600)) {
