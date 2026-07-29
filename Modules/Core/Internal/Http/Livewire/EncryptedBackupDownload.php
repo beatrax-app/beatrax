@@ -11,7 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Services\BackupEncryptor;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -31,7 +31,7 @@ final class EncryptedBackupDownload extends Component
     public function download(
         DatabaseManager $db,
         Repository $config,
-        BackupEncryptor $encryptor,
+        FileEncryptor $encryptor,
         Clock $clock,
         ResponseFactory $responses,
     ): ?BinaryFileResponse {

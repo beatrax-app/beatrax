@@ -8,6 +8,7 @@ use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use RuntimeException;
 
 /**
@@ -16,7 +17,7 @@ use RuntimeException;
 final class RestoreEncryptedBackup
 {
     public function __construct(
-        private readonly BackupEncryptor $encryptor,
+        private readonly FileEncryptor $encryptor,
         private readonly DatabaseManager $db,
         private readonly Repository $config,
         private readonly UserDataPathService $paths,

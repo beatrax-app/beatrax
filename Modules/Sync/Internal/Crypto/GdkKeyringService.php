@@ -9,7 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Services\BackupEncryptor;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Identity\SecureTempFile;
 use RuntimeException;
@@ -26,9 +26,10 @@ final class GdkKeyringService
     // sync_encryption_state — only the plain integer current_epoch pointer.
     public function __construct(
         private readonly AppLockKeyService $appLockKeyService,
-        private readonly BackupEncryptor $backupEncryptor,
+        private readonly FileEncryptor $backupEncryptor,
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly SodiumPrimitives $sodium,
     ) {}
 
     // Generates GDK epoch 1, persists the encrypted keyring file, and sets
@@ -47,7 +48,7 @@ final class GdkKeyringService
 
         try {
             $rawKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
-            $keyHex = sodium_bin2hex($rawKey);
+            $keyHex = $this->sodium->binToHex($rawKey);
             sodium_memzero($rawKey);
 
             $epoch = new GdkEpoch(epochId: 1, keyHex: $keyHex);
@@ -81,7 +82,7 @@ final class GdkKeyringService
 
         try {
             $rawKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
-            $keyHex = sodium_bin2hex($rawKey);
+            $keyHex = $this->sodium->binToHex($rawKey);
             sodium_memzero($rawKey);
 
             $epoch = new GdkEpoch(epochId: 1, keyHex: $keyHex);
