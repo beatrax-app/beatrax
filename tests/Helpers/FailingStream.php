@@ -34,6 +34,14 @@ final class FailingStream
      */
     public static int $failOnRead = PHP_INT_MAX;
 
+    /**
+     * Caps each read to this many bytes. Needed to empty PHP's buffer at a
+     * chosen point: with the default 8 KiB fill, a reader that has consumed
+     * only a header still has thousands of buffered bytes left, so the next
+     * fread is served from the buffer and never reaches the wrapper.
+     */
+    public static int $chunkSize = PHP_INT_MAX;
+
     /** When true, every fwrite reports zero bytes written. */
     public static bool $failWrites = false;
 
@@ -57,6 +65,7 @@ final class FailingStream
     {
         self::$data = '';
         self::$failOnRead = PHP_INT_MAX;
+        self::$chunkSize = PHP_INT_MAX;
         self::$failWrites = false;
     }
 
@@ -75,7 +84,7 @@ final class FailingStream
             return false;
         }
 
-        $chunk = substr(self::$data, $this->position, $count);
+        $chunk = substr(self::$data, $this->position, min($count, self::$chunkSize));
         $this->position += strlen($chunk);
 
         return $chunk;
