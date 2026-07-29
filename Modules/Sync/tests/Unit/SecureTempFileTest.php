@@ -48,24 +48,30 @@ it('locks an existing file (created at default permissions) down to 0600', funct
     @unlink($path);
 });
 
+// The write is suppressed so its own `=== false` check decides. It used to be
+// unsuppressed, and this test said so — it accepted "either our own exception
+// or an ErrorException", because Laravel's handler converted the E_WARNING
+// before the guard could run. The guard never fired. It does now, so the test
+// can name the type it expects.
 it('throws and never leaves the file behind when write() cannot stage content', function (): void {
     $dir = sys_get_temp_dir().'/beatrax_secure_temp_file_test_missing_'.bin2hex(random_bytes(8));
     $path = $dir.'/secret.tmp';
-    // Deliberately do NOT create $dir — file_put_contents() must fail.
-    // Depending on error-handler configuration, a missing parent directory
-    // surfaces as either our own RuntimeException (file_put_contents()
-    // returns false) or an ErrorException from PHP's E_WARNING — either way
-    // this must throw rather than silently continue, and never leave a file
-    // behind. Caught manually (rather than Pest's toThrow(Throwable::class))
-    // since Pest's toThrow() treats an interface class-string as a message
-    // substring rather than a type check.
-    $thrown = null;
-    try {
-        SecureTempFile::write($path, 'secret');
-    } catch (Throwable $e) {
-        $thrown = $e;
-    }
 
-    expect($thrown)->not->toBeNull();
+    // Deliberately do NOT create $dir, so file_put_contents() fails.
+    expect(fn () => SecureTempFile::write($path, 'secret'))
+        ->toThrow(RuntimeException::class, 'Failed to stage secret material');
+
     expect(file_exists($path))->toBeFalse();
+});
+
+// A path that is a directory fails the write for a different reason than a
+// missing parent, and is the shape an interrupted run leaves behind.
+it('refuses to stage secret material over a directory', function (): void {
+    $path = sys_get_temp_dir().'/beatrax_secure_temp_dir_'.bin2hex(random_bytes(8));
+    mkdir($path);
+
+    expect(fn () => SecureTempFile::write($path, 'secret'))
+        ->toThrow(RuntimeException::class, 'Failed to stage secret material');
+
+    @rmdir($path);
 });

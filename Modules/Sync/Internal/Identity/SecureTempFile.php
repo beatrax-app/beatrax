@@ -19,7 +19,11 @@ final class SecureTempFile
      */
     public static function write(string $path, string $contents): void
     {
-        if (file_put_contents($path, $contents, LOCK_EX) === false) {
+        // Suppressed so the `=== false` check decides. Unsuppressed, a failed
+        // write raises E_WARNING, which Laravel's handler turns into an
+        // ErrorException before the comparison runs — so this guard never
+        // fired and the caller saw a type it was not looking for.
+        if (@file_put_contents($path, $contents, LOCK_EX) === false) {
             throw new RuntimeException("Failed to stage secret material at: {$path}");
         }
 
