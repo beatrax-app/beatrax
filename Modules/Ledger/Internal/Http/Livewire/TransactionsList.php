@@ -183,130 +183,147 @@ final class TransactionsList extends Component
         SensitiveColumnCodec $codec,
         Session $session,
     ): View {
+        return $this->isSearchActive()
+            ? $this->renderSearch($currentUser, $views, $db, $taxTagQuery, $searchQuery, $codec, $session)
+            : $this->renderList($currentUser, $listQuery, $views, $db, $taxTagQuery, $codec, $session);
+    }
+
+    // Search mode keeps the pre-search history preference so leaving the
+    // search box restores the list the user was looking at, rather than
+    // whatever the search happened to span.
+    private function renderSearch(
+        CurrentUser $currentUser,
+        ViewFactory $views,
+        DatabaseManager $db,
+        TaxTagQuery $taxTagQuery,
+        SearchQuery $searchQuery,
+        SensitiveColumnCodec $codec,
+        Session $session,
+    ): View {
         $user = $currentUser->user();
 
-        if ($this->isSearchActive()) {
-            if ($this->preSearchFullHistory === null) {
-                $this->preSearchFullHistory = $this->fullHistory;
-            }
-
-            $filters = new SearchFilters(
-                accounts: array_values(array_filter(
-                    $this->filterAccounts,
-                    static fn (int $id): bool => $id > 0,
-                )),
-                categories: array_values(array_filter(
-                    $this->filterCategories,
-                    static fn (int $id): bool => $id > 0,
-                )),
-                counterparties: array_values(array_filter(
-                    $this->filterCounterparties,
-                    static fn (int $id): bool => $id > 0,
-                )),
-                after: $this->filterAfter !== '' ? $this->filterAfter : null,
-                before: $this->filterBefore !== '' ? $this->filterBefore : null,
-                amountMin: $this->filterAmountMin !== '' ? $this->filterAmountMin : null,
-                amountMax: $this->filterAmountMax !== '' ? $this->filterAmountMax : null,
-                amountDirection: $this->filterAmountDir,
-            );
-
-            $searchPage = $searchQuery->search(
-                $user,
-                $this->searchQuery,
-                $filters,
-                $this->cursorId,
-                $this->cursorPostedAt,
-            );
-
-            // Accumulate search result rows using the same guard pattern;
-            // highlightedCounterparty + snippet are re-fetched from
-            // SearchQuery on each render rather than stored here.
-            $guardKey = $this->cursorId ?? 0;
-
-            if ($guardKey === 0) {
-                $this->accumulatedRows = array_map(
-                    static fn (SearchRowDto $row): array => self::searchRowToArray($row),
-                    $searchPage->rows,
-                );
-                $this->appendedCursorIds = [0 => true];
-            } elseif (! isset($this->appendedCursorIds[$guardKey])) {
-                foreach ($searchPage->rows as $row) {
-                    $this->accumulatedRows[] = self::searchRowToArray($row);
-                }
-                $this->appendedCursorIds[$guardKey] = true;
-            }
-
-            if (count($this->accumulatedRows) > self::MAX_ACCUMULATED_ROWS) {
-                $this->accumulatedRows = array_slice($this->accumulatedRows, -self::MAX_ACCUMULATED_ROWS);
-                $this->appendedCursorIds = [$guardKey => true];
-            }
-
-            $this->hasMore = $searchPage->hasMore;
-            $this->nextCursorId = $searchPage->nextCursorId;
-            $this->nextCursorPostedAt = $searchPage->nextCursorPostedAt;
-
-            $rowIds = array_map(static fn (SearchRowDto $row): int => $row->id, $searchPage->rows);
-            $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
-            $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
-            $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
-            $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id, $codec, $session);
-            $clearedState = $this->clearedStatusFor($stateIds, $db, $currentUser);
-
-            foreach ($this->accumulatedRows as &$accRow) {
-                $accRowId = $accRow['id'];
-                $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
-                $accRow['taxCategoryShortName'] = $taxState[$accRowId]['taxCategoryShortName'] ?? null;
-                $accRow['splitLegs'] = $splitLegs[$accRowId] ?? [];
-                $accRow['status'] = $clearedState[$accRowId] ?? 'cleared';
-            }
-            unset($accRow);
-
-            // Transaction id -> SearchRowDto, for highlight/snippet
-            // access in the Blade; recomputed on every render.
-            $searchRows = [];
-            foreach ($searchPage->rows as $row) {
-                $searchRows[$row->id] = $row;
-            }
-
-            return $views->make('ledger::livewire.transactions-list', [
-                'page' => $searchPage,
-                'accumulatedRows' => $this->accumulatedRows,
-                'fullHistory' => $this->fullHistory,
-                'currency' => $this->currency,
-                'chainTxIds' => [],
-                'taxState' => $taxState,
-                'splitLegs' => $splitLegs,
-                'clearedState' => $clearedState,
-                'isSearchMode' => true,
-                'searchQuery' => $this->searchQuery,
-                'searchTotalCount' => $searchPage->totalCount,
-                'searchTotalOut' => $searchPage->totalOutMinor,
-                'searchTotalIn' => $searchPage->totalInMinor,
-                'didYouMean' => $searchPage->didYouMean,
-                'searchRows' => $searchRows,
-                'activeFilterCount' => $this->activeFilterCount(),
-                'availableAccounts' => $this->availableAccounts($db, $user->id),
-                'availableCategories' => $this->availableCategories($db, $user->id),
-            ]);
+        if ($this->preSearchFullHistory === null) {
+            $this->preSearchFullHistory = $this->fullHistory;
         }
 
+        $page = $searchQuery->search(
+            $user,
+            $this->searchQuery,
+            $this->searchFilters(),
+            $this->cursorId,
+            $this->cursorPostedAt,
+        );
+
+        // highlightedCounterparty and snippet are re-fetched from SearchQuery
+        // on every render rather than accumulated, so a stale highlight
+        // cannot outlive the query that produced it.
+        $this->accumulate(array_map(
+            static fn (SearchRowDto $row): array => self::searchRowToArray($row),
+            $page->rows,
+        ));
+
+        $this->hasMore = $page->hasMore;
+        $this->nextCursorId = $page->nextCursorId;
+        $this->nextCursorPostedAt = $page->nextCursorPostedAt;
+
+        $rowIds = array_map(static fn (SearchRowDto $row): int => $row->id, $page->rows);
+        $state = $this->decorateAccumulatedRows($rowIds, $db, $taxTagQuery, $currentUser, $codec, $session);
+
+        // Transaction id -> SearchRowDto, for highlight/snippet access in
+        // the Blade; recomputed on every render.
+        $searchRows = [];
+        foreach ($page->rows as $row) {
+            $searchRows[$row->id] = $row;
+        }
+
+        return $views->make('ledger::livewire.transactions-list', [
+            ...$this->sharedViewData($state, $db, $user->id),
+            'page' => $page,
+            'chainTxIds' => [],
+            'isSearchMode' => true,
+            'searchTotalCount' => $page->totalCount,
+            'searchTotalOut' => $page->totalOutMinor,
+            'searchTotalIn' => $page->totalInMinor,
+            'didYouMean' => $page->didYouMean,
+            'searchRows' => $searchRows,
+            'activeFilterCount' => $this->activeFilterCount(),
+        ]);
+    }
+
+    private function renderList(
+        CurrentUser $currentUser,
+        TransactionListQuery $listQuery,
+        ViewFactory $views,
+        DatabaseManager $db,
+        TaxTagQuery $taxTagQuery,
+        SensitiveColumnCodec $codec,
+        Session $session,
+    ): View {
+        $user = $currentUser->user();
         $queryCurrency = $this->currency === 'eur' ? 'EUR' : null;
 
         $page = $this->fullHistory
             ? $listQuery->fullHistory($user, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt, currency: $queryCurrency)
             : $listQuery->recent($user, daysBack: 90, cursorId: $this->cursorId, cursorPostedAt: $this->cursorPostedAt, currency: $queryCurrency);
 
+        $this->accumulate(array_values(array_map(
+            static fn (TransactionRowDto $row): array => self::rowToArray($row),
+            $page->rows,
+        )));
+
+        $this->hasMore = $page->hasMore;
+        $this->nextCursorId = $page->nextCursorId;
+        $this->nextCursorPostedAt = $page->nextCursorPostedAt;
+
+        $rowIds = array_values(array_map(static fn ($row): int => $row->id, $page->rows));
+        $state = $this->decorateAccumulatedRows($rowIds, $db, $taxTagQuery, $currentUser, $codec, $session);
+
+        return $views->make('ledger::livewire.transactions-list', [
+            ...$this->sharedViewData($state, $db, $user->id),
+            'page' => $page,
+            'chainTxIds' => $this->chainTxIdsFor($rowIds, $db, $user->id),
+            'isSearchMode' => false,
+            'searchTotalCount' => 0,
+            'searchTotalOut' => 0,
+            'searchTotalIn' => 0,
+            'didYouMean' => null,
+            'searchRows' => [],
+            'activeFilterCount' => 0,
+        ]);
+    }
+
+    // Only ids above zero reach the query: a filter array can hold a 0 from
+    // an unselected option, which would otherwise narrow to nothing.
+    private function searchFilters(): SearchFilters
+    {
+        return new SearchFilters(
+            accounts: array_values(array_filter($this->filterAccounts, static fn (int $id): bool => $id > 0)),
+            categories: array_values(array_filter($this->filterCategories, static fn (int $id): bool => $id > 0)),
+            counterparties: array_values(array_filter($this->filterCounterparties, static fn (int $id): bool => $id > 0)),
+            after: $this->filterAfter !== '' ? $this->filterAfter : null,
+            before: $this->filterBefore !== '' ? $this->filterBefore : null,
+            amountMin: $this->filterAmountMin !== '' ? $this->filterAmountMin : null,
+            amountMax: $this->filterAmountMax !== '' ? $this->filterAmountMax : null,
+            amountDirection: $this->filterAmountDir,
+        );
+    }
+
+    // Load-more appends; a first page replaces. appendedCursorIds is what
+    // stops a re-render at the same cursor appending the same rows twice,
+    // which Livewire will do whenever any other property changes.
+    /**
+     * @param  list<array{id: int, bookedAt: string, counterpartyName: ?string, counterpartySlug: ?string, categoryId: ?int, amountMinor: int, amountCurrency: string, secondaryMinor: ?int, secondaryCurrency: ?string, taxTagged?: bool, taxCategoryShortName?: ?string, splitLegs?: list<array{id: int, categoryName: string, amountMinor: int, amountCurrency: string, note: ?string, taxTagged: bool, taxCategoryShortName: ?string}>, status?: string}>  $rows
+     */
+    private function accumulate(array $rows): void
+    {
         $guardKey = $this->cursorId ?? 0;
 
         if ($guardKey === 0) {
-            $this->accumulatedRows = array_values(array_map(
-                static fn (TransactionRowDto $row): array => self::rowToArray($row),
-                $page->rows,
-            ));
+            $this->accumulatedRows = $rows;
             $this->appendedCursorIds = [0 => true];
         } elseif (! isset($this->appendedCursorIds[$guardKey])) {
-            foreach ($page->rows as $row) {
-                $this->accumulatedRows[] = self::rowToArray($row);
+            foreach ($rows as $row) {
+                $this->accumulatedRows[] = $row;
             }
             $this->appendedCursorIds[$guardKey] = true;
         }
@@ -315,40 +332,30 @@ final class TransactionsList extends Component
             $this->accumulatedRows = array_slice($this->accumulatedRows, -self::MAX_ACCUMULATED_ROWS);
             $this->appendedCursorIds = [$guardKey => true];
         }
+    }
 
-        $this->hasMore = $page->hasMore;
-        $this->nextCursorId = $page->nextCursorId;
-        $this->nextCursorPostedAt = $page->nextCursorPostedAt;
-
-        $rowIds = array_map(static fn ($row): int => $row->id, $page->rows);
-        $chainTxIds = [];
-        if ($rowIds !== []) {
-            $matches = $db->connection()->table('chain_links')
-                ->where('user_id', $user->id)
-                ->whereIn('state', ['confirmed', 'candidate'])
-                ->where(function (Builder $q) use ($rowIds): void {
-                    $q->whereIn('from_transaction_id', $rowIds)
-                        ->orWhereIn('to_transaction_id', $rowIds);
-                })
-                ->select(['from_transaction_id', 'to_transaction_id'])
-                ->get();
-            foreach ($matches as $m) {
-                $fromId = is_numeric($m->from_transaction_id) ? (int) $m->from_transaction_id : 0;
-                $toId = is_numeric($m->to_transaction_id ?? null) ? (int) $m->to_transaction_id : 0;
-                if ($fromId !== 0) {
-                    $chainTxIds[$fromId] = true;
-                }
-                if ($toId !== 0) {
-                    $chainTxIds[$toId] = true;
-                }
-            }
-        }
-
+    // Tax, split and cleared state are read for the whole accumulated set,
+    // not just this page: a row loaded three pages ago is still on screen
+    // and still has to show the truth after it is tagged or split.
+    /**
+     * @param  list<int>  $rowIds
+     * @return array{taxState: array<int, array<string, mixed>>, splitLegs: array<int, mixed>, clearedState: array<int, string>}
+     */
+    private function decorateAccumulatedRows(
+        array $rowIds,
+        DatabaseManager $db,
+        TaxTagQuery $taxTagQuery,
+        CurrentUser $currentUser,
+        SensitiveColumnCodec $codec,
+        Session $session,
+    ): array {
         $accIds = array_map(static fn (array $r): int => $r['id'], $this->accumulatedRows);
         $stateIds = array_values(array_unique([...$rowIds, ...$accIds]));
+
         $taxState = $this->taxTagStateFor($stateIds, $taxTagQuery, $currentUser);
-        $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $user->id, $codec, $session);
+        $splitLegs = $this->legsFor($stateIds, $db, $taxTagQuery, $currentUser->user()->id, $codec, $session);
         $clearedState = $this->clearedStatusFor($stateIds, $db, $currentUser);
+
         foreach ($this->accumulatedRows as &$accRow) {
             $accRowId = $accRow['id'];
             $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
@@ -358,26 +365,63 @@ final class TransactionsList extends Component
         }
         unset($accRow);
 
-        return $views->make('ledger::livewire.transactions-list', [
-            'page' => $page,
+        return ['taxState' => $taxState, 'splitLegs' => $splitLegs, 'clearedState' => $clearedState];
+    }
+
+    // Which rows on this page belong to a chain, so the list can show the
+    // link affordance without asking per row.
+    /**
+     * @param  list<int>  $rowIds
+     * @return array<int, bool>
+     */
+    private function chainTxIdsFor(array $rowIds, DatabaseManager $db, int $userId): array
+    {
+        if ($rowIds === []) {
+            return [];
+        }
+
+        $matches = $db->connection()->table('chain_links')
+            ->where('user_id', $userId)
+            ->whereIn('state', ['confirmed', 'candidate'])
+            ->where(function (Builder $q) use ($rowIds): void {
+                $q->whereIn('from_transaction_id', $rowIds)
+                    ->orWhereIn('to_transaction_id', $rowIds);
+            })
+            ->select(['from_transaction_id', 'to_transaction_id'])
+            ->get();
+
+        $chainTxIds = [];
+        foreach ($matches as $m) {
+            $fromId = is_numeric($m->from_transaction_id) ? (int) $m->from_transaction_id : 0;
+            $toId = is_numeric($m->to_transaction_id ?? null) ? (int) $m->to_transaction_id : 0;
+            if ($fromId !== 0) {
+                $chainTxIds[$fromId] = true;
+            }
+            if ($toId !== 0) {
+                $chainTxIds[$toId] = true;
+            }
+        }
+
+        return $chainTxIds;
+    }
+
+    /**
+     * @param  array{taxState: array<int, array<string, mixed>>, splitLegs: array<int, mixed>, clearedState: array<int, string>}  $state
+     * @return array<string, mixed>
+     */
+    private function sharedViewData(array $state, DatabaseManager $db, int $userId): array
+    {
+        return [
             'accumulatedRows' => $this->accumulatedRows,
             'fullHistory' => $this->fullHistory,
             'currency' => $this->currency,
-            'chainTxIds' => $chainTxIds,
-            'taxState' => $taxState,
-            'splitLegs' => $splitLegs,
-            'clearedState' => $clearedState,
-            'isSearchMode' => false,
+            'taxState' => $state['taxState'],
+            'splitLegs' => $state['splitLegs'],
+            'clearedState' => $state['clearedState'],
             'searchQuery' => $this->searchQuery,
-            'searchTotalCount' => 0,
-            'searchTotalOut' => 0,
-            'searchTotalIn' => 0,
-            'didYouMean' => null,
-            'searchRows' => [],
-            'activeFilterCount' => 0,
-            'availableAccounts' => $this->availableAccounts($db, $user->id),
-            'availableCategories' => $this->availableCategories($db, $user->id),
-        ]);
+            'availableAccounts' => $this->availableAccounts($db, $userId),
+            'availableCategories' => $this->availableCategories($db, $userId),
+        ];
     }
 
     public function activeFilterCount(): int
