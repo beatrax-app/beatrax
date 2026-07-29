@@ -9,7 +9,7 @@ use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\ScanCursor;
-use RuntimeException;
+use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
 /**
  * @link ../../../.docs/features/email-scan/architecture.md
@@ -61,7 +61,7 @@ final class InboxScanStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new ScanStateNotFoundException(
                     "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
                 );
             }
@@ -103,7 +103,7 @@ final class InboxScanStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new ScanStateNotFoundException(
                     "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
                 );
             }
@@ -139,7 +139,7 @@ final class InboxScanStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new ScanStateNotFoundException(
                     "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
                 );
             }
@@ -182,7 +182,7 @@ final class InboxScanStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new ScanStateNotFoundException(
                     "InboxScanStateMachine: inbox_scan_state for inbox {$inboxId} folder INBOX not found.",
                 );
             }

@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
+use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 
 uses(RefreshDatabase::class);
 
@@ -34,12 +35,12 @@ it('refuses to refresh a token before the OAuth client is configured', function 
     $provider = $this->app->make($class);
 
     expect(fn () => $provider->refreshAccessToken('any-refresh-token'))
-        ->toThrow(RuntimeException::class, 'is not configured');
+        ->toThrow(InboxNotConfiguredException::class, 'is not configured');
 })->with([GoogleOAuthProvider::class, MicrosoftOAuthProvider::class]);
 
 it('refuses to read the account email before the OAuth client is configured', function (string $class): void {
     $provider = $this->app->make($class);
 
     expect(fn () => $provider->readEmail('any-access-token'))
-        ->toThrow(RuntimeException::class, 'is not configured');
+        ->toThrow(InboxNotConfiguredException::class, 'is not configured');
 })->with([GoogleOAuthProvider::class, MicrosoftOAuthProvider::class]);

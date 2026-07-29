@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Token\AccessTokenInterface;
 use Modules\EmailScan\Internal\SafeMessage;
+use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 use TheNetworg\OAuth2\Client\Provider\Azure;
@@ -88,7 +89,7 @@ class MicrosoftOAuthProvider
     {
         $client = $this->secrets->loadProviderClient('microsoft');
         if ($client === null) {
-            throw new RuntimeException(
+            throw new InboxNotConfiguredException(
                 'Microsoft OAuth client is not configured — run the OAuth-client wizard first.',
             );
         }
@@ -129,7 +130,7 @@ class MicrosoftOAuthProvider
     {
         $client = $this->secrets->loadProviderClient('microsoft');
         if ($client === null) {
-            throw new RuntimeException(
+            throw new InboxNotConfiguredException(
                 'Microsoft OAuth client is not configured — run the OAuth-client wizard first.',
             );
         }
