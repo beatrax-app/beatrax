@@ -219,3 +219,70 @@ it('reports a write that reports zero bytes while encrypting', function (): void
 // instead; and init_pull only raises for a header of the wrong length, which
 // readExactly() has already guaranteed. Both stay as guards against a
 // filesystem or a libsodium that misbehaves in ways PHP will not simulate.
+
+// The header is served as its own read so PHP's buffer is empty when the
+// ciphertext loop asks for its first block — otherwise the buffered remainder
+// is returned as a short read, the AEAD rejects it as corruption, and the test
+// passes against a different branch than the one it names.
+it('reports a read that fails on the first ciphertext block', function (): void {
+    $p = backupTmpPaths();
+    file_put_contents($p['plain'], random_bytes(200_000));
+    $enc = new BackupEncryptor;
+    $enc->encrypt($p['plain'], $p['enc'], 'pw');
+
+    FailingStream::register();
+    FailingStream::$data = (string) file_get_contents($p['enc']);
+    // MAGIC(8) + salt(16) + opslimit(4) + memlimit(8) + stream header(24).
+    FailingStream::$chunkSize = 60;
+    FailingStream::$failOnRead = 2;
+
+    expect(fn () => $enc->decrypt('beatraxfail://ciphertext', $p['dec'], 'pw'))
+        ->toThrow(RuntimeException::class, 'Read error while decrypting backup.');
+
+    FailingStream::reset();
+    $p['cleanup']();
+});
+
+// Truncating on an exact block boundary is a different failure from truncating
+// mid-block: the reader gets a clean end-of-file rather than a partial block,
+// so it leaves the loop without ever seeing the FINAL tag. Both must be
+// refused, and only the mid-block case was covered.
+it('detects a backup truncated on a block boundary', function (): void {
+    $p = backupTmpPaths();
+    file_put_contents($p['plain'], random_bytes(200_000));
+    $enc = new BackupEncryptor;
+    $enc->encrypt($p['plain'], $p['enc'], 'pw');
+
+    $headerBytes = 8 + SODIUM_CRYPTO_PWHASH_SALTBYTES + 4 + 8
+        + SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_HEADERBYTES;
+    $blockBytes = 65536 + SODIUM_CRYPTO_SECRETSTREAM_XCHACHA20POLY1305_ABYTES;
+
+    $bytes = (string) file_get_contents($p['enc']);
+    file_put_contents($p['enc'], substr($bytes, 0, $headerBytes + $blockBytes));
+
+    expect(fn () => $enc->decrypt($p['enc'], $p['dec'], 'pw'))
+        ->toThrow(RuntimeException::class, 'truncated');
+
+    expect(is_file($p['dec']))->toBeFalse();
+
+    $p['cleanup']();
+});
+
+// encrypt() opens the source before the destination, so a destination it
+// cannot open leaves a source handle already open. It has to be closed on the
+// way out or every failed encrypt leaks one.
+it('closes the source handle when the destination cannot be opened', function (): void {
+    $p = backupTmpPaths();
+    file_put_contents($p['plain'], random_bytes(1_000));
+    mkdir($p['enc']);
+
+    $before = count(get_resources('stream'));
+
+    expect(fn () => (new BackupEncryptor)->encrypt($p['plain'], $p['enc'], 'pw'))
+        ->toThrow(RuntimeException::class, 'Cannot write encrypted backup');
+
+    expect(count(get_resources('stream')))->toBe($before);
+
+    @rmdir($p['enc']);
+    $p['cleanup']();
+});
