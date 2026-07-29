@@ -48,9 +48,8 @@
     </nav>
 
     @if (count($selectedIds) > 0)
-        <div
+        <section
             class="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
-            role="region"
             aria-label="Bulk actions"
         >
             <span class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ count($selectedIds) }} selected</span>
@@ -64,7 +63,7 @@
                 wire:click="bulkReject"
                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
             >Reject {{ count($selectedIds) }}</button>
-        </div>
+        </section>
     @endif
 
     @if (count($rows) === 0)

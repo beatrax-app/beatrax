@@ -102,12 +102,12 @@
                         default => '✨ Looks like **'.$suggestion->suggestedCounterpartyName.'** — confidence high',
                     };
                 @endphp
-                <div class="{{ $bannerClass }}" role="region" aria-label="Suggested match">
+                <section class="{{ $bannerClass }}" aria-label="Suggested match">
                     <span>{!! preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', e($bannerCopy)) !!}</span>
                     <span style="font-size: var(--text-xs); color: inherit; opacity: 0.85;">
                         {{ $suggestion->reasoning }}
                     </span>
-                </div>
+                </section>
 
                 <div class="triage-actions">
                     <button
