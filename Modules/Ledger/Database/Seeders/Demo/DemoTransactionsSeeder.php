@@ -94,103 +94,19 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        // 3× monthly salary credits (Salaris MijnWerkgever BV) on the
-        // 25th of each of the three months in the window.
-        $salaryCategory = $this->categoryId('income-salary');
-        foreach ($this->monthlyDates($windowStart, 25) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'income',
-                'amountMinor' => 385000,
-                'description' => 'Salaris MijnWerkgever BV',
-                'counterpartyName' => 'MijnWerkgever BV',
-                'counterpartyIban' => 'NL44RABO0123456789',
-                'date' => $date,
-                'paymentType' => PaymentType::Transfer,
-                'categoryId' => $salaryCategory,
-            ]);
-        }
-
-        $rentCategory = $this->categoryId('housing-rent');
-        foreach ($this->monthlyDates($windowStart, 1) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -125000,
-                'description' => 'Huur Vesteda',
-                'counterpartyName' => 'Vesteda',
-                'counterpartyIban' => 'NL36INGB0007654321',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => $rentCategory,
-            ]);
-        }
-
-        $internetCategory = $this->categoryId('housing-internet');
-        foreach ($this->monthlyDates($windowStart, 3) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -4500,
-                'description' => 'KPN Mobile + Internet',
-                'counterpartyName' => 'KPN BV',
-                'counterpartyIban' => 'NL27INGB0010040004',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => $internetCategory,
-            ]);
-        }
-
-        foreach ($this->monthlyDates($windowStart, 5) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -5995,
-                'description' => 'Ziggo abonnement',
-                'counterpartyName' => 'Ziggo',
-                'counterpartyIban' => 'NL05INGB0700057757',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => $internetCategory,
-            ]);
-        }
-
-        $membershipsCategory = $this->categoryId('subscriptions-memberships');
-        foreach ($this->monthlyDates($windowStart, 1) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -2500,
-                'description' => 'Sport City',
-                'counterpartyName' => 'Sport City Nederland BV',
-                'counterpartyIban' => 'NL02ABNA0123456789',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => $membershipsCategory,
-            ]);
-        }
-
-        $healthInsuranceCategory = $this->categoryId('insurance-health');
-        foreach ($this->monthlyDates($windowStart, 28) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -14250,
-                'description' => 'Zilveren Kruis Zorgverzekering',
-                'counterpartyName' => 'Zilveren Kruis',
-                'counterpartyIban' => 'NL39INGB0686806266',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => $healthInsuranceCategory,
-            ]);
-        }
-
-        foreach ($this->monthlyDates($windowStart, 27) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -8500,
-                'description' => 'Belastingdienst motorrijtuigenbelasting',
-                'counterpartyName' => 'Belastingdienst',
-                'counterpartyIban' => 'NL86INGB0002445588',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => null,
-            ]);
-        }
+        // The fixed monthly slate: salary in on the 25th, then the direct
+        // debits that leave on the same day every month. Written in the
+        // order they are seeded — the row index feeds each fingerprint, so
+        // reordering these entries would rewrite the dataset's identity.
+        $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
+            ['day' => 25, 'type' => 'income', 'amountMinor' => 385000, 'description' => 'Salaris MijnWerkgever BV', 'counterpartyName' => 'MijnWerkgever BV', 'counterpartyIban' => 'NL44RABO0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'income-salary'],
+            ['day' => 1, 'type' => 'expense', 'amountMinor' => -125000, 'description' => 'Huur Vesteda', 'counterpartyName' => 'Vesteda', 'counterpartyIban' => 'NL36INGB0007654321', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-rent'],
+            ['day' => 3, 'type' => 'expense', 'amountMinor' => -4500, 'description' => 'KPN Mobile + Internet', 'counterpartyName' => 'KPN BV', 'counterpartyIban' => 'NL27INGB0010040004', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-internet'],
+            ['day' => 5, 'type' => 'expense', 'amountMinor' => -5995, 'description' => 'Ziggo abonnement', 'counterpartyName' => 'Ziggo', 'counterpartyIban' => 'NL05INGB0700057757', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-internet'],
+            ['day' => 1, 'type' => 'expense', 'amountMinor' => -2500, 'description' => 'Sport City', 'counterpartyName' => 'Sport City Nederland BV', 'counterpartyIban' => 'NL02ABNA0123456789', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'subscriptions-memberships'],
+            ['day' => 28, 'type' => 'expense', 'amountMinor' => -14250, 'description' => 'Zilveren Kruis Zorgverzekering', 'counterpartyName' => 'Zilveren Kruis', 'counterpartyIban' => 'NL39INGB0686806266', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'insurance-health'],
+            ['day' => 27, 'type' => 'expense', 'amountMinor' => -8500, 'description' => 'Belastingdienst motorrijtuigenbelasting', 'counterpartyName' => 'Belastingdienst', 'counterpartyIban' => 'NL86INGB0002445588', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => null],
+        ]);
 
         // Albert Heijn — weekly groceries on Saturday + a midweek
         // top-up on Wednesday. Amounts vary per week to look natural.
@@ -275,18 +191,9 @@ final class DemoTransactionsSeeder
         }
 
         $eatingOutCategory = $this->categoryId('eating-out');
-        foreach ($this->monthlyDates($windowStart, 12) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -2095,
-                'description' => "Domino's Pizza Utrecht",
-                'counterpartyName' => "Domino's Pizza",
-                'counterpartyIban' => null,
-                'date' => $date,
-                'paymentType' => PaymentType::Pin,
-                'categoryId' => $eatingOutCategory,
-            ]);
-        }
+        $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
+            ['day' => 12, 'type' => 'expense', 'amountMinor' => -2095, 'description' => "Domino's Pizza Utrecht", 'counterpartyName' => "Domino's Pizza", 'counterpartyIban' => null, 'paymentType' => PaymentType::Pin, 'categorySlug' => 'eating-out'],
+        ]);
         foreach ([0, 14, 28, 42, 56, 70, 84] as $dayOffset) {
             $date = $windowStart->addDays($dayOffset);
             if ($date->lessThan($windowStart) || $date->greaterThan($this->windowEnd)) {
@@ -304,70 +211,15 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        $cashCategory = $this->categoryId('cash-withdrawal');
-        foreach ($this->monthlyDates($windowStart, 8) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -10000,
-                'description' => 'GEA ASN BANK Utrecht',
-                'counterpartyName' => 'ASN Bank GEA',
-                'counterpartyIban' => null,
-                'date' => $date,
-                'paymentType' => PaymentType::Cash,
-                'categoryId' => $cashCategory,
-            ]);
-        }
-
-        // ASN→PayPal top-up — monthly transfer that funds online
-        // purchases. The matching transfer_in lands on the PayPal
-        // account; linkUser1Transfers() wires the pair_transaction_id
-        // after both legs are written.
-        $transfersInternalCategory = $this->categoryId('transfers-internal');
-        foreach ($this->monthlyDates($windowStart, 10) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'transfer_out',
-                'amountMinor' => -10000,
-                'description' => 'PayPal top-up',
-                'counterpartyName' => 'PayPal',
-                'counterpartyIban' => 'PAYPAL-DEMO-1',
-                'date' => $date,
-                'paymentType' => PaymentType::Transfer,
-                'categoryId' => $transfersInternalCategory,
-            ]);
-        }
-
-        // ICS bulk settlement on the 18th (one ICS→ASN row that
-        // settles the full ICS card balance for the prior period).
-        // The matching ICS credits land on the ICS account; the
-        // Chains demo seeder wires the chain_link.
-        foreach ($this->monthlyDates($windowStart, 18) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'transfer_out',
-                'amountMinor' => -22500,
-                'description' => 'ICS afrekening MasterCard',
-                'counterpartyName' => 'International Card Services',
-                'counterpartyIban' => 'NL09ABNA0596780870',
-                'date' => $date,
-                'paymentType' => PaymentType::Transfer,
-                'categoryId' => $transfersInternalCategory,
-            ]);
-        }
-
-        // Personal P2P transfers — one outgoing to a friend (Maria
-        // van Buren) once a month so the personal-counterparty type
-        // has data to surface.
-        foreach ($this->monthlyDates($windowStart, 20) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'transfer_out',
-                'amountMinor' => -2500,
-                'description' => 'Tikkie aandeel diner',
-                'counterpartyName' => 'M VAN BUREN',
-                'counterpartyIban' => 'NL51ABNA0987654321',
-                'date' => $date,
-                'paymentType' => PaymentType::Transfer,
-                'categoryId' => null,
-            ]);
-        }
+        // The cash withdrawal, the two internal legs and the P2P transfer.
+        // linkUser1Transfers() and the Chains demo seeder find their rows by
+        // description rather than by position, so this stays a table.
+        $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
+            ['day' => 8, 'type' => 'expense', 'amountMinor' => -10000, 'description' => 'GEA ASN BANK Utrecht', 'counterpartyName' => 'ASN Bank GEA', 'counterpartyIban' => null, 'paymentType' => PaymentType::Cash, 'categorySlug' => 'cash-withdrawal'],
+            ['day' => 10, 'type' => 'transfer_out', 'amountMinor' => -10000, 'description' => 'PayPal top-up', 'counterpartyName' => 'PayPal', 'counterpartyIban' => 'PAYPAL-DEMO-1', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+            ['day' => 18, 'type' => 'transfer_out', 'amountMinor' => -22500, 'description' => 'ICS afrekening MasterCard', 'counterpartyName' => 'International Card Services', 'counterpartyIban' => 'NL09ABNA0596780870', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+            ['day' => 20, 'type' => 'transfer_out', 'amountMinor' => -2500, 'description' => 'Tikkie aandeel diner', 'counterpartyName' => 'M VAN BUREN', 'counterpartyIban' => 'NL51ABNA0987654321', 'paymentType' => PaymentType::Transfer, 'categorySlug' => null],
+        ]);
 
         return $inserted;
     }
@@ -458,18 +310,9 @@ final class DemoTransactionsSeeder
         // the ASN account zeroing the card. Three of them across the
         // window. These rows are the `to_transaction` side of the
         // ics_bulk_settle chain.
-        foreach ($this->monthlyDates($windowStart, 18) as $date) {
-            $inserted += $this->insertTransaction($user, $ics, $run, $rowIndex++, [
-                'type' => 'transfer_in',
-                'amountMinor' => 22500,
-                'description' => 'Afrekening MasterCard ICS',
-                'counterpartyName' => 'ASN Bank',
-                'counterpartyIban' => 'NL57ASNB0123456789',
-                'date' => $date,
-                'paymentType' => PaymentType::Transfer,
-                'categoryId' => $this->categoryId('transfers-internal'),
-            ]);
-        }
+        $inserted += $this->seedMonthlySeries($user, $ics, $run, $rowIndex, $windowStart, [
+            ['day' => 18, 'type' => 'transfer_in', 'amountMinor' => 22500, 'description' => 'Afrekening MasterCard ICS', 'counterpartyName' => 'ASN Bank', 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+        ]);
 
         return $inserted;
     }
@@ -480,33 +323,10 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        $musicCategory = $this->categoryId('subscriptions-music');
-        foreach ($this->monthlyDates($windowStart, 11) as $date) {
-            $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -1099,
-                'description' => 'Spotify Premium',
-                'counterpartyName' => 'Spotify AB',
-                'counterpartyIban' => null,
-                'date' => $date,
-                'paymentType' => PaymentType::Online,
-                'categoryId' => $musicCategory,
-            ]);
-        }
-
-        $streamingCategory = $this->categoryId('subscriptions-streaming');
-        foreach ($this->monthlyDates($windowStart, 15) as $date) {
-            $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -1499,
-                'description' => 'Netflix.com',
-                'counterpartyName' => 'Netflix International BV',
-                'counterpartyIban' => null,
-                'date' => $date,
-                'paymentType' => PaymentType::Online,
-                'categoryId' => $streamingCategory,
-            ]);
-        }
+        $inserted += $this->seedMonthlySeries($user, $paypal, $run, $rowIndex, $windowStart, [
+            ['day' => 11, 'type' => 'expense', 'amountMinor' => -1099, 'description' => 'Spotify Premium', 'counterpartyName' => 'Spotify AB', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-music'],
+            ['day' => 15, 'type' => 'expense', 'amountMinor' => -1499, 'description' => 'Netflix.com', 'counterpartyName' => 'Netflix International BV', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-streaming'],
+        ]);
 
         // Google Play — five USD-denominated rows so the FX surface
         // has data. Amounts are USD minor units; settled in EUR via
@@ -535,38 +355,13 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        // PayPal Bol.com — the chain-seed transactions for the
-        // PayPal→ASN demo chain. Each one is funded by an ASN→PayPal
-        // top-up on the same date; the chain_link wires the pair.
-        $onlineCategory = $this->categoryId('subscriptions-cloud');
-        foreach ($this->monthlyDates($windowStart, 10) as $date) {
-            $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -7995,
-                'description' => 'Bol.com via PayPal',
-                'counterpartyName' => 'Bol.com',
-                'counterpartyIban' => null,
-                'date' => $date,
-                'paymentType' => PaymentType::Online,
-                'categoryId' => $onlineCategory,
-            ]);
-        }
-
-        // ASN→PayPal funding (transfer_in). The matching transfer_out
-        // sits on the ASN account; linkUser1Transfers() pairs them.
-        $transfersInternalCategory = $this->categoryId('transfers-internal');
-        foreach ($this->monthlyDates($windowStart, 10) as $date) {
-            $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
-                'type' => 'transfer_in',
-                'amountMinor' => 10000,
-                'description' => 'Top-up from ASN',
-                'counterpartyName' => 'ASN Bank',
-                'counterpartyIban' => 'NL57ASNB0123456789',
-                'date' => $date,
-                'paymentType' => PaymentType::Transfer,
-                'categoryId' => $transfersInternalCategory,
-            ]);
-        }
+        // The Bol.com purchase and the ASN→PayPal funding that covers it,
+        // both on the 10th. The chain_link wires that pair, and
+        // linkUser1Transfers() pairs the transfer_in with its ASN leg.
+        $inserted += $this->seedMonthlySeries($user, $paypal, $run, $rowIndex, $windowStart, [
+            ['day' => 10, 'type' => 'expense', 'amountMinor' => -7995, 'description' => 'Bol.com via PayPal', 'counterpartyName' => 'Bol.com', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-cloud'],
+            ['day' => 10, 'type' => 'transfer_in', 'amountMinor' => 10000, 'description' => 'Top-up from ASN', 'counterpartyName' => 'ASN Bank', 'counterpartyIban' => 'NL57ASNB0123456789', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'transfers-internal'],
+        ]);
 
         // Bol.com + Coolblue refunds — two rows so the `refund` type
         // and the `Refund` PaymentType chip both have multiple
@@ -647,33 +442,10 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        $salaryCategory = $this->categoryId('income-salary');
-        foreach ($this->monthlyDates($windowStart, 25) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'income',
-                'amountMinor' => 285000,
-                'description' => 'Salaris StichtingZorg',
-                'counterpartyName' => 'StichtingZorg',
-                'counterpartyIban' => 'NL93RABO0987654321',
-                'date' => $date,
-                'paymentType' => PaymentType::Transfer,
-                'categoryId' => $salaryCategory,
-            ]);
-        }
-
-        $rentCategory = $this->categoryId('housing-rent');
-        foreach ($this->monthlyDates($windowStart, 1) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -89500,
-                'description' => 'Huur Woningstichting',
-                'counterpartyName' => 'Woningstichting Centrum',
-                'counterpartyIban' => 'NL70INGB0001112223',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => $rentCategory,
-            ]);
-        }
+        $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
+            ['day' => 25, 'type' => 'income', 'amountMinor' => 285000, 'description' => 'Salaris StichtingZorg', 'counterpartyName' => 'StichtingZorg', 'counterpartyIban' => 'NL93RABO0987654321', 'paymentType' => PaymentType::Transfer, 'categorySlug' => 'income-salary'],
+            ['day' => 1, 'type' => 'expense', 'amountMinor' => -89500, 'description' => 'Huur Woningstichting', 'counterpartyName' => 'Woningstichting Centrum', 'counterpartyIban' => 'NL70INGB0001112223', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => 'housing-rent'],
+        ]);
 
         $groceriesCategory = $this->categoryId('groceries');
         foreach ([3, 10, 17, 24, 38, 52, 66, 80] as $dayOffset) {
@@ -693,18 +465,9 @@ final class DemoTransactionsSeeder
             ]);
         }
 
-        foreach ($this->monthlyDates($windowStart, 22) as $date) {
-            $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -6500,
-                'description' => 'Gemeente Den Haag woonlasten',
-                'counterpartyName' => 'Gemeente Den Haag',
-                'counterpartyIban' => 'NL03INGB0698027001',
-                'date' => $date,
-                'paymentType' => PaymentType::DirectDebit,
-                'categoryId' => null,
-            ]);
-        }
+        $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
+            ['day' => 22, 'type' => 'expense', 'amountMinor' => -6500, 'description' => 'Gemeente Den Haag woonlasten', 'counterpartyName' => 'Gemeente Den Haag', 'counterpartyIban' => 'NL03INGB0698027001', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => null],
+        ]);
 
         return $inserted;
     }
@@ -715,19 +478,9 @@ final class DemoTransactionsSeeder
         $rowIndex = 0;
         $inserted = 0;
 
-        $musicCategory = $this->categoryId('subscriptions-music');
-        foreach ($this->monthlyDates($windowStart, 9) as $date) {
-            $inserted += $this->insertTransaction($user, $paypal, $run, $rowIndex++, [
-                'type' => 'expense',
-                'amountMinor' => -1099,
-                'description' => 'Spotify Premium',
-                'counterpartyName' => 'Spotify AB',
-                'counterpartyIban' => null,
-                'date' => $date,
-                'paymentType' => PaymentType::Online,
-                'categoryId' => $musicCategory,
-            ]);
-        }
+        $inserted += $this->seedMonthlySeries($user, $paypal, $run, $rowIndex, $windowStart, [
+            ['day' => 9, 'type' => 'expense', 'amountMinor' => -1099, 'description' => 'Spotify Premium', 'counterpartyName' => 'Spotify AB', 'counterpartyIban' => null, 'paymentType' => PaymentType::Online, 'categorySlug' => 'subscriptions-music'],
+        ]);
 
         $onlineCategory = $this->categoryId('subscriptions-cloud');
         foreach ([14, 47, 76] as $dayOffset) {
@@ -783,6 +536,43 @@ final class DemoTransactionsSeeder
                 Transaction::query()->where('id', $inId)->update(['pair_transaction_id' => $outId]);
             }
         }
+    }
+
+    // Seeds each fixed monthly series in turn, one row per month. They are
+    // data rather than code because only the eight constants differed, and
+    // writing the walk out per series is what let the two personas drift
+    // into near-identical methods that had to be edited in step.
+    /**
+     * @param  list<array{day: int, type: string, amountMinor: int, description: string, counterpartyName: string, counterpartyIban: ?string, paymentType: PaymentType, categorySlug: ?string}>  $definitions
+     */
+    private function seedMonthlySeries(
+        User $user,
+        Account $account,
+        ImportRun $run,
+        int &$rowIndex,
+        CarbonImmutable $windowStart,
+        array $definitions,
+    ): int {
+        $inserted = 0;
+
+        foreach ($definitions as $series) {
+            foreach ($this->monthlyDates($windowStart, $series['day']) as $date) {
+                $inserted += $this->insertTransaction($user, $account, $run, $rowIndex++, [
+                    'type' => $series['type'],
+                    'amountMinor' => $series['amountMinor'],
+                    'description' => $series['description'],
+                    'counterpartyName' => $series['counterpartyName'],
+                    'counterpartyIban' => $series['counterpartyIban'],
+                    'date' => $date,
+                    'paymentType' => $series['paymentType'],
+                    'categoryId' => $series['categorySlug'] === null
+                        ? null
+                        : $this->categoryId($series['categorySlug']),
+                ]);
+            }
+        }
+
+        return $inserted;
     }
 
     // The date in each month of the window that falls on $dayOfMonth,
