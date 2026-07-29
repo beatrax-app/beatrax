@@ -52,38 +52,19 @@ class BiometricKeyVault
 
         $outcome = $this->vaultGet($this->slot(), $reason);
 
-        // Empty result = the native bridge failed to answer at all (facade
-        // vanished after the availability check) — a failure, not "missing".
-        if ($outcome === []) {
-            return BiometricRecoverResult::failed();
-        }
-        if (($outcome['async'] ?? false) === true) {
-            return BiometricRecoverResult::pendingAsync();
-        }
-        if (($outcome['canceled'] ?? false) === true) {
-            return BiometricRecoverResult::canceled();
-        }
-        // Enrolled but authentication failed (wrong finger / lockout / native
-        // error) — must NOT be mistaken for "nothing enrolled".
-        if (($outcome['failed'] ?? false) === true) {
-            return BiometricRecoverResult::failed();
-        }
+        // Empty means the native bridge never answered — the facade vanished
+        // after the availability check — which is a failure, not "missing".
+        // Same for the failed flag: enrolled but not authenticated must never
+        // be reported as nothing enrolled.
+        $refusal = match (true) {
+            $outcome === [] => BiometricRecoverResult::failed(),
+            ($outcome['async'] ?? false) === true => BiometricRecoverResult::pendingAsync(),
+            ($outcome['canceled'] ?? false) === true => BiometricRecoverResult::canceled(),
+            ($outcome['failed'] ?? false) === true => BiometricRecoverResult::failed(),
+            default => null,
+        };
 
-        $stored = $outcome['value'] ?? null;
-        if (! is_string($stored) || $stored === '') {
-            return BiometricRecoverResult::missing();
-        }
-
-        $blob = base64_decode($stored, strict: true);
-        if ($blob === false) {
-            return BiometricRecoverResult::missing();
-        }
-
-        $dataKey = $this->codec->unwrap($blob);
-
-        return $dataKey === null
-            ? BiometricRecoverResult::missing()
-            : BiometricRecoverResult::recovered($dataKey);
+        return $refusal ?? $this->recoveredFrom($outcome['value'] ?? null);
     }
 
     // Completes an async (Android) recovery after the native
@@ -96,17 +77,21 @@ class BiometricKeyVault
             return BiometricRecoverResult::unavailable();
         }
 
-        $stored = $this->pollRecovered();
-        if ($stored === null) {
+        return $this->recoveredFrom($this->pollRecovered());
+    }
+
+    // Turns a stored wrapped blob into a result. Both recovery paths decoded
+    // and unwrapped identically, in longhand. Every failure here is MISSING,
+    // not FAILED: an absent or unusable blob means nothing is enrolled to
+    // authenticate against, which is not the same as being refused.
+    private function recoveredFrom(mixed $stored): BiometricRecoverResult
+    {
+        if (! is_string($stored) || $stored === '') {
             return BiometricRecoverResult::missing();
         }
 
         $blob = base64_decode($stored, strict: true);
-        if ($blob === false) {
-            return BiometricRecoverResult::missing();
-        }
-
-        $dataKey = $this->codec->unwrap($blob);
+        $dataKey = $blob === false ? null : $this->codec->unwrap($blob);
 
         return $dataKey === null
             ? BiometricRecoverResult::missing()
