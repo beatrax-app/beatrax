@@ -34,7 +34,11 @@ final class LoopbackTlsCertificate
         $this->prepareDirectory();
         [$certPem, $keyPem] = $this->generate();
 
-        if (file_put_contents($certPath, $certPem) === false || file_put_contents($keyPath, $keyPem) === false) {
+        // Suppressed so the `=== false` checks decide. Unsuppressed, a failed
+        // write raises E_WARNING, which Laravel's handler turns into an
+        // ErrorException before either comparison runs — the guard on TLS key
+        // material never fired.
+        if (@file_put_contents($certPath, $certPem) === false || @file_put_contents($keyPath, $keyPem) === false) {
             throw new RuntimeException('Unable to write the loopback TLS certificate to '.$this->directory.'.');
         }
 

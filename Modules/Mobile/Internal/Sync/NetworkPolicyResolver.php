@@ -58,7 +58,7 @@ final class NetworkPolicyResolver
         $dir = dirname($path);
 
         if (! is_dir($dir)) {
-            if (! mkdir($dir, 0700, true)) {
+            if (! @mkdir($dir, 0700, true)) {
                 throw new RuntimeException("Cannot create network-policy directory: {$dir}");
             }
         }
@@ -66,7 +66,9 @@ final class NetworkPolicyResolver
         $data = ['pause_on_cellular' => $enabled];
         $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
 
-        if (file_put_contents($path, $json, LOCK_EX) === false) {
+        // Suppressed so the `=== false` check decides; unsuppressed the
+        // E_WARNING becomes an ErrorException first and the guard never ran.
+        if (@file_put_contents($path, $json, LOCK_EX) === false) {
             throw new RuntimeException("Cannot write network policy to: {$path}");
         }
     }
