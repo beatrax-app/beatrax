@@ -296,13 +296,17 @@ final class BackupDatabaseCommand extends Command
 
         $prevUmask = umask(0o077);
         try {
-            if (file_put_contents($tmp, $payload) === false) {
+            // Suppressed so the `=== false` checks decide. Unsuppressed,
+            // each raises E_WARNING, which Laravel's handler turns into an
+            // ErrorException before the comparison runs — and that is not a
+            // RuntimeException, so the caller's catch missed it too.
+            if (@file_put_contents($tmp, $payload) === false) {
                 throw new RuntimeException('Failed to write backup sidecar tmp file at '.$tmp);
             }
-            if (chmod($tmp, 0o600) === false) {
+            if (@chmod($tmp, 0o600) === false) {
                 throw new RuntimeException('Failed to chmod sidecar tmp file at '.$tmp.' to 0600.');
             }
-            if (rename($tmp, $sidecar) === false) {
+            if (@rename($tmp, $sidecar) === false) {
                 throw new RuntimeException('Failed to rename sidecar tmp file to '.$sidecar.'.');
             }
             // Belt-and-braces chmod: rename() preserves the tmp file's mode
