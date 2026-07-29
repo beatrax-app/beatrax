@@ -255,6 +255,34 @@ it('it_filters_by_account', function (): void {
     expect($page->totalCount)->toBe(1);
 });
 
+// T-08-06: the account filter validates ids against ownership before it
+// applies them. An id belonging to someone else has to collapse the result
+// set to empty — the dangerous failure is not an error, it is silently
+// dropping the filter and returning everything the caller can otherwise
+// see, which is how a foreign id turns into a data leak.
+it('returns an empty result for an account id belonging to another user', function (): void {
+    $db = app(DatabaseManager::class)->connection();
+
+    $this->searchTestTransaction($this->userBId, [
+        'counterparty_name' => 'Shared Counterparty',
+        'description' => 'belongs to user B',
+    ]);
+    $foreignAccountId = (int) $db->table('accounts')->where('user_id', $this->userBId)->value('id');
+
+    $this->searchTestTransaction($this->userAId, [
+        'counterparty_name' => 'Shared Counterparty',
+        'description' => 'belongs to user A',
+    ]);
+
+    /** @var SearchQuery $searchQuery */
+    $searchQuery = app(SearchQuery::class);
+    $user = User::findOrFail($this->userAId);
+
+    $page = $searchQuery->search($user, 'Shared', new SearchFilters(accounts: [$foreignAccountId]));
+
+    expect($page->totalCount)->toBe(0);
+});
+
 // SRCH-02: amount min/max filter
 it('it_filters_by_amount_min_max', function (): void {
     // Wave 0 RED — implemented in Plan 03

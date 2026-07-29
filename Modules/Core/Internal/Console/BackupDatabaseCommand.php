@@ -22,6 +22,8 @@ use Throwable;
  */
 final class BackupDatabaseCommand extends Command
 {
+    private const BACKUP_CORRUPT_MESSAGE = 'Backup corrupt — see system_alerts.';
+
     /** @var string */
     protected $signature = 'db:backup {--force : Bypass the smart-skip data_version check and run unconditionally}';
 
@@ -59,7 +61,7 @@ final class BackupDatabaseCommand extends Command
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'pragma_data_version',
             ]);
-            $this->error('Backup corrupt — see system_alerts.');
+            $this->error(self::BACKUP_CORRUPT_MESSAGE);
 
             return self::FAILURE;
         }
@@ -100,7 +102,7 @@ final class BackupDatabaseCommand extends Command
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'vacuum_into',
             ]);
-            $this->error('Backup corrupt — see system_alerts.');
+            $this->error(self::BACKUP_CORRUPT_MESSAGE);
 
             return self::FAILURE;
         }
@@ -114,7 +116,7 @@ final class BackupDatabaseCommand extends Command
                 'phase' => 'vacuum_into',
                 'reason' => 'no output file produced',
             ]);
-            $this->error('Backup corrupt — see system_alerts.');
+            $this->error(self::BACKUP_CORRUPT_MESSAGE);
 
             return self::FAILURE;
         }
@@ -133,7 +135,7 @@ final class BackupDatabaseCommand extends Command
                 'phase' => 'chmod',
                 'reason' => 'chmod 0600 failed on freshly-written backup file',
             ]);
-            $this->error('Backup corrupt — see system_alerts.');
+            $this->error(self::BACKUP_CORRUPT_MESSAGE);
 
             return self::FAILURE;
         }
@@ -147,7 +149,7 @@ final class BackupDatabaseCommand extends Command
                 'integrity_check' => $integrityRows,
                 'phase' => 'post_vacuum',
             ]);
-            $this->error('Backup corrupt — see system_alerts.');
+            $this->error(self::BACKUP_CORRUPT_MESSAGE);
 
             return self::FAILURE;
         }

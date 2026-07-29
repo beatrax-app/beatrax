@@ -18,6 +18,10 @@ use Modules\Tax\Public\Dto\TaxYearSummary;
  */
 final class TaxTagQuery
 {
+    private const TAX_TAGS_ALIAS = 'tax_transaction_tags AS tag';
+
+    private const TRANSACTIONS_ALIAS = 'transactions AS t';
+
     use CoercesScalars;
 
     public function __construct(
@@ -39,7 +43,7 @@ final class TaxTagQuery
         }
 
         $rows = $this->db->connection()
-            ->table('tax_transaction_tags AS tag')
+            ->table(self::TAX_TAGS_ALIAS)
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->where('tag.user_id', $userId)
             ->whereIn('tag.transaction_id', $transactionIds)
@@ -78,7 +82,7 @@ final class TaxTagQuery
         }
 
         $rows = $this->db->connection()
-            ->table('tax_transaction_tags AS tag')
+            ->table(self::TAX_TAGS_ALIAS)
             ->leftJoin('tax_deduction_categories AS cat', 'cat.id', '=', 'tag.deduction_category_id')
             ->where('tag.user_id', $userId)
             ->whereIn('tag.transaction_id', $transactionIds)
@@ -134,8 +138,8 @@ final class TaxTagQuery
     public function summaryForUser(int $userId, int $year): TaxYearSummary
     {
         $row = $this->db->connection()
-            ->table('tax_transaction_tags AS tag')
-            ->join('transactions AS t', 't.id', '=', 'tag.transaction_id')
+            ->table(self::TAX_TAGS_ALIAS)
+            ->join(self::TRANSACTIONS_ALIAS, 't.id', '=', 'tag.transaction_id')
             ->where('tag.user_id', $userId)
             ->whereRaw(
                 'COALESCE(tag.tax_year_override, CAST(strftime(\'%Y\', t.booked_at) AS INTEGER)) = ?',
@@ -186,8 +190,8 @@ final class TaxTagQuery
             : '';
 
         $untaggedCount = $connection
-            ->table('transactions AS t')
-            ->leftJoin('tax_transaction_tags AS tag', static function (JoinClause $join) use ($userId): void {
+            ->table(self::TRANSACTIONS_ALIAS)
+            ->leftJoin(self::TAX_TAGS_ALIAS, static function (JoinClause $join) use ($userId): void {
                 $join->on('tag.transaction_id', '=', 't.id')
                     ->where('tag.user_id', '=', $userId);
             })
@@ -214,8 +218,8 @@ final class TaxTagQuery
     public function untaggedIdsForCounterparty(int $userId, int $counterpartyId, int $taxYear): array
     {
         $rows = $this->db->connection()
-            ->table('transactions AS t')
-            ->leftJoin('tax_transaction_tags AS tag', static function (JoinClause $join) use ($userId): void {
+            ->table(self::TRANSACTIONS_ALIAS)
+            ->leftJoin(self::TAX_TAGS_ALIAS, static function (JoinClause $join) use ($userId): void {
                 $join->on('tag.transaction_id', '=', 't.id')
                     ->where('tag.user_id', '=', $userId);
             })

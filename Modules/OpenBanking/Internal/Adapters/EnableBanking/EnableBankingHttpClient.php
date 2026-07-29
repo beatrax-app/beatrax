@@ -19,6 +19,8 @@ use RuntimeException;
  */
 class EnableBankingHttpClient
 {
+    private const ACCOUNTS_PATH = 'accounts/';
+
     private const EB_API_HOST = 'api.enablebanking.com';
 
     public function __construct(
@@ -116,7 +118,7 @@ class EnableBankingHttpClient
      */
     public function accountDetails(string $uid): array
     {
-        return $this->getJson('accounts/'.rawurlencode($uid));
+        return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid));
     }
 
     /**
@@ -132,7 +134,7 @@ class EnableBankingHttpClient
             $query['continuation_key'] = $continuationKey;
         }
 
-        return $this->getJson('accounts/'.rawurlencode($uid).'/transactions', $query);
+        return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/transactions', $query);
     }
 
     // A point-in-time balance reading, not a statement opening/closing
@@ -142,7 +144,7 @@ class EnableBankingHttpClient
      */
     public function balances(string $uid): array
     {
-        return $this->getJson('accounts/'.rawurlencode($uid).'/balances');
+        return $this->getJson(self::ACCOUNTS_PATH.rawurlencode($uid).'/balances');
     }
 
     // Overridden by the SSRF regression test to exercise attacker/look-alike/

@@ -174,6 +174,26 @@ it('tints the Net diff numeric rose-700 when the scenario worsens the baseline',
         ->assertSee('text-rose-700');
 });
 
+// A scenario that changes nothing is not an improvement, and tinting the
+// panel emerald would tell the user it was one. Zero has to land on the same
+// neutral ink the baseline panel uses.
+it('leaves the scenario panel neutral when the scenario changes nothing by day 30', function (): void {
+    /** @var ForecastScenario $scenario */
+    $scenario = ForecastScenario::query()->create([
+        'user_id' => $this->user->id,
+        'name' => 'No-op',
+    ]);
+    sbsForecastRun($this->db, $this->user->id, $this->accountId, null, 30, 'complete', sbsPoints(100000, 30));
+    sbsForecastRun($this->db, $this->user->id, $this->accountId, $scenario->id, 30, 'complete', sbsPoints(100000, 30));
+
+    $this->actingAs($this->user)
+        ->get('/forecast?account='.$this->accountId.'&scenarioId='.$scenario->id)
+        ->assertOk()
+        ->assertSee('Net diff')
+        ->assertDontSee('#047857')
+        ->assertDontSee('#BE123C');
+});
+
 it('activates the wire:poll.2s element only while the latest run is pending or running', function (): void {
     /** @var ForecastScenario $scenario */
     $scenario = ForecastScenario::query()->create([

@@ -32,6 +32,8 @@ use Throwable;
 #[Layout('layouts.app')]
 final class AliasesSettingsPage extends Component
 {
+    private const ALIAS_NOT_FOUND = 'Alias not found (it may have been deleted in another tab).';
+
     use WithFileUploads;
 
     public int $perPage = 25;
@@ -106,7 +108,7 @@ final class AliasesSettingsPage extends Component
             ->first(['id', 'generalized_pattern']);
 
         if ($row === null) {
-            $this->flashMessage = 'Alias not found (it may have been deleted in another tab).';
+            $this->flashMessage = self::ALIAS_NOT_FOUND;
 
             return;
         }
@@ -185,7 +187,7 @@ final class AliasesSettingsPage extends Component
             $this->editingId = 0;
             $this->editingPattern = '';
             $this->previewResult = [];
-            $this->flashMessage = 'Alias not found (it may have been deleted in another tab).';
+            $this->flashMessage = self::ALIAS_NOT_FOUND;
 
             return;
         }
@@ -209,7 +211,7 @@ final class AliasesSettingsPage extends Component
             ->delete();
 
         if ($affected === 0) {
-            $this->flashMessage = 'Alias not found (it may have been deleted in another tab).';
+            $this->flashMessage = self::ALIAS_NOT_FOUND;
 
             return;
         }

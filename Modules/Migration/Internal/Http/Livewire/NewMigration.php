@@ -25,6 +25,8 @@ use Throwable;
  */
 final class NewMigration extends Component
 {
+    private const UNRECOGNISED_EXPORT_MESSAGE = 'This doesn\'t look like a YNAB4, nYNAB, or Actual export we can read. Check the file and try again.';
+
     use WithFileUploads;
 
     // Rejects an obviously-oversized upload before it ever reaches disk;
@@ -93,8 +95,8 @@ final class NewMigration extends Component
     {
         return [
             'file.max' => 'That file is too large for a migration export.',
-            'file.extensions' => "This doesn't look like a YNAB4, nYNAB, or Actual export we can read. Check the file and try again.",
-            'file.mimes' => "This doesn't look like a YNAB4, nYNAB, or Actual export we can read. Check the file and try again.",
+            'file.extensions' => self::UNRECOGNISED_EXPORT_MESSAGE,
+            'file.mimes' => self::UNRECOGNISED_EXPORT_MESSAGE,
         ];
     }
 
@@ -159,7 +161,7 @@ final class NewMigration extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => $e->getTraceAsString(),
             ]);
-            $this->uploadError = "This doesn't look like a YNAB4, nYNAB, or Actual export we can read. Check the file and try again.";
+            $this->uploadError = self::UNRECOGNISED_EXPORT_MESSAGE;
 
             return;
         }

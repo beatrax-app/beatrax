@@ -31,6 +31,15 @@ final class ForecastPage extends Component
 {
     use CoercesScalars;
 
+    // Panel accent colours. The scenario panel is tinted by whether the
+    // scenario leaves the user better or worse off at day 30; the
+    // baseline panel is always neutral.
+    private const NEUTRAL_INK = '#0F172A';
+
+    private const BETTER_OFF_INK = '#047857';
+
+    private const WORSE_OFF_INK = '#BE123C';
+
     // 'all' is a sentinel value: it selects the All-accounts aggregate
     // view rather than a specific account id.
     #[Url(as: 'account', except: 'all')]
@@ -273,7 +282,7 @@ final class ForecastPage extends Component
         $scenario = null;
         $scenarioApexOptions = null;
         $scenarioChartElementId = null;
-        $scenarioPanelColor = '#0F172A';
+        $scenarioPanelColor = self::NEUTRAL_INK;
         /** @var array<int, int> $netDiff */
         $netDiff = [];
         foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
@@ -335,9 +344,7 @@ final class ForecastPage extends Component
             if ($this->scenarioId !== null) {
                 $scenario = $forecastQuery->forUser($selectedAccountId, $this->horizon, $this->scenarioId, $user);
                 $netDiff = $this->computeNetDiff($baseline, $scenario);
-                $scenarioPanelColor = $netDiff[30] > 0
-                    ? '#047857'
-                    : ($netDiff[30] < 0 ? '#BE123C' : '#0F172A');
+                $scenarioPanelColor = $this->panelColorFor($netDiff[30]);
             }
 
             // Shared y-axis (RESEARCH Pitfall 2): compute the union range
@@ -345,7 +352,7 @@ final class ForecastPage extends Component
             // y-axis is identical and the visual delta is honest.
             [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $effectiveBufferMinor);
 
-            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, '#0F172A');
+            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, self::NEUTRAL_INK);
             $chartElementId = 'forecast-chart-baseline-'.$selectedAccountId;
 
             if ($scenario !== null) {
@@ -486,6 +493,18 @@ final class ForecastPage extends Component
         return [$yMin, $yMax];
     }
 
+    // Tints the scenario panel by the day-30 net difference. Exactly
+    // zero is neutral rather than green: an unchanged balance is not an
+    // improvement, and colouring it as one overstates the scenario.
+    private function panelColorFor(int $netDiffMinor): string
+    {
+        return match (true) {
+            $netDiffMinor > 0 => self::BETTER_OFF_INK,
+            $netDiffMinor < 0 => self::WORSE_OFF_INK,
+            default => self::NEUTRAL_INK,
+        };
+    }
+
     /**
      * @return array<int, int>
      */
@@ -536,7 +555,7 @@ final class ForecastPage extends Component
         ?int $effectiveBufferMinor = null,
         ?float $yMinOverride = null,
         ?float $yMaxOverride = null,
-        string $panelColor = '#0F172A',
+        string $panelColor = self::NEUTRAL_INK,
     ): array {
         $rangeData = [];
         $lineData = [];

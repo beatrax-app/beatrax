@@ -17,6 +17,10 @@ use Modules\Pots\Public\Exceptions\PotNotFoundException;
  */
 final class PotWriter
 {
+    private const NOT_FOUND_MESSAGE = 'Pot not found or not owned by user.';
+
+    private const INVALID_AMOUNT_MESSAGE = 'Invalid or non-positive amount.';
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly PotBalanceQuery $balance,
@@ -113,7 +117,7 @@ final class PotWriter
     ): Pot {
         $pot = $this->findOwnedActivePot($user, $potId);
         if (! $pot instanceof Pot) {
-            throw new PotNotFoundException('Pot not found or not owned by user.');
+            throw new PotNotFoundException(self::NOT_FOUND_MESSAGE);
         }
 
         if (trim($name) === '') {
@@ -143,12 +147,12 @@ final class PotWriter
     {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException('Invalid or non-positive amount.');
+            throw new \InvalidArgumentException(self::INVALID_AMOUNT_MESSAGE);
         }
 
         $pot = $this->findOwnedActivePot($user, $potId);
         if (! $pot instanceof Pot) {
-            throw new PotNotFoundException('Pot not found or not owned by user.');
+            throw new PotNotFoundException(self::NOT_FOUND_MESSAGE);
         }
 
         $accountId = $pot->account_id;
@@ -187,12 +191,12 @@ final class PotWriter
     {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException('Invalid or non-positive amount.');
+            throw new \InvalidArgumentException(self::INVALID_AMOUNT_MESSAGE);
         }
 
         $pot = $this->findOwnedActivePot($user, $potId);
         if (! $pot instanceof Pot) {
-            throw new PotNotFoundException('Pot not found or not owned by user.');
+            throw new PotNotFoundException(self::NOT_FOUND_MESSAGE);
         }
 
         $currency = $pot->currency;
@@ -233,7 +237,7 @@ final class PotWriter
     ): void {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
-            throw new \InvalidArgumentException('Invalid or non-positive amount.');
+            throw new \InvalidArgumentException(self::INVALID_AMOUNT_MESSAGE);
         }
 
         if ($fromPotId === $toPotId) {

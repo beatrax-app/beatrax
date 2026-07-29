@@ -32,6 +32,8 @@ use Throwable;
  */
 final class PairingFlowModal extends Component
 {
+    private const IDENTITY_LOCKED_MESSAGE = 'Your device identity is locked. Unlock the app and try again.';
+
     public bool $open = false;
 
     public string $step = 'choose_direction';
@@ -111,7 +113,7 @@ final class PairingFlowModal extends Component
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = 'Your device identity is locked. Unlock the app and try again.';
+            $this->flashMessage = self::IDENTITY_LOCKED_MESSAGE;
 
             return;
         }
@@ -167,7 +169,7 @@ final class PairingFlowModal extends Component
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = 'Your device identity is locked. Unlock the app and try again.';
+            $this->flashMessage = self::IDENTITY_LOCKED_MESSAGE;
 
             return;
         }
@@ -296,7 +298,7 @@ final class PairingFlowModal extends Component
         // service derives the side from this device id, never from client state.
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = 'Your device identity is locked. Unlock the app and try again.';
+            $this->flashMessage = self::IDENTITY_LOCKED_MESSAGE;
 
             return;
         }
