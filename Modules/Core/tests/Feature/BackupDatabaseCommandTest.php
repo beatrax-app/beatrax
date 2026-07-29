@@ -6,6 +6,8 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
+use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
 use Tests\Helpers\RealSqliteFixture;
 
 /*
@@ -181,7 +183,7 @@ it('refuses a destination path carrying a byte VACUUM INTO must never see', func
     putenv('NATIVEPHP_STORAGE_PATH='.$storageRoot."\n".'injected');
 
     expect(fn () => $this->artisan('db:backup', ['--force' => true])->run())
-        ->toThrow(RuntimeException::class, 'unsafe byte');
+        ->toThrow(UnsafeBackupPathException::class, 'unsafe byte');
 });
 
 it('refuses to run against a driver it cannot VACUUM INTO', function (): void {
@@ -190,7 +192,7 @@ it('refuses to run against a driver it cannot VACUUM INTO', function (): void {
     $config->set('database.connections.sqlite.driver', 'pgsql');
 
     expect(fn () => $this->artisan('db:backup', ['--force' => true])->run())
-        ->toThrow(RuntimeException::class, 'only supported on the sqlite driver');
+        ->toThrow(BackupNotSupportedException::class, 'only supported on the sqlite driver');
 });
 
 it('refuses to run when no sqlite database path is configured', function (): void {
@@ -199,7 +201,7 @@ it('refuses to run when no sqlite database path is configured', function (): voi
     $config->set('database.connections.sqlite.database', '');
 
     expect(fn () => $this->artisan('db:backup', ['--force' => true])->run())
-        ->toThrow(RuntimeException::class, 'is not configured');
+        ->toThrow(BackupNotSupportedException::class, 'is not configured');
 });
 
 // Not covered: the three `=== false` guards in writeSidecar(), and the catch

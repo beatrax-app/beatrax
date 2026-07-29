@@ -11,10 +11,12 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BackupIoException;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
+use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
 use Modules\Core\Public\Services\UserDataPathService;
 use PDO;
 use PDOException;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -81,7 +83,7 @@ final class BackupDatabaseCommand extends Command
             // Reject shell/SQL-hostile bytes first so a future directory-
             // composition change cannot smuggle a NUL, newline, or quote in.
             if (preg_match('/[\x00\n\r]/', $destination) === 1) {
-                throw new RuntimeException('Backup destination path contains an unsafe byte (NUL / newline).');
+                throw new UnsafeBackupPathException('Backup destination path contains an unsafe byte (NUL / newline).');
             }
             $escaped = str_replace("'", "''", $destination);
             // VACUUM INTO must NOT run inside a transaction (SQLite refuses)
@@ -157,7 +159,7 @@ final class BackupDatabaseCommand extends Command
         $completedAt = $this->clock->now();
         try {
             $this->writeSidecar($destination, $liveDataVersion, $startedAt->toIso8601String(), $completedAt->toIso8601String());
-        } catch (RuntimeException $e) {
+        } catch (BackupIoException $e) {
             // Sidecar I/O failure leaves the backup on disk without a
             // .meta.json, which would make the next db:backup misread "no
             // recent backup exists" via smart-skip and silently re-write.
@@ -178,18 +180,18 @@ final class BackupDatabaseCommand extends Command
     }
 
     /**
-     * @throws RuntimeException when the default connection is not sqlite
+     * @throws BackupNotSupportedException when the default connection is not sqlite
      */
     private function livePath(): string
     {
         $driver = $this->config->get('database.connections.sqlite.driver');
         if ($driver !== 'sqlite') {
-            throw new RuntimeException('db:backup is only supported on the sqlite driver.');
+            throw new BackupNotSupportedException('db:backup is only supported on the sqlite driver.');
         }
 
         $path = $this->config->get('database.connections.sqlite.database');
         if (! is_string($path) || $path === '') {
-            throw new RuntimeException('database.connections.sqlite.database is not configured.');
+            throw new BackupNotSupportedException('database.connections.sqlite.database is not configured.');
         }
 
         return $path;
@@ -301,13 +303,13 @@ final class BackupDatabaseCommand extends Command
             // ErrorException before the comparison runs — and that is not a
             // RuntimeException, so the caller's catch missed it too.
             if (@file_put_contents($tmp, $payload) === false) {
-                throw new RuntimeException('Failed to write backup sidecar tmp file at '.$tmp);
+                throw new BackupIoException('Failed to write backup sidecar tmp file at '.$tmp);
             }
             if (@chmod($tmp, 0o600) === false) {
-                throw new RuntimeException('Failed to chmod sidecar tmp file at '.$tmp.' to 0600.');
+                throw new BackupIoException('Failed to chmod sidecar tmp file at '.$tmp.' to 0600.');
             }
             if (@rename($tmp, $sidecar) === false) {
-                throw new RuntimeException('Failed to rename sidecar tmp file to '.$sidecar.'.');
+                throw new BackupIoException('Failed to rename sidecar tmp file to '.$sidecar.'.');
             }
             // Belt-and-braces chmod: rename() preserves the tmp file's mode
             // on every common filesystem, so failure here is non-fatal — the
