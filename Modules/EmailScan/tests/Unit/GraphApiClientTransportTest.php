@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
@@ -181,3 +183,64 @@ it('falls back to a fixed phrase when the error body is not the documented shape
     'error is not an object' => ['{"error":"oops"}'],
     'error object carries neither message nor code' => ['{"error":{}}'],
 ]);
+
+// A transport failure that never produced a response — DNS, a refused
+// connection, a timeout — is a different shape from an HTTP error, and reaches
+// a different arm. Graph's own error envelope does not exist in this case, so
+// the message is the transport's, capped by safeMessage().
+it('reports a transport failure with no response while fetching a raw message', function (): void {
+    $client = ($this->makeClient)([
+        new ConnectException('could not resolve host', new Request('GET', 'https://graph.microsoft.com/v1.0/me')),
+    ]);
+
+    expect(fn () => $client->getRawMessage(1, 'AAA-BBB_CCC'))
+        ->toThrow(RuntimeException::class, 'HTTP error fetching raw message');
+});
+
+it('reports a transport failure with no response while paging', function (): void {
+    $client = ($this->makeClient)([
+        new ConnectException('connection timed out', new Request('GET', 'https://graph.microsoft.com/v1.0/me')),
+    ]);
+
+    expect(fn () => $client->deltaPage(1, null))
+        ->toThrow(RuntimeException::class, 'HTTP error against');
+});
+
+// A 200 carrying something that is not JSON: a captive portal, a proxy error
+// page, a truncated body. The status says success, so nothing before this
+// point objects.
+it('reports a successful response whose body is not JSON', function (): void {
+    $client = ($this->makeClient)([
+        new Response(200, ['Content-Type' => 'application/json'], '<html>not json at all</html>'),
+    ]);
+
+    expect(fn () => $client->deltaPage(1, null))
+        ->toThrow(RuntimeException::class, 'failed to decode Graph response JSON');
+});
+
+// An inbox row whose OAuth credentials were never persisted, or were revoked
+// and cleared. Reaching the transport with no token would produce a 401 the
+// caller could mistake for an expired grant, so it is refused first.
+it('refuses to act on an inbox with no persisted credentials', function (): void {
+    $secrets = new class extends OAuthSecretsRepository
+    {
+        public function __construct() {}
+
+        public function loadInbox(int $inboxId): ?InboxCredentials
+        {
+            return null;
+        }
+    };
+
+    $client = new GraphApiClient(
+        $secrets,
+        $this->oauth,
+        $this->clock,
+        $this->createStub(EventsDispatcher::class),
+        $this->createStub(DatabaseManager::class),
+        new GuzzleClient(['handler' => HandlerStack::create(new MockHandler([]))]),
+    );
+
+    expect(fn () => $client->getRawMessage(7, 'AAA-BBB_CCC'))
+        ->toThrow(RuntimeException::class, 'no OAuth credentials persisted for inbox 7');
+});

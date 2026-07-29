@@ -112,3 +112,31 @@ it('decodes the base64url body Gmail returns into RFC 822 bytes', function (): v
 
     expect($client->getRawMessage(1, 'm1'))->toBe($raw);
 });
+
+// An inbox row whose OAuth credentials were never persisted, or were revoked
+// and cleared. Reaching Google with no token would come back as a 401 the
+// caller could mistake for an expired grant, so it is refused before the
+// service is built.
+it('refuses to act on an inbox with no persisted credentials', function (): void {
+    $secrets = new class extends OAuthSecretsRepository
+    {
+        public function __construct() {}
+
+        public function loadInbox(int $inboxId): ?InboxCredentials
+        {
+            return null;
+        }
+    };
+
+    $client = new GmailApiClient(
+        $secrets,
+        $this->oauth,
+        $this->clock,
+        $this->createStub(EventsDispatcher::class),
+        $this->createStub(DatabaseManager::class),
+        new GuzzleClient(['handler' => HandlerStack::create(new MockHandler([]))]),
+    );
+
+    expect(fn () => $client->getRawMessage(9, '18f9b4a2c1e5d6f7'))
+        ->toThrow(RuntimeException::class, 'no OAuth credentials persisted for inbox 9');
+});
