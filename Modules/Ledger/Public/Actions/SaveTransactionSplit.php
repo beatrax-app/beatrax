@@ -48,16 +48,56 @@ final class SaveTransactionSplit implements SavesTransactionSplit
      */
     public function save(User $user, int $transactionId, array $legs): void
     {
+        $parent = $this->loadParent($user, $transactionId, ['id', 'type', 'status', 'settled_amount_minor', 'settled_currency']);
+        $this->assertSplittable($user, $parent, $legs);
+
+        /** @var list<TransactionSplitMutated> $dispatchAfterCommit */
+        $dispatchAfterCommit = [];
+
+        $this->db->connection()->transaction(function () use ($user, $transactionId, $legs, &$dispatchAfterCommit): void {
+            // Re-read the parent's settled amount inside the transaction
+            // — TOCTOU-safe, mirrors PotWriter::fund().
+            $freshParent = $this->loadParent($user, $transactionId, ['settled_amount_minor', 'settled_currency']);
+            $currency = self::toString($freshParent->settled_currency);
+
+            $this->assertLegsSumToParent($legs, $currency, self::toInt($freshParent->settled_amount_minor));
+
+            $dispatchAfterCommit = $this->applyLegDiff($user, $transactionId, $legs, $currency);
+        });
+
+        // Dispatch after the transaction commits — never from inside
+        // an open DB::transaction() closure.
+        foreach ($dispatchAfterCommit as $event) {
+            $this->events->dispatch($event);
+        }
+    }
+
+    // Both reads of the parent are user-scoped and both treat an absent row
+    // the same way, so they ask the same question here. A missing row and a
+    // cross-user row stay indistinguishable on purpose.
+    /**
+     * @param  list<string>  $columns
+     */
+    private function loadParent(User $user, int $transactionId, array $columns): stdClass
+    {
         $parent = $this->db->connection()
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $user->id)
-            ->first(['id', 'type', 'status', 'settled_amount_minor', 'settled_currency']);
+            ->first($columns);
 
         if ($parent === null) {
             throw new InvalidArgumentException(self::NOT_FOUND_MESSAGE);
         }
 
+        return $parent;
+    }
+
+    /**
+     * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
+     */
+    private function assertSplittable(User $user, stdClass $parent, array $legs): void
+    {
         // Reconciled lock: reuses the already user-scoped parent load
         // above — no extra query. TransactionDetail's catch blocks
         // convert this into a warn toast, staying warn-first end-to-end.
@@ -83,189 +123,210 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 throw new InvalidArgumentException('Leg amounts must share the parent\'s sign.');
             }
 
-            $categoryVisible = $this->db->connection()
-                ->table('categories')
-                ->where('id', $leg['category_id'])
-                ->where(static function (QueryBuilder $q) use ($user): void {
-                    $q->whereNull('user_id')->orWhere('user_id', $user->id);
-                })
-                ->exists();
+            $this->assertCategoryVisible($user, $leg['category_id']);
+        }
+    }
 
-            if (! $categoryVisible) {
-                throw new InvalidArgumentException('Leg category not found or not accessible by user.');
+    // A category is usable if it is global or the user's own. Anything else
+    // is reported as absent rather than forbidden, so the check cannot be
+    // used to probe another user's category names.
+    private function assertCategoryVisible(User $user, int $categoryId): void
+    {
+        $visible = $this->db->connection()
+            ->table('categories')
+            ->where('id', $categoryId)
+            ->where(static function (QueryBuilder $q) use ($user): void {
+                $q->whereNull('user_id')->orWhere('user_id', $user->id);
+            })
+            ->exists();
+
+        if (! $visible) {
+            throw new InvalidArgumentException('Leg category not found or not accessible by user.');
+        }
+    }
+
+    /**
+     * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
+     */
+    private function assertLegsSumToParent(array $legs, string $currency, int $parentMinor): void
+    {
+        $sum = Money::ofMinor(0, $currency);
+        foreach ($legs as $leg) {
+            $sum = $sum->plus(Money::ofMinor($leg['settled_amount_minor'], $currency));
+        }
+
+        if ($sum->toMinor() !== $parentMinor) {
+            throw new SplitSumMismatchException(
+                "Leg totals ({$sum->toMinor()}) must match parent ({$parentMinor}) exactly.",
+            );
+        }
+    }
+
+    // PK-preserving UPDATE/DELETE/INSERT diff, never delete-all + reinsert:
+    // full rows are re-read so the edit branch can compute a genuine
+    // per-field dirty diff, which is what the LWW sync merge requires.
+    /**
+     * @param  list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>  $legs
+     * @return list<TransactionSplitMutated>
+     */
+    private function applyLegDiff(User $user, int $transactionId, array $legs, string $currency): array
+    {
+        /** @var Collection<int, stdClass> $existingRows */
+        $existingRows = $this->db->connection()
+            ->table('transaction_splits')
+            ->where('transaction_id', $transactionId)
+            ->where('user_id', $user->id)
+            ->get(['id', 'category_id', 'settled_amount_minor', 'note', 'sort_order'])
+            ->keyBy(static fn (object $row): int => self::toInt($row->id));
+
+        /** @var list<int> $existingIds */
+        $existingIds = $existingRows->keys()->all();
+
+        $now = CarbonImmutable::now();
+        $events = [];
+        $incomingIds = [];
+
+        foreach ($legs as $index => $leg) {
+            $legId = $leg['id'] ?? null;
+
+            if ($legId !== null && in_array($legId, $existingIds, true)) {
+                $incomingIds[] = $legId;
+                $event = $this->updateLeg($user, $transactionId, $legId, $leg, $index, $existingRows->get($legId));
+                if ($event !== null) {
+                    $events[] = $event;
+                }
+
+                continue;
+            }
+
+            $events[] = $this->insertLeg($user, $transactionId, $leg, $index, $currency, $now);
+        }
+
+        return [...$events, ...$this->deleteRemovedLegs($user, $transactionId, $existingIds, $incomingIds)];
+    }
+
+    // Matched by id -> UPDATE in place, preserving the PK. Returns null when
+    // nothing actually changed, so an untouched leg raises no event.
+    /**
+     * @param  array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}  $leg
+     */
+    private function updateLeg(User $user, int $transactionId, int $legId, array $leg, int $index, ?stdClass $old): ?TransactionSplitMutated
+    {
+        // Canonicalise empty note to NULL on write so '' and null are never
+        // distinct stored values.
+        $normalizedNote = self::normalizeNote($leg['note']);
+        $fields = [
+            'category_id' => $leg['category_id'],
+            'settled_amount_minor' => $leg['settled_amount_minor'],
+            'note' => $normalizedNote,
+            'sort_order' => $index,
+        ];
+
+        // The DB row stores ciphertext; $fields (plaintext) stays the
+        // dirty-diff and dispatched-event source of truth so the op-log's
+        // own encrypt-on-write never double-encrypts.
+        $dbFields = $fields;
+        $dbFields['note'] = $this->encryptNote($normalizedNote, $user->id);
+
+        $this->db->connection()
+            ->table('transaction_splits')
+            ->where('id', $legId)
+            ->where('user_id', $user->id)
+            ->update($dbFields);
+
+        // The stored note is ciphertext when encrypted — decrypt before
+        // diffing so the comparison runs on plaintext, never a fresh
+        // random-nonce ciphertext.
+        $oldFields = $old !== null ? [
+            'category_id' => $old->category_id ?? null,
+            'settled_amount_minor' => $old->settled_amount_minor ?? null,
+            'note' => $this->decryptNote($old->note ?? null, $user->id),
+            'sort_order' => $old->sort_order ?? null,
+        ] : [];
+
+        $dirty = [];
+        foreach ($fields as $field => $value) {
+            if (self::legFieldChanged($oldFields[$field] ?? null, $value)) {
+                $dirty[$field] = $value;
             }
         }
 
-        /** @var list<TransactionSplitMutated> $dispatchAfterCommit */
-        $dispatchAfterCommit = [];
+        if ($dirty === []) {
+            return null;
+        }
 
-        $this->db->connection()->transaction(function () use ($user, $transactionId, $legs, &$dispatchAfterCommit): void {
-            // Re-read the parent's settled amount inside the transaction
-            // — TOCTOU-safe, mirrors PotWriter::fund().
-            $freshParent = $this->db->connection()
-                ->table('transactions')
-                ->where('id', $transactionId)
-                ->where('user_id', $user->id)
-                ->first(['settled_amount_minor', 'settled_currency']);
+        return new TransactionSplitMutated(
+            splitId: $legId,
+            transactionId: $transactionId,
+            userId: $user->id,
+            mutationType: 'edit',
+            dirtyFields: $dirty,
+        );
+    }
 
-            if ($freshParent === null) {
-                throw new InvalidArgumentException(self::NOT_FOUND_MESSAGE);
-            }
+    /**
+     * @param  array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}  $leg
+     */
+    private function insertLeg(User $user, int $transactionId, array $leg, int $index, string $currency, CarbonImmutable $now): TransactionSplitMutated
+    {
+        $fields = [
+            'user_id' => $user->id,
+            'transaction_id' => $transactionId,
+            'category_id' => $leg['category_id'],
+            'settled_amount_minor' => $leg['settled_amount_minor'],
+            'settled_currency' => $currency,
+            'note' => self::normalizeNote($leg['note']),
+            'sort_order' => $index,
+            // Pre-formatted datetime strings into the op-log dirtyFields
+            // rather than CarbonImmutable objects — decouples the capture
+            // payload from Carbon and the op-log serialiser's coercion.
+            'created_at' => $now->toDateTimeString(),
+            'updated_at' => $now->toDateTimeString(),
+        ];
 
-            $parentMinor = self::toInt($freshParent->settled_amount_minor);
-            $currency = self::toString($freshParent->settled_currency);
+        // $fields (plaintext) stays the dispatched-event source of truth;
+        // only the DB row gets the ciphertext note.
+        $dbFields = $fields;
+        $dbFields['note'] = $this->encryptNote($fields['note'], $user->id);
 
-            $sum = Money::ofMinor(0, $currency);
-            foreach ($legs as $leg) {
-                $sum = $sum->plus(Money::ofMinor($leg['settled_amount_minor'], $currency));
-            }
+        $newId = self::toInt($this->db->connection()->table('transaction_splits')->insertGetId($dbFields));
 
-            if ($sum->toMinor() !== $parentMinor) {
-                throw new SplitSumMismatchException(
-                    "Leg totals ({$sum->toMinor()}) must match parent ({$parentMinor}) exactly.",
-                );
-            }
+        return new TransactionSplitMutated(
+            splitId: $newId,
+            transactionId: $transactionId,
+            userId: $user->id,
+            mutationType: 'create',
+            dirtyFields: $fields,
+        );
+    }
 
-            // PK-preserving UPDATE/DELETE/INSERT diff (never delete-all +
-            // reinsert), full rows re-read so the edit branch below can
-            // compute a genuine per-field dirty diff — see the linked
-            // architecture page for why the LWW sync merge requires this.
-            /** @var Collection<int, stdClass> $existingRows */
-            $existingRows = $this->db->connection()
+    // Present in the existing set but absent from the incoming one, which
+    // is a delete rather than an edit and tombstones for the sync merge.
+    /**
+     * @param  list<int>  $existingIds
+     * @param  list<int>  $incomingIds
+     * @return list<TransactionSplitMutated>
+     */
+    private function deleteRemovedLegs(User $user, int $transactionId, array $existingIds, array $incomingIds): array
+    {
+        $events = [];
+
+        foreach (array_diff($existingIds, $incomingIds) as $removedId) {
+            $this->db->connection()
                 ->table('transaction_splits')
-                ->where('transaction_id', $transactionId)
+                ->where('id', $removedId)
                 ->where('user_id', $user->id)
-                ->get(['id', 'category_id', 'settled_amount_minor', 'note', 'sort_order'])
-                ->keyBy(static fn (object $row): int => self::toInt($row->id));
+                ->delete();
 
-            /** @var list<int> $existingIds */
-            $existingIds = $existingRows->keys()->all();
-
-            /** @var list<int> $incomingIds */
-            $incomingIds = [];
-            foreach ($legs as $leg) {
-                $legId = $leg['id'] ?? null;
-                if ($legId !== null && in_array($legId, $existingIds, true)) {
-                    $incomingIds[] = $legId;
-                }
-            }
-
-            $now = CarbonImmutable::now();
-
-            foreach ($legs as $index => $leg) {
-                $legId = $leg['id'] ?? null;
-
-                if ($legId !== null && in_array($legId, $existingIds, true)) {
-                    // Matched by id -> UPDATE in place, preserving the PK.
-                    // Canonicalise empty note to NULL on write so '' and
-                    // null are never distinct stored values.
-                    $normalizedNote = self::normalizeNote($leg['note']);
-                    $fields = [
-                        'category_id' => $leg['category_id'],
-                        'settled_amount_minor' => $leg['settled_amount_minor'],
-                        'note' => $normalizedNote,
-                        'sort_order' => $index,
-                    ];
-
-                    // The DB row stores ciphertext; $fields (plaintext)
-                    // stays the dirty-diff and dispatched-event source of
-                    // truth so the op-log's own encrypt-on-write never
-                    // double-encrypts.
-                    $dbFields = $fields;
-                    $dbFields['note'] = $this->encryptNote($normalizedNote, $user->id);
-
-                    $this->db->connection()
-                        ->table('transaction_splits')
-                        ->where('id', $legId)
-                        ->where('user_id', $user->id)
-                        ->update($dbFields);
-
-                    // Only fields that actually changed are captured. The
-                    // stored note is ciphertext when encrypted — decrypt
-                    // before diffing so the comparison runs on plaintext,
-                    // never a fresh random-nonce ciphertext.
-                    $old = $existingRows->get($legId);
-                    $oldFields = $old !== null ? [
-                        'category_id' => $old->category_id ?? null,
-                        'settled_amount_minor' => $old->settled_amount_minor ?? null,
-                        'note' => $this->decryptNote($old->note ?? null, $user->id),
-                        'sort_order' => $old->sort_order ?? null,
-                    ] : [];
-
-                    $dirty = [];
-                    foreach ($fields as $field => $value) {
-                        if (self::legFieldChanged($oldFields[$field] ?? null, $value)) {
-                            $dirty[$field] = $value;
-                        }
-                    }
-
-                    if ($dirty !== []) {
-                        $dispatchAfterCommit[] = new TransactionSplitMutated(
-                            splitId: $legId,
-                            transactionId: $transactionId,
-                            userId: $user->id,
-                            mutationType: 'edit',
-                            dirtyFields: $dirty,
-                        );
-                    }
-                } else {
-                    $fields = [
-                        'user_id' => $user->id,
-                        'transaction_id' => $transactionId,
-                        'category_id' => $leg['category_id'],
-                        'settled_amount_minor' => $leg['settled_amount_minor'],
-                        'settled_currency' => $currency,
-                        'note' => self::normalizeNote($leg['note']),
-                        'sort_order' => $index,
-                        // Pre-formatted datetime strings into the op-log
-                        // dirtyFields rather than CarbonImmutable objects —
-                        // decouples the capture payload from Carbon and
-                        // the op-log serialiser's implicit coercion.
-                        'created_at' => $now->toDateTimeString(),
-                        'updated_at' => $now->toDateTimeString(),
-                    ];
-
-                    // $fields (plaintext) stays the dispatched-event source
-                    // of truth; only the DB row gets the ciphertext note.
-                    $dbFields = $fields;
-                    $dbFields['note'] = $this->encryptNote($fields['note'], $user->id);
-
-                    $newId = self::toInt($this->db->connection()->table('transaction_splits')->insertGetId($dbFields));
-
-                    $dispatchAfterCommit[] = new TransactionSplitMutated(
-                        splitId: $newId,
-                        transactionId: $transactionId,
-                        userId: $user->id,
-                        mutationType: 'create',
-                        dirtyFields: $fields,
-                    );
-                }
-            }
-
-            // Leg present in the existing set but absent from the
-            // incoming set -> DELETE (tombstone).
-            $removedIds = array_diff($existingIds, $incomingIds);
-            foreach ($removedIds as $removedId) {
-                $this->db->connection()
-                    ->table('transaction_splits')
-                    ->where('id', $removedId)
-                    ->where('user_id', $user->id)
-                    ->delete();
-
-                $dispatchAfterCommit[] = new TransactionSplitMutated(
-                    splitId: $removedId,
-                    transactionId: $transactionId,
-                    userId: $user->id,
-                    mutationType: 'delete',
-                );
-            }
-        });
-
-        // Dispatch after the transaction commits — never from inside
-        // an open DB::transaction() closure.
-        foreach ($dispatchAfterCommit as $event) {
-            $this->events->dispatch($event);
+            $events[] = new TransactionSplitMutated(
+                splitId: $removedId,
+                transactionId: $transactionId,
+                userId: $user->id,
+                mutationType: 'delete',
+            );
         }
+
+        return $events;
     }
 
     public function unsplit(User $user, int $transactionId, int $survivingCategoryId): void
