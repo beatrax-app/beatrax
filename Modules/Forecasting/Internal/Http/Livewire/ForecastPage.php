@@ -29,9 +29,16 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ForecastPage extends Component
 {
+    use CoercesScalars;
+
+    // Panel accent colours. The scenario panel is tinted by whether the
+    // scenario leaves the user better or worse off at day 30; the
+    // baseline panel is always neutral.
     private const NEUTRAL_INK = '#0F172A';
 
-    use CoercesScalars;
+    private const BETTER_OFF_INK = '#047857';
+
+    private const WORSE_OFF_INK = '#BE123C';
 
     // 'all' is a sentinel value: it selects the All-accounts aggregate
     // view rather than a specific account id.
@@ -337,9 +344,7 @@ final class ForecastPage extends Component
             if ($this->scenarioId !== null) {
                 $scenario = $forecastQuery->forUser($selectedAccountId, $this->horizon, $this->scenarioId, $user);
                 $netDiff = $this->computeNetDiff($baseline, $scenario);
-                $scenarioPanelColor = $netDiff[30] > 0
-                    ? '#047857'
-                    : ($netDiff[30] < 0 ? '#BE123C' : self::NEUTRAL_INK);
+                $scenarioPanelColor = $this->panelColorFor($netDiff[30]);
             }
 
             // Shared y-axis (RESEARCH Pitfall 2): compute the union range
@@ -486,6 +491,18 @@ final class ForecastPage extends Component
         $yMax = ($highs === [] ? 0 : max($highs)) / 100 + 1;
 
         return [$yMin, $yMax];
+    }
+
+    // Tints the scenario panel by the day-30 net difference. Exactly
+    // zero is neutral rather than green: an unchanged balance is not an
+    // improvement, and colouring it as one overstates the scenario.
+    private function panelColorFor(int $netDiffMinor): string
+    {
+        return match (true) {
+            $netDiffMinor > 0 => self::BETTER_OFF_INK,
+            $netDiffMinor < 0 => self::WORSE_OFF_INK,
+            default => self::NEUTRAL_INK,
+        };
     }
 
     /**

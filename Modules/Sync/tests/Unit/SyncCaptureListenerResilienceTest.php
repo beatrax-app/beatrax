@@ -4,7 +4,14 @@ declare(strict_types=1);
 
 use Illuminate\Container\Container as IlluminateContainer;
 use Illuminate\Contracts\Container\Container;
+use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Internal\Listeners\SyncCaptureListener;
+use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
+use Modules\Sync\Public\Events\EnvelopeMoveMutated;
+use Modules\Sync\Public\Events\EnvelopeSettingMutated;
+use Modules\Sync\Public\Events\NotificationMutated;
+use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Psr\Log\LoggerInterface;
@@ -119,8 +126,58 @@ it('does not fail a split save either', function (): void {
         ->and($calls[0]['message'])->toContain('split capture failed');
 });
 
-// The unknown-mutationType arm is not asserted here. Reaching it needs a
-// resolvable OpLogWriter, and that class is final with twelve constructor
-// dependencies — building one would make this a test of the writer's wiring
-// rather than of the listener's routing. The Feature suite drives it with a
-// real writer already.
+// Reaching the unknown-mutationType arm needs container->make(OpLogWriter)
+// to succeed, and that class is final with twelve constructor dependencies.
+// Building a real one would make this a test of the writer's wiring rather
+// than of the listener's routing — so the container hands back a placeholder
+// instead. That is sound precisely because the default arm is the one arm
+// that never touches the writer: it only logs. If someone later routes the
+// writer through it, the placeholder raises a TypeError, the catch turns it
+// into an 'error' line, and the level assertion below fails loudly.
+function placeholderWriterContainer(): Container
+{
+    $container = new IlluminateContainer;
+    $container->bind(OpLogWriter::class, fn (): object => new stdClass);
+
+    return $container;
+}
+
+// Every mutating surface routes on a free-form string, and a device running
+// an older build can emit a verb this one has never heard of. The listener
+// has to treat that as "nothing to replicate" rather than as a failure —
+// warn, and let the user's save stand.
+it('warns rather than throws on a mutation type it does not recognise', function (Closure $dispatch): void {
+    $calls = [];
+    $listener = new SyncCaptureListener(placeholderWriterContainer(), capturingLogger($calls));
+
+    $dispatch($listener);
+
+    expect($calls)->toHaveCount(1)
+        ->and($calls[0]['level'])->toBe('warning')
+        ->and($calls[0]['message'])->toBe('SyncCaptureListener: unknown mutationType');
+})->with([
+    'transaction' => [fn (SyncCaptureListener $l) => $l->handle(
+        new TransactionMutated(transactionId: 42, userId: 1, mutationType: 'teleport'),
+    )],
+    'split' => [fn (SyncCaptureListener $l) => $l->handleSplit(
+        new TransactionSplitMutated(splitId: 7, transactionId: 42, userId: 1, mutationType: 'teleport'),
+    )],
+    'envelope assignment' => [fn (SyncCaptureListener $l) => $l->handleEnvelopeAssignment(
+        new EnvelopeAssignmentMutated(assignmentId: 3, userId: 1, mutationType: 'teleport'),
+    )],
+    'envelope move' => [fn (SyncCaptureListener $l) => $l->handleEnvelopeMove(
+        new EnvelopeMoveMutated(moveId: 4, userId: 1, mutationType: 'teleport'),
+    )],
+    'envelope setting' => [fn (SyncCaptureListener $l) => $l->handleEnvelopeSetting(
+        new EnvelopeSettingMutated(settingId: 5, userId: 1, mutationType: 'teleport'),
+    )],
+    'saved report' => [fn (SyncCaptureListener $l) => $l->handleSavedReport(
+        new SavedReportMutated(reportId: 6, userId: 1, mutationType: 'teleport'),
+    )],
+    'notification' => [fn (SyncCaptureListener $l) => $l->handleNotificationMutated(
+        new NotificationMutated(notificationId: 'n-1', userId: 1, mutationType: 'teleport'),
+    )],
+    'notification preference' => [fn (SyncCaptureListener $l) => $l->handleNotificationPreferenceMutated(
+        new NotificationPreferenceMutated(preferenceId: 8, userId: 1, mutationType: 'teleport'),
+    )],
+]);

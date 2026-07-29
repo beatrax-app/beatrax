@@ -162,3 +162,22 @@ it('carries the delta link forward so the next scan resumes where this one stopp
 
     expect($result['deltaLink'])->toBe('https://graph.microsoft.com/v1.0/me/messages/delta?$deltatoken=xyz');
 });
+
+// Graph's error envelope is a contract we do not control, and a proxy or a
+// gateway in front of it can return something that parses as JSON but is not
+// the documented {"error": {"code", "message"}} shape at all. Each of the
+// three ways that shape can be wrong falls back to the same phrase, and the
+// point of the case is that the client keeps its footing instead of
+// surfacing a type error while already handling a failure.
+it('falls back to a fixed phrase when the error body is not the documented shape', function (string $body): void {
+    $client = ($this->makeClient)([
+        new Response(500, ['Content-Type' => 'application/json'], $body),
+    ]);
+
+    expect(fn () => $client->getRawMessage(1, 'AAA-BBB_CCC'))
+        ->toThrow(RuntimeException::class, 'returned HTTP 500 — unrecognised error body');
+})->with([
+    'valid JSON that is not an object' => ['"just a string"'],
+    'error is not an object' => ['{"error":"oops"}'],
+    'error object carries neither message nor code' => ['{"error":{}}'],
+]);
