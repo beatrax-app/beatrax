@@ -64,12 +64,12 @@ readonly class InboxMessageQuery
             return null;
         }
 
-        return is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+        return self::toString($value);
     }
 
     private static function toDateTime(mixed $value): DateTimeImmutable
     {
-        $raw = is_string($value) ? $value : (string) (is_scalar($value) ? $value : '');
+        $raw = self::toString($value);
         $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $raw);
         if ($dt === false) {
             // Fall back to the constructor so ISO 8601 + tz-bearing
