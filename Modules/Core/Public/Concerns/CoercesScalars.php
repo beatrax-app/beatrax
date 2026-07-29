@@ -29,4 +29,16 @@ trait CoercesScalars
 
         return is_scalar($value) ? (string) $value : '';
     }
+
+    // The nullable counterpart: null survives as null rather than becoming
+    // the empty string, so a caller can tell an absent value from a blank
+    // one. Objects and arrays still collapse, because neither is a string.
+    private static function toStringOrNull(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return is_scalar($value) ? (string) $value : null;
+    }
 }

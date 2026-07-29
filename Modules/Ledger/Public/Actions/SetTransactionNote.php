@@ -34,11 +34,9 @@ final class SetTransactionNote implements SetsTransactionNote
             ->where('user_id', $user->id)
             ->first(['status', 'note']);
 
-        if ($row === null) {
-            return 0;
-        }
-
-        if ($row->status === 'reconciled') {
+        // A missing row and a reconciled one are the same answer to the
+        // caller: the note was not written, and not because of an error.
+        if ($row === null || $row->status === 'reconciled') {
             return 0;
         }
 
@@ -50,9 +48,11 @@ final class SetTransactionNote implements SetsTransactionNote
             : null;
         $trimmed = $text === null ? '' : trim($text);
 
-        $target = $mode === 'append'
-            ? self::appended($currentNote, $trimmed)
-            : ($trimmed === '' ? null : $trimmed);
+        if ($mode === 'append') {
+            $target = self::appended($currentNote, $trimmed);
+        } else {
+            $target = $trimmed === '' ? null : $trimmed;
+        }
 
         if ($target === $currentNote) {
             return 0;

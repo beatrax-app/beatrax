@@ -56,8 +56,6 @@ final class DemoTransactionsSeeder
         // run dates (clamping to `today` would shrink a mid-month run).
         $this->windowEnd = $today->endOfMonth();
 
-        $totalInserted = 0;
-
         // User 1: the active power-user persona — three accounts, ~120
         // transactions covering salary, household bills, groceries,
         // transit, and online purchases.
@@ -65,9 +63,9 @@ final class DemoTransactionsSeeder
             $user = $users['demo-1@beatrax.local'];
             $perUserAccounts = $accounts['demo-1@beatrax.local'];
 
-            $totalInserted += $this->seedUser1AsnRows($user, $perUserAccounts['asn-demo-1'], $windowStart);
-            $totalInserted += $this->seedUser1IcsRows($user, $perUserAccounts['ics-demo-1'], $windowStart);
-            $totalInserted += $this->seedUser1PaypalRows($user, $perUserAccounts['paypal-demo-1'], $windowStart);
+            $this->seedUser1AsnRows($user, $perUserAccounts['asn-demo-1'], $windowStart);
+            $this->seedUser1IcsRows($user, $perUserAccounts['ics-demo-1'], $windowStart);
+            $this->seedUser1PaypalRows($user, $perUserAccounts['paypal-demo-1'], $windowStart);
 
             $this->linkUser1Transfers($user);
         }
@@ -79,8 +77,8 @@ final class DemoTransactionsSeeder
             $user = $users['demo-2@beatrax.local'];
             $perUserAccounts = $accounts['demo-2@beatrax.local'];
 
-            $totalInserted += $this->seedUser2AsnRows($user, $perUserAccounts['asn-demo-2'], $windowStart);
-            $totalInserted += $this->seedUser2PaypalRows($user, $perUserAccounts['paypal-demo-2'], $windowStart);
+            $this->seedUser2AsnRows($user, $perUserAccounts['asn-demo-2'], $windowStart);
+            $this->seedUser2PaypalRows($user, $perUserAccounts['paypal-demo-2'], $windowStart);
         }
 
         return Transaction::query()
@@ -881,9 +879,8 @@ final class DemoTransactionsSeeder
         // collapse two monthsBack offsets onto the same calendar month
         // and drop the duplicate via insertOrIgnore.
         $anchor = CarbonImmutable::today()->subMonthsNoOverflow($monthsBack)->startOfMonth();
-        $candidate = $anchor->setDay(min($day, $anchor->daysInMonth));
 
-        return $candidate;
+        return $anchor->setDay(min($day, $anchor->daysInMonth));
     }
 
     // Looks up the global default-tree category id for a slug; returns
@@ -907,8 +904,7 @@ final class DemoTransactionsSeeder
     {
         $sha = hash('sha256', 'demo|'.$user->username.'|'.$account->slug);
 
-        /** @var ImportRun $run */
-        $run = ImportRun::query()->updateOrCreate(
+        return ImportRun::query()->updateOrCreate(
             ['user_id' => $user->id, 'sha256' => $sha],
             [
                 'source_format' => 'demo',
@@ -918,8 +914,6 @@ final class DemoTransactionsSeeder
                 'status' => 'confirmed',
             ],
         );
-
-        return $run;
     }
 
     // Builds a CanonicalTransaction, computes its production
@@ -987,8 +981,6 @@ final class DemoTransactionsSeeder
             'updated_at' => $now,
         ]);
 
-        $affected = Transaction::query()->insertOrIgnore($attrs);
-
-        return $affected;
+        return Transaction::query()->insertOrIgnore($attrs);
     }
 }

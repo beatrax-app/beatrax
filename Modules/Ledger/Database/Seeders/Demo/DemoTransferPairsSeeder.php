@@ -86,8 +86,7 @@ final class DemoTransferPairsSeeder
     {
         $sha = hash('sha256', 'demo-pair|'.$user->username.'|'.$account->slug);
 
-        /** @var ImportRun $run */
-        $run = ImportRun::query()->updateOrCreate(
+        return ImportRun::query()->updateOrCreate(
             ['user_id' => $user->id, 'sha256' => $sha],
             [
                 'source_format' => 'demo',
@@ -97,8 +96,6 @@ final class DemoTransferPairsSeeder
                 'status' => 'confirmed',
             ],
         );
-
-        return $run;
     }
 
     private function insertLeg(
