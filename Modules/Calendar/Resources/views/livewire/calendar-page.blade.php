@@ -152,39 +152,55 @@
 
     {{-- §5 Calendar grid + §6.4 desktop right-rail day panel wrapper --}}
     <div class="relative">
-        {{-- 7-column Mon–Sun calendar grid --}}
-        <div
+        {{--
+            7-column Mon–Sun calendar grid.
+
+            A real <table> rather than divs carrying role="row"/"columnheader"/
+            "gridcell". role="grid" stays on the table: under ARIA in HTML a
+            grid-roled table maps <tr> to row, <th scope="col"> to columnheader
+            and <td> to gridcell implicitly, so the accessibility tree is the
+            same one the explicit roles built — but assistive tech that ignores
+            roles on generic elements now gets the structure natively too.
+            The cells used to sit in a flat grid with the week rows collapsed
+            via `display: contents`, which is exactly the construct screen
+            readers have historically dropped rows from.
+        --}}
+        <div class="cal-grid-frame">
+        <table
             role="grid"
             class="cal-grid"
             aria-label="{{ \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->format('F Y') }} calendar"
             @keydown.arrow-left.prevent="
                 let prev = document.activeElement.previousElementSibling;
-                if (prev && prev.getAttribute('role') === 'gridcell') prev.focus();
+                if (prev && prev.tagName === 'TD') prev.focus();
             "
             @keydown.arrow-right.prevent="
                 let next = document.activeElement.nextElementSibling;
-                if (next && next.getAttribute('role') === 'gridcell') next.focus();
+                if (next && next.tagName === 'TD') next.focus();
             "
         >
             {{-- Day-of-week headers --}}
-            <div role="row" class="contents">
-                @foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $heading)
-                    <div
-                        role="columnheader"
-                        class="px-2 py-1 text-center text-xs font-semibold"
-                        style="background: var(--color-bg-subtle); color: var(--color-text-faint); border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);"
-                    >
-                        {{ $heading }}
-                    </div>
-                @endforeach
-            </div>
+            <thead>
+                <tr>
+                    @foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $heading)
+                        <th
+                            scope="col"
+                            class="px-2 py-1 text-center text-xs font-semibold"
+                            style="background: var(--color-bg-subtle); color: var(--color-text-faint); border-right: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);"
+                        >
+                            {{ $heading }}
+                        </th>
+                    @endforeach
+                </tr>
+            </thead>
 
             {{-- Day cells grouped in weeks --}}
             @php
                 $chunks = array_chunk($days, 7);
             @endphp
+            <tbody>
             @foreach ($chunks as $week)
-                <div role="row" class="contents">
+                <tr>
                     @foreach ($week as $day)
                         @php
                             $dateStr      = $day->date->toDateString();
@@ -218,8 +234,7 @@
                                 $ariaLabel .= ', projected balance ' . ($day->eodBalanceMinor < 0 ? 'minus ' : '') . '€' . number_format(abs($day->eodBalanceMinor / 100), 0, ',', '.');
                             }
                         @endphp
-                        <div
-                            role="gridcell"
+                        <td
                             tabindex="0"
                             wire:click="selectDay('{{ $dateStr }}')"
                             @keydown.enter.prevent="$wire.selectDay('{{ $dateStr }}')"
@@ -279,10 +294,12 @@
                             @if ($entryCount > 0)
                                 <div class="cal-entry-count sm:hidden">{{ $entryCount }}</div>
                             @endif
-                        </div>
+                        </td>
                     @endforeach
-                </div>
+                </tr>
             @endforeach
+            </tbody>
+        </table>
         </div>
 
         {{-- §6.4 Desktop day panel (right-rail slide-in, hidden on phone) --}}
