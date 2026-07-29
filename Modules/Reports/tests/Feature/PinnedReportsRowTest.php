@@ -9,6 +9,7 @@ use Modules\Reports\Internal\Http\Livewire\PinnedReportsRow;
 use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Actions\TogglePin;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -36,7 +37,7 @@ function prrDefinition(string $viz = 'table'): ReportDefinition
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: $viz,
     );

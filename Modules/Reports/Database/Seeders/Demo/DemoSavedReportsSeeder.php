@@ -9,6 +9,7 @@ use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Actions\TogglePin;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 // Saved report definitions covering the questions the demo ledger can
 // actually answer, two of them pinned so the dashboard shows its mini-card
@@ -88,7 +89,7 @@ final class DemoSavedReportsSeeder
                 metric: $row['metric'],
                 dimension: $row['dimension'],
                 periodPreset: $row['period'],
-                granularity: 'monthly',
+                granularity: ReportGranularity::Monthly,
                 currencyMode: 'base',
                 viz: $row['viz'],
             ),

@@ -13,6 +13,7 @@ use Modules\Reports\Internal\Aggregation\AccountSpendQuery;
 use Modules\Reports\Internal\Aggregation\CategorySpendQuery;
 use Modules\Reports\Internal\Aggregation\CounterpartySpendQuery;
 use Modules\Reports\Internal\Aggregation\TimeBucketSpendQuery;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -174,7 +175,7 @@ it('produces the identical spend/income/net grand total across category/counterp
         $categoryTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $categoryQuery->forUserAndPeriod($user, $period, $metric, 'EUR')));
         $counterpartyTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $counterpartyQuery->forUserAndPeriod($user, $period, $metric, 'EUR')));
         $accountTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $accountQuery->forUserAndPeriod($user, $period, $metric, 'EUR')));
-        $timeBucketTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $timeBucketQuery->forUserAndPeriod($user, $period, $metric, 'EUR', 'monthly')));
+        $timeBucketTotal = array_sum(array_map(fn ($r) => $r->amountMinor, $timeBucketQuery->forUserAndPeriod($user, $period, $metric, 'EUR', ReportGranularity::Monthly)));
 
         expect($counterpartyTotal)->toBe($categoryTotal, "counterparty vs category mismatch for metric={$metric}");
         expect($accountTotal)->toBe($categoryTotal, "account vs category mismatch for metric={$metric}");
@@ -216,7 +217,7 @@ it('WR-01: a genuinely-unsplit $0.00 transaction is captured by CategorySpendQue
     $categoryRows = app(CategorySpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR');
     $accountRows = app(AccountSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR');
     $counterpartyRows = app(CounterpartySpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR');
-    $timeBucketRows = app(TimeBucketSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', 'monthly');
+    $timeBucketRows = app(TimeBucketSpendQuery::class)->forUserAndPeriod($user, $period, 'spend', 'EUR', ReportGranularity::Monthly);
 
     expect($categoryRows)->toHaveCount(1);
     expect($categoryRows[0]->groupLabel)->toBe('Audit Adjustment');

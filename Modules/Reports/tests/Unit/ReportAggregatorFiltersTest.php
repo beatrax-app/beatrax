@@ -9,6 +9,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -111,7 +112,7 @@ function raftDefinition(string $dimension, array $accounts = [], array $categori
         metric: 'spend',
         dimension: $dimension,
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         customFrom: '2026-05-01',
@@ -210,7 +211,7 @@ it('AMOUNT FILTER: amountMin + amountDirection=in ("In > EUR 500") changes the t
         metric: 'net',
         dimension: 'category',
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         customFrom: '2026-05-01',
@@ -223,7 +224,7 @@ it('AMOUNT FILTER: amountMin + amountDirection=in ("In > EUR 500") changes the t
         metric: 'net',
         dimension: 'category',
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         customFrom: '2026-05-01',

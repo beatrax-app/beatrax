@@ -10,6 +10,7 @@ use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Actions\UpdateReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -50,7 +51,7 @@ function ricrudDefinition(): ReportDefinition
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
     );

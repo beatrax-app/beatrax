@@ -10,6 +10,7 @@ use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Actions\TogglePin;
 use Modules\Reports\Public\Actions\UpdateReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 uses(RefreshDatabase::class);
@@ -41,7 +42,7 @@ function srwaDefinition(): ReportDefinition
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
     );
@@ -85,7 +86,7 @@ it('WR-03: UpdateReport is a no-op when only the filter-array element order chan
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         accounts: [1, 2, 3],
@@ -101,7 +102,7 @@ it('WR-03: UpdateReport is a no-op when only the filter-array element order chan
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         accounts: [3, 1, 2],

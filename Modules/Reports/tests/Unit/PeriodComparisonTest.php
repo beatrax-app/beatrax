@@ -13,6 +13,7 @@ use Modules\Reports\Internal\Aggregation\PeriodComparison;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Public\Dto\ReportDefinition;
 use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -121,7 +122,7 @@ function pctDefinition(bool $compare = true, string $currencyMode = 'base'): Rep
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: $currencyMode,
         viz: 'table',
         customFrom: '2026-03-01',
@@ -306,7 +307,7 @@ it('CR-03: compare() keeps BOTH currencies for a group present in EUR and USD un
         metric: 'spend',
         dimension: 'counterparty',
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'original',
         viz: 'table',
         customFrom: '2026-03-01',

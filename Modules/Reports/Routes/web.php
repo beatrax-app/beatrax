@@ -9,6 +9,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Reports\Internal\Http\Livewire\ReportsIndex;
 use Modules\Reports\Internal\Services\ReportCsvExporter;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 // ServiceProvider::loadRoutesFrom() uses a plain require (not require_once),
@@ -49,7 +50,13 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
             metric: is_string($request->query('metric')) ? $request->query('metric') : 'spend',
             dimension: is_string($request->query('dim')) ? $request->query('dim') : 'category',
             periodPreset: is_string($request->query('period')) ? $request->query('period') : 'this_month',
-            granularity: is_string($request->query('gran')) ? $request->query('gran') : 'monthly',
+            // tryFrom, not from: an unknown ?gran= is a bad link rather than
+            // corrupt state, and it used to reach TimeBucketGenerator and
+            // throw, so ?gran=nonsense was a 500. The stored-value rejection
+            // C7-R21 asks for happens in ReportDefinition::from() instead.
+            granularity: ReportGranularity::tryFrom(
+                is_string($request->query('gran')) ? $request->query('gran') : '',
+            ) ?? ReportGranularity::default(),
             currencyMode: is_string($request->query('ccy')) ? $request->query('ccy') : 'base',
             viz: is_string($request->query('viz')) ? $request->query('viz') : 'table',
             customFrom: $toNullableString($request->query('from')),
