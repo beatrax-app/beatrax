@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Pairing;
 
-use RuntimeException;
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
@@ -40,8 +40,11 @@ final class SafetyNumberDeriver
         for ($i = 0; $i < 6; $i++) {
             $chunk = substr($hash, $i * 2, 2);
             $unpacked = unpack('n', $chunk);
+            // Narrowing guard rather than a reachable failure: every chunk
+            // here is exactly two bytes of a 32-byte hash, which unpack('n')
+            // cannot refuse. It exists so the int below is an int.
             if ($unpacked === false || ! isset($unpacked[1]) || ! is_int($unpacked[1])) {
-                throw new RuntimeException('SafetyNumberDeriver: could not unpack word index.');
+                throw CryptoOperationFailedException::during('safety number derivation');
             }
             $words[] = $this->wordList[$unpacked[1] % 2048];
         }

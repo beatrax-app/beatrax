@@ -11,8 +11,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Ramsey\Uuid\Uuid;
-use RuntimeException;
 use SodiumException;
 
 /**
@@ -34,7 +34,7 @@ final class DeviceIdentityService
     // carries secret-key hex — never persist the DTO).
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
-     * @throws RuntimeException on a crypto / I-O failure.
+     * @throws CryptoOperationFailedException on a libsodium failure.
      */
     public function generateAndPersist(int $userId, Session $session): DeviceIdentityDto
     {
@@ -113,7 +113,7 @@ final class DeviceIdentityService
 
             return $dto;
         } catch (SodiumException $e) {
-            throw new RuntimeException('Failed to generate device identity: sodium error.', 0, $e);
+            throw CryptoOperationFailedException::during('device identity generation', $e);
         } finally {
             sodium_memzero($kek);
         }

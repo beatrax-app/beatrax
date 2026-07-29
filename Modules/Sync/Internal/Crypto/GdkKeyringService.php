@@ -11,8 +11,10 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Internal\Exceptions\KeyringStateException;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Identity\SecureTempFile;
-use RuntimeException;
 use SodiumException;
 
 /**
@@ -37,7 +39,8 @@ final class GdkKeyringService
     // DTO (carries the raw key hex — never persist the DTO itself).
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
-     * @throws RuntimeException on a crypto / I-O failure.
+     * @throws CryptoOperationFailedException on a libsodium failure.
+     * @throws SecretFileException when the keyring file cannot be written.
      */
     public function generateAndPersist(int $userId, Session $session): GdkEpoch
     {
@@ -59,7 +62,7 @@ final class GdkKeyringService
 
             return $epoch;
         } catch (SodiumException $e) {
-            throw new RuntimeException('Failed to generate GDK keyring: sodium error.', 0, $e);
+            throw CryptoOperationFailedException::during('GDK keyring generation', $e);
         } finally {
             sodium_memzero($kek);
         }
@@ -71,7 +74,8 @@ final class GdkKeyringService
     // or discardStagedEpoch() once the surrounding SQL transaction resolves.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
-     * @throws RuntimeException on a crypto / I-O failure.
+     * @throws CryptoOperationFailedException on a libsodium failure.
+     * @throws SecretFileException when the keyring file cannot be staged.
      */
     public function stageFirstEpoch(int $userId, Session $session): GdkKeyringStage
     {
@@ -93,7 +97,7 @@ final class GdkKeyringService
 
             return new GdkKeyringStage($userId, $epoch, $tmpEncPath);
         } catch (SodiumException $e) {
-            throw new RuntimeException('Failed to generate GDK keyring: sodium error.', 0, $e);
+            throw CryptoOperationFailedException::during('GDK keyring generation', $e);
         } finally {
             sodium_memzero($kek);
         }
@@ -103,7 +107,7 @@ final class GdkKeyringService
     // keyring file into place. Call ONLY after the ambient SQL transaction
     // that wrote current_epoch in stageFirstEpoch() has committed.
     /**
-     * @throws RuntimeException if the rename fails.
+     * @throws SecretFileException if the rename fails.
      */
     public function finalizeStagedEpoch(GdkKeyringStage $stage): void
     {
@@ -113,7 +117,7 @@ final class GdkKeyringService
             // Do NOT @unlink the staged file on rename failure. At this point
             // current_epoch is already committed and this .tmp is the ONLY
             // copy of the epoch key — keep it so a re-entrant call can retry.
-            throw new RuntimeException("Could not finalize the GDK keyring file for user {$stage->userId}.");
+            throw SecretFileException::couldNotFinalizeKeyring($stage->userId);
         }
     }
 
@@ -160,7 +164,7 @@ final class GdkKeyringService
             $this->writeKeyringFile($userId, $keyring, $kek);
             $this->setCurrentEpoch($userId, $epoch->epochId);
         } catch (SodiumException $e) {
-            throw new RuntimeException('Failed to append GDK epoch: sodium error.', 0, $e);
+            throw CryptoOperationFailedException::during('GDK epoch append', $e);
         } finally {
             sodium_memzero($kek);
         }
@@ -170,8 +174,8 @@ final class GdkKeyringService
     // key from the keyring — the single accessor the write hooks consume.
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
-     * @throws RuntimeException when no current epoch is recorded, or the
-     *                          keyring does not hold a key for it.
+     * @throws KeyringStateException when no current epoch is recorded, or
+     *                               the keyring does not hold a key for it.
      */
     public function currentEpoch(int $userId, Session $session): GdkEpoch
     {
@@ -183,12 +187,12 @@ final class GdkKeyringService
         try {
             $epochId = $this->currentEpochId($userId);
             if ($epochId === null) {
-                throw new RuntimeException("No current GDK epoch recorded for user {$userId}.");
+                throw KeyringStateException::noCurrentEpoch($userId);
             }
 
             $keyHex = $this->readKeyringFile($userId, $kek)->keyFor($epochId);
             if ($keyHex === null) {
-                throw new RuntimeException("GDK keyring for user {$userId} has no key for current epoch {$epochId}.");
+                throw KeyringStateException::missingKeyForEpoch($userId, $epochId);
             }
 
             return new GdkEpoch(epochId: $epochId, keyHex: $keyHex);
@@ -203,7 +207,7 @@ final class GdkKeyringService
     // can no longer decrypt the file; only $newKek can.
     /**
      * @throws InvalidArgumentException when either key is empty.
-     * @throws RuntimeException when $oldKek cannot decrypt the current file.
+     * @throws CryptoOperationFailedException when $oldKek cannot decrypt the current file.
      */
     public function rewrapUnderNewKek(int $userId, string $oldKek, string $newKek): void
     {
@@ -215,7 +219,7 @@ final class GdkKeyringService
             $keyring = $this->readKeyringFile($userId, $oldKek);
             $this->writeKeyringFile($userId, $keyring, $newKek);
         } catch (SodiumException $e) {
-            throw new RuntimeException('Failed to re-wrap GDK keyring: sodium error.', 0, $e);
+            throw CryptoOperationFailedException::during('GDK keyring re-wrap', $e);
         } finally {
             sodium_memzero($oldKek);
             sodium_memzero($newKek);
@@ -228,8 +232,11 @@ final class GdkKeyringService
     }
 
     /**
-     * @throws RuntimeException when $kek cannot decrypt the file (wrong
-     *                          key, tampering, or a truncated/corrupt file).
+     * @throws KeyringStateException when the decrypted payload will not parse.
+     *
+     * The file encryptor raises its own type when $kek cannot decrypt the
+     * file — wrong key, tampering, or truncation. Not re-declared here
+     * because this method does not translate it.
      */
     private function readKeyringFile(int $userId, string $kek): GdkKeyring
     {
@@ -253,7 +260,7 @@ final class GdkKeyringService
 
             $payload = json_decode((string) file_get_contents($tmpPath), true, flags: JSON_THROW_ON_ERROR);
             if (! is_array($payload)) {
-                throw new RuntimeException("Corrupt GDK keyring payload for user {$userId}.");
+                throw KeyringStateException::corruptPayload($userId);
             }
 
             /** @var array<string, mixed> $payload */
@@ -274,7 +281,7 @@ final class GdkKeyringService
         if (! @rename($tmpEncPath, $encPath)) {
             @unlink($tmpEncPath);
 
-            throw new RuntimeException("Could not finalize the GDK keyring file for user {$userId}.");
+            throw SecretFileException::couldNotFinalizeKeyring($userId);
         }
     }
 
