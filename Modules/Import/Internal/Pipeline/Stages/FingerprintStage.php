@@ -6,6 +6,7 @@ namespace Modules\Import\Internal\Pipeline\Stages;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Dto\FingerprintDisposition;
 use Modules\Import\Public\Services\SourceRefRanker;
@@ -19,6 +20,8 @@ use stdClass;
  */
 final class FingerprintStage
 {
+    use CoercesScalars;
+
     public function __construct(
         private readonly FingerprintComposer $fingerprints,
         private readonly DatabaseManager $db,
@@ -63,7 +66,7 @@ final class FingerprintStage
 
         $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
         $rawId = $existing->id;
-        $existingId = is_int($rawId) ? $rawId : (int) (is_numeric($rawId) ? $rawId : 0);
+        $existingId = self::toInt($rawId);
 
         $incomingRank = $this->ranker->rank($tx->sourceRef, $tx->sourceFormat);
         $existingRank = $this->ranker->rank($existingRef, $existingFormat);
