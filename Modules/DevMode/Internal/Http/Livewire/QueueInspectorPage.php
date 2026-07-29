@@ -151,28 +151,13 @@ final class QueueInspectorPage extends Component
         array $args = [],
         string $confirmed_typed = '',
     ): void {
-        if ($command !== 'queue.bulk.delete') {
-            return;
-        }
-        if ($this->selected === []) {
+        if ($command !== 'queue.bulk.delete' || $this->selected === []) {
             return;
         }
 
-        // Re-validate all three triple-gate checks server-side: Dev
-        // Mode env flag, session Advanced toggle, and a timing-safe
-        // comparison of the typed app-name confirmation token.
-        if (! $devMode->isOn()) {
-            $this->dispatch('toast', message: 'Bulk delete refused — Dev Mode is OFF.');
-
-            return;
-        }
-        if ($session->get('dev_mode.advanced') !== true) {
-            $this->dispatch('toast', message: 'Bulk delete refused — Advanced toggle is OFF.');
-
-            return;
-        }
-        if (! hash_equals('beatrax', $confirmed_typed)) {
-            $this->dispatch('toast', message: 'Bulk delete refused — typed confirmation token mismatch.');
+        $refusal = $this->bulkDeleteRefusal($devMode, $session, $confirmed_typed);
+        if ($refusal !== null) {
+            $this->dispatch('toast', message: 'Bulk delete refused — '.$refusal);
 
             return;
         }
@@ -186,6 +171,20 @@ final class QueueInspectorPage extends Component
         $actions->bulkDelete($this->selected, $kind);
         $this->selected = [];
         $this->dispatch('toast', message: 'Selected rows deleted');
+    }
+
+    // The triple gate re-validated server-side: Dev Mode env flag, session
+    // Advanced toggle, timing-safe compare of the typed app-name token.
+    // Returns the reason to surface, or null when all three pass. The arms
+    // short-circuit, so hash_equals runs only once the first two are open.
+    private function bulkDeleteRefusal(DevModeFlag $devMode, Session $session, string $confirmedTyped): ?string
+    {
+        return match (true) {
+            ! $devMode->isOn() => 'Dev Mode is OFF.',
+            $session->get('dev_mode.advanced') !== true => 'Advanced toggle is OFF.',
+            ! hash_equals('beatrax', $confirmedTyped) => 'typed confirmation token mismatch.',
+            default => null,
+        };
     }
 
     public function render(

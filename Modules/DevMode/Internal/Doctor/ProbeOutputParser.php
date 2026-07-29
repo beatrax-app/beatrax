@@ -43,14 +43,7 @@ final class ProbeOutputParser
      */
     private function parseLine(string $line): ?array
     {
-        $trimmed = trim($line);
-        if ($trimmed === '') {
-            return null;
-        }
-        if ($trimmed === 'beatrax:doctor' || preg_match('/^-+$/', $trimmed) === 1) {
-            return null;
-        }
-        if (preg_match('/^(All checks passed|\d+ warning|\d+ blocker)/i', $trimmed) === 1) {
+        if ($this->isChrome(trim($line))) {
             return null;
         }
 
@@ -70,6 +63,16 @@ final class ProbeOutputParser
             'label' => $label,
             'detail' => $detail,
         ];
+    }
+
+    // Everything DoctorCommand prints that is not a probe row: blank lines,
+    // the banner, rule separators, and the closing tally.
+    private function isChrome(string $trimmed): bool
+    {
+        return $trimmed === ''
+            || $trimmed === 'beatrax:doctor'
+            || preg_match('/^-+$/', $trimmed) === 1
+            || preg_match('/^(All checks passed|\d+ warning|\d+ blocker)/i', $trimmed) === 1;
     }
 
     /**

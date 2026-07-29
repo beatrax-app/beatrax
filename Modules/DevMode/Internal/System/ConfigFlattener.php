@@ -10,6 +10,10 @@ namespace Modules\DevMode\Internal\System;
 // applies to env keys, so BEATRAX_DEV_MODE renders plainly while BEATRAX_OAUTH_SECRET masks.
 final class ConfigFlattener
 {
+    // Substrings that make a config key sensitive wherever in the key they
+    // appear, as one list rather than a chain of str_contains calls.
+    private const SENSITIVE_SUBSTRINGS = ['password', 'secret', 'token'];
+
     public const string REDACTED_MARKER = '[REDACTED]';
 
     /**
@@ -66,24 +70,17 @@ final class ConfigFlattener
     {
         $needle = strtolower($key);
 
-        if (str_contains($needle, 'password')) {
-            return true;
-        }
-        if (str_contains($needle, 'secret')) {
-            return true;
-        }
-        if (str_contains($needle, 'token')) {
-            return true;
-        }
-        // `*key` — must end in `key` (anywhere after a separator). The
-        // segment-final test covers `app.key`, `APP_KEY`, `auth.key`,
-        // and rejects benign matches like `app.kind` that the `*key`
-        // suffix pattern would otherwise hit.
-        if (str_ends_with($needle, 'key') || str_ends_with($needle, '_key')) {
-            return true;
+        foreach (self::SENSITIVE_SUBSTRINGS as $marker) {
+            if (str_contains($needle, $marker)) {
+                return true;
+            }
         }
 
-        return false;
+        // Segment-final `key` covers app.key, APP_KEY and auth.key while
+        // rejecting benign names like app.kind. The old second clause tested
+        // '_key' too, which could never add a match — the needle is already
+        // lowercased, so anything ending '_key' ends 'key'.
+        return str_ends_with($needle, 'key');
     }
 
     /**
