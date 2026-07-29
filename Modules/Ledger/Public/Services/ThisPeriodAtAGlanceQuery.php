@@ -259,12 +259,9 @@ final class ThisPeriodAtAGlanceQuery
             if ($status === 'needs_reauth') {
                 $lineStatus = 'reauth';
                 $overall = 'reauth';
-            } elseif ($lastScanAt === null) {
-                $lineStatus = 'stale';
-                if ($overall !== 'reauth') {
-                    $overall = 'stale';
-                }
-            } elseif ($lastScanAt->getTimestamp() < ($nowEpoch - self::STALE_THRESHOLD_SECONDS)) {
+            } elseif ($lastScanAt === null || $lastScanAt->getTimestamp() < ($nowEpoch - self::STALE_THRESHOLD_SECONDS)) {
+                // Never scanned and scanned too long ago are the same thing
+                // to a reader of this tile: the figure cannot be trusted.
                 $lineStatus = 'stale';
                 if ($overall !== 'reauth') {
                     $overall = 'stale';

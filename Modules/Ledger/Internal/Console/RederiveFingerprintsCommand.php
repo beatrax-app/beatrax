@@ -40,36 +40,39 @@ final class RederiveFingerprintsCommand extends Command
 
     private function report(FingerprintRederiveOutcome $outcome): int
     {
-        switch ($outcome->status) {
-            case 'collided':
-                $count = count($outcome->collisions);
-                $json = json_encode($outcome->collisions, JSON_PRETTY_PRINT);
+        if ($outcome->status === 'collided') {
+            $this->reportCollisions($outcome);
 
-                $this->error(sprintf('Fingerprint v%d migration ABORTED.', $outcome->targetVersion));
-                $this->error(sprintf('%d collision(s) detected:', $count));
-                $this->line(is_string($json) ? $json : '[json_encode failed]');
-                $this->error('Existing rows left intact. Manual reconciliation required before re-running.');
-
-                return self::FAILURE;
-
-            case 'noop':
-                $this->info(sprintf('0 rows would be re-derived (already on v%d).', $outcome->targetVersion));
-
-                return self::SUCCESS;
-
-            case 'dry_run':
-                $this->info(sprintf('Dry-run OK. %d rows would be re-derived to v%d.', $outcome->rowsAffected, $outcome->targetVersion));
-
-                return self::SUCCESS;
-
-            case 'applied':
-                $this->info(sprintf('Re-derived %d rows to v%d.', $outcome->rowsAffected, $outcome->targetVersion));
-
-                return self::SUCCESS;
+            return self::FAILURE;
         }
 
-        $this->error(sprintf('Unknown re-derive outcome: %s', $outcome->status));
+        // A status with no message is one this command does not know about,
+        // which is a failure rather than a silent success.
+        $message = match ($outcome->status) {
+            'noop' => sprintf('0 rows would be re-derived (already on v%d).', $outcome->targetVersion),
+            'dry_run' => sprintf('Dry-run OK. %d rows would be re-derived to v%d.', $outcome->rowsAffected, $outcome->targetVersion),
+            'applied' => sprintf('Re-derived %d rows to v%d.', $outcome->rowsAffected, $outcome->targetVersion),
+            default => null,
+        };
 
-        return self::FAILURE;
+        if ($message === null) {
+            $this->error(sprintf('Unknown re-derive outcome: %s', $outcome->status));
+
+            return self::FAILURE;
+        }
+
+        $this->info($message);
+
+        return self::SUCCESS;
+    }
+
+    private function reportCollisions(FingerprintRederiveOutcome $outcome): void
+    {
+        $json = json_encode($outcome->collisions, JSON_PRETTY_PRINT);
+
+        $this->error(sprintf('Fingerprint v%d migration ABORTED.', $outcome->targetVersion));
+        $this->error(sprintf('%d collision(s) detected:', count($outcome->collisions)));
+        $this->line(is_string($json) ? $json : '[json_encode failed]');
+        $this->error('Existing rows left intact. Manual reconciliation required before re-running.');
     }
 }
