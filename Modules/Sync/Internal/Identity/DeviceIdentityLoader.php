@@ -51,7 +51,10 @@ final class DeviceIdentityLoader
             // $tmpPath, which lands at the process umask default — lock it
             // to 0600 before ever reading the plaintext back out.
             SecureTempFile::lockDown($tmpPath);
-            $json = file_get_contents($tmpPath);
+            // Suppressed so the `=== false` check decides. Unsuppressed, a
+            // failed read raises E_WARNING, which Laravel's handler turns into
+            // an ErrorException before the comparison runs.
+            $json = @file_get_contents($tmpPath);
             if ($json === false) {
                 throw new RuntimeException('Failed to read the decrypted device identity key-file.');
             }
