@@ -9,6 +9,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Category;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -140,7 +141,7 @@ function ramtDefinition(string $metric, string $dimension): ReportDefinition
         metric: $metric,
         dimension: $dimension,
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         customFrom: '2026-03-01',

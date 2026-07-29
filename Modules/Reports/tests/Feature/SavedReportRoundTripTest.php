@@ -7,6 +7,8 @@ use Modules\Core\Models\User;
 use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
+use Spatie\LaravelData\Exceptions\CannotCastEnum;
 
 uses(RefreshDatabase::class);
 
@@ -46,7 +48,7 @@ it('saves and reopens a full report definition losslessly, including currencyMod
         metric: 'income',
         dimension: 'counterparty',
         periodPreset: 'last_3_months',
-        granularity: 'weekly',
+        granularity: ReportGranularity::Weekly,
         currencyMode: 'original',
         viz: 'donut',
         compare: true,
@@ -74,7 +76,7 @@ it('reopens a saved report with currencyMode=base exactly as it was saved', func
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'bar',
     );
@@ -86,4 +88,42 @@ it('reopens a saved report with currencyMode=base exactly as it was saved', func
     $reopened = ReportDefinition::from($reloaded->definition);
 
     expect($reopened->currencyMode)->toBe('base');
+});
+
+// C7-R21: a stored granularity outside the set must be rejected rather than
+// defaulted. Sync replicates saved reports between devices, so a definition
+// payload can arrive from a build whose vocabulary is not this one's. Quietly
+// reading such a report as monthly would show the user a different report
+// than the one they saved, under the name they gave it — a loud failure is
+// the lesser harm, and it is the one the requirement asks for.
+it('refuses to reopen a saved report whose stored granularity is not in the vocabulary', function (): void {
+    $user = srrtUser();
+    test()->actingAs($user);
+
+    $saved = app(SaveReport::class)->save($user, new ReportDefinition(
+        metric: 'spend',
+        dimension: 'time_bucket',
+        periodPreset: 'this_year',
+        granularity: ReportGranularity::Monthly,
+        currencyMode: 'base',
+        viz: 'line',
+    ), 'Tampered');
+
+    /** @var SavedReport $reloaded */
+    $reloaded = SavedReport::query()->findOrFail($saved->id);
+    $payload = $reloaded->definition;
+    $payload['granularity'] = 'quarterly';
+
+    expect(fn () => ReportDefinition::from($payload))->toThrow(CannotCastEnum::class);
+});
+
+// Quarterly is reachable as a widening outcome but is not a granularity the
+// user can ask for. The distinction is easy to lose — the widening prose in
+// C7 names quarterly — so it is pinned here rather than left implicit.
+it('does not admit quarterly as a granularity the user can choose', function (): void {
+    expect(ReportGranularity::tryFrom('quarterly'))->toBeNull()
+        ->and(array_map(
+            static fn (ReportGranularity $case): string => $case->value,
+            ReportGranularity::cases(),
+        ))->toBe(['monthly', 'weekly']);
 });

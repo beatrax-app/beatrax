@@ -11,6 +11,7 @@ use Modules\Reports\Internal\Http\Livewire\ReportBuilder;
 use Modules\Reports\Models\SavedReport;
 use Modules\Reports\Public\Actions\SaveReport;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -150,7 +151,7 @@ it('?report={id} restores a user-owned saved definition into the builder', funct
         metric: 'income',
         dimension: 'counterparty',
         periodPreset: 'last_3_months',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'bar',
     );
@@ -171,7 +172,7 @@ it('a foreign report id never loads another user\'s saved report — the builder
         metric: 'income',
         dimension: 'counterparty',
         periodPreset: 'last_3_months',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'bar',
     );
@@ -228,7 +229,7 @@ it('CR-01: editing a loaded report updates the same row (no duplicate); a fresh 
         metric: 'spend',
         dimension: 'category',
         periodPreset: 'this_month',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
     );

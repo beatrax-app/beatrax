@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\NetWorthSeriesQuery;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -114,7 +115,7 @@ it('fx_exclusion_never_1to1: an unconvertible account is excluded and counted, n
         label: 'Apr 2026',
     );
 
-    $points = app(NetWorthSeriesQuery::class)->forUser($user, $period, 'monthly');
+    $points = app(NetWorthSeriesQuery::class)->forUser($user, $period, ReportGranularity::Monthly);
 
     expect($points)->toHaveCount(1);
     $point = $points[0];

@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Aggregation\NetWorthSeriesQuery;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 uses(RefreshDatabase::class);
 
@@ -112,7 +113,7 @@ it('renders one point per monthly bucket over a 12-month span — a time series,
         label: 'FY',
     );
 
-    $points = app(NetWorthSeriesQuery::class)->forUser($user, $period, 'monthly');
+    $points = app(NetWorthSeriesQuery::class)->forUser($user, $period, ReportGranularity::Monthly);
 
     expect($points)->toHaveCount(12);
 
@@ -152,7 +153,7 @@ it('excludes paypal_funding accounts from every point, matching NetWorthQuery pa
         label: 'Jul 2025',
     );
 
-    $points = app(NetWorthSeriesQuery::class)->forUser($user, $period, 'monthly');
+    $points = app(NetWorthSeriesQuery::class)->forUser($user, $period, ReportGranularity::Monthly);
 
     expect($points)->toHaveCount(1);
     expect($points[0]->totalMinor)->toBe(20_000);

@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
 use Modules\Reports\Public\Dto\ReportDefinition;
+use Modules\Reports\Public\Enums\ReportGranularity;
 
 /*
  * Wave-authored (999.6-08 Task 1, Req 12/D-03) — pins the single tested
@@ -24,7 +25,7 @@ function dubDefinition(string $dimension, array $overrides = []): ReportDefiniti
         metric: 'spend',
         dimension: $dimension,
         periodPreset: 'custom',
-        granularity: 'monthly',
+        granularity: ReportGranularity::Monthly,
         currencyMode: 'base',
         viz: 'table',
         customFrom: '2026-05-01',

@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultRow;
+use Modules\Reports\Public\Enums\ReportGranularity;
 use stdClass;
 
 /**
@@ -27,7 +28,6 @@ final class TimeBucketSpendQuery
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
-     * @param  string  $granularity  'monthly' | 'weekly'
      * @param  list<int>  $accountIds  restrict to these account ids (empty = no restriction); applied alongside the user_id guard, so a foreign id only narrows this user's own result, never widens it
      * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
      * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
@@ -41,7 +41,7 @@ final class TimeBucketSpendQuery
         Period $period,
         string $metric,
         string $currency,
-        string $granularity = 'monthly',
+        ?ReportGranularity $granularity = null,
         array $accountIds = [],
         array $categoryIds = [],
         array $counterpartyIds = [],
@@ -49,7 +49,7 @@ final class TimeBucketSpendQuery
         ?int $amountMaxMinor = null,
         string $amountDirection = 'both',
     ): array {
-        $buckets = $this->timeBucketGenerator->generate($period, $granularity);
+        $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
         $types = self::metricTypes($metric);
         $amountExpr = self::amountExpr($metric);
 
