@@ -28,7 +28,9 @@ use Modules\Core\Models\User as CoreUser;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\CurrentUserService;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\NavCountsService;
@@ -50,6 +52,10 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(BootProbeState::class);
         $this->app->register(HealthCheckServiceProvider::class);
         $this->app->singleton(Clock::class, SystemClock::class);
+
+        // Bound to the interface so callers that translate a libsodium
+        // failure into their own type can be driven from a test.
+        $this->app->singleton(FileEncryptor::class, BackupEncryptor::class);
         // Named constructor, so the class cannot be built with neither a
         // container nor a session.
         $this->app->singleton(SessionFactory::class, fn () => SessionFactory::fromContainer($this->app));

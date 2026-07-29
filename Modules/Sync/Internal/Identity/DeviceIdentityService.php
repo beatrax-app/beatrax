@@ -8,8 +8,9 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Services\BackupEncryptor;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Ramsey\Uuid\Uuid;
 use RuntimeException;
 use SodiumException;
@@ -21,10 +22,11 @@ final class DeviceIdentityService
 {
     public function __construct(
         private readonly AppLockKeyService $appLockKeyService,
-        private readonly BackupEncryptor $backupEncryptor,
+        private readonly FileEncryptor $backupEncryptor,
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly DeviceNameDetector $nameDetector,
+        private readonly SodiumPrimitives $sodium,
     ) {}
 
     // Generates the device identity, encrypts the key-file, and persists the
@@ -50,10 +52,10 @@ final class DeviceIdentityService
             // since key-reuse across primitives is a crypto anti-pattern.
             $kxKp = sodium_crypto_kx_keypair();
 
-            $ed25519SecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($signKp));
-            $ed25519PublicHex = sodium_bin2hex(sodium_crypto_sign_publickey($signKp));
-            $x25519SecretHex = sodium_bin2hex(sodium_crypto_kx_secretkey($kxKp));
-            $x25519PublicHex = sodium_bin2hex(sodium_crypto_kx_publickey($kxKp));
+            $ed25519SecretHex = $this->sodium->binToHex(sodium_crypto_sign_secretkey($signKp));
+            $ed25519PublicHex = $this->sodium->binToHex(sodium_crypto_sign_publickey($signKp));
+            $x25519SecretHex = $this->sodium->binToHex(sodium_crypto_kx_secretkey($kxKp));
+            $x25519PublicHex = $this->sodium->binToHex(sodium_crypto_kx_publickey($kxKp));
 
             // Zero the raw keypair buffers as soon as the hex is extracted —
             // no reason to keep the binary form in memory afterward.

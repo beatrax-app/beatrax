@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Public\Services;
 
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Exceptions\BackupIoException;
@@ -13,7 +14,7 @@ use Throwable;
 /**
  * @link ../../../../.docs/features/core/architecture.md
  */
-final class BackupEncryptor
+final class BackupEncryptor implements FileEncryptor
 {
     private const MAGIC = 'BTRXENC1';
 

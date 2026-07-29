@@ -28,6 +28,7 @@ final class GdkRotationService
         private readonly RelayMailbox $relayMailbox,
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
+        private readonly SodiumPrimitives $sodium,
     ) {}
 
     // $session is a PER-METHOD parameter, not a constructor-captured field —
@@ -88,7 +89,7 @@ final class GdkRotationService
                         'updated_at' => $now,
                     ]);
 
-                $newEpoch = new GdkEpoch(epochId: $newEpochId, keyHex: sodium_bin2hex($rawGdkKey));
+                $newEpoch = new GdkEpoch(epochId: $newEpochId, keyHex: $this->sodium->binToHex($rawGdkKey));
                 $this->keyringService->appendEpoch($userId, $newEpoch, $session);
 
                 // Step 3: wrap-per-remaining-device fan-out over the ZK-pure
@@ -101,7 +102,7 @@ final class GdkRotationService
                         continue;
                     }
 
-                    $recipientPub = sodium_hex2bin($x25519PublicKeyHex);
+                    $recipientPub = $this->sodium->hexToBin($x25519PublicKeyHex);
                     $wrap = $this->buildGdkEpochWrap($newEpochId, $rawGdkKey, $recipientPub, $deviceId);
 
                     $this->relayMailbox->deliver(
@@ -196,12 +197,12 @@ final class GdkRotationService
         // this user — in that case the foreach below enqueues zero wraps.
         $keyring = $this->keyringService->loadKeyring($userId, $session);
         $selfDeviceId = $this->selfDeviceId($userId);
-        $recipientPub = sodium_hex2bin($recipientPubHex);
+        $recipientPub = $this->sodium->hexToBin($recipientPubHex);
 
         try {
             $connection->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId): void {
                 foreach ($keyring->epochs() as $epoch) {
-                    $rawKey = sodium_hex2bin($epoch->keyHex);
+                    $rawKey = $this->sodium->hexToBin($epoch->keyHex);
 
                     try {
                         $wrap = $this->buildGdkEpochWrap($epoch->epochId, $rawKey, $recipientPub, $recipientDeviceId);

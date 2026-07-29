@@ -12,6 +12,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use RuntimeException;
 use Throwable;
@@ -40,7 +41,7 @@ class EncryptionMigrationService
 
     public function __construct(
         protected readonly DatabaseManager $db,
-        private readonly BackupEncryptor $backupEncryptor,
+        private readonly FileEncryptor $backupEncryptor,
         private readonly AppLockKeyService $appLockKeyService,
         private readonly Clock $clock,
         private readonly Container $container,

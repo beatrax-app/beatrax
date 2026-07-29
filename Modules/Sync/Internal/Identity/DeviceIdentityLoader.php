@@ -6,7 +6,7 @@ namespace Modules\Sync\Internal\Identity;
 
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Public\Services\AppLockKeyService;
-use Modules\Core\Public\Services\BackupEncryptor;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
 use RuntimeException;
 
@@ -17,7 +17,7 @@ final class DeviceIdentityLoader
 {
     public function __construct(
         private readonly AppLockKeyService $appLockKeyService,
-        private readonly BackupEncryptor $backupEncryptor,
+        private readonly FileEncryptor $backupEncryptor,
     ) {}
 
     // Returns null when sync was never enabled (no key-file) or the app-lock

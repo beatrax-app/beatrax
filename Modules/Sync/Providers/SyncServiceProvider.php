@@ -18,7 +18,9 @@ use Modules\Sync\Commands\SyncServeCommand;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\LibsodiumPrimitives;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
+use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
@@ -66,6 +68,10 @@ final class SyncServiceProvider extends ServiceProvider
         $this->app->singleton(OrSetStrategy::class);
         $this->app->singleton(MergeRulesRegistry::class);
         $this->app->singleton(DeviceKeySigner::class);
+
+        // The libsodium conversions the crypto paths run inside their
+        // try-blocks, behind an interface so a test can make them fail.
+        $this->app->singleton(SodiumPrimitives::class, LibsodiumPrimitives::class);
 
         // GDK crypto primitives (class_exists-guarded so this provider
         // stays clean at every intermediate commit — stateless/DI-resolved,
