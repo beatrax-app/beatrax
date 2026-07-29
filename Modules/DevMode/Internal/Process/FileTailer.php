@@ -17,52 +17,55 @@ final readonly class FileTailer
      */
     public function tailOnce(string $path, int $fromOffset): array
     {
+        $length = $this->readableLength($path, $fromOffset);
+        $chunk = $length < 1 ? '' : $this->readAt($path, $fromOffset, $length);
+
+        // "Nothing new — keep your offset" was written out seven times here.
+        // Every reason for it (missing, rotated, truncated, caught up,
+        // unopenable, unseekable, empty read) is one answer, and the unchanged
+        // offset is what preserves the caller's idempotency.
+        return $chunk === ''
+            ? ['chunk' => '', 'newOffset' => $fromOffset]
+            : ['chunk' => $chunk, 'newOffset' => $fromOffset + strlen($chunk)];
+    }
+
+    // How many bytes are available from $fromOffset, capped at one chunk; 0
+    // when there is nothing to read. A size below the caller's offset is
+    // rotation or truncation and a size equal to it means caught up — both
+    // are "nothing", which is why they share the one comparison.
+    private function readableLength(string $path, int $fromOffset): int
+    {
         clearstatcache(true, $path);
 
         if (! is_file($path)) {
-            return ['chunk' => '', 'newOffset' => $fromOffset];
+            return 0;
         }
 
         $size = filesize($path);
-        if ($size === false || $size < $fromOffset) {
-            // Rotation / truncation: keep the caller's offset so they
-            // can decide whether to reset to 0 or wait. Returning the
-            // unchanged offset preserves caller idempotency.
-            return ['chunk' => '', 'newOffset' => $fromOffset];
+        if ($size === false || $size <= $fromOffset) {
+            return 0;
         }
 
-        if ($size === $fromOffset) {
-            return ['chunk' => '', 'newOffset' => $fromOffset];
-        }
+        return min($size - $fromOffset, self::READ_CHUNK_BYTES);
+    }
 
+    // The bytes at $fromOffset, or '' when the file cannot be opened, will not
+    // seek to that offset, or yields nothing.
+    private function readAt(string $path, int $fromOffset, int $length): string
+    {
         $handle = @fopen($path, 'r');
         if ($handle === false) {
-            return ['chunk' => '', 'newOffset' => $fromOffset];
+            return '';
         }
 
         try {
             if (@fseek($handle, $fromOffset) !== 0) {
-                return ['chunk' => '', 'newOffset' => $fromOffset];
+                return '';
             }
 
-            $remaining = $size - $fromOffset;
-            // $remaining is guaranteed >= 1 here: the earlier `$size === $fromOffset`
-            // branch returned, and PHP's fread() requires the length to be a positive
-            // int (PHPStan: int<1, max>).
-            $toRead = $remaining > self::READ_CHUNK_BYTES ? self::READ_CHUNK_BYTES : $remaining;
-            if ($toRead < 1) {
-                return ['chunk' => '', 'newOffset' => $fromOffset];
-            }
+            $chunk = @fread($handle, max(1, $length));
 
-            $chunk = @fread($handle, $toRead);
-            if ($chunk === false || $chunk === '') {
-                return ['chunk' => '', 'newOffset' => $fromOffset];
-            }
-
-            return [
-                'chunk' => $chunk,
-                'newOffset' => $fromOffset + strlen($chunk),
-            ];
+            return $chunk === false ? '' : $chunk;
         } finally {
             @fclose($handle);
         }
