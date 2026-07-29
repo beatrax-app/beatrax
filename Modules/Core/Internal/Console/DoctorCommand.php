@@ -21,6 +21,8 @@ use Modules\Search\Public\Services\FtsHealthCheck;
  */
 final class DoctorCommand extends Command
 {
+    private const ROW_FORMAT = '%-24s %-8s %s';
+
     /** @var string */
     protected $signature = 'beatrax:doctor';
 
@@ -74,7 +76,7 @@ final class DoctorCommand extends Command
         // ProbeResult is built here so FtsHealthCheck stays boundary-clean.
         if ($this->ftsHealth !== null) {
             $ftsResult = new ProbeResult($this->ftsHealth->severity(), $this->ftsHealth->message());
-            $this->line(sprintf('%-24s %-8s %s', $this->ftsHealth->label(), $ftsResult->severity, $ftsResult->message));
+            $this->line(sprintf(self::ROW_FORMAT, $this->ftsHealth->label(), $ftsResult->severity, $ftsResult->message));
             if ($ftsResult->severity === 'critical') {
                 $blockers[] = $this->ftsHealth->label();
             } elseif ($ftsResult->severity === 'warning') {
@@ -88,7 +90,7 @@ final class DoctorCommand extends Command
         // Probe severity model would invent a fourth ("info") bucket.
         $loaded = in_array('imap', get_loaded_extensions(), true);
         $this->line(sprintf(
-            '%-24s %-8s %s',
+            self::ROW_FORMAT,
             'ext-imap',
             'info',
             ($loaded ? 'loaded' : 'not loaded').' (beatrax uses webklex/php-imap regardless)',
@@ -119,7 +121,7 @@ final class DoctorCommand extends Command
      */
     private function reportProbe(Probe $probe, ProbeResult $result, array &$blockers, array &$warnings): void
     {
-        $this->line(sprintf('%-24s %-8s %s', $probe->label(), $result->severity, $result->message));
+        $this->line(sprintf(self::ROW_FORMAT, $probe->label(), $result->severity, $result->message));
 
         if ($result->severity === 'critical') {
             $blockers[] = $probe->label();

@@ -22,6 +22,8 @@ use Modules\Receipts\Public\Pipeline\MboxHeaderProfile;
  */
 final class HeaderSniffer
 {
+    private const EMPTY_FILE_MESSAGE = 'The file is empty.';
+
     private const HEAD_BYTES = 8192;
 
     private const UTF8_BOM = "\xEF\xBB\xBF";
@@ -89,7 +91,7 @@ final class HeaderSniffer
 
         $firstLine = strtok($head, "\r\n");
         if ($firstLine === false) {
-            throw new SniffMismatchException('The file is empty.');
+            throw new SniffMismatchException(self::EMPTY_FILE_MESSAGE);
         }
 
         $columns = str_getcsv($firstLine, $preset->delimiter, '"', '');
@@ -180,7 +182,7 @@ final class HeaderSniffer
 
         $firstLine = strtok($head, "\r\n");
         if ($firstLine === false) {
-            throw new SniffMismatchException('The file is empty.');
+            throw new SniffMismatchException(self::EMPTY_FILE_MESSAGE);
         }
 
         $columns = str_getcsv($firstLine, PaypalCsvLanguageProfile::DELIMITER, '"', '');
@@ -317,7 +319,7 @@ final class HeaderSniffer
 
         $firstLine = strtok($head, "\r\n");
         if ($firstLine === false) {
-            throw new SniffMismatchException('The file is empty.');
+            throw new SniffMismatchException(self::EMPTY_FILE_MESSAGE);
         }
 
         $delim = AsnCsvHeaderProfile::DELIMITER;

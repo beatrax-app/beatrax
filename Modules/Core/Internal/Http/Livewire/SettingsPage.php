@@ -20,6 +20,16 @@ use Modules\Ledger\Models\Currency;
  */
 final class SettingsPage extends Component
 {
+    private const CURRENCY_REQUIRED = 'Please choose a currency.';
+
+    private const INVALID_WINDOW_MONTHS = 'Choose between 2 and 60 months.';
+
+    private const INVALID_THRESHOLD = 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.';
+
+    private const INVALID_AMOUNT = 'Enter an amount from €0 upward.';
+
+    private const INVALID_PERIOD_DAY = 'Choose a day from 1 to 28.';
+
     #[Validate('required|in:eur_only,original')]
     public string $defaultCurrencyView = 'eur_only';
 
@@ -247,26 +257,26 @@ final class SettingsPage extends Component
     public function messages(): array
     {
         return [
-            'periodStartDay.required' => 'Choose a day from 1 to 28.',
-            'periodStartDay.integer' => 'Choose a day from 1 to 28.',
-            'periodStartDay.min' => 'Choose a day from 1 to 28.',
-            'periodStartDay.max' => 'Choose a day from 1 to 28.',
+            'periodStartDay.required' => self::INVALID_PERIOD_DAY,
+            'periodStartDay.integer' => self::INVALID_PERIOD_DAY,
+            'periodStartDay.min' => self::INVALID_PERIOD_DAY,
+            'periodStartDay.max' => self::INVALID_PERIOD_DAY,
             'defaultCurrencyView.required' => 'Pick one of the available options.',
             'defaultCurrencyView.in' => 'Pick one of the available options.',
-            'recurringDetectionWindowMonths.required' => 'Choose between 2 and 60 months.',
-            'recurringDetectionWindowMonths.integer' => 'Choose between 2 and 60 months.',
-            'recurringDetectionWindowMonths.min' => 'Choose between 2 and 60 months.',
-            'recurringDetectionWindowMonths.max' => 'Choose between 2 and 60 months.',
-            'recurringIncomeMinAmountMinor.required' => 'Enter an amount from €0 upward.',
-            'recurringIncomeMinAmountMinor.integer' => 'Enter an amount from €0 upward.',
-            'recurringIncomeMinAmountMinor.min' => 'Enter an amount from €0 upward.',
-            'recurringIncomeMinAmountMinor.max' => 'Enter an amount from €0 upward.',
-            'driftAlertThresholdPercent.required' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
-            'driftAlertThresholdPercent.integer' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
-            'driftAlertThresholdPercent.in' => 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.',
-            'baseCurrency.size' => 'Please choose a currency.',
-            'baseCurrency.exists' => 'Please choose a currency.',
-            'baseCurrency.string' => 'Please choose a currency.',
+            'recurringDetectionWindowMonths.required' => self::INVALID_WINDOW_MONTHS,
+            'recurringDetectionWindowMonths.integer' => self::INVALID_WINDOW_MONTHS,
+            'recurringDetectionWindowMonths.min' => self::INVALID_WINDOW_MONTHS,
+            'recurringDetectionWindowMonths.max' => self::INVALID_WINDOW_MONTHS,
+            'recurringIncomeMinAmountMinor.required' => self::INVALID_AMOUNT,
+            'recurringIncomeMinAmountMinor.integer' => self::INVALID_AMOUNT,
+            'recurringIncomeMinAmountMinor.min' => self::INVALID_AMOUNT,
+            'recurringIncomeMinAmountMinor.max' => self::INVALID_AMOUNT,
+            'driftAlertThresholdPercent.required' => self::INVALID_THRESHOLD,
+            'driftAlertThresholdPercent.integer' => self::INVALID_THRESHOLD,
+            'driftAlertThresholdPercent.in' => self::INVALID_THRESHOLD,
+            'baseCurrency.size' => self::CURRENCY_REQUIRED,
+            'baseCurrency.exists' => self::CURRENCY_REQUIRED,
+            'baseCurrency.string' => self::CURRENCY_REQUIRED,
         ];
     }
 }

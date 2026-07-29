@@ -21,6 +21,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final readonly class ArtisanStreamController
 {
+    private const SSE_DATA_PREFIX = 'data: ';
+
     private const TICK_MICROSECONDS = 150_000;
 
     private const STREAM_TIMEOUT_SECONDS = 600;
@@ -81,7 +83,7 @@ final readonly class ArtisanStreamController
 
                 if ($result['chunk'] !== '') {
                     echo 'id: '.$offset."\n";
-                    echo 'data: '.json_encode([
+                    echo self::SSE_DATA_PREFIX.json_encode([
                         'line' => $result['chunk'],
                     ], JSON_UNESCAPED_SLASHES)."\n\n";
                     @ob_flush();
@@ -99,7 +101,7 @@ final readonly class ArtisanStreamController
                     if ($finalChunk['chunk'] !== '') {
                         $offset = $finalChunk['newOffset'];
                         echo 'id: '.$offset."\n";
-                        echo 'data: '.json_encode([
+                        echo self::SSE_DATA_PREFIX.json_encode([
                             'line' => $finalChunk['chunk'],
                         ], JSON_UNESCAPED_SLASHES)."\n\n";
                     }
@@ -137,7 +139,7 @@ final readonly class ArtisanStreamController
                     }
 
                     echo "event: done\n";
-                    echo 'data: '.json_encode([
+                    echo self::SSE_DATA_PREFIX.json_encode([
                         'exit' => $exit,
                         'cancelled' => $cancelled,
                     ], JSON_UNESCAPED_SLASHES)."\n\n";

@@ -26,6 +26,8 @@ use RuntimeException;
  */
 final class GraphApiClient implements GraphApiClientContract
 {
+    private const UNRECOGNISED_ERROR_BODY = 'unrecognised error body';
+
     private const GRAPH_BASE_URI = 'https://graph.microsoft.com/v1.0/';
 
     // SSRF host allow-list: every URL the client sends a bearer token
@@ -441,11 +443,11 @@ final class GraphApiClient implements GraphApiClientContract
             return $this->safeMessage($rawBody);
         }
         if (! is_array($decoded)) {
-            return 'unrecognised error body';
+            return self::UNRECOGNISED_ERROR_BODY;
         }
         $err = $decoded['error'] ?? null;
         if (! is_array($err)) {
-            return 'unrecognised error body';
+            return self::UNRECOGNISED_ERROR_BODY;
         }
         $msg = $err['message'] ?? null;
         if (is_string($msg) && $msg !== '') {
@@ -456,7 +458,7 @@ final class GraphApiClient implements GraphApiClientContract
             return $this->safeMessage($code);
         }
 
-        return 'unrecognised error body';
+        return self::UNRECOGNISED_ERROR_BODY;
     }
 
     // Caps the surfaced message and strips newlines so a verbose

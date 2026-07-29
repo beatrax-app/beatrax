@@ -37,6 +37,8 @@ use Webauthn\TrustPath\EmptyTrustPath;
  */
 final class WebAuthnBiometricService
 {
+    private const LOCALHOST_ORIGIN = 'http://localhost';
+
     public const CREATION_CHALLENGE_SESSION = 'beatrax_webauthn_creation_challenge';
 
     public const REQUEST_CHALLENGE_SESSION = 'beatrax_webauthn_request_challenge';
@@ -391,7 +393,7 @@ final class WebAuthnBiometricService
 
     private function rpId(): string
     {
-        $url = $this->config->get('app.url', 'http://localhost');
+        $url = $this->config->get('app.url', self::LOCALHOST_ORIGIN);
         if (! is_string($url)) {
             return 'localhost';
         }
@@ -403,9 +405,9 @@ final class WebAuthnBiometricService
 
     private function origin(): string
     {
-        $url = $this->config->get('app.url', 'http://localhost');
+        $url = $this->config->get('app.url', self::LOCALHOST_ORIGIN);
 
-        return is_string($url) ? $url : 'http://localhost';
+        return is_string($url) ? $url : self::LOCALHOST_ORIGIN;
     }
 
     private function consumeCreationChallenge(Session $session): string

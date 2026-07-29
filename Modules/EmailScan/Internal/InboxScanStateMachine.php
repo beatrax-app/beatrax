@@ -16,6 +16,8 @@ use RuntimeException;
  */
 final class InboxScanStateMachine
 {
+    private const BUSY_TIMEOUT_PRAGMA = 'PRAGMA busy_timeout = 5000';
+
     use CoercesScalars;
 
     // Per-attempt backoff schedule in seconds ([60s, 5min, 15min,
@@ -50,7 +52,7 @@ final class InboxScanStateMachine
     ): void {
         $this->db->connection()->transaction(function () use ($inboxId, $newStatus, $errorMessage): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
+            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -92,7 +94,7 @@ final class InboxScanStateMachine
     {
         $this->db->connection()->transaction(function () use ($inboxId, $retryAfterSeconds): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
+            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -128,7 +130,7 @@ final class InboxScanStateMachine
     {
         $this->db->connection()->transaction(function () use ($inboxId): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
+            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -171,7 +173,7 @@ final class InboxScanStateMachine
 
         $this->db->connection()->transaction(function () use ($inboxId, $cursor): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
+            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $row = $connection->table('inbox_scan_state')
                 ->where('inbox_id', $inboxId)
@@ -222,7 +224,7 @@ final class InboxScanStateMachine
     {
         $this->db->connection()->transaction(function () use ($inboxId, $progress): void {
             $connection = $this->db->connection();
-            $connection->statement('PRAGMA busy_timeout = 5000');
+            $connection->statement(self::BUSY_TIMEOUT_PRAGMA);
 
             $encoded = $progress === null
                 ? null

@@ -29,6 +29,8 @@ use stdClass;
  */
 final class SearchQuery
 {
+    private const MATCH_NOTHING = '1 = 0';
+
     use CoercesScalars;
 
     // SQLite's highlight()/snippet() do not HTML-escape surrounding
@@ -477,7 +479,7 @@ final class SearchQuery
             } else {
                 // Every supplied account id was foreign — return the
                 // caller's own empty result, never another user's rows.
-                $query->whereRaw('1 = 0');
+                $query->whereRaw(self::MATCH_NOTHING);
             }
         }
 
@@ -494,7 +496,7 @@ final class SearchQuery
             if ($validatedCategoryIds !== []) {
                 $query->whereIn('transactions.category_id', $validatedCategoryIds);
             } else {
-                $query->whereRaw('1 = 0');
+                $query->whereRaw(self::MATCH_NOTHING);
             }
         }
 
@@ -509,7 +511,7 @@ final class SearchQuery
             if ($validatedCounterpartyIds !== []) {
                 $query->whereIn('transactions.counterparty_id', $validatedCounterpartyIds);
             } else {
-                $query->whereRaw('1 = 0');
+                $query->whereRaw(self::MATCH_NOTHING);
             }
         }
 

@@ -22,6 +22,8 @@ use Psr\Log\LoggerInterface;
  */
 final class RelayServeCommand extends Command
 {
+    private const JSON_CONTENT_TYPE = 'application/json';
+
     /** @var string */
     protected $signature = 'relay:serve {--port=51338 : Relay HTTP listen port}';
 
@@ -115,7 +117,7 @@ final class RelayServeCommand extends Command
             }
         }
 
-        return new Response(HttpStatus::NOT_FOUND, ['content-type' => 'application/json'], '{"error":"not_found"}');
+        return new Response(HttpStatus::NOT_FOUND, ['content-type' => self::JSON_CONTENT_TYPE], '{"error":"not_found"}');
     }
 
     // POST /relay/deliver — open submission; the recipient's drain token gates
@@ -172,7 +174,7 @@ final class RelayServeCommand extends Command
             return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'mailbox_full');
         }
 
-        return new Response(HttpStatus::ACCEPTED, ['content-type' => 'application/json'], '{"status":"accepted"}');
+        return new Response(HttpStatus::ACCEPTED, ['content-type' => self::JSON_CONTENT_TYPE], '{"status":"accepted"}');
     }
 
     // GET /relay/drain — bearer-token authorized (see class @link); returns up
@@ -223,7 +225,7 @@ final class RelayServeCommand extends Command
 
         $json = json_encode(['blobs' => $payload], JSON_THROW_ON_ERROR);
 
-        return new Response(HttpStatus::OK, ['content-type' => 'application/json'], $json);
+        return new Response(HttpStatus::OK, ['content-type' => self::JSON_CONTENT_TYPE], $json);
     }
 
     // DELETE /relay/drain/{id} — bearer-token authorized against the row's own
@@ -256,7 +258,7 @@ final class RelayServeCommand extends Command
             return $this->jsonError(HttpStatus::INTERNAL_SERVER_ERROR, 'confirm_failed');
         }
 
-        return new Response(HttpStatus::OK, ['content-type' => 'application/json'], '{"status":"confirmed"}');
+        return new Response(HttpStatus::OK, ['content-type' => self::JSON_CONTENT_TYPE], '{"status":"confirmed"}');
     }
 
     // Authorization is bound to the specific device whose mailbox is being
@@ -293,6 +295,6 @@ final class RelayServeCommand extends Command
     {
         $body = json_encode(['error' => $errorCode], JSON_THROW_ON_ERROR);
 
-        return new Response($status, ['content-type' => 'application/json'], $body);
+        return new Response($status, ['content-type' => self::JSON_CONTENT_TYPE], $body);
     }
 }

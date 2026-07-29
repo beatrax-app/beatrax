@@ -25,6 +25,14 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
  */
 final class AppLockSettingsSection extends Component
 {
+    private const PIN_TOO_SHORT = 'PIN must be at least 4 digits.';
+
+    private const PIN_MISMATCH = 'PINs don\'t match. Try again.';
+
+    private const PIN_RULES = 'nullable|regex:/^[0-9]{4,10}$/';
+
+    private const PIN_INCORRECT = 'Incorrect PIN.';
+
     public bool $lockEnabled = false;
 
     public bool $biometricEnrolled = false;
@@ -37,7 +45,7 @@ final class AppLockSettingsSection extends Component
 
     public bool $confirmingDeenroll = false;
 
-    #[Validate('nullable|regex:/^[0-9]{4,10}$/')]
+    #[Validate(self::PIN_RULES)]
     public string $deenrollPin = '';
 
     // Applied without PIN confirmation -- unlike every other mutation on
@@ -46,13 +54,13 @@ final class AppLockSettingsSection extends Component
     #[Validate('required|integer|in:1,5,15,30')]
     public int $idleTimeoutMinutes = 5;
 
-    #[Validate('nullable|regex:/^[0-9]{4,10}$/')]
+    #[Validate(self::PIN_RULES)]
     public string $newPin = '';
 
-    #[Validate('nullable|regex:/^[0-9]{4,10}$/')]
+    #[Validate(self::PIN_RULES)]
     public string $confirmPin = '';
 
-    #[Validate('nullable|regex:/^[0-9]{4,10}$/')]
+    #[Validate(self::PIN_RULES)]
     public string $currentPin = '';
 
     // Used transiently to build the password recovery wrap; never stored
@@ -143,13 +151,13 @@ final class AppLockSettingsSection extends Component
         }
 
         if (strlen($this->newPin) < 4) {
-            $this->flashMessage = 'PIN must be at least 4 digits.';
+            $this->flashMessage = self::PIN_TOO_SHORT;
 
             return;
         }
 
         if ($this->newPin !== $this->confirmPin) {
-            $this->flashMessage = "PINs don't match. Try again.";
+            $this->flashMessage = self::PIN_MISMATCH;
 
             return;
         }
@@ -214,7 +222,7 @@ final class AppLockSettingsSection extends Component
         $result = $provisioner->disable($user->id, $this->currentPin);
 
         if ($result === false) {
-            $this->flashMessage = 'Incorrect PIN.';
+            $this->flashMessage = self::PIN_INCORRECT;
 
             return;
         }
@@ -248,13 +256,13 @@ final class AppLockSettingsSection extends Component
     public function changePin(CurrentUser $currentUser, AppLockProvisioner $provisioner, EncryptionMigrationService $migrationService): void
     {
         if (strlen($this->newPin) < 4) {
-            $this->flashMessage = 'PIN must be at least 4 digits.';
+            $this->flashMessage = self::PIN_TOO_SHORT;
 
             return;
         }
 
         if ($this->newPin !== $this->confirmPin) {
-            $this->flashMessage = "PINs don't match. Try again.";
+            $this->flashMessage = self::PIN_MISMATCH;
 
             return;
         }
@@ -263,7 +271,7 @@ final class AppLockSettingsSection extends Component
         $result = $provisioner->changePin($user->id, $this->currentPin, $this->newPin);
 
         if ($result === false) {
-            $this->flashMessage = 'Incorrect PIN.';
+            $this->flashMessage = self::PIN_INCORRECT;
 
             return;
         }
@@ -296,13 +304,13 @@ final class AppLockSettingsSection extends Component
     public function resetForgottenPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher): void
     {
         if (strlen($this->newPin) < 4) {
-            $this->flashMessage = 'PIN must be at least 4 digits.';
+            $this->flashMessage = self::PIN_TOO_SHORT;
 
             return;
         }
 
         if ($this->newPin !== $this->confirmPin) {
-            $this->flashMessage = "PINs don't match. Try again.";
+            $this->flashMessage = self::PIN_MISMATCH;
 
             return;
         }
@@ -373,7 +381,7 @@ final class AppLockSettingsSection extends Component
         $user = $currentUser->user();
 
         if (! $provisioner->verifyPin($user->id, $this->deenrollPin)) {
-            $this->flashMessage = 'Incorrect PIN.';
+            $this->flashMessage = self::PIN_INCORRECT;
 
             return;
         }

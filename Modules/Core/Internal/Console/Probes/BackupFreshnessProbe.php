@@ -17,6 +17,8 @@ use Throwable;
  */
 final class BackupFreshnessProbe implements Probe
 {
+    private const BACKUP_AGE_MESSAGE = 'Most recent verified backup is %dh old.';
+
     private const int STALE_AFTER_HOURS = 48;
 
     public function __construct(
@@ -64,14 +66,14 @@ final class BackupFreshnessProbe implements Probe
 
             return new ProbeResult(
                 'warning',
-                sprintf('Most recent verified backup is %dh old.', $hoursOld),
+                sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
                 ['hours_old' => $hoursOld],
             );
         }
 
         return new ProbeResult(
             'ok',
-            sprintf('Most recent verified backup is %dh old.', $hoursOld),
+            sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
             ['hours_old' => $hoursOld],
         );
     }
@@ -147,7 +149,7 @@ final class BackupFreshnessProbe implements Probe
                 'severity' => 'warning',
                 'message' => $hoursOld === null
                     ? 'No verified backups found under the backups directory.'
-                    : sprintf('Most recent verified backup is %dh old.', $hoursOld),
+                    : sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
                 'metadata' => [
                     'hours_old' => $hoursOld,
                     'backups_path' => $this->paths->backups(),

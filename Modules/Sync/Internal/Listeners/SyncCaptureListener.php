@@ -22,6 +22,8 @@ use Psr\Log\LoggerInterface;
  */
 final class SyncCaptureListener
 {
+    private const UNKNOWN_MUTATION_TYPE = 'SyncCaptureListener: unknown mutationType';
+
     public function __construct(
         private readonly Container $container,
         private readonly LoggerInterface $log,
@@ -40,7 +42,7 @@ final class SyncCaptureListener
                 'edit' => $this->handleEdit($event, $writer),
                 'delete' => $this->handleDelete($event, $writer),
                 'create' => $this->handleCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'transactionId' => $event->transactionId,
                 ]),
@@ -68,7 +70,7 @@ final class SyncCaptureListener
                 'edit' => $this->handleSplitEdit($event, $writer),
                 'delete' => $this->handleSplitDelete($event, $writer),
                 'create' => $this->handleSplitCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'splitId' => $event->splitId,
                 ]),
@@ -157,7 +159,7 @@ final class SyncCaptureListener
                 'edit' => $this->handleEnvelopeAssignmentEdit($event, $writer),
                 'delete' => $this->handleEnvelopeAssignmentDelete($event, $writer),
                 'create' => $this->handleEnvelopeAssignmentCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'assignmentId' => $event->assignmentId,
                 ]),
@@ -184,7 +186,7 @@ final class SyncCaptureListener
                 'edit' => $this->handleEnvelopeMoveEdit($event, $writer),
                 'delete' => $this->handleEnvelopeMoveDelete($event, $writer),
                 'create' => $this->handleEnvelopeMoveCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'moveId' => $event->moveId,
                 ]),
@@ -211,7 +213,7 @@ final class SyncCaptureListener
                 'edit' => $this->handleEnvelopeSettingEdit($event, $writer),
                 'delete' => $this->handleEnvelopeSettingDelete($event, $writer),
                 'create' => $this->handleEnvelopeSettingCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'settingId' => $event->settingId,
                 ]),
@@ -325,7 +327,7 @@ final class SyncCaptureListener
                 'edit' => $this->handleSavedReportEdit($event, $writer),
                 'delete' => $this->handleSavedReportDelete($event, $writer),
                 'create' => $this->handleSavedReportCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'reportId' => $event->reportId,
                 ]),
@@ -381,7 +383,7 @@ final class SyncCaptureListener
             match ($event->mutationType) {
                 'edit' => $this->handleNotificationEdit($event, $writer),
                 'create' => $this->handleNotificationCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'notificationId' => $event->notificationId,
                 ]),
@@ -433,7 +435,7 @@ final class SyncCaptureListener
             match ($event->mutationType) {
                 'edit' => $this->handleNotificationPreferenceEdit($event, $writer),
                 'create' => $this->handleNotificationPreferenceCreate($event, $writer),
-                default => $this->log->warning('SyncCaptureListener: unknown mutationType', [
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
                     'mutationType' => $event->mutationType,
                     'preferenceId' => $event->preferenceId,
                 ]),

@@ -304,6 +304,16 @@ it('rejects a zero or unparseable amount on both fund and withdraw', function (s
     $this->writer->{$method}($this->user, $pot->id, '0,00');
 })->with(['fund', 'withdraw'])->throws(InvalidArgumentException::class);
 
+// The ownership check matters more on the way out than on the way in: funding
+// someone else's pot only misplaces the caller's own money, whereas
+// withdrawing from it would move money that is not theirs.
+it('refuses to withdraw from a pot that is not the user\'s', function (): void {
+    $other = User::create(['username' => 'other5', 'password' => 'x', 'period_start_day' => 1]);
+    $theirPot = pwPot($other->id, $this->account->id);
+
+    $this->writer->withdraw($this->user, $theirPot->id, '1,00');
+})->throws(PotNotFoundException::class, 'Pot not found or not owned by user.');
+
 // ---------------------------------------------------------------------------
 // transfer
 // ---------------------------------------------------------------------------
@@ -330,6 +340,16 @@ it('refuses a transfer into the same pot', function (): void {
 
     $this->writer->transfer($this->user, $pot->id, $pot->id, '1,00');
 })->throws(InvalidArgumentException::class, 'Source and target pot must be different.');
+
+// Both the amount and the same-pot rule reject this call. The amount has to
+// win: it is the cheaper check and the one the user can act on, and the
+// message naming the pots would be a red herring when the real problem is
+// the field they typed in.
+it('rejects an unparseable transfer amount before it compares the two pots', function (): void {
+    $pot = pwPot($this->user->id, $this->account->id);
+
+    $this->writer->transfer($this->user, $pot->id, $pot->id, 'nonsense');
+})->throws(InvalidArgumentException::class, 'Invalid or non-positive amount.');
 
 it('refuses a transfer across accounts, which would move money invisibly', function (): void {
     $second = Account::create([

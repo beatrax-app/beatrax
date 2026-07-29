@@ -17,6 +17,8 @@ use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
  */
 final class NotificationsSettingsSection extends Component
 {
+    private const SAVE_FAILED_MESSAGE = 'Couldn\'t save your notification settings. Try again.';
+
     public bool $remindersEnabled = true;
 
     public int $reminderLeadDays = 3;
@@ -67,20 +69,20 @@ final class NotificationsSettingsSection extends Component
         // one. A value no case can represent means a tampered payload.
         $cadence = DigestCadence::tryFrom($this->digestCadence);
         if ($cadence === null) {
-            $this->saveError = "Couldn't save your notification settings. Try again.";
+            $this->saveError = self::SAVE_FAILED_MESSAGE;
 
             return;
         }
 
         if ($this->reminderLeadDays < 1 || $this->reminderLeadDays > 30) {
-            $this->saveError = "Couldn't save your notification settings. Try again.";
+            $this->saveError = self::SAVE_FAILED_MESSAGE;
 
             return;
         }
 
         foreach ([$this->quietHoursFrom, $this->quietHoursTo] as $time) {
             if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time) !== 1) {
-                $this->saveError = "Couldn't save your notification settings. Try again.";
+                $this->saveError = self::SAVE_FAILED_MESSAGE;
 
                 return;
             }
