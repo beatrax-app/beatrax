@@ -7,6 +7,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Services\BackupEncryptor;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 
@@ -212,4 +214,74 @@ it('refuses a current epoch the keyring holds no key for', function (): void {
 
     expect(fn () => $service->currentEpoch((int) $user->id, $session))
         ->toThrow(RuntimeException::class, 'has no key for current epoch 99');
+});
+
+// ---------------------------------------------------------------------------
+// Failures moving the keyring file into place
+//
+// The keyring is written to a .tmp sibling and renamed, so the rename is the
+// moment the new epoch becomes real. Both callers of that rename had to answer
+// for it failing and neither was exercised.
+// ---------------------------------------------------------------------------
+
+// finalizeStagedEpoch() deliberately does NOT delete the staged file when the
+// rename fails: current_epoch is already committed by then, so the .tmp is the
+// only copy of the epoch key in existence. Losing it would lock the user out
+// of everything encrypted under that epoch.
+it('keeps the staged keyring when it cannot be moved into place', function (): void {
+    $user = gdkUser('gdk-finalize-fail');
+
+    /** @var GdkKeyringService $service */
+    $service = $this->app->make(GdkKeyringService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $stage = $service->stageFirstEpoch((int) $user->id, $session);
+
+    // A non-empty directory where the keyring belongs: rename() refuses it.
+    $encPath = UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc');
+    mkdir($encPath, 0700, true);
+    file_put_contents($encPath.DIRECTORY_SEPARATOR.'occupied', 'x');
+
+    expect(fn () => $service->finalizeStagedEpoch($stage))
+        ->toThrow(RuntimeException::class, 'Could not finalize');
+
+    expect(is_file($stage->tmpEncPath))->toBeTrue('the staged keyring is the only copy of the epoch key');
+
+    @unlink($encPath.DIRECTORY_SEPARATOR.'occupied');
+    @rmdir($encPath);
+});
+
+// A keyring file that decrypts cleanly but does not hold an object is a
+// different failure from one that will not decrypt at all: the passphrase was
+// right, so re-prompting would be the wrong response.
+it('refuses a keyring payload that decrypts to something other than an object', function (): void {
+    $user = gdkUser('gdk-corrupt-payload');
+
+    /** @var GdkKeyringService $service */
+    $service = $this->app->make(GdkKeyringService::class);
+
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    $service->generateAndPersist((int) $user->id, $session);
+
+    /** @var AppLockKeyService $keys */
+    $keys = $this->app->make(AppLockKeyService::class);
+    $kek = (string) $keys->release($session);
+
+    // Re-encrypt valid-but-wrong-shaped JSON under the same KEK, so the read
+    // gets all the way past decryption before it objects.
+    $plain = sys_get_temp_dir().DIRECTORY_SEPARATOR.'gdk-bad-'.bin2hex(random_bytes(4));
+    file_put_contents($plain, '"a bare string, not the keyring object"');
+    $this->app->make(BackupEncryptor::class)->encrypt(
+        $plain,
+        UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'),
+        $kek,
+    );
+    @unlink($plain);
+
+    expect(fn () => $service->currentEpoch((int) $user->id, $session))
+        ->toThrow(RuntimeException::class, 'Corrupt GDK keyring payload');
 });
