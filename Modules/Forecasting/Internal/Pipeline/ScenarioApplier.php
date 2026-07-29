@@ -68,31 +68,64 @@ final readonly class ScenarioApplier
         CarbonImmutable $horizonEnd,
         int $horizonDays,
     ): array {
-        $payload = $mutation->payload;
+        // $horizonDays is accepted for symmetry with the per-kind helper
+        // signatures; no kind needs it.
+        unset($horizonDays);
 
-        if ($payload instanceof CancelSeriesPayload) {
-            return $this->applyCancelSeries($contributions, $payload);
-        }
-        if ($payload instanceof AddOneOffPayload) {
-            return $this->applyAddOneOff($contributions, $payload, $asOf, $horizonEnd, $user);
-        }
-        if ($payload instanceof AddRecurringPayload) {
-            return $this->applyAddRecurring($contributions, $payload, $asOf, $horizonEnd, $user);
-        }
-        if ($payload instanceof ChangeSeriesAmountPayload) {
-            return $this->applyChangeSeriesAmount($contributions, $payload, $user);
-        }
-        if ($payload instanceof ShiftSeriesDatePayload) {
-            return $this->applyShiftSeriesDate($contributions, $payload, $horizonEnd);
+        // The default arm is unreachable in practice — the typed cast already
+        // raises on an unknown kind at read time — and leaves the
+        // contributions untouched rather than guessing at one.
+        return match (true) {
+            $mutation->payload instanceof CancelSeriesPayload => $this->applyCancelSeries($contributions, $mutation->payload),
+            $mutation->payload instanceof AddOneOffPayload => $this->applyAddOneOff($contributions, $mutation->payload, $asOf, $horizonEnd, $user),
+            $mutation->payload instanceof AddRecurringPayload => $this->applyAddRecurring($contributions, $mutation->payload, $asOf, $horizonEnd, $user),
+            $mutation->payload instanceof ChangeSeriesAmountPayload => $this->applyChangeSeriesAmount($contributions, $mutation->payload, $user),
+            $mutation->payload instanceof ShiftSeriesDatePayload => $this->applyShiftSeriesDate($contributions, $mutation->payload, $horizonEnd),
+            default => $contributions,
+        };
+    }
+
+    // The index of the earliest contribution for a series, or null when the
+    // baseline holds none — a shift with nothing to shift. The index rather
+    // than the date because a 'first_only' scope shifts exactly that entry.
+    /**
+     * @param  list<ForecastContribution>  $contributions
+     */
+    private function earliestIndexForSeries(array $contributions, int $seriesId): ?int
+    {
+        $earliestIndex = null;
+        foreach ($contributions as $i => $c) {
+            if ($c->seriesId !== $seriesId) {
+                continue;
+            }
+            if ($earliestIndex === null || $c->date->lessThan($contributions[$earliestIndex]->date)) {
+                $earliestIndex = $i;
+            }
         }
 
-        // Unknown payload — leave contributions untouched; the typed cast
-        // already raises on unknown kinds at read time. $horizonDays /
-        // $mutation / $user are accepted for symmetry with the per-kind
-        // helper signatures.
-        unset($horizonDays, $mutation, $user);
+        return $earliestIndex;
+    }
 
-        return $contributions;
+    // A payload date parsed to a day boundary, or null when it will not parse.
+    // The recurring start is allowed to precede asOf — the occurrence walk
+    // skips those — so it is bounded by the caller rather than here.
+    private function parsedDate(string $raw): ?CarbonImmutable
+    {
+        try {
+            return CarbonImmutable::parse($raw)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    // A payload date parsed and bounded to the projection window, or null when
+    // it is unparseable or falls outside it — both meaning the mutation has
+    // nothing to contribute rather than that something went wrong.
+    private function dateWithinHorizon(string $raw, CarbonImmutable $asOf, CarbonImmutable $horizonEnd): ?CarbonImmutable
+    {
+        $date = $this->parsedDate($raw);
+
+        return $date === null || $date->lessThan($asOf) || $date->greaterThan($horizonEnd) ? null : $date;
     }
 
     /**
@@ -123,25 +156,18 @@ final readonly class ScenarioApplier
         CarbonImmutable $horizonEnd,
         User $user,
     ): array {
-        try {
-            $date = CarbonImmutable::parse($payload->date)->startOfDay();
-        } catch (\Throwable) {
-            return $contributions;
-        }
-        if ($date->lessThan($asOf) || $date->greaterThan($horizonEnd)) {
+        $date = $this->dateWithinHorizon($payload->date, $asOf, $horizonEnd);
+
+        // pickAccountIdForOneOff answers 0 when there is no account to land on
+        // — an empty baseline AND no owned account — and has already logged.
+        $accountId = $date === null ? 0 : $this->pickAccountIdForOneOff($contributions, $user);
+
+        if ($date === null || $accountId === 0) {
             return $contributions;
         }
 
-        $magnitude = abs($payload->amountMinor);
-        $sign = $payload->direction === 'income' ? 1 : -1;
-        $signed = $sign * $magnitude;
+        $signed = ($payload->direction === 'income' ? 1 : -1) * abs($payload->amountMinor);
 
-        $accountId = $this->pickAccountIdForOneOff($contributions, $user);
-        if ($accountId === 0) {
-            // No account to land on (empty baseline AND no owned account);
-            // skip the mutation. pickAccountIdForOneOff already logged.
-            return $contributions;
-        }
         $contributions[] = new ForecastContribution(
             date: $date,
             pointMinor: $signed,
@@ -211,13 +237,15 @@ final readonly class ScenarioApplier
         CarbonImmutable $horizonEnd,
         User $user,
     ): array {
-        try {
-            $start = CarbonImmutable::parse($payload->startDate)->startOfDay();
-        } catch (\Throwable) {
-            return $contributions;
-        }
+        $start = $this->parsedDate($payload->startDate);
         $cadence = $payload->cadence;
-        if (! in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true)) {
+
+        // pickAccountIdForOneOff is only asked once the payload is known to be
+        // usable, so an unusable one never reaches its logging.
+        $usable = $start !== null && in_array($cadence, ['weekly', 'monthly', 'quarterly', 'yearly'], true);
+        $accountId = $usable ? $this->pickAccountIdForOneOff($contributions, $user) : 0;
+
+        if ($start === null || ! $usable || $accountId === 0) {
             return $contributions;
         }
 
@@ -228,18 +256,7 @@ final readonly class ScenarioApplier
         // variance-tolerance field, so a fixed conservative band is used.
         $low5 = (int) round($magnitude * 0.95);
         $high5 = (int) round($magnitude * 1.05);
-        if ($sign < 0) {
-            $lowMinor = -$high5;
-            $highMinor = -$low5;
-        } else {
-            $lowMinor = $low5;
-            $highMinor = $high5;
-        }
-
-        $accountId = $this->pickAccountIdForOneOff($contributions, $user);
-        if ($accountId === 0) {
-            return $contributions;
-        }
+        [$lowMinor, $highMinor] = $sign < 0 ? [-$high5, -$low5] : [$low5, $high5];
 
         $cursor = $start;
         while ($cursor->lessThanOrEqualTo($horizonEnd)) {
@@ -336,29 +353,17 @@ final readonly class ScenarioApplier
         ShiftSeriesDatePayload $payload,
         CarbonImmutable $horizonEnd,
     ): array {
-        try {
-            $newDate = CarbonImmutable::parse($payload->newNextDate)->startOfDay();
-        } catch (\Throwable) {
-            return $contributions;
-        }
+        $newDate = $this->parsedDate($payload->newNextDate);
+        $firstIndex = $this->earliestIndexForSeries($contributions, $payload->seriesId);
+        $firstDate = $firstIndex === null ? null : $contributions[$firstIndex]->date;
 
-        $firstIndex = null;
-        $firstDate = null;
-        foreach ($contributions as $i => $c) {
-            if ($c->seriesId !== $payload->seriesId) {
-                continue;
-            }
-            if ($firstDate === null || $c->date->lessThan($firstDate)) {
-                $firstDate = $c->date;
-                $firstIndex = $i;
-            }
-        }
-        if ($firstIndex === null || $firstDate === null) {
-            return $contributions;
-        }
-        // diffInDays returns float in Carbon 3; round to integer days for
-        // the addDays() shift below.
-        $deltaDays = (int) round($firstDate->diffInDays($newDate, false));
+        // diffInDays returns float in Carbon 3; round to integer days for the
+        // addDays() shift below. A zero delta means the series already starts
+        // where the mutation asks it to.
+        $deltaDays = $newDate === null || $firstDate === null
+            ? 0
+            : (int) round($firstDate->diffInDays($newDate, false));
+
         if ($deltaDays === 0) {
             return $contributions;
         }
