@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Import\Internal\Parsers;
 
-use Modules\Import\Public\Contracts\PaymentTypeHinter;
-use Modules\Import\Public\Dto\PaymentTypeHint;
 use Modules\Import\Public\Enums\PaymentType;
-use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
-final class DescriptionKeywordFallbackHinter implements PaymentTypeHinter
+final class DescriptionKeywordFallbackHinter extends DescriptionKeywordHinter
 {
     private const CONFIDENCE = 40;
 
@@ -22,7 +19,7 @@ final class DescriptionKeywordFallbackHinter implements PaymentTypeHinter
     /**
      * @var list<array{keyword: string, type: PaymentType}>
      */
-    private const KEYWORDS = [
+    private const UNSCORED_KEYWORDS = [
         ['keyword' => 'betaalautomaat', 'type' => PaymentType::Pin],
         ['keyword' => 'geldautomaat', 'type' => PaymentType::Pin],
         ['keyword' => 'geldmaat', 'type' => PaymentType::Pin],
@@ -40,27 +37,30 @@ final class DescriptionKeywordFallbackHinter implements PaymentTypeHinter
         ['keyword' => 'fee', 'type' => PaymentType::Fee],
     ];
 
-    public function hint(CanonicalTransaction $tx, string $sourceFormat): ?PaymentTypeHint
+    // Answers for every row regardless of origin: this is the last hinter in
+    // the registry and exists to catch what the per-parser ones did not.
+    protected function handles(string $sourceFormat): bool
     {
-        // The $sourceFormat gate is intentionally absent — the
-        // fallback inspects every row, regardless of origin.
         unset($sourceFormat);
 
-        if ($tx->description === null || $tx->description === '') {
-            return null;
-        }
+        return true;
+    }
 
-        $haystack = mb_strtolower($tx->description);
-        foreach (self::KEYWORDS as $entry) {
-            if (mb_strpos($haystack, $entry['keyword']) !== false) {
-                return new PaymentTypeHint(
-                    type: $entry['type'],
-                    confidence: self::CONFIDENCE,
-                    sourceHint: $entry['keyword'],
-                );
-            }
-        }
-
-        return null;
+    // Every keyword here carries the same low confidence, so the table stores
+    // the type alone and the confidence is stamped on at read time — keeping
+    // one number to change rather than one per row.
+    /**
+     * @return list<array{keyword: string, type: PaymentType, confidence: int}>
+     */
+    protected function keywords(): array
+    {
+        return array_map(
+            static fn (array $entry): array => [
+                'keyword' => $entry['keyword'],
+                'type' => $entry['type'],
+                'confidence' => self::CONFIDENCE,
+            ],
+            self::UNSCORED_KEYWORDS,
+        );
     }
 }
