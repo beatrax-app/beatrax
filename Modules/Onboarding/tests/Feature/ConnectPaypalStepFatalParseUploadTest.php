@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * Regression for the live "0 ROWS · READY" PayPal section produced when
@@ -36,6 +37,8 @@ use Modules\Onboarding\Models\WizardProgress;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::query()->create([
         'username' => 'connect-paypal-fatal-parse',
         'password' => 'fixture-password-12chars',

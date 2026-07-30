@@ -6,8 +6,11 @@ use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Ledger\Models\ImportRun;
+use Tests\Helpers\UploadIsolation;
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });

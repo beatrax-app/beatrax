@@ -9,6 +9,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * Verifies the single-file PayPal Activity CSV submit path stashes the
@@ -31,6 +32,8 @@ use Modules\Onboarding\Models\WizardProgress;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::query()->create([
         'username' => 'connect-paypal-stash',
         'password' => 'fixture-password-12chars',

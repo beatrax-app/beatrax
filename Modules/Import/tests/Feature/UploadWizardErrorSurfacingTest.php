@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Mockery\MockInterface;
 use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Ledger\Models\ImportRun;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * UploadWizard parse-time error surfacing + log capture.
@@ -31,6 +32,8 @@ use Modules\Ledger\Models\ImportRun;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->seedFixtureUserAndAccount();
     $this->actingAs($this->fixtureUser);
 });

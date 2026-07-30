@@ -9,6 +9,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectBankStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * Verifies the format-first restructure of the bank connector step.
@@ -36,6 +37,8 @@ use Modules\Onboarding\Models\WizardProgress;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::query()->create([
         'username' => 'connect-bank-fmt',
         'password' => 'fixture-password-12chars',
