@@ -14,6 +14,7 @@ use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
@@ -201,7 +202,7 @@ it('updates ONLY last_attempt_* on a generic failure, leaves last_successful_syn
     sojaSeedCredentials();
 
     $stub = new SojaStubRemoteSourceAdapter(
-        new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 500 — server error')
+        EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 500, 'server error')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 
@@ -226,7 +227,7 @@ it('a consent failure (HTTP 401) marks consent_failed, dispatches OpenBankingCon
     sojaSeedCredentials();
 
     $stub = new SojaStubRemoteSourceAdapter(
-        new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 401 — unauthorized')
+        EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 401, 'unauthorized')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 
@@ -254,7 +255,7 @@ it('a consent failure (HTTP 403) also marks consent_failed and dispatches OpenBa
     sojaSeedCredentials();
 
     $stub = new SojaStubRemoteSourceAdapter(
-        new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 403 — forbidden')
+        EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 403, 'forbidden')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 

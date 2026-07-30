@@ -11,9 +11,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -93,9 +93,7 @@ class OpenBankingSecretsRepository
     {
         $credentials = $this->load();
         if ($credentials === null) {
-            throw new RuntimeException(
-                'OpenBankingSecretsRepository: no Enable Banking application credentials are persisted.'
-            );
+            throw OpenBankingCredentialsException::notConfigured();
         }
 
         return $credentials;
@@ -168,11 +166,7 @@ class OpenBankingSecretsRepository
         try {
             $decoded = json_decode($revealed, true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            // Never include $revealed/$raw in the message — it would
-            // leak credential material into any logging surface above.
-            throw new RuntimeException(
-                "OpenBankingSecretsRepository: failed to parse {$absolute} ({$e->getMessage()})."
-            );
+            throw OpenBankingCredentialsException::unreadable($absolute, $e);
         }
         if (! is_array($decoded)) {
             return [];

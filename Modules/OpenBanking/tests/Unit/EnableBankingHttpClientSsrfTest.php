@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 /*
@@ -92,8 +93,8 @@ it('rejects an attacker-controlled host before any bearer token is attached', fu
     };
 
     expect(fn () => $client->aspsps('NL'))->toThrow(
-        RuntimeException::class,
-        'refusing to send bearer token to non-allow-listed host: attacker.example.com',
+        UnsafeOpenBankingRequestException::class,
+        'non-allow-listed host: attacker.example.com',
     );
 });
 
@@ -108,8 +109,8 @@ it('rejects a look-alike host', function (): void {
     };
 
     expect(fn () => $client->aspsps('NL'))->toThrow(
-        RuntimeException::class,
-        'refusing to send bearer token to non-allow-listed host: api.enablebanking.com.evil.example',
+        UnsafeOpenBankingRequestException::class,
+        'non-allow-listed host: api.enablebanking.com.evil.example',
     );
 });
 
@@ -124,8 +125,8 @@ it('rejects a non-HTTPS scheme even on the real Enable Banking host', function (
     };
 
     expect(fn () => $client->aspsps('NL'))->toThrow(
-        RuntimeException::class,
-        'refusing to send bearer token over non-HTTPS scheme',
+        UnsafeOpenBankingRequestException::class,
+        'non-HTTPS scheme',
     );
 });
 
@@ -140,8 +141,8 @@ it('rejects an unparseable URL', function (): void {
     };
 
     expect(fn () => $client->aspsps('NL'))->toThrow(
-        RuntimeException::class,
-        'refusing to send bearer token',
+        UnsafeOpenBankingRequestException::class,
+        'bearer token',
     );
 });
 
@@ -187,7 +188,7 @@ it('rejects an attacker host even when a bank SCA host has separately been resol
     };
 
     expect(fn () => $client->aspsps('NL'))->toThrow(
-        RuntimeException::class,
-        'refusing to send bearer token to non-allow-listed host: attacker.example.com',
+        UnsafeOpenBankingRequestException::class,
+        'non-allow-listed host: attacker.example.com',
     );
 });
