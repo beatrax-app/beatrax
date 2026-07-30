@@ -50,31 +50,31 @@ final class MobileSyncTriggerService
         ?int $lanPort = null,
     ): ?bool {
         $identity = $this->identityLoader->load($userId, $session);
-        if ($identity === null) {
-            // Locked, no key, or sync never enabled for this user - skip
-            // the tick entirely. Data stays encrypted; no key is cached
-            // anywhere outside the session.
-            $this->logger?->info('MobileSyncTriggerService: no usable device identity — skipping tick.');
+
+        // Two reasons to skip the tick, each keeping its own log line. No
+        // identity means locked, no key, or sync never enabled — data stays
+        // encrypted and no key is cached outside the session. The gate means
+        // pause-on-cellular is ON and the link is confirmed expensive.
+        $skip = match (true) {
+            $identity === null => 'no usable device identity',
+            ! $this->networkPolicy->shouldSyncNow() => 'D-10 pause-on-cellular gate',
+            default => null,
+        };
+
+        // The null identity is re-tested rather than left to $skip so the
+        // narrowing survives to dialLanWithBoundedRetry() below; $skip alone
+        // does not tell the analyser that $identity is set.
+        if ($identity === null || $skip !== null) {
+            $this->logger?->info('MobileSyncTriggerService: '.$skip.' — skipping tick.');
 
             return null;
         }
 
-        if (! $this->networkPolicy->shouldSyncNow()) {
-            // Pause-on-cellular is ON and the current connection is
-            // positively confirmed cellular/expensive - skip this tick.
-            // Sync-on-any-network remains the default posture.
-            $this->logger?->info('MobileSyncTriggerService: D-10 pause-on-cellular gate — skipping tick.');
+        $lanReached = $lanHost !== null
+            && $lanPort !== null
+            && $this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session);
 
-            return null;
-        }
-
-        if ($lanHost !== null && $lanPort !== null) {
-            if ($this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session)) {
-                return true;
-            }
-        }
-
-        return $this->relayLeg($identity);
+        return $lanReached ? true : $this->relayLeg($identity);
     }
 
     // Re-drives exactly ONCE on a retryable outcome (the iOS Local
@@ -97,11 +97,12 @@ final class MobileSyncTriggerService
     // device's mailbox; it does not yet interpret or confirm drained rows.
     private function relayLeg(DeviceIdentityDto $identity): bool
     {
-        if (! $this->relayConfig->isConfigured()) {
-            return false;
-        }
+        // An unconfigured relay and one that yields no device token are the
+        // same outcome for this leg: there is nothing to dial.
+        $token = $this->relayConfig->isConfigured()
+            ? $this->relayConfig->deriveDeviceToken($identity->deviceId)
+            : null;
 
-        $token = $this->relayConfig->deriveDeviceToken($identity->deviceId);
         if ($token === null) {
             return false;
         }
