@@ -140,22 +140,7 @@ final class RuleApplier
             return null;
         }
 
-        // Unlike ReassignCounterparty/SetTransactionNote, UpdateTransactionCategory
-        // has no internal write-only-on-change guard — an UPDATE with an
-        // unchanged category_id still reports 1 affected row on SQLite.
-        // Read-before-write here so re-apply idempotency holds too.
-        $currentCategoryId = $this->db->connection()
-            ->table('transactions')
-            ->where('id', $transactionId)
-            ->where('user_id', $user->id)
-            ->value('category_id');
-        $currentCategoryId = is_numeric($currentCategoryId) ? (int) $currentCategoryId : null;
-        if ($currentCategoryId === $categoryId) {
-            return null;
-        }
-
-        $affected = ($this->updateCategory)($transactionId, $categoryId, $user);
-        if ($affected === 0) {
+        if (! $this->writeCategory($transactionId, $categoryId, $user)) {
             return null;
         }
 
@@ -168,6 +153,25 @@ final class RuleApplier
         $this->provenance->stamp($user->id, $transactionId, ['category_id' => 'rule']);
 
         return ['category_id', $categoryId];
+    }
+
+    // False when the row already carries this category, or the update changed
+    // nothing. UpdateTransactionCategory has no write-only-on-change guard —
+    // an unchanged category_id still reports one affected row on SQLite — so
+    // this read is what keeps a re-apply a no-op.
+    private function writeCategory(int $transactionId, int $categoryId, User $user): bool
+    {
+        $currentCategoryId = $this->db->connection()
+            ->table('transactions')
+            ->where('id', $transactionId)
+            ->where('user_id', $user->id)
+            ->value('category_id');
+
+        if ((is_numeric($currentCategoryId) ? (int) $currentCategoryId : null) === $categoryId) {
+            return false;
+        }
+
+        return ($this->updateCategory)($transactionId, $categoryId, $user) !== 0;
     }
 
     /**
@@ -262,6 +266,18 @@ final class RuleApplier
         }
         $year = self::intFromPayload($action->payload, 'year');
 
+        if (! $this->writeTaxTag($ruleId, $transactionId, $userId, $deductionCategoryId, $year)) {
+            return null;
+        }
+
+        return ['tax_tag', $deductionCategoryId];
+    }
+
+    // False when the tag already says this, or the write refused. Reads the
+    // existing row first so an identical re-apply is a genuine no-op rather
+    // than relying on the upsert's own idempotency.
+    private function writeTaxTag(int $ruleId, int $transactionId, int $userId, int $deductionCategoryId, ?int $year): bool
+    {
         $current = $this->db->connection()
             ->table('tax_transaction_tags')
             ->where('user_id', $userId)
@@ -275,6 +291,11 @@ final class RuleApplier
         $currentYear = $current !== null && is_numeric($current->tax_year_override)
             ? (int) $current->tax_year_override
             : null;
+
+        if ($currentDeductionCategoryId === $deductionCategoryId && $currentYear === $year) {
+            return false;
+        }
+
         // TagTransaction::updateExisting() rewrites note/category/year
         // TOGETHER the instant any one is non-null, so a literal null note
         // would silently wipe a user-authored tax note; read the existing
@@ -282,10 +303,6 @@ final class RuleApplier
         $currentNote = $current !== null && is_string($current->note)
             ? $this->codec->decryptValue('tax_transaction_tags', 'note', $current->note, $userId, ($this->session)())['value']
             : null;
-
-        if ($currentDeductionCategoryId === $deductionCategoryId && $currentYear === $year) {
-            return null;
-        }
 
         try {
             $this->tagTransaction->execute($userId, $transactionId, $deductionCategoryId, $currentNote, $year, null, 'rule');
@@ -297,10 +314,10 @@ final class RuleApplier
                 'message' => $e->getMessage(),
             ]);
 
-            return null;
+            return false;
         }
 
-        return ['tax_tag', $deductionCategoryId];
+        return true;
     }
 
     private function logSkip(int $ruleId, string $actionType, string $reason): void
