@@ -14,6 +14,8 @@ use Psr\Log\LoggerInterface;
 use SodiumException;
 
 /**
+ * @phpstan-import-type FetchedManifest from PublisherManifestFetcher
+ *
  * @link ../../../../.docs/features/core/architecture.md
  */
 final readonly class ElectronUpdateChannel
@@ -37,27 +39,13 @@ final readonly class ElectronUpdateChannel
         return is_string($value) ? $value : 'stable';
     }
 
-    // Returns null on every silent-failure path: the fetcher returned null
-    // (offline / 404), signature verification failed (tampered manifest), or
-    // a row for latestVersion is already unacknowledged (idempotency). Every
-    // path logs at WARNING so the log-tail panel sees the rejection.
+    // Null on every silent-failure path: nothing was fetched (offline / 404),
+    // the manifest was not signed by us, or this version is already sitting
+    // unacknowledged. They are one answer to the caller — nothing to show.
     public function poll(PublisherManifestFetcher $fetcher): ?UpdateManifestDto
     {
         $manifest = $fetcher->fetch($this->channel());
-        if ($manifest === null) {
-            return null;
-        }
-
-        if (! $this->verifyManifest($manifest['body'], $manifest['signature'])) {
-            $this->logger->warning('ElectronUpdateChannel: rejected manifest with invalid Ed25519 signature.', [
-                'channel' => $this->channel(),
-                'latest_version' => $manifest['latest_version'],
-            ]);
-
-            return null;
-        }
-
-        if ($this->hasUnacknowledgedAvailabilityRow($manifest['latest_version'])) {
+        if ($manifest === null || ! $this->isWorthSurfacing($manifest)) {
             return null;
         }
 
@@ -67,6 +55,27 @@ final readonly class ElectronUpdateChannel
             publishedAt: $manifest['published_at'],
             channel: $this->channel(),
         );
+    }
+
+    // Separated from poll() so each rejection stays distinguishable in the
+    // log even though the caller cannot tell them apart: an unsigned manifest
+    // is a tampering signal worth seeing, while an already-announced version
+    // is routine and stays quiet.
+    /**
+     * @param  FetchedManifest  $manifest
+     */
+    private function isWorthSurfacing(array $manifest): bool
+    {
+        if (! $this->verifyManifest($manifest['body'], $manifest['signature'])) {
+            $this->logger->warning('ElectronUpdateChannel: rejected manifest with invalid Ed25519 signature.', [
+                'channel' => $this->channel(),
+                'latest_version' => $manifest['latest_version'],
+            ]);
+
+            return false;
+        }
+
+        return ! $this->hasUnacknowledgedAvailabilityRow($manifest['latest_version']);
     }
 
     // Returns true iff sodium_crypto_sign_verify_detached succeeds; false on
@@ -84,24 +93,32 @@ final readonly class ElectronUpdateChannel
      */
     public function verifyManifest(string $manifestBody, string $detachedSignature): bool
     {
+        // Checked before the configuration is read, so a caller passing no
+        // signature never provokes the missing-key warning about an install
+        // that may be perfectly fine.
         if ($detachedSignature === '') {
             return false;
         }
 
-        $publicKeyHex = $this->config->get('auto_update.publisher_public_key_hex');
-        if (! is_string($publicKeyHex) || $publicKeyHex === '') {
-            $this->logger->warning('ElectronUpdateChannel: missing or invalid publisher public key configuration.');
+        $publicKeyHex = $this->configuredPublisherKeyHex();
 
-            return false;
-        }
+        return $publicKeyHex !== null
+            && $this->verifiesUnder($publicKeyHex, $manifestBody, $detachedSignature);
+    }
 
+    // The two libsodium calls sit together because either can reject
+    // malformed input and the caller cannot act differently on which did.
+    /**
+     * @param  non-empty-string  $detachedSignature
+     */
+    private function verifiesUnder(string $publicKeyHex, string $manifestBody, string $detachedSignature): bool
+    {
         try {
             $publicKey = sodium_hex2bin($publicKeyHex);
-            if ($publicKey === '') {
-                return false;
-            }
 
-            return sodium_crypto_sign_verify_detached(
+            // An empty key verifies nothing, so it is refused rather than
+            // handed to libsodium as an argument.
+            return $publicKey !== '' && sodium_crypto_sign_verify_detached(
                 $detachedSignature,
                 $manifestBody,
                 $publicKey,
@@ -113,6 +130,21 @@ final readonly class ElectronUpdateChannel
 
             return false;
         }
+    }
+
+    // Null when no publisher key is configured. Warned about here rather than
+    // at the call site because an unconfigured key is an install problem,
+    // while a signature that will not verify is a manifest problem.
+    private function configuredPublisherKeyHex(): ?string
+    {
+        $publicKeyHex = $this->config->get('auto_update.publisher_public_key_hex');
+        if (! is_string($publicKeyHex) || $publicKeyHex === '') {
+            $this->logger->warning('ElectronUpdateChannel: missing or invalid publisher public key configuration.');
+
+            return null;
+        }
+
+        return $publicKeyHex;
     }
 
     // Comparison uses hash_equals for a constant-time check so a partial-byte
