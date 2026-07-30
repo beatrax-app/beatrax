@@ -11,9 +11,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Services\UserDataPathService;
 use PDO;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -169,18 +169,19 @@ final class RestoreDatabaseCommand extends Command
     }
 
     /**
-     * @throws RuntimeException when the configured connection is not sqlite
+     * @throws BackupNotSupportedException when the connection is not sqlite, or
+     *                                     carries no configured database path
      */
     private function resolveLivePath(): string
     {
         $driver = $this->config->get('database.connections.sqlite.driver');
         if ($driver !== 'sqlite') {
-            throw new RuntimeException('db:restore is only supported on the sqlite driver.');
+            throw new BackupNotSupportedException('db:restore is only supported on the sqlite driver.');
         }
 
         $path = $this->config->get('database.connections.sqlite.database');
         if (! is_string($path) || $path === '') {
-            throw new RuntimeException('database.connections.sqlite.database is not configured.');
+            throw new BackupNotSupportedException('database.connections.sqlite.database is not configured.');
         }
 
         return $path;

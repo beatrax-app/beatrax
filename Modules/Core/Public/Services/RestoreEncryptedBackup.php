@@ -9,6 +9,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Exceptions\BackupFormatException;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use RuntimeException;
 
 /**
@@ -28,15 +30,17 @@ final class RestoreEncryptedBackup
     /**
      * @return string the absolute path of the pre-restore snapshot
      *
-     * @throws RuntimeException on any failure; the live DB is only swapped after
-     *                          the source decrypts AND passes integrity_check.
+     * @throws BackupNotSupportedException when this is not the SQLite build
+     * @throws BackupFormatException when the decrypted payload will not open as a
+     *                               database — the live DB is only swapped after
+     *                               it opens AND passes integrity_check
      */
     public function __invoke(string $encryptedPath, string $passphrase): string
     {
         $default = $this->config->get('database.default');
         $livePath = $this->config->get('database.connections.sqlite.database');
         if ($default !== 'sqlite' || ! is_string($livePath) || $livePath === '') {
-            throw new RuntimeException('Restore is only available on the SQLite build.');
+            throw new BackupNotSupportedException('Restore is only available on the SQLite build.');
         }
 
         $decryptedPath = $this->tempPath('decrypted');
@@ -101,7 +105,7 @@ final class RestoreEncryptedBackup
             $this->db->purge($connectionName);
             $result = $this->db->connection($connectionName)->scalar('PRAGMA integrity_check');
         } catch (\Throwable $e) {
-            throw new RuntimeException('The backup is not a readable database.', 0, $e);
+            throw new BackupFormatException('The backup is not a readable database.', 0, $e);
         } finally {
             $this->db->purge($connectionName);
         }

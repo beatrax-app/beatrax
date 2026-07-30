@@ -6,7 +6,7 @@ namespace Modules\Core\Public\Support;
 
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
-use RuntimeException;
+use Modules\Core\Public\Exceptions\LockStoreNotConfiguredException;
 
 /**
  * @link ../../../../.docs/features/core/architecture.md
@@ -17,7 +17,7 @@ final class LockStore
     {
         $store = config('cache.locks_store');
         if (! is_string($store) || $store === '') {
-            throw new RuntimeException(
+            throw new LockStoreNotConfiguredException(
                 'cache.locks_store must be a non-empty store name; got: '.var_export($store, true),
             );
         }
