@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
@@ -25,6 +26,14 @@ use Tests\Helpers\RealSqliteFixture;
  * alert never fired.
  */
 beforeEach(function (): void {
+    // Frozen because both tests occupy a path the command is about to choose,
+    // and that path carries a seconds-resolution timestamp. The test and the
+    // command each read the clock, so on a slow runner they land in different
+    // seconds, the pre-created obstruction no longer matches, the sidecar
+    // writes cleanly and the assertion fails for a reason unrelated to the
+    // behaviour under test.
+    CarbonImmutable::setTestNow('2026-07-29 12:00:00');
+
     $this->sourcePath = RealSqliteFixture::create('backup-sidecar-source');
 
     /** @var Repository $config */
@@ -41,6 +50,7 @@ beforeEach(function (): void {
 });
 
 afterEach(function (): void {
+    CarbonImmutable::setTestNow(null);
     putenv('NATIVEPHP_STORAGE_PATH');
 
     /** @var string $sourcePath */
