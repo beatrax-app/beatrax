@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Transport;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -112,7 +113,7 @@ final class SyncSession
     public function encrypt(string $plaintext): string
     {
         if ($this->noiseSession === null) {
-            throw new \RuntimeException('SyncSession::encrypt — session not authenticated yet.');
+            throw SessionNotAuthenticatedException::forOperation('encrypt');
         }
 
         return $this->noiseSession->encrypt($plaintext);
@@ -124,7 +125,7 @@ final class SyncSession
     public function decrypt(string $ciphertext): string
     {
         if ($this->noiseSession === null) {
-            throw new \RuntimeException('SyncSession::decrypt — session not authenticated yet.');
+            throw SessionNotAuthenticatedException::forOperation('decrypt');
         }
 
         return $this->noiseSession->decrypt($ciphertext);
@@ -137,7 +138,7 @@ final class SyncSession
     public function sendOps(array $entries): string
     {
         if ($this->noiseSession === null) {
-            throw new \RuntimeException('SyncSession::sendOps — session not authenticated yet.');
+            throw SessionNotAuthenticatedException::forOperation('sendOps');
         }
 
         $frame = $this->framer->encode($entries);
@@ -158,7 +159,7 @@ final class SyncSession
     public function receiveOps(string $ciphertext, int $userId, array $deviceKeys): void
     {
         if ($this->noiseSession === null) {
-            throw new \RuntimeException('SyncSession::receiveOps — session not authenticated yet.');
+            throw SessionNotAuthenticatedException::forOperation('receiveOps');
         }
 
         $frame = $this->noiseSession->decrypt($ciphertext);

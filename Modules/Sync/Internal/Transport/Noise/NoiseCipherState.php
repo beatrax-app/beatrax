@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Noise;
 
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Internal\Exceptions\NoiseDecryptionFailedException;
+use Modules\Sync\Internal\Exceptions\NoiseNonceExhaustedException;
 use SodiumException;
 
 /**
@@ -33,8 +36,8 @@ final class NoiseCipherState
     // Nonce is encoded as 64-bit LE in the first 8 bytes, zeros in [8:12];
     // the counter increments AFTER building the nonce bytes.
     /**
-     * @throws \RuntimeException if the nonce counter would overflow.
-     * @throws \RuntimeException wrapping SodiumException on crypto failure.
+     * @throws NoiseNonceExhaustedException if the nonce counter would overflow
+     * @throws CryptoOperationFailedException wrapping SodiumException
      */
     public function encrypt(string $plaintext, string $ad = ''): string
     {
@@ -49,14 +52,15 @@ final class NoiseCipherState
                 $this->key,
             );
         } catch (SodiumException $e) {
-            throw new \RuntimeException('Noise CipherState: encrypt failed — '.$e->getMessage(), 0, $e);
+            throw CryptoOperationFailedException::during('Noise transport encryption', $e);
         }
     }
 
     // Throws on any AEAD authentication failure — callers MUST close the
     // connection on failure, never silently discard it.
     /**
-     * @throws \RuntimeException on MAC failure or malformed ciphertext.
+     * @throws NoiseDecryptionFailedException on MAC failure or malformed ciphertext
+     * @throws NoiseNonceExhaustedException if the nonce counter would overflow
      */
     public function decrypt(string $ciphertext, string $ad = ''): string
     {
@@ -71,13 +75,11 @@ final class NoiseCipherState
                 $this->key,
             );
         } catch (SodiumException $e) {
-            throw new \RuntimeException('Noise CipherState: AEAD decryption failed — '.$e->getMessage(), 0, $e);
+            throw NoiseDecryptionFailedException::aeadRejected($e);
         }
 
         if ($plaintext === false) {
-            throw new \RuntimeException(
-                'Noise CipherState: AEAD decryption failed — invalid ciphertext or wrong key.'
-            );
+            throw NoiseDecryptionFailedException::aeadRejected();
         }
 
         return $plaintext;
@@ -90,10 +92,7 @@ final class NoiseCipherState
         // Guard at PHP_INT_MAX rather than the true 2^64-1 MAXNONCE, since
         // nonceHi would overflow past 32-bit unsigned before reaching it.
         if ($this->nonceHi === 0x7FFFFFFF && $this->nonceLo === 0xFFFFFFFF) {
-            throw new \RuntimeException(
-                'Noise CipherState: nonce overflow — nonce approaches PHP_INT_MAX. '.
-                'Initiate a rekey before this point.'
-            );
+            throw NoiseNonceExhaustedException::beforeRekey();
         }
 
         return pack('VVV', $this->nonceLo, $this->nonceHi, 0);
