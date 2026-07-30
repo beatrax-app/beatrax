@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\EncryptedBackupRestore;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Exceptions\BackupFormatException;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
 
@@ -137,6 +138,45 @@ it('refuses to swap when the passphrase is wrong — the live file is untouched'
     expect(rbReadMarker($live))->toBe('ORIGINAL'); // never swapped — decrypt failed before the swap
 
     foreach ([$live, $base.'-backup.sqlite', $enc] as $f) {
+        @unlink($f);
+    }
+});
+
+/*
+ * A payload that decrypts but is not a database this build can restore.
+ *
+ * These are BackupFormatException rather than a decryption failure, and the
+ * difference is what the user is told to do: the passphrase was right, so
+ * offering to retype it would send them down the wrong path entirely. In both
+ * cases the live file must still be sitting there untouched — the swap only
+ * happens after the payload opens AND passes integrity_check.
+ */
+
+it('refuses a payload that decrypts but will not open as a database', function (): void {
+    $base = sys_get_temp_dir().'/rb-'.bin2hex(random_bytes(5));
+    $live = $base.'-live.sqlite';
+    $notADatabase = $base.'-payload.txt';
+    $enc = $base.'-payload.enc';
+    rbMakeSqlite($live, 'ORIGINAL');
+    file_put_contents($notADatabase, 'this is not a SQLite file, it is a note');
+    (new BackupEncryptor)->encrypt($notADatabase, $enc, 'pw');
+
+    $db = app(DatabaseManager::class);
+    Config::set('database.default', 'sqlite');
+    Config::set('database.connections.sqlite.database', $live);
+    $db->purge('sqlite');
+
+    try {
+        expect(fn () => app(RestoreEncryptedBackup::class)($enc, 'pw'))
+            ->toThrow(BackupFormatException::class, 'not a readable database');
+    } finally {
+        Config::set('database.default', 'sqlite_testing');
+        $db->purge('sqlite');
+    }
+
+    expect(rbReadMarker($live))->toBe('ORIGINAL');
+
+    foreach ([$live, $notADatabase, $enc] as $f) {
         @unlink($f);
     }
 });

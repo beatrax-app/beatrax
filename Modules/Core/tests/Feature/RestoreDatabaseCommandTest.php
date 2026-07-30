@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Artisan;
+use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Tests\Helpers\RealSqliteFixture;
 
@@ -167,3 +169,38 @@ it('refuses with exit 1 in a non-TTY context when --confirm is absent', function
         RealSqliteFixture::cleanup($sourcePath);
     }
 });
+
+/*
+ * The two configuration refusals, which happen before any file is read.
+ *
+ * Both raise BackupNotSupportedException rather than returning FAILURE like
+ * the file-level refusals do, and the distinction is what the operator does
+ * next: nothing about the machine needs fixing and no retry helps, so this
+ * points at configuration rather than at the disk or the file they just
+ * handed the command.
+ */
+
+it('refuses when the configured connection is not sqlite', function (): void {
+    ($this->markDown)();
+
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.connections.sqlite.driver', 'pgsql');
+
+    expect(fn () => Artisan::call('db:restore', ['path' => $this->livePath, '--confirm' => true]))
+        ->toThrow(BackupNotSupportedException::class, 'only supported on the sqlite driver');
+});
+
+it('refuses when no sqlite database path is configured', function (mixed $configured): void {
+    ($this->markDown)();
+
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.connections.sqlite.database', $configured);
+
+    expect(fn () => Artisan::call('db:restore', ['path' => $this->livePath, '--confirm' => true]))
+        ->toThrow(BackupNotSupportedException::class, 'is not configured');
+})->with([
+    'unset' => [null],
+    'empty string' => [''],
+]);
