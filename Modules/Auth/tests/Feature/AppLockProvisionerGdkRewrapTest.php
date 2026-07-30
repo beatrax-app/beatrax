@@ -74,3 +74,24 @@ it('fails changePin (returns false, no partial rewrap) when the current PIN is w
     expect($unchanged->epochId)->toBe($original->epochId);
     expect($unchanged->keyHex)->toBe($original->keyHex);
 });
+
+/*
+ * A user who never set up the app lock has no user_app_lock_configs row at
+ * all. Both key-rotating entry points must refuse that as flatly as they
+ * refuse a wrong PIN — returning true would tell the caller a re-wrap
+ * happened when there was nothing to re-wrap, and the UI would report a
+ * changed PIN for a lock that does not exist.
+ */
+
+it('refuses to rotate keys for a user with no app-lock row', function (string $method): void {
+    /** @var AppLockProvisioner $provisioner */
+    $provisioner = app(AppLockProvisioner::class);
+
+    /** @var User $user */
+    $user = $this->user;
+
+    expect($provisioner->{$method}($user->id, 'irrelevant-credential', '1234'))->toBeFalse();
+})->with([
+    'changePin' => ['changePin'],
+    'rewrapForNewPin' => ['rewrapForNewPin'],
+]);
