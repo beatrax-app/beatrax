@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\ImportRun;
 use Modules\OpenBanking\Internal\Http\Livewire\OpenBankingSettingsPage;
+use Tests\Helpers\UploadIsolation;
 
 uses(RefreshDatabase::class);
 
@@ -36,6 +37,8 @@ function guiSecretsPath(): string
 }
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->tinyPdfPath = base_path('Modules/Ingestion/tests/fixtures/ics/ics-sample-tiny.pdf');
 });
 

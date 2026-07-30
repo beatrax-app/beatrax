@@ -12,6 +12,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectPaypalStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * Regression for the live "0 ROWS · READY" PayPal section: when the
@@ -32,6 +33,8 @@ use Modules\Onboarding\Models\WizardProgress;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::query()->create([
         'username' => 'connect-paypal-reuse',
         'password' => 'fixture-password-12chars',

@@ -9,6 +9,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectCardStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * Verifies the multi-file restructure of the ICS card connector step.
@@ -29,6 +30,8 @@ use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::query()->create([
         'username' => 'connect-card-multi',
         'password' => 'fixture-password-12chars',

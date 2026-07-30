@@ -9,8 +9,11 @@ use Modules\Import\Internal\Http\Livewire\UploadWizard;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Tests\Helpers\UploadIsolation;
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $seeded = $this->seedFixtureUserAndAccount();
     $this->fixtureUser = $seeded['user'];
     $this->paypalAccount = $seeded['paypalAccount'];
