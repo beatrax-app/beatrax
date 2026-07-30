@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Noise;
 
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use SodiumException;
 
 /**
@@ -406,7 +407,7 @@ final class NoiseHandshakeState
         try {
             $result = sodium_crypto_scalarmult($secretKey, $publicKey);
         } catch (SodiumException $e) {
-            throw new \RuntimeException('Noise DH failed: '.$e->getMessage(), 0, $e);
+            throw CryptoOperationFailedException::during('Noise Diffie-Hellman', $e);
         }
 
         return $result;

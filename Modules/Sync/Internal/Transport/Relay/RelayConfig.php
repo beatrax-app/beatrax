@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport\Relay;
 
 use Modules\Core\Public\Services\UserDataPathService;
-use RuntimeException;
+use Modules\Sync\Internal\Exceptions\RelayConfigWriteException;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 
 /**
  * @link ../../../../../.docs/features/sync/architecture.md
@@ -67,7 +68,7 @@ final class RelayConfig
     // Passing null or empty string clears the endpoint (reverts to "not
     // configured"). Non-HTTPS URLs are stored but flagged insecure.
     /**
-     * @throws RuntimeException on an I/O failure.
+     * @throws RelayConfigWriteException on an I/O failure
      */
     public function setEndpointUrl(?string $url): void
     {
@@ -76,7 +77,7 @@ final class RelayConfig
 
         if (! is_dir($dir)) {
             if (! @mkdir($dir, 0700, true)) {
-                throw new RuntimeException("Cannot create relay config directory: {$dir}");
+                throw RelayConfigWriteException::couldNotCreateDirectory($dir);
             }
         }
 
@@ -86,7 +87,7 @@ final class RelayConfig
         // Suppressed so the `=== false` check decides; unsuppressed the
         // E_WARNING becomes an ErrorException first and the guard never ran.
         if (@file_put_contents($path, $json, LOCK_EX) === false) {
-            throw new RuntimeException("Cannot write relay config to: {$path}");
+            throw RelayConfigWriteException::couldNotWrite($path);
         }
     }
 
@@ -133,7 +134,8 @@ final class RelayConfig
     // Mirrors the DeviceIdentityService key-file write pattern: mkdir 0700
     // -> write -> chmod 0600. Passing null clears the stored token.
     /**
-     * @throws RuntimeException on an I/O failure.
+     * @throws SecretFileException on an I/O failure, including one that would
+     *                             leave the token readable
      */
     public function setAuthToken(?string $token): void
     {
@@ -142,7 +144,7 @@ final class RelayConfig
 
         if (! is_dir($dir)) {
             if (! @mkdir($dir, 0700, true)) {
-                throw new RuntimeException("Cannot create secrets directory: {$dir}");
+                throw SecretFileException::couldNotCreateSecretsDirectory($dir);
             }
         }
 
@@ -152,15 +154,13 @@ final class RelayConfig
         // Suppressed so the `=== false` check decides; unsuppressed the
         // E_WARNING becomes an ErrorException first and the guard never ran.
         if (@file_put_contents($path, $json, LOCK_EX) === false) {
-            throw new RuntimeException("Cannot write relay token to: {$path}");
+            throw SecretFileException::couldNotWriteRelayToken($path);
         }
 
         // A silently-swallowed chmod failure would leave the secret token
         // file world-readable with no signal — verify and throw instead.
         if (! @chmod($path, 0600)) {
-            throw new RuntimeException(
-                "Cannot chmod relay token file to 0600 (secret would be left readable): {$path}"
-            );
+            throw SecretFileException::couldNotLockDown($path);
         }
     }
 }

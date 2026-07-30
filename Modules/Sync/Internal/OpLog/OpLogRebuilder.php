@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
+use Modules\Sync\Internal\Exceptions\RebuildInProgressException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 
 /**
@@ -255,9 +256,7 @@ final class OpLogRebuilder
     private function acquireMaintenanceLock(int $userId): void
     {
         if (isset($this->heldLocks[$userId]) && $this->heldLocks[$userId] === true) {
-            throw new \RuntimeException(
-                "OpLogRebuilder: rebuild already in progress for user {$userId} (maintenance lock held).",
-            );
+            throw RebuildInProgressException::forUser($userId);
         }
 
         $this->heldLocks[$userId] = true;

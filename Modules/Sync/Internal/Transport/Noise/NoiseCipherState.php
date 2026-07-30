@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport\Noise;
 
+use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Internal\Exceptions\NoiseDecryptionFailedException;
+use Modules\Sync\Internal\Exceptions\NoiseNonceExhaustedException;
 use SodiumException;
 
 /**
@@ -49,7 +52,7 @@ final class NoiseCipherState
                 $this->key,
             );
         } catch (SodiumException $e) {
-            throw new \RuntimeException('Noise CipherState: encrypt failed — '.$e->getMessage(), 0, $e);
+            throw CryptoOperationFailedException::during('Noise transport encryption', $e);
         }
     }
 
@@ -71,13 +74,11 @@ final class NoiseCipherState
                 $this->key,
             );
         } catch (SodiumException $e) {
-            throw new \RuntimeException('Noise CipherState: AEAD decryption failed — '.$e->getMessage(), 0, $e);
+            throw NoiseDecryptionFailedException::aeadRejected($e);
         }
 
         if ($plaintext === false) {
-            throw new \RuntimeException(
-                'Noise CipherState: AEAD decryption failed — invalid ciphertext or wrong key.'
-            );
+            throw NoiseDecryptionFailedException::aeadRejected();
         }
 
         return $plaintext;
@@ -90,10 +91,7 @@ final class NoiseCipherState
         // Guard at PHP_INT_MAX rather than the true 2^64-1 MAXNONCE, since
         // nonceHi would overflow past 32-bit unsigned before reaching it.
         if ($this->nonceHi === 0x7FFFFFFF && $this->nonceLo === 0xFFFFFFFF) {
-            throw new \RuntimeException(
-                'Noise CipherState: nonce overflow — nonce approaches PHP_INT_MAX. '.
-                'Initiate a rekey before this point.'
-            );
+            throw NoiseNonceExhaustedException::beforeRekey();
         }
 
         return pack('VVV', $this->nonceLo, $this->nonceHi, 0);

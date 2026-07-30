@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Sync\Internal\Exceptions\RelayConfigWriteException;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 
 uses(RefreshDatabase::class);
@@ -41,7 +42,7 @@ it('refuses to report a saved endpoint it could not write', function (): void {
     $config = $this->app->make(RelayConfig::class);
 
     expect(fn () => $config->setEndpointUrl('https://relay.example/ws'))
-        ->toThrow(RuntimeException::class, 'Cannot write relay config');
+        ->toThrow(RelayConfigWriteException::class, 'Cannot write relay config');
 
     @rmdir($path);
 });
