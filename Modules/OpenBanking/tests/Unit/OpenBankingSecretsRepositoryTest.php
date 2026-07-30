@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
 
@@ -162,3 +163,69 @@ it('clear removes the credential file, load returns null afterward, and clear is
     // Idempotent — clearing an already-missing file does not throw.
     $repo->clear();
 });
+
+/*
+ * What readAll() does with a file it cannot make sense of.
+ *
+ * The reveal happens before the decode, because on the desktop bundle the
+ * on-disk bytes are safeStorage ciphertext rather than JSON. That ordering is
+ * why a corrupt file cannot simply be detected by looking at it — every case
+ * below writes bytes that reveal to something the decoder then has to judge.
+ */
+
+it('treats an empty secrets file as no credentials rather than a corrupt one', function (): void {
+    $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
+    $this->obFiles->put($this->obSecretsPath, '');
+
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+
+    expect($repo->load())->toBeNull()
+        ->and($repo->hasApplication())->toBeFalse();
+});
+
+// A file that will not decode is a different thing from a file with nothing
+// in it, and the difference matters: one means the wizard was never run, the
+// other means something on disk needs repairing.
+it('refuses a secrets file whose revealed bytes are not JSON', function (): void {
+    $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
+    $this->obFiles->put($this->obSecretsPath, strrev('{"applicationId": '));
+
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+
+    expect(fn () => $repo->load())
+        ->toThrow(OpenBankingCredentialsException::class, $this->obSecretsPath);
+});
+
+// The message may name the path and nothing else — the revealed payload and
+// the raw bytes are both credential material, and this exception is logged
+// wherever it surfaces.
+it('names only the path when it refuses an unreadable secrets file', function (): void {
+    $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
+    $this->obFiles->put($this->obSecretsPath, strrev('{"applicationId": "super-secret-value"'));
+
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+
+    try {
+        $repo->load();
+        expect(false)->toBeTrue('load() should have refused the file');
+    } catch (OpenBankingCredentialsException $e) {
+        expect($e->getMessage())->toContain($this->obSecretsPath)
+            ->and($e->getMessage())->not->toContain('super-secret-value');
+    }
+});
+
+// Valid JSON that is not an object carries no fields to read. Treated as an
+// empty store rather than an error: there is nothing to repair, there is
+// simply nothing there.
+it('reads a well-formed non-object secrets file as an empty store', function (string $revealed): void {
+    $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
+    $this->obFiles->put($this->obSecretsPath, strrev($revealed));
+
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+
+    expect($repo->load())->toBeNull();
+})->with([
+    'a string' => ['"just a string"'],
+    'a number' => ['42'],
+    'null' => ['null'],
+]);
