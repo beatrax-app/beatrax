@@ -45,6 +45,15 @@ final class BackupFreshnessProbe implements Probe
             );
         }
 
+        return $this->freshnessOf($newestCompletedAt);
+    }
+
+    // Split from run() so the unreadable-directory case, which is about this
+    // machine, stays apart from the three that are about the backups
+    // themselves. Both warnings record an overdue alert; the ok result does
+    // not, which is the only asymmetry worth reading closely.
+    private function freshnessOf(?CarbonImmutable $newestCompletedAt): ProbeResult
+    {
         if ($newestCompletedAt === null) {
             $this->recordOverdueAlert(null);
 
@@ -55,11 +64,10 @@ final class BackupFreshnessProbe implements Probe
             );
         }
 
-        $now = $this->clock->now();
-        // Carbon 3.x `diffInHours` returns a float by default. Compute
-        // the absolute integer hours between the sidecar timestamp and
-        // now so direction (past / future) does not flip the sign.
-        $hoursOld = (int) floor(abs($now->diffInHours($newestCompletedAt)));
+        // Carbon 3.x `diffInHours` returns a float by default. Compute the
+        // absolute integer hours between the sidecar timestamp and now so
+        // direction (past / future) does not flip the sign.
+        $hoursOld = (int) floor(abs($this->clock->now()->diffInHours($newestCompletedAt)));
 
         if ($hoursOld > self::STALE_AFTER_HOURS) {
             $this->recordOverdueAlert($hoursOld);
