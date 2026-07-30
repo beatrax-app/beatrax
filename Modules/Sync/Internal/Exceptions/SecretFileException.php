@@ -31,4 +31,14 @@ final class SecretFileException extends RuntimeException
     {
         return new self('Failed to read the decrypted device identity key-file.');
     }
+
+    public static function couldNotCreateSecretsDirectory(string $directory): self
+    {
+        return new self("Cannot create secrets directory: {$directory}");
+    }
+
+    public static function couldNotWriteRelayToken(string $path): self
+    {
+        return new self("Cannot write relay token to: {$path}");
+    }
 }

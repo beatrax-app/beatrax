@@ -18,6 +18,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
+use Modules\Sync\Internal\Exceptions\PeerDisconnectedException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
@@ -182,9 +183,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             'Noise handshake msg1',
         );
         if ($msg1WsMessage === null) {
-            throw new \RuntimeException(
-                'SyncWebSocketHandler: peer disconnected before sending Noise msg1.'
-            );
+            throw PeerDisconnectedException::beforeHandshakeMessage('msg1');
         }
         $respHs->readMessage($msg1WsMessage->buffer());
 

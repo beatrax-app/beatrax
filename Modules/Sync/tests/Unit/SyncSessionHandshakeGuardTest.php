@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Transport\SyncSession;
@@ -44,24 +45,24 @@ it('starts out handshaking, with no peer identified', function (): void {
 
 it('refuses to encrypt before the handshake has established a key', function (): void {
     $this->session->encrypt('plaintext');
-})->throws(RuntimeException::class, 'session not authenticated yet');
+})->throws(SessionNotAuthenticatedException::class, 'session not authenticated yet');
 
 it('refuses to decrypt before the handshake has established a key', function (): void {
     $this->session->decrypt('ciphertext');
-})->throws(RuntimeException::class, 'session not authenticated yet');
+})->throws(SessionNotAuthenticatedException::class, 'session not authenticated yet');
 
 it('refuses to send ops before the handshake, rather than framing them in the clear', function (): void {
     // sendOps frames first and encrypts second. Without the guard an
     // unauthenticated session would hand the caller a plaintext frame that
     // looks exactly like something ready to put on a socket.
     $this->session->sendOps([guardEntry()]);
-})->throws(RuntimeException::class, 'session not authenticated yet');
+})->throws(SessionNotAuthenticatedException::class, 'session not authenticated yet');
 
 it('refuses to receive ops before the handshake', function (): void {
     // Accepting here would mean replaying entries whose sender was never
     // authenticated into the user's ledger.
     $this->session->receiveOps('ciphertext', 1, ['device-a' => str_repeat('a', 64)]);
-})->throws(RuntimeException::class, 'session not authenticated yet');
+})->throws(SessionNotAuthenticatedException::class, 'session not authenticated yet');
 
 it('can be closed before it was ever opened', function (): void {
     // A connection that drops mid-handshake still gets closed by the caller,
@@ -75,4 +76,4 @@ it('stays closed for encryption after close', function (): void {
     $this->session->close();
 
     $this->session->encrypt('plaintext');
-})->throws(RuntimeException::class, 'session not authenticated yet');
+})->throws(SessionNotAuthenticatedException::class, 'session not authenticated yet');

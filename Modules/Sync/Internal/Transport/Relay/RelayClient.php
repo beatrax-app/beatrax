@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Transport\Relay;
 
 use Illuminate\Http\Client\Factory as HttpFactory;
-use RuntimeException;
+use Modules\Sync\Internal\Exceptions\RelayRefusedException;
+use Modules\Sync\Internal\Exceptions\RelayUnavailableException;
 
 /**
  * @link ../../../../../.docs/features/sync/architecture.md
@@ -32,19 +33,16 @@ final readonly class RelayClient
      * @param  string  $recipientDid  Recipient device_id (relay routing key)
      * @param  string  $blob  Opaque Noise ciphertext
      *
-     * @throws RuntimeException when no endpoint is configured, the endpoint is
-     *                          insecure (http://), or the HTTP request fails.
+     * @throws RelayRefusedException when the blob exceeds the relay's limit, no
+     *                               endpoint is configured, or it is not HTTPS
+     * @throws RelayUnavailableException when the relay answers with a non-2xx
      */
     public function deliver(string $senderDid, string $recipientDid, string $blob): void
     {
         $endpoint = $this->resolvedEndpoint();
 
         if (strlen($blob) > self::MAX_BLOB_BYTES) {
-            throw new RuntimeException(sprintf(
-                'RelayClient::deliver — blob too large (%d bytes). Maximum is %d bytes.',
-                strlen($blob),
-                self::MAX_BLOB_BYTES,
-            ));
+            throw RelayRefusedException::blobTooLarge(strlen($blob), self::MAX_BLOB_BYTES);
         }
 
         $response = $this->http
@@ -58,9 +56,7 @@ final readonly class RelayClient
             ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException(
-                "RelayClient::deliver failed: HTTP {$response->status()} from {$endpoint}"
-            );
+            throw RelayUnavailableException::requestFailed('deliver', $response->status(), $endpoint);
         }
     }
 
@@ -71,7 +67,8 @@ final readonly class RelayClient
      *                             relay-wide token is rejected by the server.
      * @return list<array<string, mixed>>
      *
-     * @throws RuntimeException when the request fails.
+     * @throws RelayRefusedException when no endpoint is configured or it is not HTTPS
+     * @throws RelayUnavailableException when the relay answers with a non-2xx
      */
     public function drain(string $deviceId, string $authToken): array
     {
@@ -84,9 +81,7 @@ final readonly class RelayClient
             ->get("{$endpoint}/relay/drain", ['did' => $deviceId]);
 
         if (! $response->successful()) {
-            throw new RuntimeException(
-                "RelayClient::drain failed: HTTP {$response->status()} from {$endpoint}"
-            );
+            throw RelayUnavailableException::requestFailed('drain', $response->status(), $endpoint);
         }
 
         // The server wraps the rows in a {"blobs": [...]} envelope; unwrap
@@ -107,7 +102,8 @@ final readonly class RelayClient
      *                             (RelayConfig::deriveDeviceToken($recipientDid)); a
      *                             relay-wide token is rejected by the server.
      *
-     * @throws RuntimeException when the request fails.
+     * @throws RelayRefusedException when no endpoint is configured or it is not HTTPS
+     * @throws RelayUnavailableException when the relay answers with a non-2xx
      */
     public function confirm(int $id, string $authToken): void
     {
@@ -120,30 +116,22 @@ final readonly class RelayClient
             ->delete("{$endpoint}/relay/drain/{$id}");
 
         if (! $response->successful()) {
-            throw new RuntimeException(
-                "RelayClient::confirm failed: HTTP {$response->status()} from {$endpoint}"
-            );
+            throw RelayUnavailableException::requestFailed('confirm', $response->status(), $endpoint);
         }
     }
 
     /**
-     * @throws RuntimeException when no endpoint is configured or the
-     *                          endpoint is insecure (http://).
+     * @throws RelayRefusedException when no endpoint is configured or the
+     *                               endpoint is insecure (http://)
      */
     private function resolvedEndpoint(): string
     {
         if (! $this->config->isConfigured()) {
-            throw new RuntimeException(
-                'RelayClient: no relay endpoint configured. '
-                .'Set an endpoint URL via RelayConfig::setEndpointUrl() before using the relay.'
-            );
+            throw RelayRefusedException::notConfigured();
         }
 
         if ($this->config->isInsecure()) {
-            throw new RuntimeException(
-                'RelayClient: relay endpoint must use HTTPS to protect routing metadata. '
-                .'The configured endpoint appears to use plain HTTP.'
-            );
+            throw RelayRefusedException::endpointNotHttps();
         }
 
         $endpoint = $this->config->endpointUrl();
@@ -151,7 +139,7 @@ final readonly class RelayClient
         // isConfigured() above guarantees this is non-null; PHPStan sees
         // ?string, so assert it explicitly.
         if ($endpoint === null) {
-            throw new RuntimeException('RelayClient: relay endpoint unexpectedly null after isConfigured() check.');
+            throw RelayRefusedException::endpointVanished();
         }
 
         return rtrim($endpoint, '/');
