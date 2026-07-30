@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -287,4 +288,46 @@ it('is a no-op when the connection row was deleted between dispatch and pickup',
     // an uncaught exception here would fail this test.
 
     expect($stub->called)->toBeFalse();
+});
+
+/*
+ * The exits taken before any provider call, and the queue-uniqueness contract.
+ *
+ * Each early return leaves the row untouched — no last_attempt_at, no status.
+ * That is deliberate: these are not failed attempts, they are the job
+ * declining to run, and writing a timestamp would make a deleted user look
+ * like a bank that would not answer.
+ */
+
+// user_id is nullable and the constraint is ON DELETE CASCADE, so an orphaned
+// row is the one shape this can take: the column cleared rather than the row
+// pointing at a user that never existed, which the foreign key forbids.
+it('exits without touching the row when the connection has no user to sync for', function (): void {
+    $user = sojaUser('soja-orphan');
+    $connectionId = sojaSeedConnection($user, ['user_id' => null]);
+    sojaSeedCredentials();
+
+    $stub = new SojaStubRemoteSourceAdapter(null);
+    app()->instance(RemoteSourceAdapter::class, $stub);
+
+    app()->call([new SyncOpenBankingAccountJob($connectionId), 'handle']);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+
+    expect($row->last_attempt_at)->toBeNull()
+        ->and($row->last_attempt_status)->toBeNull();
+});
+
+// Queue uniqueness is keyed on the connection, not the job instance: two
+// schedule ticks landing while a sync is still running must collapse into
+// one, or the same window gets fetched twice and the second run reconciles
+// against rows the first has not committed yet.
+it('scopes queue uniqueness to the connection for ten minutes', function (): void {
+    $job = new SyncOpenBankingAccountJob(17);
+
+    expect($job->uniqueId())->toBe('17')
+        ->and($job->uniqueFor())->toBe(600)
+        ->and($job->uniqueVia())->toBeInstanceOf(Repository::class);
 });
