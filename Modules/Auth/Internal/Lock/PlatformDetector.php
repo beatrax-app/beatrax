@@ -12,19 +12,12 @@ final class PlatformDetector
     // itself is unaffected.
     public function detectLabel(string $userAgent): string
     {
-        if ($this->isIos($userAgent)) {
-            return 'Use Face ID';
-        }
-
-        if ($this->isMacOs($userAgent)) {
-            return 'Use Touch ID';
-        }
-
-        if ($this->isWindows($userAgent)) {
-            return 'Use Windows Hello';
-        }
-
-        return 'Use fingerprint';
+        return match (true) {
+            $this->isIos($userAgent) => 'Use Face ID',
+            $this->isMacOs($userAgent) => 'Use Touch ID',
+            $this->isWindows($userAgent) => 'Use Windows Hello',
+            default => 'Use fingerprint',
+        };
     }
 
     /**
