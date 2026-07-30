@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\FileEncryptor;
@@ -80,6 +81,46 @@ it('translates a libsodium failure while rotating after a device removal', funct
         ->toThrow(CryptoOperationFailedException::class, 'GDK rotation');
 });
 
+// The add-device fan-out translates the same way, and that now includes the
+// recipient-key conversion. It used to sit outside the try and escape as a raw
+// SodiumException, while the per-epoch conversion a few lines later came back
+// as CryptoOperationFailedException — one fault, two types.
+it('translates a libsodium failure while fanning out epochs to a new device', function (): void {
+    $user = remainingUser('fanout-fail');
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = $this->app->make(GdkKeyringService::class);
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $recipientId = $db->connection()->table('device_registry')->insertGetId([
+        'user_id' => (int) $user->id,
+        'device_id' => 'fanout-recipient',
+        'name' => 'fanout-recipient',
+        'ed25519_public_key_hex' => bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        'x25519_public_key_hex' => bin2hex(random_bytes(SODIUM_CRYPTO_BOX_PUBLICKEYBYTES)),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-07-11T10:00:00Z',
+        'confirmed_at' => '2026-07-11T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-07-11T10:00:00Z',
+        'updated_at' => '2026-07-11T10:00:00Z',
+    ]);
+
+    $this->app->instance(SodiumPrimitives::class, remainingFailingSodium());
+    forgetRemainingSingletons($this->app);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = $this->app->make(GdkRotationService::class);
+
+    expect(fn () => $rotation->fanOutAllEpochsToDevice((int) $user->id, $recipientId, $session))
+        ->toThrow(CryptoOperationFailedException::class, 'GDK epoch fan-out to a device');
+});
+
 // finalizeStagedEpoch() is not the only place the keyring is renamed into
 // position: writeKeyringFile() does its own, on the path generateAndPersist()
 // takes. A directory where the keyring belongs makes that rename fail without
@@ -146,15 +187,9 @@ it('refuses to read an identity key-file it could not lock down', function (): v
         ->toThrow(SecretFileException::class, 'Cannot chmod secret material');
 });
 
-// Two guards in this area stay uncovered, both for reasons no test can work
+// One guard in this area stays uncovered, for a reason no test can work
 // around:
 //
-//   - fanOutAllEpochsToDevice()'s catch. Its first hexToBin() call sits
-//     OUTSIDE the try, so a conversion failure escapes as a raw
-//     SodiumException rather than being translated — the catch only covers the
-//     conversions inside the transaction closure, which are not reached once
-//     the first one has thrown. Making the translation consistent there is a
-//     change to that method, not to these tests.
 //   - the read-back guard in DeviceIdentityLoader. Reaching it needs a
 //     plaintext file that survives the lock-down chmod and then fails to read.
 //     A directory satisfies the chmod but yields an empty read rather than

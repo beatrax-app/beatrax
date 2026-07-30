@@ -197,9 +197,14 @@ final class GdkRotationService
         // this user — in that case the foreach below enqueues zero wraps.
         $keyring = $this->keyringService->loadKeyring($userId, $session);
         $selfDeviceId = $this->selfDeviceId($userId);
-        $recipientPub = $this->sodium->hexToBin($recipientPubHex);
 
         try {
+            // Inside the try, like the per-epoch conversion below it. Outside,
+            // a libsodium failure here escaped as a raw SodiumException while
+            // the identical call a few lines down was translated — one fault
+            // reported as two types, depending on which key it was converting.
+            $recipientPub = $this->sodium->hexToBin($recipientPubHex);
+
             $connection->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId): void {
                 foreach ($keyring->epochs() as $epoch) {
                     $rawKey = $this->sodium->hexToBin($epoch->keyHex);
