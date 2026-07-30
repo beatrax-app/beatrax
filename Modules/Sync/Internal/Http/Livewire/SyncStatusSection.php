@@ -72,7 +72,7 @@ final class SyncStatusSection extends Component
 
             $lastSeenHuman = null;
             if ($lastSeenAt !== null) {
-                $lastSeenHuman = $this->humanRelativeTime($now, $lastSeenAt);
+                $lastSeenHuman = SyncStatusService::relativeTime($now, $lastSeenAt);
             }
 
             $errorLabel = $this->deriveErrorLabel($status, $errorMessage);
@@ -90,72 +90,39 @@ final class SyncStatusSection extends Component
         return $viewModels;
     }
 
-    // Maps known error_message prefixes ("can't reach peer" / connection
-    // variants, "relay unreachable", "handshake"/"verify"/"authentication")
-    // to human-readable copy. Returns empty string when status isn't 'failed'.
+    // Ordered most specific first: a message naming both the relay and a
+    // timeout is reported as a relay problem, because that is the hop that
+    // failed. Each row carries a set of needles rather than one, since the
+    // same failure reaches us phrased several ways.
+    /**
+     * @var list<array{needles: list<string>, label: string}>
+     */
+    private const ERROR_LABELS = [
+        ['needles' => ['relay'], 'label' => 'Relay unreachable'],
+        // 'authentication' is deliberately absent: it contains 'auth', so a
+        // needle for it could never match anything the shorter one missed.
+        ['needles' => ['handshake', 'verify', 'auth'], 'label' => 'Handshake / verify failed'],
+        ['needles' => ['connection', 'connect', 'reach', 'timeout'], 'label' => "Can't reach peer"],
+    ];
+
+    // Empty string when the row did not fail, so the view renders no label
+    // rather than an empty one. An unrecognised message — including none at
+    // all — still says the connection failed, because it did.
     private function deriveErrorLabel(string $status, ?string $errorMessage): string
     {
         if ($status !== 'failed') {
             return '';
         }
 
-        if ($errorMessage === null || $errorMessage === '') {
-            return 'Connection failed';
-        }
-
-        $lower = strtolower($errorMessage);
-
-        if (str_contains($lower, 'relay')) {
-            return 'Relay unreachable';
-        }
-
-        if (str_contains($lower, 'handshake')
-            || str_contains($lower, 'verify')
-            || str_contains($lower, 'auth')
-            || str_contains($lower, 'authentication')
-        ) {
-            return 'Handshake / verify failed';
-        }
-
-        if (str_contains($lower, 'connection')
-            || str_contains($lower, 'connect')
-            || str_contains($lower, 'reach')
-            || str_contains($lower, 'timeout')
-        ) {
-            return "Can't reach peer";
+        $lower = strtolower($errorMessage ?? '');
+        foreach (self::ERROR_LABELS as $candidate) {
+            foreach ($candidate['needles'] as $needle) {
+                if (str_contains($lower, $needle)) {
+                    return $candidate['label'];
+                }
+            }
         }
 
         return 'Connection failed';
-    }
-
-    private function humanRelativeTime(CarbonImmutable $now, string $isoTimestamp): ?string
-    {
-        try {
-            $past = CarbonImmutable::parse($isoTimestamp);
-        } catch (\Throwable) {
-            return null;
-        }
-
-        $absDiff = abs((int) $now->diffInSeconds($past, false));
-
-        if ($absDiff < 60) {
-            return 'just now';
-        }
-
-        if ($absDiff < 3600) {
-            $minutes = (int) floor($absDiff / 60);
-
-            return $minutes === 1 ? '1m ago' : "{$minutes}m ago";
-        }
-
-        if ($absDiff < 86400) {
-            $hours = (int) floor($absDiff / 3600);
-
-            return $hours === 1 ? '1h ago' : "{$hours}h ago";
-        }
-
-        $days = (int) floor($absDiff / 86400);
-
-        return $days === 1 ? '1 day ago' : "{$days} days ago";
     }
 }
