@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\RelayConfigWriteException;
+use Modules\Sync\Internal\Exceptions\SecretFileException;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 
 uses(RefreshDatabase::class);
@@ -45,4 +46,55 @@ it('refuses to report a saved endpoint it could not write', function (): void {
         ->toThrow(RelayConfigWriteException::class, 'Cannot write relay config');
 
     @rmdir($path);
+});
+
+// A file where the config directory belongs: mkdir cannot create it and
+// is_dir stays false, which is the pair of conditions the guard needs.
+it('refuses when the config directory cannot be created', function (): void {
+    $dir = dirname(UserDataPathService::appPath('sync/relay.json'));
+    mkdir(dirname($dir), 0700, true);
+    file_put_contents($dir, 'not a directory');
+
+    /** @var RelayConfig $config */
+    $config = $this->app->make(RelayConfig::class);
+
+    expect(fn () => $config->setEndpointUrl('https://relay.example/ws'))
+        ->toThrow(RelayConfigWriteException::class, 'Cannot create relay config directory');
+
+    @unlink($dir);
+});
+
+/*
+ * The auth token is key material, so its failures are SecretFileException
+ * rather than the config type — the recovery differs. A half-written or
+ * world-readable token is a secret on disk in a state the caller has to
+ * reason about, which a failed endpoint write never is.
+ */
+
+it('refuses when the secrets directory cannot be created', function (): void {
+    $dir = UserDataPathService::secretsPath();
+    mkdir(dirname($dir), 0700, true);
+    file_put_contents($dir, 'not a directory');
+
+    /** @var RelayConfig $config */
+    $config = $this->app->make(RelayConfig::class);
+
+    expect(fn () => $config->setAuthToken('relay-token'))
+        ->toThrow(SecretFileException::class, 'Cannot create secrets directory');
+
+    @unlink($dir);
+});
+
+it('refuses to report a saved token it could not write', function (): void {
+    $dir = UserDataPathService::secretsPath();
+    mkdir($dir, 0700, true);
+    mkdir($dir.DIRECTORY_SEPARATOR.'sync-relay-token.json');
+
+    /** @var RelayConfig $config */
+    $config = $this->app->make(RelayConfig::class);
+
+    expect(fn () => $config->setAuthToken('relay-token'))
+        ->toThrow(SecretFileException::class, 'Cannot write relay token');
+
+    @rmdir($dir.DIRECTORY_SEPARATOR.'sync-relay-token.json');
 });

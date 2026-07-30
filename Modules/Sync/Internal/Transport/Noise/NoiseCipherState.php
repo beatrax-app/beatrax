@@ -36,8 +36,8 @@ final class NoiseCipherState
     // Nonce is encoded as 64-bit LE in the first 8 bytes, zeros in [8:12];
     // the counter increments AFTER building the nonce bytes.
     /**
-     * @throws \RuntimeException if the nonce counter would overflow.
-     * @throws \RuntimeException wrapping SodiumException on crypto failure.
+     * @throws NoiseNonceExhaustedException if the nonce counter would overflow
+     * @throws CryptoOperationFailedException wrapping SodiumException
      */
     public function encrypt(string $plaintext, string $ad = ''): string
     {
@@ -59,7 +59,8 @@ final class NoiseCipherState
     // Throws on any AEAD authentication failure — callers MUST close the
     // connection on failure, never silently discard it.
     /**
-     * @throws \RuntimeException on MAC failure or malformed ciphertext.
+     * @throws NoiseDecryptionFailedException on MAC failure or malformed ciphertext
+     * @throws NoiseNonceExhaustedException if the nonce counter would overflow
      */
     public function decrypt(string $ciphertext, string $ad = ''): string
     {
