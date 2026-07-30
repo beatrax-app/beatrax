@@ -10,6 +10,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\ConnectCardStep;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Models\WizardProgress;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * Verifies the multi-file submit path stashes every successful
@@ -30,6 +31,8 @@ use Modules\Onboarding\Models\WizardProgress;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::query()->create([
         'username' => 'connect-card-stash',
         'password' => 'fixture-password-12chars',

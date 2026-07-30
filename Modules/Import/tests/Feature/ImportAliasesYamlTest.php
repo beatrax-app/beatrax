@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
 use Modules\Import\Models\MerchantAlias;
+use Tests\Helpers\UploadIsolation;
 
 /*
  * YAML import flow coverage — ALIAS-05 from the Phase 16.1
@@ -28,6 +29,8 @@ use Modules\Import\Models\MerchantAlias;
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::create([
         'username' => 'yaml-import-user',
         'password' => 'fixture-password',

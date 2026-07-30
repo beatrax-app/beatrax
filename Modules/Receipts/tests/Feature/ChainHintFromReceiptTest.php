@@ -16,8 +16,11 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Events\ChainHintDetected;
+use Tests\Helpers\UploadIsolation;
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $seeded = $this->seedFixtureUserAndAccount();
     $this->fixtureUser = $seeded['user'];
     $this->icsAccount = $seeded['icsAccount'];

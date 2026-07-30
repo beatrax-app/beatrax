@@ -13,6 +13,7 @@ use Modules\Migration\Internal\Http\Livewire\NewMigration;
 use Modules\Migration\Public\Actions\DiscardMigrationRun;
 use Modules\Migration\Public\Actions\StartMigrationRun;
 use Modules\Migration\Tests\Support\MigrationFixturePaths;
+use Tests\Helpers\UploadIsolation;
 
 uses(RefreshDatabase::class);
 
@@ -26,6 +27,8 @@ uses(RefreshDatabase::class);
  */
 
 beforeEach(function (): void {
+    UploadIsolation::isolate();
+
     $this->user = User::create([
         'username' => 'migration-wizard-fixture-user',
         'password' => 'opensesame',

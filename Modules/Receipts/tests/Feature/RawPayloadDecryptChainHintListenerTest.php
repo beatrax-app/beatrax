@@ -16,8 +16,13 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Receipts\Internal\Listeners\DispatchChainHintsFromReceipt;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
+use Tests\Helpers\UploadIsolation;
 
 uses(EnablesEncryptionForUser::class);
+
+beforeEach(function (): void {
+    UploadIsolation::isolate();
+});
 
 /*
  * 14.1-05 — CR-05/D-04/A3: DispatchChainHintsFromReceipt resolves the
