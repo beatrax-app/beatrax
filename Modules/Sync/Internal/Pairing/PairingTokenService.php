@@ -243,10 +243,7 @@ final class PairingTokenService
         string $responderEd25519Hex,
         string $responderX25519Hex,
     ): object|false {
-        try {
-            SafetyNumberDeriver::hexToRawKey($responderEd25519Hex);
-            SafetyNumberDeriver::hexToRawKey($responderX25519Hex);
-        } catch (InvalidPublicKeyException) {
+        if (! $this->responderKeysWellFormed($responderEd25519Hex, $responderX25519Hex)) {
             return false;
         }
 
@@ -268,22 +265,57 @@ final class PairingTokenService
 
         $state = is_string($row->state) ? $row->state : '';
 
-        if ($state === PairingStateMachine::AWAITING_CONFIRM) {
-            $existingResponder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
+        return match ($state) {
+            // Already advanced: only a redelivery of the SAME responder is
+            // idempotent here. A different responder loses — first binding wins.
+            PairingStateMachine::AWAITING_CONFIRM => $this->rowIfResponderAlreadyBound($row, $responderDeviceId),
+            PairingStateMachine::PENDING => $this->bindResponderOntoRow(
+                $row,
+                $userId,
+                $now,
+                $responderDeviceId,
+                $responderEd25519Hex,
+                $responderX25519Hex,
+            ),
+            // Terminal, expired-into-another-state, or unrecognized: fail
+            // closed rather than re-opening a handshake that has moved on.
+            default => false,
+        };
+    }
 
-            if ($existingResponder !== null && hash_equals($existingResponder, $responderDeviceId)) {
-                return $row;
-            }
-
+    // Both responder keys must decode before the row is touched, so a
+    // malformed frame cannot half-bind an identity onto the local row.
+    private function responderKeysWellFormed(string $ed25519Hex, string $x25519Hex): bool
+    {
+        try {
+            SafetyNumberDeriver::hexToRawKey($ed25519Hex);
+            SafetyNumberDeriver::hexToRawKey($x25519Hex);
+        } catch (InvalidPublicKeyException) {
             return false;
         }
 
-        if ($state !== PairingStateMachine::PENDING) {
-            return false;
-        }
+        return true;
+    }
 
-        $acceptedAt = $now->toIso8601String();
+    private function rowIfResponderAlreadyBound(\stdClass $row, string $responderDeviceId): object|false
+    {
+        $existingResponder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
 
+        return $existingResponder !== null && hash_equals($existingResponder, $responderDeviceId)
+            ? $row
+            : false;
+    }
+
+    // The PENDING -> AWAITING_CONFIRM transition: binds the responder identity
+    // and extends the window, never shortening an expiry that is already later.
+    private function bindResponderOntoRow(
+        \stdClass $row,
+        int $userId,
+        CarbonImmutable $now,
+        string $responderDeviceId,
+        string $responderEd25519Hex,
+        string $responderX25519Hex,
+    ): object|false {
         $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
         $existingExpiry = is_string($row->expires_at)
             ? CarbonImmutable::parse($row->expires_at)
@@ -300,7 +332,7 @@ final class PairingTokenService
                 'responder_ed25519_pub_hex' => $responderEd25519Hex,
                 'responder_x25519_pub_hex' => $responderX25519Hex,
                 'state' => PairingStateMachine::AWAITING_CONFIRM,
-                'accepted_at' => $acceptedAt,
+                'accepted_at' => $now->toIso8601String(),
                 'expires_at' => $newExpiry->toIso8601String(),
             ]);
 
@@ -330,6 +362,36 @@ final class PairingTokenService
         string $peerDeviceId,
         string $sigHex,
     ): ?string {
+        $context = $this->authenticatePeerConfirm(
+            $userId,
+            $tokenHash,
+            $confirmingDeviceId,
+            $peerDeviceId,
+            $sigHex,
+        );
+
+        return match (true) {
+            $context === null => null,
+            // The load-bearing gate: a validly-signed peer confirm CANNOT by
+            // itself drive this row toward CONFIRMED — the local human must
+            // have already visually matched the safety words and tapped
+            // confirm. Leave the relay row pending for redelivery until then.
+            $context->localConfirmedAt === null => 'deferred',
+            default => $this->recordPeerConfirmAndFinalize($context, $userId),
+        };
+    }
+
+    // The full PAIR_CONFIRM gate sequence, in the order the gates depend on
+    // each other: locate the row, establish which side this device is, then
+    // authenticate the frame against the identity that row bound. A null
+    // return is a fail-closed rejection at any one of them.
+    private function authenticatePeerConfirm(
+        int $userId,
+        string $tokenHash,
+        string $confirmingDeviceId,
+        string $peerDeviceId,
+        string $sigHex,
+    ): ?PeerConfirmContext {
         $now = $this->clock->now();
 
         $row = $this->db->connection()->table('pairing_tokens')
@@ -343,91 +405,116 @@ final class PairingTokenService
             return null;
         }
 
+        $localSide = $this->localSideForAddressedFrame($row, $userId, $peerDeviceId);
+
+        // $localSide is checked here rather than inside the callee so the
+        // signature check below is never reached without a known local side —
+        // the peer columns it reads are chosen by that side.
+        if ($localSide === null
+            || ! $this->peerSignatureAuthentic($row, $localSide, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex)) {
+            return null;
+        }
+
+        return $this->peerConfirmContextFor($row, $localSide);
+    }
+
+    // Which side of this handshake the local device owns, but only for a frame
+    // actually addressed to it. $peerDeviceId is populated by the SENDER from
+    // ITS OWN view of who the recipient is, so on receipt it must equal THIS
+    // device's self identity or the frame was never meant for this device.
+    private function localSideForAddressedFrame(\stdClass $row, int $userId, string $peerDeviceId): ?string
+    {
         $selfDeviceId = $this->db->connection()->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', 1)
             ->value('device_id');
 
-        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
+        if (! is_string($selfDeviceId) || $selfDeviceId === '' || ! hash_equals($selfDeviceId, $peerDeviceId)) {
             return null;
         }
 
-        // $peerDeviceId is populated by the SENDER from ITS OWN view of who
-        // the recipient is; on receipt it must equal THIS device's own self
-        // identity, or the frame was never addressed to this device at all.
-        if (! hash_equals($selfDeviceId, $peerDeviceId)) {
-            return null;
-        }
+        return $this->sideOwnedBy($row, $selfDeviceId);
+    }
 
-        $localSide = $this->sideOwnedBy($row, $selfDeviceId);
-        if ($localSide === null) {
-            return null;
-        }
+    // The anti-forgery gate: the frame must be signed by the key this row
+    // bound for the peer side, and must claim to come from that same bound
+    // device id. Both are checked against the ROW, never against the frame's
+    // own assertions about who it is.
+    private function peerSignatureAuthentic(
+        \stdClass $row,
+        string $localSide,
+        string $tokenHash,
+        string $confirmingDeviceId,
+        string $peerDeviceId,
+        string $sigHex,
+    ): bool {
+        $peerBoundDeviceId = $this->peerSideColumn($row, $localSide, 'device_id');
+        $peerPublicKeyHex = $this->peerSideColumn($row, $localSide, 'ed25519_pub_hex');
 
-        $peerBoundDeviceId = $localSide === 'initiator'
-            ? (is_string($row->responder_device_id) ? $row->responder_device_id : null)
-            : (is_string($row->initiator_device_id) ? $row->initiator_device_id : null);
-        $peerPublicKeyHex = $localSide === 'initiator'
-            ? (is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null)
-            : (is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null);
-
-        if ($peerBoundDeviceId === null || $peerPublicKeyHex === null) {
-            return null;
-        }
-
-        // The frame's claimed sender must equal the identity THIS row
-        // actually bound for the peer side — a frame purporting to be from
-        // some other device id is rejected even before touching sodium.
-        if (! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
-            return null;
+        // A frame purporting to be from some other device id is rejected even
+        // before touching sodium.
+        if ($peerBoundDeviceId === null
+            || $peerPublicKeyHex === null
+            || ! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
+            return false;
         }
 
         try {
             $peerPublicKeyBin = SafetyNumberDeriver::hexToRawKey($peerPublicKeyHex);
         } catch (InvalidPublicKeyException) {
-            return null;
+            return false;
         }
 
         $message = PairingFrame::confirmSigningMessage($tokenHash, $confirmingDeviceId, $peerDeviceId);
 
-        if (! $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin)) {
-            return null;
-        }
+        return $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin);
+    }
 
+    // Reads one of the peer side's columns — whichever side the local device
+    // is NOT. Both sides store the same column suffixes under their own prefix.
+    private function peerSideColumn(\stdClass $row, string $localSide, string $suffix): ?string
+    {
+        $prefix = $localSide === 'initiator' ? 'responder_' : 'initiator_';
+        $value = $row->{$prefix.$suffix} ?? null;
+
+        return is_string($value) ? $value : null;
+    }
+
+    private function peerConfirmContextFor(\stdClass $row, string $localSide): PeerConfirmContext
+    {
         $localConfirmedColumn = $localSide === 'initiator' ? 'initiator_confirmed_at' : 'responder_confirmed_at';
         $peerConfirmedColumn = $localSide === 'initiator' ? 'responder_confirmed_at' : 'initiator_confirmed_at';
 
-        $localConfirmedAt = is_string($row->{$localConfirmedColumn}) ? $row->{$localConfirmedColumn} : null;
+        return new PeerConfirmContext(
+            row: $row,
+            rowId: is_numeric($row->id) ? (int) $row->id : 0,
+            peerConfirmedColumn: $peerConfirmedColumn,
+            localConfirmedAt: is_string($row->{$localConfirmedColumn}) ? $row->{$localConfirmedColumn} : null,
+        );
+    }
 
-        if ($localConfirmedAt === null) {
-            // The load-bearing gate: a validly-signed peer confirm CANNOT by
-            // itself drive this row toward CONFIRMED — the local human must
-            // have already visually matched the safety words and tapped
-            // confirm. Leave the relay row pending for redelivery once that happens.
-            return 'deferred';
-        }
-
-        $peerConfirmedAt = is_string($row->{$peerConfirmedColumn}) ? $row->{$peerConfirmedColumn} : null;
-
-        $rowId = is_numeric($row->id) ? (int) $row->id : 0;
+    // Stamps the peer's confirmation if it is not already recorded, then
+    // re-reads the row so the state decision is made against what is actually
+    // persisted rather than against the pre-update copy.
+    private function recordPeerConfirmAndFinalize(PeerConfirmContext $context, int $userId): ?string
+    {
+        $peerConfirmedAt = is_string($context->row->{$context->peerConfirmedColumn})
+            ? $context->row->{$context->peerConfirmedColumn}
+            : null;
 
         if ($peerConfirmedAt === null) {
             $this->db->connection()->table('pairing_tokens')
-                ->where('id', $rowId)
+                ->where('id', $context->rowId)
                 ->where('user_id', $userId)
-                ->update([$peerConfirmedColumn => $this->clock->now()->toIso8601String()]);
+                ->update([$context->peerConfirmedColumn => $this->clock->now()->toIso8601String()]);
         }
 
         $freshRow = $this->db->connection()->table('pairing_tokens')
-            ->where('id', $rowId)
+            ->where('id', $context->rowId)
             ->where('user_id', $userId)
             ->first();
 
-        if ($freshRow === null) {
-            return null;
-        }
-
-        return $this->finalizeIfBothConfirmed($freshRow, $userId);
+        return $freshRow === null ? null : $this->finalizeIfBothConfirmed($freshRow, $userId);
     }
 
     // Re-checks the hash the row was located by, in constant time. The WHERE
