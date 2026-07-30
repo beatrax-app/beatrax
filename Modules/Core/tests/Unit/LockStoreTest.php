@@ -6,6 +6,7 @@ use Illuminate\Cache\DatabaseStore;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 use Modules\Chains\Internal\Jobs\ResolveChainLinksJob;
+use Modules\Core\Public\Exceptions\LockStoreNotConfiguredException;
 use Modules\Core\Public\Support\LockStore;
 use Modules\DriftAlerts\Internal\Jobs\DetectDriftAlertsJob;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
@@ -90,3 +91,37 @@ it('routes every ShouldBeUnique job uniqueVia to the configured lock store', fun
     ProjectForecastJob::class,
     DetectRecurringSeriesJob::class,
 ]);
+
+/*
+ * What forUniqueJobs() does with a config value it cannot resolve a store from.
+ *
+ * Every ShouldBeUnique job in the application routes uniqueVia() through this
+ * helper, so falling back to a default store on a bad value would be the worst
+ * available outcome: the jobs would keep running, each worker taking a lock in
+ * a store the others are not looking at, and the uniqueness the job declares
+ * would silently not exist. Two workers would sync the same connection or scan
+ * the same inbox concurrently, against the same rows.
+ */
+
+it('refuses a lock store name it cannot use', function (mixed $configured): void {
+    config(['cache.locks_store' => $configured]);
+
+    expect(fn () => LockStore::forUniqueJobs())
+        ->toThrow(LockStoreNotConfiguredException::class, 'cache.locks_store');
+})->with([
+    'unset' => [null],
+    'empty string' => [''],
+    'an array' => [['database']],
+    'a boolean' => [false],
+    'an integer' => [0],
+]);
+
+// The rejected value is echoed back because the failure is a configuration
+// mistake someone has to find — naming the key without showing what it held
+// leaves them looking at a value that reads fine in the file.
+it('names the value it rejected', function (): void {
+    config(['cache.locks_store' => '']);
+
+    expect(fn () => LockStore::forUniqueJobs())
+        ->toThrow(LockStoreNotConfiguredException::class, "''");
+});
