@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,6 +15,7 @@ use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
@@ -201,7 +203,7 @@ it('updates ONLY last_attempt_* on a generic failure, leaves last_successful_syn
     sojaSeedCredentials();
 
     $stub = new SojaStubRemoteSourceAdapter(
-        new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 500 — server error')
+        EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 500, 'server error')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 
@@ -226,7 +228,7 @@ it('a consent failure (HTTP 401) marks consent_failed, dispatches OpenBankingCon
     sojaSeedCredentials();
 
     $stub = new SojaStubRemoteSourceAdapter(
-        new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 401 — unauthorized')
+        EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 401, 'unauthorized')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 
@@ -254,7 +256,7 @@ it('a consent failure (HTTP 403) also marks consent_failed and dispatches OpenBa
     sojaSeedCredentials();
 
     $stub = new SojaStubRemoteSourceAdapter(
-        new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 403 — forbidden')
+        EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 403, 'forbidden')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 
@@ -286,4 +288,46 @@ it('is a no-op when the connection row was deleted between dispatch and pickup',
     // an uncaught exception here would fail this test.
 
     expect($stub->called)->toBeFalse();
+});
+
+/*
+ * The exits taken before any provider call, and the queue-uniqueness contract.
+ *
+ * Each early return leaves the row untouched — no last_attempt_at, no status.
+ * That is deliberate: these are not failed attempts, they are the job
+ * declining to run, and writing a timestamp would make a deleted user look
+ * like a bank that would not answer.
+ */
+
+// user_id is nullable and the constraint is ON DELETE CASCADE, so an orphaned
+// row is the one shape this can take: the column cleared rather than the row
+// pointing at a user that never existed, which the foreign key forbids.
+it('exits without touching the row when the connection has no user to sync for', function (): void {
+    $user = sojaUser('soja-orphan');
+    $connectionId = sojaSeedConnection($user, ['user_id' => null]);
+    sojaSeedCredentials();
+
+    $stub = new SojaStubRemoteSourceAdapter(null);
+    app()->instance(RemoteSourceAdapter::class, $stub);
+
+    app()->call([new SyncOpenBankingAccountJob($connectionId), 'handle']);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $row = $db->connection()->table('open_banking_connections')->where('id', $connectionId)->first();
+
+    expect($row->last_attempt_at)->toBeNull()
+        ->and($row->last_attempt_status)->toBeNull();
+});
+
+// Queue uniqueness is keyed on the connection, not the job instance: two
+// schedule ticks landing while a sync is still running must collapse into
+// one, or the same window gets fetched twice and the second run reconciles
+// against rows the first has not committed yet.
+it('scopes queue uniqueness to the connection for ten minutes', function (): void {
+    $job = new SyncOpenBankingAccountJob(17);
+
+    expect($job->uniqueId())->toBe('17')
+        ->and($job->uniqueFor())->toBe(600)
+        ->and($job->uniqueVia())->toBeInstanceOf(Repository::class);
 });

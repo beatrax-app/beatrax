@@ -18,6 +18,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Throwable;
 
@@ -110,7 +111,7 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
                     'updated_at' => $now,
                 ]);
         } catch (Throwable $e) {
-            $isConsentFailure = self::isConsentFailure($e);
+            $isConsentFailure = EnableBankingApiException::consentFailureWithin($e);
 
             $db->connection()
                 ->table('open_banking_connections')
@@ -139,16 +140,5 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
 
             throw $e;
         }
-    }
-
-    // No typed exception distinguishes a 401/403 consent failure from any
-    // other Enable Banking error yet — the HTTP client embeds the status in
-    // a generic RuntimeException message, so inspecting it is the narrowest
-    // available signal.
-    private static function isConsentFailure(Throwable $e): bool
-    {
-        $message = $e->getMessage();
-
-        return str_contains($message, 'HTTP 401') || str_contains($message, 'HTTP 403');
     }
 }

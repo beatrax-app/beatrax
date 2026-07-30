@@ -11,6 +11,8 @@ use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectionException;
+use Modules\OpenBanking\Public\Exceptions\OpenBankingCredentialsException;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
@@ -147,6 +149,87 @@ it('throws rather than silently fetching with a mismatched institution session',
 
     expect(fn () => $service->preview($connectionId, $user))
         ->toThrow(RuntimeException::class, 'does not');
+
+    expect($stub->called)->toBeFalse();
+});
+
+/*
+ * The refusals buildFetch() makes before any provider call. Each asserts the
+ * adapter was never reached, which is the property that matters: a fetch that
+ * starts against a half-configured connection would pair a live session with
+ * the wrong account, and no later guard would catch it.
+ */
+
+it('refuses a connection id that belongs to a different user', function (): void {
+    $owner = ofsUser('ofs-owner');
+    $stranger = ofsUser('ofs-stranger');
+    $connectionId = ofsSeedConnection($owner);
+    ofsSeedCredentials('ASNBNL21');
+
+    $stub = new OfsStubRemoteSourceAdapter;
+    app()->instance(RemoteSourceAdapter::class, $stub);
+
+    /** @var OpenBankingFetchService $service */
+    $service = app(OpenBankingFetchService::class);
+
+    expect(fn () => $service->preview($connectionId, $stranger))
+        ->toThrow(OpenBankingConnectionException::class, (string) $connectionId);
+
+    expect($stub->called)->toBeFalse();
+});
+
+it('refuses to fetch a connection that is switched off or whose consent has lapsed', function (array $overrides): void {
+    $user = ofsUser('ofs-'.md5(serialize($overrides)));
+    $connectionId = ofsSeedConnection($user, $overrides);
+    ofsSeedCredentials('ASNBNL21');
+
+    $stub = new OfsStubRemoteSourceAdapter;
+    app()->instance(RemoteSourceAdapter::class, $stub);
+
+    /** @var OpenBankingFetchService $service */
+    $service = app(OpenBankingFetchService::class);
+
+    expect(fn () => $service->preview($connectionId, $user))
+        ->toThrow(OpenBankingConnectionException::class, 'consent has expired');
+
+    expect($stub->called)->toBeFalse();
+})->with([
+    'disabled' => [['enabled' => false]],
+    'consent in the past' => [['consent_expires_at' => CarbonImmutable::parse('2026-07-01 00:00:00')->toDateTimeString()]],
+    'consent never recorded' => [['consent_expires_at' => null]],
+]);
+
+it('refuses to fetch before the consent dance has resolved an account uid', function (): void {
+    $user = ofsUser('ofs-no-account');
+    $connectionId = ofsSeedConnection($user, ['account_uid' => null]);
+    ofsSeedCredentials('ASNBNL21');
+
+    $stub = new OfsStubRemoteSourceAdapter;
+    app()->instance(RemoteSourceAdapter::class, $stub);
+
+    /** @var OpenBankingFetchService $service */
+    $service = app(OpenBankingFetchService::class);
+
+    expect(fn () => $service->preview($connectionId, $user))
+        ->toThrow(OpenBankingConnectionException::class, 'account_uid');
+
+    expect($stub->called)->toBeFalse();
+});
+
+// The service defers to the repository's loadOrThrow() rather than repeating
+// the null check, so this also pins that the delegation still refuses.
+it('refuses to fetch when no application credentials are persisted', function (): void {
+    $user = ofsUser('ofs-no-credentials');
+    $connectionId = ofsSeedConnection($user);
+
+    $stub = new OfsStubRemoteSourceAdapter;
+    app()->instance(RemoteSourceAdapter::class, $stub);
+
+    /** @var OpenBankingFetchService $service */
+    $service = app(OpenBankingFetchService::class);
+
+    expect(fn () => $service->preview($connectionId, $user))
+        ->toThrow(OpenBankingCredentialsException::class);
 
     expect($stub->called)->toBeFalse();
 });

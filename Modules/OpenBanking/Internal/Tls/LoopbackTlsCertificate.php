@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Tls;
 
-use RuntimeException;
-
 /**
  * @link ../../../../.docs/features/open-banking/architecture.md
  */
@@ -39,7 +37,7 @@ final class LoopbackTlsCertificate
         // ErrorException before either comparison runs — the guard on TLS key
         // material never fired.
         if (@file_put_contents($certPath, $certPem) === false || @file_put_contents($keyPath, $keyPem) === false) {
-            throw new RuntimeException('Unable to write the loopback TLS certificate to '.$this->directory.'.');
+            throw LoopbackTlsException::couldNotWriteCertificate($this->directory);
         }
 
         // Both halves are owner-only. The certificate is public material and
@@ -67,7 +65,7 @@ final class LoopbackTlsCertificate
                 'config' => $opensslConfig,
             ]);
             if (! $privateKey instanceof \OpenSSLAsymmetricKey) {
-                throw new RuntimeException('openssl_pkey_new() failed: '.$this->opensslError());
+                throw LoopbackTlsException::opensslFailed('openssl_pkey_new()', $this->opensslError());
             }
 
             // openssl_csr_new() takes the key by reference; keep a separate
@@ -84,7 +82,7 @@ final class LoopbackTlsCertificate
                 ],
             );
             if (! $csr instanceof \OpenSSLCertificateSigningRequest) {
-                throw new RuntimeException('openssl_csr_new() failed: '.$this->opensslError());
+                throw LoopbackTlsException::opensslFailed('openssl_csr_new()', $this->opensslError());
             }
 
             $certificate = openssl_csr_sign(
@@ -100,16 +98,16 @@ final class LoopbackTlsCertificate
                 random_int(1, PHP_INT_MAX),
             );
             if (! $certificate instanceof \OpenSSLCertificate) {
-                throw new RuntimeException('openssl_csr_sign() failed: '.$this->opensslError());
+                throw LoopbackTlsException::opensslFailed('openssl_csr_sign()', $this->opensslError());
             }
 
             $certPem = '';
             $keyPem = '';
             if (! openssl_x509_export($certificate, $certPem) || ! openssl_pkey_export($signingKey, $keyPem, null, ['config' => $opensslConfig])) {
-                throw new RuntimeException('Exporting the generated certificate failed: '.$this->opensslError());
+                throw LoopbackTlsException::opensslFailed('Exporting the generated certificate', $this->opensslError());
             }
             if (! is_string($certPem) || ! is_string($keyPem)) {
-                throw new RuntimeException('Exporting the generated certificate produced non-string PEM data.');
+                throw LoopbackTlsException::exportProducedNonPem();
             }
 
             return [$certPem, $keyPem];
@@ -146,7 +144,7 @@ final class LoopbackTlsCertificate
     private function prepareDirectory(): void
     {
         if (! is_dir($this->directory) && ! @mkdir($this->directory, 0700, true) && ! is_dir($this->directory)) {
-            throw new RuntimeException('Unable to create the loopback TLS directory at '.$this->directory.'.');
+            throw LoopbackTlsException::couldNotCreateDirectory($this->directory);
         }
 
         @chmod($this->directory, 0700);
@@ -161,7 +159,7 @@ final class LoopbackTlsCertificate
     {
         $path = tempnam(sys_get_temp_dir(), 'ob-tls-openssl-');
         if ($path === false) {
-            throw new RuntimeException('Unable to create a temporary OpenSSL config file.');
+            throw LoopbackTlsException::couldNotCreateConfig();
         }
 
         $config = <<<'CONF'

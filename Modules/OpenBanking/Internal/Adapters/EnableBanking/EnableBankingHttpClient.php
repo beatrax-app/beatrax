@@ -11,8 +11,9 @@ use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
+use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use RuntimeException;
 
 /**
  * @link ../../../../../.docs/features/open-banking/architecture.md
@@ -193,9 +194,7 @@ class EnableBankingHttpClient
         } catch (BadResponseException $e) {
             throw $this->mapErrorResponse($e, 'POST '.$url);
         } catch (GuzzleException $e) {
-            throw new RuntimeException(
-                'EnableBankingHttpClient: HTTP error against '.$url.' — '.$e->getMessage()
-            );
+            throw EnableBankingApiException::transportFailed($url, $e);
         }
 
         return $this->decodeJsonBody((string) $response->getBody(), $url);
@@ -224,9 +223,7 @@ class EnableBankingHttpClient
         } catch (BadResponseException $e) {
             throw $this->mapErrorResponse($e, 'GET '.$url);
         } catch (GuzzleException $e) {
-            throw new RuntimeException(
-                'EnableBankingHttpClient: HTTP error against '.$url.' — '.$e->getMessage()
-            );
+            throw EnableBankingApiException::transportFailed($url, $e);
         }
 
         return $this->decodeJsonBody((string) $response->getBody(), $url);
@@ -256,17 +253,12 @@ class EnableBankingHttpClient
     {
         $scheme = parse_url($url, PHP_URL_SCHEME);
         if (! is_string($scheme) || strtolower($scheme) !== 'https') {
-            throw new RuntimeException(
-                'EnableBankingHttpClient: refusing to send bearer token over non-HTTPS scheme.'
-            );
+            throw UnsafeOpenBankingRequestException::nonHttpsScheme();
         }
 
         $host = parse_url($url, PHP_URL_HOST);
         if (! is_string($host) || ! in_array(strtolower($host), $this->allowedHosts($credentials), strict: true)) {
-            throw new RuntimeException(
-                'EnableBankingHttpClient: refusing to send bearer token to non-allow-listed host: '
-                .(is_string($host) && $host !== '' ? $host : '(unparseable)')
-            );
+            throw UnsafeOpenBankingRequestException::disallowedHost(is_string($host) ? $host : null);
         }
     }
 
@@ -279,9 +271,7 @@ class EnableBankingHttpClient
             /** @var mixed $decoded */
             $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            throw new RuntimeException(
-                'EnableBankingHttpClient: failed to decode response JSON from '.$url.' ('.$e->getMessage().').'
-            );
+            throw EnableBankingApiException::malformedJson($url, $e);
         }
 
         if (! is_array($decoded)) {
@@ -299,14 +289,12 @@ class EnableBankingHttpClient
         return $out;
     }
 
-    private function mapErrorResponse(BadResponseException $e, string $context): RuntimeException
+    private function mapErrorResponse(BadResponseException $e, string $context): EnableBankingApiException
     {
         $response = $e->getResponse();
         $status = $response->getStatusCode();
         $bodySnippet = substr((string) $response->getBody(), 0, 300);
 
-        return new RuntimeException(
-            'EnableBankingHttpClient: '.$context.' returned HTTP '.$status.' — '.$bodySnippet
-        );
+        return EnableBankingApiException::errorStatus($context, $status, $bodySnippet);
     }
 }
