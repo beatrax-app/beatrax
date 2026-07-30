@@ -29,24 +29,22 @@ final readonly class SyncStatusService
             ->all();
     }
 
-    // Priority order: 'error' if any row failed with a message; 'syncing' if
-    // any row is connecting/handshaking/active; 'offline'/'all_synced'
-    // depending on whether any row is currently active; 'unknown' if no rows.
+    // Priority order: an errored peer outranks a syncing one, which outranks
+    // a finished one. Written as the ladder the caller reads rather than as
+    // nested guards, so the order is the code rather than a comment beside it.
     /**
      * @return 'all_synced'|'syncing'|'offline'|'error'|'unknown'
      */
     public function overallStatus(int $userId): string
     {
         $rows = $this->peerStatuses($userId);
-
         if ($rows === []) {
             return 'unknown';
         }
 
         $hasError = false;
         $hasSyncing = false;
-        $hasActive = false;
-        $hasClosedOrSynced = false;
+        $hasFinished = false;
 
         foreach ($rows as $row) {
             $vars = get_object_vars($row);
@@ -54,98 +52,81 @@ final readonly class SyncStatusService
             $errorMsg = is_string($vars['error_message'] ?? null) ? $vars['error_message'] : '';
             $lastSeen = is_string($vars['last_seen_at'] ?? null) ? $vars['last_seen_at'] : '';
 
-            if ($status === 'failed' && $errorMsg !== '') {
-                $hasError = true;
-            }
-
-            if (in_array($status, ['connecting', 'handshaking', 'active'], true)) {
-                $hasSyncing = true;
-            }
-
-            if ($status === 'active') {
-                $hasActive = true;
-            }
-
-            if ($status === 'closed' || ($status === 'failed' && $lastSeen !== '')) {
-                $hasClosedOrSynced = true;
-            }
+            $hasError = $hasError || ($status === 'failed' && $errorMsg !== '');
+            $hasSyncing = $hasSyncing || in_array($status, ['connecting', 'handshaking', 'active'], true);
+            // A closed row, or a failed one that was seen at least once, means
+            // the sync finished and the peer has since gone away.
+            $hasFinished = $hasFinished || $status === 'closed' || ($status === 'failed' && $lastSeen !== '');
         }
 
-        if ($hasError) {
-            return 'error';
-        }
-
-        if ($hasSyncing) {
-            return 'syncing';
-        }
-
-        if (! $hasActive) {
-            // A status='closed' row (or failed-with-last-seen) means sync
-            // completed but the peer is now disconnected.
-            if ($hasClosedOrSynced) {
-                return 'all_synced';
-            }
-
-            return 'offline';
-        }
-
-        return 'all_synced';
+        return match (true) {
+            $hasError => 'error',
+            $hasSyncing => 'syncing',
+            $hasFinished => 'all_synced',
+            default => 'offline',
+        };
     }
 
-    // Returns null when no sessions exist or no last_seen_at has been
-    // recorded. The caller passes the Clock-derived $now to avoid any use
-    // of the global now() helper.
+    // Returns null when no session has recorded a last_seen_at. The caller
+    // passes the Clock-derived $now so nothing here reaches for the global
+    // now() helper.
     /**
      * @param  CarbonImmutable  $now  The reference point for the relative diff.
      */
     public function lastSyncedHuman(CarbonImmutable $now, int $userId): ?string
     {
-        $rows = $this->peerStatuses($userId);
+        $latest = $this->latestLastSeen($userId);
 
-        $latestTs = null;
-        foreach ($rows as $row) {
-            $vars = get_object_vars($row);
-            $ts = is_string($vars['last_seen_at'] ?? null) && $vars['last_seen_at'] !== '' ? $vars['last_seen_at'] : null;
-            if ($ts === null) {
-                continue;
-            }
+        return $latest === null ? null : self::relativeTime($now, $latest);
+    }
 
-            if ($latestTs === null || strcmp($ts, $latestTs) > 0) {
-                $latestTs = $ts;
-            }
-        }
-
-        if ($latestTs === null) {
-            return null;
-        }
-
+    // Shared with SyncStatusSection, which renders the same phrasing for each
+    // peer rather than for the newest one. It was a second copy of the ladder
+    // below until now, identical down to the pluralisation that did nothing.
+    public static function relativeTime(CarbonImmutable $now, string $timestamp): ?string
+    {
         try {
-            $past = CarbonImmutable::parse($latestTs);
+            $past = CarbonImmutable::parse($timestamp);
         } catch (\Throwable) {
             return null;
         }
 
-        $diffSeconds = (int) $now->diffInSeconds($past, false);
-        $absDiff = abs($diffSeconds);
+        return self::humanizeGap(abs((int) $now->diffInSeconds($past, false)));
+    }
 
-        if ($absDiff < 60) {
-            return 'just now';
+    // Timestamps are compared as strings rather than parsed: they are stored
+    // in a fixed-width sortable format, so the largest string is the latest
+    // instant and parsing every row to find one maximum would be wasted work.
+    private function latestLastSeen(int $userId): ?string
+    {
+        $latest = null;
+        foreach ($this->peerStatuses($userId) as $row) {
+            $vars = get_object_vars($row);
+            $seen = is_string($vars['last_seen_at'] ?? null) && $vars['last_seen_at'] !== ''
+                ? $vars['last_seen_at']
+                : null;
+
+            if ($seen !== null && ($latest === null || strcmp($seen, $latest) > 0)) {
+                $latest = $seen;
+            }
         }
 
-        if ($absDiff < 3600) {
-            $minutes = (int) floor($absDiff / 60);
+        return $latest;
+    }
 
-            return $minutes === 1 ? '1m ago' : "{$minutes}m ago";
-        }
+    // One row per magnitude. Only the day arm pluralises: "1m ago" and
+    // "{$minutes}m ago" render identically at one minute, so the ternaries
+    // that used to guard the minute and hour arms decided nothing.
+    private static function humanizeGap(int $seconds): string
+    {
+        $days = (int) floor($seconds / 86400);
 
-        if ($absDiff < 86400) {
-            $hours = (int) floor($absDiff / 3600);
-
-            return $hours === 1 ? '1h ago' : "{$hours}h ago";
-        }
-
-        $days = (int) floor($absDiff / 86400);
-
-        return $days === 1 ? '1 day ago' : "{$days} days ago";
+        return match (true) {
+            $seconds < 60 => 'just now',
+            $seconds < 3600 => ((int) floor($seconds / 60)).'m ago',
+            $seconds < 86400 => ((int) floor($seconds / 3600)).'h ago',
+            $days === 1 => '1 day ago',
+            default => "{$days} days ago",
+        };
     }
 }
