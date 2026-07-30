@@ -28,6 +28,9 @@ final class LoopbackOnly
         return $response;
     }
 
+    // Anything inet_pton cannot read is not an address, and anything that is
+    // neither 4 nor 16 bytes is not one either — both are refused rather than
+    // guessed at, since this gate decides whether a request reaches the app.
     private static function isLoopback(string $addr): bool
     {
         $binary = @inet_pton($addr);
@@ -35,30 +38,34 @@ final class LoopbackOnly
             return false;
         }
 
-        $length = strlen($binary);
+        return match (strlen($binary)) {
+            4 => self::isLoopbackV4($binary),
+            16 => self::isLoopbackV6($binary),
+            default => false,
+        };
+    }
 
-        if ($length === 4) {
-            // 127.0.0.0/8 covers every IPv4 loopback address — checking only
-            // the first byte (0x7f) is sufficient for the full /8 range.
-            return $binary[0] === "\x7f";
+    // 127.0.0.0/8 covers every IPv4 loopback address, so the first byte is
+    // the whole test for the full /8 range.
+    private static function isLoopbackV4(string $binary): bool
+    {
+        return $binary[0] === "\x7f";
+    }
+
+    private static function isLoopbackV6(string $binary): bool
+    {
+        // ::1 is fifteen NUL bytes followed by 0x01 — compared in binary
+        // rather than against one of the many text spellings of it.
+        if ($binary === str_repeat("\x00", 15)."\x01") {
+            return true;
         }
 
-        if ($length === 16) {
-            // ::1 is fifteen NUL bytes followed by 0x01 — compare the exact
-            // 16-byte binary form rather than parsing text representations.
-            if ($binary === str_repeat("\x00", 15)."\x01") {
-                return true;
-            }
+        // ::ffff:0:0/96 IPv4-mapped — ten NUL bytes, 0xff 0xff, then a 4-byte
+        // IPv4 payload, which gets the same rule a native V4 address gets
+        // rather than a second copy of it.
+        $v4MappedPrefix = str_repeat("\x00", 10)."\xff\xff";
 
-            // ::ffff:0:0/96 IPv4-mapped IPv6 — 10 NUL bytes, 0xff 0xff, then
-            // a 4-byte IPv4 payload. Match the same 127.0.0.0/8 rule on the
-            // trailing four octets.
-            $v4MappedPrefix = str_repeat("\x00", 10)."\xff\xff";
-            if (str_starts_with($binary, $v4MappedPrefix)) {
-                return $binary[12] === "\x7f";
-            }
-        }
-
-        return false;
+        return str_starts_with($binary, $v4MappedPrefix)
+            && self::isLoopbackV4(substr($binary, 12));
     }
 }

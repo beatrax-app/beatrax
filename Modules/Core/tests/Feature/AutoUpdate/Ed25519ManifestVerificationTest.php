@@ -27,6 +27,18 @@ use Psr\Log\NullLogger;
  * Build the channel against a stub config Repository carrying the
  * provided public-key hex under auto_update.publisher_public_key_hex.
  */
+/** Captures warning messages so the two "cannot verify" reasons stay distinguishable. */
+final class EuvRecordingLogger extends NullLogger
+{
+    /** @var list<string> */
+    public array $warnings = [];
+
+    public function warning(string|Stringable $message, array $context = []): void
+    {
+        $this->warnings[] = (string) $message;
+    }
+}
+
 function makeChannelWithPublicKeyHex(string $publicKeyHex): ElectronUpdateChannel
 {
     /** @var DatabaseManager $db */
@@ -237,4 +249,48 @@ it('poll() returns a populated DTO when the fetched manifest verifies cleanly', 
     expect($dto?->sha512Hex)->toBe(str_repeat('a', 128));
     expect($dto?->publishedAt->equalTo($publishedAt))->toBeTrue();
     expect($dto?->channel)->toBe('preview');
+});
+
+/*
+ * An install with no publisher key configured cannot verify anything, which
+ * is a different problem from a manifest that fails to verify: one is the
+ * build being mis-shipped, the other is a manifest that should be distrusted.
+ * The warning is what distinguishes them in the log, so it is asserted rather
+ * than assumed.
+ */
+
+it('refuses to verify, and says why, when no publisher key is configured', function (mixed $configured): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $logger = new EuvRecordingLogger;
+    $channel = new ElectronUpdateChannel(
+        $db,
+        $logger,
+        new SystemClock,
+        new Repository(['auto_update' => ['publisher_public_key_hex' => $configured, 'update_channel' => 'stable']]),
+    );
+
+    expect($channel->verifyManifest('body', str_repeat('s', 64)))->toBeFalse()
+        ->and($logger->warnings)->toContain('ElectronUpdateChannel: missing or invalid publisher public key configuration.');
+})->with([
+    'absent' => [null],
+    'empty' => [''],
+    'not a string' => [12345],
+]);
+
+// The signature is checked before the configuration is read, so a caller
+// passing none never provokes a warning about an install that may be fine.
+it('refuses an empty signature without complaining about the configuration', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $logger = new EuvRecordingLogger;
+    $channel = new ElectronUpdateChannel(
+        $db,
+        $logger,
+        new SystemClock,
+        new Repository(['auto_update' => ['publisher_public_key_hex' => null, 'update_channel' => 'stable']]),
+    );
+
+    expect($channel->verifyManifest('body', ''))->toBeFalse()
+        ->and($logger->warnings)->toBe([]);
 });
