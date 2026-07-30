@@ -78,3 +78,64 @@ it('regenerates when forced', function (): void {
 
     expect($secondSerial)->not->toBe($firstSerial);
 });
+
+/*
+ * When a stored certificate is not reusable.
+ *
+ * ensure() only regenerates if stillValid() says no, so each way of saying no
+ * is pinned separately. Getting this wrong is quiet in the worst way: the
+ * serve command would present an expired or corrupt certificate, the browser
+ * would refuse the redirect, and the consent dance would fail with nothing in
+ * the logs pointing at the certificate.
+ */
+
+it('regenerates rather than presenting a certificate it cannot read', function (string $replacement): void {
+    $cert = new LoopbackTlsCertificate($this->tlsDir);
+    $paths = $cert->ensure();
+    file_put_contents($paths['cert'], $replacement);
+
+    $regenerated = (new LoopbackTlsCertificate($this->tlsDir))->ensure();
+
+    $parsed = openssl_x509_parse((string) file_get_contents($regenerated['cert']));
+
+    expect($parsed)->toBeArray()
+        ->and($parsed['subject']['CN'])->toBe('127.0.0.1');
+})->with([
+    'an empty file' => [''],
+    'text that is not a certificate' => ['not a certificate at all'],
+    'a PEM header with no body' => ["-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n"],
+]);
+
+// A certificate inside its final day is treated as expired, so a long UAT
+// session cannot cross the boundary halfway through a consent dance.
+it('regenerates a certificate that expires within the day', function (): void {
+    $cert = new LoopbackTlsCertificate($this->tlsDir);
+    $paths = $cert->ensure();
+
+    $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    expect($key)->not->toBeFalse();
+    $csr = openssl_csr_new(['commonName' => '127.0.0.1'], $key);
+    expect($csr)->not->toBeFalse();
+    $shortLived = openssl_csr_sign($csr, null, $key, 1);
+    expect($shortLived)->not->toBeFalse();
+    openssl_x509_export($shortLived, $shortLivedPem);
+    file_put_contents($paths['cert'], $shortLivedPem);
+
+    $regenerated = (new LoopbackTlsCertificate($this->tlsDir))->ensure();
+    $parsed = openssl_x509_parse((string) file_get_contents($regenerated['cert']));
+
+    expect($parsed)->toBeArray()
+        ->and($parsed['validTo_time_t'])->toBeGreaterThan(time() + 86400);
+});
+
+it('refuses when the certificate directory cannot be created', function (): void {
+    // A plain file where the directory belongs: is_dir() is false and mkdir()
+    // cannot succeed, which is the pair of conditions the guard needs.
+    $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'ob-tls-blocked-'.bin2hex(random_bytes(6));
+    file_put_contents($path, 'not a directory');
+
+    expect(fn () => (new LoopbackTlsCertificate($path))->ensure())
+        ->toThrow(RuntimeException::class, 'Unable to create the loopback TLS directory');
+
+    @unlink($path);
+});

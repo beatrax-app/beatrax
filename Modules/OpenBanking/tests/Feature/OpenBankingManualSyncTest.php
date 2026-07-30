@@ -16,6 +16,7 @@ use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 
 uses(RefreshDatabase::class);
@@ -249,7 +250,7 @@ it('a generic fetch failure: rose flash, last_attempt_status=error, and last_suc
     $connectionId = omsSeedConnection($user, ['last_successful_sync_at' => $priorSuccess]);
 
     $stub = new OmsStubRemoteSourceAdapter(
-        throws: new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 500 — server error')
+        throws: EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 500, 'server error')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 
@@ -278,7 +279,7 @@ it('a consent failure (HTTP 401): rose flash with the specific reason, marks con
     $connectionId = omsSeedConnection($user);
 
     $stub = new OmsStubRemoteSourceAdapter(
-        throws: new RuntimeException('EnableBankingHttpClient: GET https://api.enablebanking.com/... returned HTTP 401 — unauthorized')
+        throws: EnableBankingApiException::errorStatus('GET https://api.enablebanking.com/...', 401, 'unauthorized')
     );
     app()->instance(RemoteSourceAdapter::class, $stub);
 

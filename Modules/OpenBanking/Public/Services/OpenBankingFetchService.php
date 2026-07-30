@@ -16,7 +16,7 @@ use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
-use RuntimeException;
+use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectionException;
 
 /**
  * @link ../../../../.docs/features/open-banking/architecture.md
@@ -67,9 +67,7 @@ final class OpenBankingFetchService
             ->first();
 
         if ($connection === null) {
-            throw new RuntimeException(
-                "OpenBankingFetchService: no open_banking_connections row {$connectionId} for user {$user->id}."
-            );
+            throw OpenBankingConnectionException::notFound($connectionId, $user->id);
         }
 
         // Self-guard on enabled + consent-not-expired, re-loaded from the
@@ -82,9 +80,7 @@ final class OpenBankingFetchService
             && CarbonImmutable::parse($consentExpiresAtRaw)->isFuture();
 
         if (! $enabled || ! $consentValid) {
-            throw new RuntimeException(
-                "OpenBankingFetchService: connection {$connectionId} is not enabled or its consent has expired — refusing to fetch."
-            );
+            throw OpenBankingConnectionException::notFetchable($connectionId);
         }
 
         $institutionIdRaw = $connection->institution_id ?? null;
@@ -93,29 +89,20 @@ final class OpenBankingFetchService
         $accountUidRaw = $connection->account_uid ?? null;
         $accountUid = is_string($accountUidRaw) && $accountUidRaw !== '' ? $accountUidRaw : null;
         if ($accountUid === null) {
-            throw new RuntimeException(
-                "OpenBankingFetchService: connection {$connectionId} has no resolved account_uid yet — "
-                .'the consent dance must capture accounts[].uid before a fetch can run.'
-            );
+            throw OpenBankingConnectionException::accountNotResolved($connectionId);
         }
 
-        $credentials = $this->secrets->load();
-        if ($credentials === null) {
-            throw new RuntimeException(
-                'OpenBankingFetchService: no Enable Banking application credentials are persisted.'
-            );
-        }
+        $credentials = $this->secrets->loadOrThrow();
 
         // The secrets file holds exactly one live session at a time. If the
         // user has re-linked a different institution since this row was
         // created, the session would pair one bank's credentials with
         // another bank's account_uid — fail loudly rather than proceed.
         if ($credentials->institutionId !== null && $credentials->institutionId !== $institutionId) {
-            throw new RuntimeException(
-                "OpenBankingFetchService: connection {$connectionId}'s institution ({$institutionId}) does not "
-                ."match the currently active Enable Banking session's institution ({$credentials->institutionId}). "
-                .'Only one Enable Banking connection can be live at a time — re-link '.$institutionId
-                .' before syncing this connection.'
+            throw OpenBankingConnectionException::institutionMismatch(
+                $connectionId,
+                $institutionId,
+                $credentials->institutionId,
             );
         }
 

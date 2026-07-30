@@ -13,6 +13,7 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\UnsafeOpenBankingRequestException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
@@ -39,10 +40,12 @@ use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
  * extensible) — the rejection-path fixture credentials instead carry a
  * deliberately MALFORMED private-key PEM. If `assertAllowedUrl()` did
  * not run before `EnableBankingJwtSigner::sign()`, signing the
- * malformed key would throw FIRST, with a DIFFERENT exception message,
- * and the assertion on the specific "refusing to send bearer token..."
- * message would fail — this makes the ordering claim falsifiable
- * against a real regression, not merely asserted against a stub.
+ * malformed key would throw FIRST, and it would throw a DIFFERENT type —
+ * so the assertion on `UnsafeOpenBankingRequestException` would fail.
+ * This makes the ordering claim falsifiable against a real regression,
+ * not merely asserted against a stub. The type is what carries the
+ * claim now; the message is only asserted where the specific host
+ * rejected is itself part of what is being proven.
  *
  * Function names are prefixed `egressGuard*` — distinct from both
  * `OpenBankingSecretsFileGuardTest`'s `openBankingGuard*` and
@@ -222,8 +225,8 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
         $client = egressGuardRejectionClient('https://attacker.example.com/');
 
         expect(fn () => $invoke($client))->toThrow(
-            RuntimeException::class,
-            'refusing to send bearer token to non-allow-listed host: attacker.example.com',
+            UnsafeOpenBankingRequestException::class,
+            'non-allow-listed host: attacker.example.com',
         );
     });
 
@@ -231,8 +234,8 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
         $client = egressGuardRejectionClient('https://api.enablebanking.com.evil.example/');
 
         expect(fn () => $invoke($client))->toThrow(
-            RuntimeException::class,
-            'refusing to send bearer token to non-allow-listed host: api.enablebanking.com.evil.example',
+            UnsafeOpenBankingRequestException::class,
+            'non-allow-listed host: api.enablebanking.com.evil.example',
         );
     });
 
@@ -240,8 +243,8 @@ foreach (egressGuardDocumentedCallPaths() as $name => $callPath) {
         $client = egressGuardRejectionClient('http://api.enablebanking.com/');
 
         expect(fn () => $invoke($client))->toThrow(
-            RuntimeException::class,
-            'refusing to send bearer token over non-HTTPS scheme',
+            UnsafeOpenBankingRequestException::class,
+            'non-HTTPS scheme',
         );
     });
 
@@ -286,8 +289,8 @@ it('accepts the dynamically-resolved bank SCA host once persisted, without weake
     };
 
     expect(fn () => $rejectionClient->aspsps('NL'))->toThrow(
-        RuntimeException::class,
-        'refusing to send bearer token to non-allow-listed host: attacker.example.com',
+        UnsafeOpenBankingRequestException::class,
+        'non-allow-listed host: attacker.example.com',
     );
 });
 

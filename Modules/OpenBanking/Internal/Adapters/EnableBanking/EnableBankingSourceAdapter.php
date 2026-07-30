@@ -13,9 +13,9 @@ use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\OpenBanking\Public\Contracts\RemoteSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use RuntimeException;
 
 /**
  * @link ../../../../../.docs/features/open-banking/architecture.md
@@ -84,9 +84,7 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
             return $topLevelIban;
         }
 
-        throw new RuntimeException(
-            'EnableBankingSourceAdapter: could not resolve the own-account IBAN from the accountDetails() response.'
-        );
+        throw EnableBankingApiException::missingOwnAccountIban();
     }
 
     /**
@@ -179,9 +177,7 @@ final class EnableBankingSourceAdapter implements RemoteSourceAdapter
     private function parseRequiredDate(string $raw, string $fieldName): CarbonImmutable
     {
         if ($raw === '') {
-            throw new RuntimeException(
-                "EnableBankingSourceAdapter: transaction row is missing {$fieldName}; refusing to derive a fingerprinted date from the wall clock."
-            );
+            throw EnableBankingApiException::missingTransactionField($fieldName);
         }
 
         return CarbonImmutable::parse($raw)->startOfDay();

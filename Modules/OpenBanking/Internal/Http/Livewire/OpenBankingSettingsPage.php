@@ -21,6 +21,7 @@ use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
@@ -401,7 +402,7 @@ final class OpenBankingSettingsPage extends Component
         try {
             $preview = $fetchService->preview($this->connectionId, $user);
         } catch (Throwable $e) {
-            $isConsentFailure = self::isConsentFailure($e);
+            $isConsentFailure = EnableBankingApiException::consentFailureWithin($e);
 
             $db->connection()->table('open_banking_connections')
                 ->where('id', $this->connectionId)
@@ -459,17 +460,6 @@ final class OpenBankingSettingsPage extends Component
 
         $this->syncFlashTone = 'zero';
         $this->syncFlashMessage = 'No new transactions.';
-    }
-
-    // No typed exception distinguishes a 401/403 consent failure from any
-    // other Enable Banking error yet — the HTTP client embeds the status in
-    // a generic RuntimeException message, so inspecting it is the narrowest
-    // available signal.
-    private static function isConsentFailure(Throwable $e): bool
-    {
-        $message = $e->getMessage();
-
-        return str_contains($message, 'HTTP 401') || str_contains($message, 'HTTP 403');
     }
 
     // -------------------------------------------------------------------

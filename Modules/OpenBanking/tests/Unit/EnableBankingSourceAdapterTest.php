@@ -8,6 +8,7 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
 use Modules\OpenBanking\Public\Dto\FetchWindow;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Tests\Support\EnableBankingFixtures;
 
 /*
@@ -408,3 +409,64 @@ it('reports the stable format identifier', function (): void {
 
     expect($adapter->format())->toBe('enable-banking');
 });
+
+/*
+ * Resolving the account's own IBAN, and the one row-level failure the fetch
+ * absorbs rather than aborting on.
+ *
+ * The own IBAN is what every counterparty direction is judged against, so a
+ * fetch that could not establish it must refuse outright — a fetch that
+ * guessed would mislabel every row in the window.
+ */
+
+it('reads the own IBAN from account_id before falling back to the top level', function (array $details, string $expected): void {
+    $client = ebFixtureHttpClient(EnableBankingFixtures::transactions(), $details);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    $rows = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
+
+    // The resolved IBAN rides on every row as ownIban, which is what decides
+    // which side of the transaction is us — so asserting it on the row proves
+    // the fallback resolved to the right value, not merely that it resolved.
+    expect($rows)->not->toBeEmpty()
+        ->and($rows[0]->ownIban)->toBe($expected);
+})->with([
+    'nested under account_id' => [['uid' => 'acc-uid-123', 'account_id' => ['iban' => 'NL01ASNB0000000001']], 'NL01ASNB0000000001'],
+    'only at the top level' => [['uid' => 'acc-uid-123', 'iban' => 'NL02ASNB0000000002'], 'NL02ASNB0000000002'],
+    'account_id present but carrying no iban' => [['uid' => 'acc-uid-123', 'account_id' => ['other' => 'x'], 'iban' => 'NL03ASNB0000000003'], 'NL03ASNB0000000003'],
+]);
+
+it('refuses the whole fetch when no own IBAN can be resolved', function (array $details): void {
+    $client = ebFixtureHttpClient(EnableBankingFixtures::transactions(), $details);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    expect(fn () => iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials())))
+        ->toThrow(EnableBankingApiException::class, 'IBAN');
+})->with([
+    'nothing at all' => [['uid' => 'acc-uid-123']],
+    'account_id without an iban' => [['uid' => 'acc-uid-123', 'account_id' => ['other' => 'x']]],
+    'an empty iban string' => [['uid' => 'acc-uid-123', 'account_id' => ['iban' => ''], 'iban' => '']],
+    'a non-string iban' => [['uid' => 'acc-uid-123', 'iban' => 12345]],
+]);
+
+// One unparseable amount must not cost the whole window. The import is a
+// generator feeding a ledger write, so aborting mid-stream would leave the
+// user with a partial import and no indication of where it stopped.
+it('skips a booked row whose money will not parse and keeps the rest', function (array $badAmount): void {
+    $transactions = EnableBankingFixtures::transactions();
+    $rows = $transactions['transactions'];
+    $poisoned = array_merge($rows[0], $badAmount);
+    $transactions['transactions'] = array_merge([$poisoned], array_slice($rows, 1));
+
+    $client = ebFixtureHttpClient($transactions, $this->accountDetailsResponse);
+    $adapter = new EnableBankingSourceAdapter($client);
+
+    $result = iterator_to_array($adapter->fetch('acc-uid-123', $this->window, ebFixtureCredentials()));
+
+    // The fixture carries 3 booked rows; poisoning one leaves the other two.
+    expect($result)->toHaveCount(2);
+})->with([
+    'unknown currency' => [['transaction_amount' => ['amount' => '10.00', 'currency' => 'ZZZ']]],
+    'non-numeric amount' => [['transaction_amount' => ['amount' => 'not-a-number', 'currency' => 'EUR']]],
+    'more precision than the currency allows' => [['transaction_amount' => ['amount' => '10.00123', 'currency' => 'EUR']]],
+]);
