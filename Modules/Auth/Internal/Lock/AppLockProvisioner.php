@@ -129,23 +129,21 @@ final class AppLockProvisioner
             ->where('user_id', $userId)
             ->first(['kdf_salt', 'password_wrapped_key']);
 
-        if ($row === null) {
+        $salt = self::stringColumn($row, 'kdf_salt');
+        $passwordWrapped = self::stringColumn($row, 'password_wrapped_key');
+
+        // No row and a row missing the columns the schema promises are one
+        // answer: there is no key material here to re-wrap.
+        if ($salt === null || $passwordWrapped === null) {
             return false;
         }
 
-        if (! is_string($row->kdf_salt) || ! is_string($row->password_wrapped_key)) {
+        $dataKey = $this->unwrapDataKey($accountPassword, $salt, $passwordWrapped);
+        if ($dataKey === null) {
             return false;
         }
 
-        $pwWrapKey = $this->kdf->deriveWrapKey($accountPassword, $row->kdf_salt);
-        $dataKey = $this->keyWrap->unwrap($row->password_wrapped_key, $pwWrapKey);
-        sodium_memzero($pwWrapKey);
-
-        if ($dataKey === false) {
-            return false;
-        }
-
-        $newPinWrapKey = $this->kdf->deriveWrapKey($newPin, $row->kdf_salt);
+        $newPinWrapKey = $this->kdf->deriveWrapKey($newPin, $salt);
         $newPinWrappedKey = $this->keyWrap->wrap($dataKey, $newPinWrapKey);
         sodium_memzero($newPinWrapKey);
         sodium_memzero($dataKey);
@@ -172,27 +170,26 @@ final class AppLockProvisioner
             ->where('user_id', $userId)
             ->first(['kdf_salt', 'pin_hash', 'pin_wrapped_key']);
 
-        if ($row === null) {
+        $salt = self::stringColumn($row, 'kdf_salt');
+        $pinHash = self::stringColumn($row, 'pin_hash');
+        $pinWrapped = self::stringColumn($row, 'pin_wrapped_key');
+
+        // A wrong PIN and unusable stored key material refuse together and
+        // look the same from outside. Telling them apart would say whether
+        // the PIN was right about an account whose blob happens to be
+        // corrupt, which is more than a caller needs to know.
+        if ($salt === null || $pinHash === null || $pinWrapped === null
+            || ! $this->pinHasher->verify($currentPin, $pinHash)
+        ) {
             return false;
         }
 
-        if (! is_string($row->pin_hash) || ! $this->pinHasher->verify($currentPin, $row->pin_hash)) {
+        $dataKey = $this->unwrapDataKey($currentPin, $salt, $pinWrapped);
+        if ($dataKey === null) {
             return false;
         }
 
-        if (! is_string($row->kdf_salt) || ! is_string($row->pin_wrapped_key)) {
-            return false;
-        }
-
-        $curWrapKey = $this->kdf->deriveWrapKey($currentPin, $row->kdf_salt);
-        $dataKey = $this->keyWrap->unwrap($row->pin_wrapped_key, $curWrapKey);
-        sodium_memzero($curWrapKey);
-
-        if ($dataKey === false) {
-            return false;
-        }
-
-        $newPinWrapKey = $this->kdf->deriveWrapKey($newPin, $row->kdf_salt);
+        $newPinWrapKey = $this->kdf->deriveWrapKey($newPin, $salt);
         $newPinWrappedKey = $this->keyWrap->wrap($dataKey, $newPinWrapKey);
         sodium_memzero($newPinWrapKey);
 
@@ -305,5 +302,32 @@ final class AppLockProvisioner
         $this->biometricStore->deleteForUser($userId);
 
         return true;
+    }
+
+    // Derives the wrap key, unwraps with it and zeroes it on every path,
+    // including the failing one where the caller has nothing left to zero.
+    // Null when the blob will not unwrap — a wrong credential and a corrupt
+    // blob are deliberately the same answer.
+    private function unwrapDataKey(string $credential, string $salt, string $wrapped): ?string
+    {
+        $wrapKey = $this->kdf->deriveWrapKey($credential, $salt);
+        $dataKey = $this->keyWrap->unwrap($wrapped, $wrapKey);
+        sodium_memzero($wrapKey);
+
+        return $dataKey === false ? null : $dataKey;
+    }
+
+    // Null when the row is absent or the column does not hold the string the
+    // schema promises. Both mean the same thing to every caller here, so
+    // they are asked once rather than guarded separately.
+    private static function stringColumn(?object $row, string $column): ?string
+    {
+        if ($row === null) {
+            return null;
+        }
+
+        $value = get_object_vars($row)[$column] ?? null;
+
+        return is_string($value) ? $value : null;
     }
 }
