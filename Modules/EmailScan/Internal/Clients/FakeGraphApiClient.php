@@ -6,7 +6,6 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
-use RuntimeException;
 
 final class FakeGraphApiClient implements GraphApiClientContract
 {
@@ -277,7 +276,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
     {
         $emlRoot = realpath($this->fixtureRoot.'/../../eml');
         if ($emlRoot === false) {
-            throw new RuntimeException('EmailScan fixture eml root not found.');
+            throw new FixtureUnusableException('EmailScan fixture eml root not found.');
         }
         $map = [
             'paypal' => $emlRoot.'/paypal/sample-receipt.eml',
@@ -285,7 +284,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
             'googleplay' => $emlRoot.'/googleplay/sample-purchase.eml',
         ];
         if (! array_key_exists($slug, $map)) {
-            throw new RuntimeException("Fake Graph fixture has no .eml for slug `{$slug}`.");
+            throw new FixtureUnusableException("Fake Graph fixture has no .eml for slug `{$slug}`.");
         }
 
         return $map[$slug];

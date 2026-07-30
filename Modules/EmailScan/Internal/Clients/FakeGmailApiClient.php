@@ -6,7 +6,6 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
-use RuntimeException;
 
 final class FakeGmailApiClient implements GmailApiClientContract
 {
@@ -109,7 +108,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
 
         $raw = is_string($payload['raw'] ?? null) ? $payload['raw'] : null;
         if ($raw === null) {
-            throw new RuntimeException(
+            throw new FixtureUnusableException(
                 "Fake Gmail fixture {$fixture} has no `raw` field for message {$providerMessageId}.",
             );
         }
@@ -320,7 +319,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
         $padded = $value.str_repeat('=', (4 - strlen($value) % 4) % 4);
         $decoded = base64_decode(strtr($padded, '-_', '+/'), true);
         if ($decoded === false) {
-            throw new RuntimeException('Invalid base64url payload in Gmail fixture.');
+            throw new FixtureUnusableException('Invalid base64url payload in Gmail fixture.');
         }
 
         return $decoded;
