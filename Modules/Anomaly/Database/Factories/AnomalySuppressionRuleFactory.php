@@ -6,6 +6,7 @@ namespace Modules\Anomaly\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
+use Modules\Ledger\Public\Enums\Direction;
 
 // The default state encodes a large-vs-typical expense suppression rule
 // banding ±20% around a €23.49 charge (€18.79 .. €28.19) for a single
@@ -26,7 +27,7 @@ final class AnomalySuppressionRuleFactory extends Factory
             'user_id' => null,
             'counterparty_id' => null,
             'detector' => 'large',
-            'direction' => 'expense',
+            'direction' => Direction::Expense->value,
             'amount_band_low_minor' => -2819,
             'amount_band_high_minor' => -1879,
             'currency' => 'EUR',

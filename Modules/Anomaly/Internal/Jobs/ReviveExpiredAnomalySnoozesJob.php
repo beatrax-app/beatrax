@@ -12,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
@@ -41,7 +42,7 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
         // row into memory at once; each row is re-read fresh under its own
         // row lock inside the callback.
         $db->connection()->table('anomaly_alerts')
-            ->where('state', 'snoozed')
+            ->where('state', AnomalyAlertState::Snoozed->value)
             ->whereNotNull('snoozed_until')
             ->where('snoozed_until', '<=', $now)
             ->orderBy('id')
@@ -56,13 +57,13 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
                 try {
                     /** @var AnomalyAlert|null $alert */
                     $alert = AnomalyAlert::query()->where('id', $id)->first();
-                    if ($alert === null || $alert->state !== 'snoozed') {
+                    if ($alert === null || $alert->state !== AnomalyAlertState::Snoozed->value) {
                         return;
                     }
 
                     $stateMachine->transition(
                         $alert,
-                        'open',
+                        AnomalyAlertState::Open->value,
                         'detector_revived_snooze',
                         'detector',
                         null,

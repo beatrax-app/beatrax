@@ -7,6 +7,8 @@ namespace Modules\Anomaly\Database\Factories;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
+use Modules\Ledger\Public\Enums\Direction;
 
 // The default state encodes a large-vs-typical expense anomaly: a €23.49
 // charge against a €9.99 per-merchant baseline, flagged `large`. Callers
@@ -26,8 +28,8 @@ final class AnomalyAlertFactory extends Factory
         return [
             'user_id' => null,
             'transaction_id' => null,
-            'state' => 'open',
-            'direction' => 'expense',
+            'state' => AnomalyAlertState::Open->value,
+            'direction' => Direction::Expense->value,
             'reasons' => ['large'],
             'dismissed_as' => null,
             'baseline_amount_minor' => -999,
@@ -45,7 +47,7 @@ final class AnomalyAlertFactory extends Factory
     public function open(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'open',
+            'state' => AnomalyAlertState::Open->value,
             'actioned_at' => null,
             'snoozed_until' => null,
             'dismissed_as' => null,
@@ -57,7 +59,7 @@ final class AnomalyAlertFactory extends Factory
     public function acknowledged(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'acknowledged',
+            'state' => AnomalyAlertState::Acknowledged->value,
             'actioned_at' => CarbonImmutable::now(),
             'snoozed_until' => null,
         ]);
@@ -68,7 +70,7 @@ final class AnomalyAlertFactory extends Factory
     public function snoozed(CarbonImmutable $until): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'snoozed',
+            'state' => AnomalyAlertState::Snoozed->value,
             'snoozed_until' => $until,
             'actioned_at' => CarbonImmutable::now(),
         ]);
@@ -80,7 +82,7 @@ final class AnomalyAlertFactory extends Factory
     public function dismissed(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'dismissed',
+            'state' => AnomalyAlertState::Dismissed->value,
             'dismissed_as' => 'not_unusual',
             'actioned_at' => CarbonImmutable::now(),
             'snoozed_until' => null,

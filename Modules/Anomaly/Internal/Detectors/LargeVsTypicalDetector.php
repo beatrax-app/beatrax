@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Enums\TransactionType;
 
 /**
  * @link ../../../../.docs/features/anomaly/architecture.md
@@ -38,7 +39,7 @@ final readonly class LargeVsTypicalDetector
             return null;
         }
 
-        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense')->value;
+        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
         $types = Direction::from($direction)->transactionTypes();
         $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
         $categoryId = self::toIntOrNull($txn['category_id'] ?? null);

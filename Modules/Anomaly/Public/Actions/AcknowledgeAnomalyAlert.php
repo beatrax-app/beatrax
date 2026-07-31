@@ -7,6 +7,7 @@ namespace Modules\Anomaly\Public\Actions;
 use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertAcknowledged;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -36,7 +37,7 @@ final class AcknowledgeAnomalyAlert
             throw new NotFoundHttpException('Anomaly alert not found.');
         }
 
-        if ($alert->state === 'acknowledged') {
+        if ($alert->state === AnomalyAlertState::Acknowledged->value) {
             return;
         }
 
@@ -44,7 +45,7 @@ final class AcknowledgeAnomalyAlert
 
         $this->stateMachine->transition(
             $alert,
-            'acknowledged',
+            AnomalyAlertState::Acknowledged->value,
             'user_action',
             'user',
             null,
