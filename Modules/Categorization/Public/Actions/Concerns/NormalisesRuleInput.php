@@ -11,6 +11,11 @@ use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use JsonException;
 use Modules\Categorization\Public\Dto\RuleInput;
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\ConditionOperator;
+use Modules\Categorization\Public\Enums\ConditionValueType;
+use Modules\Categorization\Public\Enums\NoteMode;
+use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 
 /**
@@ -18,20 +23,9 @@ use Modules\Core\Models\User;
  */
 trait NormalisesRuleInput
 {
-    private const VALID_COMBINATORS = ['all', 'any'];
-
+    // The one vocabulary that is not an enum: `field` names a transaction
+    // attribute, not a closed rule-domain concept, so it stays a plain list.
     private const VALID_CONDITION_FIELDS = ['merchant', 'description', 'counterparty'];
-
-    private const VALID_ACTION_TYPES = ['category', 'counterparty', 'note', 'tax_tag'];
-
-    private const VALID_NOTE_MODES = ['set', 'append'];
-
-    /** @var array<string, list<string>> */
-    private const OP_VALUE_TYPE_MATRIX = [
-        'string' => ['contains', 'equals', 'starts_with'],
-        'amount' => ['>', '<', 'between', 'equals'],
-        'date' => ['before', 'after', 'between'],
-    ];
 
     private const DUPLICATE_MESSAGE = 'A rule with this field, match, and value already exists. Edit the existing rule instead.';
 
@@ -48,7 +42,7 @@ trait NormalisesRuleInput
      */
     private static function normalizeInput(DatabaseManager $db, RuleInput $input, User $user): array
     {
-        if (! in_array($input->combinator, self::VALID_COMBINATORS, true)) {
+        if (RuleCombinator::tryFrom($input->combinator) === null) {
             throw new InvalidArgumentException(
                 "Categorization rule: invalid combinator '{$input->combinator}'."
             );
@@ -84,17 +78,19 @@ trait NormalisesRuleInput
      */
     private static function normalizeCondition(array $condition): array
     {
-        $valueType = self::stringOrDefault($condition, 'value_type', '');
-        if (! array_key_exists($valueType, self::OP_VALUE_TYPE_MATRIX)) {
+        $valueTypeRaw = self::stringOrDefault($condition, 'value_type', '');
+        $valueType = ConditionValueType::tryFrom($valueTypeRaw);
+        if ($valueType === null) {
             throw new InvalidArgumentException(
-                "Categorization rule: invalid value_type '{$valueType}'."
+                "Categorization rule: invalid value_type '{$valueTypeRaw}'."
             );
         }
 
-        $op = self::stringOrDefault($condition, 'op', '');
-        if (! in_array($op, self::OP_VALUE_TYPE_MATRIX[$valueType], true)) {
+        $opRaw = self::stringOrDefault($condition, 'op', '');
+        $op = ConditionOperator::tryFrom($opRaw);
+        if ($op === null || ! in_array($op, $valueType->operators(), true)) {
             throw new InvalidArgumentException(
-                "Categorization rule: op '{$op}' is not valid for value_type '{$valueType}'."
+                "Categorization rule: op '{$opRaw}' is not valid for value_type '{$valueTypeRaw}'."
             );
         }
 
@@ -106,13 +102,13 @@ trait NormalisesRuleInput
         }
 
         $value2 = self::normalizedValue2($condition);
-        if ($op === 'between' && $value2 === null) {
+        if ($op === ConditionOperator::Between && $value2 === null) {
             throw new InvalidArgumentException(
                 "Categorization rule: op 'between' requires a non-null value2."
             );
         }
 
-        if ($valueType === 'amount') {
+        if ($valueType === ConditionValueType::Amount) {
             self::assertAmountMinorUnits($value, $value2);
         }
 
@@ -126,8 +122,8 @@ trait NormalisesRuleInput
         return [
             'id' => self::intOrNull($condition, 'id'),
             'field' => $field,
-            'op' => $op,
-            'value_type' => $valueType,
+            'op' => $op->value,
+            'value_type' => $valueType->value,
             'value' => $value,
             'value2' => $value2,
         ];
@@ -192,22 +188,22 @@ trait NormalisesRuleInput
      */
     private static function normalizeAction(DatabaseManager $db, array $action, int $index, int $userId): array
     {
-        $type = self::stringOrDefault($action, 'type', '');
-        if (! in_array($type, self::VALID_ACTION_TYPES, true)) {
+        $typeRaw = self::stringOrDefault($action, 'type', '');
+        $type = ActionType::tryFrom($typeRaw);
+        if ($type === null) {
             throw new InvalidArgumentException(
-                "Categorization rule: invalid action type '{$type}'."
+                "Categorization rule: invalid action type '{$typeRaw}'."
             );
         }
 
         $rawPayload = self::toStringKeyedArray($action['payload'] ?? null);
 
-        // 'tax_tag' is the only type left once category/counterparty/note are
-        // excluded above (VALID_ACTION_TYPES has exactly four members) —
-        // written as `default` to avoid an always-true match branch.
+        // TaxTag is the only case left once Category/Counterparty/Note are
+        // handled — written as `default` to avoid an always-true match arm.
         $payload = match ($type) {
-            'category' => self::normalizeCategoryPayload($db, $rawPayload, $userId),
-            'counterparty' => self::normalizeCounterpartyPayload($db, $rawPayload, $userId),
-            'note' => self::normalizeNotePayload($rawPayload),
+            ActionType::Category => self::normalizeCategoryPayload($db, $rawPayload, $userId),
+            ActionType::Counterparty => self::normalizeCounterpartyPayload($db, $rawPayload, $userId),
+            ActionType::Note => self::normalizeNotePayload($rawPayload),
             default => self::normalizeTaxTagPayload($db, $rawPayload, $userId),
         };
 
@@ -216,7 +212,7 @@ trait NormalisesRuleInput
         return [
             'id' => self::intOrNull($action, 'id'),
             'position' => $position,
-            'type' => $type,
+            'type' => $type->value,
             'payload' => $payload,
         ];
     }
@@ -280,11 +276,11 @@ trait NormalisesRuleInput
         if ($text === '') {
             throw new InvalidArgumentException('Categorization rule: note action requires non-empty text.');
         }
-        $mode = isset($payload['mode']) && is_string($payload['mode']) && in_array($payload['mode'], self::VALID_NOTE_MODES, true)
-            ? $payload['mode']
-            : 'set';
+        $mode = isset($payload['mode']) && is_string($payload['mode'])
+            ? NoteMode::tryFrom($payload['mode']) ?? NoteMode::Set
+            : NoteMode::Set;
 
-        return ['text' => $text, 'mode' => $mode];
+        return ['text' => $text, 'mode' => $mode->value];
     }
 
     /**

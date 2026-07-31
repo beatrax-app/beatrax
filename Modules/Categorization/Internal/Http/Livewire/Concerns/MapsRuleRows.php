@@ -6,6 +6,7 @@ namespace Modules\Categorization\Internal\Http\Livewire\Concerns;
 
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
+use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 // The pure translation layer between the form's UI rows and the backend's
@@ -17,34 +18,35 @@ use Modules\Ledger\Public\ValueObjects\MoneyInput;
  */
 trait MapsRuleRows
 {
-    /** @var array<string, string> UI field option => backend value_type. */
-    private const CONDITION_FIELDS = [
-        'merchant' => 'string',
-        'description' => 'string',
-        'counterparty' => 'string',
-        'amount' => 'amount',
-        'date' => 'date',
-    ];
-
-    /** @var array<string, array<string, string>> value_type => (op => label). */
-    private const OP_OPTIONS = [
-        'string' => ['contains' => 'contains', 'equals' => 'equals', 'starts_with' => 'starts with'],
-        'amount' => ['>' => 'more than', '<' => 'less than', 'between' => 'between', 'equals' => 'equals'],
-        'date' => ['before' => 'before', 'after' => 'after', 'between' => 'between'],
-    ];
-
-    /** @var list<string> */
-    private const VALID_ACTION_TYPES = ['category', 'counterparty', 'note', 'tax_tag'];
-
+    // The operator dropdown for a field, as (op value => label). Derived from
+    // the field's value type so the vocabulary lives once, in the enums —
+    // return shape stays string=>string for the Blade <select>.
     /** @return array<string, string> */
     public static function operatorOptionsFor(string $field): array
     {
-        return self::OP_OPTIONS[self::valueTypeFor($field)];
+        $options = [];
+        foreach (self::fieldValueType($field)->operators() as $operator) {
+            $options[$operator->value] = $operator->label();
+        }
+
+        return $options;
     }
 
     public static function valueTypeFor(string $field): string
     {
-        return self::CONDITION_FIELDS[$field] ?? 'string';
+        return self::fieldValueType($field)->value;
+    }
+
+    // The value type a form field option maps to. The three string fields
+    // (merchant, description, counterparty) share Text; amount and date are
+    // their own. Kept as the single field->type authority the form reads.
+    private static function fieldValueType(string $field): ConditionValueType
+    {
+        return match ($field) {
+            'amount' => ConditionValueType::Amount,
+            'date' => ConditionValueType::Date,
+            default => ConditionValueType::Text,
+        };
     }
 
     private static function intIdOrNull(mixed $value): ?int

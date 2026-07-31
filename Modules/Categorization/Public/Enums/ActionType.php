@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Categorization\Public\Enums;
+
+// The four things a rule can do when it fires. Case order is the order the
+// form offers an unused type in when a new action row is added.
+/**
+ * @link ../../../../.docs/features/categorization/architecture.md
+ */
+enum ActionType: string
+{
+    case Category = 'category';
+
+    case Counterparty = 'counterparty';
+
+    case Note = 'note';
+
+    case TaxTag = 'tax_tag';
+}

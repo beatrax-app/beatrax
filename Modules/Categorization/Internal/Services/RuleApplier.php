@@ -7,6 +7,8 @@ namespace Modules\Categorization\Internal\Services;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Models\RuleAction;
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\NoteMode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
@@ -103,10 +105,10 @@ final class RuleApplier
             }
 
             $result = match ($type) {
-                'category' => $this->applyCategory($entry['ruleId'], $entry['action'], $transactionId, $user),
-                'counterparty' => $this->applyCounterparty($entry['ruleId'], $entry['action'], $transactionId, $user),
-                'note' => $this->applyNote($entry['ruleId'], $entry['action'], $transactionId, $user),
-                'tax_tag' => $this->applyTaxTag($entry['ruleId'], $entry['action'], $transactionId, $userId),
+                ActionType::Category->value => $this->applyCategory($entry['ruleId'], $entry['action'], $transactionId, $user),
+                ActionType::Counterparty->value => $this->applyCounterparty($entry['ruleId'], $entry['action'], $transactionId, $user),
+                ActionType::Note->value => $this->applyNote($entry['ruleId'], $entry['action'], $transactionId, $user),
+                ActionType::TaxTag->value => $this->applyTaxTag($entry['ruleId'], $entry['action'], $transactionId, $userId),
                 default => null,
             };
 
@@ -219,7 +221,7 @@ final class RuleApplier
             return null;
         }
 
-        $mode = self::stringFromPayload($action->payload, 'mode') === 'append' ? 'append' : 'set';
+        $mode = NoteMode::coerce(self::stringFromPayload($action->payload, 'mode'))->value;
 
         $affected = ($this->setNote)($transactionId, $text, $mode, $user);
         if ($affected === 0) {

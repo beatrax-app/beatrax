@@ -6,6 +6,7 @@ namespace Modules\Categorization\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Core\Public\Concerns\CoercesScalars;
 
 /**
@@ -21,7 +22,7 @@ final class DeactivateRulesOnReferentDelete
     {
         $this->deactivate(
             userId: self::toNullableInt($category->getAttribute('user_id')),
-            actionType: 'category',
+            actionType: ActionType::Category->value,
             payloadKey: 'category_id',
             referentId: self::toInt($category->getAttribute('id')),
         );
@@ -31,7 +32,7 @@ final class DeactivateRulesOnReferentDelete
     {
         $this->deactivate(
             userId: self::toNullableInt($counterparty->getAttribute('user_id')),
-            actionType: 'counterparty',
+            actionType: ActionType::Counterparty->value,
             payloadKey: 'counterparty_id',
             referentId: self::toInt($counterparty->getAttribute('id')),
         );
