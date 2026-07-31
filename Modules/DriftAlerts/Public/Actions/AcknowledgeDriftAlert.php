@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertAcknowledged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -35,7 +36,7 @@ final class AcknowledgeDriftAlert
             throw new NotFoundHttpException('Drift alert not found.');
         }
 
-        if ($alert->state === 'acknowledged') {
+        if ($alert->state === DriftAlertState::Acknowledged->value) {
             return;
         }
 
@@ -43,7 +44,7 @@ final class AcknowledgeDriftAlert
 
         $this->stateMachine->transition(
             $alert,
-            'acknowledged',
+            DriftAlertState::Acknowledged->value,
             'user_action',
             'user',
             null,

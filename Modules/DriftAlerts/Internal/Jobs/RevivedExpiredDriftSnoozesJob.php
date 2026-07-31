@@ -15,6 +15,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use stdClass;
 
 /**
@@ -33,7 +34,7 @@ final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
         $now = $clock->now()->toDateTimeString();
 
         $rows = $db->connection()->table('drift_alerts')
-            ->where('state', 'snoozed')
+            ->where('state', DriftAlertState::Snoozed->value)
             ->whereNotNull('snoozed_until')
             ->where('snoozed_until', '<=', $now)
             ->get(['id']);
@@ -48,13 +49,13 @@ final class RevivedExpiredDriftSnoozesJob implements ShouldQueue
             try {
                 /** @var DriftAlert|null $alert */
                 $alert = DriftAlert::query()->where('id', $id)->first();
-                if ($alert === null || $alert->state !== 'snoozed') {
+                if ($alert === null || $alert->state !== DriftAlertState::Snoozed->value) {
                     continue;
                 }
 
                 $stateMachine->transition(
                     $alert,
-                    'open',
+                    DriftAlertState::Open->value,
                     'detector_revived_snooze',
                     'detector',
                     null,

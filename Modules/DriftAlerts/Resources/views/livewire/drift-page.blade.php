@@ -36,7 +36,7 @@
      */
     $tintFor = static function (object $row): string {
         $isNegative = $row->delta->isNegative();
-        if ($row->direction === 'expense') {
+        if ($row->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value) {
             return $isNegative ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300';
         }
         // income
@@ -135,7 +135,7 @@
 
             $anomalyTintFor = static function (object $row): string {
                 $up = abs($row->latestAmount->toMinor()) >= abs($row->baselineAmount->toMinor());
-                if ($row->direction === 'expense') {
+                if ($row->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value) {
                     return $up ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
                 }
                 // income: up is good (emerald), down is bad (rose)
