@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Throwable;
 
 // DI-only: no constructor. Service collaborators arrive as parameters
@@ -76,7 +77,7 @@ final class ReconcilePage extends Component
     {
         $this->error = '';
 
-        $target = self::parseAmount($this->statementBalance);
+        $target = MoneyInput::tryToMinor($this->statementBalance);
         $date = self::parseDate($this->statementDate);
 
         // Both are the same answer to the operator: the form is not yet in a
@@ -144,7 +145,7 @@ final class ReconcilePage extends Component
             : 0;
 
         $hasTarget = trim($this->statementBalance) !== '';
-        $statementTargetMinor = self::parseAmount($this->statementBalance);
+        $statementTargetMinor = MoneyInput::tryToMinor($this->statementBalance);
         $differenceMinor = ($ownedAccountId !== null && $statementDate !== null && $hasTarget && $statementTargetMinor !== null)
             ? $statementTargetMinor - $clearedBalanceMinor
             : null;
@@ -204,7 +205,7 @@ final class ReconcilePage extends Component
                 ->first(['closing_balance_minor', 'closing_balance_date', 'period_end']);
 
             if ($row !== null) {
-                $this->statementBalance = self::formatMinorForInput(self::toInt($row->closing_balance_minor));
+                $this->statementBalance = MoneyInput::formatMinor(self::toInt($row->closing_balance_minor));
                 $rawDate = $row->closing_balance_date ?? $row->period_end ?? null;
                 if (is_string($rawDate) && $rawDate !== '') {
                     $this->statementDate = CarbonImmutable::parse($rawDate)->toDateString();
@@ -224,7 +225,7 @@ final class ReconcilePage extends Component
                 ->first(['total_amount_minor', 'period_end']);
 
             if ($row !== null) {
-                $this->statementBalance = self::formatMinorForInput(self::toInt($row->total_amount_minor));
+                $this->statementBalance = MoneyInput::formatMinor(self::toInt($row->total_amount_minor));
                 if (is_string($row->period_end) && $row->period_end !== '') {
                     $this->statementDate = CarbonImmutable::parse($row->period_end)->toDateString();
                 }
@@ -264,52 +265,5 @@ final class ReconcilePage extends Component
         } catch (Throwable) {
             return null;
         }
-    }
-
-    // Formats minor units as an editable Dutch-decimal string (e.g.
-    // -6000 -> "-60,00") so a pre-filled balance round-trips through
-    // parseAmount() unchanged if submitted untouched.
-    private static function formatMinorForInput(int $minor): string
-    {
-        $negative = $minor < 0;
-        $abs = abs($minor);
-        $whole = intdiv($abs, 100);
-        $cents = $abs % 100;
-
-        return ($negative ? '-' : '').$whole.','.str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
-    }
-
-    // Parses a signed money string to minor units (accepts an optional
-    // leading '-', since a statement balance can be negative). Accepts
-    // plain, Dutch-grouped, or comma-decimal forms — the rightmost of
-    // '.' or ',' is the decimal separator.
-    private static function parseAmount(string $value): ?int
-    {
-        $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));
-        if ($trimmed === '') {
-            return null;
-        }
-
-        $negative = str_starts_with($trimmed, '-');
-        $unsigned = $negative ? substr($trimmed, 1) : $trimmed;
-
-        $lastDot = strrpos($unsigned, '.');
-        $lastComma = strrpos($unsigned, ',');
-        if ($lastDot !== false && $lastComma !== false) {
-            $unsigned = $lastComma > $lastDot
-                ? str_replace(['.', ','], ['', '.'], $unsigned)
-                : str_replace(',', '', $unsigned);
-        } elseif ($lastComma !== false) {
-            $unsigned = str_replace(',', '.', $unsigned);
-        }
-
-        if (preg_match('/^\d{1,12}(\.\d{1,2})?$/', $unsigned) !== 1) {
-            return null;
-        }
-
-        [$whole, $frac] = array_pad(explode('.', $unsigned, 2), 2, '');
-        $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
-
-        return $negative ? -$minor : $minor;
     }
 }

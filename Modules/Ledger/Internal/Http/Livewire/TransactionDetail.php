@@ -28,6 +28,7 @@ use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
@@ -489,35 +490,12 @@ final class TransactionDetail extends Component
         return is_numeric($raw) ? (int) $raw : null;
     }
 
-    // Parses a user-entered absolute amount into positive integer minor
-    // units, or null if invalid/zero/negative. Handles the Dutch
-    // grouped form "1.234,56" and the plain forms "1234.56"/"50,00"/"50"
-    // — mirrors PotWriter::parseAmount(); keep both in sync.
+    // Split legs are entered as positive magnitudes — the sign belongs to
+    // the parent transaction — so a zero or negative entry is not a valid
+    // leg amount.
     private static function parseAmount(string $value): ?int
     {
-        $normalised = str_replace([' ', "\u{00A0}"], '', trim($value));
-        if ($normalised === '') {
-            return null;
-        }
-
-        $lastDot = strrpos($normalised, '.');
-        $lastComma = strrpos($normalised, ',');
-        if ($lastDot !== false && $lastComma !== false) {
-            $normalised = $lastComma > $lastDot
-                ? str_replace(['.', ','], ['', '.'], $normalised)
-                : str_replace(',', '', $normalised);
-        } elseif ($lastComma !== false) {
-            $normalised = str_replace(',', '.', $normalised);
-        }
-
-        if (preg_match('/^\d{1,12}(\.\d{1,2})?$/', $normalised) !== 1) {
-            return null;
-        }
-
-        [$whole, $frac] = array_pad(explode('.', $normalised, 2), 2, '');
-        $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
-
-        return $minor > 0 ? $minor : null;
+        return MoneyInput::tryToPositiveMinor($value);
     }
 
     // Integer-only arithmetic (intdiv/modulo), never float division,
