@@ -13,6 +13,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
+use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -368,7 +369,7 @@ final readonly class ScenarioApplier
             return $contributions;
         }
 
-        $shiftAll = $payload->scope === 'all_subsequent';
+        $shiftAll = $payload->scope === ShiftScope::AllSubsequent->value;
 
         $result = [];
         foreach ($contributions as $i => $c) {

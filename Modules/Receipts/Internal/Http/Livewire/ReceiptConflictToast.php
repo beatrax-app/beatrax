@@ -10,6 +10,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Receipts\Public\Actions\ApplyReceiptConflictResolution;
+use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Services\ReceiptConflictQuery;
 
 // Listens for the local receipt-conflict-detected Livewire event AND
@@ -70,7 +71,7 @@ final class ReceiptConflictToast extends Component
         if (! $currentUser->isAuthenticated()) {
             return;
         }
-        $resolve($currentUser->user(), 'prefer_receipt');
+        $resolve($currentUser->user(), ReceiptConflictChoice::PreferReceipt->value);
         $this->visible = false;
     }
 
@@ -79,7 +80,7 @@ final class ReceiptConflictToast extends Component
         if (! $currentUser->isAuthenticated()) {
             return;
         }
-        $resolve($currentUser->user(), 'prefer_first_write');
+        $resolve($currentUser->user(), ReceiptConflictChoice::PreferFirstWrite->value);
         $this->visible = false;
     }
 
