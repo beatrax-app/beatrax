@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // mode='set': trimmed $text replaces the note outright, blank input
@@ -36,7 +37,7 @@ final class SetTransactionNote implements SetsTransactionNote
 
         // A missing row and a reconciled one are the same answer to the
         // caller: the note was not written, and not because of an error.
-        if ($row === null || $row->status === 'reconciled') {
+        if ($row === null || $row->status === ClearedStatus::Reconciled->value) {
             return 0;
         }
 

@@ -13,6 +13,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\Dto\TransactionRowDto;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\TransactionListQuery;
 use Modules\Search\Public\Dto\SearchFilters;
@@ -361,7 +362,7 @@ final class TransactionsList extends Component
             $accRow['taxTagged'] = $taxState[$accRowId]['taxTagged'] ?? false;
             $accRow['taxCategoryShortName'] = $taxState[$accRowId]['taxCategoryShortName'] ?? null;
             $accRow['splitLegs'] = $splitLegs[$accRowId] ?? [];
-            $accRow['status'] = $clearedState[$accRowId] ?? 'cleared';
+            $accRow['status'] = $clearedState[$accRowId] ?? ClearedStatus::Cleared->value;
         }
         unset($accRow);
 

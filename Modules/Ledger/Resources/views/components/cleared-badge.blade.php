@@ -16,11 +16,11 @@
      * x-tax::tax-badge's `$dispatch('tax-tag', ...)` pattern so this
      * component works unmodified from either surface).
      */
-    $status = is_string($transaction['status'] ?? null) ? $transaction['status'] : 'cleared';
+    $status = is_string($transaction['status'] ?? null) ? $transaction['status'] : \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value;
     $txId = (int) ($transaction['id'] ?? 0);
-    $isReconciled = $status === 'reconciled';
+    $isReconciled = $status === \Modules\Ledger\Public\Enums\ClearedStatus::Reconciled->value;
 
-    $variant = $status === 'uncleared' ? 'muted' : 'ok';
+    $variant = $status === \Modules\Ledger\Public\Enums\ClearedStatus::Uncleared->value ? 'muted' : 'ok';
     $label = match ($status) {
         'reconciled' => 'Reconciled',
         'uncleared' => 'Uncleared',

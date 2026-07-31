@@ -10,6 +10,7 @@ use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Sync\Public\Events\TransactionMutated;
 
 // All collaborators arrive as method parameters — no constructor DI,
@@ -44,7 +45,7 @@ trait HandlesClearedStatus
         $result = [];
         foreach ($transactionIds as $id) {
             $status = $statuses[$id] ?? null;
-            $result[$id] = is_string($status) ? $status : 'cleared';
+            $result[$id] = is_string($status) ? $status : ClearedStatus::Cleared->value;
         }
 
         return $result;
@@ -88,13 +89,13 @@ trait HandlesClearedStatus
             return;
         }
 
-        if ($current === 'reconciled') {
+        if ($current === ClearedStatus::Reconciled->value) {
             $this->dispatch('toast', message: 'Reconciled — un-reconcile first to change status.');
 
             return;
         }
 
-        $next = $current === 'cleared' ? 'uncleared' : 'cleared';
+        $next = $current === ClearedStatus::Cleared->value ? ClearedStatus::Uncleared->value : ClearedStatus::Cleared->value;
 
         if (! in_array($next, Transaction::STATUSES, true)) {
             return;

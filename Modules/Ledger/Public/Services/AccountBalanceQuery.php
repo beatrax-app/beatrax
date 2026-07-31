@@ -7,6 +7,7 @@ namespace Modules\Ledger\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 
 /**
  * @link ../../../../.docs/features/ledger/architecture.md
@@ -38,7 +39,7 @@ final class AccountBalanceQuery
             ->table('transactions')
             ->where('account_id', $accountId)
             ->where('user_id', $user->id)
-            ->whereIn('status', ['cleared', 'reconciled'])
+            ->whereIn('status', [ClearedStatus::Cleared->value, ClearedStatus::Reconciled->value])
             ->sum('amount_minor');
     }
 
@@ -52,7 +53,7 @@ final class AccountBalanceQuery
             ->table('transactions')
             ->where('account_id', $accountId)
             ->where('user_id', $user->id)
-            ->whereIn('status', ['cleared', 'reconciled'])
+            ->whereIn('status', [ClearedStatus::Cleared->value, ClearedStatus::Reconciled->value])
             ->where('posted_at', '<=', $asOf->toDateString())
             ->sum('amount_minor');
     }

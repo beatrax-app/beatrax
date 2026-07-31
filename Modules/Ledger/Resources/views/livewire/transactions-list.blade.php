@@ -170,7 +170,7 @@
                             <x-tax::tax-badge :transaction="$row" :showAlways="true" />
                             {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Always visible
                                  at phone width, same as the tax badge. --}}
-                            <x-ledger::cleared-badge :transaction="['id' => $row['id'], 'status' => $row['status'] ?? 'cleared']" />
+                            <x-ledger::cleared-badge :transaction="['id' => $row['id'], 'status' => $row['status'] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                             {{-- Amount: tabular, right-aligned; positive = emerald. Always the
                                  parent total — never a client-recomputed sum (UI-SPEC §5.1). --}}
                             <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
@@ -369,7 +369,7 @@
                                 {{-- Cleared/uncleared/reconciled badge (SC-1, D-11). Batch-loaded
                                      via $clearedState — no N+1 (Pitfall 1). --}}
                                 <td class="px-4 py-2">
-                                    <x-ledger::cleared-badge :transaction="['id' => $row->id, 'status' => $clearedState[$row->id] ?? 'cleared']" />
+                                    <x-ledger::cleared-badge :transaction="['id' => $row->id, 'status' => $clearedState[$row->id] ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                                 </td>
                                 <td class="px-4 py-2 text-right" style="font-variant-numeric: tabular-nums;">
                                     @if ($isSearchMode)
