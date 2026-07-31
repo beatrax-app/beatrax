@@ -14,6 +14,7 @@ use Modules\Migration\Internal\Pipeline\PromoteResult;
 use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\MigrationConfirmResult;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Migration\Public\Exceptions\MigrationAlreadyDiscardedException;
 use stdClass;
 
@@ -37,7 +38,7 @@ final class ConfirmMigration
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        if ($run->status === 'confirmed') {
+        if ($run->status === MigrationRunStatus::Confirmed->value) {
             return new MigrationConfirmResult(
                 migrationRunId: $migrationRunId,
                 categoriesCreated: $run->categories_count,
@@ -55,7 +56,7 @@ final class ConfirmMigration
         // check — staging for a discarded run is already truncated, so
         // falling through to promote() would silently flip status back to
         // 'confirmed' with all-zero counts, corrupting the audit trail.
-        if ($run->status === 'discarded') {
+        if ($run->status === MigrationRunStatus::Discarded->value) {
             throw new MigrationAlreadyDiscardedException($migrationRunId);
         }
 
@@ -163,7 +164,7 @@ final class ConfirmMigration
     private function flipToConfirmed(MigrationRun $run, PromoteResult $promoteResult): MigrationConfirmResult
     {
         $run->update([
-            'status' => 'confirmed',
+            'status' => MigrationRunStatus::Confirmed->value,
             'confirmed_at' => $this->clock->now(),
             'categories_count' => $promoteResult->categoriesCreated,
             'accounts_count' => $promoteResult->accountsCreated,

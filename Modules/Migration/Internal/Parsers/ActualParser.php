@@ -21,6 +21,7 @@ use Modules\Migration\Public\Dto\MigrationPayeeDto;
 use Modules\Migration\Public\Dto\MigrationScheduleDto;
 use Modules\Migration\Public\Dto\MigrationTransactionDto;
 use Modules\Migration\Public\Dto\UnmappedItemDto;
+use Modules\Migration\Public\Enums\MigrationSourceProduct;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 use PDOException;
 
@@ -35,7 +36,7 @@ final class ActualParser implements ParsesMigrationSource
 
     public function format(): string
     {
-        return 'actual';
+        return MigrationSourceProduct::Actual->value;
     }
 
     public function parse(string $extractedPath, User $user, int $migrationRunId): MigrationBatch

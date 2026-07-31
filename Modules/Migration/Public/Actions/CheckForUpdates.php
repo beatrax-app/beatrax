@@ -15,6 +15,7 @@ use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
 use Modules\Migration\Internal\Pipeline\ThreeWayMergeResolver;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\ConflictDto;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
 
 /**
  * @link ../../../../.docs/features/migration/architecture.md
@@ -37,7 +38,7 @@ final class CheckForUpdates
             ->where('id', $priorConfirmedRunId)
             ->where('user_id', $user->id)
             ->where('source_product', $sourceProduct)
-            ->where('status', 'confirmed')
+            ->where('status', MigrationRunStatus::Confirmed->value)
             ->firstOrFail();
 
         // Reuses StartMigrationRun (rather than duplicating parser-selection/
@@ -62,7 +63,7 @@ final class CheckForUpdates
         $hasConflicts = $decision->conflicts !== [];
 
         /** @var array{status: string, confirmed_at?: CarbonImmutable} $attrs */
-        $attrs = ['status' => $hasConflicts ? 'needs_attention' : 'confirmed'];
+        $attrs = ['status' => $hasConflicts ? MigrationRunStatus::NeedsAttention->value : MigrationRunStatus::Confirmed->value];
         if (! $hasConflicts) {
             $attrs['confirmed_at'] = $this->clock->now();
         }

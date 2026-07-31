@@ -26,6 +26,7 @@ use Modules\Migration\Internal\Exceptions\UnresolvedStagedAccountException;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 use Modules\Migration\Models\MigrationRun;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
 
@@ -747,7 +748,7 @@ final class PromoteStagingToDomain
             'raw_file_path' => 'migration',
             'sha256' => hash('sha256', 'migration:'.$sourceProduct),
             'uploaded_at' => $now,
-            'status' => 'confirmed',
+            'status' => MigrationRunStatus::Confirmed->value,
             'created_at' => $now,
             'updated_at' => $now,
         ]));

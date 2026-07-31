@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Migration\Models\MigrationRun;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Migration\Public\Exceptions\MigrationAlreadyConfirmedException;
 
 /**
@@ -43,13 +44,13 @@ final class DiscardMigrationRun
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        if ($run->status === 'confirmed') {
+        if ($run->status === MigrationRunStatus::Confirmed->value) {
             throw new MigrationAlreadyConfirmedException($migrationRunId);
         }
 
         $this->truncateStagingForRun($migrationRunId, $user);
 
-        $run->update(['status' => 'discarded']);
+        $run->update(['status' => MigrationRunStatus::Discarded->value]);
     }
 
     public function sweepAbandonedForUser(User $user): int
@@ -58,7 +59,7 @@ final class DiscardMigrationRun
 
         $staleRunIds = $this->db->connection()->table('migration_runs')
             ->where('user_id', $user->id)
-            ->where('status', 'parsed')
+            ->where('status', MigrationRunStatus::Parsed->value)
             ->where('created_at', '<', $cutoff)
             ->pluck('id');
 
