@@ -21,6 +21,7 @@ use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @link ../../../../.docs/features/email-scan/architecture.md
@@ -123,7 +124,7 @@ final class GmailApiClient implements GmailApiClientContract
                 'startHistoryId' => $startHistoryId,
             ]);
         } catch (GoogleServiceException $e) {
-            if ($e->getCode() === 404) {
+            if ($e->getCode() === Response::HTTP_NOT_FOUND) {
                 throw CursorExpiredException::gmail();
             }
             throw $this->mapRateLimit($e);

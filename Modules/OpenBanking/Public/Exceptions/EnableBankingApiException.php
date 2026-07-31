@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Public\Exceptions;
 
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 // The Enable Banking API was reached but did not yield usable data: a
@@ -63,7 +64,7 @@ final class EnableBankingApiException extends RuntimeException
     // dance can. Every other status is worth attempting again.
     public function isConsentFailure(): bool
     {
-        return $this->status === 401 || $this->status === 403;
+        return $this->status === Response::HTTP_UNAUTHORIZED || $this->status === Response::HTTP_FORBIDDEN;
     }
 
     // The rule lives here so the two places that act on it — the sync job and

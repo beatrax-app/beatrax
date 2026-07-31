@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Internal\Clients;
 
 use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\Response;
 
 final class FakeGmailApiClient implements GmailApiClientContract
 {
@@ -152,7 +153,7 @@ final class FakeGmailApiClient implements GmailApiClientContract
         $error = $payload['error'] ?? null;
         if (is_array($error)) {
             $code = $error['code'] ?? null;
-            if (is_int($code) && $code === 404) {
+            if (is_int($code) && $code === Response::HTTP_NOT_FOUND) {
                 $message = $error['message'] ?? '';
                 throw CursorExpiredException::gmail(is_string($message) ? $message : '');
             }

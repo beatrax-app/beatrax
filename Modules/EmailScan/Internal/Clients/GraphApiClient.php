@@ -23,6 +23,7 @@ use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @link ../../../../.docs/features/email-scan/architecture.md
@@ -404,11 +405,11 @@ final class GraphApiClient implements GraphApiClientContract
         $safeBodyMessage = $this->extractErrorMessage((string) $response->getBody());
 
         return match (true) {
-            $status === 429 => new RateLimitedException(
+            $status === Response::HTTP_TOO_MANY_REQUESTS => new RateLimitedException(
                 retryAfterSeconds: $this->parseRetryAfter($response->getHeaderLine('Retry-After')),
                 message: 'Microsoft Graph rate limit exceeded: '.$safeBodyMessage,
             ),
-            $expectsDelta && $status === 410 => CursorExpiredException::graph($safeBodyMessage),
+            $expectsDelta && $status === Response::HTTP_GONE => CursorExpiredException::graph($safeBodyMessage),
             default => new RuntimeException(
                 'GraphApiClient: '.$context.' returned HTTP '.$status.' — '.$safeBodyMessage,
             ),

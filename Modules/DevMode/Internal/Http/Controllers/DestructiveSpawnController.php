@@ -15,6 +15,7 @@ use Modules\DevMode\Internal\Services\DevModeFlag;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 // The dedicated DESTRUCTIVE-tier execution entry point (separate from
@@ -62,7 +63,7 @@ final readonly class DestructiveSpawnController
 
         $commandRaw = $validated['command'] ?? null;
         if (! is_string($commandRaw)) {
-            return new JsonResponse(['error' => 'invalid_command'], 422);
+            return new JsonResponse(['error' => 'invalid_command'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
         $command = $commandRaw;
 
