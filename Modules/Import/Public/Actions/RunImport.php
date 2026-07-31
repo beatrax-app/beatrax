@@ -20,6 +20,7 @@ use Modules\Import\Public\Exceptions\UploadStagingException;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
@@ -51,7 +52,7 @@ final class RunImport implements RunsImports
             ->where('sha256', $sha)
             ->first();
 
-        if ($existing !== null && $existing->status === 'confirmed') {
+        if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
             // File-layer idempotency: the SHA256 was already imported and
             // landed. Skip the (expensive, identical) re-parse and signal to
             // the wizard that nothing remains to do for this upload.
@@ -78,7 +79,7 @@ final class RunImport implements RunsImports
                     'raw_file_path' => $stablePath,
                     'sha256' => $sha,
                     'uploaded_at' => $this->clock->now(),
-                    'status' => 'previewed',
+                    'status' => ImportRunStatus::Previewed->value,
                 ]);
             } catch (UniqueConstraintViolationException) {
                 // A concurrent preview for the same (user_id, sha256)
@@ -86,7 +87,7 @@ final class RunImport implements RunsImports
                 // the winner's row and fall through to the same
                 // confirmed-short-circuit / reuse-reset semantics.
                 $raced = $this->reReadAfterRace($user, $sha);
-                if ($raced->status === 'confirmed') {
+                if ($raced->status === ImportRunStatus::Confirmed->value) {
                     return new ImportPreviewResult(
                         importRunId: $raced->id,
                         rows: [],
@@ -173,7 +174,7 @@ final class RunImport implements RunsImports
             ->where('sha256', $idempotencyKey)
             ->first();
 
-        if ($existing !== null && $existing->status === 'confirmed') {
+        if ($existing !== null && $existing->status === ImportRunStatus::Confirmed->value) {
             // Same short-circuit as runFromUpload(): the window was
             // already fetched and landed, so there is nothing left to
             // preview for this exact idempotency key.
@@ -198,14 +199,14 @@ final class RunImport implements RunsImports
                     'raw_file_path' => $this->syntheticRawFilePath($idempotencyKey),
                     'sha256' => $idempotencyKey,
                     'uploaded_at' => $this->clock->now(),
-                    'status' => 'previewed',
+                    'status' => ImportRunStatus::Previewed->value,
                 ]);
             } catch (UniqueConstraintViolationException) {
                 // Same-key concurrent preview won the insert race;
                 // re-read and fall through to the reuse/confirmed semantics
                 // rather than 500-ing the loser.
                 $raced = $this->reReadAfterRace($user, $idempotencyKey);
-                if ($raced->status === 'confirmed') {
+                if ($raced->status === ImportRunStatus::Confirmed->value) {
                     return new ImportPreviewResult(
                         importRunId: $raced->id,
                         rows: [],
@@ -253,7 +254,7 @@ final class RunImport implements RunsImports
     {
         $attributes = [
             'source_format' => $sourceFormat,
-            'status' => 'previewed',
+            'status' => ImportRunStatus::Previewed->value,
             'uploaded_at' => $this->clock->now(),
             'confirmed_at' => null,
             'inserted_count' => 0,
