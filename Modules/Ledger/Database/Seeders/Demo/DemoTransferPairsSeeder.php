@@ -11,6 +11,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
@@ -86,7 +87,7 @@ final class DemoTransferPairsSeeder
                 'raw_file_path' => 'demo://transfer-pair/'.$account->slug,
                 'uploaded_at' => CarbonImmutable::today(),
                 'confirmed_at' => CarbonImmutable::today(),
-                'status' => 'confirmed',
+                'status' => ImportRunStatus::Confirmed->value,
             ],
         );
     }

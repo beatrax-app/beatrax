@@ -17,6 +17,7 @@ use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Recurring\Public\Contracts\DispatchesRecurringDetection;
 
 /**
@@ -43,7 +44,7 @@ final class ConfirmImport implements ConfirmsImports
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        if ($importRun->status === 'confirmed') {
+        if ($importRun->status === ImportRunStatus::Confirmed->value) {
             // Re-confirm idempotent result: the SHA256 short-circuit in
             // RunImport routes a same-file re-upload here, so this
             // attempt reports zero inserts and the file's full row
@@ -113,7 +114,7 @@ final class ConfirmImport implements ConfirmsImports
                 'enriched_count' => $enrichedCount,
                 'error_count' => $errorCount,
                 'confirmed_at' => $this->clock->now(),
-                'status' => 'confirmed',
+                'status' => ImportRunStatus::Confirmed->value,
             ]);
 
             return new ImportConfirmResult(
