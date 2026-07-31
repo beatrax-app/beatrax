@@ -10,6 +10,8 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Chains\Public\Enums\ChainLinkKind;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -75,8 +77,8 @@ final class IcsSettlementResolver
             ->leftJoin('chain_links', function ($join): void {
                 /** @var JoinClause $join */
                 $join->on('chain_links.from_transaction_id', '=', 'transactions.id')
-                    ->where('chain_links.kind', '=', 'ics_bulk_settle')
-                    ->where('chain_links.state', '=', 'confirmed');
+                    ->where('chain_links.kind', '=', ChainLinkKind::IcsBulkSettle->value)
+                    ->where('chain_links.state', '=', ChainLinkState::Confirmed->value);
             })
             ->where('transactions.user_id', $user->id)
             ->where('accounts.kind', 'bank')
@@ -190,8 +192,8 @@ final class IcsSettlementResolver
                 $this->inserter->insertIfNotExists([
                     'from_transaction_id' => $transferId,
                     'to_transaction_id' => self::toInt($expense->id ?? null),
-                    'kind' => 'ics_bulk_settle',
-                    'state' => 'confirmed',
+                    'kind' => ChainLinkKind::IcsBulkSettle->value,
+                    'state' => ChainLinkState::Confirmed->value,
                     'confidence' => '1.000',
                     'resolver' => 'auto',
                     'evidence' => $evidenceBase,
@@ -230,8 +232,8 @@ final class IcsSettlementResolver
         $this->inserter->insertIfNotExists([
             'from_transaction_id' => $transferId,
             'to_transaction_id' => null,
-            'kind' => 'ics_bulk_settle',
-            'state' => 'candidate',
+            'kind' => ChainLinkKind::IcsBulkSettle->value,
+            'state' => ChainLinkState::Candidate->value,
             'confidence' => $this->formatConfidence($confidence),
             'resolver' => 'auto',
             'evidence' => [
@@ -262,7 +264,7 @@ final class IcsSettlementResolver
             ->leftJoin('chain_links', function ($join): void {
                 /** @var JoinClause $join */
                 $join->on('chain_links.from_transaction_id', '=', 'transactions.id')
-                    ->where('chain_links.kind', '=', 'ics_bulk_settle');
+                    ->where('chain_links.kind', '=', ChainLinkKind::IcsBulkSettle->value);
             })
             ->where('transactions.user_id', $user->id)
             ->where('accounts.kind', 'ics_card')
@@ -339,8 +341,8 @@ final class IcsSettlementResolver
         $this->inserter->insertIfNotExists([
             'from_transaction_id' => $refundId,
             'to_transaction_id' => $originalId,
-            'kind' => 'ics_bulk_settle',
-            'state' => 'confirmed',
+            'kind' => ChainLinkKind::IcsBulkSettle->value,
+            'state' => ChainLinkState::Confirmed->value,
             'confidence' => '1.000',
             'resolver' => 'auto',
             'evidence' => [
@@ -425,8 +427,8 @@ final class IcsSettlementResolver
             ->leftJoin('chain_links', function ($join): void {
                 /** @var JoinClause $join */
                 $join->on('chain_links.to_transaction_id', '=', 'transactions.id')
-                    ->where('chain_links.kind', '=', 'ics_bulk_settle')
-                    ->where('chain_links.state', '=', 'confirmed');
+                    ->where('chain_links.kind', '=', ChainLinkKind::IcsBulkSettle->value)
+                    ->where('chain_links.state', '=', ChainLinkState::Confirmed->value);
             })
             ->where('transactions.user_id', $user->id)
             ->where('transactions.account_id', $accountId)

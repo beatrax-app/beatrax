@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chains\Public\Actions;
 
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -36,7 +37,7 @@ final class RejectChainLink
             throw ChainLinkRequiresConcretePartnerException::from($link);
         }
 
-        $link->state = 'rejected';
+        $link->state = ChainLinkState::Rejected->value;
         $link->save();
     }
 }

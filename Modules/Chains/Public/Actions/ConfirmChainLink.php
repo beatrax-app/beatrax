@@ -6,6 +6,7 @@ namespace Modules\Chains\Public\Actions;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -49,7 +50,7 @@ final class ConfirmChainLink
         $this->db->connection()->transaction(function () use ($link, $user): void {
             // Preserve the resolver value the resolver wrote (typically
             // 'auto'); the user merely confirmed an existing suggestion.
-            $link->state = 'confirmed';
+            $link->state = ChainLinkState::Confirmed->value;
             $link->save();
 
             $evidence = $link->evidence;
@@ -60,7 +61,7 @@ final class ConfirmChainLink
 
             $confirmedCount = $this->db->connection()->table('chain_links')
                 ->where('user_id', $user->id)
-                ->where('state', 'confirmed')
+                ->where('state', ChainLinkState::Confirmed->value)
                 ->whereJsonContains('evidence->signature_hash', $signatureHash)
                 ->count();
 
@@ -71,10 +72,10 @@ final class ConfirmChainLink
             $now = $this->clock->now()->toDateTimeString();
             $this->db->connection()->table('chain_links')
                 ->where('user_id', $user->id)
-                ->where('state', 'candidate')
+                ->where('state', ChainLinkState::Candidate->value)
                 ->whereJsonContains('evidence->signature_hash', $signatureHash)
                 ->update([
-                    'state' => 'confirmed',
+                    'state' => ChainLinkState::Confirmed->value,
                     'resolver' => 'rule',
                     'updated_at' => $now,
                 ]);
