@@ -10,8 +10,8 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupFormatException;
+use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/core/architecture.md
@@ -62,7 +62,7 @@ final class RestoreEncryptedBackup
             //    live path, and clear the stale WAL/SHM sidecars.
             $this->db->purge('sqlite');
             if ($this->files->copy($decryptedPath, $livePath) === false) {
-                throw new RuntimeException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
+                throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$snapshotPath.'.');
             }
             $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
             $this->db->purge('sqlite');
@@ -111,7 +111,7 @@ final class RestoreEncryptedBackup
         }
 
         if ($result !== 'ok') {
-            throw new RuntimeException('The backup failed its integrity check and was not restored.');
+            throw new BackupFormatException('The backup failed its integrity check and was not restored.');
         }
     }
 
