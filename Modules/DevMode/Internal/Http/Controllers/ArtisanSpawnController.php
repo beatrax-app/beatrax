@@ -12,7 +12,7 @@ use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
-use RuntimeException;
+use Modules\DevMode\Public\Exceptions\SpawnedRunVanishedException;
 use Symfony\Component\HttpFoundation\Response;
 
 // SAFE-tier spawn endpoint; DESTRUCTIVE-tier commands are rejected at
@@ -54,20 +54,9 @@ final readonly class ArtisanSpawnController
         }
         $command = $commandRaw;
 
-        // Reject DESTRUCTIVE-tier commands at this layer — the runner's
-        // triple-gate pathway owns destructive execution.
-        if (in_array($command, $destructiveNames, true)) {
-            return new JsonResponse(
-                ['error' => 'destructive_requires_triple_gate'],
-                403,
-            );
-        }
-
-        if (! in_array($command, $safeNames, true)) {
-            return new JsonResponse(
-                ['error' => 'unknown_command', 'command' => $command],
-                422,
-            );
+        $rejection = $this->commandRejection($command, $safeNames, $destructiveNames);
+        if ($rejection !== null) {
+            return $rejection;
         }
 
         $spec = $this->registry->find($command);
@@ -91,12 +80,35 @@ final readonly class ArtisanSpawnController
         $runId = $this->spawner->start($command, $args, $user->id(), 'safe');
         $record = $this->runs->find($runId);
         if ($record === null) {
-            throw new RuntimeException("ArtisanSpawnController: RunRegistry lost record for run {$runId} immediately after spawn.");
+            throw SpawnedRunVanishedException::immediatelyAfterSpawn('ArtisanSpawnController', $runId);
         }
 
         return new JsonResponse([
             'run_id' => $runId,
             'pid' => $record->pid,
         ], 202);
+    }
+
+    // DESTRUCTIVE-tier commands are rejected here (403) — the runner's
+    // triple-gate pathway owns destructive execution; unknown names 422
+    // before the spawner's whitelist is ever consulted. Null lets the
+    // SAFE-tier command through.
+    /**
+     * @param  list<string>  $safeNames
+     * @param  list<string>  $destructiveNames
+     */
+    private function commandRejection(string $command, array $safeNames, array $destructiveNames): ?JsonResponse
+    {
+        return match (true) {
+            in_array($command, $destructiveNames, true) => new JsonResponse(
+                ['error' => 'destructive_requires_triple_gate'],
+                403,
+            ),
+            ! in_array($command, $safeNames, true) => new JsonResponse(
+                ['error' => 'unknown_command', 'command' => $command],
+                422,
+            ),
+            default => null,
+        };
     }
 }

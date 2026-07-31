@@ -46,57 +46,109 @@ final class SqlPanelPage extends Component
     ): void {
         $this->resetResultState();
 
-        if ($session->get('dev_mode.advanced') !== true) {
-            $this->errorMessage = 'Enable Advanced (Dev Mode → Advanced) to run queries.';
-
-            return;
-        }
-
         $sql = trim($this->sqlInput);
-        if ($sql === '') {
-            $this->errorMessage = 'Only SELECT statements are allowed. Reject reason: empty_statement.';
+
+        $error = $this->preflightError($session, $sql) ?? $this->validationError($validator, $sql);
+        if ($error !== null) {
+            $this->errorMessage = $error;
 
             return;
         }
 
-        try {
-            $validator->validate($sql);
-        } catch (ValidationException $e) {
-            $errors = $e->errors();
-            $sqlErrors = $errors['sql'] ?? null;
-            $reason = 'unknown';
-            if (is_array($sqlErrors) && isset($sqlErrors[0]) && is_string($sqlErrors[0])) {
-                $reason = $sqlErrors[0];
-            }
-            $this->errorMessage = 'Only SELECT statements are allowed. Reject reason: '.$reason.'.';
-
-            return;
-        }
-
-        try {
-            $result = $connection->execute($sql);
-        } catch (Throwable $e) {
-            $this->errorMessage = 'Query exceeded the 5-second timeout. Refine your query and try again.';
-            // For other engine errors (e.g. SQLITE_READONLY surfaced
-            // from a write that slipped past the validator) the
-            // message body is the engine's own error text — visible
-            // in the panel so the operator can react.
-            if (! str_contains($e->getMessage(), 'maximum execution time')) {
-                $this->errorMessage = 'SQL error: '.$e->getMessage();
-            }
-
+        $result = $this->runQuery($connection, $sql);
+        if ($result === null) {
             return;
         }
 
         $rows = $result['rows'];
         $this->rowcount = count($rows);
         $this->durationMs = $result['duration_ms'];
-        $this->resultColumns = $rows === []
-            ? []
-            : array_values(array_filter(
-                array_keys(get_object_vars($rows[0])),
-                static fn ($k): bool => is_string($k),
-            ));
+        $this->resultColumns = $this->columnsOf($rows);
+        $this->resultRows = $this->mapRows($rows);
+
+        $audit->recordSelectQuery(
+            query: $sql,
+            rowcount: count($rows),
+            durationMs: $result['duration_ms'],
+            callerUserId: $currentUser->id(),
+        );
+    }
+
+    // Gates that reject before the SELECT-only validator runs: the
+    // Advanced toggle must be on and the statement non-empty. Returns the
+    // operator-facing message, or null when the statement may proceed.
+    private function preflightError(Session $session, string $sql): ?string
+    {
+        return match (true) {
+            $session->get('dev_mode.advanced') !== true => 'Enable Advanced (Dev Mode → Advanced) to run queries.',
+            $sql === '' => 'Only SELECT statements are allowed. Reject reason: empty_statement.',
+            default => null,
+        };
+    }
+
+    private function validationError(SelectOnlyValidator $validator, string $sql): ?string
+    {
+        try {
+            $validator->validate($sql);
+        } catch (ValidationException $e) {
+            return 'Only SELECT statements are allowed. Reject reason: '.$this->rejectReason($e).'.';
+        }
+
+        return null;
+    }
+
+    private function rejectReason(ValidationException $e): string
+    {
+        $sqlErrors = $e->errors()['sql'] ?? null;
+        if (is_array($sqlErrors) && isset($sqlErrors[0]) && is_string($sqlErrors[0])) {
+            return $sqlErrors[0];
+        }
+
+        return 'unknown';
+    }
+
+    // Returns the executed result, or null after setting errorMessage: a
+    // timeout notice when the engine hit its execution-time cap, otherwise
+    // the engine's own error text (e.g. SQLITE_READONLY from a write that
+    // slipped past the validator) so the operator can react.
+    /**
+     * @return array{rows: list<object>, duration_ms: int}|null
+     */
+    private function runQuery(ReadOnlySqliteConnection $connection, string $sql): ?array
+    {
+        try {
+            return $connection->execute($sql);
+        } catch (Throwable $e) {
+            $this->errorMessage = str_contains($e->getMessage(), 'maximum execution time')
+                ? 'Query exceeded the 5-second timeout. Refine your query and try again.'
+                : 'SQL error: '.$e->getMessage();
+
+            return null;
+        }
+    }
+
+    /**
+     * @param  list<object>  $rows
+     * @return list<string>
+     */
+    private function columnsOf(array $rows): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_keys(get_object_vars($rows[0])),
+            static fn ($k): bool => is_string($k),
+        ));
+    }
+
+    /**
+     * @param  list<object>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function mapRows(array $rows): array
+    {
         $mapped = [];
         foreach ($rows as $row) {
             $normalised = [];
@@ -107,14 +159,8 @@ final class SqlPanelPage extends Component
             }
             $mapped[] = $normalised;
         }
-        $this->resultRows = $mapped;
 
-        $audit->recordSelectQuery(
-            query: $sql,
-            rowcount: $this->rowcount,
-            durationMs: $this->durationMs,
-            callerUserId: $currentUser->id(),
-        );
+        return $mapped;
     }
 
     public function browseTable(

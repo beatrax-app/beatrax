@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -86,31 +88,7 @@ final class AuditLogPage extends Component
         $audit = $db->connection()->table('dev_mode_audit')
             ->where('log_name', 'dev_mode');
 
-        if ($this->tierFilter !== '') {
-            $tierLocal = $this->tierFilter;
-            $audit->where('properties->tier', $tierLocal);
-        }
-
-        if ($this->commandFilter !== '') {
-            $commandLocal = $this->commandFilter;
-            $audit->where('properties->command', $commandLocal);
-        }
-
-        if ($this->callerFilter !== '') {
-            // The JSON shape stores causer_id (int), not username, so
-            // resolve the operator-facing username filter to an id via
-            // a scalar ->value() lookup rather than hydrating a User.
-            $callerId = $db->connection()->table('users')
-                ->where('username', $this->callerFilter)
-                ->value('id');
-            if ($callerId !== null) {
-                $audit->where('causer_id', $callerId);
-            } else {
-                // Unknown username: force an empty result set with a
-                // self-contradictory predicate rather than whereRaw('1 = 0').
-                $audit->whereNull('id')->whereNotNull('id');
-            }
-        }
+        $this->applyFilters($audit, $db);
 
         // id < ?before walks back without skipping rows that arrive
         // between requests: rows are append-only with a monotonically
@@ -122,50 +100,8 @@ final class AuditLogPage extends Component
 
         $rows = $audit->orderByDesc('id')->limit(self::PAGE_SIZE)->get();
 
-        // Hydrate username for display alongside each row. Drop null /
-        // zero causer ids (system writes); their rendered username is
-        // the empty string.
-        $callerIds = $rows
-            ->pluck('causer_id')
-            ->filter(static fn ($id): bool => is_int($id) && $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        $userRows = $db->connection()->table('users')
-            ->whereIn('id', $callerIds)
-            ->get(['id', 'username']);
-        /** @var array<int, string> $usernames */
-        $usernames = $userRows
-            ->mapWithKeys(static function (object $u): array {
-                $id = self::toInt($u->id);
-                $username = is_string($u->username) ? $u->username : '';
-
-                return [$id => $username];
-            })
-            ->toArray();
-
-        $rendered = $rows->map(function (object $row) use ($usernames): array {
-            $propertiesRaw = is_string($row->properties) ? json_decode($row->properties, true) : null;
-            $properties = is_array($propertiesRaw) ? $propertiesRaw : [];
-
-            $causerId = is_int($row->causer_id) ? $row->causer_id : 0;
-            $createdAt = is_string($row->created_at)
-                ? CarbonImmutable::parse($row->created_at)->toIso8601String()
-                : null;
-
-            return [
-                'id' => $row->id,
-                'command' => is_string($properties['command'] ?? null) ? $properties['command'] : '',
-                'tier' => is_string($properties['tier'] ?? null) ? $properties['tier'] : 'safe',
-                'exitCode' => is_int($properties['exit_code'] ?? null) ? $properties['exit_code'] : null,
-                'args' => is_array($properties['args'] ?? null) ? $properties['args'] : [],
-                'stdout' => is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : '',
-                'error' => is_string($properties['error_excerpt'] ?? null) ? $properties['error_excerpt'] : '',
-                'username' => $usernames[$causerId] ?? '',
-                'createdAt' => $createdAt,
-            ];
-        });
+        $usernames = $this->resolveUsernames($rows, $db);
+        $rendered = $rows->map(fn (\stdClass $row): array => $this->mapRow($row, $usernames));
 
         // Cursor metadata for the Older/Newer pager. The raw query
         // builder returns rows as stdClass; the id column resolves
@@ -182,5 +118,95 @@ final class AuditLogPage extends Component
             'hasMore' => $hasMore,
             'isPaged' => $this->before !== null,
         ]);
+    }
+
+    // Applies the tier / command / caller-username filters in place. An
+    // unknown username forces an empty result set with a self-
+    // contradictory predicate rather than whereRaw('1 = 0').
+    private function applyFilters(Builder $audit, DatabaseManager $db): void
+    {
+        if ($this->tierFilter !== '') {
+            $audit->where('properties->tier', $this->tierFilter);
+        }
+
+        if ($this->commandFilter !== '') {
+            $audit->where('properties->command', $this->commandFilter);
+        }
+
+        if ($this->callerFilter === '') {
+            return;
+        }
+
+        // The JSON shape stores causer_id (int), not username, so resolve
+        // the operator-facing username filter to an id via a scalar
+        // ->value() lookup rather than hydrating a User.
+        $callerId = $db->connection()->table('users')
+            ->where('username', $this->callerFilter)
+            ->value('id');
+        if ($callerId !== null) {
+            $audit->where('causer_id', $callerId);
+        } else {
+            $audit->whereNull('id')->whereNotNull('id');
+        }
+    }
+
+    // Hydrates a causer-id → username map for the rendered page. Null /
+    // zero causer ids (system writes) are dropped; their rendered
+    // username falls back to the empty string in mapRow().
+    /**
+     * @param  Collection<int, \stdClass>  $rows
+     * @return array<int, string>
+     */
+    private function resolveUsernames(Collection $rows, DatabaseManager $db): array
+    {
+        $callerIds = $rows
+            ->pluck('causer_id')
+            ->filter(static fn ($id): bool => is_int($id) && $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $userRows = $db->connection()->table('users')
+            ->whereIn('id', $callerIds)
+            ->get(['id', 'username']);
+
+        /** @var array<int, string> $usernames */
+        $usernames = $userRows
+            ->mapWithKeys(static function (object $u): array {
+                $id = self::toInt($u->id);
+                $username = is_string($u->username) ? $u->username : '';
+
+                return [$id => $username];
+            })
+            ->toArray();
+
+        return $usernames;
+    }
+
+    /**
+     * @param  array<int, string>  $usernames
+     * @return array<string, mixed>
+     */
+    private function mapRow(\stdClass $row, array $usernames): array
+    {
+        $propertiesRaw = is_string($row->properties) ? json_decode($row->properties, true) : null;
+        $properties = is_array($propertiesRaw) ? $propertiesRaw : [];
+
+        $causerId = is_int($row->causer_id) ? $row->causer_id : 0;
+        $createdAt = is_string($row->created_at)
+            ? CarbonImmutable::parse($row->created_at)->toIso8601String()
+            : null;
+
+        return [
+            'id' => $row->id,
+            'command' => is_string($properties['command'] ?? null) ? $properties['command'] : '',
+            'tier' => is_string($properties['tier'] ?? null) ? $properties['tier'] : 'safe',
+            'exitCode' => is_int($properties['exit_code'] ?? null) ? $properties['exit_code'] : null,
+            'args' => is_array($properties['args'] ?? null) ? $properties['args'] : [],
+            'stdout' => is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : '',
+            'error' => is_string($properties['error_excerpt'] ?? null) ? $properties['error_excerpt'] : '',
+            'username' => $usernames[$causerId] ?? '',
+            'createdAt' => $createdAt,
+        ];
     }
 }

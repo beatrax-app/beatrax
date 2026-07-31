@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
 use Modules\DevMode\Internal\Enums\AuditEvent;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 use Spatie\Activitylog\Support\ActivityLogger;
 
 /**
@@ -29,36 +30,23 @@ final readonly class SpatieAuditWriter implements AuditWriter
         private DatabaseManager $db,
     ) {}
 
-    /**
-     * @param  array<string, mixed>  $args
-     */
-    public function recordCommandRun(
-        string $command,
-        array $args,
-        string $tier,
-        int $callerUserId,
-        CarbonInterface $startedAt,
-        ?CarbonInterface $finishedAt,
-        ?int $exitCode,
-        string $stdoutExcerpt,
-        string $errorExcerpt,
-        ?string $runId = null,
-    ): void {
+    public function recordCommandRun(CommandRunAudit $run): void
+    {
         $properties = [
-            'command' => $command,
-            'args' => $args,
-            'tier' => $tier,
-            'exit_code' => $exitCode,
-            'stdout_excerpt' => $this->cap->apply($stdoutExcerpt),
-            'error_excerpt' => $this->cap->apply($errorExcerpt),
-            'started_at' => $startedAt->toIso8601String(),
-            'finished_at' => $finishedAt?->toIso8601String(),
+            'command' => $run->command,
+            'args' => $run->args,
+            'tier' => $run->tier,
+            'exit_code' => $run->exitCode,
+            'stdout_excerpt' => $this->cap->apply($run->stdoutExcerpt),
+            'error_excerpt' => $this->cap->apply($run->errorExcerpt),
+            'started_at' => $run->startedAt->toIso8601String(),
+            'finished_at' => $run->finishedAt?->toIso8601String(),
         ];
-        if ($runId !== null && $runId !== '') {
-            $properties['run_id'] = $runId;
+        if ($run->runId !== null && $run->runId !== '') {
+            $properties['run_id'] = $run->runId;
         }
 
-        $this->dispatch(AuditEvent::CommandExecuted, $callerUserId, $properties);
+        $this->dispatch(AuditEvent::CommandExecuted, $run->callerUserId, $properties);
     }
 
     public function finalizeCommandRun(
@@ -73,31 +61,13 @@ final readonly class SpatieAuditWriter implements AuditWriter
             return false;
         }
 
+        $located = $this->locateEagerRow($runId);
+        if ($located === null) {
+            return false;
+        }
+
         $connection = $this->db->connection();
-        $row = $connection->table(self::AUDIT_TABLE)
-            ->where('log_name', 'dev_mode')
-            ->where('properties->run_id', $runId)
-            ->orderByDesc('id')
-            ->first();
-
-        if ($row === null) {
-            return false;
-        }
-
-        $idRaw = get_object_vars($row)['id'] ?? null;
-        if (! is_int($idRaw)) {
-            return false;
-        }
-
-        $propertiesRaw = get_object_vars($row)['properties'] ?? null;
-        $existing = [];
-        if (is_string($propertiesRaw)) {
-            $decoded = json_decode($propertiesRaw, true);
-            if (is_array($decoded)) {
-                /** @var array<string, mixed> $decoded */
-                $existing = $decoded;
-            }
-        }
+        $existing = $this->decodeExistingProperties($located['properties']);
 
         $existingArgsRaw = $existing['args'] ?? [];
         /** @var array<string, mixed> $existingArgs */
@@ -113,13 +83,53 @@ final readonly class SpatieAuditWriter implements AuditWriter
         $existing['finished_at'] = $finishedAt->toIso8601String();
 
         $connection->table(self::AUDIT_TABLE)
-            ->where('id', $idRaw)
+            ->where('id', $located['id'])
             ->update([
                 'properties' => json_encode($existing),
                 'updated_at' => $this->clock->now()->toDateTimeString(),
             ]);
 
         return true;
+    }
+
+    // Locates the eager spawn-time row for this run and its integer id,
+    // returning null when no row exists or the id is not an int — both
+    // route the caller to the append-only fallback record instead.
+    /**
+     * @return array{id: int, properties: mixed}|null
+     */
+    private function locateEagerRow(string $runId): ?array
+    {
+        $row = $this->db->connection()->table(self::AUDIT_TABLE)
+            ->where('log_name', 'dev_mode')
+            ->where('properties->run_id', $runId)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        $vars = get_object_vars($row);
+        $idRaw = $vars['id'] ?? null;
+        if (! is_int($idRaw)) {
+            return null;
+        }
+
+        return ['id' => $idRaw, 'properties' => $vars['properties'] ?? null];
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function decodeExistingProperties(mixed $propertiesRaw): array
+    {
+        if (! is_string($propertiesRaw)) {
+            return [];
+        }
+        $decoded = json_decode($propertiesRaw, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**
@@ -185,6 +195,10 @@ final readonly class SpatieAuditWriter implements AuditWriter
                 return $authed;
             }
         } catch (NotAuthenticatedException) {
+            // No authenticated user in scope (queue worker, console, or a
+            // request whose session has since expired) — fall through to
+            // the id-based lookup below rather than treating an
+            // unauthenticated caller as an error.
         }
 
         if ($callerUserId <= 0) {

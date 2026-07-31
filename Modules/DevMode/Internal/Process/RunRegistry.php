@@ -24,32 +24,12 @@ final readonly class RunRegistry
         private Clock $clock,
     ) {}
 
-    /**
-     * @param  array<string, mixed>  $args
-     */
-    public function store(
-        string $runId,
-        int $pid,
-        string $command,
-        array $args,
-        CarbonInterface $startedAt,
-        int $callerUserId,
-        string $tier,
-        string $outPath,
-    ): void {
-        $record = new RunRecord(
-            runId: $runId,
-            pid: $pid,
-            command: $command,
-            args: $args,
-            startedAt: $startedAt,
-            callerUserId: $callerUserId,
-            tier: $tier,
-            status: 'running',
-            outPath: $outPath,
-        );
-
-        $this->cache->put(self::KEY_PREFIX.$runId, $this->serialize($record), self::TTL_SECONDS);
+    // Takes the assembled RunRecord whole rather than a long positional
+    // parameter list; CommandSpawner builds the record (status 'running')
+    // and the cache round-trips it via serialize()/hydrate().
+    public function store(RunRecord $record): void
+    {
+        $this->cache->put(self::KEY_PREFIX.$record->runId, $this->serialize($record), self::TTL_SECONDS);
     }
 
     public function find(string $runId): ?RunRecord

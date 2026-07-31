@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\DevMode\Internal\Listeners;
 
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
-use Modules\EmailScan\Models\OAuthSecret;
 
 // Eloquent observer attached to OAuthSecret in
 // DevModeServiceProvider::boot(); busts the scrub set on every
@@ -17,12 +16,15 @@ final readonly class BustOAuthScrubSetOnSecretChange
         private OAuthScrubSet $scrubSet,
     ) {}
 
-    public function saved(OAuthSecret $secret): void
+    // The changed OAuthSecret model Eloquent passes to the observer hook
+    // is not read — the scrub set rebuilds itself lazily from the live
+    // table on its next compiledPattern() call, so busting is enough.
+    public function saved(): void
     {
         $this->scrubSet->bust();
     }
 
-    public function deleted(OAuthSecret $secret): void
+    public function deleted(): void
     {
         $this->scrubSet->bust();
     }

@@ -50,10 +50,7 @@ final readonly class LogStreamController
         $sinceValue = $payload['since'] ?? 0;
         $offset = self::toInt($sinceValue);
 
-        $clientInodeRaw = $payload['inode'] ?? null;
-        $clientInode = is_int($clientInodeRaw)
-            ? $clientInodeRaw
-            : (is_numeric($clientInodeRaw) ? (int) $clientInodeRaw : null);
+        $clientInode = self::nullableInt($payload['inode'] ?? null);
 
         $path = UserDataPathService::dailyLogFile();
         $currentInode = self::inodeOf($path);
@@ -186,6 +183,18 @@ final readonly class LogStreamController
                 'totalBytes' => $all['totalBytes'],
             ],
         ]);
+    }
+
+    // Coerces the optional `?inode=` cursor to an int: passes ints
+    // through, parses numeric strings, and treats anything else as absent
+    // so a missing or garbage inode simply skips the rotation compare.
+    private static function nullableInt(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        return is_numeric($value) ? (int) $value : null;
     }
 
     private static function inodeOf(string $path): ?int

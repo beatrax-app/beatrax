@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Symfony\Component\Process\Process;
 
@@ -66,7 +67,7 @@ it('returns 204 idempotently when the process has already exited', function (): 
     // but is sandboxed from actually killing it (we'd need root). To
     // simulate the "already-exited" path, use a never-allocated PID
     // in the high range — posix_kill returns false.
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: 999_999_999, // Never-allocated PID; posix_kill(pid, 0) is false.
         command: 'cache:clear',
@@ -74,8 +75,9 @@ it('returns 204 idempotently when the process has already exited', function (): 
         startedAt: CarbonImmutable::now(),
         callerUserId: $user->id,
         tier: 'safe',
+        status: 'running',
         outPath: $outPath,
-    );
+    ));
 
     $response = $this->actingAs($user)->postJson("/dev/artisan/cancel/{$runId}");
 
@@ -103,7 +105,7 @@ it('cancels a real long-running child via SIGTERM within the 3s grace', function
 
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: $pid,
         command: 'cache:clear',
@@ -111,8 +113,9 @@ it('cancels a real long-running child via SIGTERM within the 3s grace', function
         startedAt: CarbonImmutable::now(),
         callerUserId: $user->id,
         tier: 'safe',
+        status: 'running',
         outPath: $outPath,
-    );
+    ));
 
     $response = $this->actingAs($user)->postJson("/dev/artisan/cancel/{$runId}");
     $response->assertStatus(204);
@@ -139,7 +142,7 @@ it('rejects cross-user cancel with 403', function (): void {
 
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: 999_999_999,
         command: 'cache:clear',
@@ -147,8 +150,9 @@ it('rejects cross-user cancel with 403', function (): void {
         startedAt: CarbonImmutable::now(),
         callerUserId: $owner->id,
         tier: 'safe',
+        status: 'running',
         outPath: $outPath,
-    );
+    ));
 
     $response = $this->actingAs($intruder)->postJson("/dev/artisan/cancel/{$runId}");
     $response->assertStatus(403);

@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Internal\Http\Controllers\ArtisanStreamController;
 use Modules\DevMode\Internal\Process\CommandSpawner;
+use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Process\Process;
@@ -90,7 +91,7 @@ function spawnTickingChild(int $callerUserId, int $ticks = 6, int $intervalMs = 
 
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: $pid,
         command: 'beatrax:emit-ticks',
@@ -98,8 +99,9 @@ function spawnTickingChild(int $callerUserId, int $ticks = 6, int $intervalMs = 
         startedAt: CarbonImmutable::now(),
         callerUserId: $callerUserId,
         tier: 'safe',
+        status: 'running',
         outPath: $outPath,
-    );
+    ));
 
     return ['runId' => $runId, 'pid' => $pid, 'outPath' => $outPath];
 }

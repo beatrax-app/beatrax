@@ -12,8 +12,10 @@ use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
 use Modules\DevMode\Internal\Enums\AuditEvent;
+use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 use Modules\EmailScan\Models\OAuthSecret;
 
 /*
@@ -87,7 +89,7 @@ it('SpatieAuditWriter writes a row into dev_mode_audit with log_name + descripti
     /** @var SpatieAuditWriter $writer */
     $writer = app(AuditWriter::class);
 
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'db:backup',
         args: ['destination' => '/tmp/x.db'],
         tier: 'safe',
@@ -97,7 +99,7 @@ it('SpatieAuditWriter writes a row into dev_mode_audit with log_name + descripti
         exitCode: 0,
         stdoutExcerpt: 'output ok',
         errorExcerpt: '',
-    );
+    ));
 
     $row = DB::table('dev_mode_audit')->latest('id')->first();
     expect($row)->not->toBeNull();
@@ -136,7 +138,7 @@ it('redacts an oauth_secrets value AND a Bearer header in the audit row (Test 7 
     // the literal of the oauth_secret. The audit-row writer routes
     // through RedactionExcerptCap which now applies the full
     // three-layer scrub (scrub-set + Bearer + JWT).
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
         tier: 'safe',
@@ -146,7 +148,7 @@ it('redacts an oauth_secrets value AND a Bearer header in the audit row (Test 7 
         exitCode: 0,
         stdoutExcerpt: "Authorization: Bearer TopLevelToken\nLeaked: OAUTH_LITERAL_FROM_STDOUT\nDONE",
         errorExcerpt: '',
-    );
+    ));
 
     $row = DB::table('dev_mode_audit')->latest('id')->first();
     $properties = json_decode((string) $row->properties, true);
@@ -163,7 +165,7 @@ it('redacts Bearer header content in the audit row via SpatieAuditWriter + Redac
     /** @var SpatieAuditWriter $writer */
     $writer = app(AuditWriter::class);
 
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
         tier: 'safe',
@@ -173,7 +175,7 @@ it('redacts Bearer header content in the audit row via SpatieAuditWriter + Redac
         exitCode: 0,
         stdoutExcerpt: "GET /api\nAuthorization: Bearer XYZsecrettokenvalue\nDONE",
         errorExcerpt: '',
-    );
+    ));
 
     $row = DB::table('dev_mode_audit')->latest('id')->first();
     $properties = json_decode((string) $row->properties, true);
@@ -192,7 +194,7 @@ it('FinalizeRunAudit reads the per-run tmp file + writes a dev_mode_audit row', 
 
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: 1, // sentinel pid; FinalizeRunAudit does not signal anything
         command: 'cache:clear',
@@ -200,8 +202,9 @@ it('FinalizeRunAudit reads the per-run tmp file + writes a dev_mode_audit row', 
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
         callerUserId: $user->id,
         tier: 'safe',
+        status: 'running',
         outPath: $outPath,
-    );
+    ));
 
     /** @var FinalizeRunAudit $finalize */
     $finalize = app(FinalizeRunAudit::class);
@@ -228,7 +231,7 @@ it('FinalizeRunAudit records a cancelled run with cancelled=true + negative exit
 
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: 1,
         command: 'cache:clear',
@@ -236,8 +239,9 @@ it('FinalizeRunAudit records a cancelled run with cancelled=true + negative exit
         startedAt: CarbonImmutable::parse('2026-05-24T10:00:00Z'),
         callerUserId: $user->id,
         tier: 'safe',
+        status: 'running',
         outPath: $outPath,
-    );
+    ));
 
     /** @var FinalizeRunAudit $finalize */
     $finalize = app(FinalizeRunAudit::class);
@@ -275,22 +279,22 @@ it('PruneDevAuditCommand deletes only rows older than the given days', function 
 
     // Seed: 3 fresh + 2 stale rows
     foreach (range(1, 3) as $_) {
-        $writer->recordCommandRun(
+        $writer->recordCommandRun(new CommandRunAudit(
             command: 'cache:clear', args: [], tier: 'safe',
             callerUserId: $user->id,
             startedAt: CarbonImmutable::now(),
             finishedAt: CarbonImmutable::now(),
             exitCode: 0, stdoutExcerpt: 'fresh', errorExcerpt: '',
-        );
+        ));
     }
     foreach (range(1, 2) as $_) {
-        $writer->recordCommandRun(
+        $writer->recordCommandRun(new CommandRunAudit(
             command: 'cache:clear', args: [], tier: 'safe',
             callerUserId: $user->id,
             startedAt: CarbonImmutable::now(),
             finishedAt: CarbonImmutable::now(),
             exitCode: 0, stdoutExcerpt: 'stale', errorExcerpt: '',
-        );
+        ));
     }
     // Backdate the last two rows
     DB::table('dev_mode_audit')

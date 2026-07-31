@@ -10,8 +10,9 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\DevMode\Public\Contracts\AuditWriter;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 use Modules\DevMode\Public\Dto\CommandSpec;
-use RuntimeException;
+use Modules\DevMode\Public\Exceptions\SpawnProcessException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -56,7 +57,7 @@ final readonly class CommandSpawner
 
         $startedAt = $this->clock->now();
 
-        $this->registry->store(
+        $this->registry->store(new RunRecord(
             runId: $runId,
             pid: $pid,
             command: $command,
@@ -64,14 +65,15 @@ final readonly class CommandSpawner
             startedAt: $startedAt,
             callerUserId: $callerUserId,
             tier: $tier,
+            status: 'running',
             outPath: $outPath,
-        );
+        ));
 
         // Eager audit row (exit_code=null, finished_at=null) so the
         // timeline reflects the spawn immediately. FinalizeRunAudit
         // updates this same row in place via properties.run_id when the
         // stream's done event fires.
-        $this->audit->recordCommandRun(
+        $this->audit->recordCommandRun(new CommandRunAudit(
             command: $command,
             args: $args,
             tier: $tier,
@@ -82,7 +84,7 @@ final readonly class CommandSpawner
             stdoutExcerpt: '',
             errorExcerpt: '',
             runId: $runId,
-        );
+        ));
 
         return $runId;
     }
@@ -157,24 +159,29 @@ final readonly class CommandSpawner
         $isOption = str_starts_with($argSpec->name, '--');
 
         if ($argSpec->type === 'boolean') {
-            if ($value === true || $value === 'true' || $value === 1 || $value === '1') {
-                return $isOption ? [escapeshellarg($argSpec->name)] : [];
-            }
-
-            return [];
+            return $this->renderBooleanArg($argSpec, $value, $isOption);
         }
 
         $stringValue = is_scalar($value) ? (string) $value : '';
-        $escaped = escapeshellarg($stringValue);
 
-        if ($isOption) {
-            // The entire `name=value` string is escapeshellarg'd as one
-            // unit so the resulting argv item reaches artisan intact,
-            // not split or doubled by a mid-string quote.
-            return [escapeshellarg($argSpec->name.'='.$stringValue)];
-        }
+        // Options escapeshellarg the entire `name=value` string as one
+        // unit so the argv item reaches artisan intact, not split or
+        // doubled by a mid-string quote; positionals escape the value.
+        return $isOption
+            ? [escapeshellarg($argSpec->name.'='.$stringValue)]
+            : [escapeshellarg($stringValue)];
+    }
 
-        return [$escaped];
+    // Boolean args render as the bare `--name` flag only when both truthy
+    // and an option; a truthy positional or any falsy value emits nothing.
+    /**
+     * @return list<string>
+     */
+    private function renderBooleanArg(ArgSpec $argSpec, mixed $value, bool $isOption): array
+    {
+        $truthy = $value === true || $value === 'true' || $value === 1 || $value === '1';
+
+        return $truthy && $isOption ? [escapeshellarg($argSpec->name)] : [];
     }
 
     // The bash wrapper has already detached the child, so this returns
@@ -188,16 +195,12 @@ final readonly class CommandSpawner
         $process->run();
 
         if (! $process->isSuccessful()) {
-            throw new RuntimeException(
-                'CommandSpawner: bash wrapper exited non-zero. stderr: '.trim($process->getErrorOutput()),
-            );
+            throw SpawnProcessException::bashWrapperFailed(trim($process->getErrorOutput()));
         }
 
         $pidLine = trim($process->getOutput());
         if ($pidLine === '' || preg_match('/^\d+$/', $pidLine) !== 1) {
-            throw new RuntimeException(
-                "CommandSpawner: failed to capture child PID from bash wrapper. Got: `{$pidLine}`",
-            );
+            throw SpawnProcessException::pidUncapturable($pidLine);
         }
 
         return (int) $pidLine;
@@ -215,9 +218,7 @@ final readonly class CommandSpawner
                 continue;
             }
             if (! @mkdir($path, 0700, false) && ! is_dir($path)) {
-                throw new RuntimeException(
-                    "CommandSpawner: failed to create runs directory at `{$path}`.",
-                );
+                throw SpawnProcessException::runsDirectoryUnwritable($path);
             }
             @chmod($path, 0700);
         }

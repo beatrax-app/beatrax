@@ -28,24 +28,8 @@ final class PruneDevAuditCommand extends Command
 
     public function handle(): int
     {
-        $olderThanRaw = $this->option('older-than');
-
-        if (! is_string($olderThanRaw) || $olderThanRaw === '') {
-            $this->error('--older-than is required (positive integer of days).');
-
-            return self::FAILURE;
-        }
-
-        if (preg_match('/^\d+$/', $olderThanRaw) !== 1) {
-            $this->error('--older-than must be a positive integer of days.');
-
-            return self::FAILURE;
-        }
-
-        $days = (int) $olderThanRaw;
-        if ($days <= 0) {
-            $this->error('--older-than must be a positive integer of days.');
-
+        $days = $this->resolveRetentionDays();
+        if ($days === null) {
             return self::FAILURE;
         }
 
@@ -63,5 +47,27 @@ final class PruneDevAuditCommand extends Command
         $this->info("Pruned {$deleted} dev_mode_audit row(s) older than {$days} day(s).");
 
         return self::SUCCESS;
+    }
+
+    // Returns the retention cutoff in days, or null after printing the
+    // operator-facing reason when --older-than is absent, empty, or not a
+    // positive integer — the two malformed shapes share one message.
+    private function resolveRetentionDays(): ?int
+    {
+        $raw = $this->option('older-than');
+
+        if (! is_string($raw) || $raw === '') {
+            $this->error('--older-than is required (positive integer of days).');
+
+            return null;
+        }
+
+        if (preg_match('/^\d+$/', $raw) !== 1 || (int) $raw <= 0) {
+            $this->error('--older-than must be a positive integer of days.');
+
+            return null;
+        }
+
+        return (int) $raw;
     }
 }

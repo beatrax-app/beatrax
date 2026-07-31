@@ -8,6 +8,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Http\Livewire\AuditLogPage;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 
 /*
  * /dev/audit "Clear all" + per-row Copy affordances.
@@ -42,20 +43,20 @@ it('truncateAll deletes every dev_mode_audit row', function (): void {
 
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear', args: [], tier: 'safe',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: 'output ok', errorExcerpt: '',
-    );
-    $writer->recordCommandRun(
+    ));
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'db:restore', args: ['from' => '/tmp/x'], tier: 'destructive',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 2, stdoutExcerpt: '', errorExcerpt: 'boom',
-    );
+    ));
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -73,13 +74,13 @@ it('truncateAll resets the cursor and filter state', function (): void {
 
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear', args: [], tier: 'safe',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: 'ok', errorExcerpt: '',
-    );
+    ));
 
     Livewire::actingAs($user)
         ->test(AuditLogPage::class)
@@ -109,13 +110,13 @@ it('renders a per-row Copy button for every audit row with the row payload embed
 
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear', args: [], tier: 'safe',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: 'rows deleted: 42', errorExcerpt: '',
-    );
+    ));
 
     $response = $this->actingAs($user)->get('/dev/audit');
     $response->assertStatus(200);
@@ -143,13 +144,13 @@ it('renders the stderr block in the Copy payload when error_excerpt is non-empty
 
     /** @var AuditWriter $writer */
     $writer = $this->app->make(AuditWriter::class);
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'db:restore', args: ['from' => '/tmp/x'], tier: 'destructive',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 2, stdoutExcerpt: '', errorExcerpt: 'restore failed: backup missing',
-    );
+    ));
 
     $response = $this->actingAs($user)->get('/dev/audit');
     $response->assertStatus(200);

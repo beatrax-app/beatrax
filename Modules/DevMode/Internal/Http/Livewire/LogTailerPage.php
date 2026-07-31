@@ -17,6 +17,8 @@ use Modules\DevMode\Internal\Logging\LogFileStats;
 #[Layout('dev::layouts.dev-shell')]
 final class LogTailerPage extends Component
 {
+    private const int BYTES_PER_UNIT = 1024;
+
     #[Url(as: 'severities')]
     public string $severities = 'DEBUG,INFO,NOTICE,WARNING,ERROR,CRITICAL,ALERT,EMERGENCY';
 
@@ -70,18 +72,14 @@ final class LogTailerPage extends Component
 
     private static function humanBytes(int $bytes): string
     {
-        if ($bytes < 1024) {
-            return $bytes.' B';
-        }
-        $kb = $bytes / 1024;
-        if ($kb < 1024) {
-            return number_format($kb, 1).' KB';
-        }
-        $mb = $kb / 1024;
-        if ($mb < 1024) {
-            return number_format($mb, 1).' MB';
-        }
+        $kb = $bytes / self::BYTES_PER_UNIT;
+        $mb = $kb / self::BYTES_PER_UNIT;
 
-        return number_format($mb / 1024, 2).' GB';
+        return match (true) {
+            $bytes < self::BYTES_PER_UNIT => $bytes.' B',
+            $kb < self::BYTES_PER_UNIT => number_format($kb, 1).' KB',
+            $mb < self::BYTES_PER_UNIT => number_format($mb, 1).' MB',
+            default => number_format($mb / self::BYTES_PER_UNIT, 2).' GB',
+        };
     }
 }

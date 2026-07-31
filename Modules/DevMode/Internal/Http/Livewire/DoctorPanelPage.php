@@ -30,42 +30,58 @@ final class DoctorPanelPage extends Component
             ->limit(1)
             ->first();
 
-        $rows = [];
-        $stdout = null;
-        $finishedAt = null;
-        $exitCode = null;
-        if ($latest !== null) {
-            $vars = get_object_vars($latest);
-            $rawProperties = $vars['properties'] ?? null;
-            if (is_string($rawProperties)) {
-                $decoded = json_decode($rawProperties, true);
-                if (is_array($decoded)) {
-                    $stdoutValue = $decoded['stdout_excerpt'] ?? null;
-                    if (is_string($stdoutValue)) {
-                        $stdout = $stdoutValue;
-                        $rows = $parser->parse($stdoutValue);
-                    }
-                    $exitValue = $decoded['exit_code'] ?? null;
-                    if (is_int($exitValue)) {
-                        $exitCode = $exitValue;
-                    }
-                }
-            }
-            $createdAtRaw = $vars['created_at'] ?? null;
-            if (is_string($createdAtRaw)) {
-                try {
-                    $finishedAt = CarbonImmutable::parse($createdAtRaw)->toIso8601String();
-                } catch (\Throwable) {
-                    $finishedAt = $createdAtRaw;
-                }
-            }
+        $snapshot = $latest === null
+            ? ['probeRows' => [], 'rawStdout' => null, 'finishedAt' => null, 'exitCode' => null]
+            : $this->snapshotFromRow($latest, $parser);
+
+        return $views->make('dev::livewire.doctor-panel-page', $snapshot);
+    }
+
+    /**
+     * @return array{probeRows: list<array<string, mixed>>, rawStdout: ?string, finishedAt: ?string, exitCode: ?int}
+     */
+    private function snapshotFromRow(object $latest, ProbeOutputParser $parser): array
+    {
+        $vars = get_object_vars($latest);
+        $properties = $this->decodeProperties($vars['properties'] ?? null);
+
+        $stdout = is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : null;
+        $exitValue = $properties['exit_code'] ?? null;
+
+        return [
+            'probeRows' => $stdout !== null ? $parser->parse($stdout) : [],
+            'rawStdout' => $stdout,
+            'finishedAt' => $this->parseFinishedAt($vars['created_at'] ?? null),
+            'exitCode' => is_int($exitValue) ? $exitValue : null,
+        ];
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function decodeProperties(mixed $rawProperties): array
+    {
+        if (! is_string($rawProperties)) {
+            return [];
+        }
+        $decoded = json_decode($rawProperties, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    // Falls back to the raw created_at string when Carbon cannot parse
+    // it, so a malformed timestamp still renders something rather than
+    // blanking the "last run" line.
+    private function parseFinishedAt(mixed $createdAtRaw): ?string
+    {
+        if (! is_string($createdAtRaw)) {
+            return null;
         }
 
-        return $views->make('dev::livewire.doctor-panel-page', [
-            'probeRows' => $rows,
-            'rawStdout' => $stdout,
-            'finishedAt' => $finishedAt,
-            'exitCode' => $exitCode,
-        ]);
+        try {
+            return CarbonImmutable::parse($createdAtRaw)->toIso8601String();
+        } catch (\Throwable) {
+            return $createdAtRaw;
+        }
     }
 }
