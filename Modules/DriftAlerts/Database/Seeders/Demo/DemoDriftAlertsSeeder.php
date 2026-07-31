@@ -9,7 +9,9 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Models\DriftAlertTransition;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Enums\Direction;
 
 // The latest_occurrence_id FK is NOT NULL on drift_alerts, so the seeder
 // first upserts a recurring_series_occurrences row per target series and
@@ -26,8 +28,8 @@ final class DemoDriftAlertsSeeder
         [
             'seriesClusterKey' => 'demo:spotify:monthly:1099',
             'txDescription' => 'Spotify Premium',
-            'state' => 'open',
-            'direction' => 'expense',
+            'state' => DriftAlertState::Open->value,
+            'direction' => Direction::Expense->value,
             'baselineMinor' => -1099,
             'latestMinor' => -1499,
             'deltaMinor' => -400,
@@ -39,8 +41,8 @@ final class DemoDriftAlertsSeeder
         [
             'seriesClusterKey' => 'demo:sport-city:monthly:2500',
             'txDescription' => 'Sport City',
-            'state' => 'open',
-            'direction' => 'expense',
+            'state' => DriftAlertState::Open->value,
+            'direction' => Direction::Expense->value,
             'baselineMinor' => -2500,
             'latestMinor' => -2750,
             'deltaMinor' => -250,
@@ -52,8 +54,8 @@ final class DemoDriftAlertsSeeder
         [
             'seriesClusterKey' => 'demo:netflix:monthly:1499',
             'txDescription' => 'Netflix.com',
-            'state' => 'acknowledged',
-            'direction' => 'expense',
+            'state' => DriftAlertState::Acknowledged->value,
+            'direction' => Direction::Expense->value,
             'baselineMinor' => -1399,
             'latestMinor' => -1499,
             'deltaMinor' => -100,
@@ -65,8 +67,8 @@ final class DemoDriftAlertsSeeder
         [
             'seriesClusterKey' => 'demo:nordvpn:monthly:499',
             'txDescription' => 'PayPal conversion fee',
-            'state' => 'dismissed_cancelled',
-            'direction' => 'expense',
+            'state' => DriftAlertState::DismissedCancelled->value,
+            'direction' => Direction::Expense->value,
             'baselineMinor' => -499,
             'latestMinor' => -699,
             'deltaMinor' => -200,
@@ -83,8 +85,8 @@ final class DemoDriftAlertsSeeder
     private const TRANSITIONS = [
         [
             'seriesClusterKey' => 'demo:netflix:monthly:1499',
-            'fromState' => 'open',
-            'toState' => 'acknowledged',
+            'fromState' => DriftAlertState::Open->value,
+            'toState' => DriftAlertState::Acknowledged->value,
             'reason' => 'user_action',
             'actor' => 'user',
             'ageDays' => 8,
@@ -92,8 +94,8 @@ final class DemoDriftAlertsSeeder
         ],
         [
             'seriesClusterKey' => 'demo:nordvpn:monthly:499',
-            'fromState' => 'open',
-            'toState' => 'dismissed_cancelled',
+            'fromState' => DriftAlertState::Open->value,
+            'toState' => DriftAlertState::DismissedCancelled->value,
             'reason' => 'user_dismissed_cancelled',
             'actor' => 'user',
             'ageDays' => 2,

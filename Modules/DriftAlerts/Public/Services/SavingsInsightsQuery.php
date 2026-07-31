@@ -12,6 +12,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
@@ -56,7 +58,7 @@ final class SavingsInsightsQuery
 
         $insights = [];
         foreach ($this->recurring->allApprovedForUser($user) as $series) {
-            if ($series->direction !== 'expense') {
+            if ($series->direction !== Direction::Expense->value) {
                 continue;
             }
 
@@ -181,7 +183,7 @@ final class SavingsInsightsQuery
         $ids = [];
         $rows = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
-            ->where('state', 'open')
+            ->where('state', DriftAlertState::Open->value)
             ->get(['recurring_series_id']);
 
         foreach ($rows as $row) {

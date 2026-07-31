@@ -12,6 +12,8 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\Mapping\DriftAlertDtoMapper;
 use Modules\DriftAlerts\Public\Dto\DriftAlertDto;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use stdClass;
 
@@ -42,7 +44,7 @@ final readonly class DriftAlertQuery
      */
     public function historyForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->scoped($user, ['acknowledged'], $cursorId, $limit);
+        return $this->scoped($user, [DriftAlertState::Acknowledged->value], $cursorId, $limit);
     }
 
     /**
@@ -50,7 +52,7 @@ final readonly class DriftAlertQuery
      */
     public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->scoped($user, ['dismissed_cancelled'], $cursorId, $limit);
+        return $this->scoped($user, [DriftAlertState::DismissedCancelled->value], $cursorId, $limit);
     }
 
     public function openCountForUser(User $user): int
@@ -69,7 +71,7 @@ final readonly class DriftAlertQuery
     {
         return (int) $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
-            ->where('direction', 'expense')
+            ->where('direction', Direction::Expense->value)
             ->where(fn (Builder $q) => $this->applyOpenStateFilter($q))
             ->sum('annualized_impact_minor');
     }
@@ -185,9 +187,9 @@ final readonly class DriftAlertQuery
     private function applyOpenStateFilter(Builder $query): void
     {
         $now = $this->clock->now()->toDateTimeString();
-        $query->where('state', 'open')
+        $query->where('state', DriftAlertState::Open->value)
             ->orWhere(function (Builder $q) use ($now): void {
-                $q->where('state', 'snoozed')
+                $q->where('state', DriftAlertState::Snoozed->value)
                     ->whereNotNull('snoozed_until')
                     ->where('snoozed_until', '<=', $now);
             });

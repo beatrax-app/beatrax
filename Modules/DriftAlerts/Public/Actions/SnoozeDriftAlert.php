@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertSnoozed;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -38,7 +39,7 @@ final class SnoozeDriftAlert
         // idempotency check stays correct across timezones rather than
         // comparing formatted datetime strings.
         if (
-            $alert->state === 'snoozed'
+            $alert->state === DriftAlertState::Snoozed->value
             && $alert->snoozed_until !== null
             && $alert->snoozed_until->getTimestamp() === $until->getTimestamp()
         ) {
@@ -49,7 +50,7 @@ final class SnoozeDriftAlert
 
         $this->stateMachine->transition(
             $alert,
-            'snoozed',
+            DriftAlertState::Snoozed->value,
             'user_action',
             'user',
             'snoozed_until='.$untilString,

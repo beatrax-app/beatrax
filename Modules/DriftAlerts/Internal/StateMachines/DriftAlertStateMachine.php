@@ -7,6 +7,7 @@ namespace Modules\DriftAlerts\Internal\StateMachines;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\StateMachine\GuardedStateMachine;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Throwable;
 
 /**
@@ -33,18 +34,18 @@ final class DriftAlertStateMachine extends GuardedStateMachine
         $this->transitionRow(self::toInt($alert->id), $toState, $reason, $actor, $notes, $extraColumns);
     }
 
-    // No "any -> any" escape hatch and no same-state re-entry (idempotent
-    // no-ops live in Public Actions, never here); acknowledged and
-    // dismissed_cancelled are terminal (empty target arrays).
     /** @return array<string, list<string>> */
     protected function allowedTransitions(): array
     {
-        return [
-            'open' => ['acknowledged', 'snoozed', 'dismissed_cancelled'],
-            'acknowledged' => [],
-            'snoozed' => ['open', 'acknowledged', 'dismissed_cancelled'],
-            'dismissed_cancelled' => [],
-        ];
+        $map = [];
+        foreach (DriftAlertState::cases() as $state) {
+            $map[$state->value] = array_map(
+                static fn (DriftAlertState $next): string => $next->value,
+                $state->allowedNext(),
+            );
+        }
+
+        return $map;
     }
 
     protected function table(): string

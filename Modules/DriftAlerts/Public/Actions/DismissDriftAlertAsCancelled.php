@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -35,7 +36,7 @@ final class DismissDriftAlertAsCancelled
             throw new NotFoundHttpException('Drift alert not found.');
         }
 
-        if ($alert->state === 'dismissed_cancelled') {
+        if ($alert->state === DriftAlertState::DismissedCancelled->value) {
             return;
         }
 
@@ -43,7 +44,7 @@ final class DismissDriftAlertAsCancelled
 
         $this->stateMachine->transition(
             $alert,
-            'dismissed_cancelled',
+            DriftAlertState::DismissedCancelled->value,
             'user_dismissed_cancelled',
             'user',
             null,
