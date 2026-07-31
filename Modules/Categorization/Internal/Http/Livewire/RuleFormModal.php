@@ -17,6 +17,7 @@ use Modules\Categorization\Internal\Http\Livewire\Concerns\ValidatesRuleForm;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleInput;
+use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -185,10 +186,10 @@ final class RuleFormModal extends Component
     public function addAction(): void
     {
         $usedTypes = array_column($this->actions, 'type');
-        $nextType = 'category';
-        foreach (self::VALID_ACTION_TYPES as $type) {
-            if (! in_array($type, $usedTypes, true)) {
-                $nextType = $type;
+        $nextType = ActionType::Category->value;
+        foreach (ActionType::cases() as $type) {
+            if (! in_array($type->value, $usedTypes, true)) {
+                $nextType = $type->value;
                 break;
             }
         }
