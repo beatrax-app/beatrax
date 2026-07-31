@@ -37,15 +37,10 @@ final class RecurringSeriesStateMachine extends GuardedStateMachine
     /** @return array<string, list<string>> */
     protected function allowedTransitions(): array
     {
-        $map = [];
-        foreach (RecurringSeriesState::cases() as $state) {
-            $map[$state->value] = array_map(
-                static fn (RecurringSeriesState $next): string => $next->value,
-                $state->allowedNext(),
-            );
-        }
-
-        return $map;
+        return $this->transitionMap(
+            RecurringSeriesState::cases(),
+            static fn (RecurringSeriesState $state): array => $state->allowedNext(),
+        );
     }
 
     protected function table(): string
