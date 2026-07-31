@@ -60,10 +60,17 @@ final class FieldProvenanceWriter
             ->where('user_id', $userId)
             ->value('field_provenance');
 
-        if (! is_string($raw) || $raw === '') {
-            return [];
-        }
+        return is_string($raw) && $raw !== '' ? self::decodeProvenance($raw) : [];
+    }
 
+    // Decodes a stored provenance map, returning [] for corrupt JSON or a
+    // non-object payload — provenance is best-effort audit metadata, never
+    // a crash surface.
+    /**
+     * @return array<string, string>
+     */
+    private static function decodeProvenance(string $raw): array
+    {
         try {
             /** @var mixed $decoded */
             $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);

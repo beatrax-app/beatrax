@@ -109,41 +109,10 @@ final class DemoTransactionsSeeder
             ['day' => 27, 'type' => 'expense', 'amountMinor' => -8500, 'description' => 'Belastingdienst motorrijtuigenbelasting', 'counterpartyName' => 'Belastingdienst', 'counterpartyIban' => 'NL86INGB0002445588', 'paymentType' => PaymentType::DirectDebit, 'categorySlug' => null],
         ]);
 
-        // Albert Heijn — weekly groceries on Saturday + a midweek
-        // top-up on Wednesday. Amounts vary per week to look natural.
+        // Albert Heijn — weekly groceries on Saturday + a midweek top-up on
+        // Wednesday. Amounts vary per week to look natural.
         $groceriesCategory = $this->categoryId('groceries');
-        $ahAmounts = [-6754, -5421, -7188, -4998, -6342, -5876, -7011, -5188, -6655, -7290, -5511, -6020];
-        $cursor = $windowStart->startOfWeek(CarbonImmutable::SATURDAY);
-        $i = 0;
-        while ($cursor->lessThanOrEqualTo($this->windowEnd)) {
-            if ($cursor->greaterThanOrEqualTo($windowStart) && isset($ahAmounts[$i])) {
-                $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                    'type' => 'expense',
-                    'amountMinor' => $ahAmounts[$i],
-                    'description' => 'AH Filiaal 1234 Utrecht',
-                    'counterpartyName' => self::AH_COUNTERPARTY,
-                    'counterpartyIban' => null,
-                    'date' => $cursor,
-                    'paymentType' => PaymentType::Pin,
-                    'categoryId' => $groceriesCategory,
-                ]);
-                $midweek = $cursor->subDays(3);
-                if ($midweek->greaterThanOrEqualTo($windowStart) && isset($ahAmounts[$i + 6])) {
-                    $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                        'type' => 'expense',
-                        'amountMinor' => intdiv($ahAmounts[$i + 6] ?? -2500, 2),
-                        'description' => 'AH To Go Utrecht CS',
-                        'counterpartyName' => self::AH_COUNTERPARTY,
-                        'counterpartyIban' => null,
-                        'date' => $midweek,
-                        'paymentType' => PaymentType::Pin,
-                        'categoryId' => $groceriesCategory,
-                    ]);
-                }
-            }
-            $cursor = $cursor->addDays(7);
-            $i++;
-        }
+        $inserted += $this->seedUser1AhWeekly($user, $asn, $run, $rowIndex, $windowStart, $groceriesCategory);
 
         // Jumbo + Lidl + Dirk + Hema diversity — one each per month
         // (MONTH_SPAN amounts each, oldest month first). Each list used to
@@ -170,26 +139,7 @@ final class DemoTransactionsSeeder
             }
         }
 
-        $transitCategory = $this->categoryId('transport-public');
-        $nsAmounts = [-1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240];
-        $cursor = $windowStart;
-        $nsIdx = 0;
-        while ($cursor->lessThanOrEqualTo($this->windowEnd) && $nsIdx < count($nsAmounts)) {
-            if (in_array($cursor->dayOfWeek, [CarbonImmutable::TUESDAY, CarbonImmutable::THURSDAY], true)) {
-                $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
-                    'type' => 'expense',
-                    'amountMinor' => $nsAmounts[$nsIdx],
-                    'description' => 'NS Reizen Utrecht-Amsterdam',
-                    'counterpartyName' => 'NS Reizigers',
-                    'counterpartyIban' => null,
-                    'date' => $cursor,
-                    'paymentType' => PaymentType::Pin,
-                    'categoryId' => $transitCategory,
-                ]);
-                $nsIdx++;
-            }
-            $cursor = $cursor->addDay();
-        }
+        $inserted += $this->seedUser1NsTransit($user, $asn, $run, $rowIndex, $windowStart, $this->categoryId('transport-public'));
 
         $eatingOutCategory = $this->categoryId('eating-out');
         $inserted += $this->seedMonthlySeries($user, $asn, $run, $rowIndex, $windowStart, [
@@ -537,6 +487,90 @@ final class DemoTransactionsSeeder
                 Transaction::query()->where('id', $inId)->update(['pair_transaction_id' => $outId]);
             }
         }
+    }
+
+    // Walks the window one week at a time from the first Saturday, seeding a
+    // Saturday grocery run plus a Wednesday top-up (the row three days back).
+    // rowIndex advances by reference so the fingerprints stay identical to
+    // the inline walk this replaced.
+    private function seedUser1AhWeekly(
+        User $user,
+        Account $asn,
+        ImportRun $run,
+        int &$rowIndex,
+        CarbonImmutable $windowStart,
+        ?int $groceriesCategory,
+    ): int {
+        $inserted = 0;
+        $ahAmounts = [-6754, -5421, -7188, -4998, -6342, -5876, -7011, -5188, -6655, -7290, -5511, -6020];
+        $cursor = $windowStart->startOfWeek(CarbonImmutable::SATURDAY);
+        $i = 0;
+        while ($cursor->lessThanOrEqualTo($this->windowEnd)) {
+            if ($cursor->greaterThanOrEqualTo($windowStart) && isset($ahAmounts[$i])) {
+                $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
+                    'type' => 'expense',
+                    'amountMinor' => $ahAmounts[$i],
+                    'description' => 'AH Filiaal 1234 Utrecht',
+                    'counterpartyName' => self::AH_COUNTERPARTY,
+                    'counterpartyIban' => null,
+                    'date' => $cursor,
+                    'paymentType' => PaymentType::Pin,
+                    'categoryId' => $groceriesCategory,
+                ]);
+                $midweek = $cursor->subDays(3);
+                if ($midweek->greaterThanOrEqualTo($windowStart) && isset($ahAmounts[$i + 6])) {
+                    $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
+                        'type' => 'expense',
+                        'amountMinor' => intdiv($ahAmounts[$i + 6] ?? -2500, 2),
+                        'description' => 'AH To Go Utrecht CS',
+                        'counterpartyName' => self::AH_COUNTERPARTY,
+                        'counterpartyIban' => null,
+                        'date' => $midweek,
+                        'paymentType' => PaymentType::Pin,
+                        'categoryId' => $groceriesCategory,
+                    ]);
+                }
+            }
+            $cursor = $cursor->addDays(7);
+            $i++;
+        }
+
+        return $inserted;
+    }
+
+    // Twice-weekly (Tuesday/Thursday) train commute across the window, one
+    // amount per trip until the fixed amount table is exhausted. rowIndex
+    // advances by reference to preserve the original seed order.
+    private function seedUser1NsTransit(
+        User $user,
+        Account $asn,
+        ImportRun $run,
+        int &$rowIndex,
+        CarbonImmutable $windowStart,
+        ?int $transitCategory,
+    ): int {
+        $inserted = 0;
+        $nsAmounts = [-1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240, -1180, -1180, -1240];
+        $cursor = $windowStart;
+        $nsIdx = 0;
+        while ($cursor->lessThanOrEqualTo($this->windowEnd) && $nsIdx < count($nsAmounts)) {
+            if (in_array($cursor->dayOfWeek, [CarbonImmutable::TUESDAY, CarbonImmutable::THURSDAY], true)) {
+                $inserted += $this->insertTransaction($user, $asn, $run, $rowIndex++, [
+                    'type' => 'expense',
+                    'amountMinor' => $nsAmounts[$nsIdx],
+                    'description' => 'NS Reizen Utrecht-Amsterdam',
+                    'counterpartyName' => 'NS Reizigers',
+                    'counterpartyIban' => null,
+                    'date' => $cursor,
+                    'paymentType' => PaymentType::Pin,
+                    'categoryId' => $transitCategory,
+                ]);
+                $nsIdx++;
+            }
+            $cursor = $cursor->addDay();
+        }
+
+        return $inserted;
     }
 
     // Seeds each fixed monthly series in turn, one row per month. They are

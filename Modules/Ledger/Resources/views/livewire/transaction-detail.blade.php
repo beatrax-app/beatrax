@@ -46,8 +46,8 @@
                 </p>
             </header>
 
-            <dl class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div class="space-y-1">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <dl class="space-y-1">
                     <dt class="text-sm text-slate-500 dark:text-slate-400">Counterparty</dt>
                     <dd class="text-sm text-slate-900 dark:text-slate-100">
                         @if ($transaction->counterparty !== null && $transaction->counterparty->slug !== '')
@@ -61,32 +61,32 @@
                             <span data-testid="tx-detail-counterparty-text">{{ $transaction->counterparty_name ?? '—' }}</span>
                         @endif
                     </dd>
-                </div>
+                </dl>
 
-                <div class="space-y-1">
+                <dl class="space-y-1">
                     <dt class="text-sm text-slate-500 dark:text-slate-400">Amount (native)</dt>
                     <dd class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt(Money::ofMinor($transaction->amount_minor, $transaction->currency)) }} {{ $transaction->currency }}
                     </dd>
-                </div>
+                </dl>
 
-                <div class="space-y-1">
+                <dl class="space-y-1">
                     <dt class="text-sm text-slate-500 dark:text-slate-400">Amount (settled EUR)</dt>
                     <dd class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt(Money::ofMinor($transaction->settled_amount_minor, $transaction->settled_currency)) }} {{ $transaction->settled_currency }}
                     </dd>
-                </div>
+                </dl>
 
                 @if ($fxRateDisplay !== null)
-                    <div class="space-y-1" data-testid="fx-rate-row">
+                    <dl class="space-y-1" data-testid="fx-rate-row">
                         <dt class="text-sm text-slate-500 dark:text-slate-400">Effective rate</dt>
                         <dd class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                             €{{ $fxRateDisplay }} / {{ $transaction->currency }}
                         </dd>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Includes any ICS markup.</p>
-                    </div>
+                        <dd class="text-xs text-slate-500 dark:text-slate-400">Includes any ICS markup.</dd>
+                    </dl>
                 @endif
-            </dl>
+            </div>
 
             {{-- Split editor (Phase 13.1 Plan 05, UI-SPEC §7): inline, gated to
                  non-transfer types (Req 6, D-07/D-08). Placed between the
