@@ -64,7 +64,7 @@ final class LockScreen extends Component
         DatabaseManager $db,
         Clock $clock,
     ): void {
-        if (preg_match('/^[0-9]{4,10}$/', $pin) !== 1) {
+        if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
             $this->flashMessage = 'PIN must be at least 4 digits.';
 
             return;
