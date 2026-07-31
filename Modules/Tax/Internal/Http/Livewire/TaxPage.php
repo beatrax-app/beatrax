@@ -47,7 +47,11 @@ final class TaxPage extends Component
         CurrentUser $currentUser,
     ): StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
-            return new StreamedResponse(static function (): void {});
+            return new StreamedResponse(static function (): void {
+                // Guests get an empty 200 body rather than a download; the
+                // route's 'auth' middleware already makes this unreachable in
+                // practice, so nothing is streamed here.
+            });
         }
 
         $year = $this->year;
@@ -68,7 +72,11 @@ final class TaxPage extends Component
         CurrentUser $currentUser,
     ): StreamedResponse {
         if (! $currentUser->isAuthenticated()) {
-            return new StreamedResponse(static function (): void {});
+            return new StreamedResponse(static function (): void {
+                // Guests get an empty 200 body rather than a download; the
+                // route's 'auth' middleware already makes this unreachable in
+                // practice, so nothing is streamed here.
+            });
         }
 
         $year = $this->year;

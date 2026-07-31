@@ -298,6 +298,18 @@ it('exportPdf returns a StreamedResponse with the correct filename and content t
     expect($component->instance()->year)->toBe(2026);
 });
 
+it('exportCsv returns a response for an unauthenticated component instead of throwing', function (): void {
+    $response = Livewire::test(TaxPage::class)->call('exportCsv');
+
+    expect($response)->not->toBeNull();
+});
+
+it('exportPdf returns a response for an unauthenticated component instead of throwing', function (): void {
+    $response = Livewire::test(TaxPage::class)->call('exportPdf');
+
+    expect($response)->not->toBeNull();
+});
+
 it('shows the first-visit empty state when no tax country is set', function (): void {
     $user = taxPageUser(username: 'no-country-user', withCountry: false);
 
