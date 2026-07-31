@@ -12,6 +12,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 use stdClass;
@@ -36,7 +37,7 @@ final class TransferPairer implements PairsTransferLegs
 
     public function pairOne(Transaction $tx, User $user): ?int
     {
-        if (! in_array($tx->type, ['transfer_out', 'transfer_in'], true)) {
+        if (! in_array($tx->type, TransactionType::transferValues(), true)) {
             return null;
         }
 
@@ -114,7 +115,7 @@ final class TransferPairer implements PairsTransferLegs
                     $windowEnd->toDateTimeString(),
                 ])
                 ->whereNull('pair_transaction_id')
-                ->whereIn('type', ['transfer_out', 'transfer_in'])
+                ->whereIn('type', TransactionType::transferValues())
                 ->where('id', '!=', $tx->id)
                 ->orderBy('booked_at')
                 ->first(['id']);
@@ -166,7 +167,7 @@ final class TransferPairer implements PairsTransferLegs
         $candidateIds = $connection
             ->table('transactions')
             ->where('user_id', $user->id)
-            ->whereIn('type', ['transfer_out', 'transfer_in'])
+            ->whereIn('type', TransactionType::transferValues())
             ->whereNull('pair_transaction_id')
             ->orderBy('booked_at')
             ->pluck('id')
@@ -255,7 +256,7 @@ final class TransferPairer implements PairsTransferLegs
             ->where('currency', $tx->currency)
             ->whereBetween('booked_at', [$windowStart, $windowEnd])
             ->whereNull('pair_transaction_id')
-            ->whereIn('type', ['transfer_out', 'transfer_in'])
+            ->whereIn('type', TransactionType::transferValues())
             ->where('id', '!=', $tx->id)
             ->orderBy('booked_at')
             ->get(['id', 'counterparty_iban']);
