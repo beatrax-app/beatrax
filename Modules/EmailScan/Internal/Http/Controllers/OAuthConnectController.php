@@ -11,6 +11,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -35,8 +36,8 @@ final class OAuthConnectController
     public function __invoke(Request $request, string $provider): RedirectResponse
     {
         $oauth = match ($provider) {
-            'gmail' => $this->googleOAuth,
-            'microsoft' => $this->microsoftOAuth,
+            MailProvider::Gmail->value => $this->googleOAuth,
+            MailProvider::Microsoft->value => $this->microsoftOAuth,
             default => throw new NotFoundHttpException('Unknown provider.'),
         };
 

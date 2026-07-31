@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Public\Dto;
 
 use InvalidArgumentException;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Spatie\LaravelData\Data;
 
 // Normalises the Gmail history cursor and Microsoft Graph delta-link
@@ -18,7 +19,7 @@ final class ScanCursor extends Data
         public readonly ?string $historyId,
         public readonly ?string $deltaLink,
     ) {
-        if ($provider !== 'gmail' && $provider !== 'microsoft') {
+        if ($provider !== MailProvider::Gmail->value && $provider !== MailProvider::Microsoft->value) {
             throw new InvalidArgumentException(
                 "ScanCursor provider must be 'gmail' or 'microsoft', got '{$provider}'."
             );
@@ -33,7 +34,7 @@ final class ScanCursor extends Data
             );
         }
 
-        return new self('gmail', $historyId, null);
+        return new self(MailProvider::Gmail->value, $historyId, null);
     }
 
     public static function microsoft(string $deltaLink): self
@@ -49,7 +50,7 @@ final class ScanCursor extends Data
             );
         }
 
-        return new self('microsoft', null, $deltaLink);
+        return new self(MailProvider::Microsoft->value, null, $deltaLink);
     }
 
     public static function emptyFor(string $provider): self

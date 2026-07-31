@@ -22,6 +22,7 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use stdClass;
 use Throwable;
@@ -181,8 +182,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         array $allExcludes,
     ): void {
         $messages = match ($provider) {
-            'gmail' => $this->collectGmailMessages($gmail, $clock, $inboxId, $allExcludes),
-            'microsoft' => $this->collectMicrosoftMessages($graph, $clock, $inboxId, $allExcludes),
+            MailProvider::Gmail->value => $this->collectGmailMessages($gmail, $clock, $inboxId, $allExcludes),
+            MailProvider::Microsoft->value => $this->collectMicrosoftMessages($graph, $clock, $inboxId, $allExcludes),
             default => null,
         };
         if ($messages === null) {

@@ -10,6 +10,7 @@ use League\OAuth2\Client\Provider\Google;
 use League\OAuth2\Client\Provider\GoogleUser;
 use League\OAuth2\Client\Token\AccessToken;
 use Modules\EmailScan\Internal\SafeMessage;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
@@ -86,7 +87,7 @@ class GoogleOAuthProvider
         // Refresh exchanges don't strictly need a redirect URI, but
         // the league provider still validates it against Google's
         // allow-list, so the configured one is reused here.
-        $client = $this->secrets->loadProviderClient('gmail');
+        $client = $this->secrets->loadProviderClient(MailProvider::Gmail->value);
         if ($client === null) {
             throw new InboxNotConfiguredException(
                 'Google OAuth client is not configured — run the OAuth-client wizard first.',
@@ -128,7 +129,7 @@ class GoogleOAuthProvider
 
     public function readEmail(string $accessToken): string
     {
-        $client = $this->secrets->loadProviderClient('gmail');
+        $client = $this->secrets->loadProviderClient(MailProvider::Gmail->value);
         if ($client === null) {
             throw new InboxNotConfiguredException(
                 'Google OAuth client is not configured — run the OAuth-client wizard first.',
