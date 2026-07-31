@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Parsers\Support;
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Migration\Internal\Exceptions\ExtractionDirectoryException;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
-use RuntimeException;
 use ZipArchive;
 
 /**
@@ -94,7 +94,7 @@ final class ZipExtractor
         if (! @mkdir($targetDir, 0700, true) && ! is_dir($targetDir)) {
             $zip->close();
 
-            throw new RuntimeException("could not create scoped extraction directory '{$targetDir}'");
+            throw new ExtractionDirectoryException($targetDir);
         }
 
         // Tracked BEFORE extractTo() runs — if extraction fails partway,

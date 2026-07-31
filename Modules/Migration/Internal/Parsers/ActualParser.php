@@ -63,50 +63,11 @@ final class ActualParser implements ParsesMigrationSource
         /** @var Collection<int, UnmappedItemDto> $unmapped */
         $unmapped = new Collection;
 
-        $currency = $reader->currency();
-        if ($currency === null) {
-            $currency = $user->base_currency;
-            $unmapped->push(new UnmappedItemDto(
-                itemType: 'extra',
-                sourceExternalId: null,
-                displayLabel: 'Budget-file currency',
-                reason: "assumed {$currency} — no 'preferences.currencyCode' row found in this export",
-            ));
-        }
+        $currency = $this->resolveCurrency($reader, $user, $unmapped);
 
-        $categoryGroupNames = [];
-        foreach ($reader->categoryGroups() as $group) {
-            $categoryGroupNames[$group['id']] = $group['name'];
-        }
-
+        /** @var array<string, string> $categoryNames */
         $categoryNames = [];
-        /** @var Collection<int, MigrationCategoryDto> $categories */
-        $categories = new Collection;
-
-        // Materializes each Category Group as a real parent Category BEFORE
-        // any of its member categories (promoteCategories() processes staged
-        // rows in insertion order) — Actual's group id is a stable UUID,
-        // reused verbatim as the parent's sourceExternalId.
-        foreach ($reader->categoryGroups() as $group) {
-            $categories->push(new MigrationCategoryDto(
-                sourceExternalId: $group['id'],
-                name: $group['name'],
-                sourceGroupName: null,
-                parentSourceExternalId: null,
-                kind: $group['is_income'] ? 'income' : 'expense',
-            ));
-        }
-
-        foreach ($reader->categories() as $row) {
-            $categoryNames[$row['id']] = $row['name'];
-            $categories->push(new MigrationCategoryDto(
-                sourceExternalId: $row['id'],
-                name: $row['name'],
-                sourceGroupName: $row['group'] !== null ? ($categoryGroupNames[$row['group']] ?? null) : null,
-                parentSourceExternalId: $row['group'],
-                kind: $row['is_income'] ? 'income' : 'expense',
-            ));
-        }
+        $categories = $this->buildCategoryCollection($reader, $categoryNames);
 
         /** @var Collection<int, MigrationAccountDto> $accounts */
         $accounts = new Collection;
@@ -120,18 +81,7 @@ final class ActualParser implements ParsesMigrationSource
 
         /** @var array<string, bool> $payeeIsTransfer */
         $payeeIsTransfer = [];
-        /** @var Collection<int, MigrationPayeeDto> $payees */
-        $payees = new Collection;
-        foreach ($reader->payees() as $row) {
-            $payeeIsTransfer[$row['id']] = $row['transfer_acct'] !== null;
-            if ($row['transfer_acct'] !== null) {
-                continue;
-            }
-            $payees->push(new MigrationPayeeDto(
-                sourceExternalId: $row['id'],
-                name: $row['name'],
-            ));
-        }
+        $payees = $this->buildPayeeCollection($reader, $payeeIsTransfer);
 
         /** @var Collection<int, MigrationBudgetAssignmentDto> $budgetAssignments */
         $budgetAssignments = new Collection;
@@ -143,24 +93,7 @@ final class ActualParser implements ParsesMigrationSource
             ));
         }
 
-        /** @var Collection<int, MigrationGoalDto> $goals */
-        $goals = new Collection;
-        foreach ($reader->goalDefs() as $row) {
-            $categoryName = $categoryNames[$row['category_id']] ?? $row['category_id'];
-            $goal = $this->goalDefInterpreter->interpret($row['category_id'], $categoryName, $row['goal_def'], $currency);
-            if ($goal !== null) {
-                $goals->push($goal);
-
-                continue;
-            }
-
-            $unmapped->push(new UnmappedItemDto(
-                itemType: 'extra',
-                sourceExternalId: $row['category_id'],
-                displayLabel: $categoryName.' goal',
-                reason: 'categories.goal_def uses an unsupported (non-flat) template shape — the goal was not imported',
-            ));
-        }
+        $goals = $this->buildGoalCollection($reader, $categoryNames, $currency, $unmapped);
 
         /** @var Collection<int, MigrationScheduleDto> $schedules */
         $schedules = new Collection;
@@ -204,6 +137,118 @@ final class ActualParser implements ParsesMigrationSource
             unmapped: $unmapped,
             transactions: $this->buildTransactionsGenerator($rawTransactions, $currency, $payeeIsTransfer),
         );
+    }
+
+    /**
+     * @param  Collection<int, UnmappedItemDto>  $unmapped
+     */
+    private function resolveCurrency(ActualSqliteReader $reader, User $user, Collection $unmapped): string
+    {
+        $currency = $reader->currency();
+        if ($currency === null) {
+            $currency = $user->base_currency;
+            $unmapped->push(new UnmappedItemDto(
+                itemType: 'extra',
+                sourceExternalId: null,
+                displayLabel: 'Budget-file currency',
+                reason: "assumed {$currency} — no 'preferences.currencyCode' row found in this export",
+            ));
+        }
+
+        return $currency;
+    }
+
+    /**
+     * @param  array<string, string>  $categoryNames
+     * @return Collection<int, MigrationCategoryDto>
+     */
+    private function buildCategoryCollection(ActualSqliteReader $reader, array &$categoryNames): Collection
+    {
+        $categoryGroupNames = [];
+        foreach ($reader->categoryGroups() as $group) {
+            $categoryGroupNames[$group['id']] = $group['name'];
+        }
+
+        /** @var Collection<int, MigrationCategoryDto> $categories */
+        $categories = new Collection;
+
+        // Materializes each Category Group as a real parent Category BEFORE
+        // any of its member categories (promoteCategories() processes staged
+        // rows in insertion order) — Actual's group id is a stable UUID,
+        // reused verbatim as the parent's sourceExternalId.
+        foreach ($reader->categoryGroups() as $group) {
+            $categories->push(new MigrationCategoryDto(
+                sourceExternalId: $group['id'],
+                name: $group['name'],
+                sourceGroupName: null,
+                parentSourceExternalId: null,
+                kind: $group['is_income'] ? 'income' : 'expense',
+            ));
+        }
+
+        foreach ($reader->categories() as $row) {
+            $categoryNames[$row['id']] = $row['name'];
+            $categories->push(new MigrationCategoryDto(
+                sourceExternalId: $row['id'],
+                name: $row['name'],
+                sourceGroupName: $row['group'] !== null ? ($categoryGroupNames[$row['group']] ?? null) : null,
+                parentSourceExternalId: $row['group'],
+                kind: $row['is_income'] ? 'income' : 'expense',
+            ));
+        }
+
+        return $categories;
+    }
+
+    /**
+     * @param  array<string, bool>  $payeeIsTransfer
+     * @return Collection<int, MigrationPayeeDto>
+     */
+    private function buildPayeeCollection(ActualSqliteReader $reader, array &$payeeIsTransfer): Collection
+    {
+        /** @var Collection<int, MigrationPayeeDto> $payees */
+        $payees = new Collection;
+        foreach ($reader->payees() as $row) {
+            $payeeIsTransfer[$row['id']] = $row['transfer_acct'] !== null;
+            if ($row['transfer_acct'] !== null) {
+                continue;
+            }
+            $payees->push(new MigrationPayeeDto(
+                sourceExternalId: $row['id'],
+                name: $row['name'],
+            ));
+        }
+
+        return $payees;
+    }
+
+    /**
+     * @param  array<string, string>  $categoryNames
+     * @param  Collection<int, UnmappedItemDto>  $unmapped
+     * @return Collection<int, MigrationGoalDto>
+     */
+    private function buildGoalCollection(ActualSqliteReader $reader, array $categoryNames, string $currency, Collection $unmapped): Collection
+    {
+        /** @var Collection<int, MigrationGoalDto> $goals */
+        $goals = new Collection;
+        foreach ($reader->goalDefs() as $row) {
+            $categoryName = $categoryNames[$row['category_id']] ?? $row['category_id'];
+            $goal = $this->goalDefInterpreter->interpret($row['category_id'], $categoryName, $row['goal_def'], $currency);
+            if ($goal !== null) {
+                $goals->push($goal);
+
+                continue;
+            }
+
+            $unmapped->push(new UnmappedItemDto(
+                itemType: 'extra',
+                sourceExternalId: $row['category_id'],
+                displayLabel: $categoryName.' goal',
+                reason: 'categories.goal_def uses an unsupported (non-flat) template shape — the goal was not imported',
+            ));
+        }
+
+        return $goals;
     }
 
     private function parseBudgetMonth(int $yyyymm): CarbonImmutable

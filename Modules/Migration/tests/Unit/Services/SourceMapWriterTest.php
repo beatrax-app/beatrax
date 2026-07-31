@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Migration\Internal\Services\SourceMapWriter;
+use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
 uses(RefreshDatabase::class);
 
@@ -27,18 +28,18 @@ beforeEach(function (): void {
 });
 
 it('resolve() returns null before anything is recorded', function (): void {
-    expect($this->writer->resolve($this->user, 'ynab4', 'category', 'grocery-key'))->toBeNull();
+    expect($this->writer->resolve($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key')))->toBeNull();
 });
 
 it('record() then resolve() round-trips the beatrax id via source_external_id', function (): void {
-    $this->writer->record($this->user, 'ynab4', 'category', 'grocery-key', null, 'category', 42);
+    $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42);
 
-    expect($this->writer->resolve($this->user, 'ynab4', 'category', 'grocery-key'))->toBe(42);
+    expect($this->writer->resolve($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key')))->toBe(42);
 });
 
 it('record() called twice for the same key yields exactly one migration_source_map row (UNIQUE upsert)', function (): void {
-    $this->writer->record($this->user, 'ynab4', 'category', 'grocery-key', null, 'category', 42);
-    $this->writer->record($this->user, 'ynab4', 'category', 'grocery-key', null, 'category', 42);
+    $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42);
+    $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42);
 
     $count = $this->db->connection()->table('migration_source_map')
         ->where('user_id', $this->user->id)
@@ -51,16 +52,16 @@ it('record() called twice for the same key yields exactly one migration_source_m
 });
 
 it('natural-key fallback resolves an entity whose source id is null (D-10)', function (): void {
-    $this->writer->record($this->user, 'nynab', 'payee', null, 'albert heijn', 'counterparty', 7);
+    $this->writer->record($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn'), 'counterparty', 7);
 
-    expect($this->writer->resolve($this->user, 'nynab', 'payee', null, 'albert heijn'))->toBe(7);
+    expect($this->writer->resolve($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn')))->toBe(7);
     // An exact source_external_id lookup for a natural-key-only row never matches.
-    expect($this->writer->resolve($this->user, 'nynab', 'payee', 'albert heijn'))->toBeNull();
+    expect($this->writer->resolve($this->user, new SourceMapKey('nynab', 'payee', 'albert heijn')))->toBeNull();
 });
 
 it('record() called twice with a null source_external_id (natural key path) yields exactly one row', function (): void {
-    $this->writer->record($this->user, 'nynab', 'payee', null, 'albert heijn', 'counterparty', 7);
-    $this->writer->record($this->user, 'nynab', 'payee', null, 'albert heijn', 'counterparty', 7);
+    $this->writer->record($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn'), 'counterparty', 7);
+    $this->writer->record($this->user, new SourceMapKey('nynab', 'payee', null, 'albert heijn'), 'counterparty', 7);
 
     $count = $this->db->connection()->table('migration_source_map')
         ->where('user_id', $this->user->id)
@@ -74,7 +75,7 @@ it('record() called twice with a null source_external_id (natural key path) yiel
 });
 
 it('baseline rows capture the source field values at import time (D-11)', function (): void {
-    $this->writer->record($this->user, 'ynab4', 'category', 'grocery-key', null, 'category', 42, [
+    $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42, [
         'name' => 'Groceries',
         'kind' => 'expense',
     ]);
@@ -96,7 +97,7 @@ it('baseline rows capture the source field values at import time (D-11)', functi
 
     // Re-recording with a changed field advances the SAME baseline row
     // rather than accumulating history.
-    $this->writer->record($this->user, 'ynab4', 'category', 'grocery-key', null, 'category', 42, [
+    $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42, [
         'name' => 'Groceries & Household',
     ]);
 

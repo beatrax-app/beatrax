@@ -21,10 +21,11 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
+use Modules\Migration\Internal\Exceptions\UnresolvedStagedAccountException;
 use Modules\Migration\Internal\Services\SourceMapWriter;
+use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
-use RuntimeException;
 use stdClass;
 
 /**
@@ -114,14 +115,14 @@ final class PromoteStagingToDomain
         /** @var stdClass $row */
         foreach ($rows as $row) {
             $externalId = self::toString($row->source_external_id);
-            $resolved = $this->sourceMapWriter->resolve($user, $sourceProduct, 'category', $externalId);
+            $resolved = $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, 'category', $externalId));
 
             if ($resolved === null) {
                 $parentExternalId = $row->parent_source_external_id;
                 $parentId = null;
                 if (is_string($parentExternalId) && $parentExternalId !== '') {
                     $parentId = $idMap[$parentExternalId]
-                        ?? $this->sourceMapWriter->resolve($user, $sourceProduct, 'category', $parentExternalId);
+                        ?? $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, 'category', $parentExternalId));
                 }
 
                 $name = self::toString($row->name);
@@ -141,10 +142,7 @@ final class PromoteStagingToDomain
 
                 $this->sourceMapWriter->record(
                     $user,
-                    $sourceProduct,
-                    'category',
-                    $externalId,
-                    null,
+                    new SourceMapKey($sourceProduct, 'category', $externalId),
                     'category',
                     $resolved,
                     ['name' => $name, 'kind' => $kind],
@@ -218,10 +216,7 @@ final class PromoteStagingToDomain
 
                 $this->sourceMapWriter->record(
                     $user,
-                    $sourceProduct,
-                    'budget_assignment',
-                    $externalId,
-                    null,
+                    new SourceMapKey($sourceProduct, 'budget_assignment', $externalId),
                     'envelope_assignment',
                     self::toInt($assignmentId),
                     ['budgeted_minor' => (string) $minor],
@@ -251,7 +246,7 @@ final class PromoteStagingToDomain
         /** @var stdClass $row */
         foreach ($rows as $row) {
             $externalId = self::toString($row->source_external_id);
-            $resolved = $this->sourceMapWriter->resolve($user, $sourceProduct, 'account', $externalId);
+            $resolved = $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, 'account', $externalId));
 
             if ($resolved === null) {
                 $name = self::toString($row->name);
@@ -275,10 +270,7 @@ final class PromoteStagingToDomain
 
                 $this->sourceMapWriter->record(
                     $user,
-                    $sourceProduct,
-                    'account',
-                    $externalId,
-                    null,
+                    new SourceMapKey($sourceProduct, 'account', $externalId),
                     'account',
                     $resolved,
                     ['name' => $name, 'currency' => $currency],
@@ -338,146 +330,31 @@ final class PromoteStagingToDomain
                 &$splitsCreated,
                 &$resolvedPayees,
             ): void {
-                /** @var list<stdClass> $newRows */
-                $newRows = [];
-                /** @var list<CanonicalTransaction> $newCanonicals */
-                $newCanonicals = [];
+                $prepared = $this->prepareCanonicalRows($runId, $user, $sourceProduct, $rows, $categoryIdMap, $accountIdMap, $payeeNameMap);
+                $skipped += $prepared['skipped'];
 
-                /** @var stdClass $row */
-                foreach ($rows as $row) {
-                    $externalId = self::toString($row->source_external_id);
-                    $alreadyMapped = $this->sourceMapWriter->resolve($user, $sourceProduct, 'transaction', $externalId);
-
-                    if ($alreadyMapped !== null) {
-                        $skipped++;
-
-                        continue;
-                    }
-
-                    $canonical = $this->buildCanonicalTransaction(
-                        $runId,
-                        $user,
-                        $sourceProduct,
-                        $row,
-                        $categoryIdMap,
-                        $accountIdMap,
-                        $payeeNameMap,
-                    );
-
-                    // MUST run before RecordTransactions (Pitfall 3) — the
-                    // stamped counterpartyId is what RecordTransactions
-                    // persists; it never resolves counterparties itself.
-                    $canonical = $this->resolvesCounterparties->run($canonical, $user);
-
-                    $newRows[] = $row;
-                    $newCanonicals[] = $canonical;
-                }
-
-                if ($newCanonicals === []) {
+                if ($prepared['canonicals'] === []) {
                     return;
                 }
 
-                // RecordResult::$duplicates is inspected below (per-row, via
+                // RecordResult::$duplicates is inspected per-row below (via
                 // the fingerprint-lookup miss) rather than trusted as a bare
                 // count — a genuine collision must be traceable back to the
                 // exact staged row that lost, not merely tallied.
-                ($this->recordTransactions)($newCanonicals, $user);
+                ($this->recordTransactions)($prepared['canonicals'], $user);
 
-                $fingerprintsByIndex = [];
-                foreach ($newCanonicals as $idx => $canonical) {
-                    $fingerprintsByIndex[$idx] = $this->fingerprints->compose($canonical);
-                }
-
-                /** @var Collection<string, int> $idsByFingerprint */
-                $idsByFingerprint = $this->db->connection()->table('transactions')
-                    ->where('user_id', $user->id)
-                    ->whereIn('fingerprint', array_values($fingerprintsByIndex))
-                    ->pluck('id', 'fingerprint');
-
-                foreach ($newRows as $idx => $row) {
-                    $canonical = $newCanonicals[$idx];
-                    $fingerprint = $fingerprintsByIndex[$idx];
-                    $transactionId = $idsByFingerprint->has($fingerprint)
-                        ? self::toInt($idsByFingerprint->get($fingerprint))
-                        : null;
-
-                    if ($transactionId === null) {
-                        // RecordTransactions silently dropped this row as a
-                        // fingerprint-duplicate of an unrelated row (rare
-                        // since buildCanonicalTransaction() seeds a distinct
-                        // bookedAt) — surfaced as a visible unmapped item.
-                        $this->db->connection()->table('migration_staging_unmapped_items')->insert([
-                            'user_id' => $user->id,
-                            'migration_run_id' => $runId,
-                            'item_type' => 'extra',
-                            'source_external_id' => self::toString($row->source_external_id),
-                            'display_label' => 'Transaction: '.($row->description !== null ? self::toString($row->description) : '(no description)'),
-                            'reason' => 'This transaction collided with another already-recorded transaction (identical fingerprint) and was not imported.',
-                        ]);
-
-                        continue;
-                    }
-
-                    // CanonicalTransaction::toAttributes() always stamps
-                    // 'cleared' for a non-'manual' sourceFormat, so the real
-                    // staged status is applied explicitly right after insert.
-                    $this->db->connection()->table('transactions')
-                        ->where('id', $transactionId)
-                        ->where('user_id', $user->id)
-                        ->update(['status' => self::toString($row->cleared_status)]);
-
-                    $this->sourceMapWriter->record(
-                        $user,
-                        $sourceProduct,
-                        'transaction',
-                        self::toString($row->source_external_id),
-                        null,
-                        'transaction',
-                        $transactionId,
-                        [
-                            'description' => $row->description !== null ? self::toString($row->description) : '',
-                            'amount_minor' => (string) self::toInt($row->amount_minor),
-                        ],
-                    );
-
-                    $inserted++;
-
-                    if ((bool) $row->is_split_parent) {
-                        if ($this->createSplitLegs($runId, $user, $row, $transactionId, $categoryIdMap)) {
-                            $splitsCreated++;
-                        }
-                    }
-
-                    $payeeExternalId = $row->payee_source_external_id;
-                    if (
-                        is_string($payeeExternalId)
-                        && $payeeExternalId !== ''
-                        && $canonical->counterpartyId !== null
-                        && ! isset($resolvedPayees[$payeeExternalId])
-                    ) {
-                        $resolvedPayees[$payeeExternalId] = true;
-
-                        $this->sourceMapWriter->record(
-                            $user,
-                            $sourceProduct,
-                            'payee',
-                            $payeeExternalId,
-                            null,
-                            'counterparty',
-                            $canonical->counterpartyId,
-                            ['name' => $payeeNameMap[$payeeExternalId] ?? ''],
-                        );
-
-                        $this->db->connection()->table('migration_staging_payees')
-                            ->where('user_id', $user->id)
-                            ->where('migration_run_id', $runId)
-                            ->where('source_external_id', $payeeExternalId)
-                            ->update([
-                                'resolution_status' => 'mapped',
-                                'resolved_counterparty_id' => $canonical->counterpartyId,
-                            ]);
-                    }
-                }
+                $counts = $this->persistPromotedRows(
+                    $runId,
+                    $user,
+                    $sourceProduct,
+                    $prepared['rows'],
+                    $prepared['canonicals'],
+                    $categoryIdMap,
+                    $payeeNameMap,
+                    $resolvedPayees,
+                );
+                $inserted += $counts['inserted'];
+                $splitsCreated += $counts['splits'];
             });
 
         return [
@@ -486,6 +363,183 @@ final class PromoteStagingToDomain
             'splits' => $splitsCreated,
             'counterparties' => count($resolvedPayees),
         ];
+    }
+
+    /**
+     * @param  iterable<int, stdClass>  $rows
+     * @param  array<string, int>  $categoryIdMap
+     * @param  array<string, int>  $accountIdMap
+     * @param  array<string, string>  $payeeNameMap
+     * @return array{rows: list<stdClass>, canonicals: list<CanonicalTransaction>, skipped: int}
+     */
+    private function prepareCanonicalRows(
+        int $runId,
+        User $user,
+        string $sourceProduct,
+        iterable $rows,
+        array $categoryIdMap,
+        array $accountIdMap,
+        array $payeeNameMap,
+    ): array {
+        /** @var list<stdClass> $newRows */
+        $newRows = [];
+        /** @var list<CanonicalTransaction> $newCanonicals */
+        $newCanonicals = [];
+        $skipped = 0;
+
+        /** @var stdClass $row */
+        foreach ($rows as $row) {
+            $externalId = self::toString($row->source_external_id);
+            $alreadyMapped = $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, 'transaction', $externalId));
+
+            if ($alreadyMapped !== null) {
+                $skipped++;
+
+                continue;
+            }
+
+            $canonical = $this->buildCanonicalTransaction($runId, $user, $sourceProduct, $row, $categoryIdMap, $accountIdMap, $payeeNameMap);
+
+            // MUST run before RecordTransactions (Pitfall 3) — the stamped
+            // counterpartyId is what RecordTransactions persists; it never
+            // resolves counterparties itself.
+            $canonical = $this->resolvesCounterparties->run($canonical, $user);
+
+            $newRows[] = $row;
+            $newCanonicals[] = $canonical;
+        }
+
+        return ['rows' => $newRows, 'canonicals' => $newCanonicals, 'skipped' => $skipped];
+    }
+
+    /**
+     * @param  list<stdClass>  $newRows
+     * @param  list<CanonicalTransaction>  $newCanonicals
+     * @param  array<string, int>  $categoryIdMap
+     * @param  array<string, string>  $payeeNameMap
+     * @param  array<string, true>  $resolvedPayees
+     * @return array{inserted: int, splits: int}
+     */
+    private function persistPromotedRows(
+        int $runId,
+        User $user,
+        string $sourceProduct,
+        array $newRows,
+        array $newCanonicals,
+        array $categoryIdMap,
+        array $payeeNameMap,
+        array &$resolvedPayees,
+    ): array {
+        $fingerprintsByIndex = [];
+        foreach ($newCanonicals as $idx => $canonical) {
+            $fingerprintsByIndex[$idx] = $this->fingerprints->compose($canonical);
+        }
+
+        /** @var Collection<string, int> $idsByFingerprint */
+        $idsByFingerprint = $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereIn('fingerprint', array_values($fingerprintsByIndex))
+            ->pluck('id', 'fingerprint');
+
+        $inserted = 0;
+        $splitsCreated = 0;
+
+        foreach ($newRows as $idx => $row) {
+            $description = $row->description !== null ? self::toString($row->description) : null;
+            $fingerprint = $fingerprintsByIndex[$idx];
+            $transactionId = $idsByFingerprint->has($fingerprint)
+                ? self::toInt($idsByFingerprint->get($fingerprint))
+                : null;
+
+            if ($transactionId === null) {
+                // RecordTransactions silently dropped this row as a
+                // fingerprint-duplicate of an unrelated row (rare, since
+                // buildCanonicalTransaction() seeds a distinct bookedAt) —
+                // surfaced as a visible unmapped item.
+                $this->db->connection()->table('migration_staging_unmapped_items')->insert([
+                    'user_id' => $user->id,
+                    'migration_run_id' => $runId,
+                    'item_type' => 'extra',
+                    'source_external_id' => self::toString($row->source_external_id),
+                    'display_label' => 'Transaction: '.($description ?? '(no description)'),
+                    'reason' => 'This transaction collided with another already-recorded transaction (identical fingerprint) and was not imported.',
+                ]);
+
+                continue;
+            }
+
+            // CanonicalTransaction::toAttributes() always stamps 'cleared'
+            // for a non-'manual' sourceFormat, so the real staged status is
+            // applied explicitly right after insert.
+            $this->db->connection()->table('transactions')
+                ->where('id', $transactionId)
+                ->where('user_id', $user->id)
+                ->update(['status' => self::toString($row->cleared_status)]);
+
+            $this->sourceMapWriter->record(
+                $user,
+                new SourceMapKey($sourceProduct, 'transaction', self::toString($row->source_external_id)),
+                'transaction',
+                $transactionId,
+                [
+                    'description' => $description ?? '',
+                    'amount_minor' => (string) self::toInt($row->amount_minor),
+                ],
+            );
+
+            $inserted++;
+
+            if ((bool) $row->is_split_parent && $this->createSplitLegs($runId, $user, $row, $transactionId, $categoryIdMap)) {
+                $splitsCreated++;
+            }
+
+            $this->mapPayeeToCounterparty($runId, $user, $sourceProduct, $row, $newCanonicals[$idx], $payeeNameMap, $resolvedPayees);
+        }
+
+        return ['inserted' => $inserted, 'splits' => $splitsCreated];
+    }
+
+    /**
+     * @param  array<string, string>  $payeeNameMap
+     * @param  array<string, true>  $resolvedPayees
+     */
+    private function mapPayeeToCounterparty(
+        int $runId,
+        User $user,
+        string $sourceProduct,
+        stdClass $row,
+        CanonicalTransaction $canonical,
+        array $payeeNameMap,
+        array &$resolvedPayees,
+    ): void {
+        $payeeExternalId = $row->payee_source_external_id;
+        if (
+            ! is_string($payeeExternalId)
+            || $payeeExternalId === ''
+            || $canonical->counterpartyId === null
+            || isset($resolvedPayees[$payeeExternalId])
+        ) {
+            return;
+        }
+
+        $resolvedPayees[$payeeExternalId] = true;
+
+        $this->sourceMapWriter->record(
+            $user,
+            new SourceMapKey($sourceProduct, 'payee', $payeeExternalId),
+            'counterparty',
+            $canonical->counterpartyId,
+            ['name' => $payeeNameMap[$payeeExternalId] ?? ''],
+        );
+
+        $this->db->connection()->table('migration_staging_payees')
+            ->where('user_id', $user->id)
+            ->where('migration_run_id', $runId)
+            ->where('source_external_id', $payeeExternalId)
+            ->update([
+                'resolution_status' => 'mapped',
+                'resolved_counterparty_id' => $canonical->counterpartyId,
+            ]);
     }
 
     /**
@@ -546,7 +600,7 @@ final class PromoteStagingToDomain
         $accountExternalId = self::toString($row->account_source_external_id);
         $accountId = $accountIdMap[$accountExternalId] ?? null;
         if ($accountId === null) {
-            throw new RuntimeException("Migration promote: no resolved account for staged transaction account '{$accountExternalId}'.");
+            throw new UnresolvedStagedAccountException($accountExternalId);
         }
 
         $amountMinor = self::toInt($row->amount_minor);
@@ -715,7 +769,7 @@ final class PromoteStagingToDomain
         /** @var stdClass $row */
         foreach ($rows as $row) {
             $categoryExternalId = self::toString($row->category_source_external_id);
-            $resolved = $this->sourceMapWriter->resolve($user, $sourceProduct, 'goal', $categoryExternalId);
+            $resolved = $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, 'goal', $categoryExternalId));
             if ($resolved !== null) {
                 continue;
             }
@@ -750,10 +804,7 @@ final class PromoteStagingToDomain
 
             $this->sourceMapWriter->record(
                 $user,
-                $sourceProduct,
-                'goal',
-                $categoryExternalId,
-                null,
+                new SourceMapKey($sourceProduct, 'goal', $categoryExternalId),
                 'goal',
                 $goal->id,
                 [
