@@ -22,7 +22,7 @@
 
 @php
     $tint = $tintFor($alert);
-    $isExpense = $alert->direction === 'expense';
+    $isExpense = $alert->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value;
     // Whether the charge moved "up" (more spend / more income) relative
     // to the baseline — drives the arrow glyph + large-charge chip tint.
     $latestMinor = $alert->latestAmount->toMinor();

@@ -6,6 +6,7 @@ namespace Modules\Anomaly\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Anomaly\Models\AnomalyAlertTransition;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 
 // The default state encodes a "user acknowledged an open alert"
 // transition. Callers override `from_state` / `to_state` /
@@ -25,8 +26,8 @@ final class AnomalyAlertTransitionFactory extends Factory
         return [
             'user_id' => null,
             'anomaly_alert_id' => null,
-            'from_state' => 'open',
-            'to_state' => 'acknowledged',
+            'from_state' => AnomalyAlertState::Open->value,
+            'to_state' => AnomalyAlertState::Acknowledged->value,
             'transition_reason' => 'user_action',
             'actor' => 'user',
             'transitioned_at' => $this->faker->dateTimeBetween('-30 days', 'now'),

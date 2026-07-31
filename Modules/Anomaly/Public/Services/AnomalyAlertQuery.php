@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Modules\Anomaly\Internal\Mapping\AnomalyAlertDtoMapper;
 use Modules\Anomaly\Public\Dto\AnomalyAlertDto;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -59,7 +60,7 @@ final readonly class AnomalyAlertQuery
      */
     public function historyForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
     {
-        return $this->scoped($user, ['acknowledged'], $cursorId, $limit);
+        return $this->scoped($user, [AnomalyAlertState::Acknowledged->value], $cursorId, $limit);
     }
 
     /**
@@ -67,7 +68,7 @@ final readonly class AnomalyAlertQuery
      */
     public function dismissedForUser(User $user, ?int $cursorId = null, int $limit = self::PAGE_SIZE_WITH_LOOKAHEAD): array
     {
-        return $this->scoped($user, ['dismissed'], $cursorId, $limit);
+        return $this->scoped($user, [AnomalyAlertState::Dismissed->value], $cursorId, $limit);
     }
 
     public function openCountForUser(User $user): int
@@ -195,9 +196,9 @@ final readonly class AnomalyAlertQuery
     private function applyOpenStateFilter(Builder $query): void
     {
         $now = $this->clock->now()->toDateTimeString();
-        $query->where('state', 'open')
+        $query->where('state', AnomalyAlertState::Open->value)
             ->orWhere(function (Builder $q) use ($now): void {
-                $q->where('state', 'snoozed')
+                $q->where('state', AnomalyAlertState::Snoozed->value)
                     ->whereNotNull('snoozed_until')
                     ->where('snoozed_until', '<=', $now);
             });

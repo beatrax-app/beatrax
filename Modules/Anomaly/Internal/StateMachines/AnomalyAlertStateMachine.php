@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Anomaly\Internal\StateMachines;
 
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\StateMachine\GuardedStateMachine;
 use Throwable;
@@ -37,18 +38,18 @@ final class AnomalyAlertStateMachine extends GuardedStateMachine
         $this->transitionRow(self::toInt($alert->id), $toState, $reason, $actor, $notes, $extraColumns);
     }
 
-    // `dismissed => [open]` is the one diverging undo edge: a user who
-    // dismissed an anomaly "as expected" can re-open it. `acknowledged` is
-    // terminal (empty target array).
     /** @return array<string, list<string>> */
     protected function allowedTransitions(): array
     {
-        return [
-            'open' => ['acknowledged', 'snoozed', 'dismissed'],
-            'acknowledged' => [],
-            'snoozed' => ['open', 'acknowledged', 'dismissed'],
-            'dismissed' => ['open'],
-        ];
+        $map = [];
+        foreach (AnomalyAlertState::cases() as $state) {
+            $map[$state->value] = array_map(
+                static fn (AnomalyAlertState $next): string => $next->value,
+                $state->allowedNext(),
+            );
+        }
+
+        return $map;
     }
 
     protected function table(): string

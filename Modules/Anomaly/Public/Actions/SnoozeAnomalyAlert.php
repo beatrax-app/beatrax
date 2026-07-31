@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use InvalidArgumentException;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertSnoozed;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -57,7 +58,7 @@ final class SnoozeAnomalyAlert
         // offset), so a raw getTimestamp() comparison against the
         // caller's $until could spuriously differ on a genuine re-snooze.
         if (
-            $alert->state === 'snoozed'
+            $alert->state === AnomalyAlertState::Snoozed->value
             && $alert->snoozed_until !== null
             && $alert->snoozed_until->toDateTimeString() === $untilString
         ) {
@@ -66,7 +67,7 @@ final class SnoozeAnomalyAlert
 
         $this->stateMachine->transition(
             $alert,
-            'snoozed',
+            AnomalyAlertState::Snoozed->value,
             'user_action',
             'user',
             'snoozed_until='.$untilString,

@@ -11,10 +11,12 @@ use Illuminate\Database\QueryException;
 use Modules\Anomaly\Internal\Detectors\DuplicateChargeDetector;
 use Modules\Anomaly\Internal\Detectors\FirstTimeMerchantDetector;
 use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertOpened;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Enums\TransactionType;
 
 /**
  * @link ../../../.docs/features/anomaly/architecture.md
@@ -46,7 +48,7 @@ final readonly class AnomalyEvaluator
 
         $sensitivity = self::toInt($user->anomaly_sensitivity_percent, 50);
         $minFloor = self::toInt($user->anomaly_min_amount_minor, 1000);
-        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense')->value;
+        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
 
         $reasons = [];
         $baselineMinor = null;
@@ -102,7 +104,7 @@ final readonly class AnomalyEvaluator
             $alertId = $this->db->connection()->table('anomaly_alerts')->insertGetId([
                 'user_id' => $user->id,
                 'transaction_id' => $transactionId,
-                'state' => 'open',
+                'state' => AnomalyAlertState::Open->value,
                 'direction' => $direction,
                 'reasons' => json_encode($reasons),
                 'baseline_amount_minor' => $baselineMinor,
