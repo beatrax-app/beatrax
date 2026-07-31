@@ -35,6 +35,8 @@ final class PaletteSearchEndpoint extends Component
 
     public int $totalCount = 0;
 
+    private const MIN_QUERY_LENGTH = 2;
+
     public function search(
         string $q,
         CurrentUser $currentUser,
@@ -42,43 +44,93 @@ final class PaletteSearchEndpoint extends Component
     ): void {
         $this->query = $q;
 
-        if (strlen($q) < 2) {
-            $this->transactionHits = [];
-            $this->entityHits = [];
-            $this->totalCount = 0;
+        if (strlen($q) < self::MIN_QUERY_LENGTH) {
+            $this->resetResults();
 
             return;
         }
 
-        $user = $currentUser->user();
-        $sections = $provider->paletteSections($user, $q);
+        $sections = $provider->paletteSections($currentUser->user(), $q);
 
-        /** @var list<array{id: int, counterpartyName: ?string, amount: string, snippet: ?string, url: string}> $txHits */
-        $txHits = [];
-        foreach ($sections['transactions'] as $row) {
-            $txHits[] = [
-                'id' => isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : 0,
-                'counterpartyName' => isset($row['counterpartyName']) && is_string($row['counterpartyName']) ? $row['counterpartyName'] : null,
-                'amount' => isset($row['amount']) && is_string($row['amount']) ? $row['amount'] : '',
-                'snippet' => isset($row['snippet']) && is_string($row['snippet']) ? $row['snippet'] : null,
-                'url' => isset($row['url']) && is_string($row['url']) ? $row['url'] : '',
-            ];
-        }
-
-        /** @var list<array{id: int, type: string, label: string, url: string}> $entityHits */
-        $entityHits = [];
-        foreach ($sections['entities'] as $row) {
-            $entityHits[] = [
-                'id' => isset($row['id']) && is_numeric($row['id']) ? (int) $row['id'] : 0,
-                'type' => isset($row['type']) && is_string($row['type']) ? $row['type'] : '',
-                'label' => isset($row['label']) && is_string($row['label']) ? $row['label'] : '',
-                'url' => isset($row['url']) && is_string($row['url']) ? $row['url'] : '',
-            ];
-        }
-
-        $this->transactionHits = $txHits;
-        $this->entityHits = $entityHits;
+        $this->transactionHits = $this->normalizeTransactionHits($sections['transactions']);
+        $this->entityHits = $this->normalizeEntityHits($sections['entities']);
         $this->totalCount = $sections['totalCount'];
+    }
+
+    private function resetResults(): void
+    {
+        $this->transactionHits = [];
+        $this->entityHits = [];
+        $this->totalCount = 0;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array{id: int, counterpartyName: ?string, amount: string, snippet: ?string, url: string}>
+     */
+    private function normalizeTransactionHits(array $rows): array
+    {
+        $hits = [];
+        foreach ($rows as $row) {
+            $hits[] = [
+                'id' => $this->intField($row, 'id'),
+                'counterpartyName' => $this->nullableString($row, 'counterpartyName'),
+                'amount' => $this->stringOrEmpty($row, 'amount'),
+                'snippet' => $this->nullableString($row, 'snippet'),
+                'url' => $this->stringOrEmpty($row, 'url'),
+            ];
+        }
+
+        return $hits;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array{id: int, type: string, label: string, url: string}>
+     */
+    private function normalizeEntityHits(array $rows): array
+    {
+        $hits = [];
+        foreach ($rows as $row) {
+            $hits[] = [
+                'id' => $this->intField($row, 'id'),
+                'type' => $this->stringOrEmpty($row, 'type'),
+                'label' => $this->stringOrEmpty($row, 'label'),
+                'url' => $this->stringOrEmpty($row, 'url'),
+            ];
+        }
+
+        return $hits;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function intField(array $row, string $key): int
+    {
+        $value = $row[$key] ?? null;
+
+        return is_numeric($value) ? (int) $value : 0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function stringOrEmpty(array $row, string $key): string
+    {
+        $value = $row[$key] ?? null;
+
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function nullableString(array $row, string $key): ?string
+    {
+        $value = $row[$key] ?? null;
+
+        return is_string($value) ? $value : null;
     }
 
     public function render(ViewFactory $views): View

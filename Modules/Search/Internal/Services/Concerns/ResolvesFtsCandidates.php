@@ -1,0 +1,191 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Search\Internal\Services\Concerns;
+
+use Modules\Core\Models\User;
+use Modules\Search\Public\Dto\SearchFilters;
+use stdClass;
+
+// The candidate-id half of a search: turn the text query into a bounded
+// id list via FTS5 MATCH, or — for queries too short for FTS5 — the
+// decrypt-then-substring LIKE fallback, plus the highlight/snippet load
+// that reuses the same MATCH expression.
+/**
+ * @link ../../../../../.docs/features/search/architecture.md
+ */
+trait ResolvesFtsCandidates
+{
+    // Returns null for the empty-text (filters-only) branch to signal
+    // "apply no id restriction"; otherwise a bounded list of matched
+    // ids (possibly empty) via FTS5 MATCH or the LIKE fallback.
+    /**
+     * @return list<int>|null
+     */
+    private function resolveCandidateIds(User $user, string $textQuery, SearchFilters $filters): ?array
+    {
+        if ($textQuery === '') {
+            return null;
+        }
+
+        // Short words (1-2 chars) still exist in the FTS body and pass
+        // through naturally, but can't be explicit MATCH predicates; a
+        // query with no >=3-char word falls back to the LIKE scan.
+        $ftsWords = $this->significantFtsWords($textQuery);
+        if (strlen($textQuery) < 3 || $ftsWords === []) {
+            return $this->likeFallbackIds($user, $textQuery, $filters);
+        }
+
+        return self::toIntList(
+            $this->db->connection()
+                ->table('transaction_search_fts')
+                ->whereRaw('transaction_search_fts MATCH ?', [$this->ftsMatchExpression($ftsWords)])
+                ->join(
+                    'transaction_search_docs',
+                    'transaction_search_docs.transaction_id',
+                    '=',
+                    'transaction_search_fts.rowid',
+                )
+                ->where('transaction_search_docs.user_id', $user->id)
+                ->pluck('transaction_search_fts.rowid')
+                ->all(),
+        );
+    }
+
+    // Fallback for queries too short for FTS5. Narrows the candidate set
+    // in SQL on cheap plaintext dimensions only, then decrypts +
+    // substring-matches in PHP (a no-op pass-through when disabled).
+    /**
+     * @return list<int>
+     */
+    private function likeFallbackIds(User $user, string $textQuery, SearchFilters $filters): array
+    {
+        $query = $this->db->connection()
+            ->table('transactions')
+            ->where('transactions.user_id', $user->id);
+
+        $this->applyFilters($query, $user, $filters);
+
+        /** @var iterable<stdClass> $candidates */
+        $candidates = $query
+            ->orderByDesc('transactions.posted_at')
+            ->orderByDesc('transactions.id')
+            ->limit(self::LIKE_FALLBACK_CANDIDATE_CAP)
+            ->get(['transactions.id', 'transactions.counterparty_name', 'transactions.description']);
+
+        $needle = mb_strtolower($textQuery);
+        $userId = $user->id;
+        $encryptionEnabled = $this->encryptionService->isEnabled($userId);
+
+        $matched = [];
+        foreach ($candidates as $row) {
+            $haystack = $this->decryptedRowHaystack($row, $userId, $encryptionEnabled);
+            if ($haystack !== null && str_contains($haystack, $needle)) {
+                $matched[] = self::toInt($row->id);
+            }
+        }
+
+        return $matched;
+    }
+
+    // Lowercased "name\0description" for one candidate row, or null when
+    // encryption is on and either field is still ciphertext (rekey/epoch
+    // gap, or a locked app-lock) — the NUL join can never be spanned by
+    // a user needle, so a hit lies wholly within one field.
+    private function decryptedRowHaystack(stdClass $row, int $userId, bool $encryptionEnabled): ?string
+    {
+        $nameResult = $this->decryptField('transactions', 'counterparty_name', $row->counterparty_name ?? null, $userId);
+        $descriptionResult = $this->decryptField('transactions', 'description', $row->description ?? null, $userId);
+
+        if ($encryptionEnabled && (! $nameResult['decrypted'] || ! $descriptionResult['decrypted'])) {
+            return null;
+        }
+
+        return mb_strtolower($nameResult['value'])."\x00".mb_strtolower($descriptionResult['value']);
+    }
+
+    // Empty non-null stored values short-circuit to a decrypted pass so
+    // callers never feed a blank blob to the codec.
+    /**
+     * @return array{value: string, decrypted: bool}
+     */
+    private function decryptField(string $table, string $column, mixed $stored, int $userId): array
+    {
+        if (! is_string($stored) || $stored === '') {
+            return ['value' => '', 'decrypted' => true];
+        }
+
+        return $this->codec->decryptValue($table, $column, $stored, $userId, ($this->session)());
+    }
+
+    /**
+     * @param  list<int>  $rowIds
+     * @return array<int, stdClass>
+     */
+    private function loadHighlights(User $user, string $textQuery, array $rowIds): array
+    {
+        if ($rowIds === []) {
+            return [];
+        }
+
+        $ftsWords = $this->significantFtsWords($textQuery);
+        if ($ftsWords === []) {
+            return [];
+        }
+        $ftsMatch = $this->ftsMatchExpression($ftsWords);
+
+        $highlightRows = $this->db->connection()
+            ->table('transaction_search_fts')
+            ->selectRaw(
+                'transaction_search_fts.rowid,
+                 highlight(transaction_search_fts, 0, ?, ?) AS highlighted_body,
+                 snippet(transaction_search_fts, 0, ?, ?, ?, 12) AS snippet_body',
+                [self::MARK_START, self::MARK_END, self::MARK_START, self::MARK_END, '…'],
+            )
+            ->whereRaw('transaction_search_fts MATCH ?', [$ftsMatch])
+            ->join(
+                'transaction_search_docs',
+                'transaction_search_docs.transaction_id',
+                '=',
+                'transaction_search_fts.rowid',
+            )
+            ->where('transaction_search_docs.user_id', $user->id)
+            ->whereIn('transaction_search_fts.rowid', $rowIds)
+            ->get();
+
+        /** @var array<int, stdClass> $result */
+        $result = [];
+        foreach ($highlightRows as $hl) {
+            $result[self::toInt($hl->rowid)] = $hl;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<string> the query's words of at least 3 chars
+     */
+    private function significantFtsWords(string $textQuery): array
+    {
+        return array_values(array_filter(
+            explode(' ', trim($textQuery)),
+            static fn (string $w): bool => strlen($w) >= 3,
+        ));
+    }
+
+    // Each word is double-quote-wrapped with embedded quotes doubled,
+    // the standard FTS5 MATCH escaping, then AND-joined.
+    /**
+     * @param  list<string>  $ftsWords
+     */
+    private function ftsMatchExpression(array $ftsWords): string
+    {
+        $escaped = array_map(
+            static fn (string $w): string => '"'.str_replace('"', '""', $w).'"',
+            $ftsWords,
+        );
+
+        return implode(' AND ', $escaped);
+    }
+}
