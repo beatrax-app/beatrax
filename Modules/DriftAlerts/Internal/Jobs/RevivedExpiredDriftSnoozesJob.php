@@ -12,8 +12,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
-use Modules\DriftAlerts\Internal\StateMachines\InvalidStateTransitionException;
 use Modules\DriftAlerts\Models\DriftAlert;
 use stdClass;
 
