@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Migration\Internal\Parsers\Support;
 
+use Modules\Migration\Public\Enums\MigrationSourceProduct;
 use Modules\Migration\Public\Exceptions\UnrecognizedMigrationFileException;
 
 /**
@@ -28,7 +29,7 @@ final class YnabCsvColumnMap
      */
     public function assertRegisterHeader(array $header, string $format): void
     {
-        $extra = $format === 'ynab4' ? self::REGISTER_YNAB4_EXTRA_HEADERS : self::REGISTER_NYNAB_EXTRA_HEADERS;
+        $extra = $format === MigrationSourceProduct::Ynab4->value ? self::REGISTER_YNAB4_EXTRA_HEADERS : self::REGISTER_NYNAB_EXTRA_HEADERS;
         $this->assertHeaderContains($header, [...self::REGISTER_COMMON_HEADERS, ...$extra], 'Register.csv');
     }
 
@@ -50,7 +51,7 @@ final class YnabCsvColumnMap
         // nYNAB splits the single combined "Category Group/Category" cell
         // (e.g. "Frequent: Groceries") on the first ':'. A transfer row
         // resolves to [null, ''].
-        if ($format === 'ynab4') {
+        if ($format === MigrationSourceProduct::Ynab4->value) {
             $group = trim($row['Master Category'] ?? '');
             $name = trim($row['Sub Category'] ?? '');
         } else {

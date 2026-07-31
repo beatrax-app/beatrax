@@ -15,6 +15,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\PreviewSummary;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -78,7 +79,7 @@ final class PreviewSummaryBuilder
         // migration_runs.status rather than an all-zero-counts heuristic —
         // only a 'discarded' run has had its staging deliberately truncated;
         // every other status means staging genuinely completed.
-        if (self::toString($run->status) === 'discarded') {
+        if (self::toString($run->status) === MigrationRunStatus::Discarded->value) {
             throw new MigrationRunNotParsedException($migrationRunId);
         }
 

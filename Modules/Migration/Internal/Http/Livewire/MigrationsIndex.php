@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
 
 /**
  * @link ../../../../../.docs/features/migration/architecture.md
@@ -25,7 +26,7 @@ final class MigrationsIndex extends Component
         // phpstan-strict-rules' staticMethod.dynamicCall false positive.
         $runs = $db->connection()->table('migration_runs')
             ->where('user_id', $userId)
-            ->where('status', '!=', 'discarded')
+            ->where('status', '!=', MigrationRunStatus::Discarded->value)
             ->orderByDesc('id')
             ->get(['id', 'source_product', 'status', 'created_at']);
 

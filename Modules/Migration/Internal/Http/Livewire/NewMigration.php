@@ -17,6 +17,8 @@ use Modules\Migration\Internal\Parsers\Support\ZipExtractor;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Actions\CheckForUpdates;
 use Modules\Migration\Public\Actions\StartMigrationRun;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
+use Modules\Migration\Public\Enums\MigrationSourceProduct;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -37,7 +39,7 @@ final class NewMigration extends Component
     public ?TemporaryUploadedFile $file = null;
 
     #[Validate('required|in:ynab4,nynab,actual')]
-    public string $sourceProduct = 'ynab4';
+    public string $sourceProduct = MigrationSourceProduct::Ynab4->value;
 
     // Set (and the format <select> locked) when mounted with a
     // ?reconcile_of={run} query parameter that resolves to one of this
@@ -61,7 +63,7 @@ final class NewMigration extends Component
         $priorRun = MigrationRun::query()
             ->where('id', (int) $reconcileOfParam)
             ->where('user_id', $currentUser->user()->id)
-            ->where('status', 'confirmed')
+            ->where('status', MigrationRunStatus::Confirmed->value)
             ->first();
 
         if ($priorRun === null) {

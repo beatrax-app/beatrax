@@ -12,6 +12,7 @@ use Modules\Migration\Internal\Parsers\Ynab4Parser;
 use Modules\Migration\Internal\Pipeline\StagingWriter;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Contracts\ParsesMigrationSource;
+use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Throwable;
 
 /**
@@ -45,7 +46,7 @@ final class StartMigrationRun
         $run = MigrationRun::create([
             'user_id' => $user->id,
             'source_product' => $sourceProduct,
-            'status' => 'parsed',
+            'status' => MigrationRunStatus::Parsed->value,
             'original_filename' => $originalFilename,
         ]);
 
