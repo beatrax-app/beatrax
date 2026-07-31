@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Counterparties\Models\Counterparty;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
@@ -88,11 +89,11 @@ final class CounterpartyProfile extends Component
             default => 'counterparties::livewire.profile-tabs.unknown',
         };
 
-        $supportResource = in_array($profile->type, ['merchant', 'government'], true)
+        $supportResource = in_array($profile->type, [CounterpartyType::Merchant->value, CounterpartyType::Government->value], true)
             ? $supportResources->forCounterparty($profile->displayName, $profile->type)
             : null;
 
-        $recurringSeries = in_array($profile->type, ['merchant', 'bank', 'government'], true)
+        $recurringSeries = in_array($profile->type, [CounterpartyType::Merchant->value, CounterpartyType::Bank->value, CounterpartyType::Government->value], true)
             ? $recurring->approvedSeriesForCounterparty($profile->id, $user)
             : [];
 

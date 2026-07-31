@@ -17,7 +17,7 @@
 --}}
 @php
     use Illuminate\Support\Number;
-    $isSelf = $profile->type === 'self_account';
+    $isSelf = $profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::SelfAccount->value;
 @endphp
 
 <div style="padding: var(--space-6) var(--space-4); max-width: 980px; margin: 0 auto;" class="space-y-6">
@@ -49,7 +49,7 @@
                  class="cp-profile-hero-stats">
             <div class="frame frame-tight">
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-                    @if ($profile->type === 'personal') Net received @else 12-month total @endif
+                    @if ($profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::Personal->value) Net received @else 12-month total @endif
                 </div>
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                     {{ Number::currency(abs($profile->total12mMinor) / 100, 'EUR', 'nl') }}
@@ -106,7 +106,7 @@
                     ['key' => 'aliases', 'label' => 'Aliases'],
                 ],
             ];
-            $tabs = $tabBars[$profile->type] ?? $tabBars['unknown'];
+            $tabs = $tabBars[$profile->type] ?? $tabBars[\Modules\Counterparties\Public\Enums\CounterpartyType::Unknown->value];
             $tabNote = match ($profile->type) {
                 'personal' => '— no funding chains for personal contacts',
                 'bank' => "— bank-fee counterparty doesn't generate funding chains",

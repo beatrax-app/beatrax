@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
@@ -280,7 +281,7 @@ final class GoalsPage extends Component
             return $db->connection()
                 ->table('pots')
                 ->where('user_id', $user->id)
-                ->where('status', 'active')
+                ->where('status', GoalStatus::Active->value)
                 ->where(static function (Builder $q) use ($selectedAccountId): void {
                     if ($selectedAccountId !== null) {
                         $q->where('account_id', $selectedAccountId);
@@ -298,7 +299,7 @@ final class GoalsPage extends Component
                     $db->connection()
                         ->table('pots')
                         ->where('user_id', $user->id)
-                        ->where('status', 'active')
+                        ->where('status', GoalStatus::Active->value)
                         ->where('goal_id', $this->editGoalId)
                         ->select(['id', 'name', 'account_id', 'goal_id'])
                 );

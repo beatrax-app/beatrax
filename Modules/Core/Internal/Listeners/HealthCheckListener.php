@@ -11,6 +11,7 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -107,7 +108,7 @@ final class HealthCheckListener
             SystemAlert::create([
                 'user_id' => null,
                 'kind' => $kind,
-                'severity' => 'warning',
+                'severity' => SystemAlertSeverity::Warning->value,
                 'message' => $message,
                 'metadata' => $metadata,
             ]);

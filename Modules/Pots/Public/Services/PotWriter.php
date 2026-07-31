@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Models\Pot;
+use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 
@@ -75,7 +76,7 @@ final class PotWriter
                 'category_id' => $categoryId,
                 'name' => $name,
                 'currency' => $currency,
-                'status' => 'active',
+                'status' => PotStatus::Active->value,
             ]);
 
             if ($minor !== null) {
@@ -321,7 +322,7 @@ final class PotWriter
                 ]);
             }
 
-            $pot->status = 'archived';
+            $pot->status = PotStatus::Archived->value;
             $pot->save();
         });
     }
@@ -332,7 +333,7 @@ final class PotWriter
         $pot = Pot::query()
             ->withoutGlobalScope(UserScope::class)
             ->where('user_id', $user->id)
-            ->where('status', 'archived')
+            ->where('status', PotStatus::Archived->value)
             ->find($potId);
 
         if (! $pot instanceof Pot) {
@@ -347,7 +348,7 @@ final class PotWriter
                 ->table('pots')
                 ->where('user_id', $user->id)
                 ->where('goal_id', $pot->goal_id)
-                ->where('status', 'active')
+                ->where('status', PotStatus::Active->value)
                 ->where('id', '!=', $pot->id)
                 ->exists();
 
@@ -356,7 +357,7 @@ final class PotWriter
             }
         }
 
-        $pot->status = 'active';
+        $pot->status = PotStatus::Active->value;
         $pot->save();
     }
 
@@ -379,7 +380,7 @@ final class PotWriter
         return Pot::query()
             ->withoutGlobalScope(UserScope::class)
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->find($potId);
     }
 
@@ -447,7 +448,7 @@ final class PotWriter
             ->table('pots')
             ->where('user_id', $user->id)
             ->where('goal_id', $goalId)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->exists();
 
         if ($alreadyLinked) {

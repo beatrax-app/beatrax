@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Modules\Budgets\Models\EnvelopeSetting;
+use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -144,7 +145,7 @@ final class EnvelopeWriter
     {
         $this->assertCategoryAccessible($user, $categoryId);
 
-        if (! in_array($mode, ['reduce_to_budget', 'carry_negative'], true)) {
+        if (! in_array($mode, [OverspendMode::ReduceToBudget->value, OverspendMode::CarryNegative->value], true)) {
             throw new InvalidArgumentException('Invalid overspend mode.');
         }
 
@@ -250,7 +251,7 @@ final class EnvelopeWriter
             $created = EnvelopeSetting::query()->withoutGlobalScope(UserScope::class)->create([
                 'user_id' => $user->id,
                 'category_id' => $categoryId,
-                'overspend_mode' => 'reduce_to_budget',
+                'overspend_mode' => OverspendMode::ReduceToBudget->value,
                 'threshold_percent' => $thresholdPercent,
             ]);
 
@@ -261,7 +262,7 @@ final class EnvelopeWriter
                 dirtyFields: [
                     'user_id' => $user->id,
                     'category_id' => $categoryId,
-                    'overspend_mode' => 'reduce_to_budget',
+                    'overspend_mode' => OverspendMode::ReduceToBudget->value,
                     'threshold_percent' => $thresholdPercent,
                 ],
             );

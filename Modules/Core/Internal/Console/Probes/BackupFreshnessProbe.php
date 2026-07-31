@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Services\UserDataPathService;
 use Throwable;
 
@@ -165,7 +166,7 @@ final class BackupFreshnessProbe implements Probe
             SystemAlert::create([
                 'user_id' => null,
                 'kind' => 'backup_overdue',
-                'severity' => 'warning',
+                'severity' => SystemAlertSeverity::Warning->value,
                 'message' => $hoursOld === null
                     ? 'No verified backups found under the backups directory.'
                     : sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),

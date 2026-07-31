@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Counterparties\Models\Counterparty;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -271,7 +272,7 @@ final readonly class CounterpartyProfileQuery
      */
     public function taxYearBreakdown(Counterparty $cp): Collection
     {
-        if ($cp->type !== 'government') {
+        if ($cp->type !== CounterpartyType::Government->value) {
             return new Collection;
         }
 

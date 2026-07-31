@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -80,28 +81,28 @@ final class DemoCounterpartiesSeeder
             'merchantName' => null,
         ],
         [
-            'type' => 'self_account',
+            'type' => CounterpartyType::SelfAccount->value,
             'slug' => 'self-asn-checking',
             'displayName' => 'My ASN checking account',
             'iban' => 'NL57ASNB0123456789',
             'merchantName' => null,
         ],
         [
-            'type' => 'self_account',
+            'type' => CounterpartyType::SelfAccount->value,
             'slug' => 'self-paypal-wallet',
             'displayName' => 'My PayPal wallet',
             'iban' => 'PAYPAL-DEMO-1',
             'merchantName' => null,
         ],
         [
-            'type' => 'personal',
+            'type' => CounterpartyType::Personal->value,
             'slug' => 'maria-van-buren',
             'displayName' => 'Maria van Buren',
             'iban' => 'NL51ABNA0987654321',
             'merchantName' => null,
         ],
         [
-            'type' => 'personal',
+            'type' => CounterpartyType::Personal->value,
             'slug' => 'jeroen-de-vries',
             'displayName' => 'Jeroen de Vries',
             'iban' => 'NL92RABO0001234567',

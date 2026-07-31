@@ -6,6 +6,7 @@ namespace Modules\Pots\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Pots\Models\Pot;
+use Modules\Pots\Public\Enums\PotStatus;
 
 // user_id and account_id are left null in the default definition so callers
 // always supply them explicitly — silently assuming user_id=1 creates
@@ -28,7 +29,7 @@ final class PotFactory extends Factory
             'category_id' => null,
             'name' => $this->faker->word(),
             'currency' => 'EUR',
-            'status' => 'active',
+            'status' => PotStatus::Active->value,
         ];
     }
 }

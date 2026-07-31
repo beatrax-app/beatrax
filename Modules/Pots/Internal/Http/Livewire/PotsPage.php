@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
@@ -460,7 +461,7 @@ final class PotsPage extends Component
         $linkedGoalIds = $db->connection()
             ->table('pots')
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->whereNotNull('goal_id')
             ->pluck('goal_id')
             ->toArray();
@@ -468,7 +469,7 @@ final class PotsPage extends Component
         $goalsForPickerQuery = $db->connection()
             ->table('goals')
             ->where('user_id', $user->id)
-            ->where('status', 'active')
+            ->where('status', PotStatus::Active->value)
             ->orderBy('name');
 
         if ($this->editPotId !== 0) {

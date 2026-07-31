@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Counterparties\Models\Counterparty;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
@@ -132,7 +133,7 @@ final class CounterpartyTriage extends Component
             return;
         }
 
-        $allowedTypes = ['merchant', 'personal', 'bank', 'government'];
+        $allowedTypes = [CounterpartyType::Merchant->value, CounterpartyType::Personal->value, CounterpartyType::Bank->value, CounterpartyType::Government->value];
         $name = trim($name);
         if ($name === '' || ! in_array($type, $allowedTypes, true)) {
             return;
@@ -141,7 +142,7 @@ final class CounterpartyTriage extends Component
         // Routes display_name/merchant_name through the codec before
         // save(), mirroring acceptSuggestion() above.
         $attrs = ['display_name' => $name];
-        if ($type === 'merchant') {
+        if ($type === CounterpartyType::Merchant->value) {
             $attrs['merchant_name'] = $name;
         }
         $encrypted = $codec->encryptAttrs('counterparties', $attrs, $currentUser->id(), $session);
@@ -150,7 +151,7 @@ final class CounterpartyTriage extends Component
             ? $encrypted['display_name']
             : $name;
         $current->type = $type;
-        if ($type === 'merchant') {
+        if ($type === CounterpartyType::Merchant->value) {
             $current->merchant_name = is_string($encrypted['merchant_name'] ?? null)
                 ? $encrypted['merchant_name']
                 : $name;
