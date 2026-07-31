@@ -39,7 +39,7 @@
                 <div class="flex items-center gap-3">
                     <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transaction</h1>
                     {{-- Cleared/uncleared/reconciled badge + toggle (SC-1, D-11). --}}
-                    <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? 'cleared']" />
+                    <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                 </div>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ CarbonImmutable::parse($transaction->posted_at)->format('j M Y') }}

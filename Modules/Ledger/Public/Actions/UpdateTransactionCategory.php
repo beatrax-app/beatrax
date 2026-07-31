@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\UpdatesTransactionCategory;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 
 // Defence in depth: the category — when not null — must either belong
 // to the user or be a global default-tree row. Without this, the FK
@@ -29,7 +30,7 @@ final class UpdateTransactionCategory implements UpdatesTransactionCategory
             ->where('user_id', $user->id)
             ->value('status');
 
-        if ($status === 'reconciled') {
+        if ($status === ClearedStatus::Reconciled->value) {
             return 0;
         }
 

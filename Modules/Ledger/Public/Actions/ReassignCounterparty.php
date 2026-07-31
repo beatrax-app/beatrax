@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 
 /**
  * @link ../../../../.docs/features/ledger/architecture.md
@@ -28,7 +29,7 @@ final class ReassignCounterparty implements ReassignsCounterparty
             return 0;
         }
 
-        if ($row->status === 'reconciled') {
+        if ($row->status === ClearedStatus::Reconciled->value) {
             return 0;
         }
 
