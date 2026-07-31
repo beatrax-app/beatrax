@@ -28,9 +28,7 @@ final class CurrencyModeApplier
      * @param  string  $metric  'spend' | 'income' | 'net'
      * @param  string  $currencyMode  'base' | 'original'
      * @param  callable(string $currency): list<ReportResultRow>  $queryForCurrency  Re-runs the caller's chosen dimension query, scoped to one settled_currency at a time.
-     * @param  list<int>  $accountIds  the same accounts/categories/counterparties filters the dimension query itself applies, threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows
-     * @param  list<int>  $categoryIds
-     * @param  list<int>  $counterpartyIds
+     * @param  SpendQueryFilters  $filters  the same accounts/categories/counterparties filters the dimension query itself applies, threaded into discoverCurrencies() too, so a filtered report only discovers currencies that can actually produce rows
      */
     public function apply(
         User $user,
@@ -38,11 +36,9 @@ final class CurrencyModeApplier
         string $metric,
         string $currencyMode,
         callable $queryForCurrency,
-        array $accountIds = [],
-        array $categoryIds = [],
-        array $counterpartyIds = [],
+        SpendQueryFilters $filters = new SpendQueryFilters,
     ): ReportResultDto {
-        $currencies = $this->discoverCurrencies($user, $period, $metric, $accountIds, $categoryIds, $counterpartyIds);
+        $currencies = $this->discoverCurrencies($user, $period, $metric, $filters->accountIds, $filters->categoryIds, $filters->counterpartyIds);
 
         return match ($currencyMode) {
             'base' => $this->applyBase($user, $currencies, $queryForCurrency),
