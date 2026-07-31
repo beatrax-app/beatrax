@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Internal\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -103,14 +104,25 @@ final class FingerprintRederiveService
 
         $pendingCount = count($updates);
 
-        if ($pendingCount === 0) {
-            return FingerprintRederiveOutcome::noop($targetVersion);
-        }
+        return match (true) {
+            $pendingCount === 0 => FingerprintRederiveOutcome::noop($targetVersion),
+            ! $apply => FingerprintRederiveOutcome::dryRun($targetVersion, $pendingCount),
+            default => $this->applyUpdates($connection, $updates, $targetVersion, $pendingCount),
+        };
+    }
 
-        if (! $apply) {
-            return FingerprintRederiveOutcome::dryRun($targetVersion, $pendingCount);
-        }
-
+    // Writes every pending fingerprint UPDATE inside one DB transaction,
+    // then reports the applied outcome. Reached only when a collision-free
+    // set of updates exists and the run is not a dry-run.
+    /**
+     * @param  array<int, string>  $updates  Maps transactions.id to the new sha256 fingerprint
+     */
+    private function applyUpdates(
+        ConnectionInterface $connection,
+        array $updates,
+        int $targetVersion,
+        int $pendingCount,
+    ): FingerprintRederiveOutcome {
         $connection->transaction(function () use ($connection, $updates, $targetVersion): void {
             foreach ($updates as $id => $newFingerprint) {
                 $connection->table('transactions')
