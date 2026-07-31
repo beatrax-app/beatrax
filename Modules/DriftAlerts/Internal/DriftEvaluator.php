@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
@@ -32,7 +33,7 @@ final readonly class DriftEvaluator
         if ($series === null) {
             return;
         }
-        if (! in_array($series->state, ['approved', 'cadence_changed'], true)) {
+        if (! in_array($series->state, [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value], true)) {
             return;
         }
 
