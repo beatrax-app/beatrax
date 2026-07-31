@@ -6,44 +6,37 @@
      ONLY when the last attempt did not succeed. --}}
 @if ($enabled)
     <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950" data-testid="open-banking-transparency-panel">
-        <dl class="space-y-3">
-            <div class="flex items-baseline justify-between gap-3">
-                <dt class="text-xs text-slate-500 dark:text-slate-400">Aggregator</dt>
-                <dd class="text-sm text-slate-900 dark:text-slate-100">{{ $aggregator }}</dd>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <dt class="text-xs text-slate-500 dark:text-slate-400">Bank</dt>
-                <dd class="text-sm text-slate-900 dark:text-slate-100">{{ $bankDisplayName }}</dd>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <dt class="text-xs text-slate-500 dark:text-slate-400">Consent status</dt>
-                <dd>
-                    @if ($consentStatus === 'expired')
-                        <span class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300" data-testid="ob-consent-pill">Expired — reconnect</span>
-                    @elseif ($consentStatus === 'expiring')
-                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300" data-testid="ob-consent-pill">Expiring soon</span>
-                    @else
-                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" data-testid="ob-consent-pill">Connected</span>
-                    @endif
-                </dd>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <dt class="text-xs text-slate-500 dark:text-slate-400">What&rsquo;s fetched</dt>
-                <dd class="text-sm text-slate-900 dark:text-slate-100">{{ $whatsFetched }}</dd>
-            </div>
-            <div class="flex items-baseline justify-between gap-3">
-                <dt class="text-xs text-slate-500 dark:text-slate-400">Last successful sync</dt>
-                <dd class="text-sm tabular-nums text-slate-900 dark:text-slate-100" data-testid="ob-last-successful-sync">
-                    {{ $this->lastSuccessfulSyncDisplay() ?? 'Never' }}
-                </dd>
-            </div>
+        <dl class="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-3">
+            <dt class="text-xs text-slate-500 dark:text-slate-400">Aggregator</dt>
+            <dd class="text-right text-sm text-slate-900 dark:text-slate-100">{{ $aggregator }}</dd>
+
+            <dt class="text-xs text-slate-500 dark:text-slate-400">Bank</dt>
+            <dd class="text-right text-sm text-slate-900 dark:text-slate-100">{{ $bankDisplayName }}</dd>
+
+            <dt class="text-xs text-slate-500 dark:text-slate-400">Consent status</dt>
+            <dd class="text-right">
+                @if ($consentStatus === 'expired')
+                    <span class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300" data-testid="ob-consent-pill">Expired — reconnect</span>
+                @elseif ($consentStatus === 'expiring')
+                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300" data-testid="ob-consent-pill">Expiring soon</span>
+                @else
+                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" data-testid="ob-consent-pill">Connected</span>
+                @endif
+            </dd>
+
+            <dt class="text-xs text-slate-500 dark:text-slate-400">What&rsquo;s fetched</dt>
+            <dd class="text-right text-sm text-slate-900 dark:text-slate-100">{{ $whatsFetched }}</dd>
+
+            <dt class="text-xs text-slate-500 dark:text-slate-400">Last successful sync</dt>
+            <dd class="text-right text-sm tabular-nums text-slate-900 dark:text-slate-100" data-testid="ob-last-successful-sync">
+                {{ $this->lastSuccessfulSyncDisplay() ?? 'Never' }}
+            </dd>
+
             @if ($this->lastAttemptFailed())
-                <div class="flex items-baseline justify-between gap-3">
-                    <dt class="text-xs text-slate-500 dark:text-slate-400">Last attempt</dt>
-                    <dd class="text-sm tabular-nums text-rose-600 dark:text-rose-400" data-testid="ob-last-attempt">
-                        {{ $this->lastAttemptDisplay() }} — failed ({{ $lastAttemptStatus === 'consent_failed' ? 'consent expired' : 'error' }})
-                    </dd>
-                </div>
+                <dt class="text-xs text-slate-500 dark:text-slate-400">Last attempt</dt>
+                <dd class="text-right text-sm tabular-nums text-rose-600 dark:text-rose-400" data-testid="ob-last-attempt">
+                    {{ $this->lastAttemptDisplay() }} — failed ({{ $lastAttemptStatus === 'consent_failed' ? 'consent expired' : 'error' }})
+                </dd>
             @endif
         </dl>
 

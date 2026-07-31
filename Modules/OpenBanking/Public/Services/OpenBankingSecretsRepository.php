@@ -151,10 +151,7 @@ class OpenBankingSecretsRepository
     private function readAll(): array
     {
         $absolute = $this->absolutePath();
-        if (! $this->files->exists($absolute)) {
-            return [];
-        }
-        $raw = $this->files->get($absolute);
+        $raw = $this->files->exists($absolute) ? $this->files->get($absolute) : '';
         if ($raw === '') {
             return [];
         }
@@ -189,26 +186,52 @@ class OpenBankingSecretsRepository
     private function writeAtomic(array $data): void
     {
         $absolute = $this->absolutePath();
-        $dir = dirname($absolute);
-        // chmod 0700 is applied ONLY on first create. Subsequent
-        // writes do NOT re-chmod the directory because that would
-        // silently narrow back any permissions an admin widened on
-        // purpose (e.g. for a backup tool that needs read access).
-        if (! is_dir($dir)) {
-            if (! @mkdir($dir, self::DIR_MODE, recursive: true) && ! is_dir($dir)) {
-                throw new SecretsWriteFailed(
-                    "OpenBankingSecretsRepository: could not create parent directory {$dir}."
-                );
-            }
-            if (! @chmod($dir, self::DIR_MODE)) {
-                throw new SecretsWriteFailed(
-                    "OpenBankingSecretsRepository: failed to chmod 0700 on newly-created secrets directory {$dir}."
-                );
-            }
-        }
+        $this->ensureSecretsDirectory(dirname($absolute));
 
+        // Shield the encoded JSON bytes before they ever touch disk —
+        // identity on web/desktop-without-keychain, safeStorage ciphertext
+        // on the desktop bundle.
+        $bytes = $this->shield->protect($this->encodePayload($data, $absolute));
+
+        $tmp = $absolute.'.tmp';
+        $this->writeTempFile($tmp, $bytes);
+
+        if (! $this->performRename($tmp, $absolute)) {
+            @unlink($tmp);
+            throw new SecretsWriteFailed(
+                "OpenBankingSecretsRepository: atomic rename failed from {$tmp} to {$absolute}."
+            );
+        }
+    }
+
+    private function ensureSecretsDirectory(string $dir): void
+    {
+        // chmod 0700 is applied ONLY on first create. Subsequent writes do
+        // NOT re-chmod the directory because that would silently narrow back
+        // any permissions an admin widened on purpose (e.g. for a backup tool
+        // that needs read access).
+        if (is_dir($dir)) {
+            return;
+        }
+        if (! @mkdir($dir, self::DIR_MODE, recursive: true) && ! is_dir($dir)) {
+            throw new SecretsWriteFailed(
+                "OpenBankingSecretsRepository: could not create parent directory {$dir}."
+            );
+        }
+        if (! @chmod($dir, self::DIR_MODE)) {
+            throw new SecretsWriteFailed(
+                "OpenBankingSecretsRepository: failed to chmod 0700 on newly-created secrets directory {$dir}."
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function encodePayload(array $data, string $absolute): string
+    {
         try {
-            $encoded = json_encode(
+            return json_encode(
                 $data,
                 JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
             );
@@ -217,14 +240,10 @@ class OpenBankingSecretsRepository
                 "OpenBankingSecretsRepository: failed to encode payload for {$absolute} ({$e->getMessage()})."
             );
         }
+    }
 
-        // Shield the encoded JSON bytes before they ever touch disk —
-        // identity on web/desktop-without-keychain, safeStorage ciphertext
-        // on the desktop bundle.
-        $bytes = $this->shield->protect($encoded);
-
-        $tmp = $absolute.'.tmp';
-
+    private function writeTempFile(string $tmp, string $bytes): void
+    {
         // Narrow umask before opening the temp file so it is born 0600 —
         // otherwise fopen's default mode leaves it world-readable for the
         // brief window before the explicit chmod below runs.
@@ -259,12 +278,6 @@ class OpenBankingSecretsRepository
                     "OpenBankingSecretsRepository: failed to chmod temp file at {$tmp}."
                 );
             }
-
-            if (! $this->performRename($tmp, $absolute)) {
-                throw new SecretsWriteFailed(
-                    "OpenBankingSecretsRepository: atomic rename failed from {$tmp} to {$absolute}."
-                );
-            }
         } catch (Throwable $e) {
             if (is_resource($fp)) {
                 @flock($fp, LOCK_UN);
@@ -275,12 +288,11 @@ class OpenBankingSecretsRepository
                 throw $e;
             }
             throw new SecretsWriteFailed(
-                "OpenBankingSecretsRepository: unexpected failure writing {$absolute}."
+                "OpenBankingSecretsRepository: unexpected failure writing {$tmp}."
             );
         } finally {
-            // Always restore the prior umask so the narrowed value
-            // does not leak into subsequent writes elsewhere in the
-            // request lifecycle.
+            // Always restore the prior umask so the narrowed value does not
+            // leak into subsequent writes elsewhere in the request lifecycle.
             umask($prevUmask);
         }
     }
