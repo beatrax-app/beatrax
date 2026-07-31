@@ -13,6 +13,7 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 
 // SAFE-tier spawn endpoint; DESTRUCTIVE-tier commands are rejected at
 // this layer — that path lives behind the TripleGate modal +
@@ -49,7 +50,7 @@ final readonly class ArtisanSpawnController
 
         $commandRaw = $validated['command'] ?? null;
         if (! is_string($commandRaw)) {
-            return new JsonResponse(['error' => 'invalid_command'], 422);
+            return new JsonResponse(['error' => 'invalid_command'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
         $command = $commandRaw;
 
