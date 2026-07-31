@@ -11,7 +11,7 @@
 --}}
 <div class="space-y-2">
     @switch($kind)
-        @case('cancel_series')
+        @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::CancelSeries->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">Series to cancel
                 <select wire:model.live="form.seriesId" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
                     <option value="">— pick a series —</option>
@@ -22,7 +22,7 @@
             </label>
             @break
 
-        @case('add_one_off')
+        @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::AddOneOff->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">Date
                 <input type="date" wire:model.live="form.date" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
@@ -43,7 +43,7 @@
             </label>
             @break
 
-        @case('add_recurring')
+        @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::AddRecurring->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">Start date
                 <input type="date" wire:model.live="form.startDate" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
@@ -69,7 +69,7 @@
             </label>
             @break
 
-        @case('change_series_amount')
+        @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::ChangeSeriesAmount->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">Series
                 <select wire:model.live="form.seriesId" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
                     <option value="">— pick a series —</option>
@@ -83,7 +83,7 @@
             </label>
             @break
 
-        @case('shift_series_date')
+        @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::ShiftSeriesDate->value)
             <label class="block text-xs text-slate-500 dark:text-slate-400">Series
                 <select wire:model.live="form.seriesId" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
                     <option value="">— pick a series —</option>

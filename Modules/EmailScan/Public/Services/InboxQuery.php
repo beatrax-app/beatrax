@@ -10,6 +10,7 @@ use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\EmailScan\Public\Dto\InboxHealthDto;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use stdClass;
 
 // Public read API over inboxes + inbox_scan_state: hydrates each
@@ -107,7 +108,7 @@ final class InboxQuery
             $this->db->connection()
                 ->table('inbox_scan_state')
                 ->where('user_id', $user->id)
-                ->where('status', 'needs_reauth')
+                ->where('status', InboxScanStatus::NeedsReauth->value)
                 ->count(),
         );
 
@@ -124,7 +125,7 @@ final class InboxQuery
             // row has not been inserted yet (transient window between
             // OAuth callback and first state-machine call). Treat as
             // idle.
-            $status = 'idle';
+            $status = InboxScanStatus::Idle->value;
         }
 
         return new InboxHealthDto(

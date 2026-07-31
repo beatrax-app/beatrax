@@ -16,6 +16,7 @@ use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Internal\SafeMessage;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Exceptions\ProviderTransportException;
@@ -626,13 +627,13 @@ final class GraphApiClient implements GraphApiClientContract
         $this->events->dispatch(new InboxTokenFailed(
             inboxId: $inboxId,
             userId: $userId,
-            provider: 'microsoft',
+            provider: MailProvider::Microsoft->value,
         ));
 
         return new ReconsentRequiredException(
             inboxId: $inboxId,
             userId: $userId,
-            provider: 'microsoft',
+            provider: MailProvider::Microsoft->value,
             previous: $cause,
         );
     }

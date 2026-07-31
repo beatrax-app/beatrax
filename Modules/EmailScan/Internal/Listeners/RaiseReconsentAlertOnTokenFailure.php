@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Internal\Listeners;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\SystemAlert;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -107,7 +108,7 @@ final class RaiseReconsentAlertOnTokenFailure
     private function messageFor(string $provider): string
     {
         return match ($provider) {
-            'microsoft' => self::MESSAGE_MICROSOFT,
+            MailProvider::Microsoft->value => self::MESSAGE_MICROSOFT,
             default => self::MESSAGE_GMAIL,
         };
     }

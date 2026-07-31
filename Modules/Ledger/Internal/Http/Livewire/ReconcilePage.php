@@ -195,45 +195,55 @@ final class ReconcilePage extends Component
 
         $kind = is_string($account->kind ?? null) ? $account->kind : '';
 
-        if ($kind === 'asn') {
-            $row = $connection->table('statement_summaries')
-                ->where('user_id', $user->id)
-                ->where('account_id', $this->accountId)
-                ->whereNotNull('closing_balance_minor')
-                ->orderByDesc('period_end')
-                ->orderByDesc('id')
-                ->first(['closing_balance_minor', 'closing_balance_date', 'period_end']);
+        // Any other kind (paypal, generic CSV, cash book) has no statement
+        // source — the default arm leaves statementBalance blank for manual
+        // entry.
+        match ($kind) {
+            'asn' => $this->prefillFromAsnStatement($connection, $user->id),
+            'ics_card' => $this->prefillFromCardStatement($connection, $user->id),
+            default => null,
+        };
+    }
 
-            if ($row !== null) {
-                $this->statementBalance = MoneyInput::formatMinor(self::toInt($row->closing_balance_minor));
-                $rawDate = $row->closing_balance_date ?? $row->period_end ?? null;
-                if (is_string($rawDate) && $rawDate !== '') {
-                    $this->statementDate = CarbonImmutable::parse($rawDate)->toDateString();
-                }
-            }
+    private function prefillFromAsnStatement(ConnectionInterface $connection, int $userId): void
+    {
+        $row = $connection->table('statement_summaries')
+            ->where('user_id', $userId)
+            ->where('account_id', $this->accountId)
+            ->whereNotNull('closing_balance_minor')
+            ->orderByDesc('period_end')
+            ->orderByDesc('id')
+            ->first(['closing_balance_minor', 'closing_balance_date', 'period_end']);
 
+        if ($row === null) {
             return;
         }
 
-        if ($kind === 'ics_card') {
-            $row = $connection->table('card_statements')
-                ->where('user_id', $user->id)
-                ->where('account_id', $this->accountId)
-                ->whereNotNull('total_amount_minor')
-                ->orderByDesc('period_end')
-                ->orderByDesc('id')
-                ->first(['total_amount_minor', 'period_end']);
+        $this->statementBalance = MoneyInput::formatMinor(self::toInt($row->closing_balance_minor));
+        $rawDate = $row->closing_balance_date ?? $row->period_end ?? null;
+        if (is_string($rawDate) && $rawDate !== '') {
+            $this->statementDate = CarbonImmutable::parse($rawDate)->toDateString();
+        }
+    }
 
-            if ($row !== null) {
-                $this->statementBalance = MoneyInput::formatMinor(self::toInt($row->total_amount_minor));
-                if (is_string($row->period_end) && $row->period_end !== '') {
-                    $this->statementDate = CarbonImmutable::parse($row->period_end)->toDateString();
-                }
-            }
+    private function prefillFromCardStatement(ConnectionInterface $connection, int $userId): void
+    {
+        $row = $connection->table('card_statements')
+            ->where('user_id', $userId)
+            ->where('account_id', $this->accountId)
+            ->whereNotNull('total_amount_minor')
+            ->orderByDesc('period_end')
+            ->orderByDesc('id')
+            ->first(['total_amount_minor', 'period_end']);
+
+        if ($row === null) {
+            return;
         }
 
-        // Any other kind (paypal, generic CSV, cash book): no statement
-        // source exists — leave statementBalance blank for manual entry.
+        $this->statementBalance = MoneyInput::formatMinor(self::toInt($row->total_amount_minor));
+        if (is_string($row->period_end) && $row->period_end !== '') {
+            $this->statementDate = CarbonImmutable::parse($row->period_end)->toDateString();
+        }
     }
 
     // Re-validates ownership on every render — never trusts the

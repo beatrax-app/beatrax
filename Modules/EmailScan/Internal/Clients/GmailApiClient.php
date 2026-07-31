@@ -17,6 +17,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -360,13 +361,13 @@ final class GmailApiClient implements GmailApiClientContract
         $this->events->dispatch(new InboxTokenFailed(
             inboxId: $inboxId,
             userId: $userId,
-            provider: 'gmail',
+            provider: MailProvider::Gmail->value,
         ));
 
         return new ReconsentRequiredException(
             inboxId: $inboxId,
             userId: $userId,
-            provider: 'gmail',
+            provider: MailProvider::Gmail->value,
             previous: $cause,
         );
     }

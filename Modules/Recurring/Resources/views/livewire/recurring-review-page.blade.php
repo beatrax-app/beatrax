@@ -106,7 +106,7 @@
                                 @if ($row->nextExpectedAt)
                                     · Next {{ $row->nextExpectedAt->format('d M Y') }}
                                 @endif
-                                @if ($row->state === 'cadence_changed')
+                                @if ($row->state === \Modules\Recurring\Public\Enums\RecurringSeriesState::CadenceChanged->value)
                                     · cadence changed
                                 @endif
                             </p>

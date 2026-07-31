@@ -246,41 +246,12 @@ final class ThisPeriodAtAGlanceQuery
             // inserted yet — treat as idle to match InboxQuery::makeDto().
             $status = $rawStatus === '' ? 'idle' : $rawStatus;
 
-            $lastScanRaw = self::toString($row->last_scan_at ?? null);
-            $lastScanAt = null;
-            if ($lastScanRaw !== '') {
-                try {
-                    $lastScanAt = new DateTimeImmutable($lastScanRaw);
-                } catch (\Throwable) {
-                    $lastScanAt = null;
-                }
-            }
-
-            $lineStatus = 'healthy';
-            if ($status === 'needs_reauth') {
-                $lineStatus = 'reauth';
-                $overall = 'reauth';
-            } elseif ($lastScanAt === null || $lastScanAt->getTimestamp() < ($nowEpoch - self::STALE_THRESHOLD_SECONDS)) {
-                // Never scanned and scanned too long ago are the same thing
-                // to a reader of this tile: the figure cannot be trusted.
-                $lineStatus = 'stale';
-                if ($overall !== 'reauth') {
-                    $overall = 'stale';
-                }
-            }
+            $lastScanAt = self::parseLastScanAt(self::toString($row->last_scan_at ?? null));
+            $lineStatus = self::lineStatusFor($status, $lastScanAt, $nowEpoch);
+            $overall = self::escalateOverall($overall, $lineStatus);
 
             if ($emitted < self::TILE_LINE_LIMIT) {
-                $email = self::toString($row->email);
-                $atPos = strpos($email, '@');
-                $localPart = $atPos === false ? $email : substr($email, 0, $atPos);
-                $localPart = substr($localPart, 0, self::EMAIL_LOCAL_PART_MAX);
-
-                $lines[] = new InboxHealthLine(
-                    provider: self::toString($row->provider),
-                    emailLocalPart: $localPart,
-                    lastScanAt: $lastScanAt,
-                    status: $lineStatus,
-                );
+                $lines[] = $this->makeHealthLine($row, $lastScanAt, $lineStatus);
                 $emitted++;
             }
         }
@@ -291,6 +262,65 @@ final class ThisPeriodAtAGlanceQuery
             lines: $lines,
             overallStatus: $overall,
             overflowCount: $overflowCount,
+        );
+    }
+
+    // Parses the stored last-scan timestamp, returning null for a missing
+    // value or an unparseable one — a null reads downstream as "never
+    // scanned", which the stale check treats the same as long-ago.
+    private static function parseLastScanAt(string $raw): ?DateTimeImmutable
+    {
+        if ($raw === '') {
+            return null;
+        }
+
+        try {
+            return new DateTimeImmutable($raw);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    // Per-inbox tile state: needs_reauth wins outright; otherwise a never-
+    // scanned or too-long-ago inbox is stale, because the figure cannot be
+    // trusted either way; everything else is healthy.
+    private static function lineStatusFor(string $status, ?DateTimeImmutable $lastScanAt, int $nowEpoch): string
+    {
+        if ($status === 'needs_reauth') {
+            return 'reauth';
+        }
+
+        if ($lastScanAt === null || $lastScanAt->getTimestamp() < ($nowEpoch - self::STALE_THRESHOLD_SECONDS)) {
+            return 'stale';
+        }
+
+        return 'healthy';
+    }
+
+    // The tile's overall dot shows the most severe line state seen so far:
+    // reauth outranks stale outranks healthy, and a later healthy row never
+    // downgrades a severity already reached.
+    private static function escalateOverall(string $current, string $lineStatus): string
+    {
+        return match (true) {
+            $current === 'reauth' || $lineStatus === 'reauth' => 'reauth',
+            $current === 'stale' || $lineStatus === 'stale' => 'stale',
+            default => $current,
+        };
+    }
+
+    private function makeHealthLine(stdClass $row, ?DateTimeImmutable $lastScanAt, string $lineStatus): InboxHealthLine
+    {
+        $email = self::toString($row->email);
+        $atPos = strpos($email, '@');
+        $localPart = $atPos === false ? $email : substr($email, 0, $atPos);
+        $localPart = substr($localPart, 0, self::EMAIL_LOCAL_PART_MAX);
+
+        return new InboxHealthLine(
+            provider: self::toString($row->provider),
+            emailLocalPart: $localPart,
+            lastScanAt: $lastScanAt,
+            status: $lineStatus,
         );
     }
 }

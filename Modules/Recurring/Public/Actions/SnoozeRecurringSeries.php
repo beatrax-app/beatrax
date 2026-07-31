@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // The state-machine transition carries the snoozed_until patch in its
@@ -37,7 +38,7 @@ final class SnoozeRecurringSeries
         }
 
         if (
-            $series->state === 'snoozed'
+            $series->state === RecurringSeriesState::Snoozed->value
             && $series->snoozed_until !== null
             && $series->snoozed_until->toDateTimeString() === $until->toDateTimeString()
         ) {
@@ -48,7 +49,7 @@ final class SnoozeRecurringSeries
 
         $this->stateMachine->transition(
             $series,
-            'snoozed',
+            RecurringSeriesState::Snoozed->value,
             'user_action',
             'user',
             'snoozed_until='.$untilString,

@@ -28,9 +28,33 @@ abstract class GuardedStateMachine
     ) {}
 
     // The per-state allowed target states; a from->to edge absent here is
-    // rejected via invalidTransition().
+    // rejected. Concrete machines build this from their lifecycle enum via
+    // transitionMap() rather than re-spelling the projection.
     /** @return array<string, list<string>> */
     abstract protected function allowedTransitions(): array;
+
+    // Projects a backed-enum lifecycle (whose cases each declare their own
+    // successors) into the string map transitionRow() guards against, so the
+    // cases-to-string-map fold lives here once instead of in every machine.
+    /**
+     * @template TState of \BackedEnum
+     *
+     * @param  list<TState>  $cases
+     * @param  callable(TState): list<TState>  $next
+     * @return array<string, list<string>>
+     */
+    protected function transitionMap(array $cases, callable $next): array
+    {
+        $map = [];
+        foreach ($cases as $case) {
+            $map[(string) $case->value] = array_map(
+                static fn (\BackedEnum $target): string => (string) $target->value,
+                $next($case),
+            );
+        }
+
+        return $map;
+    }
 
     abstract protected function table(): string;
 

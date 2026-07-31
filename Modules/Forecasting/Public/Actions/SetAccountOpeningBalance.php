@@ -47,34 +47,7 @@ final class SetAccountOpeningBalance
         }
 
         if ($openingBalanceMinor !== null) {
-            if ($openingBalanceAsOfDate === null || trim($openingBalanceAsOfDate) === '') {
-                throw new InvalidArgumentException('Pick the date this opening balance applies to.');
-            }
-            $parsed = \DateTimeImmutable::createFromFormat('Y-m-d', $openingBalanceAsOfDate);
-            if ($parsed === false || $parsed->format('Y-m-d') !== $openingBalanceAsOfDate) {
-                throw new InvalidArgumentException('Opening balance date must be a valid ISO date (YYYY-MM-DD).');
-            }
-            $today = $this->clock->now()->startOfDay();
-            $asOf = CarbonImmutable::parse($openingBalanceAsOfDate)->startOfDay();
-            if ($asOf->greaterThan($today)) {
-                throw new InvalidArgumentException('Opening balance date cannot be in the future.');
-            }
-
-            if (! $allowDivergence) {
-                $sum = (int) $this->db->connection()->table('transactions')
-                    ->where('user_id', $user->id)
-                    ->where('account_id', $accountId)
-                    ->where('booked_at', '<=', $asOf->endOfDay()->toDateTimeString())
-                    ->sum('amount_minor');
-                $diff = $openingBalanceMinor - $sum;
-                if (abs($diff) > self::DIVERGENCE_WARNING_THRESHOLD_MINOR) {
-                    throw new OpeningBalanceDivergenceWarning(
-                        diffMinor: $diff,
-                        sumOfTransactionsMinor: $sum,
-                        userValueMinor: $openingBalanceMinor,
-                    );
-                }
-            }
+            $this->validateOpeningBalance($accountId, $user, $openingBalanceMinor, $openingBalanceAsOfDate, $allowDivergence);
         }
 
         $this->db->connection()->transaction(function () use ($accountId, $user, $openingBalanceMinor, $openingBalanceAsOfDate): void {
@@ -94,6 +67,45 @@ final class SetAccountOpeningBalance
                 scenarioId: null,
                 horizonDays: $horizon,
             ));
+        }
+    }
+
+    private function validateOpeningBalance(
+        int $accountId,
+        User $user,
+        int $openingBalanceMinor,
+        ?string $openingBalanceAsOfDate,
+        bool $allowDivergence,
+    ): void {
+        if ($openingBalanceAsOfDate === null || trim($openingBalanceAsOfDate) === '') {
+            throw new InvalidArgumentException('Pick the date this opening balance applies to.');
+        }
+        $parsed = \DateTimeImmutable::createFromFormat('Y-m-d', $openingBalanceAsOfDate);
+        if ($parsed === false || $parsed->format('Y-m-d') !== $openingBalanceAsOfDate) {
+            throw new InvalidArgumentException('Opening balance date must be a valid ISO date (YYYY-MM-DD).');
+        }
+        $today = $this->clock->now()->startOfDay();
+        $asOf = CarbonImmutable::parse($openingBalanceAsOfDate)->startOfDay();
+        if ($asOf->greaterThan($today)) {
+            throw new InvalidArgumentException('Opening balance date cannot be in the future.');
+        }
+
+        if ($allowDivergence) {
+            return;
+        }
+
+        $sum = (int) $this->db->connection()->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('account_id', $accountId)
+            ->where('booked_at', '<=', $asOf->endOfDay()->toDateTimeString())
+            ->sum('amount_minor');
+        $diff = $openingBalanceMinor - $sum;
+        if (abs($diff) > self::DIVERGENCE_WARNING_THRESHOLD_MINOR) {
+            throw new OpeningBalanceDivergenceWarning(
+                diffMinor: $diff,
+                sumOfTransactionsMinor: $sum,
+                userValueMinor: $openingBalanceMinor,
+            );
         }
     }
 

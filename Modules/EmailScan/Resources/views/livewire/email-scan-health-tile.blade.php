@@ -33,7 +33,7 @@
                 'reauth' => 'bg-rose-600 dark:bg-rose-500',
                 default => 'bg-slate-400 dark:bg-slate-500',
             };
-            $providerLabel = $line->provider === 'gmail' ? 'Gmail' : 'Microsoft 365';
+            $providerLabel = $line->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365';
             if ($line->status === 'reauth') {
                 $lineCopy = $providerLabel . ': needs reconnect';
             } elseif ($line->lastScanAt === null) {

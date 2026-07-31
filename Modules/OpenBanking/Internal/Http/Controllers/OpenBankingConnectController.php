@@ -14,8 +14,8 @@ use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingAccessScope
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\OAuth\OpenBankingStateRepository;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
+use Modules\OpenBanking\Public\Exceptions\OpenBankingConnectException;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Modules\OpenBanking\Public\Services\SecretsWriteFailed;
 use RuntimeException;
 
 /**
@@ -43,52 +43,68 @@ final class OpenBankingConnectController
 
     public function __invoke(Request $request): RedirectResponse
     {
-        if (! $this->secrets->hasApplication()) {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', 'Finish the Open Banking setup wizard first.');
-        }
-
-        $institutionIdRaw = $request->query('institution_id');
-        $institutionId = is_string($institutionIdRaw) ? trim($institutionIdRaw) : '';
-        if ($institutionId === '') {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', 'Choose a bank before connecting.');
-        }
-
-        $userId = $this->currentUser->id();
-        $state = $this->oauthState->issueState($userId);
-
-        $redirectUri = $this->loopback->forProvider('open-banking', scheme: 'https')
-            .'?state='.rawurlencode($state);
-
         try {
-            $response = $this->client->initiateAuth(
-                institutionId: $institutionId,
-                country: self::COUNTRY,
-                redirectUrl: $redirectUri,
-                scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
-                validUntil: $this->clock->now()->addDays(self::CONSENT_VALID_FOR_DAYS),
-            );
+            $consentUrl = $this->resolveConsentUrl($request);
         } catch (RuntimeException $e) {
+            // OpenBankingConnectException, SecretsWriteFailed and the Enable
+            // Banking client's own failures all subclass RuntimeException and
+            // carry a user-facing reason — one flash handles every refusal.
             return $this->redirector
                 ->route('settings.open-banking')
                 ->with('open_banking_failed', $e->getMessage());
         }
 
-        $consentUrl = $response['url'] ?? null;
-        if (! is_string($consentUrl) || $consentUrl === '') {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', 'Enable Banking did not return a consent URL.');
+        return $this->redirector->away($consentUrl);
+    }
+
+    private function resolveConsentUrl(Request $request): string
+    {
+        if (! $this->secrets->hasApplication()) {
+            throw OpenBankingConnectException::wizardIncomplete();
         }
 
+        $institutionIdRaw = $request->query('institution_id');
+        $institutionId = is_string($institutionIdRaw) ? trim($institutionIdRaw) : '';
+        if ($institutionId === '') {
+            throw OpenBankingConnectException::noBankChosen();
+        }
+
+        $consentUrl = $this->initiateConsent($institutionId);
+        $scaHost = $this->resolveScaHost($consentUrl);
+
+        $this->persistResolvedScaHost($scaHost, $institutionId);
+        $this->guardConsentRedirect($consentUrl, $scaHost);
+
+        return $consentUrl;
+    }
+
+    private function initiateConsent(string $institutionId): string
+    {
+        $state = $this->oauthState->issueState($this->currentUser->id());
+        $redirectUri = $this->loopback->forProvider('open-banking', scheme: 'https')
+            .'?state='.rawurlencode($state);
+
+        $response = $this->client->initiateAuth(
+            institutionId: $institutionId,
+            country: self::COUNTRY,
+            redirectUrl: $redirectUri,
+            scope: new EnableBankingAccessScope(balances: true, transactions: true, accounts: true),
+            validUntil: $this->clock->now()->addDays(self::CONSENT_VALID_FOR_DAYS),
+        );
+
+        $consentUrl = $response['url'] ?? null;
+        if (! is_string($consentUrl) || $consentUrl === '') {
+            throw OpenBankingConnectException::noConsentUrl();
+        }
+
+        return $consentUrl;
+    }
+
+    private function resolveScaHost(string $consentUrl): string
+    {
         $scaHost = parse_url($consentUrl, PHP_URL_HOST);
         if (! is_string($scaHost) || $scaHost === '') {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', 'Enable Banking returned an unparseable consent URL.');
+            throw OpenBankingConnectException::unparseableConsentUrl();
         }
 
         $scaHost = strtolower($scaHost);
@@ -98,19 +114,14 @@ final class OpenBankingConnectController
         // loopback/link-local/private/bare host must never widen that
         // allow-list to an internal target — reject it before persisting.
         if (! $this->isPublicScaHost($scaHost)) {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', 'Enable Banking returned a non-public consent host.');
+            throw OpenBankingConnectException::nonPublicConsentHost();
         }
 
-        try {
-            $this->persistResolvedScaHost($scaHost, $institutionId);
-        } catch (SecretsWriteFailed $e) {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', $e->getMessage());
-        }
+        return $scaHost;
+    }
 
+    private function guardConsentRedirect(string $consentUrl, string $scaHost): void
+    {
         // The consent URL is an outward redirect target — require https and
         // that its host matches the SCA host just resolved and allow-listed,
         // otherwise fail the flow rather than emit an open redirect.
@@ -118,12 +129,8 @@ final class OpenBankingConnectController
         $consentHost = parse_url($consentUrl, PHP_URL_HOST);
         if (! is_string($consentScheme) || strtolower($consentScheme) !== 'https'
             || ! is_string($consentHost) || strtolower($consentHost) !== $scaHost) {
-            return $this->redirector
-                ->route('settings.open-banking')
-                ->with('open_banking_failed', 'Enable Banking returned an unsafe consent URL.');
+            throw OpenBankingConnectException::unsafeConsentUrl();
         }
-
-        return $this->redirector->away($consentUrl);
     }
 
     private function persistResolvedScaHost(string $scaHost, string $institutionId): void

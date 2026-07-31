@@ -62,20 +62,20 @@
         @endif
 
         <div class="rounded-lg border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-            <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <dl>
                     <dt class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Cleared balance</dt>
                     <dd class="mt-1 font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt($clearedBalanceMinor) }}
                     </dd>
-                </div>
-                <div>
+                </dl>
+                <dl>
                     <dt class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Statement target</dt>
                     <dd class="mt-1 font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $hasTarget ? $fmt($statementTargetMinor) : '—' }}
                     </dd>
-                </div>
-                <div>
+                </dl>
+                <dl>
                     <dt class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Difference</dt>
                     <dd class="mt-1" style="font-variant-numeric: tabular-nums;">
                         @if (! $hasAccount)
@@ -90,8 +90,8 @@
                             </span>
                         @endif
                     </dd>
-                </div>
-            </dl>
+                </dl>
+            </div>
 
             @if ($hasAccount && $hasTarget && ! $isMatched)
                 <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">

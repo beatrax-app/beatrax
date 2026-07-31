@@ -129,16 +129,14 @@ final class LoopbackTlsCertificate
         }
 
         $notAfter = $parsed['validTo_time_t'] ?? 0;
-        // Treat a cert inside its final day as expired so a long-lived UAT
-        // session never trips over the boundary mid-flow.
-        if (! is_int($notAfter) || $notAfter <= time() + 86400) {
-            return false;
-        }
-
         $extensions = $parsed['extensions'] ?? null;
         $san = is_array($extensions) ? ($extensions['subjectAltName'] ?? '') : '';
 
-        return is_string($san) && str_contains($san, '127.0.0.1');
+        // Treat a cert inside its final day as expired so a long-lived UAT
+        // session never trips over the boundary mid-flow, and require the
+        // 127.0.0.1 SAN the loopback listener is presented under.
+        return is_int($notAfter) && $notAfter > time() + 86400
+            && is_string($san) && str_contains($san, '127.0.0.1');
     }
 
     private function prepareDirectory(): void
