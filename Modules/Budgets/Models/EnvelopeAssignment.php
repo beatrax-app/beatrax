@@ -60,9 +60,18 @@ final class EnvelopeAssignment extends Model
             get: static fn (mixed $value): ?CarbonImmutable => is_string($value) && $value !== ''
                 ? CarbonImmutable::parse($value)
                 : null,
-            set: static fn (mixed $value): string => $value instanceof \DateTimeInterface
-                ? CarbonImmutable::parse($value)->toDateString()
-                : CarbonImmutable::parse(is_scalar($value) ? (string) $value : '')->toDateString(),
+            set: static fn (mixed $value): string => self::periodStartToDateString($value),
         );
+    }
+
+    private static function periodStartToDateString(mixed $value): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return CarbonImmutable::parse($value)->toDateString();
+        }
+
+        $raw = is_scalar($value) ? (string) $value : '';
+
+        return CarbonImmutable::parse($raw)->toDateString();
     }
 }

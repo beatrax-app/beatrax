@@ -118,3 +118,16 @@ it('never treats category_budgets as an authoritative write target for envelope 
 
     $this->assertDatabaseMissing('category_budgets', ['category_id' => $this->groceries->id]);
 });
+
+it('stores period_start written as a CarbonImmutable instance as a bare Y-m-d string (WR-05)', function (): void {
+    $assignment = EnvelopeAssignment::create([
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+        'period_start' => $this->periodA->start,
+        'assigned_minor' => 15000,
+        'currency' => 'EUR',
+    ]);
+
+    $raw = DB::table('envelope_assignments')->where('id', $assignment->id)->value('period_start');
+    expect($raw)->toBe($this->periodA->start->toDateString());
+});

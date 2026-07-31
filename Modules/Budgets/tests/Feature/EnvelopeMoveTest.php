@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Budgets\Public\Services\CarryoverQuery;
+use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
@@ -130,4 +131,36 @@ it('rejects a move to the same source and destination envelope', function (): vo
 
     expect(fn () => app(EnvelopeWriter::class)->move($this->user, $this->groceries->id, $this->groceries->id, $this->period->start, 1000))
         ->toThrow(InvalidArgumentException::class);
+});
+
+it('lists a single envelope\'s recent moves with a formatted timestamp via the per-category read seam', function (): void {
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 50000);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->period->start, 10000);
+    app(EnvelopeWriter::class)->move($this->user, $this->groceries->id, $this->dining->id, $this->period->start, 2500, 'weekly top-up');
+
+    $moves = app(EnvelopeBalanceQuery::class)
+        ->recentMovesFor($this->user->id, $this->groceries->id, $this->period);
+
+    expect($moves)->toHaveCount(1);
+    expect($moves[0]->direction)->toBe('out');
+    expect($moves[0]->amountMinor)->toBe(-2500);
+    expect($moves[0]->counterpartCategoryId)->toBe($this->dining->id);
+    expect($moves[0]->memo)->toBe('weekly top-up');
+    expect($moves[0]->createdAt)->toMatch('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/');
+});
+
+it('degrades an unparseable move timestamp to an empty string rather than throwing', function (): void {
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->groceries->id, $this->period->start, 50000);
+    app(EnvelopeWriter::class)->setAssigned($this->user, $this->dining->id, $this->period->start, 10000);
+    app(EnvelopeWriter::class)->move($this->user, $this->groceries->id, $this->dining->id, $this->period->start, 2500);
+
+    DB::table('envelope_moves')
+        ->where('category_id', $this->groceries->id)
+        ->update(['created_at' => 'not-a-timestamp']);
+
+    $moves = app(EnvelopeBalanceQuery::class)
+        ->recentMovesFor($this->user->id, $this->groceries->id, $this->period);
+
+    expect($moves)->toHaveCount(1);
+    expect($moves[0]->createdAt)->toBe('');
 });
