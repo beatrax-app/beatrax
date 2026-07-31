@@ -13,6 +13,7 @@ use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
 use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Services\ExchangeRateService;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
@@ -68,7 +69,7 @@ final class NetWorthQuery
                 kind: $kind,
                 balanceMinor: $anchor->openingBalanceMinor,
                 currency: $anchor->currency,
-                isLiability: $kind === 'ics_card',
+                isLiability: $kind === AccountKind::IcsCard->value,
                 baseEquivalentMinor: $rateAvailable && ! $result->isPassthrough
                     ? $result->converted->toMinor()
                     : null,

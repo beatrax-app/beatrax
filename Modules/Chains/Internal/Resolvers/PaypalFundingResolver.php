@@ -14,6 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Transfers\Public\Services\PairLookup;
@@ -109,7 +110,7 @@ final class PaypalFundingResolver
                     ->where('chain_links.kind', '=', ChainLinkKind::PaypalFunding->value);
             })
             ->where('transactions.user_id', $user->id)
-            ->where('accounts.kind', 'paypal')
+            ->where('accounts.kind', AccountKind::Paypal->value)
             ->whereIn('transactions.type', ['expense', 'transfer_out'])
             ->whereNull('chain_links.id')
             ->orderBy('transactions.posted_at')
@@ -267,7 +268,7 @@ final class PaypalFundingResolver
         $rows = $this->db->connection()
             ->table('known_counterparty_ibans')
             ->where('user_id', $user->id)
-            ->where('target_account_kind', 'paypal')
+            ->where('target_account_kind', AccountKind::Paypal->value)
             ->get(['real_iban']);
 
         $aliasSet = [];
