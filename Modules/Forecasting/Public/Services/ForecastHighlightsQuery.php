@@ -16,6 +16,8 @@ use stdClass;
  */
 final readonly class ForecastHighlightsQuery
 {
+    private const int HORIZON_DAYS = 30;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -25,7 +27,7 @@ final readonly class ForecastHighlightsQuery
     public function activeShortfallCountForUser(User $user): int
     {
         $today = $this->clock->now()->startOfDay()->toDateString();
-        $horizon = $this->clock->now()->startOfDay()->addDays(30)->toDateString();
+        $horizon = $this->clock->now()->startOfDay()->addDays(self::HORIZON_DAYS)->toDateString();
 
         return $this->db->connection()->table('forecast_shortfall_windows')
             ->where('user_id', $user->id)
