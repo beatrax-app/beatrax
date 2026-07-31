@@ -115,22 +115,21 @@ final readonly class AnomalyEvaluator
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
+
+            $this->events->dispatch(new AnomalyAlertOpened(
+                userId: self::toInt($user->id, 0),
+                anomalyAlertId: self::toInt($alertId, 0),
+                transactionId: $transactionId,
+                direction: $direction,
+                reasons: $reasons,
+                baselineAmountMinor: $baselineMinor,
+                latestAmountMinor: $latestMinor,
+                currency: $currency,
+            ));
         } catch (QueryException) {
             // UNIQUE(transaction_id) collision — re-evaluation against the
             // same charge is a silent no-op; this is the idempotency seam.
-            return;
         }
-
-        $this->events->dispatch(new AnomalyAlertOpened(
-            userId: self::toInt($user->id, 0),
-            anomalyAlertId: self::toInt($alertId, 0),
-            transactionId: $transactionId,
-            direction: $direction,
-            reasons: $reasons,
-            baselineAmountMinor: $baselineMinor,
-            latestAmountMinor: $latestMinor,
-            currency: $currency,
-        ));
     }
 
     // A synthetic (first-time-injected) `large` is excluded from the

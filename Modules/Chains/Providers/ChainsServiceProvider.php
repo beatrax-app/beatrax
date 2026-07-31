@@ -13,6 +13,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Chains\Internal\ChainTreeWalker;
 use Modules\Chains\Internal\Http\Livewire\ChainDrawer;
 use Modules\Chains\Internal\Http\Livewire\ChainHintsQueue;
 use Modules\Chains\Internal\Http\Livewire\ChainReviewQueue;
@@ -53,6 +54,7 @@ final class ChainsServiceProvider extends ServiceProvider
         // pair across events.
         $this->app->singleton(CreateChainLinkFromHint::class);
 
+        $this->app->singleton(ChainTreeWalker::class);
         $this->app->singleton(ChainLinkQuery::class);
         $this->app->singleton(CardStatementQuery::class);
         $this->app->singleton(ConfirmChainLink::class);

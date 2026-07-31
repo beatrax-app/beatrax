@@ -65,32 +65,12 @@ final class DriftPage extends Component
 
     public function acknowledgeAnomaly(int $alertId, CurrentUser $currentUser, AcknowledgeAnomalyAlert $action): void
     {
-        ($action)($alertId, $currentUser->user());
-        $this->dispatch('toast', message: 'Acknowledged');
+        $this->acknowledgeAlert($alertId, $currentUser, $action);
     }
 
     public function snoozeAnomaly(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeAnomalyAlert $action, Clock $clock): void
     {
-        // Bound the accepted range here (see the class @link) so a tampered
-        // Livewire payload with a past or unbounded-future timestamp never
-        // reaches the action — defence in depth on top of the action's own
-        // server-side bound.
-        try {
-            $until = CarbonImmutable::parse($untilIso);
-        } catch (\Throwable) {
-            return;
-        }
-
-        $now = $clock->now();
-        if ($until->lessThanOrEqualTo($now)) {
-            return;
-        }
-        if ($until->greaterThan($now->addMonths(self::MAX_UNTIL_MONTHS))) {
-            return;
-        }
-
-        ($action)($alertId, $currentUser->user(), $until);
-        $this->dispatch('toast', message: 'Snoozed');
+        $this->snoozeAlert($alertId, $untilIso, $currentUser, $action, $clock);
     }
 
     public function dismissAnomaly(int $alertId, CurrentUser $currentUser, DismissAnomalyAlert $action): void
@@ -126,15 +106,28 @@ final class DriftPage extends Component
 
     public function acknowledge(int $alertId, CurrentUser $currentUser, AcknowledgeDriftAlert $action): void
     {
-        ($action)($alertId, $currentUser->user());
-        $this->dispatch('toast', message: 'Acknowledged');
+        $this->acknowledgeAlert($alertId, $currentUser, $action);
     }
 
     public function snooze(int $alertId, string $untilIso, CurrentUser $currentUser, SnoozeDriftAlert $action, Clock $clock): void
     {
-        // Bound the accepted range here (see the class @link) so a tampered
-        // Livewire payload can never reach the action with a past or
-        // unbounded-future timestamp.
+        $this->snoozeAlert($alertId, $untilIso, $currentUser, $action, $clock);
+    }
+
+    // Shared by the drift and anomaly streams: both acknowledge an alert by
+    // invoking their own action collaborator, then surface the same toast.
+    private function acknowledgeAlert(int $alertId, CurrentUser $currentUser, callable $action): void
+    {
+        $action($alertId, $currentUser->user());
+        $this->dispatch('toast', message: 'Acknowledged');
+    }
+
+    // Bounds the accepted range here (see the class @link) so a tampered
+    // Livewire payload with a past or unbounded-future timestamp never
+    // reaches the action — defence in depth on top of the action's own
+    // server-side bound. Shared by both streams.
+    private function snoozeAlert(int $alertId, string $untilIso, CurrentUser $currentUser, callable $action, Clock $clock): void
+    {
         try {
             $until = CarbonImmutable::parse($untilIso);
         } catch (\Throwable) {
@@ -142,14 +135,11 @@ final class DriftPage extends Component
         }
 
         $now = $clock->now();
-        if ($until->lessThanOrEqualTo($now)) {
-            return;
-        }
-        if ($until->greaterThan($now->addMonths(self::MAX_UNTIL_MONTHS))) {
+        if ($until->lessThanOrEqualTo($now) || $until->greaterThan($now->addMonths(self::MAX_UNTIL_MONTHS))) {
             return;
         }
 
-        ($action)($alertId, $currentUser->user(), $until);
+        $action($alertId, $currentUser->user(), $until);
         $this->dispatch('toast', message: 'Snoozed');
     }
 

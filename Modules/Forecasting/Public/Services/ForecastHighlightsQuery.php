@@ -155,12 +155,8 @@ final readonly class ForecastHighlightsQuery
             ->where('status', 'complete')
             ->orderByDesc('id')
             ->first(['result_json']);
-        if ($run === null) {
-            return null;
-        }
 
-        /** @var stdClass $run */
-        $rawJson = is_string($run->result_json ?? null) ? $run->result_json : '';
+        $rawJson = ($run instanceof stdClass && is_string($run->result_json ?? null)) ? $run->result_json : '';
         if ($rawJson === '') {
             return null;
         }

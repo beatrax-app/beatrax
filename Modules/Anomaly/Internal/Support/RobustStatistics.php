@@ -117,11 +117,8 @@ final class RobustStatistics
     public static function percentile(array $sample, float $p): float
     {
         $count = count($sample);
-        if ($count === 0) {
-            return 0.0;
-        }
-        if ($count === 1) {
-            return (float) $sample[0];
+        if ($count <= 1) {
+            return $count === 1 ? (float) $sample[0] : 0.0;
         }
 
         $sorted = array_map(static fn (int|float $v): float => (float) $v, $sample);

@@ -38,13 +38,9 @@ final readonly class DuplicateChargeDetector
     {
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0);
         $absMinor = abs($settledMinor);
-
-        if ($absMinor < $minFloorMinor) {
-            return false;
-        }
-
         $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
-        if ($counterpartyId === null) {
+
+        if ($absMinor < $minFloorMinor || $counterpartyId === null) {
             return false;
         }
 

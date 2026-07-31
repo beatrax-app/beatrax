@@ -11,6 +11,8 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
+use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
+use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -29,11 +31,8 @@ final readonly class DriftEvaluator
 
     public function evaluateForSeries(int $seriesId, User $user): void
     {
-        $series = $this->recurringQuery->forSeries($seriesId, $user);
+        $series = $this->eligibleSeries($seriesId, $user);
         if ($series === null) {
-            return;
-        }
-        if (! in_array($series->state, [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value], true)) {
             return;
         }
 
@@ -42,29 +41,64 @@ final readonly class DriftEvaluator
             return;
         }
 
+        $drift = $this->driftMetrics($series, $occurrences, $seriesId, $user);
+        if ($drift === null) {
+            return;
+        }
+
+        $this->openAlert($seriesId, $user, $series, $drift);
+    }
+
+    private function eligibleSeries(int $seriesId, User $user): ?RecurringSeriesDto
+    {
+        $series = $this->recurringQuery->forSeries($seriesId, $user);
+        if ($series === null) {
+            return null;
+        }
+
+        $approved = [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value];
+
+        return in_array($series->state, $approved, true) ? $series : null;
+    }
+
+    /**
+     * @param  list<RecurringOccurrenceDto>  $occurrences
+     * @return array{priorMinor: int, latestMinor: int, deltaMinor: int, annualized: int, threshold: array{percent: int, source: string}, latestOccurrenceId: int}|null
+     */
+    private function driftMetrics(RecurringSeriesDto $series, array $occurrences, int $seriesId, User $user): ?array
+    {
         $latest = $occurrences[0];
         $prior = $occurrences[1];
 
         $priorMinor = $prior->observedAmount->toMinor();
-        if ($priorMinor === 0) {
-            return;
+        $multiplier = $this->cadenceMultiplierForYear($series->cadence);
+        if ($priorMinor === 0 || $multiplier === 0) {
+            return null;
         }
 
         $latestMinor = $latest->observedAmount->toMinor();
         $deltaMinor = $latestMinor - $priorMinor;
         $ratio = abs($deltaMinor) * 100 / abs($priorMinor);
-
         $threshold = $this->effectiveThresholdPercent($seriesId, $user);
         if ($ratio <= $threshold['percent']) {
-            return;
+            return null;
         }
 
-        $multiplier = $this->cadenceMultiplierForYear($series->cadence);
-        if ($multiplier === 0) {
-            return;
-        }
-        $annualized = $deltaMinor * $multiplier;
+        return [
+            'priorMinor' => $priorMinor,
+            'latestMinor' => $latestMinor,
+            'deltaMinor' => $deltaMinor,
+            'annualized' => $deltaMinor * $multiplier,
+            'threshold' => $threshold,
+            'latestOccurrenceId' => $latest->occurrenceId,
+        ];
+    }
 
+    /**
+     * @param  array{priorMinor: int, latestMinor: int, deltaMinor: int, annualized: int, threshold: array{percent: int, source: string}, latestOccurrenceId: int}  $drift
+     */
+    private function openAlert(int $seriesId, User $user, RecurringSeriesDto $series, array $drift): void
+    {
         $currency = $series->latestAmount->currency();
         $now = $this->clock->now()->toDateTimeString();
 
@@ -74,34 +108,33 @@ final readonly class DriftEvaluator
                 'recurring_series_id' => $seriesId,
                 'state' => DriftAlertState::Open->value,
                 'direction' => $series->direction,
-                'baseline_amount_minor' => $priorMinor,
-                'latest_amount_minor' => $latestMinor,
+                'baseline_amount_minor' => $drift['priorMinor'],
+                'latest_amount_minor' => $drift['latestMinor'],
                 'currency' => $currency,
-                'delta_minor' => $deltaMinor,
-                'annualized_impact_minor' => $annualized,
-                'threshold_percent_used' => $threshold['percent'],
-                'threshold_source' => $threshold['source'],
-                'latest_occurrence_id' => $latest->occurrenceId,
+                'delta_minor' => $drift['deltaMinor'],
+                'annualized_impact_minor' => $drift['annualized'],
+                'threshold_percent_used' => $drift['threshold']['percent'],
+                'threshold_source' => $drift['threshold']['source'],
+                'latest_occurrence_id' => $drift['latestOccurrenceId'],
                 'detected_at' => $now,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
+
+            $this->events->dispatch(new DriftAlertOpened(
+                userId: $user->id,
+                driftAlertId: $alertId,
+                recurringSeriesId: $seriesId,
+                direction: $series->direction,
+                deltaMinor: $drift['deltaMinor'],
+                annualizedImpactMinor: $drift['annualized'],
+                currency: $currency,
+            ));
         } catch (QueryException) {
             // UNIQUE(recurring_series_id, latest_occurrence_id) collision —
             // re-evaluation against the same (series, occurrence) pair is
             // a silent no-op. The idempotency seam is the seam.
-            return;
         }
-
-        $this->events->dispatch(new DriftAlertOpened(
-            userId: $user->id,
-            driftAlertId: $alertId,
-            recurringSeriesId: $seriesId,
-            direction: $series->direction,
-            deltaMinor: $deltaMinor,
-            annualizedImpactMinor: $annualized,
-            currency: $currency,
-        ));
     }
 
     /**

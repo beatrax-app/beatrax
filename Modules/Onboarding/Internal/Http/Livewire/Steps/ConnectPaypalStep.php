@@ -138,10 +138,7 @@ final class ConnectPaypalStep extends Component
     // does not trip it.
     private function fatalParseMessage(ImportPreviewResult $result): ?string
     {
-        if ($result->rows === []) {
-            return null;
-        }
-        if ($result->accountsToName !== []) {
+        if ($result->rows === [] || $result->accountsToName !== []) {
             return null;
         }
 

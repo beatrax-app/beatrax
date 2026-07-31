@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
@@ -94,16 +95,37 @@ final class ConnectCardStep extends Component
 
         $user = $currentUser->user();
 
-        $newRunIds = [];
+        $preview = $this->runPreviews($importer, $user, $logger, $app);
+        $newRunIds = $preview['ids'];
+
+        if ($newRunIds === []) {
+            $this->uploadError = sprintf(
+                "We couldn't read any of your ICS PDFs. %s",
+                $preview['firstError'] ?? 'The full error is in /dev/logs.',
+            );
+
+            return;
+        }
+
+        $this->ensureIcsAccount($newRunIds, $user, $db, $importer, $logger, $app);
+        $this->stashRunIds($user, $newRunIds);
+
+        $this->dispatch('wizard.step.completed');
+    }
+
+    // Per-file errors are logged but don't abort the batch: the loop keeps
+    // going so a single bad statement doesn't waste the rest.
+    /**
+     * @return array{ids: list<int>, firstError: ?string}
+     */
+    private function runPreviews(RunsImports $importer, User $user, LoggerInterface $logger, Application $app): array
+    {
+        $ids = [];
         $firstError = null;
-
         foreach ($this->statements as $statement) {
-            $tmp = $statement->getRealPath();
             $originalFilename = $this->sanitiseFilename($statement->getClientOriginalName());
-
             try {
-                $result = $importer->runFromUpload($tmp, $this->selectedFormat, $user, $originalFilename);
-                $newRunIds[] = $result->importRunId;
+                $ids[] = $importer->runFromUpload($statement->getRealPath(), $this->selectedFormat, $user, $originalFilename)->importRunId;
             } catch (Throwable $e) {
                 $logger->error('ConnectCardStep: import preview failed.', [
                     'source_format' => $this->selectedFormat,
@@ -112,93 +134,101 @@ final class ConnectCardStep extends Component
                     'exception_message' => $e->getMessage(),
                     'exception_trace' => SafeTrace::cap($e, $app->basePath()),
                 ]);
-                if ($firstError === null) {
-                    $firstError = sprintf('Could not read %s. The full error is in /dev/logs.', $originalFilename);
-                }
+                $firstError ??= sprintf('Could not read %s. The full error is in /dev/logs.', $originalFilename);
             }
         }
 
-        if ($newRunIds === []) {
-            $this->uploadError = sprintf(
-                "We couldn't read any of your ICS PDFs. %s",
-                $firstError ?? 'The full error is in /dev/logs.',
-            );
+        return ['ids' => $ids, 'firstError' => $firstError];
+    }
 
-            return;
-        }
-
-        // Auto-creates the ICS account + re-previews when missing — see
-        // architecture.md for why. Raw query builder (not
-        // Account::query()->exists()) to satisfy PHPStan strict-rules
-        // staticMethod.dynamicCall.
+    // Auto-creates the ICS account + re-previews when missing — see
+    // architecture.md for why. Raw query builder (not
+    // Account::query()->exists()) to satisfy PHPStan strict-rules
+    // staticMethod.dynamicCall.
+    /**
+     * @param  list<int>  $newRunIds
+     */
+    private function ensureIcsAccount(array $newRunIds, User $user, DatabaseManager $db, RunsImports $importer, LoggerInterface $logger, Application $app): void
+    {
         $hasIcsAccount = $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
             ->where('iban', self::ICS_OWN_IBAN)
             ->exists();
-
-        if (! $hasIcsAccount) {
-            Account::query()->create([
-                'user_id' => $user->id,
-                'name' => 'ICS card',
-                'slug' => 'ics-card-ics-card',
-                'kind' => 'ics_card',
-                'iban' => self::ICS_OWN_IBAN,
-                'default_currency' => 'EUR',
-            ]);
-
-            // Re-preview the runs from their stable stored paths so
-            // statement_summaries is populated and the preview cache
-            // reflects the now-resolvable account.
-            foreach ($newRunIds as $runId) {
-                /** @var ImportRun|null $run */
-                $run = ImportRun::query()
-                    ->where('id', $runId)
-                    ->where('user_id', $user->id)
-                    ->first();
-
-                if ($run !== null && file_exists($run->raw_file_path)) {
-                    try {
-                        $importer->runFromUpload(
-                            $run->raw_file_path,
-                            $this->selectedFormat,
-                            $user,
-                            basename($run->raw_file_path),
-                        );
-                    } catch (Throwable $e) {
-                        $logger->warning('ConnectCardStep: re-preview after ICS account creation failed.', [
-                            'import_run_id' => $runId,
-                            'exception_class' => $e::class,
-                            'exception_message' => $e->getMessage(),
-                            'exception_trace' => SafeTrace::cap($e, $app->basePath()),
-                        ]);
-                    }
-                }
-            }
+        if ($hasIcsAccount) {
+            return;
         }
 
+        Account::query()->create([
+            'user_id' => $user->id,
+            'name' => 'ICS card',
+            'slug' => 'ics-card-ics-card',
+            'kind' => 'ics_card',
+            'iban' => self::ICS_OWN_IBAN,
+            'default_currency' => 'EUR',
+        ]);
+
+        foreach ($newRunIds as $runId) {
+            $this->repreview($runId, $user, $importer, $logger, $app);
+        }
+    }
+
+    // Re-previews a run from its stable stored path so statement_summaries is
+    // populated and the preview cache reflects the now-resolvable account.
+    private function repreview(int $runId, User $user, RunsImports $importer, LoggerInterface $logger, Application $app): void
+    {
+        /** @var ImportRun|null $run */
+        $run = ImportRun::query()
+            ->where('id', $runId)
+            ->where('user_id', $user->id)
+            ->first();
+        if ($run === null || ! file_exists($run->raw_file_path)) {
+            return;
+        }
+
+        try {
+            $importer->runFromUpload(
+                $run->raw_file_path,
+                $this->selectedFormat,
+                $user,
+                basename($run->raw_file_path),
+            );
+        } catch (Throwable $e) {
+            $logger->warning('ConnectCardStep: re-preview after ICS account creation failed.', [
+                'import_run_id' => $runId,
+                'exception_class' => $e::class,
+                'exception_message' => $e->getMessage(),
+                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<int>  $newRunIds
+     */
+    private function stashRunIds(User $user, array $newRunIds): void
+    {
         $progress = WizardProgress::query()
             ->where('user_id', $user->id)
             ->where('step_key', 'connect-card')
             ->first();
-
-        if ($progress !== null) {
-            $data = $progress->data ?? [];
-            $existingRaw = $data['card_import_run_ids'] ?? [];
-            $existing = [];
-            if (is_array($existingRaw)) {
-                foreach ($existingRaw as $value) {
-                    if (is_int($value) && $value > 0) {
-                        $existing[] = $value;
-                    }
-                }
-            }
-            $merged = array_values(array_unique([...$existing, ...$newRunIds], SORT_NUMERIC));
-            $data['card_import_run_ids'] = $merged;
-            $progress->update(['data' => $data]);
+        if ($progress === null) {
+            return;
         }
 
-        $this->dispatch('wizard.step.completed');
+        $data = $progress->data ?? [];
+        $existingRaw = $data['card_import_run_ids'] ?? [];
+        $existing = [];
+        if (is_array($existingRaw)) {
+            foreach ($existingRaw as $value) {
+                if (is_int($value) && $value > 0) {
+                    $existing[] = $value;
+                }
+            }
+        }
+        $merged = array_values(array_unique([...$existing, ...$newRunIds], SORT_NUMERIC));
+        $data['card_import_run_ids'] = $merged;
+        $progress->update(['data' => $data]);
     }
 
     public function skip(): void

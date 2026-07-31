@@ -110,6 +110,9 @@ final class AnomalySettingsSection extends Component
             $action->removeRule($ruleId, $currentUser->user());
             $this->dispatch('toast', message: 'Rule removed');
         } catch (NotFoundHttpException) {
+            // A rule that vanished between the list render and this click is
+            // already in the desired state, so a missing row is a silent
+            // no-op rather than a surfaced error.
         }
     }
 

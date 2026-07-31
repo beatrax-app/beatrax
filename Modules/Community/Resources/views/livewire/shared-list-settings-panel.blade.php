@@ -13,15 +13,11 @@
         <p class="mt-2 text-sm">
             A bundled YAML file mapping cryptic bank-statement codes to friendly merchant names. Toggling on lets beatrax read the list when you import; submitting a suggestion opens GitHub in your browser.
         </p>
-        <dl class="mt-4 space-y-1 text-xs text-slate-500 dark:text-slate-400">
-            <div class="flex justify-between">
-                <dt>Mappings</dt>
-                <dd style="font-variant-numeric: tabular-nums;">{{ $mappingsCount }}</dd>
-            </div>
-            <div class="flex justify-between">
-                <dt>Contributors</dt>
-                <dd style="font-variant-numeric: tabular-nums;">{{ $contributorCount }}</dd>
-            </div>
+        <dl class="mt-4 grid grid-cols-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+            <dt>Mappings</dt>
+            <dd class="text-right" style="font-variant-numeric: tabular-nums;">{{ $mappingsCount }}</dd>
+            <dt>Contributors</dt>
+            <dd class="text-right" style="font-variant-numeric: tabular-nums;">{{ $contributorCount }}</dd>
         </dl>
     </aside>
 

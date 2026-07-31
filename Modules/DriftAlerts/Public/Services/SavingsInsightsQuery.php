@@ -125,8 +125,10 @@ final class SavingsInsightsQuery
     ): ?SavingsInsight {
         $monthly = Money::ofMinor($monthlyMinor, $currency)->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
 
-        if ($resource->cheaperUrl !== null) {
-            return new SavingsInsight(
+        // The review floor is a EUR threshold; the arm applies it only to EUR
+        // series so a foreign-currency minor amount is never compared with it.
+        return match (true) {
+            $resource->cheaperUrl !== null => new SavingsInsight(
                 key: 'cheaper:'.$seriesId,
                 type: 'cheaper',
                 seriesId: $seriesId,
@@ -137,11 +139,8 @@ final class SavingsInsightsQuery
                 actionLabel: 'See cheaper plans',
                 actionUrl: $resource->cheaperUrl,
                 counterpartySlug: $slug,
-            );
-        }
-
-        if ($hasOpenAlert && $resource->cancelUrl !== null) {
-            return new SavingsInsight(
+            ),
+            $hasOpenAlert && $resource->cancelUrl !== null => new SavingsInsight(
                 key: 'cancel:'.$seriesId,
                 type: 'cancel',
                 seriesId: $seriesId,
@@ -152,13 +151,8 @@ final class SavingsInsightsQuery
                 actionLabel: 'How to cancel',
                 actionUrl: $resource->cancelUrl,
                 counterpartySlug: $slug,
-            );
-        }
-
-        // The review floor is a EUR threshold; only apply it to EUR series so a
-        // foreign-currency minor amount is never compared against it.
-        if ($currency === 'EUR' && $monthlyMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null) {
-            return new SavingsInsight(
+            ),
+            $currency === 'EUR' && $monthlyMinor >= self::REVIEW_FLOOR && $resource->cancelUrl !== null => new SavingsInsight(
                 key: 'review:'.$seriesId,
                 type: 'review',
                 seriesId: $seriesId,
@@ -169,10 +163,9 @@ final class SavingsInsightsQuery
                 actionLabel: 'How to cancel',
                 actionUrl: $resource->cancelUrl,
                 counterpartySlug: $slug,
-            );
-        }
-
-        return null;
+            ),
+            default => null,
+        };
     }
 
     /**

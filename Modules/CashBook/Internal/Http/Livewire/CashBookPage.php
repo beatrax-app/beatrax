@@ -191,10 +191,8 @@ final class CashBookPage extends Component
         $fracRaw = $decimalPos === -1 ? '' : substr($trimmed, $decimalPos + 1);
 
         $whole = preg_replace('/[.,]/', '', $wholeRaw) ?? '';
-        if (preg_match('/^\d{1,12}$/', $whole) !== 1) {
-            return null;
-        }
-        if ($fracRaw !== '' && preg_match('/^\d+$/', $fracRaw) !== 1) {
+        if (preg_match('/^\d{1,12}$/', $whole) !== 1
+            || ($fracRaw !== '' && preg_match('/^\d+$/', $fracRaw) !== 1)) {
             return null;
         }
 

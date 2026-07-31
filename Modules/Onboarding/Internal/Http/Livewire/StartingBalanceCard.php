@@ -142,34 +142,35 @@ final class StartingBalanceCard extends Component
 
         $minor = $this->editedMinor;
         $date = $this->editedDate;
-
-        if ($minor === null) {
-            $this->validationError = 'Enter a valid amount.';
-
-            return;
-        }
-        if ($minor < self::MIN_BALANCE_MINOR || $minor > self::MAX_BALANCE_MINOR) {
-            $this->validationError = 'Enter an amount between -€10M and €10M.';
-
-            return;
-        }
-        if ($date === null || $date === '') {
-            $this->validationError = 'Pick a date.';
-
-            return;
-        }
-        $timestamp = strtotime($date);
-        if ($timestamp === false) {
-            $this->validationError = 'Pick a valid date.';
-
-            return;
-        }
-        if ($timestamp > time()) {
-            $this->validationError = 'Starting balance date cannot be in the future.';
+        $error = $this->amountDateError($minor, $date);
+        if ($error !== null || $minor === null || $date === null) {
+            $this->validationError = $error ?? 'Enter a valid amount.';
 
             return;
         }
 
+        $this->persistConfirmation($db, $currentUser, $minor, $date);
+    }
+
+    // Returns the first validation error for the edited amount/date, or null
+    // when both are valid. The match(true) keeps the ordering that surfaces
+    // the most specific message the user can act on first.
+    private function amountDateError(?int $minor, ?string $date): ?string
+    {
+        $timestamp = ($date === null || $date === '') ? false : strtotime($date);
+
+        return match (true) {
+            $minor === null => 'Enter a valid amount.',
+            $minor < self::MIN_BALANCE_MINOR || $minor > self::MAX_BALANCE_MINOR => 'Enter an amount between -€10M and €10M.',
+            $date === null || $date === '' => 'Pick a date.',
+            $timestamp === false => 'Pick a valid date.',
+            $timestamp > time() => 'Starting balance date cannot be in the future.',
+            default => null,
+        };
+    }
+
+    private function persistConfirmation(DatabaseManager $db, CurrentUser $currentUser, int $minor, string $date): void
+    {
         $user = $currentUser->user();
 
         $earliest = $db->connection()

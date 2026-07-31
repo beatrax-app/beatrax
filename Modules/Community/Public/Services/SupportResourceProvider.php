@@ -55,27 +55,50 @@ final class SupportResourceProvider
         }
 
         $dir = $this->reader->resolve('community.corpus.root', 'resources/corpus').'/support';
-        $map = [];
 
-        if (is_dir($dir)) {
-            $files = glob($dir.'/*.yaml');
-            if ($files !== false) {
-                sort($files);
-                foreach ($files as $file) {
-                    foreach ($this->reader->readEntries($file) as $raw) {
-                        $resource = $this->build($raw);
-                        if ($resource !== null) {
-                            $key = implode(' ', $this->words($resource->name));
-                            if ($key !== '') {
-                                $map[$key] = $resource;
-                            }
-                        }
-                    }
-                }
+        return $this->byName = $this->buildMap($dir);
+    }
+
+    /**
+     * @return array<string, SupportResource>
+     */
+    private function buildMap(string $dir): array
+    {
+        if (! is_dir($dir)) {
+            return [];
+        }
+
+        $files = glob($dir.'/*.yaml');
+        if ($files === false) {
+            return [];
+        }
+        sort($files);
+
+        $map = [];
+        foreach ($files as $file) {
+            foreach ($this->reader->readEntries($file) as $raw) {
+                $this->addResource($map, $raw);
             }
         }
 
-        return $this->byName = $map;
+        return $map;
+    }
+
+    /**
+     * @param  array<string, SupportResource>  $map
+     * @param  array<int|string, mixed>  $raw
+     */
+    private function addResource(array &$map, array $raw): void
+    {
+        $resource = $this->build($raw);
+        if ($resource === null) {
+            return;
+        }
+
+        $key = implode(' ', $this->words($resource->name));
+        if ($key !== '') {
+            $map[$key] = $resource;
+        }
     }
 
     /**

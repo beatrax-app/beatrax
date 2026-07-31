@@ -62,15 +62,28 @@ final class ClassificationRuleProvider
         foreach ($files !== false ? $files : [] as $file) {
             $region = strtoupper(pathinfo($file, PATHINFO_FILENAME));
             foreach ($this->reader->readEntries($file) as $raw) {
-                $pattern = is_string($raw['pattern'] ?? null) ? trim($raw['pattern']) : '';
-                if ($pattern === '') {
-                    continue;
+                $rule = $this->buildRule($raw, $region);
+                if ($rule !== null) {
+                    $rules[] = $rule;
                 }
-                $name = is_string($raw['name'] ?? null) && trim($raw['name']) !== '' ? trim($raw['name']) : null;
-                $rules[] = new ClassificationRule(pattern: $pattern, name: $name, region: $region);
             }
         }
 
         return $this->cache[$type] = $rules;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $raw
+     */
+    private function buildRule(array $raw, string $region): ?ClassificationRule
+    {
+        $pattern = is_string($raw['pattern'] ?? null) ? trim($raw['pattern']) : '';
+        if ($pattern === '') {
+            return null;
+        }
+
+        $name = is_string($raw['name'] ?? null) && trim($raw['name']) !== '' ? trim($raw['name']) : null;
+
+        return new ClassificationRule(pattern: $pattern, name: $name, region: $region);
     }
 }
