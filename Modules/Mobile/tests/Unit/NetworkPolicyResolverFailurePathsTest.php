@@ -19,7 +19,7 @@ use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
  *
  * UserDataPathService::appPath() derives its root from NATIVEPHP_STORAGE_PATH
  * (see UserDataPathService::storageRoot()), so each test redirects that env
- * var to a throwaway temp tree it can make un-createable / un-writable
+ * var to a throwaway temp tree it can make un-creatable / un-writable
  * without touching the real device store, then restores it.
  */
 
