@@ -32,7 +32,7 @@ final class OpLogRebuilder
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly OpLogReplayer $replayer,
-        private readonly MergeRulesRegistry $registry,
+        MergeRulesRegistry $registry,
         ?array $coveredTables = null,
     ) {
         // Derives the covered-table list from the registry so it stays
@@ -58,81 +58,123 @@ final class OpLogRebuilder
             $this->db->connection()->transaction(function () use ($userId): void {
                 $triggerSnapshots = $this->snapshotTriggers();
 
-                foreach ($triggerSnapshots as $trigger) {
-                    $this->db->connection()->statement(
-                        "DROP TRIGGER IF EXISTS {$trigger['name']}",
-                    );
-                }
-
-                // Delete ONLY the rows the op-log can recreate (a CreateRow
-                // op for this user) — import-created rows never enter the
-                // log, so preserving them lets their SET ops replay on top
-                // (see @link). FK-safe order avoids aborting on foreign_keys=ON.
-                foreach ($this->fkSafeDeletionOrder() as $table) {
-                    $createdPks = $this->createdRowPks($userId, $table);
-
-                    if ($createdPks === []) {
-                        continue;
-                    }
-
-                    $this->db->connection()
-                        ->table($table)
-                        ->where('user_id', $userId)
-                        ->whereIn('id', $createdPks)
-                        ->delete();
-                }
-
-                // Load the full op-log for this user, HLC-sorted, then map
-                // rows back to OpLogEntry objects.
-                $rows = $this->db->connection()
-                    ->table('op_log_entries')
-                    ->where('user_id', $userId)
-                    ->orderBy('hlc_l')
-                    ->orderBy('hlc_c')
-                    ->orderBy('device_id')
-                    ->get();
-
-                /** @var list<OpLogEntry> $entries */
-                $entries = [];
-
-                foreach ($rows as $row) {
-                    $vars = get_object_vars($row);
-                    $opTypeStr = is_string($vars['op_type'] ?? null) ? $vars['op_type'] : '';
-                    $pkRaw = $vars['pk'] ?? '';
-                    $pk = is_numeric($pkRaw) ? (int) $pkRaw : (is_string($pkRaw) ? $pkRaw : '');
-
-                    $entries[] = new OpLogEntry(
-                        table: is_string($vars['table_name'] ?? null) ? $vars['table_name'] : '',
-                        pk: $pk,
-                        field: is_string($vars['field'] ?? null) ? $vars['field'] : '',
-                        value: is_string($vars['value'] ?? null) ? $vars['value'] : null,
-                        hlcL: is_numeric($vars['hlc_l'] ?? null) ? (int) $vars['hlc_l'] : 0,
-                        hlcC: is_numeric($vars['hlc_c'] ?? null) ? (int) $vars['hlc_c'] : 0,
-                        deviceId: is_string($vars['device_id'] ?? null) ? $vars['device_id'] : '',
-                        opType: OpType::from($opTypeStr),
-                        signature: is_string($vars['signature'] ?? null) ? $vars['signature'] : '',
-                        userId: is_numeric($vars['user_id'] ?? null) ? (int) $vars['user_id'] : 0,
-                        // A GDK-encrypted entry's value can only be decrypted
-                        // with its original epoch tag — dropping this on
-                        // rebuild would silently lose every sensitive-field edit.
-                        gdkEpoch: is_numeric($vars['gdk_epoch'] ?? null) ? (int) $vars['gdk_epoch'] : null,
-                    );
-                }
+                $this->dropTriggers($triggerSnapshots);
+                $this->deleteReplayableRows($userId);
 
                 // Replay via the production replayer so rebuild equals
                 // incremental; injected without a SearchIndexWriterContract
                 // so FTS writes are suppressed inside this transaction.
-                $this->replayer->replay($entries, $userId);
+                $this->replayer->replay($this->loadEntries($userId), $userId);
 
-                foreach ($triggerSnapshots as $trigger) {
-                    if (is_string($trigger['sql'])) {
-                        $this->db->connection()->statement($trigger['sql']);
-                    }
-                }
+                $this->restoreTriggers($triggerSnapshots);
             });
         } finally {
             $this->releaseMaintenanceLock($userId);
         }
+    }
+
+    /**
+     * @param  list<array{name: string, sql: string|null}>  $triggerSnapshots
+     */
+    private function dropTriggers(array $triggerSnapshots): void
+    {
+        foreach ($triggerSnapshots as $trigger) {
+            $this->db->connection()->statement(
+                "DROP TRIGGER IF EXISTS {$trigger['name']}",
+            );
+        }
+    }
+
+    /**
+     * @param  list<array{name: string, sql: string|null}>  $triggerSnapshots
+     */
+    private function restoreTriggers(array $triggerSnapshots): void
+    {
+        foreach ($triggerSnapshots as $trigger) {
+            if (is_string($trigger['sql'])) {
+                $this->db->connection()->statement($trigger['sql']);
+            }
+        }
+    }
+
+    // Delete ONLY the rows the op-log can recreate (a CreateRow op for this
+    // user) — import-created rows never enter the log, so preserving them lets
+    // their SET ops replay on top (see @link). FK-safe order avoids aborting
+    // on foreign_keys=ON.
+    private function deleteReplayableRows(int $userId): void
+    {
+        foreach ($this->fkSafeDeletionOrder() as $table) {
+            $createdPks = $this->createdRowPks($userId, $table);
+
+            if ($createdPks === []) {
+                continue;
+            }
+
+            $this->db->connection()
+                ->table($table)
+                ->where('user_id', $userId)
+                ->whereIn('id', $createdPks)
+                ->delete();
+        }
+    }
+
+    // Load the full op-log for this user, HLC-sorted, then map rows back to
+    // OpLogEntry objects.
+    /**
+     * @return list<OpLogEntry>
+     */
+    private function loadEntries(int $userId): array
+    {
+        $rows = $this->db->connection()
+            ->table('op_log_entries')
+            ->where('user_id', $userId)
+            ->orderBy('hlc_l')
+            ->orderBy('hlc_c')
+            ->orderBy('device_id')
+            ->get();
+
+        /** @var list<OpLogEntry> $entries */
+        $entries = [];
+
+        foreach ($rows as $row) {
+            $entries[] = $this->mapRowToEntry($row);
+        }
+
+        return $entries;
+    }
+
+    private function mapRowToEntry(object $row): OpLogEntry
+    {
+        $vars = get_object_vars($row);
+        $opTypeStr = is_string($vars['op_type'] ?? null) ? $vars['op_type'] : '';
+
+        return new OpLogEntry(
+            table: is_string($vars['table_name'] ?? null) ? $vars['table_name'] : '',
+            pk: self::normalizePk($vars['pk'] ?? ''),
+            field: is_string($vars['field'] ?? null) ? $vars['field'] : '',
+            value: is_string($vars['value'] ?? null) ? $vars['value'] : null,
+            hlcL: is_numeric($vars['hlc_l'] ?? null) ? (int) $vars['hlc_l'] : 0,
+            hlcC: is_numeric($vars['hlc_c'] ?? null) ? (int) $vars['hlc_c'] : 0,
+            deviceId: is_string($vars['device_id'] ?? null) ? $vars['device_id'] : '',
+            opType: OpType::from($opTypeStr),
+            signature: is_string($vars['signature'] ?? null) ? $vars['signature'] : '',
+            userId: is_numeric($vars['user_id'] ?? null) ? (int) $vars['user_id'] : 0,
+            // A GDK-encrypted entry's value can only be decrypted with its
+            // original epoch tag — dropping this on rebuild would silently
+            // lose every sensitive-field edit.
+            gdkEpoch: is_numeric($vars['gdk_epoch'] ?? null) ? (int) $vars['gdk_epoch'] : null,
+        );
+    }
+
+    // A numeric pk normalises to int; a non-numeric string pk (composite or
+    // UUID key) is preserved verbatim; anything else collapses to ''.
+    private static function normalizePk(mixed $pkRaw): int|string
+    {
+        if (is_numeric($pkRaw)) {
+            return (int) $pkRaw;
+        }
+
+        return is_string($pkRaw) ? $pkRaw : '';
     }
 
     // Covered tables ordered children-before-parents so a scoped DELETE

@@ -59,6 +59,17 @@ final class SyncServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->registerMergeAndSigning();
+        $this->registerCryptoServices();
+        $this->registerReplayer();
+        $this->registerIdentityServices();
+        $this->registerPairingServices();
+        $this->registerTransportServices();
+        $this->registerCommandsAndMailbox();
+    }
+
+    private function registerMergeAndSigning(): void
+    {
         // Transient — fresh HLC instance per resolve (mutable state must
         // not be shared across unrelated callers).
         $this->app->bind(HybridLogicalClock::class);
@@ -72,7 +83,10 @@ final class SyncServiceProvider extends ServiceProvider
         // The libsodium conversions the crypto paths run inside their
         // try-blocks, behind an interface so a test can make them fail.
         $this->app->singleton(SodiumPrimitives::class, LibsodiumPrimitives::class);
+    }
 
+    private function registerCryptoServices(): void
+    {
         // GDK crypto primitives (class_exists-guarded so this provider
         // stays clean at every intermediate commit — stateless/DI-resolved,
         // safe to share).
@@ -114,7 +128,10 @@ final class SyncServiceProvider extends ServiceProvider
         }
 
         $this->singletonIfExists($cryptoNamespace.'GdkEpochControlHandler');
+    }
 
+    private function registerReplayer(): void
+    {
         // Production OpLogReplayer fed the confirmed-only device-key map.
         // Tests inject their own throwaway map by constructing OpLogReplayer
         // directly.
@@ -132,7 +149,10 @@ final class SyncServiceProvider extends ServiceProvider
                 );
             },
         );
+    }
 
+    private function registerIdentityServices(): void
+    {
         // Device-identity services (class_exists-guarded). Each is
         // stateless / DI-resolved, safe to share.
         if (class_exists(DeviceIdentityService::class)) {
@@ -157,7 +177,10 @@ final class SyncServiceProvider extends ServiceProvider
                 fn () => new SafetyNumberDeriver(Bip39WordList::WORDS),
             );
         }
+    }
 
+    private function registerPairingServices(): void
+    {
         // Pairing classes auto-wire the moment they exist. Referenced by
         // runtime-built FQCN (not `use` imports / `::class`) so this
         // provider stays PHPStan-clean before they exist.
@@ -181,7 +204,10 @@ final class SyncServiceProvider extends ServiceProvider
         if (class_exists(OpLogWriter::class)) {
             $this->app->singleton(OpLogWriter::class);
         }
+    }
 
+    private function registerTransportServices(): void
+    {
         // Transport services (class_exists-guarded), referenced by
         // runtime-built FQCN strings so PHPStan stays clean before the
         // classes exist. This provider is the single owner.
@@ -210,38 +236,48 @@ final class SyncServiceProvider extends ServiceProvider
         // container reuses the same process handle across resolutions.
         $this->singletonIfExists($discoveryNamespace.'MdnsBrowser');
 
-        // Bound as a factory so the container can resolve it from
-        // SyncServeCommand's constructor without requiring runtime device
-        // credentials at bind time — placeholder credentials reject all
-        // peers until the real host resolves them (see architecture doc).
-        if (class_exists(SyncWebSocketHandler::class)) {
-            $this->app->bind(
-                SyncWebSocketHandler::class,
-                fn () => new SyncWebSocketHandler(
-                    registryService: $this->app->make(DeviceRegistryService::class),
-                    signer: $this->app->make(DeviceKeySigner::class),
-                    framer: new TransportFramer,
-                    catchUp: $this->app->make(PeerCatchUpExchanger::class),
-                    db: $this->app->make(DatabaseManager::class),
-                    clock: $this->app->make(Clock::class),
-                    logger: $this->app->make(LoggerInterface::class),
-                    // Placeholder credentials — real values injected at
-                    // daemon start by NativePHP ChildProcess or DeviceIdentityLoader.
-                    localStaticSecret: '',
-                    localStaticPublic: '',
-                    localDeviceId: '',
-                    userId: 0,
-                    // Container-bound merge registry + FTS writer so the
-                    // live sync replay path keeps the search index fresh,
-                    // matching every other replay path.
-                    rules: $this->app->make(MergeRulesRegistry::class),
-                    searchWriter: $this->app->bound(SearchIndexWriterContract::class)
-                        ? $this->app->make(SearchIndexWriterContract::class)
-                        : null,
-                ),
-            );
+        $this->registerWebSocketHandler();
+    }
+
+    // Bound as a factory so the container can resolve it from
+    // SyncServeCommand's constructor without requiring runtime device
+    // credentials at bind time — placeholder credentials reject all peers
+    // until the real host resolves them (see architecture doc).
+    private function registerWebSocketHandler(): void
+    {
+        if (! class_exists(SyncWebSocketHandler::class)) {
+            return;
         }
 
+        $this->app->bind(
+            SyncWebSocketHandler::class,
+            fn () => new SyncWebSocketHandler(
+                registryService: $this->app->make(DeviceRegistryService::class),
+                signer: $this->app->make(DeviceKeySigner::class),
+                framer: new TransportFramer,
+                catchUp: $this->app->make(PeerCatchUpExchanger::class),
+                db: $this->app->make(DatabaseManager::class),
+                clock: $this->app->make(Clock::class),
+                logger: $this->app->make(LoggerInterface::class),
+                // Placeholder credentials — real values injected at
+                // daemon start by NativePHP ChildProcess or DeviceIdentityLoader.
+                localStaticSecret: '',
+                localStaticPublic: '',
+                localDeviceId: '',
+                userId: 0,
+                // Container-bound merge registry + FTS writer so the
+                // live sync replay path keeps the search index fresh,
+                // matching every other replay path.
+                rules: $this->app->make(MergeRulesRegistry::class),
+                searchWriter: $this->app->bound(SearchIndexWriterContract::class)
+                    ? $this->app->make(SearchIndexWriterContract::class)
+                    : null,
+            ),
+        );
+    }
+
+    private function registerCommandsAndMailbox(): void
+    {
         if (class_exists(RelayServeCommand::class)) {
             $this->app->singleton(RelayServeCommand::class);
         }
@@ -278,82 +314,42 @@ final class SyncServiceProvider extends ServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         }
 
-        // Capture listener wired once the class exists — this is the
-        // single-owner forward-registration precedent used throughout.
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(TransactionMutated::class)) {
-            $events->listen(
-                TransactionMutated::class,
-                [SyncCaptureListener::class, 'handle'],
-            );
+        $this->registerCaptureListeners($events);
+        $this->registerCryptoListeners($events);
+        $this->registerLivewireComponents();
+        $this->registerConsoleCommands();
+    }
+
+    // Each mutation event maps to one SyncCaptureListener handler. Wired
+    // once the listener and event both exist — the single-owner forward-
+    // registration precedent used throughout. Referenced by ::class (the
+    // events are imported), still class_exists-guarded before they ship.
+    private function registerCaptureListeners(Dispatcher $events): void
+    {
+        if (! class_exists(SyncCaptureListener::class)) {
+            return;
         }
 
-        // Split-leg capture listener. Same class_exists-guarded pattern as
-        // the TransactionMutated wiring above.
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(TransactionSplitMutated::class)) {
-            $events->listen(
-                TransactionSplitMutated::class,
-                [SyncCaptureListener::class, 'handleSplit'],
-            );
-        }
+        $wirings = [
+            [TransactionMutated::class, 'handle'],
+            [TransactionSplitMutated::class, 'handleSplit'],
+            [EnvelopeAssignmentMutated::class, 'handleEnvelopeAssignment'],
+            [EnvelopeMoveMutated::class, 'handleEnvelopeMove'],
+            [EnvelopeSettingMutated::class, 'handleEnvelopeSetting'],
+            [SavedReportMutated::class, 'handleSavedReport'],
+            [NotificationMutated::class, 'handleNotificationMutated'],
+            [NotificationPreferenceMutated::class, 'handleNotificationPreferenceMutated'],
+        ];
 
-        // Envelope-table capture listeners. Same class_exists-guarded
-        // pattern as the wiring above.
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(EnvelopeAssignmentMutated::class)) {
-            $events->listen(
-                EnvelopeAssignmentMutated::class,
-                [SyncCaptureListener::class, 'handleEnvelopeAssignment'],
-            );
+        foreach ($wirings as [$eventClass, $method]) {
+            if (class_exists($eventClass)) {
+                $events->listen($eventClass, [SyncCaptureListener::class, $method]);
+            }
         }
+    }
 
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(EnvelopeMoveMutated::class)) {
-            $events->listen(
-                EnvelopeMoveMutated::class,
-                [SyncCaptureListener::class, 'handleEnvelopeMove'],
-            );
-        }
-
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(EnvelopeSettingMutated::class)) {
-            $events->listen(
-                EnvelopeSettingMutated::class,
-                [SyncCaptureListener::class, 'handleEnvelopeSetting'],
-            );
-        }
-
-        // Saved-report capture listener. Same class_exists-guarded pattern
-        // as the envelope wiring above.
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(SavedReportMutated::class)) {
-            $events->listen(
-                SavedReportMutated::class,
-                [SyncCaptureListener::class, 'handleSavedReport'],
-            );
-        }
-
-        // Notification capture listeners. Same class_exists-guarded
-        // pattern as the saved-report wiring above.
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(NotificationMutated::class)) {
-            $events->listen(
-                NotificationMutated::class,
-                [SyncCaptureListener::class, 'handleNotificationMutated'],
-            );
-        }
-
-        // Per-device notification-preference capture listener. Same
-        // class_exists-guarded pattern as the wiring above.
-        if (class_exists(SyncCaptureListener::class) &&
-            class_exists(NotificationPreferenceMutated::class)) {
-            $events->listen(
-                NotificationPreferenceMutated::class,
-                [SyncCaptureListener::class, 'handleNotificationPreferenceMutated'],
-            );
-        }
-
+    private function registerCryptoListeners(Dispatcher $events): void
+    {
         // Passphrase-change GDK re-wrap. Referenced by runtime-built FQCN
         // so this provider stays PHPStan-clean before either class exists —
         // the single-owner forward-registration precedent used throughout.
@@ -362,57 +358,53 @@ final class SyncServiceProvider extends ServiceProvider
         if (class_exists($authPassphraseChanged) && class_exists($rewrapListener)) {
             $events->listen($authPassphraseChanged, [$rewrapListener, 'handle']);
         }
+    }
+
+    private function registerLivewireComponents(): void
+    {
+        if (! class_exists(LivewireManager::class)) {
+            return;
+        }
+
+        /** @var LivewireManager $livewire */
+        $livewire = $this->app->make(LivewireManager::class);
 
         // Sync health-check Livewire component. Registered by runtime FQCN
         // so PHPStan stays clean before the class exists.
-        if (class_exists(LivewireManager::class) &&
-            class_exists(SyncHealthPage::class)) {
-            /** @var LivewireManager $livewire */
-            $livewire = $this->app->make(LivewireManager::class);
-            $livewire->component(
-                'sync.sync-health-page',
-                SyncHealthPage::class,
-            );
+        if (class_exists(SyncHealthPage::class)) {
+            $livewire->component('sync.sync-health-page', SyncHealthPage::class);
         }
 
-        // Register sync:serve and relay:serve artisan daemons. Both are
-        // class_exists-guarded so the provider stays clean before they
-        // ship. Registered in boot() (not app/Console/Kernel.php) — per
-        // the module boundary rule.
+        // Devices & Sync settings section, pairing-flow modal, and sync-
+        // status surface. Referenced by runtime-built FQCN (not `use`
+        // imports / `::class`) so this provider stays PHPStan-clean before
+        // they exist; they register the moment they exist on disk.
+        $livewireNamespace = 'Modules\Sync\Internal\Http\Livewire\\';
+        $components = [
+            'sync.devices-and-sync-settings-section' => $livewireNamespace.'DevicesAndSyncSettingsSection',
+            'sync.pairing-flow-modal' => $livewireNamespace.'PairingFlowModal',
+            'sync.sync-status-section' => $livewireNamespace.'SyncStatusSection',
+        ];
+
+        foreach ($components as $alias => $componentClass) {
+            if (class_exists($componentClass)) {
+                $livewire->component($alias, $componentClass);
+            }
+        }
+    }
+
+    // Register sync:serve and relay:serve artisan daemons. Both are
+    // class_exists-guarded so the provider stays clean before they ship.
+    // Registered in boot() (not app/Console/Kernel.php) — per the module
+    // boundary rule.
+    private function registerConsoleCommands(): void
+    {
         if (class_exists(SyncServeCommand::class)) {
             $this->commands([SyncServeCommand::class]);
         }
 
         if (class_exists(RelayServeCommand::class)) {
             $this->commands([RelayServeCommand::class]);
-        }
-
-        // Devices & Sync settings section + pairing-flow modal. Referenced
-        // by runtime-built FQCN (not `use` imports / `::class`) so this
-        // provider stays PHPStan-clean before they exist; they register
-        // the moment they exist on disk.
-        if (class_exists(LivewireManager::class)) {
-            /** @var LivewireManager $livewire */
-            $livewire = $this->app->make(LivewireManager::class);
-
-            $livewireNamespace = 'Modules\Sync\Internal\Http\Livewire\\';
-            $devicesSection = $livewireNamespace.'DevicesAndSyncSettingsSection';
-            if (class_exists($devicesSection)) {
-                $livewire->component('sync.devices-and-sync-settings-section', $devicesSection);
-            }
-
-            $pairingModal = $livewireNamespace.'PairingFlowModal';
-            if (class_exists($pairingModal)) {
-                $livewire->component('sync.pairing-flow-modal', $pairingModal);
-            }
-
-            // Sync-status Livewire surface: shows per-peer online/offline
-            // status + last-sync time. Registered by runtime FQCN so
-            // PHPStan stays clean before it ships.
-            $syncStatus = $livewireNamespace.'SyncStatusSection';
-            if (class_exists($syncStatus)) {
-                $livewire->component('sync.sync-status-section', $syncStatus);
-            }
         }
     }
 

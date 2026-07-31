@@ -10,18 +10,18 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
-use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
-use Modules\Sync\Internal\Crypto\GdkKeyring;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
+use Modules\Sync\Internal\Merge\Concerns\AppliesOpLogEntries;
+use Modules\Sync\Internal\Merge\Concerns\VerifiesOpLogEntries;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
 use Modules\Sync\Internal\Merge\Strategies\LwwPerFieldStrategy;
 use Modules\Sync\Internal\Merge\Strategies\MergeStrategyInterface;
 use Modules\Sync\Internal\Merge\Strategies\OrSetStrategy;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
-use Modules\Sync\Internal\OpLog\OpType;
+use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
@@ -30,6 +30,9 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
  */
 final readonly class OpLogReplayer
 {
+    use AppliesOpLogEntries;
+    use VerifiesOpLogEntries;
+
     // Cascade ops are deterministically re-derived by the replayer on every
     // replay (incremental AND rebuild), never network-received, so they
     // carry no Ed25519 key and no signature. The signature gate allow-lists
@@ -37,6 +40,8 @@ final readonly class OpLogReplayer
     public const string SYSTEM_CASCADE_DEVICE_ID = 'system-cascade';
 
     private const string SYSTEM_FTS_DEVICE_ID = 'system-fts';
+
+    private const string DEFAULT_STRATEGY = 'lww';
 
     private DeviceKeySigner $signer;
 
@@ -88,7 +93,7 @@ final readonly class OpLogReplayer
         $this->signer = new DeviceKeySigner;
         $this->rules = $rules ?? new MergeRulesRegistry;
         $this->strategies = [
-            'lww' => new LwwPerFieldStrategy,
+            self::DEFAULT_STRATEGY => new LwwPerFieldStrategy,
             'g_counter' => new GCounterStrategy,
             'or_set' => new OrSetStrategy,
         ];
@@ -178,79 +183,6 @@ final readonly class OpLogReplayer
         return $deviceId === self::SYSTEM_CASCADE_DEVICE_ID;
     }
 
-    // Loads $userId's GDK keyring, or null when it cannot currently be
-    // loaded (crypto services unavailable, no session, app locked, or GDK
-    // never enabled). Never throws — callers treat null as "cannot decrypt right now".
-    private function tryLoadKeyring(int $userId): ?GdkKeyring
-    {
-        if ($this->keyringService === null || $this->session === null) {
-            return null;
-        }
-
-        try {
-            $keyring = $this->keyringService->loadKeyring($userId, $this->session);
-        } catch (\LogicException) {
-            return null;
-        }
-
-        return $keyring->epochs() === [] ? null : $keyring;
-    }
-
-    // Decrypts a GDK-tagged sensitive entry's value for strategy resolution.
-    // Returns a NEW OpLogEntry carrying the decrypted plaintext (->gdkEpoch
-    // unchanged, needed so a later write-back knows the source was
-    // encrypted). Returns null (quarantined) on any decrypt failure — NEVER throws.
-    private function decryptForStrategy(OpLogEntry $entry, ?GdkKeyring $keyring, string $now): ?OpLogEntry
-    {
-        if ($entry->value === null || $entry->gdkEpoch === null) {
-            return $entry;
-        }
-
-        if ($this->fieldCrypto === null || $keyring === null) {
-            $this->quarantine($entry, 'gdk_decrypt_failed', $now);
-
-            return null;
-        }
-
-        $keyHex = $keyring->keyFor($entry->gdkEpoch);
-        if ($keyHex === null) {
-            $this->quarantine($entry, 'gdk_decrypt_failed', $now);
-
-            return null;
-        }
-
-        $rawKey = sodium_hex2bin($keyHex);
-        try {
-            $plain = $this->fieldCrypto->decrypt(
-                $entry->value,
-                $rawKey,
-                "{$entry->table}:{$entry->pk}:{$entry->field}:{$entry->gdkEpoch}",
-            );
-        } finally {
-            sodium_memzero($rawKey);
-        }
-
-        if ($plain === false) {
-            $this->quarantine($entry, 'gdk_decrypt_failed', $now);
-
-            return null;
-        }
-
-        return new OpLogEntry(
-            table: $entry->table,
-            pk: $entry->pk,
-            field: $entry->field,
-            value: $plain,
-            hlcL: $entry->hlcL,
-            hlcC: $entry->hlcC,
-            deviceId: $entry->deviceId,
-            opType: $entry->opType,
-            signature: $entry->signature,
-            userId: $entry->userId,
-            gdkEpoch: $entry->gdkEpoch,
-        );
-    }
-
     // Re-encrypts a plaintext sensitive-field value for the PROJECTION
     // column write-back (rotation-safe, current-epoch AD) so it stays
     // ciphertext at rest. Pass-through when the field isn't sensitive, the
@@ -268,6 +200,16 @@ final readonly class OpLogReplayer
         return $this->columnCodec->encryptValue($table, $field, $value, $userId, $this->session);
     }
 
+    // A non-scalar strategy result (OR-Set -> list<array>) is JSON-encoded by
+    // the caller before it reaches a SQLite column; the projection column is
+    // then re-encrypted under the CURRENT epoch (rotation-safe) — the strategy
+    // itself only ever saw plaintext.
+    private function resolveStrategy(string $table, string $field): MergeStrategyInterface
+    {
+        return $this->strategies[$this->rules->strategyFor($table, $field)]
+            ?? $this->strategies[self::DEFAULT_STRATEGY];
+    }
+
     // Replays a merged set of op-log entries against the real SQLite schema:
     // filter + verify signatures (rejected -> quarantine only), sort by HLC
     // total order, single-pass resolve per (table, pk, field) via strategy
@@ -280,133 +222,17 @@ final readonly class OpLogReplayer
     {
         $now = $this->clock->now()->toDateTimeString();
 
-        // Step 1: filter to the scoped userId (defense in depth) + Ed25519
-        // gate. A rejected entry is routed to quarantine ONLY — it is NEVER
-        // written to the authoritative op_log_entries table.
-        $verified = [];
+        $verified = $this->verifyPersistAndPrepare($entries, $userId, $now);
+        $sorted = $this->sortByHlc($verified);
+        [$candidatesByField, $tombstones, $creates] = $this->partitionByOpType($sorted);
 
-        // GDK keyring: loaded at most once per replay() call, lazily (only
-        // if a GDK-tagged sensitive entry is actually encountered), and
-        // cached here — never as instance state (this class is readonly and
-        // potentially reused across many replay() calls in a headless daemon).
-        $keyring = null;
-        $keyringLoaded = false;
-
-        foreach ($entries as $entry) {
-            if ($entry->userId !== $userId) {
-                $this->quarantine($entry, 'cross_user', $now);
-
-                continue;
-            }
-
-            // Table allow-list gate: only tables registered in
-            // MergeRulesRegistry may be written via op-log replay — without
-            // it, a compromised-but-signature-valid peer could target ANY
-            // wire-supplied table name, a full trust-store takeover.
-            if (! $this->rules->isRegistered($entry->table)) {
-                $this->quarantine($entry, 'unknown_table', $now);
-
-                continue;
-            }
-
-            // System cascade ops are deterministically re-derived by the
-            // replayer itself, so they carry no device key/signature —
-            // allow-listed past the Ed25519 gate. The cross-user gate above
-            // STILL applies, and they only ever set a transaction's `type`.
-            if ($this->isSystemDevice($entry->deviceId)) {
-                $this->persistVerifiedEntry($entry, $now);
-                $verified[] = $entry;
-
-                continue;
-            }
-
-            $pubKeyHex = $this->deviceKeys[$entry->deviceId] ?? null;
-
-            if ($pubKeyHex === null) {
-                $this->quarantine($entry, 'missing_device_key', $now);
-
-                continue;
-            }
-
-            $pubKeyBin = sodium_hex2bin($pubKeyHex);
-
-            if (! $this->signer->verify($entry->signingPayload(), $entry->signature, $pubKeyBin)) {
-                $this->quarantine($entry, 'forged_signature', $now);
-
-                continue;
-            }
-
-            // Verified — persistVerifiedEntry() ALWAYS writes $entry->value
-            // UNCHANGED (ciphertext, if sensitive); the decrypt step below
-            // only affects the in-memory copy used for strategy resolution.
-            $this->persistVerifiedEntry($entry, $now);
-
-            if ($entry->gdkEpoch === null || ! $this->sensitiveFields->isSensitive($entry->table, $entry->field)) {
-                $verified[] = $entry;
-
-                continue;
-            }
-
-            if (! $keyringLoaded) {
-                $keyring = $this->tryLoadKeyring($userId);
-                $keyringLoaded = true;
-            }
-
-            $decrypted = $this->decryptForStrategy($entry, $keyring, $now);
-
-            if ($decrypted === null) {
-                // Quarantined inside decryptForStrategy(). The entry is
-                // already durably persisted (ciphertext) above — it is
-                // simply excluded from strategy resolution.
-                continue;
-            }
-
-            $verified[] = $decrypted;
-        }
-
-        $sorted = $verified;
-        usort(
-            $sorted,
-            fn (OpLogEntry $a, OpLogEntry $b): int => HybridLogicalClock::compare(
-                $a->hlcL, $a->hlcC, $a->deviceId,
-                $b->hlcL, $b->hlcC, $b->deviceId,
-            ),
-        );
-
-        // Step 3: single pass — build resolved-value map, tombstone map,
-        // creates map. Keyed as candidatesByField[table][pk][field] =>
-        // HLC-sorted list<OpLogEntry>; tombstones[table][pk] => winning
-        // DELETE_TOMBSTONE entry; creates[table][pk][field] => list<OpLogEntry>.
-
-        /** @var array<string, array<int|string, array<string, list<OpLogEntry>>>> $candidatesByField */
-        $candidatesByField = [];
-
-        /** @var array<string, array<int|string, OpLogEntry>> $tombstones */
-        $tombstones = [];
-
-        /** @var array<string, array<int|string, array<string, list<OpLogEntry>>>> $creates */
-        $creates = [];
-
-        foreach ($sorted as $entry) {
-            $pk = $entry->pk;
-
-            if ($entry->opType === OpType::DeleteTombstone) {
-                $tombstones[$entry->table][$pk] = $entry;
-            } elseif ($entry->opType === OpType::CreateRow) {
-                $creates[$entry->table][$pk][$entry->field][] = $entry;
-            } else {
-                $candidatesByField[$entry->table][$pk][$entry->field][] = $entry;
-            }
-        }
-
-        // Step 4: apply within a single DB transaction. Pair-link cascade
-        // deletions are collected here and applied AFTER commit, with the
-        // tombstone HLC captured so the compensating op sorts deterministically after it.
+        // Pair-link cascade deletions and FTS5 freshness ids are collected
+        // INSIDE the transaction but consumed AFTER commit — cascade
+        // reclassification and FTS5 shadow-table writes cannot run inside the
+        // base-table transaction, so the closure fills these by reference.
         /** @var list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}> $pairCascades */
         $pairCascades = [];
 
-        // FTS5 freshness tracking: collected inside the transaction,
-        // consumed OUTSIDE it (FTS5 calls must be post-commit).
         /** @var list<int> $touchedTransactionIds */
         $touchedTransactionIds = [];
 
@@ -424,348 +250,31 @@ final readonly class OpLogReplayer
                 &$touchedTransactionIds,
                 &$tombstonedTransactionIds,
             ): void {
-                foreach ($creates as $table => $rows) {
-                    foreach ($rows as $pk => $fields) {
-                        $tomb = $tombstones[$table][$pk] ?? null;
-
-                        if ($tomb !== null) {
-                            $maxCreate = null;
-
-                            foreach ($fields as $fieldEntries) {
-                                foreach ($fieldEntries as $fieldEntry) {
-                                    if ($maxCreate === null || HybridLogicalClock::compare(
-                                        $fieldEntry->hlcL, $fieldEntry->hlcC, $fieldEntry->deviceId,
-                                        $maxCreate->hlcL, $maxCreate->hlcC, $maxCreate->deviceId,
-                                    ) > 0) {
-                                        $maxCreate = $fieldEntry;
-                                    }
-                                }
-                            }
-
-                            if ($maxCreate !== null && HybridLogicalClock::compare(
-                                $tomb->hlcL, $tomb->hlcC, $tomb->deviceId,
-                                $maxCreate->hlcL, $maxCreate->hlcC, $maxCreate->deviceId,
-                            ) >= 0) {
-                                continue;
-                            }
-                        }
-
-                        $requiredCols = $this->rules->requiredCreateColumns($table);
-                        $presentCols = array_keys($fields);
-                        $missing = array_diff($requiredCols, $presentCols);
-
-                        if ($missing !== []) {
-                            $firstField = reset($fields);
-                            if ($firstField !== false && $firstField !== []) {
-                                $synth = $firstField[0];
-                                $this->quarantine($synth, 'incomplete_create_row', $now);
-                            }
-
-                            continue;
-                        }
-
-                        $payload = ['user_id' => $userId];
-
-                        foreach ($fields as $field => $fieldEntries) {
-                            try {
-                                $strategyKey = $this->rules->strategyFor($table, $field);
-                                $strategy = $this->strategies[$strategyKey] ?? $this->strategies['lww'];
-                                // A non-scalar strategy result (OrSet -> list<array>) must be
-                                // JSON-encoded before it reaches a SQLite column; the sensitive
-                                // PROJECTION column is then re-encrypted under the CURRENT
-                                // epoch (rotation-safe) — the strategy only saw plaintext.
-                                $resolvedValue = $this->encodeColumnValue($strategy->resolve($fieldEntries));
-                                $payload[$field] = $this->reencryptForProjection($table, $field, $resolvedValue, $userId);
-                            } catch (\Throwable) {
-                                $this->quarantine($fieldEntries[0], 'strategy_error', $now);
-
-                                continue 2;
-                            }
-                        }
-
-                        // A CreateRow op may legitimately carry a 'user_id' field, but the
-                        // loop above lets it overwrite the seeded, authoritative
-                        // $payload['user_id'] — insertOrIgnore has no WHERE clause to stop a
-                        // malicious device of user A supplying dirtyFields['user_id'] = B.
-                        if (isset($fields['user_id'])) {
-                            $suppliedUserIdValue = $payload['user_id'] ?? null;
-                            $suppliedUserId = is_numeric($suppliedUserIdValue) ? (int) $suppliedUserIdValue : null;
-
-                            if ($suppliedUserId !== $userId) {
-                                $this->quarantine($fields['user_id'][0], 'cross_user', $now);
-
-                                continue;
-                            }
-                        }
-
-                        // Defense-in-depth: force the authoritative user_id even when the
-                        // op-supplied value matched — never trust a wire-derived value here.
-                        $payload['user_id'] = $userId;
-
-                        $this->db->connection()
-                            ->table($table)
-                            ->insertOrIgnore($payload);
-
-                        if ($table === 'transactions' && is_int($pk)) {
-                            $touchedTransactionIds[] = $pk;
-                        }
-                    }
-                }
-
-                foreach ($candidatesByField as $table => $rows) {
-                    foreach ($rows as $pk => $fields) {
-                        $tomb = $tombstones[$table][$pk] ?? null;
-
-                        if ($tomb !== null) {
-                            $maxFieldEntry = null;
-
-                            foreach ($fields as $fieldEntries) {
-                                foreach ($fieldEntries as $fieldEntry) {
-                                    if ($maxFieldEntry === null || HybridLogicalClock::compare(
-                                        $fieldEntry->hlcL, $fieldEntry->hlcC, $fieldEntry->deviceId,
-                                        $maxFieldEntry->hlcL, $maxFieldEntry->hlcC, $maxFieldEntry->deviceId,
-                                    ) > 0) {
-                                        $maxFieldEntry = $fieldEntry;
-                                    }
-                                }
-                            }
-
-                            // Delete-wins: tombstone HLC >= max field HLC (incl. equal
-                            // tie). Before deleting, check for a pair-link cascade — ON
-                            // DELETE SET NULL on pair_transaction_id means the transfer
-                            // partner survives with pair_transaction_id=NULL.
-                            if ($maxFieldEntry !== null && HybridLogicalClock::compare(
-                                $tomb->hlcL, $tomb->hlcC, $tomb->deviceId,
-                                $maxFieldEntry->hlcL, $maxFieldEntry->hlcC, $maxFieldEntry->deviceId,
-                            ) >= 0) {
-                                if ($table === 'transactions') {
-                                    $txRow = $this->db->connection()
-                                        ->table('transactions')
-                                        ->where('id', $pk)
-                                        ->where('user_id', $userId)
-                                        ->first();
-
-                                    if ($txRow !== null) {
-                                        $txType = is_string($txRow->type ?? null) ? $txRow->type : null;
-                                        $pairId = is_numeric($txRow->pair_transaction_id ?? null)
-                                            ? (int) $txRow->pair_transaction_id
-                                            : null;
-
-                                        if ($pairId !== null && in_array($txType, ['transfer_in', 'transfer_out'], true)) {
-                                            $pairCascades[] = [
-                                                'partnerId' => $pairId,
-                                                'deletedType' => $txType,
-                                                'tombHlcL' => $tomb->hlcL,
-                                                'tombHlcC' => $tomb->hlcC,
-                                            ];
-                                        }
-                                    }
-                                }
-
-                                $this->db->connection()
-                                    ->table($table)
-                                    ->where('id', $pk)
-                                    ->where('user_id', $userId)
-                                    ->delete();
-
-                                if ($table === 'transactions' && is_int($pk)) {
-                                    $tombstonedTransactionIds[] = $pk;
-                                }
-
-                                continue;
-                            }
-                        }
-
-                        // Edit wins (or no tombstone). Encode AND write inside the try:
-                        // computing the value in the try but ->update() outside it let a
-                        // non-scalar (OrSet) throw during binding and roll back the ENTIRE
-                        // merge transaction — now a single bad op is quarantined instead.
-                        foreach ($fields as $field => $fieldEntries) {
-                            try {
-                                $strategyKey = $this->rules->strategyFor($table, $field);
-                                $strategy = $this->strategies[$strategyKey] ?? $this->strategies['lww'];
-                                $columnValue = $this->encodeColumnValue($strategy->resolve($fieldEntries));
-                                // The sensitive PROJECTION column is re-encrypted under the
-                                // CURRENT epoch (rotation-safe) before the UPDATE.
-                                $columnValue = $this->reencryptForProjection($table, $field, $columnValue, $userId);
-
-                                $this->db->connection()
-                                    ->table($table)
-                                    ->where('id', $pk)
-                                    ->where('user_id', $userId)
-                                    ->update([$field => $columnValue]);
-                            } catch (\Throwable) {
-                                $this->quarantine($fieldEntries[0], 'strategy_error', $now);
-
-                                continue;
-                            }
-                        }
-
-                        if ($table === 'transactions' && is_int($pk)) {
-                            $touchedTransactionIds[] = $pk;
-                        }
-                    }
-                }
-
-                // Apply tombstones for (table, pk) pairs that had no SET entries
-                // (pairs with a SET are already handled in the loop above).
-                foreach ($tombstones as $table => $pks) {
-                    foreach ($pks as $pk => $tomb) {
-                        if (isset($candidatesByField[$table][$pk])) {
-                            continue;
-                        }
-
-                        if ($table === 'transactions') {
-                            $txRow = $this->db->connection()
-                                ->table('transactions')
-                                ->where('id', $pk)
-                                ->where('user_id', $userId)
-                                ->first();
-
-                            if ($txRow !== null) {
-                                $txType = is_string($txRow->type ?? null) ? $txRow->type : null;
-                                $pairId = is_numeric($txRow->pair_transaction_id ?? null)
-                                    ? (int) $txRow->pair_transaction_id
-                                    : null;
-
-                                if ($pairId !== null && in_array($txType, ['transfer_in', 'transfer_out'], true)) {
-                                    $pairCascades[] = [
-                                        'partnerId' => $pairId,
-                                        'deletedType' => $txType,
-                                        'tombHlcL' => $tomb->hlcL,
-                                        'tombHlcC' => $tomb->hlcC,
-                                    ];
-                                }
-                            }
-                        }
-
-                        $this->db->connection()
-                            ->table($table)
-                            ->where('id', $pk)
-                            ->where('user_id', $userId)
-                            ->delete();
-
-                        if ($table === 'transactions' && is_int($pk)) {
-                            $tombstonedTransactionIds[] = $pk;
-                        }
-                    }
-                }
+                $this->applyCreates($creates, $tombstones, $userId, $now, $touchedTransactionIds);
+                $this->applyFieldMerges(
+                    $candidatesByField,
+                    $tombstones,
+                    $userId,
+                    $now,
+                    $pairCascades,
+                    $touchedTransactionIds,
+                    $tombstonedTransactionIds,
+                );
+                $this->applyBareTombstones(
+                    $candidatesByField,
+                    $tombstones,
+                    $userId,
+                    $pairCascades,
+                    $tombstonedTransactionIds,
+                );
             },
         );
 
-        // Step 5: pair-link cascade reclassification. After the merge
-        // transaction, detect orphaned transfer partners and reclassify
-        // them. Each compensating op is also persisted to op_log_entries.
-        foreach ($pairCascades as $cascade) {
-            $partnerId = $cascade['partnerId'];
-            $deletedType = $cascade['deletedType'];
-
-            $newType = match ($deletedType) {
-                'transfer_out' => 'income',   // partner was transfer_in, now orphaned -> income
-                'transfer_in' => 'expense',  // partner was transfer_out, now orphaned -> expense
-                default => null,
-            };
-
-            if ($newType === null) {
-                continue;
-            }
-
-            $partnerRow = $this->db->connection()
-                ->table('transactions')
-                ->where('id', $partnerId)
-                ->where('user_id', $userId)
-                ->first();
-
-            if ($partnerRow === null || $partnerRow->pair_transaction_id !== null) {
-                continue;
-            }
-
-            $this->db->connection()
-                ->table('transactions')
-                ->where('id', $partnerId)
-                ->where('user_id', $userId)
-                ->update(['type' => $newType]);
-
-            // Persists the compensating op with a REAL, monotonic HLC
-            // (tombstone HLC, counter+1) that sorts deterministically AFTER
-            // the tombstone — an HLC of [0,0] would sort it FIRST and a
-            // rebuild would revert the reclassification.
-            $this->db->connection()->table('op_log_entries')->updateOrInsert(
-                [
-                    'user_id' => $userId,
-                    'device_id' => self::SYSTEM_CASCADE_DEVICE_ID,
-                    'table_name' => 'transactions',
-                    'pk' => (string) $partnerId,
-                    'field' => 'type',
-                    'hlc_l' => $cascade['tombHlcL'],
-                    'hlc_c' => $cascade['tombHlcC'] + 1,
-                ],
-                [
-                    'op_type' => OpType::Set->value,
-                    'value' => json_encode($newType, JSON_THROW_ON_ERROR),
-                    'signature' => '',
-                    'recorded_at' => $now,
-                ],
-            );
-
-            $touchedTransactionIds[] = $partnerId;
-        }
-
-        // Step 6: FTS5 freshness. MUST be OUTSIDE the merge transaction
-        // (FTS5 shadow-table writes cannot participate in a transaction
-        // that also touches the base table). A FTS hiccup never breaks
-        // merge determinism — each call is try/catch guarded.
-        if ($this->searchWriter !== null) {
-            foreach ($touchedTransactionIds as $txId) {
-                try {
-                    $this->searchWriter->upsertForTransaction($txId, $userId);
-                } catch (\Throwable) {
-                    $this->quarantineSearchError($txId, 'upsert', $userId, $now);
-                }
-            }
-
-            foreach ($tombstonedTransactionIds as $txId) {
-                try {
-                    $this->searchWriter->deleteForTransaction($txId, $userId);
-                } catch (\Throwable) {
-                    $this->quarantineSearchError($txId, 'delete', $userId, $now);
-                }
-            }
-        }
+        $this->applyPairCascades($pairCascades, $userId, $now, $touchedTransactionIds);
+        $this->refreshSearchIndex($touchedTransactionIds, $tombstonedTransactionIds, $userId, $now);
     }
 
-    // Persists a VERIFIED entry to the authoritative op_log_entries table
-    // (upsert-by-identity, so replay is idempotent). Called ONLY after an
-    // entry passes the cross-user + Ed25519 gate (or is an allow-listed
-    // system op), so the durable log never holds forged or cross-user rows.
-    private function persistVerifiedEntry(OpLogEntry $entry, string $now): void
-    {
-        $this->db->connection()->table('op_log_entries')->updateOrInsert(
-            [
-                'user_id' => $entry->userId,
-                'device_id' => $entry->deviceId,
-                'table_name' => $entry->table,
-                'pk' => (string) $entry->pk,
-                'field' => $entry->field,
-                'hlc_l' => $entry->hlcL,
-                'hlc_c' => $entry->hlcC,
-            ],
-            [
-                'op_type' => $entry->opType->value,
-                'value' => $entry->value,
-                'gdk_epoch' => $entry->gdkEpoch,
-                'signature' => $entry->signature,
-                'recorded_at' => $now,
-            ],
-        );
-    }
-
-    /**
-     * @param  string  $reason  'cross_user'|'missing_device_key'|'forged_signature'|
-     *                          'unknown_table'|'strategy_error'|'incomplete_create_row'|
-     *                          'gdk_decrypt_failed'
-     */
-    private function quarantine(OpLogEntry $entry, string $reason, string $now): void
+    private function quarantine(OpLogEntry $entry, QuarantineReason $reason, string $now): void
     {
         try {
             $this->db->connection()->table('op_log_quarantine')->insert([
@@ -773,7 +282,7 @@ final readonly class OpLogReplayer
                 'table_name' => $entry->table,
                 'pk' => (string) $entry->pk,
                 'device_id' => $entry->deviceId,
-                'reason' => $reason,
+                'reason' => $reason->value,
                 'hlc_l' => $entry->hlcL,
                 'hlc_c' => $entry->hlcC,
                 'raw_value' => $entry->value,
@@ -782,29 +291,6 @@ final readonly class OpLogReplayer
         } catch (\Throwable) {
             // Never propagate a quarantine write failure — replay must
             // continue regardless.
-        }
-    }
-
-    /**
-     * @param  string  $operation  'upsert'|'delete'
-     */
-    private function quarantineSearchError(int $transactionId, string $operation, int $userId, string $now): void
-    {
-        try {
-            $this->db->connection()->table('op_log_quarantine')->insert([
-                'user_id' => $userId,
-                'table_name' => 'transactions',
-                'pk' => (string) $transactionId,
-                'device_id' => self::SYSTEM_FTS_DEVICE_ID,
-                'reason' => 'strategy_error',
-                'hlc_l' => 0,
-                'hlc_c' => 0,
-                'raw_value' => json_encode(['fts_operation' => $operation], JSON_THROW_ON_ERROR),
-                'created_at' => $now,
-            ]);
-        } catch (\Throwable) {
-            // Never propagate — an FTS-freshness quarantine failure must
-            // not break replay.
         }
     }
 }

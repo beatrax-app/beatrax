@@ -491,9 +491,7 @@ final class PairingFlowModal extends Component
         }
 
         $tokenHash = is_string($row->token_hash) ? $row->token_hash : null;
-        $peerDeviceId = $this->side === 'initiator'
-            ? (is_string($row->responder_device_id) ? $row->responder_device_id : null)
-            : (is_string($row->initiator_device_id) ? $row->initiator_device_id : null);
+        $peerDeviceId = $this->peerDeviceId($row);
 
         if ($tokenHash === null || $peerDeviceId === null) {
             return;
@@ -507,6 +505,19 @@ final class PairingFlowModal extends Component
                 'exception' => $e::class,
             ]);
         }
+    }
+
+    // Selects the PEER side's device id from the in-flight token row: an
+    // initiator confirms toward the responder column and a responder toward
+    // the initiator column. Null until that peer column is a bound string.
+    private function peerDeviceId(\stdClass $row): ?string
+    {
+        $peerDeviceId = match ($this->side) {
+            'initiator' => $row->responder_device_id,
+            default => $row->initiator_device_id,
+        };
+
+        return is_string($peerDeviceId) ? $peerDeviceId : null;
     }
 
     private function tokenRowId(DatabaseManager $db, int $userId, string $token): int
@@ -527,19 +538,9 @@ final class PairingFlowModal extends Component
         SafetyNumberDeriver $safetyDeriver,
         int $userId,
     ): array {
-        $row = $db->connection()->table('pairing_tokens')
-            ->where('id', (int) $this->pairingTokenId)
-            ->where('user_id', $userId)
-            ->first(['initiator_ed25519_pub_hex', 'responder_ed25519_pub_hex']);
+        $keyPair = $this->pairingKeyPair($db, $userId);
 
-        if ($row === null) {
-            return [];
-        }
-
-        $initiatorEd = is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
-        $responderEd = is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
-
-        if ($initiatorEd === null || $responderEd === null) {
+        if ($keyPair === null) {
             return [];
         }
 
@@ -547,9 +548,36 @@ final class PairingFlowModal extends Component
         // but guard the decode anyway: a malformed key yields the generic
         // invalid-code flash instead of an uncaught SodiumException 500.
         try {
-            return $safetyDeriver->deriveWords($initiatorEd, $responderEd);
+            return $safetyDeriver->deriveWords($keyPair[0], $keyPair[1]);
         } catch (InvalidPublicKeyException) {
             return [];
         }
+    }
+
+    // Reads both parties' Ed25519 public-key hex from the in-flight token,
+    // returning null when the row or either bound key is absent — collapsing
+    // two failure guards so deriveSafetyWords keeps a single fallible decode.
+    /**
+     * @return array{0: string, 1: string}|null
+     */
+    private function pairingKeyPair(DatabaseManager $db, int $userId): ?array
+    {
+        $row = $db->connection()->table('pairing_tokens')
+            ->where('id', (int) $this->pairingTokenId)
+            ->where('user_id', $userId)
+            ->first(['initiator_ed25519_pub_hex', 'responder_ed25519_pub_hex']);
+
+        if ($row === null) {
+            return null;
+        }
+
+        $initiatorEd = is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
+        $responderEd = is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
+
+        if ($initiatorEd === null || $responderEd === null) {
+            return null;
+        }
+
+        return [$initiatorEd, $responderEd];
     }
 }

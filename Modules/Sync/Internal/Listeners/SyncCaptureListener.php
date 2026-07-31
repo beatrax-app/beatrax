@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Listeners;
 
-use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
+use Modules\Sync\Internal\Listeners\Concerns\CapturesEnvelopeMutations;
+use Modules\Sync\Internal\Listeners\Concerns\CapturesReportAndNotificationMutations;
+use Modules\Sync\Internal\Listeners\Concerns\CapturesTransactionMutations;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
@@ -22,6 +24,10 @@ use Psr\Log\LoggerInterface;
  */
 final class SyncCaptureListener
 {
+    use CapturesEnvelopeMutations;
+    use CapturesReportAndNotificationMutations;
+    use CapturesTransactionMutations;
+
     private const UNKNOWN_MUTATION_TYPE = 'SyncCaptureListener: unknown mutationType';
 
     public function __construct(
@@ -84,66 +90,6 @@ final class SyncCaptureListener
                 'userId' => $event->userId,
             ]);
         }
-    }
-
-    private function handleEdit(TransactionMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'transactions',
-                pk: $event->transactionId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    private function handleDelete(TransactionMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeDelete(
-            table: 'transactions',
-            pk: $event->transactionId,
-        );
-    }
-
-    private function handleCreate(TransactionMutated $event, OpLogWriter $writer): void
-    {
-        // Writes the CreateRow snapshot directly — a previous
-        // writeCreateFields() one-line indirection added no value.
-        $writer->writeCreateRow(
-            table: 'transactions',
-            pk: $event->transactionId,
-            fields: $event->dirtyFields,
-        );
-    }
-
-    private function handleSplitEdit(TransactionSplitMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'transaction_splits',
-                pk: $event->splitId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    private function handleSplitDelete(TransactionSplitMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeDelete(
-            table: 'transaction_splits',
-            pk: $event->splitId,
-        );
-    }
-
-    private function handleSplitCreate(TransactionSplitMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'transaction_splits',
-            pk: $event->splitId,
-            fields: $event->dirtyFields,
-        );
     }
 
     // Routes EnvelopeAssignmentMutated events to the OpLogWriter with table:
@@ -228,93 +174,6 @@ final class SyncCaptureListener
         }
     }
 
-    private function handleEnvelopeAssignmentEdit(EnvelopeAssignmentMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'envelope_assignments',
-                pk: $event->assignmentId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    private function handleEnvelopeAssignmentDelete(EnvelopeAssignmentMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeDelete(
-            table: 'envelope_assignments',
-            pk: $event->assignmentId,
-        );
-    }
-
-    private function handleEnvelopeAssignmentCreate(EnvelopeAssignmentMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'envelope_assignments',
-            pk: $event->assignmentId,
-            fields: $event->dirtyFields,
-        );
-    }
-
-    private function handleEnvelopeMoveEdit(EnvelopeMoveMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'envelope_moves',
-                pk: $event->moveId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    private function handleEnvelopeMoveDelete(EnvelopeMoveMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeDelete(
-            table: 'envelope_moves',
-            pk: $event->moveId,
-        );
-    }
-
-    private function handleEnvelopeMoveCreate(EnvelopeMoveMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'envelope_moves',
-            pk: $event->moveId,
-            fields: $event->dirtyFields,
-        );
-    }
-
-    private function handleEnvelopeSettingEdit(EnvelopeSettingMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'envelope_settings',
-                pk: $event->settingId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    private function handleEnvelopeSettingDelete(EnvelopeSettingMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeDelete(
-            table: 'envelope_settings',
-            pk: $event->settingId,
-        );
-    }
-
-    private function handleEnvelopeSettingCreate(EnvelopeSettingMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'envelope_settings',
-            pk: $event->settingId,
-            fields: $event->dirtyFields,
-        );
-    }
-
     // Routes SavedReportMutated events to the OpLogWriter with table:
     // 'saved_reports'. `reportId` is the stable saved_reports.id pk, set
     // once via create() and never regenerated by an edit.
@@ -340,35 +199,6 @@ final class SyncCaptureListener
                 'userId' => $event->userId,
             ]);
         }
-    }
-
-    private function handleSavedReportEdit(SavedReportMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'saved_reports',
-                pk: $event->reportId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    private function handleSavedReportDelete(SavedReportMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeDelete(
-            table: 'saved_reports',
-            pk: $event->reportId,
-        );
-    }
-
-    private function handleSavedReportCreate(SavedReportMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'saved_reports',
-            pk: $event->reportId,
-            fields: $event->dirtyFields,
-        );
     }
 
     // Routes NotificationMutated events to the OpLogWriter with table:
@@ -398,31 +228,6 @@ final class SyncCaptureListener
         }
     }
 
-    private function handleNotificationEdit(NotificationMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'notifications',
-                pk: $event->notificationId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    // Unlike every other registered table, notifications.id is NOT an
-    // autoincrement surrogate — it is a deterministic sha256 digest, so it
-    // MUST be carried as an explicit field or a fresh device's
-    // insertOrIgnore would silently drop the row (see MergeRulesRegistry).
-    private function handleNotificationCreate(NotificationMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'notifications',
-            pk: $event->notificationId,
-            fields: ['id' => $event->notificationId, ...$event->dirtyFields],
-        );
-    }
-
     // Routes NotificationPreferenceMutated events to the OpLogWriter with
     // table: 'notification_preferences'. `preferenceId` is a LOCAL
     // autoincrement id surrogate — unlike notifications, this table is never
@@ -448,26 +253,5 @@ final class SyncCaptureListener
                 'userId' => $event->userId,
             ]);
         }
-    }
-
-    private function handleNotificationPreferenceEdit(NotificationPreferenceMutated $event, OpLogWriter $writer): void
-    {
-        foreach ($event->dirtyFields as $field => $value) {
-            $writer->writeSet(
-                table: 'notification_preferences',
-                pk: $event->preferenceId,
-                field: $field,
-                value: $value,
-            );
-        }
-    }
-
-    private function handleNotificationPreferenceCreate(NotificationPreferenceMutated $event, OpLogWriter $writer): void
-    {
-        $writer->writeCreateRow(
-            table: 'notification_preferences',
-            pk: $event->preferenceId,
-            fields: $event->dirtyFields,
-        );
     }
 }

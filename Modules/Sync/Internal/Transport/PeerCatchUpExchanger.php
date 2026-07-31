@@ -6,6 +6,7 @@ namespace Modules\Sync\Internal\Transport;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
@@ -16,6 +17,15 @@ use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 final readonly class PeerCatchUpExchanger
 {
     private const int BATCH_OPS = 1024;
+
+    private const int MAX_FRAME_BYTES = 65536;
+
+    // A serialized batch opens and closes with the JSON array brackets, and
+    // every appended entry costs one comma separator — both counted so the
+    // byte budget matches what TransportFramer will actually emit.
+    private const int JSON_ARRAY_BRACKETS_BYTES = 2;
+
+    private const int JSON_SEPARATOR_BYTES = 1;
 
     public const string MSG_CATCH_UP_REQUEST = 'CATCH_UP_REQUEST';
 
@@ -80,22 +90,33 @@ final readonly class PeerCatchUpExchanger
             ->orderBy('device_id')
             ->get();
 
-        if ($rows->isEmpty()) {
+        $entries = $this->mapRowsToEntries($rows);
+        if ($entries === []) {
             return [];
         }
 
+        return $this->packIntoFrames($entries);
+    }
+
+    // Skips any row whose op_type is not a known OpType — an unknown op can
+    // never be safely replayed by a peer, so it is dropped from the exchange.
+    /**
+     * @param  Collection<int, \stdClass>  $rows
+     * @return list<OpLogEntry>
+     */
+    private function mapRowsToEntries(Collection $rows): array
+    {
         $entries = [];
+
         foreach ($rows as $row) {
-            $opTypeRaw = is_string($row->op_type) ? $row->op_type : '';
-            $opType = OpType::tryFrom($opTypeRaw);
+            $opType = OpType::tryFrom(is_string($row->op_type) ? $row->op_type : '');
             if ($opType === null) {
                 continue;
             }
 
-            $pk = is_numeric($row->pk) ? (int) $row->pk : (is_string($row->pk) ? $row->pk : '');
             $entries[] = new OpLogEntry(
                 table: is_string($row->table_name) ? $row->table_name : '',
-                pk: $pk,
+                pk: self::normalizePk($row->pk),
                 field: is_string($row->field) ? $row->field : '',
                 value: is_string($row->value) ? $row->value : null,
                 hlcL: is_numeric($row->hlc_l) ? (int) $row->hlc_l : 0,
@@ -112,43 +133,33 @@ final readonly class PeerCatchUpExchanger
             );
         }
 
-        if ($entries === []) {
-            return [];
-        }
+        return $entries;
+    }
 
-        // Accumulate entries per frame, starting a new frame whenever the
-        // next entry would push the batch over BATCH_OPS ops or over 64KB
-        // serialized bytes. Both limits matter: entries with long
-        // signatures/values can hit the byte cap well before 1024 ops.
-        $maxBytes = 65536;
+    // Accumulates entries per frame, starting a new frame whenever the next
+    // entry would push the batch over BATCH_OPS ops or over MAX_FRAME_BYTES
+    // serialized bytes. Both limits matter: entries with long signatures or
+    // values can hit the byte cap well before the op count.
+    /**
+     * @param  list<OpLogEntry>  $entries  Must be non-empty.
+     * @return list<string>
+     */
+    private function packIntoFrames(array $entries): array
+    {
         $frames = [];
         $batch = [];
-        $batchBytes = 2;
+        $batchBytes = self::JSON_ARRAY_BRACKETS_BYTES;
 
         foreach ($entries as $entry) {
-            $entrySerialized = json_encode([
-                'table' => $entry->table,
-                'pk' => $entry->pk,
-                'field' => $entry->field,
-                'value' => $entry->value,
-                'hlc_l' => $entry->hlcL,
-                'hlc_c' => $entry->hlcC,
-                'device_id' => $entry->deviceId,
-                'op_type' => $entry->opType->value,
-                'signature' => $entry->signature,
-                'user_id' => $entry->userId,
-                'gdk_epoch' => $entry->gdkEpoch,
-            ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
-
-            $entryBytes = strlen($entrySerialized) + 1;
+            $entryBytes = strlen($this->serializeEntry($entry)) + self::JSON_SEPARATOR_BYTES;
 
             $wouldExceedOps = count($batch) >= self::BATCH_OPS;
-            $wouldExceedBytes = ($batchBytes + $entryBytes) > $maxBytes;
+            $wouldExceedBytes = ($batchBytes + $entryBytes) > self::MAX_FRAME_BYTES;
 
             if ($batch !== [] && ($wouldExceedOps || $wouldExceedBytes)) {
                 $frames[] = $this->framer->encode($batch);
                 $batch = [];
-                $batchBytes = 2;
+                $batchBytes = self::JSON_ARRAY_BRACKETS_BYTES;
             }
 
             $batch[] = $entry;
@@ -160,6 +171,34 @@ final readonly class PeerCatchUpExchanger
         $frames[] = $this->framer->encode($batch);
 
         return $frames;
+    }
+
+    private function serializeEntry(OpLogEntry $entry): string
+    {
+        return json_encode([
+            'table' => $entry->table,
+            'pk' => $entry->pk,
+            'field' => $entry->field,
+            'value' => $entry->value,
+            'hlc_l' => $entry->hlcL,
+            'hlc_c' => $entry->hlcC,
+            'device_id' => $entry->deviceId,
+            'op_type' => $entry->opType->value,
+            'signature' => $entry->signature,
+            'user_id' => $entry->userId,
+            'gdk_epoch' => $entry->gdkEpoch,
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+    }
+
+    // A numeric pk normalises to int; a non-numeric string pk (composite or
+    // UUID key) is preserved verbatim; anything else collapses to ''.
+    private static function normalizePk(mixed $pkRaw): int|string
+    {
+        if (is_numeric($pkRaw)) {
+            return (int) $pkRaw;
+        }
+
+        return is_string($pkRaw) ? $pkRaw : '';
     }
 
     /**

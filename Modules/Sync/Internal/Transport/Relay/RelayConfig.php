@@ -21,28 +21,14 @@ final class RelayConfig
     // both mean "not configured".
     public function endpointUrl(): ?string
     {
-        $path = UserDataPathService::appPath(self::CONFIG_SUB);
-
-        if (! file_exists($path)) {
-            return null;
-        }
-
-        $json = file_get_contents($path);
-        if ($json === false || $json === '') {
-            return null;
-        }
-
-        $data = json_decode($json, true, 512, 0);
-        if (! is_array($data)) {
+        $data = $this->readJsonObject(UserDataPathService::appPath(self::CONFIG_SUB));
+        if ($data === null) {
             return null;
         }
 
         $endpoint = $data['endpoint'] ?? null;
-        if (! is_string($endpoint) || $endpoint === '') {
-            return null;
-        }
 
-        return $endpoint;
+        return is_string($endpoint) && $endpoint !== '' ? $endpoint : null;
     }
 
     // False when relay.json is absent or the endpoint is empty — LAN-direct
@@ -75,10 +61,8 @@ final class RelayConfig
         $path = UserDataPathService::appPath(self::CONFIG_SUB);
         $dir = dirname($path);
 
-        if (! is_dir($dir)) {
-            if (! @mkdir($dir, 0700, true)) {
-                throw RelayConfigWriteException::couldNotCreateDirectory($dir);
-            }
+        if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
+            throw RelayConfigWriteException::couldNotCreateDirectory($dir);
         }
 
         $data = ['endpoint' => $url ?? ''];
@@ -93,8 +77,24 @@ final class RelayConfig
 
     public function authToken(): ?string
     {
-        $path = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::TOKEN_FILE;
+        $data = $this->readJsonObject(UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::TOKEN_FILE);
+        if ($data === null) {
+            return null;
+        }
 
+        $token = $data['token'] ?? null;
+
+        return is_string($token) && $token !== '' ? $token : null;
+    }
+
+    // Shared read path for both config files: a missing file, an unreadable
+    // or empty body, and non-object JSON all collapse to null so callers
+    // treat "absent" and "malformed" identically as "not configured".
+    /**
+     * @return array<array-key, mixed>|null
+     */
+    private function readJsonObject(string $path): ?array
+    {
         if (! file_exists($path)) {
             return null;
         }
@@ -104,14 +104,9 @@ final class RelayConfig
             return null;
         }
 
-        $data = json_decode($json, true, 512, 0);
-        if (! is_array($data)) {
-            return null;
-        }
+        $data = json_decode($json, true);
 
-        $token = $data['token'] ?? null;
-
-        return is_string($token) && $token !== '' ? $token : null;
+        return is_array($data) ? $data : null;
     }
 
     // Derives a per-device drain token = HMAC-SHA256(authToken, device_id) —
@@ -142,10 +137,8 @@ final class RelayConfig
         $dir = UserDataPathService::secretsPath();
         $path = $dir.DIRECTORY_SEPARATOR.self::TOKEN_FILE;
 
-        if (! is_dir($dir)) {
-            if (! @mkdir($dir, 0700, true)) {
-                throw SecretFileException::couldNotCreateSecretsDirectory($dir);
-            }
+        if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
+            throw SecretFileException::couldNotCreateSecretsDirectory($dir);
         }
 
         $data = ['token' => $token ?? ''];

@@ -94,8 +94,8 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
         ->assertSet('flashMessage', '');
 
     // DESKTOP drains its own mailbox â€” applies the phone's responder-accept.
-    $this->asDevice('desktop', function () use ($session): void {
-        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID, $session);
+    $this->asDevice('desktop', function (): void {
+        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
     });
 
     $this->asDevice('desktop', function () use ($issuedToken): void {
@@ -160,8 +160,8 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
 
     // DESKTOP drains, advances to confirm, and its human confirms â€” sends
     // its own signed PAIR_CONFIRM to the phone.
-    $this->asDevice('desktop', function () use ($session): void {
-        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID, $session);
+    $this->asDevice('desktop', function (): void {
+        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
     });
     $this->asDevice('desktop', function () use ($issuedToken, $desktopIdentity, $phoneIdentity, $session): void {
         $row = app(DatabaseManager::class)->connection()->table('pairing_tokens')
@@ -189,8 +189,8 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
 
     // DESKTOP drains the phone's PAIR_CONFIRM too â€” admits the phone on
     // ITS OWN database.
-    $this->asDevice('desktop', function () use ($session): void {
-        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID, $session);
+    $this->asDevice('desktop', function (): void {
+        app(PairingGateway::class)->drainPairingFrames(MPS_DESKTOP_USER_ID);
     });
     $this->asDevice('desktop', function () use ($phoneIdentity): void {
         expect(app(DeviceRegistryService::class)->deviceKeys(MPS_DESKTOP_USER_ID))->toHaveKey($phoneIdentity->deviceId);

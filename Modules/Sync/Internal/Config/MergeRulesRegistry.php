@@ -25,7 +25,23 @@ final class MergeRulesRegistry
             return $this->rules;
         }
 
-        return $this->rules = [
+        return $this->rules = array_merge(
+            $this->transactionAndMerchantRules(),
+            $this->categorizationRules(),
+            $this->financialEntityRules(),
+            $this->taxAndSplitRules(),
+            $this->envelopeRules(),
+            $this->migrationRules(),
+            $this->reportingAndNotificationRules(),
+        );
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function transactionAndMerchantRules(): array
+    {
+        return [
             'transactions' => [
                 'category_id' => ['strategy' => 'lww', 'nullable' => true],
                 'note' => ['strategy' => 'lww', 'nullable' => true],
@@ -70,6 +86,15 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['pattern'],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function categorizationRules(): array
+    {
+        return [
             // categorization_rules is the PARENT of the multi-condition/
             // multi-action rules engine (see rule_conditions/rule_actions
             // below). Rule-authoring sync is out of scope for now — no
@@ -107,6 +132,15 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['rule_id', 'position', 'type', 'payload'],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function financialEntityRules(): array
+    {
+        return [
             // `website`/`logo_url` are folded into the `metadata` JSON column —
             // no dedicated columns exist. `slug` (UNIQUE user_id, slug) is the
             // identity string; both slug and type are NOT-NULL-without-default.
@@ -154,6 +188,15 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'slug', 'kind'],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function taxAndSplitRules(): array
+    {
+        return [
             // `transaction_split_id` replays so a leg-scoped tax tag carries
             // its leg scope on a peer — without it, a per-leg deduction would
             // collapse into a whole-transaction tag and corrupt exported tax
@@ -177,6 +220,15 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['transaction_id', 'category_id', 'settled_amount_minor', 'settled_currency'],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function envelopeRules(): array
+    {
+        return [
             // One mutable snapshot row per (user_id, category_id,
             // period_start) — every `_create_required` name must match a real
             // NOT-NULL-without-default column on the migration.
@@ -203,6 +255,15 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['user_id', 'category_id', 'overspend_mode'],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function migrationRules(): array
+    {
+        return [
             // Register both persistent Migration tables so a second device
             // cannot silently diverge and double-import; the six per-run
             // scratch staging tables and their parent run table are
@@ -221,6 +282,15 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['migration_source_map_id', 'field_name', 'baseline_value', 'imported_at'],
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function reportingAndNotificationRules(): array
+    {
+        return [
             // `pinned` carries a DB-level default(false) so it is
             // nullable:false in the strategy map below but MUST NOT appear in
             // `_create_required` — the same trap that bit

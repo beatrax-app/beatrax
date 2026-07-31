@@ -14,6 +14,8 @@ use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesDeviceRenaming;
+use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -24,6 +26,9 @@ use Psr\Log\LoggerInterface;
  */
 final class DevicesAndSyncSettingsSection extends Component
 {
+    use ManagesDeviceRenaming;
+    use ReadsDeviceState;
+
     public bool $syncEnabled = false;
 
     public bool $appLockConfigured = false;
@@ -154,48 +159,6 @@ final class DevicesAndSyncSettingsSection extends Component
         }
 
         $this->encryptionOn = $this->encryptionEnabled($db, $userId);
-    }
-
-    public function startRename(int $deviceId): void
-    {
-        $this->renamingDeviceId = $deviceId;
-        $this->renameValue = $this->currentNameFor($deviceId);
-    }
-
-    public function cancelRename(): void
-    {
-        $this->renamingDeviceId = null;
-        $this->renameValue = '';
-    }
-
-    // Both the inline-edit path (renamingDeviceId + renameValue) and the
-    // direct (id, name) call shape route through here so a direct
-    // call('renameDevice', $id, 'New Name') also works.
-    public function renameDevice(
-        DatabaseManager $db,
-        CurrentUser $currentUser,
-        DeviceRegistryService $registry,
-        ?int $deviceId = null,
-        ?string $name = null,
-    ): void {
-        $targetId = $deviceId ?? $this->renamingDeviceId;
-        $newName = trim($name ?? $this->renameValue);
-
-        if ($targetId === null || $newName === '') {
-            $this->cancelRename();
-
-            return;
-        }
-
-        $userId = $currentUser->user()->id;
-
-        $db->connection()->table('device_registry')
-            ->where('id', $targetId)
-            ->where('user_id', $userId)
-            ->update(['name' => $newName]);
-
-        $this->devices = $this->loadDevices($registry, $userId);
-        $this->cancelRename();
     }
 
     // ONLY reachable from the single-device (sync off) optional offer — the
@@ -400,64 +363,5 @@ final class DevicesAndSyncSettingsSection extends Component
     public function render(ViewFactory $views): View
     {
         return $views->make('sync::livewire.devices-and-sync-settings-section');
-    }
-
-    private function selfRowExists(DatabaseManager $db, int $userId): bool
-    {
-        return $db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 1)
-            ->exists();
-    }
-
-    // sync_encryption_state is device-local and never synced, so a raw
-    // scoped read here mirrors selfRowExists()'s own precedent rather than
-    // reaching into EncryptionMigrationService::isEnabled() for a value this
-    // component can read in one query already.
-    private function encryptionEnabled(DatabaseManager $db, int $userId): bool
-    {
-        $value = $db->connection()->table('sync_encryption_state')
-            ->where('user_id', $userId)
-            ->value('current_epoch');
-
-        return $value !== null;
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function loadDevices(DeviceRegistryService $registry, int $userId): array
-    {
-        $rows = $registry->confirmedDevices($userId);
-
-        $devices = [];
-        foreach ($rows as $row) {
-            $devices[] = [
-                'id' => is_numeric($row->id) ? (int) $row->id : 0,
-                'name' => is_string($row->name) ? $row->name : '',
-                'safety_number_words' => is_string($row->safety_number_words) ? $row->safety_number_words : '',
-                'paired_at' => is_string($row->paired_at) ? $row->paired_at : '',
-                'is_self' => is_numeric($row->is_self) && (int) $row->is_self === 1,
-                'confirmed' => $row->confirmed_at !== null,
-                'removed' => false,
-            ];
-        }
-
-        return $devices;
-    }
-
-    // Public — Surface D's revocation modal sub-label ("Removing: {name}")
-    // reads this from the blade view.
-    public function currentNameFor(int $deviceId): string
-    {
-        foreach ($this->devices as $device) {
-            if (($device['id'] ?? null) === $deviceId) {
-                $name = $device['name'] ?? '';
-
-                return is_string($name) ? $name : '';
-            }
-        }
-
-        return '';
     }
 }
