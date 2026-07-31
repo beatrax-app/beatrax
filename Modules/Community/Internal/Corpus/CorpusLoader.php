@@ -98,51 +98,73 @@ final class CorpusLoader
             return null;
         }
 
-        $contributor = is_string($raw['contributor'] ?? null) && trim($raw['contributor']) !== ''
-            ? trim($raw['contributor'])
-            : self::DEFAULT_CONTRIBUTOR;
+        return new CorpusEntryDto(
+            pattern: $pattern,
+            generalizedPattern: $this->resolveGeneralized($raw, $pattern),
+            name: $name,
+            category: $this->resolveCategory($raw, $pattern, $validCategories),
+            region: $this->resolveRegion($raw, $defaultRegion),
+            contributor: $this->resolveContributor($raw),
+        );
+    }
 
-        $category = isset($raw['category']) && is_string($raw['category'])
-            ? trim($raw['category'])
-            : null;
+    /**
+     * @param  array<int|string, mixed>  $raw
+     */
+    private function resolveContributor(array $raw): string
+    {
+        $contributor = is_string($raw['contributor'] ?? null) ? trim($raw['contributor']) : '';
+
+        return $contributor !== '' ? $contributor : self::DEFAULT_CONTRIBUTOR;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $raw
+     * @param  array<string, true>  $validCategories
+     */
+    private function resolveCategory(array $raw, string $pattern, array $validCategories): ?string
+    {
+        $category = is_string($raw['category'] ?? null) ? trim($raw['category']) : '';
         if ($category === '') {
-            $category = null;
+            return null;
         }
 
-        $region = isset($raw['region']) && is_string($raw['region']) && trim($raw['region']) !== ''
-            ? trim($raw['region'])
-            : $defaultRegion;
-
-        if ($category !== null && ! isset($validCategories[$category])) {
+        if (! isset($validCategories[$category])) {
             $this->logger->warning('Corpus entry references unknown category.', [
                 'pattern' => $pattern,
                 'category' => $category,
             ]);
         }
 
-        // A `regex:` pattern is matched verbatim by CorpusPatternMatcher, so
-        // it must NOT be run through the substring generalizer (which would
-        // produce a meaningless token). Its generalized_pattern is left empty
-        // so the substring scan skips it; the regex scan picks it up instead.
+        return $category;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $raw
+     */
+    private function resolveRegion(array $raw, string $defaultRegion): string
+    {
+        $region = is_string($raw['region'] ?? null) ? trim($raw['region']) : '';
+
+        return $region !== '' ? $region : $defaultRegion;
+    }
+
+    // A `regex:` pattern is matched verbatim by CorpusPatternMatcher, so it
+    // must NOT be run through the substring generalizer (which would produce a
+    // meaningless token). Its generalized_pattern is left empty so the
+    // substring scan skips it; the regex scan picks it up instead.
+    /**
+     * @param  array<int|string, mixed>  $raw
+     */
+    private function resolveGeneralized(array $raw, string $pattern): string
+    {
         if (str_starts_with($pattern, CorpusPatternMatcher::REGEX_PREFIX)) {
-            $generalized = '';
-        } else {
-            $generalized = isset($raw['generalized_pattern']) && is_string($raw['generalized_pattern'])
-                ? trim($raw['generalized_pattern'])
-                : '';
-            if ($generalized === '') {
-                $generalized = $this->generalizer->generalize($pattern);
-            }
+            return '';
         }
 
-        return new CorpusEntryDto(
-            pattern: $pattern,
-            generalizedPattern: $generalized,
-            name: $name,
-            category: $category,
-            region: $region,
-            contributor: $contributor,
-        );
+        $generalized = is_string($raw['generalized_pattern'] ?? null) ? trim($raw['generalized_pattern']) : '';
+
+        return $generalized !== '' ? $generalized : $this->generalizer->generalize($pattern);
     }
 
     /**

@@ -45,39 +45,8 @@ final class MysteryMerchantsPage extends Component
                 'payment_type',
             ]);
 
-        /** @var array<string, array{description: string, count: int, lastSeen: ?string, paymentType: ?PaymentType}> $grouped */
-        $grouped = [];
-        $totalScanned = 0;
-        $resolvedScanned = 0;
-        foreach ($rows as $row) {
-            $totalScanned++;
-            $description = is_string($row->description) ? trim($row->description) : '';
-            if ($description === '') {
-                $resolvedScanned++;
-
-                continue;
-            }
-            if ($resolver->resolve($description, $user->id) !== null) {
-                $resolvedScanned++;
-
-                continue;
-            }
-
-            $key = $description;
-            if (! isset($grouped[$key])) {
-                $grouped[$key] = [
-                    'description' => $description,
-                    'count' => 0,
-                    'lastSeen' => null,
-                    'paymentType' => self::asPaymentType($row->payment_type ?? null),
-                ];
-            }
-            $grouped[$key]['count']++;
-            $postedAt = is_string($row->posted_at) ? $row->posted_at : null;
-            if ($postedAt !== null && ($grouped[$key]['lastSeen'] === null || $grouped[$key]['lastSeen'] < $postedAt)) {
-                $grouped[$key]['lastSeen'] = $postedAt;
-            }
-        }
+        $scan = $this->scanMysteryRows($rows, $resolver, $user->id);
+        $grouped = $scan['grouped'];
 
         uasort($grouped, static function (array $a, array $b): int {
             $countOrder = $b['count'] <=> $a['count'];
@@ -87,8 +56,8 @@ final class MysteryMerchantsPage extends Component
 
         $cards = array_slice(array_values($grouped), 0, self::CARD_LIMIT);
 
-        $autoNamedPercent = $totalScanned > 0
-            ? (int) round(($resolvedScanned / $totalScanned) * 100)
+        $autoNamedPercent = $scan['totalScanned'] > 0
+            ? (int) round(($scan['resolvedScanned'] / $scan['totalScanned']) * 100)
             : 0;
 
         $stats = [
@@ -102,6 +71,49 @@ final class MysteryMerchantsPage extends Component
             'rows' => $cards,
             'stats' => $stats,
         ]);
+    }
+
+    /**
+     * @param  iterable<stdClass>  $rows
+     * @return array{grouped: array<string, array{description: string, count: int, lastSeen: ?string, paymentType: ?PaymentType}>, totalScanned: int, resolvedScanned: int}
+     */
+    private function scanMysteryRows(iterable $rows, MerchantNameResolver $resolver, int $userId): array
+    {
+        $grouped = [];
+        $totalScanned = 0;
+        $resolvedScanned = 0;
+        foreach ($rows as $row) {
+            $totalScanned++;
+            $description = is_string($row->description) ? trim($row->description) : '';
+            if ($description === '' || $resolver->resolve($description, $userId) !== null) {
+                $resolvedScanned++;
+
+                continue;
+            }
+            $this->accumulate($grouped, $row, $description);
+        }
+
+        return ['grouped' => $grouped, 'totalScanned' => $totalScanned, 'resolvedScanned' => $resolvedScanned];
+    }
+
+    /**
+     * @param  array<string, array{description: string, count: int, lastSeen: ?string, paymentType: ?PaymentType}>  $grouped
+     */
+    private function accumulate(array &$grouped, stdClass $row, string $description): void
+    {
+        if (! isset($grouped[$description])) {
+            $grouped[$description] = [
+                'description' => $description,
+                'count' => 0,
+                'lastSeen' => null,
+                'paymentType' => self::asPaymentType($row->payment_type ?? null),
+            ];
+        }
+        $grouped[$description]['count']++;
+        $postedAt = is_string($row->posted_at) ? $row->posted_at : null;
+        if ($postedAt !== null && ($grouped[$description]['lastSeen'] === null || $grouped[$description]['lastSeen'] < $postedAt)) {
+            $grouped[$description]['lastSeen'] = $postedAt;
+        }
     }
 
     private static function asPaymentType(mixed $raw): ?PaymentType

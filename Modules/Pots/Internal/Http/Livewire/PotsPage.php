@@ -53,13 +53,6 @@ final class PotsPage extends Component
 
     public bool $showArchived = false;
 
-    public function mount(CurrentUser $currentUser): void
-    {
-        if (! $currentUser->isAuthenticated()) {
-            return;
-        }
-    }
-
     // -----------------------------------------------------------------------
     // Create pot
     // -----------------------------------------------------------------------
@@ -72,26 +65,21 @@ final class PotsPage extends Component
             return;
         }
 
-        if (trim($this->name) === '') {
-            $this->errorName = 'Enter a name for this pot.';
-
-            return;
-        }
-
         $accountId = $this->accountId !== '' ? (int) $this->accountId : 0;
-        if ($accountId === 0) {
-            $this->errorName = 'Select an account for this pot.';
+        $error = match (true) {
+            trim($this->name) === '' => 'Enter a name for this pot.',
+            $accountId === 0 => 'Select an account for this pot.',
+            default => null,
+        };
+        if ($error !== null) {
+            $this->errorName = $error;
 
             return;
         }
 
         // linkType is 'goal' | 'none' only — PotWriter always receives a
         // null categoryId here.
-        $goalId = null;
-        if ($this->linkType === 'goal' && $this->goalId !== '') {
-            $goalId = (int) $this->goalId;
-        }
-
+        $goalId = ($this->linkType === 'goal' && $this->goalId !== '') ? (int) $this->goalId : null;
         $rawAmount = trim($this->amount) !== '' ? $this->amount : null;
 
         try {
@@ -103,12 +91,12 @@ final class PotsPage extends Component
                 $goalId,
                 null,
             );
-        } catch (InsufficientUnallocatedException) {
-            $this->errorAmount = 'Amount exceeds unallocated balance.';
-
-            return;
-        } catch (\InvalidArgumentException $e) {
-            $this->errorName = $e->getMessage();
+        } catch (InsufficientUnallocatedException|\InvalidArgumentException $e) {
+            if ($e instanceof InsufficientUnallocatedException) {
+                $this->errorAmount = 'Amount exceeds unallocated balance.';
+            } else {
+                $this->errorName = $e->getMessage();
+            }
 
             return;
         }
@@ -179,12 +167,12 @@ final class PotsPage extends Component
                 $goalId,
                 null,
             );
-        } catch (PotNotFoundException) {
-            $this->resetForm();
-
-            return;
-        } catch (\InvalidArgumentException $e) {
-            $this->errorName = $e->getMessage();
+        } catch (PotNotFoundException|\InvalidArgumentException $e) {
+            if ($e instanceof PotNotFoundException) {
+                $this->resetForm();
+            } else {
+                $this->errorName = $e->getMessage();
+            }
 
             return;
         }

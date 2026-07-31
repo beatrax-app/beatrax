@@ -336,3 +336,67 @@ it('falls back to a blank name and EUR for an account it cannot see', function (
     expect($rec->accountName)->toBe('')
         ->and($rec->currency)->toBe('EUR');
 });
+
+it('builds pot rows with recent movements, counterpart names, and category spend', function (): void {
+    $categoryId = DB::table('categories')->insertGetId([
+        'user_id' => $this->user->id,
+        'name' => 'Groceries',
+        'slug' => 'groceries',
+        'kind' => 'expense',
+        'display_order' => 100,
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Buffer',
+        'category_id' => $categoryId,
+    ]);
+    $counterpart = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'name' => 'Holiday',
+    ]);
+
+    potMovement($pot->id, $this->user->id, 5000, 'fund');
+    potMovement($pot->id, $this->user->id, -1500, 'transfer_out', $counterpart->id);
+
+    // A category expense inside the current period so categorySpentMinor is
+    // summed from the settled magnitude of the spend.
+    Transaction::create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'type' => 'expense',
+        'posted_at' => CarbonImmutable::now()->toDateString(),
+        'booked_at' => CarbonImmutable::now()->toDateString().' 09:00:00',
+        'value_date' => CarbonImmutable::now()->toDateString(),
+        'amount_minor' => -2500,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -2500,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => 'Shop',
+        'counterparty_normalized' => 'shop',
+        'normalization_version' => 1,
+        'category_id' => $categoryId,
+        'source_format' => 'camt053',
+        'import_run_id' => $this->run->id,
+        'source_row_index' => 5000,
+        'fingerprint' => str_pad('cat', 64, '0', STR_PAD_LEFT),
+        'fingerprint_version' => 1,
+    ]);
+
+    $rows = app(PotBalanceQuery::class)->forUser($this->user);
+
+    $bufferRow = collect($rows)->firstWhere('name', 'Buffer');
+    expect($bufferRow)->not->toBeNull();
+    expect($bufferRow->balanceMinor)->toBe(3500);
+    expect($bufferRow->categorySpentMinor)->toBe(2500);
+    expect($bufferRow->recentMovements)->toHaveCount(2);
+
+    $transfer = collect($bufferRow->recentMovements)->firstWhere('kind', 'transfer_out');
+    expect($transfer)->not->toBeNull();
+    expect($transfer->counterpartPotName)->toBe('Holiday');
+    expect($transfer->createdAt)->not->toBe('');
+});

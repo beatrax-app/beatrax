@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Chains\Public\Contracts\DispatchesChainResolution;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
@@ -115,93 +116,7 @@ final class FirstImportStep extends Component
         $this->isCommitting = true;
 
         try {
-            $user = $currentUser->user();
-
-            $logger->info('FirstImportStep: commitEverything() invoked.', [
-                'user_id' => $user->id,
-                'balance_confirmations' => count($this->balanceConfirmations),
-            ]);
-
-            // Rebuilt at commit time since Livewire invokes action methods
-            // without running render() first.
-            $stashedIds = $this->resolveStashedImportRunIds($user->id, $db);
-            $preview = $buildPreview->build($stashedIds, $user);
-
-            // Only ready sections feed the commit loop, so a half-broken
-            // section doesn't take the whole batch down.
-            $runIdsToCommit = [];
-            foreach ($preview->sections as $section) {
-                if ($section->status !== 'ready') {
-                    continue;
-                }
-                foreach ($section->importRunIds as $runId) {
-                    $runIdsToCommit[] = $runId;
-                }
-            }
-
-            if ($runIdsToCommit === []) {
-                $this->commitError = 'Nothing to commit.';
-
-                return;
-            }
-
-            $now = $clock->now()->toDateTimeString();
-            $balanceConfirmations = $this->balanceConfirmations;
-
-            $db->connection()->transaction(function () use (
-                $runIdsToCommit,
-                $balanceConfirmations,
-                $confirmImport,
-                $user,
-                $db,
-                $now,
-            ): void {
-                foreach ($runIdsToCommit as $runId) {
-                    ($confirmImport)($runId, $user, dispatchChain: false);
-                }
-                foreach ($balanceConfirmations as $accountId => $confirmation) {
-                    $db->connection()
-                        ->table('accounts')
-                        ->where('id', $accountId)
-                        ->where('user_id', $user->id)
-                        ->update([
-                            'starting_balance_minor' => $confirmation['minor'],
-                            'starting_balance_date' => $confirmation['date'],
-                            'updated_at' => $now,
-                        ]);
-                }
-                // Mark wizard_progress done inside the transaction so the
-                // commit is truly atomic: either everything lands or nothing
-                // does. A failure before this UPDATE leaves the step in its
-                // current state so the user can retry safely.
-                $db->connection()
-                    ->table('wizard_progress')
-                    ->where('user_id', $user->id)
-                    ->where('step_key', 'first-import')
-                    ->update([
-                        'status' => 'done',
-                        'completed_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-            });
-
-            // Post-commit dispatches: failures here do NOT undo committed
-            // data. Use a separate try/catch with an honest error message
-            // so the user is not misled into thinking nothing was saved.
-            try {
-                $chainDispatcher->dispatchForUser($user->id);
-                $recurringDispatcher->dispatchForUser($user->id);
-            } catch (Throwable $dispatchException) {
-                $logger->error('FirstImportStep: post-commit dispatch failed (data already committed).', [
-                    'exception_class' => $dispatchException::class,
-                    'exception_message' => $dispatchException->getMessage(),
-                    'exception_trace' => SafeTrace::cap($dispatchException, $app->basePath()),
-                ]);
-                // Data is committed and wizard_progress is marked done.
-                // Chain/recurring will catch up on the next scheduled sweep.
-            }
-
-            $this->dispatch('wizard.step.completed');
+            $this->runCommit($db, $confirmImport, $currentUser, $clock, $chainDispatcher, $recurringDispatcher, $buildPreview, $logger, $app);
         } catch (Throwable $e) {
             $logger->error('FirstImportStep: commit-everything failed.', [
                 'exception_class' => $e::class,
@@ -211,6 +126,116 @@ final class FirstImportStep extends Component
             $this->commitError = "We couldn't commit your statements. Nothing was changed — try again.";
         } finally {
             $this->isCommitting = false;
+        }
+    }
+
+    private function runCommit(
+        DatabaseManager $db,
+        ConfirmsImports $confirmImport,
+        CurrentUser $currentUser,
+        Clock $clock,
+        DispatchesChainResolution $chainDispatcher,
+        DispatchesRecurringDetection $recurringDispatcher,
+        BuildConsolidatedPreviewQuery $buildPreview,
+        LoggerInterface $logger,
+        Application $app,
+    ): void {
+        $user = $currentUser->user();
+
+        $logger->info('FirstImportStep: commitEverything() invoked.', [
+            'user_id' => $user->id,
+            'balance_confirmations' => count($this->balanceConfirmations),
+        ]);
+
+        // Rebuilt at commit time since Livewire invokes action methods
+        // without running render() first.
+        $stashedIds = $this->resolveStashedImportRunIds($user->id, $db);
+        $runIdsToCommit = $this->readyRunIds($buildPreview->build($stashedIds, $user));
+
+        if ($runIdsToCommit === []) {
+            $this->commitError = 'Nothing to commit.';
+
+            return;
+        }
+
+        $now = $clock->now()->toDateTimeString();
+        $balanceConfirmations = $this->balanceConfirmations;
+
+        $db->connection()->transaction(fn () => $this->persistCommit($db, $confirmImport, $user, $now, $runIdsToCommit, $balanceConfirmations));
+
+        $this->dispatchPostCommit($chainDispatcher, $recurringDispatcher, $logger, $app, $user->id);
+
+        $this->dispatch('wizard.step.completed');
+    }
+
+    // Only ready sections feed the commit loop, so a half-broken section
+    // doesn't take the whole batch down.
+    /**
+     * @return list<int>
+     */
+    private function readyRunIds(ConsolidatedPreviewBatch $preview): array
+    {
+        $runIds = [];
+        foreach ($preview->sections as $section) {
+            if ($section->status !== 'ready') {
+                continue;
+            }
+            foreach ($section->importRunIds as $runId) {
+                $runIds[] = $runId;
+            }
+        }
+
+        return $runIds;
+    }
+
+    // Marks wizard_progress done inside the transaction so the commit is truly
+    // atomic: either everything lands or nothing does. A failure before that
+    // UPDATE leaves the step in its current state so the user can retry safely.
+    /**
+     * @param  list<int>  $runIdsToCommit
+     * @param  array<int, array{minor: int, date: string}>  $balanceConfirmations
+     */
+    private function persistCommit(DatabaseManager $db, ConfirmsImports $confirmImport, User $user, string $now, array $runIdsToCommit, array $balanceConfirmations): void
+    {
+        foreach ($runIdsToCommit as $runId) {
+            ($confirmImport)($runId, $user, dispatchChain: false);
+        }
+        foreach ($balanceConfirmations as $accountId => $confirmation) {
+            $db->connection()
+                ->table('accounts')
+                ->where('id', $accountId)
+                ->where('user_id', $user->id)
+                ->update([
+                    'starting_balance_minor' => $confirmation['minor'],
+                    'starting_balance_date' => $confirmation['date'],
+                    'updated_at' => $now,
+                ]);
+        }
+        $db->connection()
+            ->table('wizard_progress')
+            ->where('user_id', $user->id)
+            ->where('step_key', 'first-import')
+            ->update([
+                'status' => 'done',
+                'completed_at' => $now,
+                'updated_at' => $now,
+            ]);
+    }
+
+    // Post-commit dispatches: failures here do NOT undo committed data, so
+    // they are swallowed with an honest log — chain/recurring catch up on the
+    // next scheduled sweep rather than misleading the user into a retry.
+    private function dispatchPostCommit(DispatchesChainResolution $chainDispatcher, DispatchesRecurringDetection $recurringDispatcher, LoggerInterface $logger, Application $app, int $userId): void
+    {
+        try {
+            $chainDispatcher->dispatchForUser($userId);
+            $recurringDispatcher->dispatchForUser($userId);
+        } catch (Throwable $dispatchException) {
+            $logger->error('FirstImportStep: post-commit dispatch failed (data already committed).', [
+                'exception_class' => $dispatchException::class,
+                'exception_message' => $dispatchException->getMessage(),
+                'exception_trace' => SafeTrace::cap($dispatchException, $app->basePath()),
+            ]);
         }
     }
 

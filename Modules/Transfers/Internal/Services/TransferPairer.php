@@ -37,100 +37,100 @@ final class TransferPairer implements PairsTransferLegs
 
     public function pairOne(Transaction $tx, User $user): ?int
     {
-        if (! in_array($tx->type, TransactionType::transferValues(), true)) {
+        // Skip non-transfer types and rows already paired (re-fire after
+        // pairing is a defensive no-op).
+        if (! in_array($tx->type, TransactionType::transferValues(), true) || $tx->pair_transaction_id !== null) {
             return null;
         }
-
-        // Defensive: skip rows already paired (re-fire after pairing is
-        // a no-op).
-        if ($tx->pair_transaction_id !== null) {
-            return null;
-        }
-
-        $connection = $this->db->connection();
 
         // Normalise to whole-day boundaries so the window is symmetric
         // ±WINDOW_DAYS calendar days regardless of the row's time-of-day
         // (different adapters book at different times: ASN at 12:00:00,
         // PayPal at startOfDay, etc.).
-        $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(self::WINDOW_DAYS);
-        $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(self::WINDOW_DAYS);
+        $windowStart = $tx->booked_at->copy()->startOfDay()->subDays(self::WINDOW_DAYS)->toDateTimeString();
+        $windowEnd = $tx->booked_at->copy()->endOfDay()->addDays(self::WINDOW_DAYS)->toDateTimeString();
 
-        if ($tx->counterparty_iban === null || $tx->counterparty_iban === '') {
-            $partnerRow = $this->findPartnerByReverseLookup(
-                $tx,
-                $user->id,
-                $windowStart->toDateTimeString(),
-                $windowEnd->toDateTimeString(),
-            );
-        } else {
-            // Forward direction: Arm A (literal) matches one of the user's
-            // own Account.iban rows directly; Arm B (alias bridge) resolves
-            // real institution IBANs via ResolvesKnownCounterpartyIban.
-            // Decrypt the ciphertext IBAN once before either arm runs.
-            $ibanResult = $this->codec->decryptValue(
-                'transactions',
-                'counterparty_iban',
-                $tx->counterparty_iban,
-                $user->id,
-                ($this->session)(),
-            );
-
-            // decryptValue never throws — on failure it returns the raw
-            // ciphertext with decrypted:false. Only distrust that when
-            // encryption is actually enabled for the user; otherwise
-            // decrypted:false is the expected pass-through signal.
-            if ($this->encryptionService->isEnabled($user->id) && ! $ibanResult['decrypted']) {
-                return null;
-            }
-            $plainIban = $ibanResult['value'];
-
-            $partnerAccountRow = $connection
-                ->table('accounts')
-                ->where('user_id', $user->id)
-                ->where('iban', $plainIban)
-                ->first(['id']);
-
-            if ($partnerAccountRow !== null) {
-                $partnerAccountId = self::toInt($partnerAccountRow->id ?? null);
-            } else {
-                $aliasAccount = $this->aliasResolver->resolveAccount($plainIban, $user->id);
-                if ($aliasAccount === null) {
-                    return null;
-                }
-                $partnerAccountId = $aliasAccount->id;
-            }
-
-            // Uses the partial index transactions_unpaired_transfer_idx;
-            // the id != $tx->id clause guards the degenerate case where a
-            // row's counterparty IBAN matches its own account's IBAN.
-            $partnerRow = $connection
-                ->table('transactions')
-                ->where('user_id', $user->id)
-                ->where('account_id', $partnerAccountId)
-                ->where('amount_minor', -$tx->amount_minor)
-                ->where('currency', $tx->currency)
-                ->whereBetween('booked_at', [
-                    $windowStart->toDateTimeString(),
-                    $windowEnd->toDateTimeString(),
-                ])
-                ->whereNull('pair_transaction_id')
-                ->whereIn('type', TransactionType::transferValues())
-                ->where('id', '!=', $tx->id)
-                ->orderBy('booked_at')
-                ->first(['id']);
-        }
+        $partnerRow = ($tx->counterparty_iban === null || $tx->counterparty_iban === '')
+            ? $this->findPartnerByReverseLookup($tx, $user->id, $windowStart, $windowEnd)
+            : $this->findPartnerForward($tx, $user, $windowStart, $windowEnd);
 
         if ($partnerRow === null) {
             return null;
         }
-        $partnerId = self::toInt($partnerRow->id ?? null);
 
-        // Symmetric write: both sides get pair_transaction_id set. Outside
-        // the listener's transaction frame the two updates are independent
-        // statements — safe because ShouldBeUniqueUntilProcessing rules out
-        // a concurrent run for the same user.
+        $partnerId = self::toInt($partnerRow->id ?? null);
+        $this->linkPair($tx, $user, $partnerId);
+
+        return $partnerId;
+    }
+
+    // Forward direction: Arm A (literal) matches one of the user's own
+    // Account.iban rows directly; Arm B (alias bridge) resolves real
+    // institution IBANs via ResolvesKnownCounterpartyIban. The ciphertext
+    // IBAN is decrypted once before either arm runs.
+    private function findPartnerForward(Transaction $tx, User $user, string $windowStart, string $windowEnd): ?stdClass
+    {
+        $ibanResult = $this->codec->decryptValue(
+            'transactions',
+            'counterparty_iban',
+            (string) $tx->counterparty_iban,
+            $user->id,
+            ($this->session)(),
+        );
+
+        // decryptValue never throws — on failure it returns the raw
+        // ciphertext with decrypted:false. Only distrust that when
+        // encryption is actually enabled for the user; otherwise
+        // decrypted:false is the expected pass-through signal.
+        if ($this->encryptionService->isEnabled($user->id) && ! $ibanResult['decrypted']) {
+            return null;
+        }
+
+        $partnerAccountId = $this->resolvePartnerAccountId($ibanResult['value'], $user);
+        if ($partnerAccountId === null) {
+            return null;
+        }
+
+        // Uses the partial index transactions_unpaired_transfer_idx; the
+        // id != $tx->id clause guards the degenerate case where a row's
+        // counterparty IBAN matches its own account's IBAN.
+        return $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->where('account_id', $partnerAccountId)
+            ->where('amount_minor', -$tx->amount_minor)
+            ->where('currency', $tx->currency)
+            ->whereBetween('booked_at', [$windowStart, $windowEnd])
+            ->whereNull('pair_transaction_id')
+            ->whereIn('type', TransactionType::transferValues())
+            ->where('id', '!=', $tx->id)
+            ->orderBy('booked_at')
+            ->first(['id']);
+    }
+
+    private function resolvePartnerAccountId(string $plainIban, User $user): ?int
+    {
+        $partnerAccountRow = $this->db->connection()
+            ->table('accounts')
+            ->where('user_id', $user->id)
+            ->where('iban', $plainIban)
+            ->first(['id']);
+
+        if ($partnerAccountRow !== null) {
+            return self::toInt($partnerAccountRow->id ?? null);
+        }
+
+        return $this->aliasResolver->resolveAccount($plainIban, $user->id)?->id;
+    }
+
+    // Symmetric write: both sides get pair_transaction_id set. Outside the
+    // listener's transaction frame the two updates are independent statements
+    // — safe because ShouldBeUniqueUntilProcessing rules out a concurrent run
+    // for the same user.
+    private function linkPair(Transaction $tx, User $user, int $partnerId): void
+    {
         $now = $this->clock->now()->toDateTimeString();
+        $connection = $this->db->connection();
 
         $connection
             ->table('transactions')
@@ -153,8 +153,6 @@ final class TransferPairer implements PairsTransferLegs
         // persisted change so downstream observers see the post-pair state.
         $tx->pair_transaction_id = $partnerId;
         $tx->syncOriginalAttribute('pair_transaction_id');
-
-        return $partnerId;
     }
 
     public function pairOrphansForUser(User $user): int
@@ -217,29 +215,7 @@ final class TransferPairer implements PairsTransferLegs
             return null;
         }
 
-        $candidateIbans = [];
-
-        $ownIban = self::toStringOrNull($accountRow->iban ?? null);
-        if ($ownIban !== null && $ownIban !== '') {
-            $candidateIbans[] = $ownIban;
-        }
-
-        $ownKind = self::toStringOrNull($accountRow->kind ?? null);
-        if ($ownKind !== null && $ownKind !== '') {
-            $aliasIbans = $connection
-                ->table('known_counterparty_ibans')
-                ->where('user_id', $userId)
-                ->where('target_account_kind', $ownKind)
-                ->pluck('real_iban')
-                ->all();
-            foreach ($aliasIbans as $aliasIban) {
-                $aliasIbanStr = self::toStringOrNull($aliasIban);
-                if ($aliasIbanStr !== null && $aliasIbanStr !== '') {
-                    $candidateIbans[] = $aliasIbanStr;
-                }
-            }
-        }
-
+        $candidateIbans = $this->reverseLookupCandidateIbans($accountRow, $userId);
         if ($candidateIbans === []) {
             return null;
         }
@@ -261,6 +237,48 @@ final class TransferPairer implements PairsTransferLegs
             ->orderBy('booked_at')
             ->get(['id', 'counterparty_iban']);
 
+        return $this->matchDecryptedCandidate($candidates, $candidateIbans, $userId);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function reverseLookupCandidateIbans(stdClass $accountRow, int $userId): array
+    {
+        $candidateIbans = [];
+
+        $ownIban = self::toStringOrNull($accountRow->iban ?? null);
+        if ($ownIban !== null && $ownIban !== '') {
+            $candidateIbans[] = $ownIban;
+        }
+
+        $ownKind = self::toStringOrNull($accountRow->kind ?? null);
+        if ($ownKind === null || $ownKind === '') {
+            return $candidateIbans;
+        }
+
+        $aliasIbans = $this->db->connection()
+            ->table('known_counterparty_ibans')
+            ->where('user_id', $userId)
+            ->where('target_account_kind', $ownKind)
+            ->pluck('real_iban')
+            ->all();
+        foreach ($aliasIbans as $aliasIban) {
+            $aliasIbanStr = self::toStringOrNull($aliasIban);
+            if ($aliasIbanStr !== null && $aliasIbanStr !== '') {
+                $candidateIbans[] = $aliasIbanStr;
+            }
+        }
+
+        return $candidateIbans;
+    }
+
+    /**
+     * @param  iterable<mixed>  $candidates
+     * @param  list<string>  $candidateIbans
+     */
+    private function matchDecryptedCandidate(iterable $candidates, array $candidateIbans, int $userId): ?stdClass
+    {
         $encryptionEnabled = $this->encryptionService->isEnabled($userId);
 
         foreach ($candidates as $candidate) {

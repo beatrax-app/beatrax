@@ -72,64 +72,91 @@ final class ChainLinkQuery
         // — see architecture.md § ChainLinkQuery for why forward-only
         // missed half of paypal_funding's click-through cases.
         while ($frontier !== [] && $depth < self::MAX_DEPTH) {
-            $links = $this->db->connection()->table('chain_links')
-                ->where('user_id', $user->id)
-                ->where(function (Builder $q) use ($frontier): void {
-                    $q->whereIn('from_transaction_id', $frontier)
-                        ->orWhereIn('to_transaction_id', $frontier);
-                })
-                ->whereIn('state', ['confirmed', 'candidate'])
-                ->orderByDesc('confidence')
-                ->get();
-
-            $nextFrontier = [];
-            foreach ($links as $link) {
-                /** @var stdClass $link */
-                // NULL to_transaction_id legs (exceeded-tolerance
-                // candidates) surface via hintsForReview() instead.
-                if ($link->to_transaction_id === null) {
-                    continue;
-                }
-
-                $fromId = self::toInt($link->from_transaction_id);
-                $toId = self::toInt($link->to_transaction_id);
-                // The partner is the OTHER side of the link relative to
-                // the current frontier: to when from is on the frontier
-                // (forward walk), from otherwise (backward walk).
-                $partnerId = isset($visited[$fromId]) ? $toId : $fromId;
-                if (isset($visited[$partnerId])) {
-                    continue;
-                }
-                $visited[$partnerId] = true;
-                $nextFrontier[] = $partnerId;
-
-                $partnerRow = $this->fetchTransactionDisplayRow($partnerId, $user);
-                if ($partnerRow === null) {
-                    continue;
-                }
-
-                $confidenceTier = $this->confidenceTier(
-                    self::toString($link->state),
-                    self::toString($link->resolver),
-                    self::toFloat($link->confidence ?? null),
-                );
-
-                $nodes[] = $this->makeNode(
-                    $partnerRow,
-                    self::toInt($link->id),
-                    self::toString($link->kind),
-                    $confidenceTier,
-                    $user,
-                );
-            }
-
-            $frontier = $nextFrontier;
+            $frontier = $this->expandFrontier($frontier, $visited, $nodes, $user);
             $depth++;
         }
 
         return new ChainTree(
             rootTransactionId: $rootId,
             nodes: $nodes,
+        );
+    }
+
+    /**
+     * @param  list<int>  $frontier
+     * @param  array<int, true>  $visited
+     * @param  list<ChainTreeNode>  $nodes
+     * @return list<int>
+     */
+    private function expandFrontier(array $frontier, array &$visited, array &$nodes, User $user): array
+    {
+        $links = $this->db->connection()->table('chain_links')
+            ->where('user_id', $user->id)
+            ->where(function (Builder $q) use ($frontier): void {
+                $q->whereIn('from_transaction_id', $frontier)
+                    ->orWhereIn('to_transaction_id', $frontier);
+            })
+            ->whereIn('state', ['confirmed', 'candidate'])
+            ->orderByDesc('confidence')
+            ->get();
+
+        $nextFrontier = [];
+        foreach ($links as $link) {
+            /** @var stdClass $link */
+            $partnerId = $this->linkPartnerId($link, $visited);
+            if ($partnerId === null || isset($visited[$partnerId])) {
+                continue;
+            }
+            $visited[$partnerId] = true;
+            $nextFrontier[] = $partnerId;
+            $this->appendPartnerNode($nodes, $link, $partnerId, $user);
+        }
+
+        return $nextFrontier;
+    }
+
+    /**
+     * @param  array<int, true>  $visited
+     */
+    private function linkPartnerId(stdClass $link, array $visited): ?int
+    {
+        // NULL to_transaction_id legs (exceeded-tolerance candidates) surface
+        // via hintsForReview() instead of walking the tree.
+        if ($link->to_transaction_id === null) {
+            return null;
+        }
+
+        $fromId = self::toInt($link->from_transaction_id);
+        $toId = self::toInt($link->to_transaction_id);
+
+        // The partner is the OTHER side of the link relative to the current
+        // frontier: to when from is on the frontier (forward walk), from
+        // otherwise (backward walk).
+        return isset($visited[$fromId]) ? $toId : $fromId;
+    }
+
+    /**
+     * @param  list<ChainTreeNode>  $nodes
+     */
+    private function appendPartnerNode(array &$nodes, stdClass $link, int $partnerId, User $user): void
+    {
+        $partnerRow = $this->fetchTransactionDisplayRow($partnerId, $user);
+        if ($partnerRow === null) {
+            return;
+        }
+
+        $confidenceTier = $this->confidenceTier(
+            self::toString($link->state),
+            self::toString($link->resolver),
+            self::toFloat($link->confidence ?? null),
+        );
+
+        $nodes[] = $this->makeNode(
+            $partnerRow,
+            self::toInt($link->id),
+            self::toString($link->kind),
+            $confidenceTier,
+            $user,
         );
     }
 
@@ -401,29 +428,60 @@ final class ChainLinkQuery
 
     private function makeChainLinkRow(stdClass $row, User $user): ChainLinkRow
     {
+        $from = $this->transactionSummary($row->from_transaction_id ?? null, $user);
+        $to = $this->transactionSummary($row->to_transaction_id ?? null, $user);
+
+        return new ChainLinkRow(
+            chainLinkId: self::toInt($row->id),
+            kind: self::toString($row->kind),
+            state: self::toString($row->state),
+            confidence: self::toFloat($row->confidence ?? null),
+            fromTransactionId: self::toInt($row->from_transaction_id ?? null),
+            fromCounterparty: $from['counterparty'],
+            fromAmount: Money::ofMinor($from['amountMinor'], $from['currency']),
+            toTransactionId: self::toInt($row->to_transaction_id ?? null),
+            toCounterparty: $to['counterparty'],
+            toAmount: Money::ofMinor($to['amountMinor'], $to['currency']),
+            fromPostedAt: CarbonImmutable::parse($from['postedAt']),
+            toPostedAt: CarbonImmutable::parse($to['postedAt']),
+            confirmsRemaining: $this->confirmsRemaining($row, $user),
+            fromCounterpartySlug: $from['slug'],
+            toCounterpartySlug: $to['slug'],
+        );
+    }
+
+    private function confirmsRemaining(stdClass $row, User $user): int
+    {
         $evidence = json_decode(self::toString($row->evidence ?? null), true);
         $signatureHash = is_array($evidence) ? ($evidence['signature_hash'] ?? null) : null;
-
-        $confirmsRemaining = self::AUTO_PROMOTE_THRESHOLD;
-        if (is_string($signatureHash) && $signatureHash !== '') {
-            $confirmedCount = self::toInt(
-                $this->db->connection()->table('chain_links')
-                    ->where('user_id', $user->id)
-                    ->where('state', 'confirmed')
-                    ->whereJsonContains('evidence->signature_hash', $signatureHash)
-                    ->count(),
-            );
-            $confirmsRemaining = max(0, self::AUTO_PROMOTE_THRESHOLD - $confirmedCount);
+        if (! is_string($signatureHash) || $signatureHash === '') {
+            return self::AUTO_PROMOTE_THRESHOLD;
         }
 
-        $fromCounterparty = '';
-        $fromAmountMinor = 0;
-        $fromCurrency = 'EUR';
-        $fromPostedAt = self::EPOCH_DATE;
-        $fromCounterpartySlug = null;
-        $fromRow = $this->db->connection()->table('transactions')
+        $confirmedCount = self::toInt(
+            $this->db->connection()->table('chain_links')
+                ->where('user_id', $user->id)
+                ->where('state', 'confirmed')
+                ->whereJsonContains('evidence->signature_hash', $signatureHash)
+                ->count(),
+        );
+
+        return max(0, self::AUTO_PROMOTE_THRESHOLD - $confirmedCount);
+    }
+
+    /**
+     * @return array{counterparty: string, amountMinor: int, currency: string, postedAt: string, slug: ?string}
+     */
+    private function transactionSummary(mixed $transactionId, User $user): array
+    {
+        $default = ['counterparty' => '', 'amountMinor' => 0, 'currency' => 'EUR', 'postedAt' => self::EPOCH_DATE, 'slug' => null];
+        if ($transactionId === null) {
+            return $default;
+        }
+
+        $row = $this->db->connection()->table('transactions')
             ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
-            ->where('transactions.id', $row->from_transaction_id)
+            ->where('transactions.id', $transactionId)
             ->where('transactions.user_id', $user->id)
             ->select([
                 'transactions.counterparty_name',
@@ -433,66 +491,20 @@ final class ChainLinkQuery
                 self::COUNTERPARTY_SLUG,
             ])
             ->first();
-        if ($fromRow !== null) {
-            $fromCounterparty = $this->decryptCounterpartyName(self::toString($fromRow->counterparty_name ?? null), $user->id);
-            $fromAmountMinor = self::toInt($fromRow->settled_amount_minor ?? null);
-            $cur = self::toString($fromRow->settled_currency ?? null);
-            $fromCurrency = $cur !== '' ? $cur : 'EUR';
-            $fromPostedAt = self::toString($fromRow->posted_at ?? null);
-            if ($fromPostedAt === '') {
-                $fromPostedAt = self::EPOCH_DATE;
-            }
-            $fromCounterpartySlug = self::extractCounterpartySlug($fromRow);
+        if ($row === null) {
+            return $default;
         }
 
-        $toCounterparty = '';
-        $toAmountMinor = 0;
-        $toCurrency = 'EUR';
-        $toPostedAt = self::EPOCH_DATE;
-        $toCounterpartySlug = null;
-        if ($row->to_transaction_id !== null) {
-            $toRow = $this->db->connection()->table('transactions')
-                ->leftJoin('counterparties', 'transactions.counterparty_id', '=', 'counterparties.id')
-                ->where('transactions.id', $row->to_transaction_id)
-                ->where('transactions.user_id', $user->id)
-                ->select([
-                    'transactions.counterparty_name',
-                    'transactions.settled_amount_minor',
-                    'transactions.settled_currency',
-                    'transactions.posted_at',
-                    self::COUNTERPARTY_SLUG,
-                ])
-                ->first();
-            if ($toRow !== null) {
-                $toCounterparty = $this->decryptCounterpartyName(self::toString($toRow->counterparty_name ?? null), $user->id);
-                $toAmountMinor = self::toInt($toRow->settled_amount_minor ?? null);
-                $cur = self::toString($toRow->settled_currency ?? null);
-                $toCurrency = $cur !== '' ? $cur : 'EUR';
-                $toPostedAt = self::toString($toRow->posted_at ?? null);
-                if ($toPostedAt === '') {
-                    $toPostedAt = self::EPOCH_DATE;
-                }
-                $toCounterpartySlug = self::extractCounterpartySlug($toRow);
-            }
-        }
+        $currency = self::toString($row->settled_currency ?? null);
+        $postedAt = self::toString($row->posted_at ?? null);
 
-        return new ChainLinkRow(
-            chainLinkId: self::toInt($row->id),
-            kind: self::toString($row->kind),
-            state: self::toString($row->state),
-            confidence: self::toFloat($row->confidence ?? null),
-            fromTransactionId: self::toInt($row->from_transaction_id ?? null),
-            fromCounterparty: $fromCounterparty,
-            fromAmount: Money::ofMinor($fromAmountMinor, $fromCurrency),
-            toTransactionId: self::toInt($row->to_transaction_id ?? null),
-            toCounterparty: $toCounterparty,
-            toAmount: Money::ofMinor($toAmountMinor, $toCurrency),
-            fromPostedAt: CarbonImmutable::parse($fromPostedAt),
-            toPostedAt: CarbonImmutable::parse($toPostedAt),
-            confirmsRemaining: $confirmsRemaining,
-            fromCounterpartySlug: $fromCounterpartySlug,
-            toCounterpartySlug: $toCounterpartySlug,
-        );
+        return [
+            'counterparty' => $this->decryptCounterpartyName(self::toString($row->counterparty_name ?? null), $user->id),
+            'amountMinor' => self::toInt($row->settled_amount_minor ?? null),
+            'currency' => $currency !== '' ? $currency : 'EUR',
+            'postedAt' => $postedAt !== '' ? $postedAt : self::EPOCH_DATE,
+            'slug' => self::extractCounterpartySlug($row),
+        ];
     }
 
     private function resolveAccountName(int $accountId, User $user): string
