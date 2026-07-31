@@ -7,6 +7,7 @@ namespace Modules\Chains\Internal\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
+use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
@@ -101,7 +102,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
                 'period_end' => $periodEnd,
                 'total_amount_minor' => $closing,
                 'open_balance_minor' => abs($closing),
-                'state' => 'open',
+                'state' => CardStatementState::Open->value,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
