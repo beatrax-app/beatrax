@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Ingestion\Public\Exceptions\PdfExtractionFailed;
 use Spatie\PdfToText\Exceptions\BinaryNotFoundException;
 use Spatie\PdfToText\Exceptions\CouldNotExtractText;
@@ -16,7 +17,7 @@ use Throwable;
  */
 class PdfTextExtractor
 {
-    public const MAX_BYTES = 10 * 1024 * 1024;
+    public const int MAX_BYTES = UploadLimits::MAX_BYTES;
 
     /** @var list<string> */
     private const PDFTOTEXT_OPTIONS = ['layout', 'enc UTF-8', 'eol unix', 'nopgbrk'];

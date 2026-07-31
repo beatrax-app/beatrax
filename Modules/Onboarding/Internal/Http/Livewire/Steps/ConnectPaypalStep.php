@@ -12,6 +12,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportPreviewResult;
@@ -40,7 +41,7 @@ final class ConnectPaypalStep extends Component
     public function rules(): array
     {
         return [
-            'activityCsv' => ['required', 'file', 'max:10240', 'extensions:csv,txt'],
+            'activityCsv' => ['required', 'file', 'max:'.UploadLimits::MAX_KB, 'extensions:csv,txt'],
         ];
     }
 

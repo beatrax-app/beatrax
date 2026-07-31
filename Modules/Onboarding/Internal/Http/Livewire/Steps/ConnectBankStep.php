@@ -14,6 +14,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Account;
@@ -55,7 +56,7 @@ final class ConnectBankStep extends Component
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:10240', 'extensions:csv,txt,xml,sta,mt940,940'],
+            'file' => ['required', 'file', 'max:'.UploadLimits::MAX_KB, 'extensions:csv,txt,xml,sta,mt940,940'],
             'selectedFormat' => ['required', 'in:'.implode(',', self::SUPPORTED_FORMATS)],
             'selectedBankFormatHint' => ['nullable', 'in:'.implode(',', self::SUPPORTED_BANK_FORMAT_HINTS)],
         ];

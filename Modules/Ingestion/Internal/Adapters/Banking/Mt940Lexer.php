@@ -13,8 +13,8 @@ use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
 final class Mt940Lexer
 {
     // Defensive against pathological inputs: bounds total line count against
-    // a file whose every byte is a newline (the upload wizard's max:10240
-    // rule bounds bytes, not lines).
+    // a file whose every byte is a newline (UploadLimits bounds bytes, not
+    // lines, so a small-but-degenerate file still needs its own cap).
     private const MAX_LINE_COUNT = 100_000;
 
     // Caps a single tag buffer; real :86: narratives never exceed a few
