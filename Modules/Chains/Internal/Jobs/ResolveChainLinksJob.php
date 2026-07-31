@@ -19,6 +19,7 @@ use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
 
@@ -73,7 +74,7 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
         $runId = $db->connection()->table('chain_resolution_runs')->insertGetId([
             'user_id' => $this->userId,
             'job_uuid' => is_string($jobId) ? $jobId : null,
-            'status' => 'running',
+            'status' => JobRunStatus::Running->value,
             'started_at' => $now,
             'linked_count' => 0,
             'created_at' => $now,
@@ -104,7 +105,7 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
             ->table('chain_resolution_runs')
             ->where('id', $runId)
             ->update([
-                'status' => 'complete',
+                'status' => JobRunStatus::Complete->value,
                 'completed_at' => $completedAt,
                 'linked_count' => $afterCount - $beforeCount,
                 'updated_at' => $completedAt,

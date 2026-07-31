@@ -32,6 +32,7 @@ use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 /**
@@ -140,11 +141,11 @@ final class ChainsServiceProvider extends ServiceProvider
             $db->connection()
                 ->table('chain_resolution_runs')
                 ->where('user_id', $userId)
-                ->where('status', 'running')
+                ->where('status', JobRunStatus::Running->value)
                 ->orderByDesc('id')
                 ->limit(1)
                 ->update([
-                    'status' => 'failed',
+                    'status' => JobRunStatus::Failed->value,
                     'completed_at' => $now,
                     'last_error' => $lastError,
                     'updated_at' => $now,

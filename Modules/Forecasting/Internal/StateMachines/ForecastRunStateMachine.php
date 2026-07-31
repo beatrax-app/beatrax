@@ -7,6 +7,7 @@ namespace Modules\Forecasting\Internal\StateMachines;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Internal\Exceptions\ForecastRunNotFoundException;
 use Modules\Forecasting\Internal\Exceptions\InvalidForecastRunTransitionException;
 use Modules\Forecasting\Models\ForecastRun;
@@ -18,19 +19,6 @@ final readonly class ForecastRunStateMachine
 {
     use CoercesScalars;
 
-    /**
-     * @return array<string, list<string>>
-     */
-    public static function transitionMap(): array
-    {
-        return [
-            'pending' => ['running', 'failed'],
-            'running' => ['complete', 'failed'],
-            'complete' => [],
-            'failed' => [],
-        ];
-    }
-
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -39,19 +27,19 @@ final readonly class ForecastRunStateMachine
     public function start(ForecastRun $run): void
     {
         $now = $this->clock->now()->toDateTimeString();
-        $this->transition($run, 'running', ['started_at' => $now, 'updated_at' => $now]);
+        $this->transition($run, JobRunStatus::Running->value, ['started_at' => $now, 'updated_at' => $now]);
     }
 
     public function complete(ForecastRun $run): void
     {
         $now = $this->clock->now()->toDateTimeString();
-        $this->transition($run, 'complete', ['completed_at' => $now, 'updated_at' => $now]);
+        $this->transition($run, JobRunStatus::Complete->value, ['completed_at' => $now, 'updated_at' => $now]);
     }
 
     public function fail(ForecastRun $run): void
     {
         $now = $this->clock->now()->toDateTimeString();
-        $this->transition($run, 'failed', ['completed_at' => $now, 'updated_at' => $now]);
+        $this->transition($run, JobRunStatus::Failed->value, ['completed_at' => $now, 'updated_at' => $now]);
     }
 
     /**
@@ -92,7 +80,10 @@ final readonly class ForecastRunStateMachine
 
     private function guardTransition(int $runId, string $currentStatus, string $toStatus): void
     {
-        $allowed = self::transitionMap()[$currentStatus] ?? [];
+        $current = JobRunStatus::tryFrom($currentStatus);
+        $allowed = $current === null
+            ? []
+            : array_map(static fn (JobRunStatus $next): string => $next->value, $current->allowedNext());
         if (! in_array($toStatus, $allowed, strict: true)) {
             throw InvalidForecastRunTransitionException::forTransition($runId, $currentStatus, $toStatus);
         }
