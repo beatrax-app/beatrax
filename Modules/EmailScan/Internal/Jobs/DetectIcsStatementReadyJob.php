@@ -71,49 +71,58 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
 
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            $rowUserId = is_numeric($row->user_id) ? (int) $row->user_id : null;
-            if ($rowUserId !== $this->userId) {
-                // Defence-in-depth: mirrors ProcessFetchedInboxMessagesJob's
-                // own cross-user re-check even though the query above is
-                // already user_id-scoped.
-                continue;
+            $event = $this->rowToEvent($row, $domains, $pattern);
+            if ($event !== null) {
+                $events->dispatch($event);
             }
-
-            $senderEmail = is_string($row->sender_email) ? $row->sender_email : '';
-            if (! self::senderMatchesDomain($senderEmail, $domains)) {
-                continue;
-            }
-
-            $subject = is_string($row->subject) ? $row->subject : '';
-            if ($subject === '' || preg_match($pattern, $subject) !== 1) {
-                continue;
-            }
-
-            $internalDateRaw = is_string($row->internal_date) ? $row->internal_date : '';
-            if ($internalDateRaw === '') {
-                continue;
-            }
-
-            $messageId = is_numeric($row->id) ? (int) $row->id : null;
-            if ($messageId === null) {
-                continue;
-            }
-
-            // One malformed internal_date must not abort the whole
-            // per-user sweep; skip the row on an unparseable date,
-            // matching the is_numeric/is_string guard style above.
-            try {
-                $internalDate = CarbonImmutable::parse($internalDateRaw);
-            } catch (InvalidFormatException) {
-                continue;
-            }
-
-            $events->dispatch(new IcsStatementReady(
-                userId: $this->userId,
-                messageId: $messageId,
-                internalDate: $internalDate,
-            ));
         }
+    }
+
+    // Maps one inbox_messages row to an IcsStatementReady event, or null
+    // when any guard rejects it so the caller simply skips the row.
+    /**
+     * @param  list<string>  $domains
+     */
+    private function rowToEvent(stdClass $row, array $domains, string $pattern): ?IcsStatementReady
+    {
+        // Defence-in-depth: mirrors ProcessFetchedInboxMessagesJob's
+        // own cross-user re-check even though the query above is
+        // already user_id-scoped.
+        $rowUserId = is_numeric($row->user_id) ? (int) $row->user_id : null;
+        if ($rowUserId !== $this->userId) {
+            return null;
+        }
+
+        $senderEmail = is_string($row->sender_email) ? $row->sender_email : '';
+        if (! self::senderMatchesDomain($senderEmail, $domains)) {
+            return null;
+        }
+
+        $subject = is_string($row->subject) ? $row->subject : '';
+        if ($subject === '' || preg_match($pattern, $subject) !== 1) {
+            return null;
+        }
+
+        $internalDateRaw = is_string($row->internal_date) ? $row->internal_date : '';
+        $messageId = is_numeric($row->id) ? (int) $row->id : null;
+        if ($internalDateRaw === '' || $messageId === null) {
+            return null;
+        }
+
+        // One malformed internal_date must not abort the whole
+        // per-user sweep; skip the row on an unparseable date,
+        // matching the is_numeric/is_string guard style above.
+        try {
+            $internalDate = CarbonImmutable::parse($internalDateRaw);
+        } catch (InvalidFormatException) {
+            return null;
+        }
+
+        return new IcsStatementReady(
+            userId: $this->userId,
+            messageId: $messageId,
+            internalDate: $internalDate,
+        );
     }
 
     /**

@@ -51,23 +51,28 @@ final class OAuthStateRepository
     {
         $this->assertProvider($provider);
 
-        $key = $this->sessionKey($provider);
-        $entry = ($this->session)()->pull($key);
+        $entry = ($this->session)()->pull($this->sessionKey($provider));
 
-        if (! is_array($entry)) {
+        if (! is_array($entry) || ! $this->entryIsValid($entry, $candidateState, $currentUserId)) {
             return null;
         }
 
-        $storedState = $entry['state'] ?? null;
-        if (! is_string($storedState) || $storedState === '') {
-            return null;
-        }
+        $inboxId = $entry['inbox_id'] ?? null;
 
+        return is_int($inboxId) ? $inboxId : 0;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $entry
+     */
+    private function entryIsValid(array $entry, string $candidateState, int $currentUserId): bool
+    {
         // hash_equals avoids the timing-attack a naive `===` would
         // expose; the comparison cost is constant in the prefix
         // match length regardless of input difference position.
-        if (! hash_equals($storedState, $candidateState)) {
-            return null;
+        $storedState = $entry['state'] ?? null;
+        if (! is_string($storedState) || $storedState === '' || ! hash_equals($storedState, $candidateState)) {
+            return false;
         }
 
         // User-id binding: a change of session-bound user between
@@ -75,29 +80,28 @@ final class OAuthStateRepository
         // must not attach the inbox to the wrong account.
         $storedUserId = $entry['user_id'] ?? null;
         if (! is_int($storedUserId) || $storedUserId !== $currentUserId) {
-            return null;
+            return false;
         }
 
-        // Issued-at expiry: reject state tokens older than the
-        // configured window so a long-lived session cannot replay a
-        // stale state value.
-        $issuedAtRaw = $entry['issued_at'] ?? null;
+        return $this->issuedAtWithinWindow($entry['issued_at'] ?? null);
+    }
+
+    // Issued-at expiry: reject state tokens older than the configured
+    // window so a long-lived session cannot replay a stale state value.
+    // Any missing/malformed/unparseable timestamp is treated as expired.
+    private function issuedAtWithinWindow(mixed $issuedAtRaw): bool
+    {
         if (! is_string($issuedAtRaw) || $issuedAtRaw === '') {
-            return null;
+            return false;
         }
         try {
             $issuedAt = new DateTimeImmutable($issuedAtRaw);
         } catch (Throwable) {
-            return null;
+            return false;
         }
         $ageSeconds = $this->clock->now()->getTimestamp() - $issuedAt->getTimestamp();
-        if ($ageSeconds < 0 || $ageSeconds > self::MAX_AGE_SECONDS) {
-            return null;
-        }
 
-        $inboxId = $entry['inbox_id'] ?? null;
-
-        return is_int($inboxId) ? $inboxId : 0;
+        return $ageSeconds >= 0 && $ageSeconds <= self::MAX_AGE_SECONDS;
     }
 
     public function issueClientWizardSuccess(string $provider): void

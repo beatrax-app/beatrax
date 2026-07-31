@@ -22,6 +22,7 @@ use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
+use stdClass;
 use Throwable;
 
 /**
@@ -93,9 +94,28 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         /** @var User $user */
         $user = User::query()->where('id', $this->userId)->firstOrFail();
 
-        // Builds the exclude list from known_senders patterns plus
-        // dismissed/added discovered_senders rows (see architecture.md
-        // for why both discovered-sender states mean "do not resurface").
+        $allExcludes = $this->buildExcludeList($connection, $user, $senderQuery);
+
+        $inboxRows = $connection->table('inboxes')
+            ->where('user_id', $this->userId)
+            ->get(['id', 'provider']);
+
+        foreach ($inboxRows as $inboxRow) {
+            /** @var stdClass $inboxRow */
+            if (! $this->scanInboxRow($inboxRow, $connection, $clock, $gmail, $graph, $allExcludes)) {
+                return;
+            }
+        }
+    }
+
+    // Builds the exclude list from known_senders patterns plus
+    // dismissed/added discovered_senders rows (see architecture.md for
+    // why both discovered-sender states mean "do not resurface").
+    /**
+     * @return list<string>
+     */
+    private function buildExcludeList(Connection $connection, User $user, KnownSenderQuery $senderQuery): array
+    {
         $knownPatterns = array_map(
             static fn ($s) => $s->emailPattern,
             $senderQuery->all($user),
@@ -111,46 +131,42 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                 $dismissedSenders[] = (string) $value;
             }
         }
-        $allExcludes = array_values(array_unique(array_merge($knownPatterns, $dismissedSenders)));
 
-        $inboxRows = $connection->table('inboxes')
-            ->where('user_id', $this->userId)
-            ->get(['id', 'provider']);
-        if ($inboxRows->isEmpty()) {
-            return;
-        }
+        return array_values(array_unique(array_merge($knownPatterns, $dismissedSenders)));
+    }
 
-        foreach ($inboxRows as $inboxRow) {
-            $rawInboxId = $inboxRow->id;
-            $inboxId = is_numeric($rawInboxId) ? (int) $rawInboxId : 0;
-            $rawProvider = $inboxRow->provider;
-            $provider = is_string($rawProvider) ? $rawProvider : '';
+    // Runs discovery for one inbox row, swallowing per-inbox failures so
+    // one bad inbox never aborts the pass. Returns false only on a rate
+    // limit, which signals handle() to stop the whole daily sweep.
+    /**
+     * @param  list<string>  $allExcludes
+     */
+    private function scanInboxRow(
+        stdClass $inboxRow,
+        Connection $connection,
+        Clock $clock,
+        GmailApiClientContract $gmail,
+        GraphApiClientContract $graph,
+        array $allExcludes,
+    ): bool {
+        $inboxId = is_numeric($inboxRow->id) ? (int) $inboxRow->id : 0;
+        $provider = is_string($inboxRow->provider) ? $inboxRow->provider : '';
 
-            if ($inboxId <= 0 || $provider === '') {
-                continue;
-            }
-
+        if ($inboxId > 0 && $provider !== '') {
             try {
-                $this->runDiscoveryForInbox(
-                    $connection,
-                    $clock,
-                    $gmail,
-                    $graph,
-                    $inboxId,
-                    $provider,
-                    $allExcludes,
-                );
+                $this->runDiscoveryForInbox($connection, $clock, $gmail, $graph, $inboxId, $provider, $allExcludes);
             } catch (RateLimitedException) {
                 // Discovery is daily — abort silently and retry
                 // tomorrow; discovered_senders has no per-inbox
                 // lifecycle column to transition.
-                return;
+                return false;
             } catch (Throwable) {
                 // Best-effort surface — one inbox's failure must not
                 // abort the per-user pass.
-                continue;
             }
         }
+
+        return true;
     }
 
     // Walks one inbox's discovery results and upserts
@@ -167,98 +183,12 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         string $provider,
         array $allExcludes,
     ): void {
-        $messages = [];
-
-        if ($provider === 'gmail') {
-            // Walks pages of discovery candidates up to the defensive
-            // hard cap (see architecture.md for why a single-page call
-            // previously made discovery silently fail on busy inboxes).
-            $pageToken = null;
-            $pagesWalked = 0;
-            do {
-                $page = $gmail->listDiscoveryCandidates(
-                    $inboxId,
-                    self::DISCOVERY_KEYWORDS,
-                    $allExcludes,
-                    $pageToken,
-                );
-                foreach ($page['messages'] as $msg) {
-                    // Defensively narrows every field to DateTimeImmutable
-                    // at the boundary, since the contract exposes entries
-                    // as array<string, mixed> precisely so a future
-                    // response-shape drift cannot crash the daily scan.
-                    $rawAddr = $msg['fromAddress'] ?? null;
-                    if (! is_string($rawAddr) || $rawAddr === '') {
-                        continue;
-                    }
-                    $rawName = $msg['fromName'] ?? null;
-                    $senderName = is_string($rawName) && $rawName !== '' ? $rawName : null;
-
-                    $rawDate = $msg['internalDate'] ?? null;
-                    $internalDate = is_string($rawDate) && $rawDate !== ''
-                        ? $this->safeParseDate($rawDate, $clock)
-                        : $clock->now()->toDateTimeImmutable();
-
-                    $messages[] = [
-                        'sender_email' => strtolower($rawAddr),
-                        'sender_name' => $senderName,
-                        'internalDate' => $internalDate,
-                    ];
-                }
-                $pageToken = $page['nextPageToken'] ?? null;
-                $pagesWalked++;
-            } while (
-                is_string($pageToken) && $pageToken !== ''
-                && $pagesWalked < self::DISCOVERY_MAX_PAGES
-            );
-        } elseif ($provider === 'microsoft') {
-            $nextLink = null;
-            $pagesWalked = 0;
-            do {
-                $page = $graph->listDiscoveryCandidatesPaged(
-                    $inboxId,
-                    self::DISCOVERY_KEYWORDS,
-                    $allExcludes,
-                    $nextLink,
-                );
-                foreach ($page['messages'] as $rawMsg) {
-                    $sender = '';
-                    $senderName = null;
-                    if (isset($rawMsg['from']) && is_array($rawMsg['from'])) {
-                        $emailAddress = $rawMsg['from']['emailAddress'] ?? null;
-                        if (is_array($emailAddress)) {
-                            $rawAddr = $emailAddress['address'] ?? null;
-                            if (is_string($rawAddr)) {
-                                $sender = strtolower($rawAddr);
-                            }
-                            $rawName = $emailAddress['name'] ?? null;
-                            if (is_string($rawName) && $rawName !== '') {
-                                $senderName = $rawName;
-                            }
-                        }
-                    }
-                    $received = $rawMsg['receivedDateTime'] ?? null;
-                    // Falls back to the injected clock (not the magic
-                    // 'now' string literal) when Graph omits
-                    // receivedDateTime, keeping the missing-data path
-                    // explicit rather than reaching for natural-language parsing.
-                    $internalDate = is_string($received) && $received !== ''
-                        ? $this->safeParseDate($received, $clock)
-                        : $clock->now()->toDateTimeImmutable();
-
-                    $messages[] = [
-                        'sender_email' => $sender,
-                        'sender_name' => $senderName,
-                        'internalDate' => $internalDate,
-                    ];
-                }
-                $nextLink = $page['nextLink'] ?? null;
-                $pagesWalked++;
-            } while (
-                is_string($nextLink) && $nextLink !== ''
-                && $pagesWalked < self::DISCOVERY_MAX_PAGES
-            );
-        } else {
+        $messages = match ($provider) {
+            'gmail' => $this->collectGmailMessages($gmail, $clock, $inboxId, $allExcludes),
+            'microsoft' => $this->collectMicrosoftMessages($graph, $clock, $inboxId, $allExcludes),
+            default => null,
+        };
+        if ($messages === null) {
             return;
         }
 
@@ -266,86 +196,214 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
 
         foreach ($messages as $msg) {
             $sender = $msg['sender_email'];
-            if ($sender === '') {
+            if ($sender === '' || $this->isExcluded($sender, $lowerExcludes)) {
                 continue;
             }
 
-            // Defensive exclude — re-check the sender against the full
-            // exclude list even though the provider query already
-            // applied it server-side. Patterns starting with '@' match
-            // by domain suffix; otherwise a substring containment match.
-            $excluded = false;
-            foreach ($lowerExcludes as $pattern) {
-                if (str_starts_with($pattern, '@')) {
-                    if (str_ends_with($sender, $pattern)) {
-                        $excluded = true;
-                        break;
-                    }
-                } else {
-                    if (str_contains($sender, $pattern)) {
-                        $excluded = true;
-                        break;
-                    }
+            $this->upsertDiscoveredSender($connection, $clock, $inboxId, $msg);
+        }
+    }
+
+    // Walks pages of Gmail discovery candidates up to the defensive hard
+    // cap (see architecture.md for why a single-page call previously
+    // made discovery silently fail on busy inboxes).
+    /**
+     * @param  list<string>  $allExcludes
+     * @return list<array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}>
+     */
+    private function collectGmailMessages(GmailApiClientContract $gmail, Clock $clock, int $inboxId, array $allExcludes): array
+    {
+        $messages = [];
+        $pageToken = null;
+        $pagesWalked = 0;
+        do {
+            $page = $gmail->listDiscoveryCandidates($inboxId, self::DISCOVERY_KEYWORDS, $allExcludes, $pageToken);
+            foreach ($page['messages'] as $msg) {
+                $mapped = $this->mapGmailMessage($msg, $clock);
+                if ($mapped !== null) {
+                    $messages[] = $mapped;
                 }
             }
-            if ($excluded) {
-                continue;
-            }
+            $pageToken = $page['nextPageToken'] ?? null;
+            $pagesWalked++;
+        } while (
+            is_string($pageToken) && $pageToken !== ''
+            && $pagesWalked < self::DISCOVERY_MAX_PAGES
+        );
 
-            // internalDate is already a DateTimeImmutable from the
-            // per-provider boundary above — no second parse needed.
-            $internalDate = $msg['internalDate'];
-            $senderName = $msg['sender_name'];
+        return $messages;
+    }
 
-            // Upsert discovered_senders row. UNIQUE on
-            // (user_id, inbox_id, sender_email) so the existence read
-            // + insert / update branch covers the same uniqueness
-            // contract the schema enforces.
-            $existing = $connection->table('discovered_senders')
-                ->where('user_id', $this->userId)
-                ->where('inbox_id', $inboxId)
-                ->where('sender_email', $sender)
-                ->first();
-
-            $now = $clock->now()->toDateTimeString();
-            $internalDateStr = $internalDate->format('Y-m-d H:i:s');
-
-            if ($existing === null) {
-                $connection->table('discovered_senders')->insert([
-                    'user_id' => $this->userId,
-                    'inbox_id' => $inboxId,
-                    'sender_email' => $sender,
-                    'sender_name' => $senderName,
-                    'occurrence_count' => 1,
-                    'last_seen_at' => $internalDateStr,
-                    'state' => 'candidate',
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-
-                continue;
-            }
-
-            // Only resurfaces candidates — never re-touches a
-            // dismissed/added row; second line of defence past the
-            // exclude list above.
-            $existingState = is_string($existing->state ?? null) ? $existing->state : '';
-            if ($existingState !== 'candidate') {
-                continue;
-            }
-
-            $existingCount = self::toInt($existing->occurrence_count ?? 0);
-            $existingName = is_string($existing->sender_name ?? null) ? $existing->sender_name : null;
-
-            $connection->table('discovered_senders')
-                ->where('id', $existing->id)
-                ->update([
-                    'occurrence_count' => $existingCount + 1,
-                    'last_seen_at' => $internalDateStr,
-                    'sender_name' => $senderName ?? $existingName,
-                    'updated_at' => $now,
-                ]);
+    // Defensively narrows every field at the boundary, since the
+    // contract exposes entries as array<string, mixed> precisely so a
+    // future response-shape drift cannot crash the daily scan.
+    /**
+     * @param  array<string, mixed>  $msg
+     * @return array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}|null
+     */
+    private function mapGmailMessage(array $msg, Clock $clock): ?array
+    {
+        $rawAddr = $msg['fromAddress'] ?? null;
+        if (! is_string($rawAddr) || $rawAddr === '') {
+            return null;
         }
+        $rawName = $msg['fromName'] ?? null;
+        $senderName = is_string($rawName) && $rawName !== '' ? $rawName : null;
+
+        $rawDate = $msg['internalDate'] ?? null;
+        $internalDate = is_string($rawDate) && $rawDate !== ''
+            ? $this->safeParseDate($rawDate, $clock)
+            : $clock->now()->toDateTimeImmutable();
+
+        return [
+            'sender_email' => strtolower($rawAddr),
+            'sender_name' => $senderName,
+            'internalDate' => $internalDate,
+        ];
+    }
+
+    /**
+     * @param  list<string>  $allExcludes
+     * @return list<array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}>
+     */
+    private function collectMicrosoftMessages(GraphApiClientContract $graph, Clock $clock, int $inboxId, array $allExcludes): array
+    {
+        $messages = [];
+        $nextLink = null;
+        $pagesWalked = 0;
+        do {
+            $page = $graph->listDiscoveryCandidatesPaged($inboxId, self::DISCOVERY_KEYWORDS, $allExcludes, $nextLink);
+            foreach ($page['messages'] as $rawMsg) {
+                $messages[] = $this->mapMicrosoftMessage($rawMsg, $clock);
+            }
+            $nextLink = $page['nextLink'] ?? null;
+            $pagesWalked++;
+        } while (
+            is_string($nextLink) && $nextLink !== ''
+            && $pagesWalked < self::DISCOVERY_MAX_PAGES
+        );
+
+        return $messages;
+    }
+
+    /**
+     * @param  array<string, mixed>  $rawMsg
+     * @return array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}
+     */
+    private function mapMicrosoftMessage(array $rawMsg, Clock $clock): array
+    {
+        [$sender, $senderName] = $this->extractMicrosoftSender($rawMsg);
+
+        // Falls back to the injected clock (not the magic 'now' string
+        // literal) when Graph omits receivedDateTime, keeping the
+        // missing-data path explicit rather than reaching for
+        // natural-language parsing.
+        $received = $rawMsg['receivedDateTime'] ?? null;
+        $internalDate = is_string($received) && $received !== ''
+            ? $this->safeParseDate($received, $clock)
+            : $clock->now()->toDateTimeImmutable();
+
+        return [
+            'sender_email' => $sender,
+            'sender_name' => $senderName,
+            'internalDate' => $internalDate,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $rawMsg
+     * @return array{0: string, 1: ?string}
+     */
+    private function extractMicrosoftSender(array $rawMsg): array
+    {
+        $from = $rawMsg['from'] ?? null;
+        $emailAddress = is_array($from) ? ($from['emailAddress'] ?? null) : null;
+        if (! is_array($emailAddress)) {
+            return ['', null];
+        }
+
+        $rawAddr = $emailAddress['address'] ?? null;
+        $sender = is_string($rawAddr) ? strtolower($rawAddr) : '';
+
+        $rawName = $emailAddress['name'] ?? null;
+        $senderName = is_string($rawName) && $rawName !== '' ? $rawName : null;
+
+        return [$sender, $senderName];
+    }
+
+    // Defensive exclude — re-check the sender against the full exclude
+    // list even though the provider query already applied it
+    // server-side. Patterns starting with '@' match by domain suffix;
+    // otherwise a substring containment match.
+    /**
+     * @param  list<string>  $lowerExcludes
+     */
+    private function isExcluded(string $sender, array $lowerExcludes): bool
+    {
+        foreach ($lowerExcludes as $pattern) {
+            $hit = str_starts_with($pattern, '@')
+                ? str_ends_with($sender, $pattern)
+                : str_contains($sender, $pattern);
+            if ($hit) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Upsert on UNIQUE (user_id, inbox_id, sender_email): the existence
+    // read + insert / update branch mirrors the schema's uniqueness
+    // contract. Only candidates are resurfaced — a dismissed/added row
+    // is never re-touched (second line of defence past isExcluded).
+    /**
+     * @param  array{sender_email: string, sender_name: ?string, internalDate: DateTimeImmutable}  $msg
+     */
+    private function upsertDiscoveredSender(Connection $connection, Clock $clock, int $inboxId, array $msg): void
+    {
+        $sender = $msg['sender_email'];
+        $senderName = $msg['sender_name'];
+        $existing = $connection->table('discovered_senders')
+            ->where('user_id', $this->userId)
+            ->where('inbox_id', $inboxId)
+            ->where('sender_email', $sender)
+            ->first();
+
+        $now = $clock->now()->toDateTimeString();
+        $internalDateStr = $msg['internalDate']->format('Y-m-d H:i:s');
+
+        if ($existing === null) {
+            $connection->table('discovered_senders')->insert([
+                'user_id' => $this->userId,
+                'inbox_id' => $inboxId,
+                'sender_email' => $sender,
+                'sender_name' => $senderName,
+                'occurrence_count' => 1,
+                'last_seen_at' => $internalDateStr,
+                'state' => 'candidate',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            return;
+        }
+
+        $existingState = is_string($existing->state ?? null) ? $existing->state : '';
+        if ($existingState !== 'candidate') {
+            return;
+        }
+
+        $existingCount = self::toInt($existing->occurrence_count ?? 0);
+        $existingName = is_string($existing->sender_name ?? null) ? $existing->sender_name : null;
+
+        $connection->table('discovered_senders')
+            ->where('id', $existing->id)
+            ->update([
+                'occurrence_count' => $existingCount + 1,
+                'last_seen_at' => $internalDateStr,
+                'sender_name' => $senderName ?? $existingName,
+                'updated_at' => $now,
+            ]);
     }
 
     private function safeParseDate(string $raw, Clock $clock): DateTimeImmutable

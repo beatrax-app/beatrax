@@ -6,6 +6,7 @@ namespace Modules\EmailScan\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -65,51 +66,64 @@ final class InboxesPage extends Component
         // backfill-window:open. hasSession() guards a direct Livewire
         // test harness that boots without a bound session.
         if ($request->hasSession()) {
-            $session = $request->session();
-
-            // Every flash below uses pull() (single-use) so a later
-            // wire:poll tick or back-button revisit doesn't re-fire
-            // the modal or repaint a stale canceled/failed banner.
-            $candidate = $session->pull('open_backfill_modal');
-            if (is_int($candidate) && $candidate > 0) {
-                $this->openBackfillForInboxId = $candidate;
-            } elseif (is_numeric($candidate)) {
-                $this->openBackfillForInboxId = (int) $candidate;
-            }
-            if ($this->openBackfillForInboxId !== null) {
-                $this->dispatch('backfill-window:open', inboxId: $this->openBackfillForInboxId);
-            }
-
-            $canceled = $session->pull('oauth_canceled');
-            if (is_string($canceled) && $canceled !== '') {
-                $this->oauthCanceledMessage = $canceled;
-            }
-            $failed = $session->pull('oauth_failed');
-            if (is_string($failed) && $failed !== '') {
-                $this->oauthFailedMessage = $failed;
-            }
+            $this->consumeOAuthFlashes($request->session());
         }
 
-        // ?reconnect={id} hand-off: the SystemAlertsBanner Reconnect
-        // link routes here, auto-dispatching the modal-open event.
-        // Cross-user/missing ids are silently ignored (404-not-403)
-        // but logged at info so an operator can see the attempt.
+        $this->handleReconnectQueryParam($currentUser, $inboxQuery, $logger);
+    }
+
+    // Every flash below uses pull() (single-use) so a later wire:poll
+    // tick or back-button revisit doesn't re-fire the modal or repaint
+    // a stale canceled/failed banner.
+    private function consumeOAuthFlashes(Session $session): void
+    {
+        $candidate = $session->pull('open_backfill_modal');
+        if (is_int($candidate) && $candidate > 0) {
+            $this->openBackfillForInboxId = $candidate;
+        } elseif (is_numeric($candidate)) {
+            $this->openBackfillForInboxId = (int) $candidate;
+        }
+        if ($this->openBackfillForInboxId !== null) {
+            $this->dispatch('backfill-window:open', inboxId: $this->openBackfillForInboxId);
+        }
+
+        $canceled = $session->pull('oauth_canceled');
+        if (is_string($canceled) && $canceled !== '') {
+            $this->oauthCanceledMessage = $canceled;
+        }
+        $failed = $session->pull('oauth_failed');
+        if (is_string($failed) && $failed !== '') {
+            $this->oauthFailedMessage = $failed;
+        }
+    }
+
+    // ?reconnect={id} hand-off: the SystemAlertsBanner Reconnect link
+    // routes here, auto-dispatching the modal-open event. Cross-user or
+    // missing ids are silently ignored (404-not-403) but logged at info
+    // so an operator can see the attempt.
+    private function handleReconnectQueryParam(
+        CurrentUser $currentUser,
+        InboxQuery $inboxQuery,
+        LoggerInterface $logger,
+    ): void {
         $reconnectId = $this->reconnectInboxId;
-        if ($reconnectId !== null && $reconnectId > 0) {
-            $user = $currentUser->user();
-            $inbox = $inboxQuery->findForUser($reconnectId, $user);
-            if ($inbox !== null && in_array($inbox->provider, ['gmail', 'microsoft'], strict: true)) {
-                $this->dispatch(
-                    'oauth-client-wizard:open',
-                    provider: $inbox->provider,
-                    inboxId: $inbox->inboxId,
-                );
-            } elseif ($inbox === null) {
-                $logger->info('InboxesPage: ?reconnect query-param resolved to no inbox for the current user.', [
-                    'user_id' => $user->id,
-                    'reconnect_inbox_id' => $reconnectId,
-                ]);
-            }
+        if ($reconnectId === null || $reconnectId <= 0) {
+            return;
+        }
+
+        $user = $currentUser->user();
+        $inbox = $inboxQuery->findForUser($reconnectId, $user);
+        if ($inbox !== null && in_array($inbox->provider, ['gmail', 'microsoft'], strict: true)) {
+            $this->dispatch(
+                'oauth-client-wizard:open',
+                provider: $inbox->provider,
+                inboxId: $inbox->inboxId,
+            );
+        } elseif ($inbox === null) {
+            $logger->info('InboxesPage: ?reconnect query-param resolved to no inbox for the current user.', [
+                'user_id' => $user->id,
+                'reconnect_inbox_id' => $reconnectId,
+            ]);
         }
     }
 

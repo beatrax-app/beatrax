@@ -18,6 +18,7 @@ use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
+use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
 
@@ -308,7 +309,7 @@ final class GmailApiClient implements GmailApiClientContract
     {
         $creds = $this->secrets->loadInbox($inboxId);
         if ($creds === null) {
-            throw new RuntimeException(
+            throw new InboxNotConfiguredException(
                 "GmailApiClient: no OAuth credentials persisted for inbox {$inboxId}.",
             );
         }

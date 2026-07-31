@@ -240,44 +240,9 @@ final class GraphApiClient implements GraphApiClientContract
 
         // Client-side exclude-sender filter, applied after the server
         // response since Graph rejects a "not from/..." predicate
-        // alongside $search. Patterns starting with '@' match by
-        // domain suffix; otherwise it's a substring containment match.
+        // alongside $search.
         if ($excludeSenders !== []) {
-            $lowerExcludes = array_map('strtolower', $excludeSenders);
-            $filtered = [];
-            foreach ($messages as $msg) {
-                $addr = '';
-                if (isset($msg['from']) && is_array($msg['from'])) {
-                    $emailAddress = $msg['from']['emailAddress'] ?? null;
-                    if (is_array($emailAddress)) {
-                        $rawAddr = $emailAddress['address'] ?? null;
-                        if (is_string($rawAddr)) {
-                            $addr = strtolower($rawAddr);
-                        }
-                    }
-                }
-                if ($addr === '') {
-                    continue;
-                }
-                $excluded = false;
-                foreach ($lowerExcludes as $pattern) {
-                    if (str_starts_with($pattern, '@')) {
-                        if (str_ends_with($addr, $pattern)) {
-                            $excluded = true;
-                            break;
-                        }
-                    } else {
-                        if (str_contains($addr, $pattern)) {
-                            $excluded = true;
-                            break;
-                        }
-                    }
-                }
-                if (! $excluded) {
-                    $filtered[] = $msg;
-                }
-            }
-            $messages = $filtered;
+            $messages = self::applyExcludeSenders($messages, $excludeSenders);
         }
 
         $rawNext = $body['@odata.nextLink'] ?? null;
@@ -287,6 +252,59 @@ final class GraphApiClient implements GraphApiClientContract
             'messages' => $messages,
             'nextLink' => $next,
         ];
+    }
+
+    // Drops any message whose from-address matches an exclude pattern:
+    // a pattern starting with '@' matches by domain suffix, otherwise by
+    // substring. A message with no readable from-address is kept, since
+    // the exclude list can only ever remove a known sender.
+    /**
+     * @param  list<array<string, mixed>>  $messages
+     * @param  list<string>  $excludeSenders
+     * @return list<array<string, mixed>>
+     */
+    private static function applyExcludeSenders(array $messages, array $excludeSenders): array
+    {
+        $lowerExcludes = array_map('strtolower', $excludeSenders);
+
+        $filtered = [];
+        foreach ($messages as $msg) {
+            $addr = self::senderAddress($msg);
+            if ($addr === '' || ! self::isExcludedSender($addr, $lowerExcludes)) {
+                $filtered[] = $msg;
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * @param  array<string, mixed>  $msg
+     */
+    private static function senderAddress(array $msg): string
+    {
+        $from = $msg['from'] ?? null;
+        $emailAddress = is_array($from) ? ($from['emailAddress'] ?? null) : null;
+        $rawAddr = is_array($emailAddress) ? ($emailAddress['address'] ?? null) : null;
+
+        return is_string($rawAddr) ? strtolower($rawAddr) : '';
+    }
+
+    /**
+     * @param  list<string>  $lowerExcludes
+     */
+    private static function isExcludedSender(string $addr, array $lowerExcludes): bool
+    {
+        foreach ($lowerExcludes as $pattern) {
+            $matches = str_starts_with($pattern, '@')
+                ? str_ends_with($addr, $pattern)
+                : str_contains($addr, $pattern);
+            if ($matches) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Builds the OData $filter clause constraining a backfill page to
@@ -383,26 +401,18 @@ final class GraphApiClient implements GraphApiClientContract
         }
 
         $status = $response->getStatusCode();
-        $body = (string) $response->getBody();
-        $safeBodyMessage = $this->extractErrorMessage($body);
+        $safeBodyMessage = $this->extractErrorMessage((string) $response->getBody());
 
-        if ($status === 429) {
-            $retryAfterHeader = $response->getHeaderLine('Retry-After');
-            $retryAfterSeconds = $this->parseRetryAfter($retryAfterHeader);
-
-            return new RateLimitedException(
-                retryAfterSeconds: $retryAfterSeconds,
+        return match (true) {
+            $status === 429 => new RateLimitedException(
+                retryAfterSeconds: $this->parseRetryAfter($response->getHeaderLine('Retry-After')),
                 message: 'Microsoft Graph rate limit exceeded: '.$safeBodyMessage,
-            );
-        }
-
-        if ($expectsDelta && $status === 410) {
-            return CursorExpiredException::graph($safeBodyMessage);
-        }
-
-        return new RuntimeException(
-            'GraphApiClient: '.$context.' returned HTTP '.$status.' — '.$safeBodyMessage,
-        );
+            ),
+            $expectsDelta && $status === 410 => CursorExpiredException::graph($safeBodyMessage),
+            default => new RuntimeException(
+                'GraphApiClient: '.$context.' returned HTTP '.$status.' — '.$safeBodyMessage,
+            ),
+        };
     }
 
     // Parses the Retry-After header into a seconds value. Graph
@@ -412,9 +422,6 @@ final class GraphApiClient implements GraphApiClientContract
     private function parseRetryAfter(string $header): int
     {
         $trimmed = trim($header);
-        if ($trimmed === '') {
-            return 60;
-        }
 
         if (preg_match('/^\d+$/', $trimmed) === 1) {
             $seconds = (int) $trimmed;
@@ -422,11 +429,10 @@ final class GraphApiClient implements GraphApiClientContract
             return $seconds > 0 ? $seconds : 60;
         }
 
-        $when = strtotime($trimmed);
-        if ($when === false) {
-            return 60;
-        }
-        $delta = $when - $this->clock->now()->getTimestamp();
+        // Non-numeric (or empty): read it as an HTTP-date against the clock,
+        // and fall back to 60s whenever that is absent, unparseable, or past.
+        $when = $trimmed === '' ? false : strtotime($trimmed);
+        $delta = $when === false ? 0 : $when - $this->clock->now()->getTimestamp();
 
         return $delta > 0 ? $delta : 60;
     }
@@ -445,23 +451,28 @@ final class GraphApiClient implements GraphApiClientContract
         } catch (JsonException) {
             return $this->safeMessage($rawBody);
         }
-        if (! is_array($decoded)) {
-            return self::UNRECOGNISED_ERROR_BODY;
-        }
-        $err = $decoded['error'] ?? null;
-        if (! is_array($err)) {
-            return self::UNRECOGNISED_ERROR_BODY;
-        }
-        $msg = $err['message'] ?? null;
-        if (is_string($msg) && $msg !== '') {
-            return $this->safeMessage($msg);
-        }
-        $code = $err['code'] ?? null;
-        if (is_string($code) && $code !== '') {
-            return $this->safeMessage($code);
+        $err = is_array($decoded) ? ($decoded['error'] ?? null) : null;
+        // Graph puts the human-readable text under error.message, and a
+        // machine code under error.code; prefer the former, accept the
+        // latter, and treat anything else as an unrecognised body.
+        $message = is_array($err)
+            ? self::firstNonEmptyString($err['message'] ?? null, $err['code'] ?? null)
+            : null;
+
+        return $message === null ? self::UNRECOGNISED_ERROR_BODY : $this->safeMessage($message);
+    }
+
+    // Returns the first argument that is a non-empty string, or null when
+    // none is — used to prefer a provider's message over its bare code.
+    private static function firstNonEmptyString(mixed ...$values): ?string
+    {
+        foreach ($values as $value) {
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
         }
 
-        return self::UNRECOGNISED_ERROR_BODY;
+        return null;
     }
 
     // Caps the surfaced message and strips newlines so a verbose

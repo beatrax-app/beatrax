@@ -8,7 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
 use Modules\Core\Public\Services\UserDataPathService;
-use RuntimeException;
+use Modules\EmailScan\Public\Exceptions\EmlBlobWriteException;
 use Throwable;
 
 /**
@@ -75,7 +75,7 @@ final class EmlBlobStore
     // Writes the raw .eml bytes to disk atomically: ensures the parent
     // directory exists at 0700, writes to a sibling .tmp file, fsyncs,
     // chmods to 0600, and renames over the canonical path. Any failure
-    // tears down the temp file and rethrows as a RuntimeException.
+    // tears down the temp file and rethrows as an EmlBlobWriteException.
     public function put(string $absolutePath, string $rawMime): void
     {
         $dir = dirname($absolutePath);
@@ -97,7 +97,7 @@ final class EmlBlobStore
         $fp = @fopen($tmp, 'wb');
         if ($fp === false) {
             umask($prevUmask);
-            throw new RuntimeException(
+            throw new EmlBlobWriteException(
                 "EmlBlobStore: could not open temp file at {$tmp}.",
             );
         }
@@ -106,7 +106,7 @@ final class EmlBlobStore
             @flock($fp, LOCK_EX);
             $written = @fwrite($fp, $rawMime);
             if ($written === false || $written !== strlen($rawMime)) {
-                throw new RuntimeException(
+                throw new EmlBlobWriteException(
                     "EmlBlobStore: short write to temp file at {$tmp}.",
                 );
             }
@@ -119,13 +119,13 @@ final class EmlBlobStore
             $fp = null;
 
             if (! @chmod($tmp, self::FILE_MODE)) {
-                throw new RuntimeException(
+                throw new EmlBlobWriteException(
                     "EmlBlobStore: failed to chmod temp file at {$tmp}.",
                 );
             }
 
             if (! @rename($tmp, $absolutePath)) {
-                throw new RuntimeException(
+                throw new EmlBlobWriteException(
                     "EmlBlobStore: atomic rename failed from {$tmp} to {$absolutePath}.",
                 );
             }
@@ -135,10 +135,10 @@ final class EmlBlobStore
                 @fclose($fp);
             }
             @unlink($tmp);
-            if ($e instanceof RuntimeException) {
+            if ($e instanceof EmlBlobWriteException) {
                 throw $e;
             }
-            throw new RuntimeException(
+            throw new EmlBlobWriteException(
                 "EmlBlobStore: unexpected failure writing {$absolutePath}.",
             );
         } finally {

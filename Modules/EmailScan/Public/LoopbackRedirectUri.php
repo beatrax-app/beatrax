@@ -23,13 +23,16 @@ final class LoopbackRedirectUri
     private function resolvePort(): int
     {
         $override = $this->config->get('email-scan.oauth_loopback_port');
-        if (is_int($override) && $override > 0) {
-            return $override;
-        }
-        if (is_string($override) && $override !== '' && ctype_digit($override)) {
-            return (int) $override;
-        }
 
+        return match (true) {
+            is_int($override) && $override > 0 => $override,
+            is_string($override) && $override !== '' && ctype_digit($override) => (int) $override,
+            default => $this->portFromAppUrl(),
+        };
+    }
+
+    private function portFromAppUrl(): int
+    {
         $appUrl = $this->config->get('app.url');
         if (is_string($appUrl) && $appUrl !== '') {
             $host = parse_url($appUrl, PHP_URL_HOST);
