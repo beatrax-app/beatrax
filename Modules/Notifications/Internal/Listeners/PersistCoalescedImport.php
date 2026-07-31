@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
@@ -38,7 +39,7 @@ final class PersistCoalescedImport
             $occurrence = $this->clock->now()->format('Y-m-d H:i:s').':'.$event->insertedCount;
 
             if ($isReceipts) {
-                $this->writer->write(
+                $this->writer->write(new NotificationDraft(
                     userId: $event->userId,
                     triggerType: DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
                     subjectKey: 'import',
@@ -47,12 +48,12 @@ final class PersistCoalescedImport
                     body: $this->pluralCount($event->insertedCount, 'receipt').' matched from your email.',
                     params: ['target_kind' => 'inbox'],
                     deepLinkRoute: $this->urls->route('inboxes.index'),
-                );
+                ));
 
                 return;
             }
 
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
                 subjectKey: 'import',
@@ -61,7 +62,7 @@ final class PersistCoalescedImport
                 body: $this->pluralCount($event->insertedCount, 'transaction').' imported.',
                 params: ['target_kind' => 'import'],
                 deepLinkRoute: $this->urls->route('imports.new'),
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating import.

@@ -272,11 +272,7 @@ final class Camt053Adapter implements SourceAdapter
      */
     private function extractCounterparty(?EntryTransactionDetail $txDtls, ?string $cdi): array
     {
-        if ($txDtls === null) {
-            return [null, null];
-        }
-
-        $parties = $txDtls->getRelatedParties();
+        $parties = $txDtls?->getRelatedParties() ?? [];
         if ($parties === []) {
             return [null, null];
         }
@@ -327,11 +323,7 @@ final class Camt053Adapter implements SourceAdapter
     // downstream resolution). A structured-only TxDtls yields null.
     private function extractRemittance(?EntryTransactionDetail $txDtls): ?string
     {
-        if ($txDtls === null) {
-            return null;
-        }
-
-        $rmt = $txDtls->getRemittanceInformation();
+        $rmt = $txDtls?->getRemittanceInformation();
         if ($rmt === null) {
             return null;
         }
@@ -341,11 +333,7 @@ final class Camt053Adapter implements SourceAdapter
             $messages[] = $block->getMessage();
         }
 
-        if ($messages === []) {
-            return null;
-        }
-
-        return $this->collapseWhitespace(implode(' ', $messages));
+        return $messages === [] ? null : $this->collapseWhitespace(implode(' ', $messages));
     }
 
     private function collapseWhitespace(string $s): string

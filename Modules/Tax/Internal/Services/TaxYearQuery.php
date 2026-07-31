@@ -6,6 +6,7 @@ namespace Modules\Tax\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Collection;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -34,9 +35,29 @@ final class TaxYearQuery
     // signed stored amounts to the UI's unsigned "you spent X" totals.
     public function forUser(int $userId, int $year): TaxYearData
     {
+        $rawRows = $this->fetchTaggedRows($userId, $year);
+
+        if ($rawRows->isEmpty()) {
+            return new TaxYearData(
+                year: $year,
+                deductionsTotalMinor: 0,
+                incomeTotalMinor: 0,
+                itemCount: 0,
+                categories: [],
+            );
+        }
+
+        return $this->buildYearData($userId, $year, $rawRows);
+    }
+
+    /**
+     * @return Collection<int, \stdClass>
+     */
+    private function fetchTaggedRows(int $userId, int $year): Collection
+    {
         $connection = $this->db->connection();
 
-        $rawRows = $connection
+        return $connection
             ->table('tax_transaction_tags AS tag')
             ->join('transactions AS t', 't.id', '=', 'tag.transaction_id')
             // A leg-scoped tag joins to its own transaction_splits row; a
@@ -95,20 +116,16 @@ final class TaxYearQuery
                 'cp.iban AS counterparty_iban',
             ])
             ->get();
+    }
 
-        if ($rawRows->isEmpty()) {
-            return new TaxYearData(
-                year: $year,
-                deductionsTotalMinor: 0,
-                incomeTotalMinor: 0,
-                itemCount: 0,
-                categories: [],
-            );
-        }
-
+    /**
+     * @param  Collection<int, \stdClass>  $rawRows
+     */
+    private function buildYearData(int $userId, int $year, Collection $rawRows): TaxYearData
+    {
         // Group rows by category id; a null id lands in the trailing
-        // "no category" group built separately below.
-        /** @var array<string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}> $groups */
+        // "no category" group appended after the keyed groups below.
+        /** @var array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}> $groups */
         $groups = [];
         /** @var array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}|null $noCategory */
         $noCategory = null;
@@ -118,8 +135,7 @@ final class TaxYearQuery
 
         foreach ($rawRows as $row) {
             $minor = self::toInt($row->settled_amount_minor);
-            $transactionType = self::toString($row->transaction_type);
-            $isIncome = $transactionType === 'income';
+            $isIncome = self::toString($row->transaction_type) === 'income';
 
             // abs() converts the signed stored minor amount to the
             // unsigned total the UI expects.
@@ -129,60 +145,12 @@ final class TaxYearQuery
                 $deductionsTotal += abs($minor);
             }
 
-            // Read-side decrypt — the tax cockpit / CSV / PDF export reads
-            // description/counterparty display name/iban/note, all
-            // ciphertext at rest once encryption is enabled; a pass-through
-            // no-op otherwise.
-            $rowData = [
-                'transactionId' => self::toInt($row->transaction_id),
-                'transactionSplitId' => $row->transaction_split_id !== null ? self::toInt($row->transaction_split_id) : null,
-                'bookedAt' => self::toStrOrNull($row->booked_at),
-                'accountName' => self::toStrOrNull($row->account_name),
-                'counterpartyName' => $this->decryptOrNull('counterparties', 'display_name', $row->counterparty_name, $userId),
-                'counterpartyIban' => $this->decryptOrNull('counterparties', 'iban', $row->counterparty_iban, $userId),
-                'description' => $this->decryptOrNull('transactions', 'description', $row->description, $userId),
-                'note' => $this->decryptOrNull('tax_transaction_tags', 'note', $row->note, $userId),
-                'settledAmountMinor' => $minor,
-                'settledCurrency' => self::toString($row->settled_currency),
-                'amountMinor' => self::toInt($row->amount_minor),
-                'currency' => self::toString($row->currency),
-                'transactionType' => $transactionType,
-                'categoryId' => $row->category_id !== null ? self::toInt($row->category_id) : null,
-                'categoryName' => self::toStrOrNull($row->category_name),
-                'categoryShortName' => self::toStrOrNull($row->category_short_name),
-                'taxYearOverride' => $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
-                'sourceFormat' => self::toString($row->source_format),
-                'importRunId' => self::toInt($row->import_run_id),
-                'fingerprint' => self::toString($row->fingerprint),
-            ];
+            $rowData = $this->mapRow($row, $userId, $minor);
 
             if ($row->category_id === null) {
-                // Accumulate into the trailing no-category group, created
-                // lazily on first encounter.
-                if ($noCategory === null) {
-                    $noCategory = [
-                        'id' => null,
-                        'name' => null,
-                        'shortName' => null,
-                        'subtotalMinor' => 0,
-                        'rows' => [],
-                    ];
-                }
-                $noCategory['subtotalMinor'] += abs($minor);
-                $noCategory['rows'][] = $rowData;
+                $noCategory = $this->accumulateNoCategory($noCategory, $rowData, $minor);
             } else {
-                $catKey = (string) self::toInt($row->category_id);
-                if (! array_key_exists($catKey, $groups)) {
-                    $groups[$catKey] = [
-                        'id' => self::toInt($row->category_id),
-                        'name' => self::toStrOrNull($row->category_name),
-                        'shortName' => self::toStrOrNull($row->category_short_name),
-                        'subtotalMinor' => 0,
-                        'rows' => [],
-                    ];
-                }
-                $groups[$catKey]['subtotalMinor'] += abs($minor);
-                $groups[$catKey]['rows'][] = $rowData;
+                $groups = $this->accumulateCategory($groups, $row, $rowData, $minor);
             }
         }
 
@@ -198,6 +166,85 @@ final class TaxYearQuery
             itemCount: $rawRows->count(),
             categories: $categories,
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapRow(\stdClass $row, int $userId, int $minor): array
+    {
+        // Read-side decrypt — the tax cockpit / CSV / PDF export reads
+        // description/counterparty display name/iban/note, all ciphertext at
+        // rest once encryption is enabled; a pass-through no-op otherwise.
+        return [
+            'transactionId' => self::toInt($row->transaction_id),
+            'transactionSplitId' => $row->transaction_split_id !== null ? self::toInt($row->transaction_split_id) : null,
+            'bookedAt' => self::toStrOrNull($row->booked_at),
+            'accountName' => self::toStrOrNull($row->account_name),
+            'counterpartyName' => $this->decryptOrNull('counterparties', 'display_name', $row->counterparty_name, $userId),
+            'counterpartyIban' => $this->decryptOrNull('counterparties', 'iban', $row->counterparty_iban, $userId),
+            'description' => $this->decryptOrNull('transactions', 'description', $row->description, $userId),
+            'note' => $this->decryptOrNull('tax_transaction_tags', 'note', $row->note, $userId),
+            'settledAmountMinor' => $minor,
+            'settledCurrency' => self::toString($row->settled_currency),
+            'amountMinor' => self::toInt($row->amount_minor),
+            'currency' => self::toString($row->currency),
+            'transactionType' => self::toString($row->transaction_type),
+            'categoryId' => $row->category_id !== null ? self::toInt($row->category_id) : null,
+            'categoryName' => self::toStrOrNull($row->category_name),
+            'categoryShortName' => self::toStrOrNull($row->category_short_name),
+            'taxYearOverride' => $row->tax_year_override !== null ? self::toInt($row->tax_year_override) : null,
+            'sourceFormat' => self::toString($row->source_format),
+            'importRunId' => self::toInt($row->import_run_id),
+            'fingerprint' => self::toString($row->fingerprint),
+        ];
+    }
+
+    /**
+     * @param  array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}|null  $noCategory
+     * @param  array<string, mixed>  $rowData
+     * @return array{id: null, name: null, shortName: null, subtotalMinor: int, rows: list<array<string,mixed>>}
+     */
+    private function accumulateNoCategory(?array $noCategory, array $rowData, int $minor): array
+    {
+        // Created lazily on first encounter so an all-categorised year never
+        // emits an empty trailing "no category" group.
+        $noCategory ??= [
+            'id' => null,
+            'name' => null,
+            'shortName' => null,
+            'subtotalMinor' => 0,
+            'rows' => [],
+        ];
+
+        $noCategory['subtotalMinor'] += abs($minor);
+        $noCategory['rows'][] = $rowData;
+
+        return $noCategory;
+    }
+
+    /**
+     * @param  array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}>  $groups
+     * @param  array<string, mixed>  $rowData
+     * @return array<int|string, array{id: int, name: string|null, shortName: string|null, subtotalMinor: int, rows: list<array<string,mixed>>}>
+     */
+    private function accumulateCategory(array $groups, \stdClass $row, array $rowData, int $minor): array
+    {
+        $catKey = (string) self::toInt($row->category_id);
+        if (! array_key_exists($catKey, $groups)) {
+            $groups[$catKey] = [
+                'id' => self::toInt($row->category_id),
+                'name' => self::toStrOrNull($row->category_name),
+                'shortName' => self::toStrOrNull($row->category_short_name),
+                'subtotalMinor' => 0,
+                'rows' => [],
+            ];
+        }
+
+        $groups[$catKey]['subtotalMinor'] += abs($minor);
+        $groups[$catKey]['rows'][] = $rowData;
+
+        return $groups;
     }
 
     /**

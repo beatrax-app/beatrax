@@ -37,66 +37,8 @@ final class PaypalTransactionRollup
         $this->orphanChildCount = 0;
         $this->skippedMalformedRowCount = 0;
 
-        // Pass 1: drop skipped event types, index surviving rows by
-        // their Transaction ID, and record per-row classification so
-        // the subsequent passes don't re-call classify() repeatedly.
-        /** @var list<array{row: array<string, string>, action: string, txnId: string}> $surviving */
-        $surviving = [];
-        /** @var array<string, bool> $byTxnId */
-        $byTxnId = [];
-
-        foreach ($rawRows as $row) {
-            $eventType = $this->columns->value('type', $language, $row) ?? '';
-            if ($eventType === '') {
-                continue;
-            }
-
-            $action = $this->events->classify($eventType, $language);
-            if ($action === 'skip') {
-                $this->skippedHoldCount++;
-
-                continue;
-            }
-
-            $txnId = $this->columns->value('transactionId', $language, $row) ?? '';
-            $surviving[] = ['row' => $row, 'action' => $action, 'txnId' => $txnId];
-            if ($txnId !== '') {
-                $byTxnId[$txnId] = true;
-            }
-        }
-
-        // Pass 2: a row is a child only when classified 'child-fee' or
-        // 'child-fx' AND its Reference Txn ID points at another row in this
-        // file; an orphan child (RefId points outside the file) is promoted
-        // to a standalone parent and counted via orphanChildCount().
-        /** @var array<string, list<array<string, string>>> $childrenByParent */
-        $childrenByParent = [];
-        /** @var list<array<string, string>> $parents */
-        $parents = [];
-
-        foreach ($surviving as $entry) {
-            $row = $entry['row'];
-            $action = $entry['action'];
-            $txnId = $entry['txnId'];
-            $refId = $this->columns->value('referenceTxnId', $language, $row) ?? '';
-
-            $isChildAction = $action === 'child-fee' || $action === 'child-fx';
-            $pointsAtInsideRow = $refId !== '' && $refId !== $txnId && isset($byTxnId[$refId]);
-
-            if ($isChildAction) {
-                if ($pointsAtInsideRow) {
-                    $childrenByParent[$refId][] = $row;
-
-                    continue;
-                }
-
-                // Orphan child: parent absent from this report window.
-                // Promote to standalone parent so the row is not lost.
-                $this->orphanChildCount++;
-            }
-
-            $parents[] = $row;
-        }
+        $surviving = $this->filterSurviving($rawRows, $language);
+        [$parents, $childrenByParent] = $this->partitionParents($surviving, $language);
 
         // Pass 3: fold each parent + its children into one DTO. A malformed
         // parent amount drops the whole logical-payment group and bumps
@@ -120,6 +62,87 @@ final class PaypalTransactionRollup
         }
 
         return $rolledUp;
+    }
+
+    /**
+     * @param  list<array<string, string>>  $rawRows  one entry per CSV record
+     * @return list<array{row: array<string, string>, action: string, txnId: string}>
+     */
+    private function filterSurviving(array $rawRows, string $language): array
+    {
+        // Pass 1: drop skipped event types and record each surviving row's
+        // classification so the later passes don't re-call classify().
+        $surviving = [];
+
+        foreach ($rawRows as $row) {
+            $eventType = $this->columns->value('type', $language, $row) ?? '';
+            if ($eventType === '') {
+                continue;
+            }
+
+            $action = $this->events->classify($eventType, $language);
+            if ($action === 'skip') {
+                $this->skippedHoldCount++;
+
+                continue;
+            }
+
+            $surviving[] = [
+                'row' => $row,
+                'action' => $action,
+                'txnId' => $this->columns->value('transactionId', $language, $row) ?? '',
+            ];
+        }
+
+        return $surviving;
+    }
+
+    /**
+     * @param  list<array{row: array<string, string>, action: string, txnId: string}>  $surviving
+     * @return array{0: list<array<string, string>>, 1: array<string, list<array<string, string>>>}
+     */
+    private function partitionParents(array $surviving, string $language): array
+    {
+        /** @var array<string, bool> $byTxnId */
+        $byTxnId = [];
+        foreach ($surviving as $entry) {
+            if ($entry['txnId'] !== '') {
+                $byTxnId[$entry['txnId']] = true;
+            }
+        }
+
+        // Pass 2: a row is a child only when classified 'child-fee' or
+        // 'child-fx' AND its Reference Txn ID points at another row in this
+        // file; an orphan child (RefId points outside the file) is promoted
+        // to a standalone parent and counted via orphanChildCount().
+        /** @var array<string, list<array<string, string>>> $childrenByParent */
+        $childrenByParent = [];
+        /** @var list<array<string, string>> $parents */
+        $parents = [];
+
+        foreach ($surviving as $entry) {
+            $row = $entry['row'];
+            $refId = $this->columns->value('referenceTxnId', $language, $row) ?? '';
+
+            $isChildAction = $entry['action'] === 'child-fee' || $entry['action'] === 'child-fx';
+            $pointsAtInsideRow = $refId !== '' && $refId !== $entry['txnId'] && isset($byTxnId[$refId]);
+
+            if ($isChildAction && $pointsAtInsideRow) {
+                $childrenByParent[$refId][] = $row;
+
+                continue;
+            }
+
+            if ($isChildAction) {
+                // Orphan child: parent absent from this report window.
+                // Promote to standalone parent so the row is not lost.
+                $this->orphanChildCount++;
+            }
+
+            $parents[] = $row;
+        }
+
+        return [$parents, $childrenByParent];
     }
 
     public function skippedHoldCount(): int
