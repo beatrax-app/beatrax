@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -24,8 +25,6 @@ use stdClass;
 final class ApplyReceiptConflictResolution
 {
     use CoercesScalars;
-
-    private const ALLOWED_CHOICES = ['prefer_receipt', 'prefer_first_write'];
 
     // Mirrors the four field names FingerprintStage::detectConflicts
     // emits. Any other value on a stored row is rejected before it can
@@ -46,11 +45,11 @@ final class ApplyReceiptConflictResolution
 
     public function __invoke(User $user, string $choice): int
     {
-        if (! in_array($choice, self::ALLOWED_CHOICES, true)) {
+        if (ReceiptConflictChoice::tryFrom($choice) === null) {
             throw new InvalidArgumentException(sprintf(
                 'Invalid receipt-conflict resolution choice %s — must be one of %s.',
                 $choice,
-                implode(', ', self::ALLOWED_CHOICES),
+                implode(', ', array_column(ReceiptConflictChoice::cases(), 'value')),
             ));
         }
 
@@ -89,7 +88,7 @@ final class ApplyReceiptConflictResolution
 
         $fieldIsAllowed = in_array($fieldName, self::ALLOWED_FIELDS, true);
 
-        if ($choice === 'prefer_receipt' && $fieldIsAllowed) {
+        if ($choice === ReceiptConflictChoice::PreferReceipt->value && $fieldIsAllowed) {
             $incomingRaw = is_string($row->incoming_value) ? $row->incoming_value : 'null';
 
             try {

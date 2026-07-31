@@ -20,7 +20,9 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
+use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -336,9 +338,9 @@ final class ScenarioEditorSidebar extends Component
         return match ($kind) {
             'cancel_series' => ['seriesId' => null],
             'add_one_off' => ['date' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'note' => ''],
-            'add_recurring' => ['startDate' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'cadence' => 'monthly', 'note' => ''],
+            'add_recurring' => ['startDate' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
             'change_series_amount' => ['seriesId' => null, 'newAmount' => ''],
-            'shift_series_date' => ['seriesId' => null, 'newNextDate' => '', 'scope' => 'next'],
+            'shift_series_date' => ['seriesId' => null, 'newNextDate' => '', 'scope' => ShiftScope::Next->value],
             default => [],
         };
     }
@@ -372,7 +374,7 @@ final class ScenarioEditorSidebar extends Component
                 'shift_series_date' => new ShiftSeriesDatePayload(
                     seriesId: $this->intField('seriesId'),
                     newNextDate: $this->stringField('newNextDate'),
-                    scope: $this->stringField('scope', 'next'),
+                    scope: $this->stringField('scope', ShiftScope::Next->value),
                 ),
                 default => null,
             };
@@ -466,7 +468,7 @@ final class ScenarioEditorSidebar extends Component
             return $resolveName($payload->seriesId).": new amount {$amount}";
         }
         if ($payload instanceof ShiftSeriesDatePayload) {
-            $scope = $payload->scope === 'all_subsequent' ? 'all subsequent' : 'next';
+            $scope = $payload->scope === ShiftScope::AllSubsequent->value ? 'all subsequent' : 'next';
 
             return $resolveName($payload->seriesId).": shift {$scope} to {$payload->newNextDate}";
         }

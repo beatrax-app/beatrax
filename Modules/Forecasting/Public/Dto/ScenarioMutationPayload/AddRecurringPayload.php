@@ -6,14 +6,13 @@ namespace Modules\Forecasting\Public\Dto\ScenarioMutationPayload;
 
 use InvalidArgumentException;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Recurring\Public\Enums\SeriesCadence;
 
 /**
  * @see ScenarioMutationPayload
  */
 final class AddRecurringPayload extends ScenarioMutationPayload
 {
-    public const ALLOWED_CADENCES = ['weekly', 'monthly', 'quarterly', 'yearly'];
-
     public function __construct(
         public readonly string $startDate,
         public readonly int $amountMinor,
@@ -30,9 +29,16 @@ final class AddRecurringPayload extends ScenarioMutationPayload
                 'AddRecurringPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases()))."; got '{$direction}'."
             );
         }
-        if (! in_array($cadence, self::ALLOWED_CADENCES, true)) {
+        $cadenceEnum = SeriesCadence::tryFrom($cadence);
+        if ($cadenceEnum === null || $cadenceEnum === SeriesCadence::Irregular) {
+            // A scenario add-recurring is a regular series; Irregular (which
+            // SeriesCadence carries for detected series) is not a choice here.
+            $valid = array_map(
+                static fn (SeriesCadence $c): string => "'".$c->value."'",
+                array_filter(SeriesCadence::cases(), static fn (SeriesCadence $c): bool => $c !== SeriesCadence::Irregular),
+            );
             throw new InvalidArgumentException(
-                "AddRecurringPayload.cadence must be one of: 'weekly' | 'monthly' | 'quarterly' | 'yearly'; got '{$cadence}'."
+                'AddRecurringPayload.cadence must be one of: '.implode(' | ', $valid)."; got '{$cadence}'."
             );
         }
     }
