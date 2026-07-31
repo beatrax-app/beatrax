@@ -13,6 +13,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Services\SourceMapWriter;
+use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -45,12 +46,11 @@ final class EntityChangeApplier
             default => null,
         };
 
-        if ($table === null) {
-            return false;
-        }
+        $beatraxId = $table === null
+            ? null
+            : $this->sourceMapWriter->resolve($user, new SourceMapKey($sourceProduct, $entityType, $sourceExternalId));
 
-        $beatraxId = $this->sourceMapWriter->resolve($user, $sourceProduct, $entityType, $sourceExternalId);
-        if ($beatraxId === null) {
+        if ($table === null || $beatraxId === null) {
             return false;
         }
 
@@ -74,10 +74,7 @@ final class EntityChangeApplier
 
         $this->sourceMapWriter->record(
             $user,
-            $sourceProduct,
-            $entityType,
-            $sourceExternalId,
-            null,
+            new SourceMapKey($sourceProduct, $entityType, $sourceExternalId),
             self::beatraxEntityType($entityType),
             $beatraxId,
             $fields,
@@ -92,7 +89,9 @@ final class EntityChangeApplier
             return;
         }
 
-        $beatraxId = $this->sourceMapWriter->resolve($user, $sourceProduct, $entityType, $sourceExternalId);
+        $key = new SourceMapKey($sourceProduct, $entityType, $sourceExternalId);
+
+        $beatraxId = $this->sourceMapWriter->resolve($user, $key);
         if ($beatraxId === null) {
             // Defensive: a conflict only ever exists for an already-mapped
             // entity.
@@ -101,10 +100,7 @@ final class EntityChangeApplier
 
         $this->sourceMapWriter->record(
             $user,
-            $sourceProduct,
-            $entityType,
-            $sourceExternalId,
-            null,
+            $key,
             self::beatraxEntityType($entityType),
             $beatraxId,
             [$fieldName => $value],

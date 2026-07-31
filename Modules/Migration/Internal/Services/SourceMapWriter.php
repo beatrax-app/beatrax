@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Migration\Internal\ValueObjects\SourceMapKey;
 
 /**
  * @link ../../../../.docs/features/migration/architecture.md
@@ -21,21 +22,16 @@ final class SourceMapWriter
         private readonly Clock $clock,
     ) {}
 
-    public function resolve(
-        User $user,
-        string $sourceProduct,
-        string $entityType,
-        ?string $sourceExternalId,
-        ?string $naturalKey = null,
-    ): ?int {
+    public function resolve(User $user, SourceMapKey $key): ?int
+    {
         $connection = $this->db->connection();
 
-        if ($sourceExternalId !== null) {
+        if ($key->sourceExternalId !== null) {
             $row = $connection->table('migration_source_map')
                 ->where('user_id', $user->id)
-                ->where('source_product', $sourceProduct)
-                ->where('source_entity_type', $entityType)
-                ->where('source_external_id', $sourceExternalId)
+                ->where('source_product', $key->sourceProduct)
+                ->where('source_entity_type', $key->entityType)
+                ->where('source_external_id', $key->sourceExternalId)
                 ->first(['beatrax_id']);
 
             if ($row !== null) {
@@ -43,13 +39,13 @@ final class SourceMapWriter
             }
         }
 
-        if ($naturalKey !== null) {
+        if ($key->naturalKey !== null) {
             $row = $connection->table('migration_source_map')
                 ->where('user_id', $user->id)
-                ->where('source_product', $sourceProduct)
-                ->where('source_entity_type', $entityType)
+                ->where('source_product', $key->sourceProduct)
+                ->where('source_entity_type', $key->entityType)
                 ->whereNull('source_external_id')
-                ->where('natural_key', $naturalKey)
+                ->where('natural_key', $key->naturalKey)
                 ->first(['beatrax_id']);
 
             if ($row !== null) {
@@ -65,10 +61,7 @@ final class SourceMapWriter
      */
     public function record(
         User $user,
-        string $sourceProduct,
-        string $entityType,
-        ?string $sourceExternalId,
-        ?string $naturalKey,
+        SourceMapKey $key,
         string $beatraxEntityType,
         int $beatraxId,
         array $baselineFields = [],
@@ -78,16 +71,16 @@ final class SourceMapWriter
 
         $query = $connection->table('migration_source_map')
             ->where('user_id', $user->id)
-            ->where('source_product', $sourceProduct)
-            ->where('source_entity_type', $entityType);
+            ->where('source_product', $key->sourceProduct)
+            ->where('source_entity_type', $key->entityType);
 
-        if ($sourceExternalId !== null) {
-            $query->where('source_external_id', $sourceExternalId);
+        if ($key->sourceExternalId !== null) {
+            $query->where('source_external_id', $key->sourceExternalId);
         } else {
             // NULL is distinct-from-itself in a SQLite UNIQUE index — the
             // natural_key equality check is what actually prevents a
             // duplicate map row for a stable-id-less entity.
-            $query->whereNull('source_external_id')->where('natural_key', $naturalKey);
+            $query->whereNull('source_external_id')->where('natural_key', $key->naturalKey);
         }
 
         $existing = $query->first(['id']);
@@ -97,18 +90,18 @@ final class SourceMapWriter
             $connection->table('migration_source_map')->where('id', $mapId)->update([
                 'beatrax_entity_type' => $beatraxEntityType,
                 'beatrax_id' => $beatraxId,
-                'natural_key' => $naturalKey,
+                'natural_key' => $key->naturalKey,
                 'updated_at' => $now,
             ]);
         } else {
             $mapId = self::toInt($connection->table('migration_source_map')->insertGetId([
                 'user_id' => $user->id,
-                'source_product' => $sourceProduct,
-                'source_entity_type' => $entityType,
-                'source_external_id' => $sourceExternalId,
+                'source_product' => $key->sourceProduct,
+                'source_entity_type' => $key->entityType,
+                'source_external_id' => $key->sourceExternalId,
                 'beatrax_entity_type' => $beatraxEntityType,
                 'beatrax_id' => $beatraxId,
-                'natural_key' => $naturalKey,
+                'natural_key' => $key->naturalKey,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));

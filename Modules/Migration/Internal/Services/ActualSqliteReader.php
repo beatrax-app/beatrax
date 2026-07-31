@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Services;
 
 use Generator;
-use JsonException;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Migration\Internal\Exceptions\ActualSqliteReadException;
 use Modules\Migration\Internal\Exceptions\UnrecognizedActualBudgetTypeException;
+use Modules\Migration\Internal\Services\Concerns\SummarizesRuleConditions;
 use PDO;
 use Pdo\Sqlite as PdoSqlite;
 use PDOStatement;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/migration/architecture.md
@@ -19,17 +19,14 @@ use RuntimeException;
 final class ActualSqliteReader
 {
     use CoercesScalars;
-
-    private const MAX_JSON_BYTES = 65536;
-
-    private const MAX_JSON_DEPTH = 20;
+    use SummarizesRuleConditions;
 
     private readonly PdoSqlite $pdo;
 
     public function __construct(string $dbPath)
     {
         if (! is_file($dbPath)) {
-            throw new RuntimeException("Actual SQLite file not found at '{$dbPath}'");
+            throw new ActualSqliteReadException("Actual SQLite file not found at '{$dbPath}'");
         }
 
         $this->pdo = new PdoSqlite(
@@ -74,7 +71,7 @@ final class ActualSqliteReader
 
         $stmt = $this->pdo->query($sql);
         if ($stmt === false) {
-            throw new RuntimeException('could not query categories/v_categories');
+            throw new ActualSqliteReadException('could not query categories/v_categories');
         }
 
         $rows = [];
@@ -98,7 +95,7 @@ final class ActualSqliteReader
     {
         $stmt = $this->pdo->query('SELECT id, name FROM accounts WHERE tombstone = 0');
         if ($stmt === false) {
-            throw new RuntimeException('could not query accounts');
+            throw new ActualSqliteReadException('could not query accounts');
         }
 
         $rows = [];
@@ -120,7 +117,7 @@ final class ActualSqliteReader
 
         $stmt = $this->pdo->query($sql);
         if ($stmt === false) {
-            throw new RuntimeException('could not query payees/v_payees');
+            throw new ActualSqliteReadException('could not query payees/v_payees');
         }
 
         $rows = [];
@@ -146,7 +143,7 @@ final class ActualSqliteReader
 
         $stmt = $this->pdo->query($sql);
         if ($stmt === false) {
-            throw new RuntimeException('could not query transactions/v_transactions');
+            throw new ActualSqliteReadException('could not query transactions/v_transactions');
         }
 
         while (($row = $this->fetchAssocRow($stmt)) !== null) {
@@ -175,7 +172,7 @@ final class ActualSqliteReader
     {
         $value = $this->preference('budgetType');
         if ($value === null) {
-            throw new RuntimeException("Actual export has no 'preferences.budgetType' row — cannot determine envelope vs tracking mode");
+            throw new ActualSqliteReadException("Actual export has no 'preferences.budgetType' row — cannot determine envelope vs tracking mode");
         }
 
         return match ($value) {
@@ -200,7 +197,7 @@ final class ActualSqliteReader
 
         $stmt = $this->pdo->query("SELECT category, month, amount FROM {$table}");
         if ($stmt === false) {
-            throw new RuntimeException("could not query {$table}");
+            throw new ActualSqliteReadException("could not query {$table}");
         }
 
         $rows = [];
@@ -346,50 +343,6 @@ final class ActualSqliteReader
             SQL;
     }
 
-    private function boundedJsonDecode(string $json): mixed
-    {
-        // Bounds decoding of untrusted source-blob content by byte size and
-        // nesting depth — returns null on an oversized, malformed, or empty
-        // blob rather than throwing.
-        if ($json === '' || strlen($json) > self::MAX_JSON_BYTES) {
-            return null;
-        }
-
-        try {
-            return json_decode($json, true, self::MAX_JSON_DEPTH, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return null;
-        }
-    }
-
-    private function summarizeConditions(mixed $decoded): string
-    {
-        $list = null;
-        if (is_array($decoded) && isset($decoded['conditions']) && is_array($decoded['conditions'])) {
-            $list = $decoded['conditions'];
-        } elseif (is_array($decoded) && array_is_list($decoded)) {
-            $list = $decoded;
-        }
-
-        if ($list === null || $list === []) {
-            return 'no rule conditions recorded';
-        }
-
-        $parts = [];
-        foreach ($list as $condition) {
-            if (! is_array($condition)) {
-                continue;
-            }
-            $field = is_string($condition['field'] ?? null) ? $condition['field'] : '?';
-            $op = is_string($condition['op'] ?? null) ? $condition['op'] : '?';
-            $value = $condition['value'] ?? '?';
-            $valueStr = is_scalar($value) ? (string) $value : '?';
-            $parts[] = "{$field} {$op} {$valueStr}";
-        }
-
-        return $parts === [] ? 'no rule conditions recorded' : implode('; ', $parts);
-    }
-
     /**
      * @return array<string, mixed>|null
      */
@@ -401,7 +354,7 @@ final class ActualSqliteReader
         }
 
         if (! is_array($row)) {
-            throw new RuntimeException('unexpected non-array row from PDOStatement::fetch(PDO::FETCH_ASSOC)');
+            throw new ActualSqliteReadException('unexpected non-array row from PDOStatement::fetch(PDO::FETCH_ASSOC)');
         }
 
         /** @var array<string, mixed> $row */
