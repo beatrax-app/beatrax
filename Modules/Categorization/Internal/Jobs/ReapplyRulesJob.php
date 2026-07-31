@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Categorization\Internal\Jobs;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -17,9 +16,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\LazyCollection;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Categorization\Internal\Services\RowMatcher;
 use Modules\Categorization\Internal\Services\RuleApplier;
 use Modules\Categorization\Internal\Services\RuleEngine;
-use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
@@ -30,6 +29,18 @@ use Throwable;
 
 /**
  * @link ../../../../.docs/features/categorization/architecture.md
+ *
+ * @phpstan-type ReapplyProgress array{
+ *     status: string,
+ *     checked: int,
+ *     total: int,
+ *     fields_updated: int,
+ *     transactions_updated: int,
+ *     reconciled_skipped: int,
+ *     rows_errored: int,
+ *     started_at: string,
+ *     finished_at: string|null,
+ * }
  */
 final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 {
@@ -109,6 +120,7 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
 
         $cacheKey = self::progressCacheKey($userId);
 
+        /** @var ReapplyProgress $progress */
         $progress = [
             'status' => 'running',
             'checked' => 0,
@@ -131,69 +143,23 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
             ->orderBy('transactions.id')
             ->lazyById(self::CHUNK, 'transactions.id', 'id');
 
+        $matcher = new RowMatcher($engine, $applier, $user, $userId, $codec, $session, $hasKek);
+
         $rows->chunk(self::CHUNK)->each(
             /** @param  LazyCollection<int, stdClass>  $chunk */
             function (LazyCollection $chunk) use (
-                $engine,
-                $applier,
                 $statusQuery,
-                $user,
+                $matcher,
                 $userId,
                 $cache,
                 $cacheKey,
                 $logger,
-                $codec,
-                $session,
-                $hasKek,
                 &$progress,
             ): void {
-                $ids = [];
-                foreach ($chunk as $row) {
-                    if (is_numeric($row->id)) {
-                        $ids[] = (int) $row->id;
-                    }
-                }
-
-                $reconciledIds = $statusQuery->reconciledIdsAmong($userId, $ids);
+                $reconciledIds = $statusQuery->reconciledIdsAmong($userId, self::numericIds($chunk));
 
                 foreach ($chunk as $row) {
-                    $transactionId = is_numeric($row->id) ? (int) $row->id : 0;
-                    if ($transactionId <= 0) {
-                        continue;
-                    }
-
-                    $progress['checked'] = $progress['checked'] + 1;
-
-                    if (in_array($transactionId, $reconciledIds, true)) {
-                        $progress['reconciled_skipped'] = $progress['reconciled_skipped'] + 1;
-
-                        continue;
-                    }
-
-                    // Fail-open per row: a malformed condition value would
-                    // otherwise throw uncaught out of this chunk closure,
-                    // failing the ENTIRE queued job instead of just
-                    // skipping the one bad row.
-                    try {
-                        $input = self::matchInputFromRow($row, $codec, $session, $userId, $hasKek);
-                        $matched = $engine->match($input, $user);
-                        $changed = $applier->applyAtReapply($matched, $transactionId, $userId);
-                    } catch (Throwable $e) {
-                        $progress['rows_errored'] = $progress['rows_errored'] + 1;
-                        $logger->warning('ReapplyRulesJob skipped a row after a match/apply failure.', [
-                            'user_id' => $userId,
-                            'transaction_id' => $transactionId,
-                            'exception' => $e::class,
-                            'message' => $e->getMessage(),
-                        ]);
-
-                        continue;
-                    }
-
-                    if ($changed !== []) {
-                        $progress['transactions_updated'] = $progress['transactions_updated'] + 1;
-                        $progress['fields_updated'] = $progress['fields_updated'] + count($changed);
-                    }
+                    self::processRow($row, $matcher, $userId, $reconciledIds, $logger, $progress);
                 }
 
                 $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
@@ -205,36 +171,67 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
         $cache->put($cacheKey, $progress, self::PROGRESS_TTL_SECONDS);
     }
 
-    private static function matchInputFromRow(
-        stdClass $row,
-        SensitiveColumnCodec $codec,
-        Session $session,
-        int $userId,
-        bool $hasKek,
-    ): RuleMatchInput {
-        $counterpartyName = is_string($row->counterparty_name) ? $row->counterparty_name : null;
-        $description = is_string($row->description) ? $row->description : null;
-
-        // decryptValue() is a no-op pass-through when encryption isn't
-        // enabled, but skipping the call entirely when $hasKek is false
-        // avoids a wasted keyring-load attempt per row.
-        if ($hasKek) {
-            if ($counterpartyName !== null && $counterpartyName !== '') {
-                $counterpartyName = $codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $session)['value'];
-            }
-            if ($description !== null && $description !== '') {
-                $description = $codec->decryptValue('transactions', 'description', $description, $userId, $session)['value'];
+    /**
+     * @param  LazyCollection<int, stdClass>  $chunk
+     * @return list<int>
+     */
+    private static function numericIds(LazyCollection $chunk): array
+    {
+        $ids = [];
+        foreach ($chunk as $row) {
+            if (is_numeric($row->id)) {
+                $ids[] = (int) $row->id;
             }
         }
 
-        $settledAmountMinor = is_numeric($row->settled_amount_minor) ? (int) $row->settled_amount_minor : 0;
-        $postedAt = is_string($row->posted_at) ? CarbonImmutable::parse($row->posted_at) : CarbonImmutable::now();
+        return $ids;
+    }
 
-        return new RuleMatchInput(
-            counterpartyName: $counterpartyName,
-            description: $description,
-            settledAmountMinor: $settledAmountMinor,
-            postedAt: $postedAt,
-        );
+    /**
+     * @param  list<int>  $reconciledIds
+     * @param  ReapplyProgress  $progress
+     */
+    private static function processRow(
+        stdClass $row,
+        RowMatcher $matcher,
+        int $userId,
+        array $reconciledIds,
+        LoggerInterface $logger,
+        array &$progress,
+    ): void {
+        $transactionId = is_numeric($row->id) ? (int) $row->id : 0;
+        if ($transactionId <= 0) {
+            return;
+        }
+
+        $progress['checked'] = $progress['checked'] + 1;
+
+        if (in_array($transactionId, $reconciledIds, true)) {
+            $progress['reconciled_skipped'] = $progress['reconciled_skipped'] + 1;
+
+            return;
+        }
+
+        // Fail-open per row: a malformed condition value would otherwise
+        // throw uncaught out of the chunk closure, failing the ENTIRE
+        // queued job instead of just skipping the one bad row.
+        try {
+            $changed = $matcher->changedFields($row, $transactionId);
+        } catch (Throwable $e) {
+            $progress['rows_errored'] = $progress['rows_errored'] + 1;
+            $logger->warning('ReapplyRulesJob skipped a row after a match/apply failure.', [
+                'user_id' => $userId,
+                'transaction_id' => $transactionId,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if ($changed !== []) {
+            $progress['transactions_updated'] = $progress['transactions_updated'] + 1;
+            $progress['fields_updated'] = $progress['fields_updated'] + count($changed);
+        }
     }
 }
