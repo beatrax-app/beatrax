@@ -14,6 +14,7 @@ use Modules\Anomaly\Internal\Detectors\LargeVsTypicalDetector;
 use Modules\Anomaly\Public\Events\AnomalyAlertOpened;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\Direction;
 
 /**
  * @link ../../../.docs/features/anomaly/architecture.md
@@ -45,7 +46,7 @@ final readonly class AnomalyEvaluator
 
         $sensitivity = self::toInt($user->anomaly_sensitivity_percent, 50);
         $minFloor = self::toInt($user->anomaly_min_amount_minor, 1000);
-        $direction = self::directionFromType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense');
+        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense')->value;
 
         $reasons = [];
         $baselineMinor = null;
@@ -204,14 +205,6 @@ final readonly class AnomalyEvaluator
         $present = array_unique($reasons);
 
         return array_values(array_filter($order, static fn (string $r): bool => in_array($r, $present, true)));
-    }
-
-    private static function directionFromType(string $type): string
-    {
-        return match ($type) {
-            'income', 'transfer_in', 'refund' => 'income',
-            default => 'expense',
-        };
     }
 
     private static function toInt(mixed $value, int $default = 0): int

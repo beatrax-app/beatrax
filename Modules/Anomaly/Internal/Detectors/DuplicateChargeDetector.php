@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -47,8 +48,8 @@ final readonly class DuplicateChargeDetector
         }
 
         $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : 'EUR';
-        $direction = self::directionFromType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense');
-        $types = self::typesForDirection($direction);
+        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense')->value;
+        $types = Direction::from($direction)->transactionTypes();
         $thisId = self::toInt($txn['id'] ?? 0);
         $postedAt = is_string($txn['posted_at'] ?? null) ? $txn['posted_at'] : $this->clock->now()->toDateString();
 
@@ -92,23 +93,5 @@ final readonly class DuplicateChargeDetector
         $int = (int) $value;
 
         return $int > 0 ? $int : null;
-    }
-
-    private static function directionFromType(string $type): string
-    {
-        return match ($type) {
-            'income', 'transfer_in', 'refund' => 'income',
-            default => 'expense',
-        };
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function typesForDirection(string $direction): array
-    {
-        return $direction === 'income'
-            ? ['income', 'transfer_in', 'refund']
-            : ['expense', 'transfer_out', 'fee', 'adjustment'];
     }
 }
