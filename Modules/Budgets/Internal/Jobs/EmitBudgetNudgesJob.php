@@ -21,6 +21,7 @@ use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Ledger\Public\Dto\Period;
 
@@ -46,7 +47,7 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
 
     public function uniqueFor(): int
     {
-        return 3600;
+        return Duration::Hour->seconds();
     }
 
     public function uniqueVia(): Repository

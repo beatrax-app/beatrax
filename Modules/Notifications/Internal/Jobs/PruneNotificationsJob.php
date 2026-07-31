@@ -15,6 +15,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Concerns\TunedQueueJob;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
 use Psr\Log\LoggerInterface;
@@ -49,7 +50,7 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
 
     public function uniqueFor(): int
     {
-        return 3600;
+        return Duration::Hour->seconds();
     }
 
     public function uniqueVia(): Repository

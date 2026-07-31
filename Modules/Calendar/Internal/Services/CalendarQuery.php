@@ -12,6 +12,7 @@ use Modules\Calendar\Public\Dto\CalendarEntryDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\FX\Public\Services\ExchangeRateService;
@@ -354,7 +355,7 @@ final readonly class CalendarQuery
         // Estimate the first occurrence index that could land in the month,
         // then start one step earlier as a safety margin.
         $monthsDelta = ($monthStart->year - $anchor->year) * 12 + ($monthStart->month - $anchor->month);
-        $deltaDays = (int) floor(($monthStart->getTimestamp() - $anchor->getTimestamp()) / 86400);
+        $deltaDays = (int) floor(($monthStart->getTimestamp() - $anchor->getTimestamp()) / Duration::Day->seconds());
         $k = match ($cadence) {
             SeriesCadence::Weekly => (int) floor($deltaDays / 7) - 1,
             SeriesCadence::Monthly => $monthsDelta - 1,

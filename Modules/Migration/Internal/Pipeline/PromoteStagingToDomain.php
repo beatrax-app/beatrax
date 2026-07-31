@@ -12,6 +12,7 @@ use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 use Modules\Goals\Public\Services\GoalWriter;
 use Modules\Import\Public\Pipeline\NormalizeStage;
@@ -631,7 +632,7 @@ final class PromoteStagingToDomain
         // staged row's own stable id, so two same-day rows get distinct
         // fingerprints — see the architecture doc's "Idempotency" section
         // for why a shared midnight value would defeat FingerprintComposer.
-        $bookedAt = $postedAt->addSeconds(self::toInt($row->id) % 86400);
+        $bookedAt = $postedAt->addSeconds(self::toInt($row->id) % Duration::Day->seconds());
 
         return new CanonicalTransaction(
             userId: $user->id,

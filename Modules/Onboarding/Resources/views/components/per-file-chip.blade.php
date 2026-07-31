@@ -33,9 +33,11 @@
     /** @var string $state */
 
     $bytes = (int) $sizeBytes;
+    $bytesPerUnit = 1024;
+    $bytesPerMib = $bytesPerUnit * $bytesPerUnit;
     $sizeLabel = match (true) {
-        $bytes >= 1024 * 1024 => number_format($bytes / (1024 * 1024), 1).' MB',
-        $bytes >= 1024 => number_format($bytes / 1024, 0).' KB',
+        $bytes >= $bytesPerMib => number_format($bytes / $bytesPerMib, 1).' MB',
+        $bytes >= $bytesPerUnit => number_format($bytes / $bytesPerUnit, 0).' KB',
         default => $bytes.' B',
     };
 

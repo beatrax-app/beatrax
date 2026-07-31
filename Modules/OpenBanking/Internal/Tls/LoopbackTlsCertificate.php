@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Tls;
 
+use Modules\Core\Public\Enums\Duration;
+
 /**
  * @link ../../../../.docs/features/open-banking/architecture.md
  */
@@ -135,7 +137,7 @@ final class LoopbackTlsCertificate
         // Treat a cert inside its final day as expired so a long-lived UAT
         // session never trips over the boundary mid-flow, and require the
         // 127.0.0.1 SAN the loopback listener is presented under.
-        return is_int($notAfter) && $notAfter > time() + 86400
+        return is_int($notAfter) && $notAfter > time() + Duration::Day->seconds()
             && is_string($san) && str_contains($san, '127.0.0.1');
     }
 

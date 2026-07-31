@@ -14,6 +14,7 @@ use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\ReconsentRequiredException;
@@ -291,7 +292,7 @@ final class GmailApiClient implements GmailApiClientContract
         $client = new GoogleClient;
         $client->setAccessToken([
             'access_token' => $accessToken,
-            'expires_in' => 3600,
+            'expires_in' => Duration::Hour->seconds(),
         ]);
 
         // The Google SDK builds its own Guzzle instance unless given one, so
