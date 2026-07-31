@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertDismissed;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -46,7 +47,7 @@ final class DismissAnomalyAlertAsExpected
             throw new NotFoundHttpException('Anomaly alert not found.');
         }
 
-        if ($alert->state === 'dismissed') {
+        if ($alert->state === AnomalyAlertState::Dismissed->value) {
             return false;
         }
 
@@ -54,7 +55,7 @@ final class DismissAnomalyAlertAsExpected
 
         $this->stateMachine->transition(
             $alert,
-            'dismissed',
+            AnomalyAlertState::Dismissed->value,
             'user_dismissed_expected',
             'user',
             null,

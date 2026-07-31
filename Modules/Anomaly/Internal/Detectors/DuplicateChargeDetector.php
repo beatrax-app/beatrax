@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -48,7 +49,7 @@ final readonly class DuplicateChargeDetector
         }
 
         $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : 'EUR';
-        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense')->value;
+        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
         $types = Direction::from($direction)->transactionTypes();
         $thisId = self::toInt($txn['id'] ?? 0);
         $postedAt = is_string($txn['posted_at'] ?? null) ? $txn['posted_at'] : $this->clock->now()->toDateString();

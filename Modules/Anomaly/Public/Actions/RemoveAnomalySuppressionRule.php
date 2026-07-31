@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Models\AnomalySuppressionRule;
+use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Core\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -61,10 +62,10 @@ final class RemoveAnomalySuppressionRule
         // Only re-open if the alert is actually dismissed; the state
         // machine rejects any other source state for the dismissed->open
         // edge.
-        if ($alert->state === 'dismissed') {
+        if ($alert->state === AnomalyAlertState::Dismissed->value) {
             $this->stateMachine->transition(
                 $alert,
-                'open',
+                AnomalyAlertState::Open->value,
                 'user_undo_suppression',
                 'user',
             );
