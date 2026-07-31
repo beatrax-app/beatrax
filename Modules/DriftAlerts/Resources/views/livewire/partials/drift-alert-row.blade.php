@@ -29,7 +29,7 @@
     $tint = $tintFor($alert);
     $deltaText = $signedFmt($alert);
     $annualizedText = $annualizedFmt($alert);
-    $isExpense = $alert->direction === 'expense';
+    $isExpense = $alert->direction === \Modules\Ledger\Public\Enums\Direction::Expense->value;
     $upArrow = ! $alert->delta->isNegative();
     $seriesState = $seriesStates[$alert->recurringSeriesId] ?? null;
 @endphp

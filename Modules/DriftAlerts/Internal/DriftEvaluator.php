@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -70,7 +71,7 @@ final readonly class DriftEvaluator
             $alertId = $this->db->connection()->table('drift_alerts')->insertGetId([
                 'user_id' => $user->id,
                 'recurring_series_id' => $seriesId,
-                'state' => 'open',
+                'state' => DriftAlertState::Open->value,
                 'direction' => $series->direction,
                 'baseline_amount_minor' => $priorMinor,
                 'latest_amount_minor' => $latestMinor,

@@ -7,6 +7,8 @@ namespace Modules\DriftAlerts\Database\Factories;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\DriftAlerts\Models\DriftAlert;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\Ledger\Public\Enums\Direction;
 
 // The default state mirrors a 15% monthly expense drift (EUR 9.99 to
 // 11.49). Callers must override the three FK columns (user_id,
@@ -27,8 +29,8 @@ final class DriftAlertFactory extends Factory
         return [
             'user_id' => null,
             'recurring_series_id' => null,
-            'state' => 'open',
-            'direction' => 'expense',
+            'state' => DriftAlertState::Open->value,
+            'direction' => Direction::Expense->value,
             'baseline_amount_minor' => -999,
             'latest_amount_minor' => -1149,
             'currency' => 'EUR',
@@ -48,7 +50,7 @@ final class DriftAlertFactory extends Factory
     public function open(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'open',
+            'state' => DriftAlertState::Open->value,
             'actioned_at' => null,
             'snoozed_until' => null,
         ]);
@@ -59,7 +61,7 @@ final class DriftAlertFactory extends Factory
     public function acknowledged(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'acknowledged',
+            'state' => DriftAlertState::Acknowledged->value,
             'actioned_at' => CarbonImmutable::now(),
             'snoozed_until' => null,
         ]);
@@ -70,7 +72,7 @@ final class DriftAlertFactory extends Factory
     public function snoozed(CarbonImmutable $until): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'snoozed',
+            'state' => DriftAlertState::Snoozed->value,
             'snoozed_until' => $until,
             'actioned_at' => CarbonImmutable::now(),
         ]);
@@ -81,7 +83,7 @@ final class DriftAlertFactory extends Factory
     public function dismissedCancelled(): self
     {
         return $this->state(fn (array $attributes): array => [
-            'state' => 'dismissed_cancelled',
+            'state' => DriftAlertState::DismissedCancelled->value,
             'actioned_at' => CarbonImmutable::now(),
             'snoozed_until' => null,
         ]);

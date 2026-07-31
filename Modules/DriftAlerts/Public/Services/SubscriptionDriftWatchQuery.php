@@ -7,6 +7,8 @@ namespace Modules\DriftAlerts\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Dto\SubscriptionDriftRow;
+use Modules\DriftAlerts\Public\Enums\DriftAlertState;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -32,7 +34,7 @@ final class SubscriptionDriftWatchQuery
 
         $rows = [];
         foreach ($this->series->allApprovedForUser($user) as $dto) {
-            if ($dto->direction !== 'expense') {
+            if ($dto->direction !== Direction::Expense->value) {
                 continue;
             }
 
@@ -78,7 +80,7 @@ final class SubscriptionDriftWatchQuery
         $ids = [];
         $rows = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
-            ->where('state', 'open')
+            ->where('state', DriftAlertState::Open->value)
             ->get(['recurring_series_id']);
 
         foreach ($rows as $row) {
