@@ -64,7 +64,7 @@ it('transitions open -> resolved', function (): void {
     expect($row->state)->toBe('resolved');
 });
 
-it('throws on resolved -> resolved (no entry exists in ALLOWED_TRANSITIONS)', function (): void {
+it('throws on resolved -> resolved (resolved is terminal)', function (): void {
     $this->machine->resolve($this->notificationId, $this->user->id);
 
     expect(fn () => $this->machine->resolve($this->notificationId, $this->user->id))

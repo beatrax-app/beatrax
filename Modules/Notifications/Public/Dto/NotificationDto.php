@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Notifications\Public\Dto;
 
 use Carbon\CarbonImmutable;
+use Modules\Notifications\Public\Enums\NotificationState;
 use Spatie\LaravelData\Data;
 
 /**
@@ -30,7 +31,7 @@ final class NotificationDto extends Data
 
     public function resolved(): bool
     {
-        return $this->state === 'resolved';
+        return $this->state === NotificationState::Resolved->value;
     }
 
     public function relativeTime(): string

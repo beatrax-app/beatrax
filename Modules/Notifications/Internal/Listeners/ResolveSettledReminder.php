@@ -7,6 +7,7 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Database\DatabaseManager;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Public\Enums\NotificationState;
 use Modules\Recurring\Public\Events\PaymentSettled;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -46,7 +47,7 @@ final class ResolveSettledReminder
             }
 
             $state = is_string($row->state) ? $row->state : '';
-            if ($state !== 'open') {
+            if ($state !== NotificationState::Open->value) {
                 // Already resolved (or an unexpected state) - never call
                 // the state machine for a transition it would reject.
                 return;
