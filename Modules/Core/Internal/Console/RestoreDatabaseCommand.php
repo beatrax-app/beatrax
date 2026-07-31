@@ -124,13 +124,15 @@ final class RestoreDatabaseCommand extends Command
             return false;
         }
 
-        if (! $this->confirm(sprintf('Restore %s over current DB? A pre-restore snapshot will be saved. [y/N]', $sourcePath), false)) {
+        // Interactive TTY: y/N prompt defaulting to "no". A decline records
+        // the cancellation notice, then the same boolean drives the return so
+        // the accept/decline paths share one exit.
+        $accepted = $this->confirm(sprintf('Restore %s over current DB? A pre-restore snapshot will be saved. [y/N]', $sourcePath), false);
+        if (! $accepted) {
             $this->info('Restore cancelled.');
-
-            return false;
         }
 
-        return true;
+        return $accepted;
     }
 
     // Verifies the source, snapshots the current DB, then swaps. Each failure

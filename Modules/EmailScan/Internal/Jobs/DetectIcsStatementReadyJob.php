@@ -82,27 +82,23 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
      */
     private function rowToEvent(stdClass $row, array $domains, string $pattern): ?IcsStatementReady
     {
-        // Defence-in-depth: mirrors ProcessFetchedInboxMessagesJob's
-        // own cross-user re-check even though the query above is
-        // already user_id-scoped.
         $rowUserId = is_numeric($row->user_id) ? (int) $row->user_id : null;
-        if ($rowUserId !== $this->userId) {
-            return null;
-        }
-
         $senderEmail = is_string($row->sender_email) ? $row->sender_email : '';
-        if (! self::senderMatchesDomain($senderEmail, $domains)) {
-            return null;
-        }
-
         $subject = is_string($row->subject) ? $row->subject : '';
-        if ($subject === '' || preg_match($pattern, $subject) !== 1) {
-            return null;
-        }
-
         $internalDateRaw = is_string($row->internal_date) ? $row->internal_date : '';
         $messageId = is_numeric($row->id) ? (int) $row->id : null;
-        if ($internalDateRaw === '' || $messageId === null) {
+
+        // Defence-in-depth: the rowUserId re-check mirrors
+        // ProcessFetchedInboxMessagesJob even though the query above is
+        // already user_id-scoped; every guard collapses into one reject
+        // so a rejected row yields a single null return.
+        $rejected = match (true) {
+            $rowUserId !== $this->userId => true,
+            ! self::senderMatchesDomain($senderEmail, $domains) => true,
+            $subject === '' || preg_match($pattern, $subject) !== 1 => true,
+            default => false,
+        };
+        if ($rejected || $internalDateRaw === '' || $messageId === null) {
             return null;
         }
 

@@ -2,25 +2,38 @@
 
 declare(strict_types=1);
 
-namespace Modules\Core\Public\Services\Concerns;
+namespace Modules\Core\Internal\Encryption;
 
 use Illuminate\Database\ConnectionInterface;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
 
-// The pre-migration plaintext snapshot and its restore: a targeted,
-// KEK-wrapped copy of every sensitive column taken before the encrypt pass
-// opens its transaction, plus the all-or-nothing replay that runs only on a
-// genuine rollback. Split off EncryptionMigrationService as one concern.
 /**
- * @link ../../../../../.docs/features/core/architecture.md
+ * @link ../../../../.docs/features/core/architecture.md
  */
-trait TakesPreMigrationSnapshot
+final readonly class PreMigrationSnapshot
 {
+    // See architecture.md for the tax_transaction_tags/transaction_splits
+    // backfill rationale — the same sensitive-column map the migration's
+    // projection re-encrypt pass consumes.
+    public const PROJECTION_COLUMNS = [
+        'transactions' => ['note', 'description', 'counterparty_name', 'counterparty_iban', 'raw_payload'],
+        'counterparties' => ['display_name', 'merchant_name', 'iban'],
+        'tax_transaction_tags' => ['note'],
+        'transaction_splits' => ['note'],
+    ];
+
+    public function __construct(
+        private FileEncryptor $backupEncryptor,
+        private Clock $clock,
+    ) {}
+
     // See architecture.md for why this is a targeted sensitive-column
     // snapshot (mirrors GdkKeyringService's encrypted-file idiom) rather
     // than a whole-file SQLite copy.
-    private function takeSnapshot(int $userId, ConnectionInterface $connection, string $kek): string
+    public function takeSnapshot(int $userId, ConnectionInterface $connection, string $kek): string
     {
         $payload = [
             'op_log_entries' => $connection->table('op_log_entries')
@@ -87,7 +100,7 @@ trait TakesPreMigrationSnapshot
         return $rows;
     }
 
-    private function restoreFromSnapshot(string $snapshotPath, string $kek, ConnectionInterface $connection): void
+    public function restoreFromSnapshot(string $snapshotPath, string $kek, ConnectionInterface $connection): void
     {
         $payload = $this->decodeSnapshotPayload($snapshotPath, $kek);
 

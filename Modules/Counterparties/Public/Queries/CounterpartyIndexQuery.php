@@ -34,9 +34,7 @@ final readonly class CounterpartyIndexQuery
     {
         $resolvedType = $typeFilter === 'self' ? 'self_account' : $typeFilter;
 
-        $connection = $this->db->connection();
-
-        $query = $connection->table('counterparties')->where('user_id', $user->id);
+        $query = $this->db->connection()->table('counterparties')->where('user_id', $user->id);
         if ($resolvedType !== 'all') {
             $query = $query->where('type', $resolvedType);
         }
@@ -49,81 +47,14 @@ final readonly class CounterpartyIndexQuery
         $cpRows = $query->orderBy('id')->get(['id', 'slug', 'display_name', 'type']);
 
         $cutoffDate = $this->clock->now()->subYear()->toDateString();
-        $userId = $user->id;
 
         /** @var list<CounterpartyIndexRow> $result */
         $result = [];
         foreach ($cpRows as $cpRow) {
-            $cpId = is_numeric($cpRow->id ?? null) ? (int) $cpRow->id : 0;
-            if ($cpId === 0) {
-                continue;
+            $row = $this->buildRow($cpRow, $user, $cutoffDate);
+            if ($row !== null) {
+                $result[] = $row;
             }
-            $slug = is_string($cpRow->slug ?? null) ? $cpRow->slug : '';
-            $storedDisplayName = is_string($cpRow->display_name ?? null) ? $cpRow->display_name : '';
-            // Read-side decrypt — a pass-through no-op when encryption is
-            // not enabled for this user.
-            $displayName = $storedDisplayName === ''
-                ? ''
-                : $this->codec->decryptValue('counterparties', 'display_name', $storedDisplayName, $userId, $this->session)['value'];
-            $type = is_string($cpRow->type ?? null) ? $cpRow->type : 'unknown';
-
-            // 12-month total + transaction count via a single aggregate
-            // query, covered by the (user_id, counterparty_id) composite index.
-            /** @var stdClass|null $totals */
-            $totals = $connection->table('transactions')
-                ->where('user_id', $user->id)
-                ->where('counterparty_id', $cpId)
-                ->where('posted_at', '>=', $cutoffDate)
-                ->selectRaw('COALESCE(SUM(amount_minor), 0) as total, COUNT(*) as cnt')
-                ->first();
-
-            $total = $totals !== null && is_numeric($totals->total ?? null) ? (int) $totals->total : 0;
-            $count = $totals !== null && is_numeric($totals->cnt ?? null) ? (int) $totals->cnt : 0;
-            $avg = $count > 0 ? (int) round($total / 12) : 0;
-
-            // Most-recent transaction's posted date + short description
-            // — feeds the card's recent-line strip.
-            /** @var stdClass|null $recent */
-            $recent = $connection->table('transactions')
-                ->where('user_id', $user->id)
-                ->where('counterparty_id', $cpId)
-                ->orderByDesc('posted_at')
-                ->orderByDesc('id')
-                ->first(['posted_at', 'description', 'counterparty_name']);
-
-            $recentLine = null;
-            if ($recent !== null) {
-                $postedAt = $recent->posted_at ?? null;
-                $description = $recent->description ?? null;
-                $counterpartyName = $recent->counterparty_name ?? null;
-                // Read-side decrypt — a pass-through no-op when encryption
-                // is not enabled for this user.
-                if (is_string($description) && $description !== '') {
-                    $description = $this->codec->decryptValue('transactions', 'description', $description, $userId, $this->session)['value'];
-                }
-                if (is_string($counterpartyName) && $counterpartyName !== '') {
-                    $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $this->session)['value'];
-                }
-                $date = is_string($postedAt) ? substr($postedAt, 0, 10) : '';
-                $label = is_string($description) && $description !== ''
-                    ? $description
-                    : (is_string($counterpartyName) ? $counterpartyName : '');
-                $recentLine = trim($date.' · '.$label, ' ·');
-                if ($recentLine === '') {
-                    $recentLine = null;
-                }
-            }
-
-            $result[] = new CounterpartyIndexRow(
-                id: $cpId,
-                slug: $slug,
-                displayName: $displayName,
-                type: $type,
-                total12mMinor: $total,
-                avgPerMonthMinor: $avg,
-                recentLine: $recentLine,
-                sparkline: $this->sparklineFor($user, $cpId, $cutoffDate),
-            );
         }
 
         // Sort by 12-month absolute total descending, tie-broken by name
@@ -135,6 +66,95 @@ final readonly class CounterpartyIndexQuery
         });
 
         return new Collection($result);
+    }
+
+    // One counterparty row -> one index card, or null for a row whose id
+    // does not parse (defensive: the id column is a PK, so this only fires
+    // on a corrupt read). The heavy per-row aggregate/recent-line reads live
+    // in their own helpers so forUser stays a thin map-and-sort.
+    private function buildRow(stdClass $cpRow, User $user, string $cutoffDate): ?CounterpartyIndexRow
+    {
+        $cpId = is_numeric($cpRow->id ?? null) ? (int) $cpRow->id : 0;
+        if ($cpId === 0) {
+            return null;
+        }
+
+        $userId = $user->id;
+        $slug = is_string($cpRow->slug ?? null) ? $cpRow->slug : '';
+        $storedDisplayName = is_string($cpRow->display_name ?? null) ? $cpRow->display_name : '';
+        // Read-side decrypt — a pass-through no-op when encryption is not
+        // enabled for this user.
+        $displayName = $storedDisplayName === ''
+            ? ''
+            : $this->codec->decryptValue('counterparties', 'display_name', $storedDisplayName, $userId, $this->session)['value'];
+        $type = is_string($cpRow->type ?? null) ? $cpRow->type : 'unknown';
+
+        // 12-month total + transaction count via a single aggregate query,
+        // covered by the (user_id, counterparty_id) composite index.
+        /** @var stdClass|null $totals */
+        $totals = $this->db->connection()->table('transactions')
+            ->where('user_id', $userId)
+            ->where('counterparty_id', $cpId)
+            ->where('posted_at', '>=', $cutoffDate)
+            ->selectRaw('COALESCE(SUM(amount_minor), 0) as total, COUNT(*) as cnt')
+            ->first();
+
+        $total = $totals !== null && is_numeric($totals->total ?? null) ? (int) $totals->total : 0;
+        $count = $totals !== null && is_numeric($totals->cnt ?? null) ? (int) $totals->cnt : 0;
+        $avg = $count > 0 ? (int) round($total / 12) : 0;
+
+        return new CounterpartyIndexRow(
+            id: $cpId,
+            slug: $slug,
+            displayName: $displayName,
+            type: $type,
+            total12mMinor: $total,
+            avgPerMonthMinor: $avg,
+            recentLine: $this->recentLineFor($user, $cpId),
+            sparkline: $this->sparklineFor($user, $cpId, $cutoffDate),
+        );
+    }
+
+    // Most-recent transaction's posted date + short description — feeds the
+    // card's recent-line strip. Null when the counterparty has no
+    // transactions or the joined row carries nothing renderable.
+    private function recentLineFor(User $user, int $counterpartyId): ?string
+    {
+        $userId = $user->id;
+
+        /** @var stdClass|null $recent */
+        $recent = $this->db->connection()->table('transactions')
+            ->where('user_id', $userId)
+            ->where('counterparty_id', $counterpartyId)
+            ->orderByDesc('posted_at')
+            ->orderByDesc('id')
+            ->first(['posted_at', 'description', 'counterparty_name']);
+
+        if ($recent === null) {
+            return null;
+        }
+
+        $postedAt = $recent->posted_at ?? null;
+        $description = $recent->description ?? null;
+        $counterpartyName = $recent->counterparty_name ?? null;
+        // Read-side decrypt — a pass-through no-op when encryption is not
+        // enabled for this user.
+        if (is_string($description) && $description !== '') {
+            $description = $this->codec->decryptValue('transactions', 'description', $description, $userId, $this->session)['value'];
+        }
+        if (is_string($counterpartyName) && $counterpartyName !== '') {
+            $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $this->session)['value'];
+        }
+
+        $date = is_string($postedAt) ? substr($postedAt, 0, 10) : '';
+        $label = match (true) {
+            is_string($description) && $description !== '' => $description,
+            is_string($counterpartyName) => $counterpartyName,
+            default => '',
+        };
+        $recentLine = trim($date.' · '.$label, ' ·');
+
+        return $recentLine === '' ? null : $recentLine;
     }
 
     // Feeds the <x-counterparties::filter-chips> row atop /counterparties;

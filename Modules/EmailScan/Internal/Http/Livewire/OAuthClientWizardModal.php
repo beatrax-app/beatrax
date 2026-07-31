@@ -103,19 +103,12 @@ final class OAuthClientWizardModal extends Component
 
     private function validateGoogleCredentials(): ?string
     {
-        if ($this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com')) {
-            return 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.';
-        }
-
-        if ($this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-')) {
-            return 'Enter a Google OAuth client secret starting with GOCSPX-.';
-        }
-
-        if (! $this->publishedConfirmed) {
-            return "Confirm that you've pushed your OAuth consent screen to 'In production'.";
-        }
-
-        return null;
+        return match (true) {
+            $this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com') => 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.',
+            $this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-') => 'Enter a Google OAuth client secret starting with GOCSPX-.',
+            ! $this->publishedConfirmed => "Confirm that you've pushed your OAuth consent screen to 'In production'.",
+            default => null,
+        };
     }
 
     private function persistAndRedirect(

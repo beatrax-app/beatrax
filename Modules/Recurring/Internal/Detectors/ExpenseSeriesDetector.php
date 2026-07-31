@@ -138,7 +138,6 @@ final class ExpenseSeriesDetector implements SeriesDetector
 
         $latestRow = $filtered[count($filtered) - 1];
         $latestAmount = self::toInt($latestRow->amount_minor);
-        $nextExpectedAt = $cadenceResult['next_expected_at'];
 
         $detected = DetectedSeries::fromCadence($clusterKey, $cadenceResult, $latestAmount, $currency, $filtered);
 
