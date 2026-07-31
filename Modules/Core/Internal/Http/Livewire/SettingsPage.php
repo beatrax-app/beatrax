@@ -7,13 +7,13 @@ namespace Modules\Core\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
-use Modules\Ledger\Models\Currency;
 
 /**
  * @link ../../../../../.docs/features/core/architecture.md
@@ -179,8 +179,10 @@ final class SettingsPage extends Component
 
     public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
     {
-        // Load every account the user owns so the Forecasting section
-        // can mount one OpeningBalanceEditor per row.
+        // Load every account the user owns (one OpeningBalanceEditor per row)
+        // and the seeded currencies for the picker, sorted alpha by code so
+        // the <select> is stable. Both queries use the DB connection directly
+        // (no facade) per the BoundaryArchTest rule.
         $accounts = $db->connection()->table('accounts')
             ->where('user_id', $currentUser->user()->id)
             ->orderBy('name')
@@ -195,16 +197,30 @@ final class SettingsPage extends Component
                 'opening_balance_as_of_date',
             ]);
 
+        $currencyRows = $db->connection()
+            ->table('currencies')
+            ->orderBy('code')
+            ->get(['code', 'name']);
+
+        return $views->make('core::livewire.settings-page', [
+            // Expose the per-user inbox-drop path so the help text
+            // renders the directory the user must actually create
+            // (storage/app/inbox-drop/{userId}/) rather than the
+            // root inbox-drop folder.
+            'userId' => $currentUser->user()->id,
+            'forecastingAccounts' => $this->mapAccounts($accounts),
+            'currencyOptions' => $this->mapCurrencyOptions($currencyRows),
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, \stdClass>  $accounts
+     * @return list<array<string, mixed>>
+     */
+    private function mapAccounts(Collection $accounts): array
+    {
         $accountList = [];
         foreach ($accounts as $row) {
-            /** @var \stdClass $row */
-            $rawAsOf = $row->opening_balance_as_of_date ?? null;
-            $asOf = null;
-            if ($rawAsOf instanceof \DateTimeInterface) {
-                $asOf = $rawAsOf->format('Y-m-d');
-            } elseif (is_string($rawAsOf) && $rawAsOf !== '') {
-                $asOf = substr($rawAsOf, 0, 10);
-            }
             $accountList[] = [
                 'id' => is_numeric($row->id ?? null) ? (int) $row->id : 0,
                 'name' => is_string($row->name ?? null) ? $row->name : '',
@@ -216,23 +232,30 @@ final class SettingsPage extends Component
                 'opening_balance_minor' => is_numeric($row->opening_balance_minor ?? null)
                     ? (int) $row->opening_balance_minor
                     : null,
-                'opening_balance_as_of_date' => $asOf,
+                'opening_balance_as_of_date' => $this->resolveAsOfDate($row->opening_balance_as_of_date ?? null),
             ];
         }
 
-        // Build the currency picker option list from the seeded currencies table.
-        // Sorted alpha by code so the <select> is consistent across renders.
-        // The query uses the DB connection directly (no facade) per the
-        // BoundaryArchTest no-facade rule.
-        $currencyRows = $db->connection()
-            ->table('currencies')
-            ->orderBy('code')
-            ->get(['code', 'name']);
+        return $accountList;
+    }
 
-        /** @var array<string, string> $currencyOptions */
+    private function resolveAsOfDate(mixed $rawAsOf): ?string
+    {
+        if ($rawAsOf instanceof \DateTimeInterface) {
+            return $rawAsOf->format('Y-m-d');
+        }
+
+        return is_string($rawAsOf) && $rawAsOf !== '' ? substr($rawAsOf, 0, 10) : null;
+    }
+
+    /**
+     * @param  Collection<int, \stdClass>  $currencyRows
+     * @return array<string, string>
+     */
+    private function mapCurrencyOptions(Collection $currencyRows): array
+    {
         $currencyOptions = [];
         foreach ($currencyRows as $row) {
-            /** @var \stdClass $row */
             $code = is_string($row->code ?? null) ? $row->code : '';
             $name = is_string($row->name ?? null) ? $row->name : '';
             if ($code !== '') {
@@ -240,15 +263,7 @@ final class SettingsPage extends Component
             }
         }
 
-        return $views->make('core::livewire.settings-page', [
-            // Expose the per-user inbox-drop path so the help text
-            // renders the directory the user must actually create
-            // (storage/app/inbox-drop/{userId}/) rather than the
-            // root inbox-drop folder.
-            'userId' => $currentUser->user()->id,
-            'forecastingAccounts' => $accountList,
-            'currencyOptions' => $currencyOptions,
-        ]);
+        return $currencyOptions;
     }
 
     /**

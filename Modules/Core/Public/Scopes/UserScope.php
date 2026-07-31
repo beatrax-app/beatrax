@@ -28,6 +28,10 @@ final class UserScope implements Scope
         try {
             $builder->where($model->getTable().'.user_id', $this->currentUser->id());
         } catch (NotAuthenticatedException) {
+            // Intentionally empty: an unauthenticated context (install
+            // bootstrap, tests without actingAs) must leave the query
+            // unscoped rather than 500, so the missing user id is swallowed
+            // and every row stays visible.
         }
     }
 }

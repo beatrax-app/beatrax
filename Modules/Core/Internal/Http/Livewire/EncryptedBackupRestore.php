@@ -37,26 +37,8 @@ final class EncryptedBackupRestore extends Component
         $this->error = '';
         $this->snapshotPath = '';
 
-        if ($this->confirmation !== self::CONFIRM_PHRASE) {
-            $this->error = 'Type '.self::CONFIRM_PHRASE.' to confirm — this replaces your current data.';
-
-            return;
-        }
-        if (! $this->backup instanceof TemporaryUploadedFile) {
-            $this->error = 'Choose an encrypted backup file (.enc) to restore.';
-
-            return;
-        }
-        if ($this->passphrase === '') {
-            $this->error = 'Enter the passphrase the backup was encrypted with.';
-
-            return;
-        }
-
-        $path = $this->backup->getRealPath();
-        if ($path === '' || ! is_file($path)) {
-            $this->error = 'The uploaded file could not be read. Try again.';
-
+        $path = $this->validatedUploadPath();
+        if ($path === null) {
             return;
         }
 
@@ -69,6 +51,25 @@ final class EncryptedBackupRestore extends Component
         }
 
         $this->reset('backup', 'passphrase', 'confirmation');
+    }
+
+    // Runs the four preflight checks in message-priority order and returns
+    // the readable upload path, or null after setting $this->error. Folding
+    // them into one match keeps restore() itself down to a single guard.
+    private function validatedUploadPath(): ?string
+    {
+        $backup = $this->backup;
+        $path = $backup instanceof TemporaryUploadedFile ? $backup->getRealPath() : '';
+
+        $this->error = match (true) {
+            $this->confirmation !== self::CONFIRM_PHRASE => 'Type '.self::CONFIRM_PHRASE.' to confirm — this replaces your current data.',
+            ! $backup instanceof TemporaryUploadedFile => 'Choose an encrypted backup file (.enc) to restore.',
+            $this->passphrase === '' => 'Enter the passphrase the backup was encrypted with.',
+            $path === '' || ! is_file($path) => 'The uploaded file could not be read. Try again.',
+            default => '',
+        };
+
+        return $this->error === '' ? $path : null;
     }
 
     public function render(ViewFactory $views, Repository $config): View

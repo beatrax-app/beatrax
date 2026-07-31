@@ -72,41 +72,71 @@ class InstallCommand extends Command
             return $this->installLaunchdPlists();
         }
 
+        return $this->runInstall();
+    }
+
+    // The single-user first-run path: refuse a cloud-synced DB, migrate +
+    // seed reference data, then create or re-confirm the account.
+    private function runInstall(): int
+    {
         $dbPathValue = $this->config->get('database.connections.sqlite.database');
         $dbPath = is_string($dbPathValue) ? $dbPathValue : '';
-
         $resolvedPath = self::resolveRealPath($dbPath);
 
+        $token = $this->cloudSyncToken($resolvedPath);
+        if ($token !== null) {
+            $this->error(sprintf(
+                "Refusing to install: database path '%s' (resolved to '%s') is inside a cloud-sync folder (%s).",
+                $dbPath,
+                $resolvedPath,
+                $token,
+            ));
+            $this->line('beatrax is local-only — move database.sqlite outside iCloud Drive, OneDrive, Dropbox, or any other cloud-sync folder before running install again.');
+
+            return self::FAILURE;
+        }
+
+        if (! $this->runMigrationsAndSeed()) {
+            return self::FAILURE;
+        }
+
+        return $this->ensureUser();
+    }
+
+    // The first cloud-sync token the resolved database path matches, or null
+    // when the path is local. Matched case-insensitively so per-vendor names
+    // and the canonical macOS mountpoint are both caught.
+    private function cloudSyncToken(string $resolvedPath): ?string
+    {
         foreach (self::CLOUD_SYNC_TOKENS as $token) {
             if (stripos($resolvedPath, $token) !== false) {
-                $this->error(sprintf(
-                    "Refusing to install: database path '%s' (resolved to '%s') is inside a cloud-sync folder (%s).",
-                    $dbPath,
-                    $resolvedPath,
-                    $token,
-                ));
-                $this->line('beatrax is local-only — move database.sqlite outside iCloud Drive, OneDrive, Dropbox, or any other cloud-sync folder before running install again.');
-
-                return self::FAILURE;
+                return $token;
             }
         }
 
-        $migrateResult = $this->call('migrate', ['--force' => true]);
-        if ($migrateResult !== 0) {
-            return self::FAILURE;
+        return null;
+    }
+
+    private function runMigrationsAndSeed(): bool
+    {
+        if ($this->call('migrate', ['--force' => true]) !== 0) {
+            return false;
         }
 
         // Currency reference data is owned by the Ledger module. Referenced
         // by FQN string so InstallCommand does not import a class from
         // another module's private namespace.
-        $seedResult = $this->call('db:seed', [
+        return $this->call('db:seed', [
             '--class' => 'Modules\\Ledger\\Database\\Seeders\\CurrenciesSeeder',
             '--force' => true,
-        ]);
-        if ($seedResult !== 0) {
-            return self::FAILURE;
-        }
+        ]) === 0;
+    }
 
+    // Re-confirms and re-dispatches UserInstalled for an existing account
+    // (password untouched), or creates the single user from the resolved
+    // username/password/period inputs.
+    private function ensureUser(): int
+    {
         $existingId = self::resolveExistingUserId($this->db);
         if ($existingId !== null) {
             $this->info('A user account is already installed. Password is unchanged; re-running install re-confirms the existing account.');
@@ -121,13 +151,13 @@ class InstallCommand extends Command
         $password = $this->resolveStringInput('password', 'Password', secret: true);
         $periodStartDay = $this->resolvePeriodStartDay();
 
-        if ($username === '') {
-            $this->error('Refusing to install: username is required.');
-
-            return self::FAILURE;
-        }
-        if ($password === '') {
-            $this->error('Refusing to install: password is required.');
+        $missing = match (true) {
+            $username === '' => 'username',
+            $password === '' => 'password',
+            default => '',
+        };
+        if ($missing !== '') {
+            $this->error('Refusing to install: '.$missing.' is required.');
 
             return self::FAILURE;
         }
@@ -185,13 +215,9 @@ class InstallCommand extends Command
             return $resolved;
         }
 
-        $dir = dirname($path);
-        $resolvedDir = @realpath($dir);
-        if (is_string($resolvedDir)) {
-            return $resolvedDir.'/'.basename($path);
-        }
+        $resolvedDir = @realpath(dirname($path));
 
-        return $path;
+        return is_string($resolvedDir) ? $resolvedDir.'/'.basename($path) : $path;
     }
 
     private function resolveStringInput(string $option, string $prompt, bool $secret = false): string
@@ -252,8 +278,18 @@ class InstallCommand extends Command
             '{{ABS_PROJECT_ROOT}}' => $this->app->basePath(),
         ];
 
-        $uid = self::resolveCurrentUid();
+        return $this->writePlists($plistNames, $launchAgentsDir, $substitutions, self::resolveCurrentUid());
+    }
 
+    // Renders and writes each plist, then bootstraps it. A missing source
+    // plist is fatal (FAILURE); a non-zero launchctl bootstrap is only a
+    // warning, since launchctl exits non-zero for an already-loaded agent.
+    /**
+     * @param  list<string>  $plistNames
+     * @param  array<string, string>  $substitutions
+     */
+    private function writePlists(array $plistNames, string $launchAgentsDir, array $substitutions, int $uid): int
+    {
         foreach ($plistNames as $name) {
             $sourcePath = $this->app->basePath('deploy/launchd/com.beatrax.'.$name.'.plist');
             if (! $this->files->exists($sourcePath)) {
@@ -262,8 +298,7 @@ class InstallCommand extends Command
                 return self::FAILURE;
             }
 
-            $template = $this->files->get($sourcePath);
-            $rendered = strtr($template, $substitutions);
+            $rendered = strtr($this->files->get($sourcePath), $substitutions);
             $targetPath = $launchAgentsDir.'/com.beatrax.'.$name.'.plist';
             $this->files->put($targetPath, $rendered);
             $this->info("Wrote {$targetPath}");

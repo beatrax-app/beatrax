@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Carbon\CarbonImmutable;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 
 /*
@@ -221,7 +220,7 @@ dataset('retention scenarios', [
 
 it('keeps 7 most-recent dailies plus 4 most-recent Sundays plus all non-matching filenames', function (array $candidates, string $now, array $expectedKeepers): void {
     $policy = new BackupRetentionPolicy;
-    $keepers = $policy->keepers($candidates, CarbonImmutable::parse($now));
+    $keepers = $policy->keepers($candidates);
 
     $sortedKeepers = $keepers;
     sort($sortedKeepers);

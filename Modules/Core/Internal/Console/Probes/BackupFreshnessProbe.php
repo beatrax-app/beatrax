@@ -97,41 +97,52 @@ final class BackupFreshnessProbe implements Probe
             return null;
         }
 
-        $entries = $this->files->files($backupsPath);
-
         $newest = null;
-        foreach ($entries as $entry) {
-            if (! str_ends_with($entry->getBasename(), '.meta.json')) {
-                continue;
-            }
-
-            $raw = @file_get_contents($entry->getPathname());
-            if (! is_string($raw)) {
-                continue;
-            }
-
-            $decoded = json_decode($raw, true);
-            if (! is_array($decoded)) {
-                continue;
-            }
-
-            $completedAt = $decoded['completed_at'] ?? null;
-            if (! is_string($completedAt) || $completedAt === '') {
-                continue;
-            }
-
-            try {
-                $candidate = CarbonImmutable::parse($completedAt);
-            } catch (Throwable) {
-                continue;
-            }
-
-            if ($newest === null || $candidate->isAfter($newest)) {
+        foreach ($this->files->files($backupsPath) as $entry) {
+            $candidate = $this->sidecarCompletedAt($entry);
+            if ($candidate !== null && ($newest === null || $candidate->isAfter($newest))) {
                 $newest = $candidate;
             }
         }
 
         return $newest;
+    }
+
+    // One sidecar's completed_at as a timestamp, or null when the entry is
+    // not a sidecar, is unreadable/malformed, or carries no parseable date.
+    private function sidecarCompletedAt(\SplFileInfo $entry): ?CarbonImmutable
+    {
+        if (! str_ends_with($entry->getBasename(), '.meta.json')) {
+            return null;
+        }
+
+        $completedAt = $this->readCompletedAtField($entry->getPathname());
+
+        return $completedAt === null ? null : $this->parseOrNull($completedAt);
+    }
+
+    // The non-empty completed_at string from a sidecar file, or null when the
+    // file cannot be read or does not decode to an object carrying the field.
+    private function readCompletedAtField(string $path): ?string
+    {
+        $raw = @file_get_contents($path);
+        if (! is_string($raw)) {
+            return null;
+        }
+
+        $decoded = json_decode($raw, true);
+        $completedAt = is_array($decoded) ? ($decoded['completed_at'] ?? null) : null;
+
+        return is_string($completedAt) && $completedAt !== '' ? $completedAt : null;
+    }
+
+    private function parseOrNull(string $value): ?CarbonImmutable
+    {
+        try {
+            return CarbonImmutable::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function recordOverdueAlert(?int $hoursOld): void

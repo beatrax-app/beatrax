@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Modules\Core\Public\Services;
 
 use InvalidArgumentException;
+use Modules\Core\Public\Services\Concerns\ProvidesInstancePathAccessors;
 
 /**
  * @link ../../../../.docs/features/core/architecture.md
  */
 final class UserDataPathService
 {
+    use ProvidesInstancePathAccessors;
+
     // `base_path()` is the one sanctioned raw helper call in the whole
     // codebase — this class is the arch-test allow-list of size one.
     private static function projectRoot(): string
@@ -185,35 +188,5 @@ final class UserDataPathService
         return $relative === ''
             ? $base
             : $base.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
-    }
-
-    public function databasePath(): string
-    {
-        return self::databaseFile();
-    }
-
-    public function storagePath(): string
-    {
-        return self::storageBase();
-    }
-
-    public function backups(): string
-    {
-        return self::backupsPath();
-    }
-
-    public function secrets(): string
-    {
-        return self::secretsPath();
-    }
-
-    public function framework(string $sub = ''): string
-    {
-        return self::frameworkPath($sub);
-    }
-
-    public function appRelative(string $relative): string
-    {
-        return self::appPath($relative);
     }
 }

@@ -24,13 +24,43 @@ final class BackupRetentionPolicy
      * @param  list<string>  $candidateFilenames
      * @return list<string>
      */
-    public function keepers(array $candidateFilenames, CarbonImmutable $now): array
+    public function keepers(array $candidateFilenames): array
     {
-        // Sunday's day-of-week constant on Carbon equals 0. Read from the
-        // class constant rather than hardcoding so a future Carbon major
-        // version that bumps the value still resolves correctly.
-        $sundayDow = CarbonImmutable::SUNDAY;
+        [$kept, $matched] = $this->partition($candidateFilenames);
 
+        if ($matched === []) {
+            return array_values($kept);
+        }
+
+        usort(
+            $matched,
+            static fn (array $a, array $b): int => strcmp($b['date_key'], $a['date_key']),
+        );
+
+        $keepIndexes = $this->dailyKeepIndexes($matched) + $this->sundayKeepIndexes($matched);
+
+        foreach ($matched as $entry) {
+            if (isset($keepIndexes[$entry['index']])) {
+                $kept[$entry['index']] = $entry['name'];
+            }
+        }
+
+        // Re-key in original input order (not the DESC sort above) so the
+        // output is stable for downstream logging.
+        ksort($kept);
+
+        return array_values($kept);
+    }
+
+    // Splits the input into non-matching filenames (always preserved, keyed
+    // by original index) and parsed daily backups carrying a zero-padded,
+    // lexicographically sortable date_key of the form "YYYY-MM-DD HHMMSS".
+    /**
+     * @param  list<string>  $candidateFilenames
+     * @return array{0: array<int, string>, 1: list<array{index: int, name: string, date_key: string, date_only: string}>}
+     */
+    private function partition(array $candidateFilenames): array
+    {
         $kept = [];
         $matched = [];
 
@@ -43,39 +73,47 @@ final class BackupRetentionPolicy
                 continue;
             }
 
-            // Parse the date+time portion of the filename into a sortable
-            // key. Format: YYYY-MM-DD HHMMSS. Sorting lexicographically
-            // works because all components are zero-padded fixed-width.
-            $dateKey = $m[1].'-'.$m[2].'-'.$m[3].' '.$m[4];
-            $dateOnly = $m[1].'-'.$m[2].'-'.$m[3];
-
             $matched[] = [
                 'index' => $index,
                 'name' => $name,
-                'date_key' => $dateKey,
-                'date_only' => $dateOnly,
+                'date_key' => $m[1].'-'.$m[2].'-'.$m[3].' '.$m[4],
+                'date_only' => $m[1].'-'.$m[2].'-'.$m[3],
             ];
         }
 
-        if ($matched === []) {
-            return array_values($kept);
-        }
+        return [$kept, $matched];
+    }
 
-        usort(
-            $matched,
-            static fn (array $a, array $b): int => strcmp($b['date_key'], $a['date_key']),
-        );
-
-        $dailyKeepIndexes = [];
+    /**
+     * @param  list<array{index: int, name: string, date_key: string, date_only: string}>  $matched
+     * @return array<int, true>
+     */
+    private function dailyKeepIndexes(array $matched): array
+    {
+        $indexes = [];
         foreach (array_slice($matched, 0, self::DAILY_KEEP_COUNT) as $entry) {
-            $dailyKeepIndexes[$entry['index']] = true;
+            $indexes[$entry['index']] = true;
         }
 
-        // Weekly: take the 4 most-recent Sunday-dated matched files. The
-        // regex accepts digit-shaped components without calendar validity,
-        // so a bogus date like 2026-13-99 would crash CarbonImmutable::parse()
-        // — treat it as non-Sunday (skipped) rather than halting the sweep.
-        $sundayKeepIndexes = [];
+        return $indexes;
+    }
+
+    // Weekly: the 4 most-recent Sunday-dated matched files. The regex accepts
+    // digit-shaped components without calendar validity, so a bogus date like
+    // 2026-13-99 would crash CarbonImmutable::parse() — treat it as non-Sunday
+    // (skipped) rather than halting the sweep.
+    /**
+     * @param  list<array{index: int, name: string, date_key: string, date_only: string}>  $matched
+     * @return array<int, true>
+     */
+    private function sundayKeepIndexes(array $matched): array
+    {
+        // Sunday's day-of-week constant on Carbon equals 0. Read from the
+        // class constant rather than hardcoding so a future Carbon major
+        // version that bumps the value still resolves correctly.
+        $sundayDow = CarbonImmutable::SUNDAY;
+
+        $indexes = [];
         $sundayCount = 0;
         foreach ($matched as $entry) {
             if ($sundayCount >= self::SUNDAY_KEEP_COUNT) {
@@ -87,21 +125,11 @@ final class BackupRetentionPolicy
                 continue;
             }
             if ($dow === $sundayDow) {
-                $sundayKeepIndexes[$entry['index']] = true;
+                $indexes[$entry['index']] = true;
                 $sundayCount++;
             }
         }
 
-        foreach ($matched as $entry) {
-            if (isset($dailyKeepIndexes[$entry['index']]) || isset($sundayKeepIndexes[$entry['index']])) {
-                $kept[$entry['index']] = $entry['name'];
-            }
-        }
-
-        // Re-key in original input order (not the DESC sort above) so the
-        // output is stable for downstream logging.
-        ksort($kept);
-
-        return array_values($kept);
+        return $indexes;
     }
 }

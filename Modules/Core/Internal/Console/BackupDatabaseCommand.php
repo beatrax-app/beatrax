@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Console;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
@@ -11,6 +12,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\BackupCorruptException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\UnsafeBackupPathException;
@@ -47,9 +49,23 @@ final class BackupDatabaseCommand extends Command
     {
         $livePath = $this->livePath();
         $backupsDir = $this->backupsDir();
-
         $startedAt = $this->clock->now();
 
+        try {
+            return $this->produceBackup($livePath, $backupsDir, $startedAt);
+        } catch (BackupCorruptException) {
+            // Every corrupt phase already recorded its critical system_alerts
+            // row and printed its console error before throwing; the throw
+            // exists only to collapse those six failure returns into one.
+            return self::FAILURE;
+        }
+    }
+
+    // The verified-backup pipeline: data_version read, VACUUM INTO, chmod,
+    // integrity check, sidecar write, retention prune. Any phase that fails
+    // records its alert, prints its error, then throws BackupCorruptException.
+    private function produceBackup(string $livePath, string $backupsDir, CarbonImmutable $startedAt): int
+    {
         try {
             $liveDataVersion = $this->readDataVersion($livePath);
         } catch (PDOException $e) {
@@ -57,15 +73,11 @@ final class BackupDatabaseCommand extends Command
             // backup or .suspect file exists yet, so the alert's suspect
             // path is null and the message says "aborted before any file
             // was produced" rather than pointing at a nonexistent file.
-            $basenameForAlert = 'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
-            $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.$basenameForAlert;
-            $this->recordCorruptAlert($destinationForAlert, null, [
+            $destinationForAlert = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
+            $this->failCorrupt($destinationForAlert, null, [
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'pragma_data_version',
-            ]);
-            $this->error(self::BACKUP_CORRUPT_MESSAGE);
-
-            return self::FAILURE;
+            ], self::BACKUP_CORRUPT_MESSAGE);
         }
 
         if ($this->option('force') !== true && $this->isSkippable($backupsDir, $liveDataVersion)) {
@@ -74,9 +86,22 @@ final class BackupDatabaseCommand extends Command
             return self::SUCCESS;
         }
 
-        $basename = 'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
-        $destination = $backupsDir.DIRECTORY_SEPARATOR.$basename;
+        $destination = $backupsDir.DIRECTORY_SEPARATOR.'beatrax-'.$startedAt->format('Y-m-d-His').'.sqlite';
 
+        $this->vacuumInto($destination);
+        $this->assertOutputExists($destination);
+        $this->hardenBackupFile($destination);
+        $this->assertIntegrity($destination);
+        $this->writeSidecarOrFail($destination, $liveDataVersion, $startedAt);
+
+        $this->pruneRetention($backupsDir);
+        $this->info(sprintf('Backup written: %s', $destination));
+
+        return self::SUCCESS;
+    }
+
+    private function vacuumInto(string $destination): void
+    {
         try {
             // VACUUM INTO's target string is a parse-time constant with no
             // bound parameters, so the destination is interpolated literally.
@@ -100,29 +125,29 @@ final class BackupDatabaseCommand extends Command
             if ($this->files->exists($destination)) {
                 $this->files->move($destination, $suspect);
             }
-            $this->recordCorruptAlert($destination, $suspect, [
+            $this->failCorrupt($destination, $suspect, [
                 'pdo_exception' => $e->getMessage(),
                 'phase' => 'vacuum_into',
-            ]);
-            $this->error(self::BACKUP_CORRUPT_MESSAGE);
-
-            return self::FAILURE;
+            ], self::BACKUP_CORRUPT_MESSAGE);
         }
+    }
 
+    private function assertOutputExists(string $destination): void
+    {
         if (! $this->files->exists($destination)) {
             // VACUUM INTO returned without throwing but produced no
             // output. No file landed on disk, so the alert carries a
             // null suspect path — same shape as the PDOException catch
             // arm above.
-            $this->recordCorruptAlert($destination, null, [
+            $this->failCorrupt($destination, null, [
                 'phase' => 'vacuum_into',
                 'reason' => 'no output file produced',
-            ]);
-            $this->error(self::BACKUP_CORRUPT_MESSAGE);
-
-            return self::FAILURE;
+            ], self::BACKUP_CORRUPT_MESSAGE);
         }
+    }
 
+    private function hardenBackupFile(string $destination): void
+    {
         // Immediately chmod 0600 since VACUUM INTO bypassed PHP's umask
         // narrowing (SQLite created the file via open(2)). Filesystem::chmod
         // returns mixed (bool on write, string-octal on read), so the check
@@ -133,29 +158,29 @@ final class BackupDatabaseCommand extends Command
             // The alert's suspect path is null since the file no longer
             // exists by the time recordCorruptAlert() runs.
             $this->files->delete($destination);
-            $this->recordCorruptAlert($destination, null, [
+            $this->failCorrupt($destination, null, [
                 'phase' => 'chmod',
                 'reason' => 'chmod 0600 failed on freshly-written backup file',
-            ]);
-            $this->error(self::BACKUP_CORRUPT_MESSAGE);
-
-            return self::FAILURE;
+            ], self::BACKUP_CORRUPT_MESSAGE);
         }
+    }
 
+    private function assertIntegrity(string $destination): void
+    {
         $integrityRows = $this->readIntegrityCheck($destination);
 
         if ($integrityRows !== ['ok']) {
             $suspect = $destination.'.suspect';
             $this->files->move($destination, $suspect);
-            $this->recordCorruptAlert($destination, $suspect, [
+            $this->failCorrupt($destination, $suspect, [
                 'integrity_check' => $integrityRows,
                 'phase' => 'post_vacuum',
-            ]);
-            $this->error(self::BACKUP_CORRUPT_MESSAGE);
-
-            return self::FAILURE;
+            ], self::BACKUP_CORRUPT_MESSAGE);
         }
+    }
 
+    private function writeSidecarOrFail(string $destination, int $liveDataVersion, CarbonImmutable $startedAt): void
+    {
         $completedAt = $this->clock->now();
         try {
             $this->writeSidecar($destination, $liveDataVersion, $startedAt->toIso8601String(), $completedAt->toIso8601String());
@@ -164,19 +189,26 @@ final class BackupDatabaseCommand extends Command
             // .meta.json, which would make the next db:backup misread "no
             // recent backup exists" via smart-skip and silently re-write.
             // Surface it via the same critical system_alerts row instead.
-            $this->recordCorruptAlert($destination, null, [
+            $this->failCorrupt($destination, null, [
                 'phase' => 'sidecar_write',
                 'reason' => $e->getMessage(),
-            ]);
-            $this->error('Backup written but sidecar write failed — see system_alerts.');
-
-            return self::FAILURE;
+            ], 'Backup written but sidecar write failed — see system_alerts.');
         }
-        $this->pruneRetention($backupsDir);
+    }
 
-        $this->info(sprintf('Backup written: %s', $destination));
+    // Records the critical alert, prints the console error, then throws so the
+    // caller's single catch turns it into a FAILURE exit code.
+    /**
+     * @param  array<string, mixed>  $metadata
+     *
+     * @throws BackupCorruptException
+     */
+    private function failCorrupt(string $destination, ?string $suspectPath, array $metadata, string $consoleMessage): never
+    {
+        $this->recordCorruptAlert($destination, $suspectPath, $metadata);
+        $this->error($consoleMessage);
 
-        return self::SUCCESS;
+        throw new BackupCorruptException;
     }
 
     /**
@@ -254,30 +286,32 @@ final class BackupDatabaseCommand extends Command
     // is load-bearing: a wrong skip would silently write no backup at all.
     private function isSkippable(string $backupsDir, int $liveDataVersion): bool
     {
-        $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.meta.json');
-        if ($candidates === false || $candidates === []) {
+        $newest = $this->newestSidecarPath($backupsDir);
+        if ($newest === null) {
             return false;
         }
 
-        // Most-recent by parsed-timestamp basename: sorting basenames (not
-        // full paths) means directory-shape changes cannot flip the winner.
-        // The fixed `beatrax-` + zero-padded timestamp + `.sqlite.meta.json`
-        // shape makes basename strcmp descending == chronological descending.
-        usort($candidates, static fn (string $a, string $b): int => strcmp(basename($b), basename($a)));
-        $newest = $candidates[0];
-        if (! is_file($newest)) {
-            return false;
-        }
-
-        $raw = (string) file_get_contents($newest);
-        $decoded = json_decode($raw, true);
-        if (! is_array($decoded)) {
-            return false;
-        }
-
-        $stored = $decoded['data_version'] ?? null;
+        $decoded = json_decode((string) file_get_contents($newest), true);
+        $stored = is_array($decoded) ? ($decoded['data_version'] ?? null) : null;
 
         return is_int($stored) && $stored === $liveDataVersion;
+    }
+
+    // The most-recent existing sidecar by parsed-timestamp basename, or null
+    // when none exist. Sorting basenames (not full paths) means directory-
+    // shape changes cannot flip the winner: the fixed `beatrax-` + zero-padded
+    // timestamp + `.sqlite.meta.json` shape makes strcmp DESC == newest-first.
+    private function newestSidecarPath(string $backupsDir): ?string
+    {
+        $candidates = glob($backupsDir.DIRECTORY_SEPARATOR.'beatrax-*.sqlite.meta.json');
+        if ($candidates === false || $candidates === []) {
+            return null;
+        }
+
+        usort($candidates, static fn (string $a, string $b): int => strcmp(basename($b), basename($a)));
+        $newest = $candidates[0];
+
+        return is_file($newest) ? $newest : null;
     }
 
     // Atomic write: umask + tmp + rename + chmod mirrors
@@ -335,7 +369,7 @@ final class BackupDatabaseCommand extends Command
             $basenames[] = $entry->getBasename();
         }
 
-        $keepers = $this->retention->keepers($basenames, $this->clock->now());
+        $keepers = $this->retention->keepers($basenames);
         $keeperSet = array_flip($keepers);
 
         foreach ($basenames as $name) {

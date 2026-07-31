@@ -12,8 +12,8 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
-use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
@@ -22,6 +22,8 @@ use Throwable;
  */
 final class EncryptedBackupDownload extends Component
 {
+    private const MIN_PASSPHRASE_LENGTH = 8;
+
     public string $passphrase = '';
 
     public string $confirmPassphrase = '';
@@ -35,22 +37,8 @@ final class EncryptedBackupDownload extends Component
         Clock $clock,
         ResponseFactory $responses,
     ): ?BinaryFileResponse {
-        $this->error = '';
-
-        if (strlen($this->passphrase) < 8) {
-            $this->error = 'Use a passphrase of at least 8 characters.';
-
-            return null;
-        }
-        if ($this->passphrase !== $this->confirmPassphrase) {
-            $this->error = 'The two passphrases do not match.';
-
-            return null;
-        }
-
-        if (! $this->isSqliteBuild($config)) {
-            $this->error = 'Encrypted download is only available on the SQLite build.';
-
+        $this->error = $this->downloadValidationError($config);
+        if ($this->error !== '') {
             return null;
         }
 
@@ -71,7 +59,7 @@ final class EncryptedBackupDownload extends Component
             $escaped = str_replace("'", "''", $plainPath);
             $db->connection()->statement("VACUUM INTO '{$escaped}'");
             if (! is_file($plainPath)) {
-                throw new RuntimeException('The database snapshot was not produced.');
+                throw new BackupIoException('The database snapshot was not produced.');
             }
             // The snapshot is briefly plaintext on disk — lock the file itself
             // down too (defense in depth on top of the 0700 dir), mirroring
@@ -105,6 +93,19 @@ final class EncryptedBackupDownload extends Component
         return $views->make('core::livewire.encrypted-backup-download', [
             'sqliteOnly' => $this->isSqliteBuild($config),
         ]);
+    }
+
+    // The first failing precondition's message in display order, or '' when
+    // the request is good to proceed. Returning a value rather than early
+    // returns keeps download() within the guard-count budget.
+    private function downloadValidationError(Repository $config): string
+    {
+        return match (true) {
+            strlen($this->passphrase) < self::MIN_PASSPHRASE_LENGTH => 'Use a passphrase of at least '.self::MIN_PASSPHRASE_LENGTH.' characters.',
+            $this->passphrase !== $this->confirmPassphrase => 'The two passphrases do not match.',
+            ! $this->isSqliteBuild($config) => 'Encrypted download is only available on the SQLite build.',
+            default => '',
+        };
     }
 
     // Checks the driver (not the connection name) so the in-memory test
