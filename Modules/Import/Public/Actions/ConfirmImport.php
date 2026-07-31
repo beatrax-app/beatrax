@@ -10,6 +10,7 @@ use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Contracts\ConfirmsImports;
@@ -150,7 +151,7 @@ final class ConfirmImport implements ConfirmsImports
                 // automatically instead of silently NULL via raw insert.
                 ChainResolutionRun::query()->create([
                     'user_id' => $user->id,
-                    'status' => 'pending',
+                    'status' => JobRunStatus::Pending->value,
                 ]);
                 $this->chainDispatcher->dispatchForUser($user->id);
 
