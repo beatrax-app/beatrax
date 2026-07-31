@@ -11,6 +11,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 // Materialises one explicit "reimburse for shared dinner" transfer
@@ -52,26 +53,18 @@ final class DemoTransferPairsSeeder
         $asnRun = $this->ensureImportRun($primary, $asn);
         $paypalRun = $this->ensureImportRun($primary, $paypal);
 
-        $this->insertLeg(
-            $primary,
-            $asn,
-            $asnRun,
-            type: 'transfer_out',
+        $this->insertLeg($primary, $asn, $asnRun, new DemoTransferLeg(
+            type: TransactionType::TransferOut,
             amountMinor: -self::PAIR_AMOUNT_MINOR,
             description: 'Tikkie reimbursement to PayPal',
             sourceRef: 'DEMO-PAIR-OUT-1',
-            date: $pairDate,
-        );
-        $this->insertLeg(
-            $primary,
-            $paypal,
-            $paypalRun,
-            type: 'transfer_in',
+        ), $pairDate);
+        $this->insertLeg($primary, $paypal, $paypalRun, new DemoTransferLeg(
+            type: TransactionType::TransferIn,
             amountMinor: self::PAIR_AMOUNT_MINOR,
             description: 'Tikkie reimbursement from ASN',
             sourceRef: 'DEMO-PAIR-IN-1',
-            date: $pairDate,
-        );
+        ), $pairDate);
 
         $this->linkPair($primary, $pairDate);
 
@@ -102,37 +95,35 @@ final class DemoTransferPairsSeeder
         User $user,
         Account $account,
         ImportRun $run,
-        string $type,
-        int $amountMinor,
-        string $description,
-        string $sourceRef,
+        DemoTransferLeg $leg,
         CarbonImmutable $date,
     ): void {
-        $normalized = $this->fingerprints->normalize($description);
+        $normalized = $this->fingerprints->normalize($leg->description);
         $bookedAt = $date->setTime(12, 0, 0);
+        $isOut = $leg->type === TransactionType::TransferOut;
 
         $canonical = new CanonicalTransaction(
             userId: $user->id,
             accountId: $account->id,
-            type: $type,
+            type: $leg->type->value,
             postedAt: $date,
             bookedAt: $bookedAt,
             valueDate: $date,
-            amountMinor: $amountMinor,
+            amountMinor: $leg->amountMinor,
             currency: 'EUR',
-            settledAmountMinor: $amountMinor,
+            settledAmountMinor: $leg->amountMinor,
             settledCurrency: 'EUR',
             fxRateUsed: null,
-            counterpartyName: $type === 'transfer_out' ? 'PayPal' : 'ASN Bank',
-            counterpartyIban: $type === 'transfer_out' ? 'PAYPAL-DEMO-1' : 'NL57ASNB0123456789',
+            counterpartyName: $isOut ? 'PayPal' : 'ASN Bank',
+            counterpartyIban: $isOut ? 'PAYPAL-DEMO-1' : 'NL57ASNB0123456789',
             counterpartyNormalized: $normalized,
             normalizationVersion: $this->fingerprints->version(),
-            description: $description,
+            description: $leg->description,
             categoryId: null,
             sourceFormat: 'demo',
             importRunId: $run->id,
             sourceRowIndex: 0,
-            sourceRef: $sourceRef,
+            sourceRef: $leg->sourceRef,
             rawPayload: null,
             autoCategoryProvenance: null,
             paymentType: PaymentType::Transfer,
