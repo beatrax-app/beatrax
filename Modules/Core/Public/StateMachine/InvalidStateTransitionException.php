@@ -11,7 +11,7 @@ use RuntimeException;
 // row vanished mid-flight". The $subject is the table the machine guards.
 final class InvalidStateTransitionException extends RuntimeException
 {
-    public static function forTransition(string $subject, int $id, string $from, string $to): self
+    public static function forTransition(string $subject, int|string $id, string $from, string $to): self
     {
         return new self("Illegal {$subject} transition for id={$id}: {$from} -> {$to}");
     }

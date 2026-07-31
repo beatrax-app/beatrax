@@ -21,6 +21,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
+use Modules\Notifications\Public\Enums\NotificationState;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use Modules\Position\Public\Dto\PositionSummaryDto;
 use Modules\Position\Public\Events\PositionDigestDue;
@@ -477,7 +478,7 @@ final class DemoNotificationsSeeder
         $row = $this->db->connection()->table('drift_alerts')
             ->where('user_id', $user->id)
             ->where('recurring_series_id', $seriesId)
-            ->where('state', 'open')
+            ->where('state', NotificationState::Open->value)
             ->first(['id', 'direction', 'delta_minor', 'annualized_impact_minor', 'currency']);
 
         if (! $row instanceof stdClass
