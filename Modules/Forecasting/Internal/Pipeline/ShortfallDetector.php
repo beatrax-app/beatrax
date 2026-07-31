@@ -36,11 +36,35 @@ final readonly class ShortfallDetector
     ): array {
         $buffer = $effectiveBufferMinor ?? 0;
 
-        // Walk the points with a simple state machine. Track the start
-        // of the current shortfall (if any) plus the lowest point so
-        // far. Emit a window when the balance recovers above the
-        // buffer or at end-of-horizon.
-        /** @var list<array{starts_at: string, ends_at: string, lowest_balance_minor: int}> $windows */
+        $windows = $this->buildWindows($dailyPoints, $buffer);
+        $written = $this->persistWindows($windows, $accountId, $scenarioId, $buffer, $currency, $user);
+
+        foreach ($written as $row) {
+            $this->events->dispatch(new ForecastShortfallDetected(
+                userId: $user->id,
+                accountId: $accountId,
+                scenarioId: $scenarioId,
+                startsAt: Carbon::parse($row['starts_at']),
+                endsAt: Carbon::parse($row['ends_at']),
+                lowestBalanceMinor: $row['lowest_balance_minor'],
+                currency: $row['currency'],
+                bufferUsedMinor: $row['buffer_used_minor'],
+            ));
+        }
+
+        return $written;
+    }
+
+    /**
+     * @param  list<array{date: string, low_minor: int, point_minor: int, high_minor: int, currency: string}>  $dailyPoints
+     * @return list<array{starts_at: string, ends_at: string, lowest_balance_minor: int}>
+     */
+    private function buildWindows(array $dailyPoints, int $buffer): array
+    {
+        // Walk the points with a simple state machine. Track the start of
+        // the current shortfall (if any) plus the lowest point so far.
+        // Emit a window when the balance recovers above the buffer or at
+        // end-of-horizon.
         $windows = [];
         $startsAt = null;
         $lowestBalance = 0;
@@ -54,10 +78,8 @@ final readonly class ShortfallDetector
                 if ($startsAt === null) {
                     $startsAt = $date;
                     $lowestBalance = $point;
-                } else {
-                    if ($point < $lowestBalance) {
-                        $lowestBalance = $point;
-                    }
+                } elseif ($point < $lowestBalance) {
+                    $lowestBalance = $point;
                 }
                 $previousDate = $date;
 
@@ -67,10 +89,9 @@ final readonly class ShortfallDetector
             // Balance >= buffer — close any open window the day BEFORE
             // this one (the recovery day is not itself in shortfall).
             if ($startsAt !== null) {
-                $endsAt = $previousDate ?? $startsAt;
                 $windows[] = [
                     'starts_at' => $startsAt,
-                    'ends_at' => $endsAt,
+                    'ends_at' => $previousDate ?? $startsAt,
                     'lowest_balance_minor' => $lowestBalance,
                 ];
                 $startsAt = null;
@@ -89,6 +110,15 @@ final readonly class ShortfallDetector
             ];
         }
 
+        return $windows;
+    }
+
+    /**
+     * @param  list<array{starts_at: string, ends_at: string, lowest_balance_minor: int}>  $windows
+     * @return list<array{starts_at: string, ends_at: string, lowest_balance_minor: int, buffer_used_minor: int, currency: string}>
+     */
+    private function persistWindows(array $windows, int $accountId, ?int $scenarioId, int $buffer, string $currency, User $user): array
+    {
         // Persist + emit events inside a single transaction. Pre-write
         // cleanup is the canonical "the shortfall picture is fully
         // replaced on each projection run" semantic.
@@ -138,19 +168,6 @@ final readonly class ShortfallDetector
                 ];
             }
         });
-
-        foreach ($written as $row) {
-            $this->events->dispatch(new ForecastShortfallDetected(
-                userId: $user->id,
-                accountId: $accountId,
-                scenarioId: $scenarioId,
-                startsAt: Carbon::parse($row['starts_at']),
-                endsAt: Carbon::parse($row['ends_at']),
-                lowestBalanceMinor: $row['lowest_balance_minor'],
-                currency: $row['currency'],
-                bufferUsedMinor: $row['buffer_used_minor'],
-            ));
-        }
 
         return $written;
     }

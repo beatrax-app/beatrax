@@ -40,92 +40,136 @@ final readonly class ForecastHighlightsQuery
     public function forUser(User $user): ForecastHighlightsDto
     {
         $shortfallCount = $this->activeShortfallCountForUser($user);
-
-        // Lowest projected balance across all accounts in the next 30
-        // days. The forecast run carries every account's points in a
-        // single result_json, so hoist the run lookup OUT of the
-        // per-account loop (one query, not N).
-        $lowestMinor = null;
-        $lowestDate = null;
-        $lowestAccountId = null;
-        $lowestAccountName = null;
-
-        $run = $this->db->connection()->table('forecast_runs')
-            ->where('user_id', $user->id)
-            ->whereNull('scenario_id')
-            ->where('horizon_days', 30)
-            ->where('status', 'complete')
-            ->orderByDesc('id')
-            ->first(['result_json']);
-
-        $accountsBlock = null;
-        if ($run !== null) {
-            /** @var stdClass $run */
-            $rawJson = is_string($run->result_json ?? null) ? $run->result_json : '';
-            if ($rawJson !== '') {
-                $decoded = json_decode($rawJson, associative: true);
-                if (is_array($decoded) && is_array($decoded['accounts'] ?? null)) {
-                    /** @var array<int|string, mixed> $accountsBlock */
-                    $accountsBlock = $decoded['accounts'];
-                }
-            }
-        }
-
-        if ($accountsBlock !== null) {
-            $accounts = $this->db->connection()->table('accounts')
-                ->where('user_id', $user->id)
-                ->orderBy('name')
-                ->orderBy('id')
-                ->get(['id', 'name']);
-
-            foreach ($accounts as $accountRow) {
-                /** @var stdClass $accountRow */
-                $accountId = is_numeric($accountRow->id) ? (int) $accountRow->id : 0;
-                $accountName = is_string($accountRow->name) ? $accountRow->name : '';
-
-                $accountResult = $accountsBlock[(string) $accountId] ?? $accountsBlock[$accountId] ?? null;
-                if (! is_array($accountResult)) {
-                    continue;
-                }
-                $points = $accountResult['points'] ?? null;
-                if (! is_array($points)) {
-                    continue;
-                }
-                foreach ($points as $point) {
-                    if (! is_array($point)) {
-                        continue;
-                    }
-                    // Skip malformed rows entirely — a point without a
-                    // string date contributes nothing to the "lowest on
-                    // date X" surface; using '' as a sentinel let the
-                    // tile render " on " with no date.
-                    if (! is_string($point['date'] ?? null) || $point['date'] === '') {
-                        continue;
-                    }
-                    $pointMinor = isset($point['point_minor']) && is_numeric($point['point_minor'])
-                        ? (int) $point['point_minor']
-                        : 0;
-                    $pointDate = $point['date'];
-                    if ($lowestMinor === null || $pointMinor < $lowestMinor) {
-                        $lowestMinor = $pointMinor;
-                        $lowestDate = $pointDate;
-                        $lowestAccountId = $accountId;
-                        $lowestAccountName = $accountName;
-                    }
-                }
-            }
-        }
-
+        $lowest = $this->lowestProjectedBalance($user);
         $nextIcsSettlement = $this->cardStatementQuery->nextSettlementForUser($user);
 
         return new ForecastHighlightsDto(
             userId: $user->id,
-            lowestProjectedBalanceMinor: $lowestMinor,
-            lowestProjectedBalanceDate: $lowestDate,
-            lowestProjectedAccountId: $lowestAccountId,
-            lowestProjectedAccountName: $lowestAccountName,
+            lowestProjectedBalanceMinor: $lowest['balanceMinor'] ?? null,
+            lowestProjectedBalanceDate: $lowest['date'] ?? null,
+            lowestProjectedAccountId: $lowest['accountId'] ?? null,
+            lowestProjectedAccountName: $lowest['accountName'] ?? null,
             activeShortfallCount: $shortfallCount,
             nextIcsSettlement: $nextIcsSettlement,
         );
+    }
+
+    // Lowest projected balance across all accounts in the next 30 days.
+    // The forecast run carries every account's points in a single
+    // result_json, so the run is loaded once (not once per account).
+    /**
+     * @return array{balanceMinor: int, date: string, accountId: int, accountName: string}|null
+     */
+    private function lowestProjectedBalance(User $user): ?array
+    {
+        $accountsBlock = $this->loadLatestAccountsBlock($user);
+        if ($accountsBlock === null) {
+            return null;
+        }
+
+        $accounts = $this->db->connection()->table('accounts')
+            ->where('user_id', $user->id)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get(['id', 'name']);
+
+        $lowest = null;
+        foreach ($accounts as $accountRow) {
+            /** @var stdClass $accountRow */
+            $accountId = is_numeric($accountRow->id) ? (int) $accountRow->id : 0;
+            $accountName = is_string($accountRow->name) ? $accountRow->name : '';
+            $lowest = $this->lowestForAccount($accountsBlock, $accountId, $accountName, $lowest);
+        }
+
+        return $lowest;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $accountsBlock
+     * @param  array{balanceMinor: int, date: string, accountId: int, accountName: string}|null  $lowest
+     * @return array{balanceMinor: int, date: string, accountId: int, accountName: string}|null
+     */
+    private function lowestForAccount(array $accountsBlock, int $accountId, string $accountName, ?array $lowest): ?array
+    {
+        foreach ($this->pointsForAccount($accountsBlock, $accountId) as $point) {
+            $candidate = $this->pointMinorOnDate($point);
+            if ($candidate === null) {
+                continue;
+            }
+            [$pointMinor, $pointDate] = $candidate;
+            if ($lowest === null || $pointMinor < $lowest['balanceMinor']) {
+                $lowest = [
+                    'balanceMinor' => $pointMinor,
+                    'date' => $pointDate,
+                    'accountId' => $accountId,
+                    'accountName' => $accountName,
+                ];
+            }
+        }
+
+        return $lowest;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $accountsBlock
+     * @return array<int, mixed>
+     */
+    private function pointsForAccount(array $accountsBlock, int $accountId): array
+    {
+        $accountResult = $accountsBlock[(string) $accountId] ?? $accountsBlock[$accountId] ?? null;
+        if (! is_array($accountResult) || ! is_array($accountResult['points'] ?? null)) {
+            return [];
+        }
+
+        return array_values($accountResult['points']);
+    }
+
+    /**
+     * @return array{0: int, 1: string}|null
+     */
+    private function pointMinorOnDate(mixed $point): ?array
+    {
+        // Skip malformed rows entirely — a point without a string date
+        // contributes nothing to the "lowest on date X" surface; a ''
+        // sentinel would let the tile render " on " with no date.
+        if (! is_array($point) || ! is_string($point['date'] ?? null) || $point['date'] === '') {
+            return null;
+        }
+
+        $pointMinor = isset($point['point_minor']) && is_numeric($point['point_minor'])
+            ? (int) $point['point_minor']
+            : 0;
+
+        return [$pointMinor, $point['date']];
+    }
+
+    /**
+     * @return array<int|string, mixed>|null
+     */
+    private function loadLatestAccountsBlock(User $user): ?array
+    {
+        $run = $this->db->connection()->table('forecast_runs')
+            ->where('user_id', $user->id)
+            ->whereNull('scenario_id')
+            ->where('horizon_days', self::HORIZON_DAYS)
+            ->where('status', 'complete')
+            ->orderByDesc('id')
+            ->first(['result_json']);
+        if ($run === null) {
+            return null;
+        }
+
+        /** @var stdClass $run */
+        $rawJson = is_string($run->result_json ?? null) ? $run->result_json : '';
+        if ($rawJson === '') {
+            return null;
+        }
+
+        $decoded = json_decode($rawJson, associative: true);
+        if (! is_array($decoded) || ! is_array($decoded['accounts'] ?? null)) {
+            return null;
+        }
+
+        return $decoded['accounts'];
     }
 }

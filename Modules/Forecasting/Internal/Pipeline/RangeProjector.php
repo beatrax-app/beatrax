@@ -142,12 +142,8 @@ final readonly class RangeProjector
         array $occurrences,
     ): array {
         $next = $series->nextExpectedAt;
-        if ($next === null) {
-            return [];
-        }
-
         $cadence = $series->cadence;
-        if ($cadence === SeriesCadence::Irregular) {
+        if ($next === null || $cadence === SeriesCadence::Irregular) {
             return [];
         }
 

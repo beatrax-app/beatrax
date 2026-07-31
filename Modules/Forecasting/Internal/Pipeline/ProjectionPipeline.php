@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Internal\Exceptions\ForecastResultEncodingException;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Models\ForecastRun;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -47,7 +48,7 @@ final readonly class ProjectionPipeline
 
             $encoded = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if ($encoded === false) {
-                throw new \RuntimeException('ProjectionPipeline: failed to encode result_json.');
+                throw new ForecastResultEncodingException('ProjectionPipeline: failed to encode result_json.');
             }
 
             $this->db->connection()->table('forecast_runs')

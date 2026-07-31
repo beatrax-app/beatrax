@@ -11,6 +11,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Forecasting\Internal\Pipeline\BalanceAnchorResolver;
 use Modules\Forecasting\Public\Dto\AccountBalanceLine;
 use Modules\Forecasting\Public\Dto\NetWorth;
+use Modules\FX\Public\Dto\ConversionResult;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -41,9 +42,8 @@ final class NetWorthQuery
         $total = 0;
         $hasExcluded = false;
         $accountsWithoutRate = 0;
-        $hasStaleRates = false;
-        $latestSource = null;
-        $latestAsOf = null;
+        /** @var array{stale: bool, source: ?string, asOf: ?CarbonImmutable} $fxMeta */
+        $fxMeta = ['stale' => false, 'source' => null, 'asOf' => null];
 
         $baseCurrency = $user->base_currency;
 
@@ -86,23 +86,7 @@ final class NetWorthQuery
             }
 
             $total += $result->converted->toMinor();
-
-            // Track FX metadata from the latest non-passthrough conversion
-            // only — a passthrough (already-base-currency) line carries no
-            // rate/source/as-of worth surfacing.
-            if (! $result->isPassthrough) {
-                $hasStaleRates = $hasStaleRates || $result->isStale;
-
-                if ($result->source !== null) {
-                    $latestSource = $result->source;
-                }
-
-                if ($result->asOf !== null) {
-                    if ($latestAsOf === null || $result->asOf > $latestAsOf) {
-                        $latestAsOf = $result->asOf;
-                    }
-                }
-            }
+            $this->trackFxMetadata($fxMeta, $result);
         }
 
         return new NetWorth(
@@ -110,10 +94,31 @@ final class NetWorthQuery
             currency: $baseCurrency,
             accounts: $lines,
             hasExcludedAccounts: $hasExcluded,
-            ratesSource: $latestSource,
-            ratesAsOf: $latestAsOf instanceof CarbonImmutable ? $latestAsOf : null,
-            hasStaleRates: $hasStaleRates,
+            ratesSource: $fxMeta['source'],
+            ratesAsOf: $fxMeta['asOf'] instanceof CarbonImmutable ? $fxMeta['asOf'] : null,
+            hasStaleRates: $fxMeta['stale'],
             accountsWithoutRate: $accountsWithoutRate,
         );
+    }
+
+    /**
+     * @param  array{stale: bool, source: ?string, asOf: ?CarbonImmutable}  $meta
+     */
+    private function trackFxMetadata(array &$meta, ConversionResult $result): void
+    {
+        // A passthrough (already-base-currency) line carries no rate,
+        // source or as-of worth surfacing, so only non-passthrough
+        // conversions feed the rollup metadata.
+        if ($result->isPassthrough) {
+            return;
+        }
+
+        $meta['stale'] = $meta['stale'] || $result->isStale;
+        if ($result->source !== null) {
+            $meta['source'] = $result->source;
+        }
+        if ($result->asOf !== null && ($meta['asOf'] === null || $result->asOf > $meta['asOf'])) {
+            $meta['asOf'] = $result->asOf;
+        }
     }
 }
