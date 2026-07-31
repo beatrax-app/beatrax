@@ -55,7 +55,7 @@ final class ColdStartBiometricSettingsSection extends Component
         $pin = $this->pin;
         $this->pin = '';
 
-        if (preg_match('/^[0-9]{4,10}$/', $pin) !== 1) {
+        if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
             $this->flashMessage = 'Enter your PIN (4–10 digits) to enable biometric unlock.';
 
             return;

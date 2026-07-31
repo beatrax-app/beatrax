@@ -40,33 +40,36 @@ final class SpikeSyncDialCommand extends Command
 
         try {
             $frameSeen = $this->dialOnce($uri);
-        } catch (WebsocketConnectException|CancelledException $e) {
-            // Peer unreachable or the connect budget fired - either way the
-            // Revolt loop still ran to completion (a refused socket reaches
-            // a definite result), so the loop-topology proof holds. This is
-            // the expected outcome when no desktop sync:serve is listening.
+            $this->info($frameSeen
+                ? 'mobile:spike-dial: connected, received one frame, closed cleanly.'
+                : 'mobile:spike-dial: connected, no frame within probe window, closed cleanly.');
+            $this->info('RESULT: SUCCESS (Revolt loop drove to completion; no loop-conflict).');
+
+            return self::SUCCESS;
+        } catch (Throwable $e) {
+            return $this->reportDialFailure($e);
+        }
+    }
+
+    // Splits the two catch outcomes without a second try: an unreachable
+    // peer or fired connect budget still proves the Revolt loop drove to
+    // completion (SUCCESS), whereas any other throwable is the native-loop
+    // / Revolt-driver conflict the on-device run watches for (FAILURE).
+    private function reportDialFailure(Throwable $e): int
+    {
+        if ($e instanceof WebsocketConnectException || $e instanceof CancelledException) {
             $this->warn('mobile:spike-dial: peer unreachable — no desktop sync:serve listening (or connect timed out).');
             $this->line('  reason: '.$e::class.': '.$e->getMessage());
             $this->info('RESULT: SUCCESS (Revolt loop drove to completion; no loop-conflict).');
 
             return self::SUCCESS;
-        } catch (Throwable $e) {
-            // Any other throwable is the shape a native-loop / Revolt-driver
-            // conflict would take under the NativePHP mobile runtime. This is
-            // the genuine NO-GO signal the on-device run is watching for.
-            $this->error('mobile:spike-dial: UNEXPECTED failure driving the event loop.');
-            $this->line('  '.$e::class.': '.$e->getMessage());
-            $this->info('RESULT: FAILURE (possible native-loop / Revolt-driver conflict).');
-
-            return self::FAILURE;
         }
 
-        $this->info($frameSeen
-            ? 'mobile:spike-dial: connected, received one frame, closed cleanly.'
-            : 'mobile:spike-dial: connected, no frame within probe window, closed cleanly.');
-        $this->info('RESULT: SUCCESS (Revolt loop drove to completion; no loop-conflict).');
+        $this->error('mobile:spike-dial: UNEXPECTED failure driving the event loop.');
+        $this->line('  '.$e::class.': '.$e->getMessage());
+        $this->info('RESULT: FAILURE (possible native-loop / Revolt-driver conflict).');
 
-        return self::SUCCESS;
+        return self::FAILURE;
     }
 
     /**

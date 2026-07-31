@@ -8,6 +8,7 @@ use Amp\Http\Client\Response;
 use Amp\Socket\SocketAddress;
 use Amp\Socket\TlsInfo;
 use Amp\Socket\UnixAddress;
+use Amp\TimeoutException;
 use Amp\Websocket\Client\WebsocketConnection;
 use Amp\Websocket\WebsocketCloseInfo;
 use Amp\Websocket\WebsocketCount;
@@ -20,6 +21,7 @@ use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Mobile\Internal\Exceptions\LanSyncException;
 use Modules\Mobile\Internal\Sync\LanSyncClient;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
@@ -336,4 +338,247 @@ it('skips a malformed pushed frame without throwing and without appending anythi
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
     expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a malformed frame must never append anything to the keyring');
+});
+
+/*
+ * ── Additional LanSyncClient fault-branch coverage ────────────────────────
+ *
+ * The cases below drive the fault branches the converge/malformed pair above
+ * never reaches: the handshake premature-disconnect throw, the two remaining
+ * receiveGdkEpochWraps loop exits (read-timeout and a non-wrap control
+ * frame), and the confirmed-device-gate rejection factory. A live successful
+ * dial (real desktop peer) stays Manual-Only Verification, so the
+ * gate-rejection throw site inside syncOnce() is asserted through its
+ * dedicated LanSyncException factory rather than a live socket.
+ */
+
+/**
+ * A scripted WebsocketConnection whose sendBinary() is a NO-OP (so
+ * performHandshake's msg1 send does not blow up) and whose receive() replays
+ * a script: a WebsocketMessage is returned as-is, '__NULL__' returns null
+ * (clean disconnect), and '__TIMEOUT__' throws Amp\TimeoutException.
+ */
+function lanScriptedFakeConnection(array $script): WebsocketConnection
+{
+    return new class($script) implements IteratorAggregate, WebsocketConnection
+    {
+        private int $cursor = 0;
+
+        public function __construct(private array $script) {}
+
+        public function receive(?Cancellation $cancellation = null): ?WebsocketMessage
+        {
+            if ($this->cursor >= count($this->script)) {
+                return null;
+            }
+
+            $item = $this->script[$this->cursor++];
+
+            if ($item === '__TIMEOUT__') {
+                throw new TimeoutException('scripted read timeout');
+            }
+
+            if ($item === '__NULL__') {
+                return null;
+            }
+
+            return $item;
+        }
+
+        public function getHandshakeResponse(): Response
+        {
+            throw new LogicException('not used in this test');
+        }
+
+        public function getId(): int
+        {
+            return 2;
+        }
+
+        public function getLocalAddress(): SocketAddress
+        {
+            return new UnixAddress('test');
+        }
+
+        public function getRemoteAddress(): SocketAddress
+        {
+            return new UnixAddress('test');
+        }
+
+        public function getTlsInfo(): ?TlsInfo
+        {
+            return null;
+        }
+
+        public function getCloseInfo(): WebsocketCloseInfo
+        {
+            throw new LogicException('not used in this test');
+        }
+
+        public function isCompressionEnabled(): bool
+        {
+            return false;
+        }
+
+        public function sendText(string $data): void {}
+
+        public function sendBinary(string $data): void {}
+
+        public function streamText(ReadableStream $stream): void {}
+
+        public function streamBinary(ReadableStream $stream): void {}
+
+        public function ping(): void {}
+
+        public function getCount(WebsocketCount $type): int
+        {
+            return 0;
+        }
+
+        public function getTimestamp(WebsocketTimestamp $type): float
+        {
+            return NAN;
+        }
+
+        public function isClosed(): bool
+        {
+            return false;
+        }
+
+        public function close(int $code = 1000, string $reason = ''): void {}
+
+        public function onClose(Closure $onClose): void {}
+
+        public function getIterator(): Traversable
+        {
+            return new ArrayIterator([]);
+        }
+    };
+}
+
+it('throws LanSyncException when the peer disconnects before sending the Noise msg2 handshake frame', function (): void {
+    $user = lanReceiveUser('lan-handshake-disconnect');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $phone = $identityService->generateAndPersist($userId, $session);
+
+    // A real, well-formed desktop static X25519 public key — the handshake
+    // gets far enough to send msg1, then the peer vanishes (receive() ->
+    // null) before msg2, which is the premature-disconnect throw.
+    $desktopPublicHex = sodium_bin2hex(sodium_crypto_kx_publickey(sodium_crypto_kx_keypair()));
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+
+    $performHandshake = new ReflectionMethod($client, 'performHandshake');
+    $connection = lanScriptedFakeConnection(['__NULL__']);
+
+    expect(fn () => $performHandshake->invoke($client, $connection, $phone, $desktopPublicHex))
+        ->toThrow(LanSyncException::class, 'peer disconnected before sending Noise msg2');
+});
+
+it('ends the GDK receive loop cleanly when the read times out (no more pushed wraps)', function (): void {
+    $user = lanReceiveUser('lan-receive-timeout');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+
+    // A read timeout on the very first receive() means "the desktop's fixed
+    // push step is over" — the loop must break without throwing and without
+    // needing to decrypt anything.
+    $phoneSyncSession = lanReceiveBareSyncSession();
+    $connection = lanScriptedFakeConnection(['__TIMEOUT__']);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+
+    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a read-timeout exit must never append anything to the keyring');
+});
+
+it('ends the GDK receive loop on a well-formed but non-wrap control frame', function (): void {
+    $user = lanReceiveUser('lan-receive-nonwrap');
+    $userId = (int) $user->id;
+    test()->actingAs($user);
+
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$userId.'.enc'));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    (new LockStateManager)->unlock($session, str_repeat('k', 32));
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $phone = $identityService->generateAndPersist($userId, $session);
+
+    $desktopKp = sodium_crypto_kx_keypair();
+    $desktopSecret = sodium_crypto_kx_secretkey($desktopKp);
+    $desktopPublic = sodium_crypto_kx_publickey($desktopKp);
+
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => 'desktop-peer-nonwrap',
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        'x25519_public_key_hex' => sodium_bin2hex($desktopPublic),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-07-14T10:00:00Z',
+        'confirmed_at' => '2026-07-14T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-07-14T10:00:00Z',
+        'updated_at' => '2026-07-14T10:00:00Z',
+    ]);
+
+    [$phoneNoiseSession, $desktopNoiseSession] = lanReceiveNoisePair(
+        sodium_hex2bin($phone->x25519SecretKeyHex),
+        sodium_hex2bin($phone->x25519PublicKeyHex),
+        $desktopSecret,
+        $desktopPublic,
+    );
+
+    $phoneSyncSession = lanReceiveBareSyncSession();
+    $phoneSyncSession->authenticate($phoneNoiseSession, $userId, $phone->deviceId);
+
+    // A perfectly valid control message that parseControlMessage() accepts
+    // (JSON object with a string "type"), but whose type is NOT
+    // GDK_EPOCH_WRAP — the desktop's fixed push step is over, so the loop
+    // ends here without routing anything into the delivery gateway.
+    $nonWrapFrame = $desktopNoiseSession->encrypt(json_encode(['type' => 'CATCH_UP_COMPLETE'], JSON_THROW_ON_ERROR));
+
+    $connection = lanReceiveFakeConnection([WebsocketMessage::fromBinary($nonWrapFrame)]);
+
+    /** @var LanSyncClient $client */
+    $client = app(LanSyncClient::class);
+    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a non-wrap control frame must never append anything to the keyring');
+});
+
+it('LanSyncException::peerFailedConfirmedDeviceGate carries the T-13-13 confirmed-device-gate rejection message', function (): void {
+    // syncOnce() throws this the moment a peer completes the Noise handshake
+    // yet fails SyncSession::authenticate() (a security-relevant rejection,
+    // never a retryable transient). The live-dial throw site is Manual-Only,
+    // so the factory contract is pinned here directly.
+    $exception = LanSyncException::peerFailedConfirmedDeviceGate();
+
+    expect($exception)->toBeInstanceOf(LanSyncException::class)
+        ->and($exception->getMessage())->toContain('confirmed-device auth gate');
 });

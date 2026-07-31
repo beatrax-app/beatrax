@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
 use Throwable;
@@ -58,36 +59,22 @@ final class MobileImportBootstrap extends Component
         DatabaseManager $db,
         MobileImportIntentGate $importIntent,
     ): void {
-        if ($this->password !== $this->passwordConfirmation) {
-            $this->flashMessage = 'Passwords do not match.';
+        if (($passwordError = $this->passwordError()) !== null) {
+            $this->flashMessage = $passwordError;
             $this->password = '';
             $this->passwordConfirmation = '';
 
             return;
         }
 
-        if (strlen($this->password) < self::MINIMUM_PASSWORD_LENGTH) {
-            $this->flashMessage = 'Use at least 12 characters.';
-            $this->password = '';
-            $this->passwordConfirmation = '';
-
-            return;
-        }
-
-        if (strlen($this->pin) < 4) {
-            $this->flashMessage = 'PIN must be at least 4 digits.';
-
-            return;
-        }
-
-        if ($this->pin !== $this->confirmPin) {
-            $this->flashMessage = "PINs don't match. Try again.";
+        if (($pinError = $this->pinError()) !== null) {
+            $this->flashMessage = $pinError;
 
             return;
         }
 
         try {
-            $result = $signup->__invoke($this->username, $this->password);
+            $userId = $signup->__invoke($this->username, $this->password)['user']->id;
         } catch (ValidationException $e) {
             $this->flashMessage = self::firstErrorMessage($e);
             $this->password = '';
@@ -96,14 +83,11 @@ final class MobileImportBootstrap extends Component
             return;
         }
 
-        $userId = $result['user']->id;
-
         // The plaintext PIN/password must never linger in the component's
         // public wire snapshot once used - a public Livewire property
         // survives re-renders inside the serialized wire:snapshot payload
         // sent to the browser on every subsequent request.
-        $pin = $this->pin;
-        $accountPassword = $this->password;
+        $credentials = new MobileProvisioningCredentials($userId, $this->pin, $this->password);
         $this->pin = '';
         $this->confirmPin = '';
         $this->password = '';
@@ -113,16 +97,32 @@ final class MobileImportBootstrap extends Component
         // the client) so a genuine mid-flow failure after signup already
         // committed can still be retried with the same real credentials -
         // never the empty properties cleared immediately above.
-        $session->put(self::PENDING_CREDENTIALS_SESSION_KEY, ['pin' => $pin, 'password' => $accountPassword]);
+        $session->put(self::PENDING_CREDENTIALS_SESSION_KEY, ['pin' => $credentials->pin, 'password' => $credentials->accountPassword]);
 
-        if (! $this->provisionDeviceLocally($userId, $pin, $accountPassword, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
+        if ($this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
+            $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
+            $this->step = 'recovery_codes';
+        } else {
             $this->step = 'provisioning_failed';
-
-            return;
         }
+    }
 
-        $session->forget(self::PENDING_CREDENTIALS_SESSION_KEY);
-        $this->step = 'recovery_codes';
+    private function passwordError(): ?string
+    {
+        return match (true) {
+            $this->password !== $this->passwordConfirmation => 'Passwords do not match.',
+            strlen($this->password) < self::MINIMUM_PASSWORD_LENGTH => 'Use at least 12 characters.',
+            default => null,
+        };
+    }
+
+    private function pinError(): ?string
+    {
+        return match (true) {
+            strlen($this->pin) < 4 => 'PIN must be at least 4 digits.',
+            $this->pin !== $this->confirmPin => "PINs don't match. Try again.",
+            default => null,
+        };
     }
 
     // Idempotent-safe retry of the provisioning steps only - never
@@ -153,7 +153,9 @@ final class MobileImportBootstrap extends Component
             return;
         }
 
-        if (! $this->provisionDeviceLocally($userId, $pending['pin'], $pending['password'], $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
+        $credentials = new MobileProvisioningCredentials($userId, $pending['pin'], $pending['password']);
+
+        if (! $this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
             $this->flashMessage = 'Still could not finish setting up this device. Please try again.';
 
             return;
@@ -195,15 +197,14 @@ final class MobileImportBootstrap extends Component
     // device_registry row or needlessly re-rotates an already-minted
     // app-lock data key. Returns false on any failure, never throws.
     private function provisionDeviceLocally(
-        int $userId,
-        string $pin,
-        string $accountPassword,
+        MobileProvisioningCredentials $credentials,
         Session $session,
         MobileLockGateway $lockGateway,
         PairingGateway $pairingGateway,
         DatabaseManager $db,
         MobileImportIntentGate $importIntent,
     ): bool {
+        $userId = $credentials->userId;
         $importIntent->markImporting($userId);
 
         try {
@@ -213,7 +214,7 @@ final class MobileImportBootstrap extends Component
                 ->value('lock_enabled') ?? false);
 
             if (! $lockAlreadyEnabled) {
-                $lockGateway->enableAppLock($userId, $pin, $accountPassword, $session);
+                $lockGateway->enableAppLock($userId, $credentials->pin, $credentials->accountPassword, $session);
             }
 
             $identityAlreadyExists = $db->connection()
