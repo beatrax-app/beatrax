@@ -83,7 +83,7 @@ final class OAuthClientWizardModal extends Component
 
     private function validateCredentials(string $provider): ?string
     {
-        return $provider === 'microsoft'
+        return $provider === MailProvider::Microsoft->value
             ? $this->validateMicrosoftCredentials()
             : $this->validateGoogleCredentials();
     }
@@ -169,13 +169,13 @@ final class OAuthClientWizardModal extends Component
 
     public function cancel(): void
     {
-        $provider = $this->provider ?? 'gmail';
+        $provider = $this->provider ?? MailProvider::Gmail->value;
         $this->dispatch('modal-close', name: 'oauth-client-wizard-'.$provider);
     }
 
     public function render(ViewFactory $views, LoopbackRedirectUri $loopback): View
     {
-        $provider = $this->provider ?? 'gmail';
+        $provider = $this->provider ?? MailProvider::Gmail->value;
         $redirectUri = $loopback->forProvider($provider);
 
         return $views->make('email-scan::livewire.oauth-client-wizard-modal', [

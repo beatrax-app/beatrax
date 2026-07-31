@@ -26,6 +26,8 @@ use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Public\Dto\ScanCursor;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Psr\Log\LoggerInterface;
@@ -100,7 +102,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         if ($senderPatterns === []) {
             $sm->applyStatus(
                 $this->inboxId,
-                'idle',
+                InboxScanStatus::Idle->value,
                 'No known senders are configured for this user.',
             );
 
@@ -118,11 +120,11 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         // data bypassed the migration; it surfaces the misconfiguration
         // without retrying forever rather than walking an empty provider.
         match ($provider) {
-            'gmail' => $this->runGmailBackfill($context, $gmail, $senderPatterns, $window),
-            'microsoft' => $this->runMicrosoftBackfill($context, $graph, $senderPatterns, $window),
+            MailProvider::Gmail->value => $this->runGmailBackfill($context, $gmail, $senderPatterns, $window),
+            MailProvider::Microsoft->value => $this->runMicrosoftBackfill($context, $graph, $senderPatterns, $window),
             default => $sm->applyStatus(
                 $this->inboxId,
-                'error',
+                InboxScanStatus::Error->value,
                 "Unknown provider '{$provider}' — backfill cannot proceed.",
             ),
         };
@@ -137,7 +139,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         array $senderPatterns,
         int $windowMonths,
     ): void {
-        $context->sm->applyStatus($this->inboxId, 'backfilling');
+        $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
 
         // Honours the user-selected window: the Gmail after: operator
         // bounds the q= search to this date floor so the walk stops
@@ -200,7 +202,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         array $senderPatterns,
         int $windowMonths,
     ): void {
-        $context->sm->applyStatus($this->inboxId, 'backfilling');
+        $context->sm->applyStatus($this->inboxId, InboxScanStatus::Backfilling->value);
 
         // Captures the wall-clock anchor before any provider call so
         // the post-walk deltaPage(null, anchor) baseline uses the
@@ -346,7 +348,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         try {
             $sm->applyStatus(
                 $this->inboxId,
-                'error',
+                InboxScanStatus::Error->value,
                 substr($exception->getMessage(), 0, 500),
             );
         } catch (Throwable $stateWriteFailure) {
@@ -371,7 +373,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         // both through the state machine so its lifecycle write
         // boundary covers backfill_progress alongside status/cursor.
         $context->sm->recordBackfillProgress($this->inboxId, null);
-        $context->sm->applyStatus($this->inboxId, 'idle');
+        $context->sm->applyStatus($this->inboxId, InboxScanStatus::Idle->value);
     }
 
     // Both provider branches share one error envelope: rate-limit
@@ -383,17 +385,17 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         match (true) {
             $e instanceof RateLimitedException => $context->sm->applyStatus(
                 $this->inboxId,
-                'rate_limited',
+                InboxScanStatus::RateLimited->value,
                 "Retry after {$e->retryAfterSeconds}s.",
             ),
             $e instanceof InvalidGrantException => $context->sm->applyStatus(
                 $this->inboxId,
-                'needs_reauth',
+                InboxScanStatus::NeedsReauth->value,
                 'OAuth grant revoked or expired.',
             ),
             default => $context->sm->applyStatus(
                 $this->inboxId,
-                'error',
+                InboxScanStatus::Error->value,
                 substr($e->getMessage(), 0, 500),
             ),
         };

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Models\OAuthSecret;
+use Modules\EmailScan\Public\Enums\MailProvider;
 
 /**
  * @extends Factory<OAuthSecret>
@@ -20,7 +21,7 @@ final class OAuthSecretFactory extends Factory
     /** @return array<string, mixed> */
     public function definition(): array
     {
-        $providers = ['gmail', 'microsoft'];
+        $providers = [MailProvider::Gmail->value, MailProvider::Microsoft->value];
         $provider = $providers[array_rand($providers)];
 
         // client_secret and tokens_blob are plaintext here; OAuthSecret's
