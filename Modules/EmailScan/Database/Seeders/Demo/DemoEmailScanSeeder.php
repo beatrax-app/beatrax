@@ -12,6 +12,7 @@ use Modules\EmailScan\Models\InboxMessage;
 use Modules\EmailScan\Models\InboxScanState;
 use Modules\EmailScan\Models\KnownSender;
 use Modules\EmailScan\Models\OAuthSecret;
+use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 
@@ -80,7 +81,7 @@ final class DemoEmailScanSeeder
             'mailings@hema.nl',
             'HEMA Mailings',
             sampleMessageId: $messageGmail1->id,
-            state: 'candidate',
+            state: DiscoveredSenderState::Candidate->value,
             occurrenceCount: 3,
         );
         $this->upsertDiscoveredSender(
@@ -89,7 +90,7 @@ final class DemoEmailScanSeeder
             'support@coolblue.nl',
             'Coolblue Support',
             sampleMessageId: $messageGmail2->id,
-            state: 'added',
+            state: DiscoveredSenderState::Added->value,
             occurrenceCount: 7,
         );
         $this->upsertDiscoveredSender(
@@ -98,7 +99,7 @@ final class DemoEmailScanSeeder
             'noreply@aliexpress.com',
             'AliExpress',
             sampleMessageId: $messageMs1->id,
-            state: 'dismissed',
+            state: DiscoveredSenderState::Dismissed->value,
             occurrenceCount: 1,
         );
 

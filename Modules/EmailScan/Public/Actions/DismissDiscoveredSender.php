@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Dismisses a discovered_senders candidate so DiscoveryScanJob
@@ -37,7 +38,7 @@ final class DismissDiscoveredSender
             }
 
             $rawState = is_string($row->state ?? null) ? $row->state : '';
-            if ($rawState !== 'candidate') {
+            if ($rawState !== DiscoveredSenderState::Candidate->value) {
                 return;
             }
 
@@ -45,7 +46,7 @@ final class DismissDiscoveredSender
                 ->where('id', $discoveredSenderId)
                 ->where('user_id', $user->id)
                 ->update([
-                    'state' => 'dismissed',
+                    'state' => DiscoveredSenderState::Dismissed->value,
                     'updated_at' => $this->clock->now()->toDateTimeString(),
                 ]);
         });

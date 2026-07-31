@@ -7,6 +7,7 @@ namespace Modules\Onboarding\Internal\Services;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Onboarding\Public\Enums\WizardStepStatus;
 
 /**
  * @link ../../../../.docs/features/onboarding/architecture.md
@@ -33,7 +34,7 @@ final readonly class WizardProgressInitializer
 
         // See architecture.md for why a newly-registered step seeds as
         // skipped (not pending) for an already-finished user.
-        $seedStatus = ($existing !== [] && ! $hasPending) ? 'skipped' : 'pending';
+        $seedStatus = ($existing !== [] && ! $hasPending) ? WizardStepStatus::Skipped->value : WizardStepStatus::Pending->value;
 
         foreach ($this->registry->steps() as $stepKey) {
             if (! isset($existing[$stepKey])) {
@@ -53,7 +54,7 @@ final readonly class WizardProgressInitializer
             if (is_string($row->step_key)) {
                 $existing[$row->step_key] = true;
             }
-            if ($row->status !== 'done' && $row->status !== 'skipped') {
+            if ($row->status !== WizardStepStatus::Done->value && $row->status !== WizardStepStatus::Skipped->value) {
                 $hasPending = true;
             }
         }

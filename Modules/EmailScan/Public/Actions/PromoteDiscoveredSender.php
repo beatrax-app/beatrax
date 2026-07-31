@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Promotes a discovered_senders candidate into known_senders and
@@ -37,7 +38,7 @@ final class PromoteDiscoveredSender
             }
 
             $rawState = is_string($row->state ?? null) ? $row->state : '';
-            if ($rawState !== 'candidate') {
+            if ($rawState !== DiscoveredSenderState::Candidate->value) {
                 return;
             }
 
@@ -63,7 +64,7 @@ final class PromoteDiscoveredSender
                 ->where('id', $discoveredSenderId)
                 ->where('user_id', $user->id)
                 ->update([
-                    'state' => 'added',
+                    'state' => DiscoveredSenderState::Added->value,
                     'updated_at' => $now,
                 ]);
         });

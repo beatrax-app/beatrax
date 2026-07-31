@@ -32,11 +32,11 @@
 <nav {{ $attributes->class(['wiz-dots']) }} aria-label="Setup progress">
     @foreach ($stepKeys as $index => $stepKey)
         @php
-            $status = $progress[$stepKey]['status'] ?? 'pending';
+            $status = $progress[$stepKey]['status'] ?? \Modules\Onboarding\Public\Enums\WizardStepStatus::Pending->value;
             $isCurrent = $stepKey === $current;
             $dotClass = match (true) {
                 $isCurrent => 'dot now',
-                $status === 'done', $status === 'skipped' => 'dot done',
+                $status === \Modules\Onboarding\Public\Enums\WizardStepStatus::Done->value, $status === \Modules\Onboarding\Public\Enums\WizardStepStatus::Skipped->value => 'dot done',
                 default => 'dot',
             };
         @endphp

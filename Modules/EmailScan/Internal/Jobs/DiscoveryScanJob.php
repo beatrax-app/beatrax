@@ -22,6 +22,7 @@ use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\Clients\RateLimitedException;
+use Modules\EmailScan\Public\Enums\DiscoveredSenderState;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use stdClass;
@@ -120,7 +121,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         );
         $rawDismissed = $connection->table('discovered_senders')
             ->where('user_id', $this->userId)
-            ->whereIn('state', ['dismissed', 'added'])
+            ->whereIn('state', [DiscoveredSenderState::Dismissed->value, DiscoveredSenderState::Added->value])
             ->pluck('sender_email')
             ->toArray();
         $dismissedSenders = [];
@@ -378,7 +379,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
                 'sender_name' => $senderName,
                 'occurrence_count' => 1,
                 'last_seen_at' => $internalDateStr,
-                'state' => 'candidate',
+                'state' => DiscoveredSenderState::Candidate->value,
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -387,7 +388,7 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         }
 
         $existingState = is_string($existing->state ?? null) ? $existing->state : '';
-        if ($existingState !== 'candidate') {
+        if ($existingState !== DiscoveredSenderState::Candidate->value) {
             return;
         }
 

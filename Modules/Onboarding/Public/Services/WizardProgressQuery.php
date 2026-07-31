@@ -6,6 +6,7 @@ namespace Modules\Onboarding\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
+use Modules\Onboarding\Public\Enums\WizardStepStatus;
 
 // Returns one entry per registry step keyed by step_key in registry
 // order, falling back to pending/null for a missing row so a
@@ -40,7 +41,7 @@ final readonly class WizardProgressQuery
         $progress = [];
         foreach ($this->registry->steps() as $stepKey) {
             $progress[$stepKey] = $byStep[$stepKey] ?? [
-                'status' => 'pending',
+                'status' => WizardStepStatus::Pending->value,
                 'completed_at' => null,
             ];
         }

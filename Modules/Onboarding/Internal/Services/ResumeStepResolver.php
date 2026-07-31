@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Onboarding\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Onboarding\Public\Enums\WizardStepStatus;
 
 /**
  * @link ../../../../.docs/features/onboarding/architecture.md
@@ -31,13 +32,13 @@ final readonly class ResumeStepResolver
         }
 
         foreach ($this->registry->steps() as $stepKey) {
-            if (($statusByStep[$stepKey] ?? null) === 'in_progress') {
+            if (($statusByStep[$stepKey] ?? null) === WizardStepStatus::InProgress->value) {
                 return $stepKey;
             }
         }
 
         foreach ($this->registry->steps() as $stepKey) {
-            if (($statusByStep[$stepKey] ?? null) === 'pending') {
+            if (($statusByStep[$stepKey] ?? null) === WizardStepStatus::Pending->value) {
                 return $stepKey;
             }
         }
