@@ -24,6 +24,8 @@ final class HeaderSniffer
 {
     private const EMPTY_FILE_MESSAGE = 'The file is empty.';
 
+    private const CSV_EXTENSION_REGEX = '/\.csv$/i';
+
     private const HEAD_BYTES = 8192;
 
     private const UTF8_BOM = "\xEF\xBB\xBF";
@@ -82,7 +84,7 @@ final class HeaderSniffer
     // optional columns still sniffs.
     private function sniffPresetCsv(CsvPreset $preset, string $path, string $head): SniffResult
     {
-        if (preg_match('/\.csv$/i', $path) !== 1) {
+        if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
             throw new SniffMismatchException(sprintf(
                 "That file doesn't look like a CSV. Drop in the %s CSV export.",
                 $preset->label,
@@ -174,7 +176,7 @@ final class HeaderSniffer
     // render a specific message.
     private function sniffPaypalCsv(string $path, string $head): SniffResult
     {
-        if (preg_match('/\.csv$/i', $path) !== 1) {
+        if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
             throw new SniffMismatchException(
                 "That file doesn't look like a CSV. In the PayPal portal, open the custom statements view, switch to the Betalingen tab, and download Rapport Transactiegegevens as CSV."
             );
@@ -311,7 +313,7 @@ final class HeaderSniffer
 
     private function sniffAsnCsv(string $path, string $head): SniffResult
     {
-        if (preg_match('/\.csv$/i', $path) !== 1) {
+        if (preg_match(self::CSV_EXTENSION_REGEX, $path) !== 1) {
             throw new SniffMismatchException(
                 "That file doesn't look like a CSV. Drop in the ASN CSV export you downloaded from the ASN portal."
             );
