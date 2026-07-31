@@ -26,21 +26,8 @@ final class ActualGoalDefInterpreter
             return null;
         }
 
-        // A multi-step template/schedule is explicitly non-flat — never
-        // reduced to a single target.
-        if (isset($decoded['steps']) || isset($decoded['schedule'])) {
-            return null;
-        }
-
-        $type = $decoded['type'] ?? null;
-        if (! in_array($type, ['simple', 'target', null], true)) {
-            // An unrecognised/complex type keyword — treat conservatively
-            // as non-flat rather than guessing at its shape.
-            return null;
-        }
-
-        $amount = $decoded['amount'] ?? null;
-        if (! is_int($amount) || $amount <= 0) {
+        $amount = $this->flatGoalAmount($decoded);
+        if ($amount === null) {
             return null;
         }
 
@@ -50,6 +37,28 @@ final class ActualGoalDefInterpreter
             targetAmount: Money::ofMinor($amount, $currency),
             targetDate: $this->parseTargetDate($decoded),
         );
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $decoded
+     */
+    private function flatGoalAmount(array $decoded): ?int
+    {
+        // A multi-step template/schedule, or an unrecognised type keyword,
+        // is non-flat — treated conservatively as "no single target"
+        // rather than guessing at its shape.
+        if (isset($decoded['steps']) || isset($decoded['schedule'])) {
+            return null;
+        }
+
+        $type = $decoded['type'] ?? null;
+        if (! in_array($type, ['simple', 'target', null], true)) {
+            return null;
+        }
+
+        $amount = $decoded['amount'] ?? null;
+
+        return is_int($amount) && $amount > 0 ? $amount : null;
     }
 
     /**

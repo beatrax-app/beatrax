@@ -245,8 +245,7 @@ final class PreviewSummaryBuilder
             ? null
             : $this->codec->decryptValue('transactions', 'description', self::toString($txn->description), $user->id, ($this->session)())['value'];
 
-        $identifier = $counterpartyName !== null ? $counterpartyName
-            : ($description !== null ? $description : 'Transaction');
+        $identifier = $counterpartyName ?? $description ?? 'Transaction';
         $date = $txn->posted_at !== null ? CarbonImmutable::parse(self::toString($txn->posted_at))->format('j M Y') : null;
 
         return $date !== null ? "{$identifier} · {$date} {$fieldLabel}" : "{$identifier} {$fieldLabel}";
