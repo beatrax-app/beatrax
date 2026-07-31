@@ -50,9 +50,7 @@ final class GoalProgressQuery
      */
     private function loadRows(User $user, string ...$statuses): array
     {
-        $connection = $this->db->connection();
-
-        $goalRows = $connection->table('goals')
+        $goalRows = $this->db->connection()->table('goals')
             ->leftJoin('accounts', 'goals.account_id', '=', 'accounts.id')
             ->where('goals.user_id', $user->id)
             ->whereIn('goals.status', $statuses)
@@ -73,68 +71,85 @@ final class GoalProgressQuery
             return [];
         }
 
-        // Batch-load pot balances keyed by goal_id — avoids N+1 in the loop
-        // below.
+        // Batch-load pot balances keyed by goal_id up front — avoids an N+1
+        // lookup per row when resolving each goal's contribution.
         $linkedPotBalances = $this->potBalance->linkedPotBalancesForUser($user);
 
-        // Build a lightweight Goal model per row so GoalProjectionService can
-        // consume the model's typed properties (start_date as CarbonImmutable,
-        // account_id, target_minor, etc.) without re-implementing casting here.
         $rows = [];
         foreach ($goalRows as $row) {
-            $goal = $this->hydrateGoal($row);
-            $accountName = isset($row->account_name) && is_string($row->account_name)
-                ? $row->account_name
-                : null;
-
-            // If this goal has an active linked pot, use the pot's balance as
-            // contributedMinor (FX-converted into target_currency when
-            // needed); otherwise fall back to sumContributions() below.
-            $goalId = self::toInt($row->id);
-            if (isset($linkedPotBalances[$goalId])) {
-                $potMinor = $linkedPotBalances[$goalId]['balance'];
-                $potCurrency = $linkedPotBalances[$goalId]['currency'];
-                $targetCurrency = self::toString($row->target_currency);
-
-                if ($potCurrency !== '' && $potCurrency !== $targetCurrency) {
-                    $money = Money::ofMinor($potMinor, $potCurrency);
-                    $contributedMinor = $this->fx->convertToBase($money, $targetCurrency)->converted->toMinor();
-                } else {
-                    $contributedMinor = $potMinor;
-                }
-            } else {
-                $contributedMinor = $this->sumContributions($goal, $user);
-            }
-            $targetMinor = self::toInt($row->target_minor);
-            $fractionComplete = $targetMinor > 0 ? $contributedMinor / $targetMinor : 0.0;
-
-            $progressState = match (true) {
-                $contributedMinor >= $targetMinor => 'reached',
-                CarbonImmutable::today()->gt($goal->target_date) => 'overdue',
-                default => 'in_progress',
-            };
-
-            ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon] =
-                $this->projection->project($goal, $contributedMinor, $user);
-
-            $rows[] = new GoalProgressRow(
-                id: self::toInt($row->id),
-                name: self::toString($row->name),
-                accountId: $row->account_id !== null ? self::toInt($row->account_id) : null,
-                accountName: $accountName,
-                targetMinor: $targetMinor,
-                contributedMinor: $contributedMinor,
-                currency: self::toString($row->target_currency),
-                fractionComplete: $fractionComplete,
-                targetDate: self::toDateStr($row->target_date),
-                status: self::toString($row->status),
-                progressState: $progressState,
-                projectedFinishDate: $projectedDate,
-                projectionBeyondHorizon: $beyondHorizon,
-            );
+            $rows[] = $this->buildRow($row, $linkedPotBalances, $user);
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<int, array{balance: int, currency: string}>  $linkedPotBalances
+     */
+    private function buildRow(stdClass $row, array $linkedPotBalances, User $user): GoalProgressRow
+    {
+        // A lightweight Goal model per row lets GoalProjectionService consume
+        // the model's typed properties (start_date as CarbonImmutable,
+        // account_id, target_minor) without re-implementing casting here.
+        $goal = $this->hydrateGoal($row);
+        $accountName = isset($row->account_name) && is_string($row->account_name)
+            ? $row->account_name
+            : null;
+
+        $contributedMinor = $this->resolveContributedMinor($row, $goal, $linkedPotBalances, $user);
+        $targetMinor = self::toInt($row->target_minor);
+        $fractionComplete = $targetMinor > 0 ? $contributedMinor / $targetMinor : 0.0;
+
+        $progressState = match (true) {
+            $contributedMinor >= $targetMinor => 'reached',
+            CarbonImmutable::today()->gt($goal->target_date) => 'overdue',
+            default => 'in_progress',
+        };
+
+        ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon] =
+            $this->projection->project($goal, $contributedMinor, $user);
+
+        return new GoalProgressRow(
+            id: self::toInt($row->id),
+            name: self::toString($row->name),
+            accountId: $row->account_id !== null ? self::toInt($row->account_id) : null,
+            accountName: $accountName,
+            targetMinor: $targetMinor,
+            contributedMinor: $contributedMinor,
+            currency: self::toString($row->target_currency),
+            fractionComplete: $fractionComplete,
+            targetDate: self::toDateStr($row->target_date),
+            status: self::toString($row->status),
+            progressState: $progressState,
+            projectedFinishDate: $projectedDate,
+            projectionBeyondHorizon: $beyondHorizon,
+        );
+    }
+
+    // A goal with an active linked pot draws its contribution from the pot's
+    // balance (FX-converted into target_currency when they differ); otherwise
+    // it falls back to the transaction-sum path.
+    /**
+     * @param  array<int, array{balance: int, currency: string}>  $linkedPotBalances
+     */
+    private function resolveContributedMinor(stdClass $row, Goal $goal, array $linkedPotBalances, User $user): int
+    {
+        $goalId = self::toInt($row->id);
+        if (! isset($linkedPotBalances[$goalId])) {
+            return $this->sumContributions($goal, $user);
+        }
+
+        $potMinor = $linkedPotBalances[$goalId]['balance'];
+        $potCurrency = $linkedPotBalances[$goalId]['currency'];
+        $targetCurrency = self::toString($row->target_currency);
+
+        if ($potCurrency === '' || $potCurrency === $targetCurrency) {
+            return $potMinor;
+        }
+
+        $money = Money::ofMinor($potMinor, $potCurrency);
+
+        return $this->fx->convertToBase($money, $targetCurrency)->converted->toMinor();
     }
 
     // Hydrates a Goal Eloquent model from a raw stdClass row so model casts

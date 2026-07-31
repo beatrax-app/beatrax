@@ -9,7 +9,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Livewire\Component;
-use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
@@ -48,12 +47,11 @@ final class GoalsPage extends Component
 
     public bool $showArchived = false;
 
-    public function mount(CurrentUser $currentUser): void
-    {
-        if (! $currentUser->isAuthenticated()) {
-            return;
-        }
-    }
+    private const string ERROR_NAME_REQUIRED = 'Enter a name for your goal.';
+
+    private const string ERROR_DATE_REQUIRED = 'Choose a target date.';
+
+    private const string ERROR_AMOUNT_INVALID = 'Enter a valid amount greater than zero.';
 
     // The pot picker's option list is scoped to the selected account, but the
     // bound property survives a re-render — switching accounts would
@@ -71,19 +69,7 @@ final class GoalsPage extends Component
     {
         $this->clearErrors();
 
-        if (! $currentUser->isAuthenticated()) {
-            return;
-        }
-
-        if (trim($this->name) === '') {
-            $this->errorName = 'Enter a name for your goal.';
-
-            return;
-        }
-
-        if (trim($this->targetDate) === '') {
-            $this->errorDate = 'Choose a target date.';
-
+        if (! $currentUser->isAuthenticated() || ! $this->validateNameAndDate()) {
             return;
         }
 
@@ -91,6 +77,8 @@ final class GoalsPage extends Component
 
         // Goal save + optional pot link run in one transaction so a failed
         // link rolls back the goal — no orphan goal, no duplicate on resubmit.
+        // The success dispatch stays inside the try so a thrown write never
+        // reaches it.
         try {
             $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId): void {
                 $goal = $writer->save(
@@ -105,19 +93,13 @@ final class GoalsPage extends Component
                     $this->linkPotToGoal($currentUser, $db, $potWriter, (int) $this->linkedPotId, $goal->id);
                 }
             });
-        } catch (InvalidGoalAmountException) {
-            $this->errorAmount = 'Enter a valid amount greater than zero.';
 
-            return;
+            $this->resetForm();
+            $this->dispatch('modal-close', name: 'goal-form');
+            $this->toast('Goal created.');
         } catch (\InvalidArgumentException $e) {
-            $this->errorLinkedPot = $e->getMessage();
-
-            return;
+            $this->applyWriteFailure($e);
         }
-
-        $this->resetForm();
-        $this->dispatch('modal-close', name: 'goal-form');
-        $this->toast('Goal created.');
     }
 
     // -----------------------------------------------------------------------
@@ -154,24 +136,11 @@ final class GoalsPage extends Component
     {
         $this->clearErrors();
 
-        if (! $currentUser->isAuthenticated() || $this->editGoalId === 0) {
-            return;
-        }
-
-        if (trim($this->name) === '') {
-            $this->errorName = 'Enter a name for your goal.';
-
-            return;
-        }
-
-        if (trim($this->targetDate) === '') {
-            $this->errorDate = 'Choose a target date.';
-
+        if (! $currentUser->isAuthenticated() || $this->editGoalId === 0 || ! $this->validateNameAndDate()) {
             return;
         }
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
-
         $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
         $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
 
@@ -189,33 +158,15 @@ final class GoalsPage extends Component
                     $accountId,
                 );
 
-                if ($newPotId !== null && $newPotId !== $prevPotId) {
-                    if ($prevPotId !== null) {
-                        $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-                    }
-
-                    $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
-                } elseif ($newPotId === null && $prevPotId !== null) {
-                    $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
-                }
+                $this->applyPotRelink($currentUser, $db, $potWriter, $newPotId, $prevPotId);
             });
-        } catch (GoalNotFoundException) {
+
             $this->resetForm();
-
-            return;
-        } catch (InvalidGoalAmountException) {
-            $this->errorAmount = 'Enter a valid amount greater than zero.';
-
-            return;
+            $this->dispatch('modal-close', name: 'goal-form');
+            $this->toast('Goal updated.');
         } catch (\InvalidArgumentException $e) {
-            $this->errorLinkedPot = $e->getMessage();
-
-            return;
+            $this->applyWriteFailure($e);
         }
-
-        $this->resetForm();
-        $this->dispatch('modal-close', name: 'goal-form');
-        $this->toast('Goal updated.');
     }
 
     // -----------------------------------------------------------------------
@@ -392,19 +343,66 @@ final class GoalsPage extends Component
         $this->clearErrors();
     }
 
-    private function potName(int $potId, User $user, DatabaseManager $db): string
+    private function validateNameAndDate(): bool
     {
-        $row = $db->connection()
-            ->table('pots')
-            ->where('user_id', $user->id)
-            ->where('id', $potId)
-            ->first(['name']);
+        if (trim($this->name) === '') {
+            $this->errorName = self::ERROR_NAME_REQUIRED;
 
-        if ($row === null) {
-            return '';
+            return false;
         }
 
-        return is_string($row->name) ? $row->name : '';
+        if (trim($this->targetDate) === '') {
+            $this->errorDate = self::ERROR_DATE_REQUIRED;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Maps a write failure to inline form feedback: a vanished goal resets the
+    // form, an invalid amount flags the amount field, and any other ownership
+    // or pot-link violation surfaces its own message on the linked-pot field.
+    private function applyWriteFailure(\InvalidArgumentException $e): void
+    {
+        if ($e instanceof GoalNotFoundException) {
+            $this->resetForm();
+
+            return;
+        }
+
+        if ($e instanceof InvalidGoalAmountException) {
+            $this->errorAmount = self::ERROR_AMOUNT_INVALID;
+
+            return;
+        }
+
+        $this->errorLinkedPot = $e->getMessage();
+    }
+
+    // Reconciles the goal's pot link inside the update transaction: switching
+    // pots clears the previous link before creating the new one, and clearing
+    // the picker removes the existing link. Both paths are mutually exclusive.
+    private function applyPotRelink(
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        PotWriter $potWriter,
+        ?int $newPotId,
+        ?int $prevPotId,
+    ): void {
+        if ($newPotId !== null && $newPotId !== $prevPotId) {
+            if ($prevPotId !== null) {
+                $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
+            }
+
+            $this->linkPotToGoal($currentUser, $db, $potWriter, $newPotId, $this->editGoalId);
+
+            return;
+        }
+
+        if ($newPotId === null && $prevPotId !== null) {
+            $this->clearPotGoalLink($currentUser, $db, $potWriter, $prevPotId);
+        }
     }
 
     /**
@@ -449,7 +447,14 @@ final class GoalsPage extends Component
         int $potId,
     ): void {
         $user = $currentUser->user();
-        $name = $this->potName($potId, $user, $db);
+
+        $row = $db->connection()
+            ->table('pots')
+            ->where('user_id', $user->id)
+            ->where('id', $potId)
+            ->first(['name']);
+
+        $name = ($row !== null && is_string($row->name)) ? $row->name : '';
         $potWriter->update($user, $potId, $name, null, null);
     }
 
