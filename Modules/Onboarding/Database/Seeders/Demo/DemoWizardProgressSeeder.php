@@ -7,6 +7,7 @@ namespace Modules\Onboarding\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Onboarding\Models\WizardProgress;
+use Modules\Onboarding\Public\Enums\WizardStepStatus;
 
 // Materialises a mixed-state wizard_progress slate (done/in_progress/
 // skipped/pending) for the primary demo user. Hard-codes the step keys
@@ -18,28 +19,28 @@ final class DemoWizardProgressSeeder
      * @var list<array{stepKey: string, status: string, completedAgeHours: ?int, data: ?array<string, mixed>}>
      */
     private const STEPS = [
-        ['stepKey' => 'welcome', 'status' => 'done', 'completedAgeHours' => 96, 'data' => null],
+        ['stepKey' => 'welcome', 'status' => WizardStepStatus::Done->value, 'completedAgeHours' => 96, 'data' => null],
         [
             'stepKey' => 'connect-bank',
-            'status' => 'done',
+            'status' => WizardStepStatus::Done->value,
             'completedAgeHours' => 72,
             'data' => ['connector' => 'asn-csv', 'filename' => 'asn-2026-05.csv'],
         ],
         [
             'stepKey' => 'connect-paypal',
-            'status' => 'in_progress',
+            'status' => WizardStepStatus::InProgress->value,
             'completedAgeHours' => null,
             'data' => ['oauth_attempt' => 1],
         ],
-        ['stepKey' => 'connect-card', 'status' => 'pending', 'completedAgeHours' => null, 'data' => null],
+        ['stepKey' => 'connect-card', 'status' => WizardStepStatus::Pending->value, 'completedAgeHours' => null, 'data' => null],
         [
             'stepKey' => 'connect-email',
-            'status' => 'skipped',
+            'status' => WizardStepStatus::Skipped->value,
             'completedAgeHours' => 48,
             'data' => ['reason' => 'user_opted_out'],
         ],
-        ['stepKey' => 'first-import', 'status' => 'pending', 'completedAgeHours' => null, 'data' => null],
-        ['stepKey' => 'done', 'status' => 'pending', 'completedAgeHours' => null, 'data' => null],
+        ['stepKey' => 'first-import', 'status' => WizardStepStatus::Pending->value, 'completedAgeHours' => null, 'data' => null],
+        ['stepKey' => 'done', 'status' => WizardStepStatus::Pending->value, 'completedAgeHours' => null, 'data' => null],
     ];
 
     /**
