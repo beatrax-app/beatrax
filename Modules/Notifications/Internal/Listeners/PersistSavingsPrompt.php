@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
@@ -33,7 +34,7 @@ final class PersistSavingsPrompt
 
             $body = $event->message.' ('.$monthlyText.'/mo)';
 
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT,
                 subjectKey: (string) $event->seriesId,
@@ -42,7 +43,7 @@ final class PersistSavingsPrompt
                 body: $body,
                 params: $this->targetParams($event),
                 deepLinkRoute: $event->actionUrl,
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating job run.

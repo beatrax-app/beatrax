@@ -7,6 +7,7 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\DriftAlerts\Public\Events\DriftAlertOpened;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
@@ -30,7 +31,7 @@ final class PersistDriftAlert
             $delta = number_format(abs($event->deltaMinor) / 100, 2);
             $currency = $event->currency;
 
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_DRIFT_CHANGED,
                 subjectKey: (string) $event->recurringSeriesId,
@@ -39,7 +40,7 @@ final class PersistDriftAlert
                 body: 'A recurring charge moved '.$direction.' by '.$delta.' '.$currency.'.',
                 params: ['target_kind' => 'series', 'target_id' => $event->recurringSeriesId],
                 deepLinkRoute: $this->urls->route('drift.index'),
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating drift-detection run.

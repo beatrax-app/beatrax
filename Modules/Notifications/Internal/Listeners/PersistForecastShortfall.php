@@ -7,6 +7,7 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
@@ -26,7 +27,7 @@ final class PersistForecastShortfall
     public function handle(ForecastShortfallDetected $event): void
     {
         try {
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
                 subjectKey: 'forecast',
@@ -35,7 +36,7 @@ final class PersistForecastShortfall
                 body: 'Your projected balance dips below zero within the next 30 days.',
                 params: ['target_kind' => 'forecast'],
                 deepLinkRoute: $this->urls->route('forecast.index'),
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating shortfall-detection run.

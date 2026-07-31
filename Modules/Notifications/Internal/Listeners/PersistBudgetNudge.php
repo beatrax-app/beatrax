@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
@@ -34,7 +35,7 @@ final class PersistBudgetNudge
 
             $body = "{$event->categoryName} — {$spentText} of {$budgetText} spent.";
 
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE,
                 subjectKey: (string) $event->categoryId,
@@ -46,7 +47,7 @@ final class PersistBudgetNudge
                 body: $body,
                 params: ['target_kind' => 'budget', 'target_id' => $event->categoryId],
                 deepLinkRoute: $this->urls->route('budgets.index'),
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating nudge job run.

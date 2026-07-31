@@ -228,3 +228,33 @@ it('degrades a cross-user target with the SAME generic copy as a genuinely delet
     // as the deleted-target row, no distinguishing signal either way.
     expect($crossUserResponse->getContent() ?: '')->not->toContain('/recurring/series/'.$foreignSeriesId);
 });
+
+it('degrades a notification whose params JSON is malformed to a disabled generic item link', function (): void {
+    $user = dldUser('dld-malformed-params');
+    $id = str_repeat('8', 64);
+    dldInsertNotification($this->db, $user->id, $id, [
+        'params' => 'this-is-not-valid-json',
+    ]);
+
+    $response = $this->actingAs($user)->get('/notifications?tab=all');
+
+    $response->assertOk()
+        ->assertSeeText('Payment due Friday')
+        ->assertSeeText('This item no longer exists.')
+        ->assertSee('aria-disabled="true"', false);
+});
+
+it('degrades a notification whose params column is an empty string to a disabled generic item link', function (): void {
+    $user = dldUser('dld-empty-params');
+    $id = str_repeat('9', 64);
+    dldInsertNotification($this->db, $user->id, $id, [
+        'params' => '',
+    ]);
+
+    $response = $this->actingAs($user)->get('/notifications?tab=all');
+
+    $response->assertOk()
+        ->assertSeeText('Payment due Friday')
+        ->assertSeeText('This item no longer exists.')
+        ->assertSee('aria-disabled="true"', false);
+});
