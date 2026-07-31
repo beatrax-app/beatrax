@@ -106,8 +106,6 @@ final class FirstImportStep extends Component
         ConfirmsImports $confirmImport,
         CurrentUser $currentUser,
         Clock $clock,
-        DispatchesChainResolution $chainDispatcher,
-        DispatchesRecurringDetection $recurringDispatcher,
         BuildConsolidatedPreviewQuery $buildPreview,
         LoggerInterface $logger,
         Application $app,
@@ -116,7 +114,32 @@ final class FirstImportStep extends Component
         $this->isCommitting = true;
 
         try {
-            $this->runCommit($db, $confirmImport, $currentUser, $clock, $chainDispatcher, $recurringDispatcher, $buildPreview, $logger, $app);
+            $user = $currentUser->user();
+
+            $logger->info('FirstImportStep: commitEverything() invoked.', [
+                'user_id' => $user->id,
+                'balance_confirmations' => count($this->balanceConfirmations),
+            ]);
+
+            // Rebuilt at commit time since Livewire invokes action methods
+            // without running render() first.
+            $stashedIds = $this->resolveStashedImportRunIds($user->id, $db);
+            $runIdsToCommit = $this->readyRunIds($buildPreview->build($stashedIds, $user));
+
+            if ($runIdsToCommit === []) {
+                $this->commitError = 'Nothing to commit.';
+
+                return;
+            }
+
+            $now = $clock->now()->toDateTimeString();
+            $balanceConfirmations = $this->balanceConfirmations;
+
+            $db->connection()->transaction(fn () => $this->persistCommit($db, $confirmImport, $user, $now, $runIdsToCommit, $balanceConfirmations));
+
+            $this->dispatchPostCommit($app, $logger, $user->id);
+
+            $this->dispatch('wizard.step.completed');
         } catch (Throwable $e) {
             $logger->error('FirstImportStep: commit-everything failed.', [
                 'exception_class' => $e::class,
@@ -127,45 +150,6 @@ final class FirstImportStep extends Component
         } finally {
             $this->isCommitting = false;
         }
-    }
-
-    private function runCommit(
-        DatabaseManager $db,
-        ConfirmsImports $confirmImport,
-        CurrentUser $currentUser,
-        Clock $clock,
-        DispatchesChainResolution $chainDispatcher,
-        DispatchesRecurringDetection $recurringDispatcher,
-        BuildConsolidatedPreviewQuery $buildPreview,
-        LoggerInterface $logger,
-        Application $app,
-    ): void {
-        $user = $currentUser->user();
-
-        $logger->info('FirstImportStep: commitEverything() invoked.', [
-            'user_id' => $user->id,
-            'balance_confirmations' => count($this->balanceConfirmations),
-        ]);
-
-        // Rebuilt at commit time since Livewire invokes action methods
-        // without running render() first.
-        $stashedIds = $this->resolveStashedImportRunIds($user->id, $db);
-        $runIdsToCommit = $this->readyRunIds($buildPreview->build($stashedIds, $user));
-
-        if ($runIdsToCommit === []) {
-            $this->commitError = 'Nothing to commit.';
-
-            return;
-        }
-
-        $now = $clock->now()->toDateTimeString();
-        $balanceConfirmations = $this->balanceConfirmations;
-
-        $db->connection()->transaction(fn () => $this->persistCommit($db, $confirmImport, $user, $now, $runIdsToCommit, $balanceConfirmations));
-
-        $this->dispatchPostCommit($chainDispatcher, $recurringDispatcher, $logger, $app, $user->id);
-
-        $this->dispatch('wizard.step.completed');
     }
 
     // Only ready sections feed the commit loop, so a half-broken section
@@ -225,11 +209,11 @@ final class FirstImportStep extends Component
     // Post-commit dispatches: failures here do NOT undo committed data, so
     // they are swallowed with an honest log — chain/recurring catch up on the
     // next scheduled sweep rather than misleading the user into a retry.
-    private function dispatchPostCommit(DispatchesChainResolution $chainDispatcher, DispatchesRecurringDetection $recurringDispatcher, LoggerInterface $logger, Application $app, int $userId): void
+    private function dispatchPostCommit(Application $app, LoggerInterface $logger, int $userId): void
     {
         try {
-            $chainDispatcher->dispatchForUser($userId);
-            $recurringDispatcher->dispatchForUser($userId);
+            $app->make(DispatchesChainResolution::class)->dispatchForUser($userId);
+            $app->make(DispatchesRecurringDetection::class)->dispatchForUser($userId);
         } catch (Throwable $dispatchException) {
             $logger->error('FirstImportStep: post-commit dispatch failed (data already committed).', [
                 'exception_class' => $dispatchException::class,

@@ -40,31 +40,26 @@ final readonly class LargeVsTypicalDetector
         }
 
         $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
-        $types = Direction::from($direction)->transactionTypes();
         $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
         $categoryId = self::toIntOrNull($txn['category_id'] ?? null);
-        $windowStart = $this->clock->now()
-            ->subMonthsNoOverflow(RobustStatistics::WINDOW_MONTHS)
-            ->toDateString();
-        $excludeId = self::toInt($txn['id'] ?? 0);
+
+        $context = new LargeSampleContext(
+            user: $user,
+            types: Direction::from($direction)->transactionTypes(),
+            currency: $settledCurrency,
+            windowStart: $this->clock->now()->subMonthsNoOverflow(RobustStatistics::WINDOW_MONTHS)->toDateString(),
+            excludeId: self::toInt($txn['id'] ?? 0),
+        );
 
         // Per-counterparty sample in settled minor units, same direction,
         // same settled currency, within the rolling window.
-        $counterpartySample = $counterpartyId === null ? [] : $this->sample(
-            $user,
-            $types,
-            $settledCurrency,
-            $windowStart,
-            $excludeId,
-            'counterparty_id',
-            $counterpartyId,
-        );
+        $counterpartySample = $counterpartyId === null ? [] : $this->sample($context, 'counterparty_id', $counterpartyId);
 
         if (count($counterpartySample) >= RobustStatistics::THIN_HISTORY_CUTOFF) {
             return self::counterpartyTrip($absMinor, $settledMinor, $settledCurrency, $counterpartySample, $sensitivityPercent);
         }
 
-        return $this->categoryTrip($absMinor, $settledMinor, $settledCurrency, $categoryId, $user, $types, $windowStart, $excludeId);
+        return $this->categoryTrip($absMinor, $settledMinor, $context, $categoryId);
     }
 
     /**
@@ -89,16 +84,15 @@ final readonly class LargeVsTypicalDetector
     // too thin, and it trips on a charge above the category p95 for the same
     // direction and window.
     /**
-     * @param  list<string>  $types
      * @return array{baseline_amount_minor: int, latest_amount_minor: int, currency: string}|null
      */
-    private function categoryTrip(int $absMinor, int $settledMinor, string $settledCurrency, ?int $categoryId, User $user, array $types, string $windowStart, int $excludeId): ?array
+    private function categoryTrip(int $absMinor, int $settledMinor, LargeSampleContext $context, ?int $categoryId): ?array
     {
         if ($categoryId === null) {
             return null;
         }
 
-        $categorySample = $this->sample($user, $types, $settledCurrency, $windowStart, $excludeId, 'category_id', $categoryId);
+        $categorySample = $this->sample($context, 'category_id', $categoryId);
 
         // Tie-inclusive boundary via exceedsPercentile: a charge EQUAL to the
         // category p95 fires, so a repeat of the largest-ever charge is not a
@@ -113,30 +107,22 @@ final readonly class LargeVsTypicalDetector
         return [
             'baseline_amount_minor' => (int) round(-$p95),
             'latest_amount_minor' => $settledMinor,
-            'currency' => $settledCurrency,
+            'currency' => $context->currency,
         ];
     }
 
     /**
-     * @param  list<string>  $types
      * @return list<int>
      */
-    private function sample(
-        User $user,
-        array $types,
-        string $settledCurrency,
-        string $windowStart,
-        int $excludeId,
-        string $column,
-        int $columnValue,
-    ): array {
+    private function sample(LargeSampleContext $context, string $column, int $columnValue): array
+    {
         $rows = $this->db->connection()->table('transactions')
-            ->where('user_id', $user->id)
+            ->where('user_id', $context->user->id)
             ->where($column, $columnValue)
-            ->whereIn('type', $types)
-            ->where('settled_currency', $settledCurrency)
-            ->where('posted_at', '>=', $windowStart)
-            ->where('id', '!=', $excludeId)
+            ->whereIn('type', $context->types)
+            ->where('settled_currency', $context->currency)
+            ->where('posted_at', '>=', $context->windowStart)
+            ->where('id', '!=', $context->excludeId)
             ->pluck('settled_amount_minor');
 
         $sample = [];

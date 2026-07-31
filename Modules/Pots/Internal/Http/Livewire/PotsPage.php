@@ -167,7 +167,10 @@ final class PotsPage extends Component
                 $goalId,
                 null,
             );
-        } catch (PotNotFoundException|\InvalidArgumentException $e) {
+        } catch (\InvalidArgumentException $e) {
+            // PotNotFoundException derives from InvalidArgumentException, so
+            // the single catch covers both; the instance check keeps the
+            // not-found reset distinct from a surfaced validation message.
             if ($e instanceof PotNotFoundException) {
                 $this->resetForm();
             } else {

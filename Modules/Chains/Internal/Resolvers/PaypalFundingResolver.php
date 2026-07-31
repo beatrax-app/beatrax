@@ -187,11 +187,8 @@ final class PaypalFundingResolver
             return null;
         }
         $eventType = isset($event['type']) && is_string($event['type']) ? $event['type'] : '';
-        if (! in_array($eventType, self::FUNDING_EVENT_TYPES, true)) {
-            return null;
-        }
         $eventRow = $event['row'] ?? [];
-        if (! is_array($eventRow)) {
+        if (! in_array($eventType, self::FUNDING_EVENT_TYPES, true) || ! is_array($eventRow)) {
             return null;
         }
 
