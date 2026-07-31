@@ -15,6 +15,8 @@ use Modules\Chains\Public\Actions\ConfirmChainLink;
 use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
+use Modules\Chains\Public\Enums\ChainLinkKind;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -138,9 +140,9 @@ final class ChainDrawer extends Component
 
         $links = $db->connection()->table('chain_links')
             ->where('user_id', $user->id)
-            ->where('kind', 'ics_bulk_settle')
+            ->where('kind', ChainLinkKind::IcsBulkSettle->value)
             ->whereIn('from_transaction_id', $nodeIds)
-            ->whereIn('state', ['confirmed', 'candidate'])
+            ->whereIn('state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
             ->orderBy('id')
             ->get();
 

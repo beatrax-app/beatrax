@@ -15,6 +15,7 @@ use Modules\Chains\Public\Dto\ChainLinkHintRow;
 use Modules\Chains\Public\Dto\ChainLinkRow;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\SeriesFunderLink;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
@@ -62,7 +63,7 @@ final class ChainLinkQuery
     {
         $rows = $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
-            ->whereIn('state', ['confirmed', 'candidate'])
+            ->whereIn('state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
             ->whereNotNull('to_transaction_id')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -84,7 +85,7 @@ final class ChainLinkQuery
     {
         return $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
-            ->whereIn('state', ['confirmed', 'candidate'])
+            ->whereIn('state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
             ->where(function (Builder $q) use ($transactionId): void {
                 $q->where('from_transaction_id', $transactionId)
                     ->orWhere('to_transaction_id', $transactionId);
@@ -108,7 +109,7 @@ final class ChainLinkQuery
             ->where('rso.recurring_series_id', $seriesId)
             ->where(function ($q): void {
                 /** @var Builder $q */
-                $q->where('chain_links.state', 'confirmed')
+                $q->where('chain_links.state', ChainLinkState::Confirmed->value)
                     ->orWhere('chain_links.resolver', 'auto');
             })
             ->whereNotNull('chain_links.to_transaction_id')
@@ -147,7 +148,7 @@ final class ChainLinkQuery
         return self::toInt(
             $this->db->connection()->table('chain_links')
                 ->where('user_id', $user->id)
-                ->where('state', 'candidate')
+                ->where('state', ChainLinkState::Candidate->value)
                 ->count(),
         );
     }
@@ -169,7 +170,7 @@ final class ChainLinkQuery
         // so the review queue only surfaces actionable rows.
         $query = $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
-            ->where('state', 'candidate')
+            ->where('state', ChainLinkState::Candidate->value)
             ->whereNotNull('to_transaction_id')
             ->orderByDesc('confidence')
             ->orderByDesc('id')
@@ -208,7 +209,7 @@ final class ChainLinkQuery
     {
         $rows = $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
-            ->where('state', 'candidate')
+            ->where('state', ChainLinkState::Candidate->value)
             ->whereNull('to_transaction_id')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
@@ -229,7 +230,7 @@ final class ChainLinkQuery
     {
         return $this->db->connection()->table('chain_links')
             ->where('user_id', $user->id)
-            ->where('state', 'candidate')
+            ->where('state', ChainLinkState::Candidate->value)
             ->whereNull('to_transaction_id')
             ->count();
     }
@@ -293,7 +294,7 @@ final class ChainLinkQuery
         $confirmedCount = self::toInt(
             $this->db->connection()->table('chain_links')
                 ->where('user_id', $user->id)
-                ->where('state', 'confirmed')
+                ->where('state', ChainLinkState::Confirmed->value)
                 ->whereJsonContains('evidence->signature_hash', $signatureHash)
                 ->count(),
         );

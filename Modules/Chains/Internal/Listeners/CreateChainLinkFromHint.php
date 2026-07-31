@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Chains\Internal\Listeners;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Chains\Public\Enums\ChainLinkKind;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Chains\Public\Exceptions\EvidenceEncodingFailedException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
@@ -34,14 +36,14 @@ final class CreateChainLinkFromHint
 
         $row = match (true) {
             $event->hintType === 'funded_by_card' && $payload instanceof FundedByCardPayload => [
-                'kind' => 'funded_by_card_hint',
+                'kind' => ChainLinkKind::FundedByCardHint->value,
                 'evidence' => [
                     'card_last4' => $payload->cardLast4,
                     'source_evidence' => $event->evidence,
                 ],
             ],
             $event->hintType === 'refund_of' && $payload instanceof RefundOfPayload => [
-                'kind' => 'refund_of_hint',
+                'kind' => ChainLinkKind::RefundOfHint->value,
                 'evidence' => [
                     'original_reference_id' => $payload->originalReferenceId,
                     'source_evidence' => $event->evidence,
@@ -91,7 +93,7 @@ final class CreateChainLinkFromHint
             'from_transaction_id' => $event->sourceTransactionId,
             'to_transaction_id' => null,
             'kind' => $row['kind'],
-            'state' => 'candidate',
+            'state' => ChainLinkState::Candidate->value,
             'confidence' => self::HINT_CONFIDENCE,
             'resolver' => 'auto',
             'evidence' => $encoded,

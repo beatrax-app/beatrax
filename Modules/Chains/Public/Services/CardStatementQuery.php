@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Public\Dto\NextSettlementDto;
+use Modules\Chains\Public\Enums\ChainLinkKind;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -75,8 +77,8 @@ final class CardStatementQuery
             ->join('transactions as funder_tx', 'funder_tx.id', '=', 'chain_links.to_transaction_id')
             ->join('transactions as funded_tx', 'funded_tx.id', '=', 'chain_links.from_transaction_id')
             ->where('chain_links.user_id', $user->id)
-            ->where('chain_links.kind', 'ics_bulk_settle')
-            ->where('chain_links.state', 'confirmed')
+            ->where('chain_links.kind', ChainLinkKind::IcsBulkSettle->value)
+            ->where('chain_links.state', ChainLinkState::Confirmed->value)
             ->where('funded_tx.account_id', $cardAccountId)
             ->whereNotNull('chain_links.to_transaction_id')
             ->orderByDesc('chain_links.created_at')

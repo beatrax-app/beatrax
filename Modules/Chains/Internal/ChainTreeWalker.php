@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Chains\Public\Dto\ChainTree;
 use Modules\Chains\Public\Dto\ChainTreeNode;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
@@ -78,7 +79,7 @@ final class ChainTreeWalker
                 $q->whereIn('from_transaction_id', $frontier)
                     ->orWhereIn('to_transaction_id', $frontier);
             })
-            ->whereIn('state', ['confirmed', 'candidate'])
+            ->whereIn('state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value])
             ->orderByDesc('confidence')
             ->get();
 
@@ -144,10 +145,10 @@ final class ChainTreeWalker
 
     private function confidenceTier(string $state, string $resolver, float $confidence): string
     {
-        if ($state === 'confirmed' && $resolver === 'auto' && $confidence === 1.0) {
+        if ($state === ChainLinkState::Confirmed->value && $resolver === 'auto' && $confidence === 1.0) {
             return 'Deterministic';
         }
-        if ($state === 'confirmed') {
+        if ($state === ChainLinkState::Confirmed->value) {
             return 'Confirmed';
         }
 

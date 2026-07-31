@@ -26,10 +26,10 @@
         : $money->format('en_US');
 
     $kindLabel = static function (string $kind): string {
-        if ($kind === 'paypal_funding') {
+        if ($kind === \Modules\Chains\Public\Enums\ChainLinkKind::PaypalFunding->value) {
             return 'PayPal funding';
         }
-        if ($kind === 'ics_bulk_settle') {
+        if ($kind === \Modules\Chains\Public\Enums\ChainLinkKind::IcsBulkSettle->value) {
             return 'Bulk iDEAL settlement';
         }
         return $kind;
