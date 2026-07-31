@@ -40,41 +40,37 @@ final class OpenBankingStateRepository
     public function consumeState(string $candidateState, int $currentUserId): bool
     {
         $entry = ($this->session)()->pull(self::SESSION_KEY);
-
-        if (! is_array($entry)) {
-            return false;
-        }
+        $entry = is_array($entry) ? $entry : [];
 
         $storedState = $entry['state'] ?? null;
-        if (! is_string($storedState) || $storedState === '') {
-            return false;
-        }
-
-        // hash_equals avoids the timing-attack a naive `===` would
-        // expose; the comparison cost is constant in the prefix match
-        // length regardless of input difference position.
-        if (! hash_equals($storedState, $candidateState)) {
-            return false;
-        }
-
-        // User-id binding: the consent flow must complete under the
-        // same authenticated user that started it.
         $storedUserId = $entry['user_id'] ?? null;
-        if (! is_int($storedUserId) || $storedUserId !== $currentUserId) {
-            return false;
-        }
-
         $issuedAtRaw = $entry['issued_at'] ?? null;
-        if (! is_string($issuedAtRaw) || $issuedAtRaw === '') {
-            return false;
-        }
-        try {
-            $issuedAt = new DateTimeImmutable($issuedAtRaw);
-        } catch (Throwable) {
-            return false;
-        }
-        $ageSeconds = $this->clock->now()->getTimestamp() - $issuedAt->getTimestamp();
 
-        return $ageSeconds >= 0 && $ageSeconds <= self::MAX_AGE_SECONDS;
+        // hash_equals avoids the timing-attack a naive `===` would expose; the
+        // user-id binding requires the consent to complete under the same
+        // authenticated user that started it; the two string guards keep both
+        // hash_equals and the DateTimeImmutable parse on well-typed input.
+        if (! is_string($storedState) || $storedState === ''
+            || ! hash_equals($storedState, $candidateState)
+            || ! is_int($storedUserId) || $storedUserId !== $currentUserId
+            || ! is_string($issuedAtRaw) || $issuedAtRaw === '') {
+            return false;
+        }
+
+        $issuedAt = $this->parseIssuedAt($issuedAtRaw);
+        $ageSeconds = $issuedAt === null
+            ? null
+            : $this->clock->now()->getTimestamp() - $issuedAt->getTimestamp();
+
+        return $ageSeconds !== null && $ageSeconds >= 0 && $ageSeconds <= self::MAX_AGE_SECONDS;
+    }
+
+    private function parseIssuedAt(string $issuedAtRaw): ?DateTimeImmutable
+    {
+        try {
+            return new DateTimeImmutable($issuedAtRaw);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

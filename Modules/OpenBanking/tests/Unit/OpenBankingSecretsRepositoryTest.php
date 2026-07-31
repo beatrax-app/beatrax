@@ -229,3 +229,81 @@ it('reads a well-formed non-object secrets file as an empty store', function (st
     'a number' => ['42'],
     'null' => ['null'],
 ]);
+
+/*
+ * writeAtomic() failure branches. Each raises SecretsWriteFailed (a
+ * RuntimeException the controllers catch) and — as with the rename case above —
+ * must never leak credential material into the message.
+ */
+
+// The secrets directory could not be created because its parent is occupied by
+// a plain file: mkdir() fails and is_dir() stays false.
+it('raises SecretsWriteFailed when the secrets parent directory cannot be created', function (): void {
+    $secretsDir = dirname($this->obSecretsPath);
+    if (is_dir($secretsDir)) {
+        // Remove any pre-existing secrets dir so the blocking file can take
+        // its place.
+        foreach (glob($secretsDir.'/*') ?: [] as $f) {
+            @unlink($f);
+        }
+        @rmdir($secretsDir);
+    }
+    // Occupy the directory's own path with a file so mkdir() cannot create it.
+    $this->obFiles->ensureDirectoryExists(dirname($secretsDir));
+    file_put_contents($secretsDir, 'blocking file');
+
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+
+    try {
+        expect(fn () => $repo->save(openBankingSecretsFixtureCredentials()))
+            ->toThrow(SecretsWriteFailed::class, 'could not create parent directory');
+    } finally {
+        @unlink($secretsDir);
+    }
+});
+
+// json_encode() refuses the payload (here: an invalid-UTF-8 byte in a field);
+// encodePayload() maps the JsonException to SecretsWriteFailed without echoing
+// the payload.
+it('raises SecretsWriteFailed when the payload cannot be encoded, without leaking it', function (): void {
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+
+    $badCredentials = new OpenBankingCredentials(
+        applicationId: 'app-fixture-123',
+        // A lone continuation byte is not valid UTF-8, so json_encode() fails.
+        privateKeyPem: "-----BEGIN PRIVATE KEY-----\n\xB1\xB2\n-----END PRIVATE KEY-----",
+        sessionId: null,
+        consentExpiresAt: null,
+        bankScaHost: null,
+        institutionId: null,
+    );
+
+    try {
+        $repo->save($badCredentials);
+        expect(false)->toBeTrue('save() should have refused the un-encodable payload');
+    } catch (SecretsWriteFailed $e) {
+        expect($e->getMessage())->toContain('failed to encode payload')
+            ->and($e->getMessage())->not->toContain('BEGIN PRIVATE KEY');
+    }
+
+    expect(is_file($this->obSecretsPath))->toBeFalse();
+});
+
+// The temp file cannot be opened because a directory already occupies its
+// path: fopen() returns false and the umask is restored on the way out.
+it('raises SecretsWriteFailed when the temp file cannot be opened, and restores umask', function (): void {
+    $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
+    // A directory sitting where the temp file wants to be — fopen('wb') fails.
+    @mkdir($this->obSecretsPath.'.tmp', 0700);
+
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $prevUmask = umask();
+
+    try {
+        expect(fn () => $repo->save(openBankingSecretsFixtureCredentials()))
+            ->toThrow(SecretsWriteFailed::class, 'could not open temp file');
+        expect(umask())->toBe($prevUmask);
+    } finally {
+        @rmdir($this->obSecretsPath.'.tmp');
+    }
+});

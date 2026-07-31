@@ -79,15 +79,12 @@ final class OpenBankingConnectionQuery
         }
 
         $now = $this->clock->now();
-        if ($consentExpiresAt->lessThanOrEqualTo($now)) {
-            return 'expired';
-        }
 
-        if ($consentExpiresAt->lessThanOrEqualTo($now->addDays(self::EXPIRING_SOON_DAYS))) {
-            return 'expiring';
-        }
-
-        return 'connected';
+        return match (true) {
+            $consentExpiresAt->lessThanOrEqualTo($now) => 'expired',
+            $consentExpiresAt->lessThanOrEqualTo($now->addDays(self::EXPIRING_SOON_DAYS)) => 'expiring',
+            default => 'connected',
+        };
     }
 
     // open_banking_connections.bank_display_name exists but is never

@@ -4,28 +4,24 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Internal\Http\Livewire;
 
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Core\Public\Support\SafeTrace;
-use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\OpenBanking\Internal\Http\Livewire\Concerns\FormatsConnectionTimestamps;
+use Modules\OpenBanking\Internal\Http\Livewire\Concerns\ManagesGuidedIcsImport;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
 use Modules\OpenBanking\Public\Exceptions\EnableBankingApiException;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 use Modules\OpenBanking\Public\Services\OpenBankingFetchService;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
-use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -33,6 +29,8 @@ use Throwable;
  */
 final class OpenBankingSettingsPage extends Component
 {
+    use FormatsConnectionTimestamps;
+    use ManagesGuidedIcsImport;
     use WithFileUploads;
 
     // 2 hours: must comfortably survive not just the wizard dance but a
@@ -40,11 +38,6 @@ final class OpenBankingSettingsPage extends Component
     // an abandoned tab cannot leave a standing authorization indefinitely —
     // a lapse surfaces the visible re-confirm CTA instead of a silent no-op.
     private const ACK_TTL_SECONDS = 7200;
-
-    // The leaf format key the existing ICS SourceAdapter consumes. ICS
-    // Cards's consumer portal only ever exports monthly PDF statements, so
-    // the guided drop pre-selects this single format.
-    private const ICS_SOURCE_FORMAT = 'ics-pdf';
 
     // -------------------------------------------------------------------
     // Connection state (OpenBankingConnectionQuery::current() projection)
@@ -131,15 +124,6 @@ final class OpenBankingSettingsPage extends Component
     public string $syncFlashTone = '';
 
     public ?int $syncReviewImportRunId = null;
-
-    // -------------------------------------------------------------------
-    // B7: guided ICS file-import — separate from live OB, stores no
-    // credentials, routes to the existing ics-pdf SourceAdapter.
-    // -------------------------------------------------------------------
-
-    public ?TemporaryUploadedFile $icsStatement = null;
-
-    public ?string $icsImportError = null;
 
     public function mount(
         CurrentUser $currentUser,
@@ -364,15 +348,6 @@ final class OpenBankingSettingsPage extends Component
         };
     }
 
-    public function lastSuccessfulSyncRelative(): ?string
-    {
-        if ($this->lastSuccessfulSyncAtIso === null) {
-            return null;
-        }
-
-        return CarbonImmutable::parse($this->lastSuccessfulSyncAtIso)->diffForHumans();
-    }
-
     // -------------------------------------------------------------------
     // B6: manual "Sync now" action
     // -------------------------------------------------------------------
@@ -462,83 +437,6 @@ final class OpenBankingSettingsPage extends Component
         $this->syncFlashMessage = 'No new transactions.';
     }
 
-    // -------------------------------------------------------------------
-    // B7: guided ICS file-import affordance
-    // -------------------------------------------------------------------
-
-    /**
-     * @return array<string, list<string>>
-     */
-    public function rules(): array
-    {
-        return [
-            // mimetypes checks the actual sniffed content type rather than
-            // trusting the client-supplied extension alone.
-            'icsStatement' => ['required', 'file', 'max:1024', 'mimetypes:application/pdf', 'extensions:pdf'],
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return [
-            'icsStatement.required' => 'Drop the ICS statement you downloaded from Mijn ICS.',
-            'icsStatement.max' => 'That file is too large. ICS PDF statements are normally under 1 MB each.',
-            'icsStatement.extensions' => "That isn't a PDF. Mijn ICS only exports PDF statements.",
-        ];
-    }
-
-    /**
-     * @link ../../../../../.docs/features/open-banking/architecture.md
-     */
-    public function importIcsStatement(
-        RunsImports $importer,
-        CurrentUser $currentUser,
-        LoggerInterface $logger,
-        Application $app,
-    ): void {
-        $this->icsImportError = null;
-        $this->validate();
-
-        if ($this->icsStatement === null) {
-            return;
-        }
-
-        $user = $currentUser->user();
-        $tmp = $this->icsStatement->getRealPath();
-        $originalFilename = self::sanitiseIcsFilename($this->icsStatement->getClientOriginalName());
-
-        try {
-            $result = $importer->runFromUpload($tmp, self::ICS_SOURCE_FORMAT, $user, $originalFilename);
-        } catch (Throwable $e) {
-            $logger->error('OpenBankingSettingsPage: guided ICS import preview failed.', [
-                'source_format' => self::ICS_SOURCE_FORMAT,
-                'filename' => $originalFilename,
-                'exception_class' => $e::class,
-                'exception_message' => $e->getMessage(),
-                'exception_trace' => SafeTrace::cap($e, $app->basePath()),
-            ]);
-            $this->icsImportError = "Could not read {$originalFilename}. The full error is in /dev/logs.";
-
-            return;
-        }
-
-        $this->redirectRoute('imports.preview', ['id' => $result->importRunId], navigate: false);
-    }
-
-    // Strips path-traversal characters and locks the extension to .pdf,
-    // since both feed the same ics-pdf adapter.
-    private static function sanitiseIcsFilename(string $original): string
-    {
-        $stem = pathinfo($original, PATHINFO_FILENAME);
-        $safe = preg_replace('/[^A-Za-z0-9_-]+/', '_', $stem);
-        $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
-
-        return $stemPart.'.pdf';
-    }
-
     public function render(ViewFactory $views): View
     {
         return $views->make('openbanking::livewire.open-banking-settings-page');
@@ -547,35 +445,6 @@ final class OpenBankingSettingsPage extends Component
     // -------------------------------------------------------------------
     // Internals
     // -------------------------------------------------------------------
-
-    public function lastSuccessfulSyncDisplay(): ?string
-    {
-        return self::relativeAndAbsolute($this->lastSuccessfulSyncAtIso);
-    }
-
-    public function lastAttemptDisplay(): ?string
-    {
-        return self::relativeAndAbsolute($this->lastAttemptAtIso);
-    }
-
-    // Renders only when the last attempt did not succeed —
-    // last_attempt_status is 'ok' on success, 'consent_failed'/'error' on
-    // failure, never null once at least one attempt has run.
-    public function lastAttemptFailed(): bool
-    {
-        return $this->lastAttemptStatus !== null && $this->lastAttemptStatus !== 'ok';
-    }
-
-    private static function relativeAndAbsolute(?string $iso): ?string
-    {
-        if ($iso === null) {
-            return null;
-        }
-
-        $dt = CarbonImmutable::parse($iso);
-
-        return $dt->diffForHumans().' · '.$dt->format('d M Y, H:i');
-    }
 
     private function refreshState(CurrentUser $currentUser, OpenBankingConnectionQuery $query): void
     {

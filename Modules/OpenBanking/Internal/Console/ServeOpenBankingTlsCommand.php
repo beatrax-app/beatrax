@@ -38,46 +38,109 @@ final class ServeOpenBankingTlsCommand extends Command
 
     public function handle(): int
     {
+        $ports = $this->resolveValidatedPorts();
+        if ($ports === null) {
+            return self::FAILURE;
+        }
+
+        $cert = $this->certificate->ensure($this->option('regenerate-cert') === true);
+        $this->announceCertificate($cert);
+
+        $listener = $this->startListener($ports, $cert);
+        if ($listener === null) {
+            return self::FAILURE;
+        }
+
+        $this->installSignalHandlers();
+        $this->announceReady($ports['front'], $ports['backend'], $listener['noBackend']);
+
+        $exitCode = $this->runProxyLoop($listener['server'], $ports['backend'], $listener['backend']);
+
+        $this->cleanup($listener['server'], $listener['backend']);
+
+        return $exitCode;
+    }
+
+    /**
+     * @return array{front: int, backend: int}|null null when a port is invalid,
+     *                                              the reason already reported to the operator
+     */
+    private function resolveValidatedPorts(): ?array
+    {
         $frontPort = $this->resolveFrontPort();
         $backendPort = (int) $this->option('backend-port');
 
         if ($frontPort <= 0 || $backendPort <= 0) {
             $this->error('Both the HTTPS port and the backend port must be positive integers.');
 
-            return self::FAILURE;
+            return null;
         }
         if ($frontPort === $backendPort) {
             $this->error("The HTTPS port ({$frontPort}) and the backend port ({$backendPort}) must differ.");
 
-            return self::FAILURE;
+            return null;
         }
 
-        $cert = $this->certificate->ensure($this->option('regenerate-cert') === true);
-        $this->line('<info>Loopback TLS certificate:</info> '.$cert['cert']);
-        $this->line('  fingerprint (SHA-256): '.$this->fingerprint($cert['cert']));
+        return ['front' => $frontPort, 'backend' => $backendPort];
+    }
 
-        $noBackend = $this->option('no-backend') === true;
-        $backend = null;
-        if (! $noBackend) {
-            $backend = $this->startBackend($backendPort, $frontPort);
-            if ($backend === null) {
-                return self::FAILURE;
-            }
-        } elseif (! $this->backendReachable($backendPort)) {
-            $this->error("No backend is reachable on 127.0.0.1:{$backendPort} (and --no-backend was given).");
-
-            return self::FAILURE;
+    /**
+     * @param  array{front: int, backend: int}  $ports
+     * @param  array{cert: string, key: string}  $cert
+     * @return array{server: resource, backend: Process|null, noBackend: bool}|null
+     *                                                                              null when the backend or listener could not start, already reported
+     */
+    private function startListener(array $ports, array $cert): ?array
+    {
+        $backend = $this->acquireBackend($ports['backend'], $ports['front']);
+        if ($backend === false) {
+            return null;
         }
 
-        $server = $this->openTlsServer($frontPort, $cert);
+        $server = $this->openTlsServer($ports['front'], $cert);
         if ($server === null) {
             $this->stopBackend($backend);
 
-            return self::FAILURE;
+            return null;
         }
 
-        $this->installSignalHandlers();
+        return [
+            'server' => $server,
+            'backend' => $backend,
+            'noBackend' => $this->option('no-backend') === true,
+        ];
+    }
 
+    /**
+     * @return Process|false|null Process = a managed backend to stop on exit;
+     *                            null = an external backend already reachable; false = a startup failure
+     *                            already reported to the operator
+     */
+    private function acquireBackend(int $backendPort, int $frontPort): Process|false|null
+    {
+        if ($this->option('no-backend') === true) {
+            if ($this->backendReachable($backendPort)) {
+                return null;
+            }
+            $this->error("No backend is reachable on 127.0.0.1:{$backendPort} (and --no-backend was given).");
+
+            return false;
+        }
+
+        return $this->startBackend($backendPort, $frontPort) ?? false;
+    }
+
+    /**
+     * @param  array{cert: string, key: string}  $cert
+     */
+    private function announceCertificate(array $cert): void
+    {
+        $this->line('<info>Loopback TLS certificate:</info> '.$cert['cert']);
+        $this->line('  fingerprint (SHA-256): '.$this->fingerprint($cert['cert']));
+    }
+
+    private function announceReady(int $frontPort, int $backendPort, bool $noBackend): void
+    {
         $this->newLine();
         $this->info("HTTPS loopback listener ready → https://127.0.0.1:{$frontPort}");
         $this->line('  OAuth redirect URI: <comment>'.$this->redirectUri->forProvider('open-banking', scheme: 'https').'</comment>');
@@ -85,12 +148,6 @@ final class ServeOpenBankingTlsCommand extends Command
         $this->line('  Your browser will warn about the self-signed certificate — accept it (or trust the cert above) once.');
         $this->comment('  Press Ctrl+C to stop.');
         $this->newLine();
-
-        $exitCode = $this->runProxyLoop($server, $backendPort, $backend);
-
-        $this->cleanup($server, $backend);
-
-        return $exitCode;
     }
 
     private function resolveFrontPort(): int
@@ -214,67 +271,113 @@ final class ServeOpenBankingTlsCommand extends Command
                 return self::FAILURE;
             }
 
-            $read = [$server];
-            $write = [];
-            foreach ($conns as $conn) {
-                $read[] = $conn['sock'];
-                if ($conn['wbuf'] !== '') {
-                    $write[] = $conn['sock'];
-                }
-            }
-
-            $except = null;
-            $ready = @stream_select($read, $write, $except, 1);
-            if ($ready === false) {
-                continue;
-            }
-            if ($ready === 0) {
+            [$read, $write] = $this->selectSockets($server, $conns);
+            if ($read === null) {
                 continue;
             }
 
-            foreach ($write as $sock) {
-                $id = $this->sockId($sock);
-                if (! isset($conns[$id])) {
-                    continue;
-                }
-                $this->flush($conns, $id);
-            }
+            $this->pumpWritable($conns, $write);
+            $this->pumpReadable($server, $backendPort, $conns, $read);
+        }
 
-            foreach ($read as $sock) {
-                if ($sock === $server) {
-                    $this->accept($server, $backendPort, $conns);
+        $this->closeAll($conns);
 
-                    continue;
-                }
+        return self::SUCCESS;
+    }
 
-                $id = $this->sockId($sock);
-                if (! isset($conns[$id])) {
-                    continue;
-                }
-
-                $data = @fread($sock, self::READ_CHUNK);
-                if ($data === false || ($data === '' && feof($sock))) {
-                    $this->closePair($conns, $id);
-
-                    continue;
-                }
-                if ($data === '') {
-                    continue;
-                }
-
-                $peerId = $conns[$id]['peer'];
-                if (isset($conns[$peerId])) {
-                    $conns[$peerId]['wbuf'] .= $data;
-                    $this->flush($conns, $peerId);
-                }
+    /**
+     * @param  resource  $server
+     * @param  array<int, array{sock: resource, peer: int, wbuf: string}>  $conns
+     * @return array{0: list<resource>|null, 1: list<resource>} post-select
+     *                                                          readable/writable sets, or [null, []] when nothing is ready this tick
+     */
+    private function selectSockets($server, array $conns): array
+    {
+        $read = [$server];
+        $write = [];
+        foreach ($conns as $conn) {
+            $read[] = $conn['sock'];
+            if ($conn['wbuf'] !== '') {
+                $write[] = $conn['sock'];
             }
         }
 
+        $except = null;
+        $ready = @stream_select($read, $write, $except, 1);
+        if ($ready === false || $ready === 0) {
+            return [null, []];
+        }
+
+        return [$read, $write];
+    }
+
+    /**
+     * @param  array<int, array{sock: resource, peer: int, wbuf: string}>  $conns
+     * @param  list<resource>  $write
+     */
+    private function pumpWritable(array &$conns, array $write): void
+    {
+        foreach ($write as $sock) {
+            $id = $this->sockId($sock);
+            if (isset($conns[$id])) {
+                $this->flush($conns, $id);
+            }
+        }
+    }
+
+    /**
+     * @param  resource  $server
+     * @param  array<int, array{sock: resource, peer: int, wbuf: string}>  $conns
+     * @param  list<resource>  $read
+     */
+    private function pumpReadable($server, int $backendPort, array &$conns, array $read): void
+    {
+        foreach ($read as $sock) {
+            if ($sock === $server) {
+                $this->accept($server, $backendPort, $conns);
+
+                continue;
+            }
+            $this->relay($conns, $sock);
+        }
+    }
+
+    /**
+     * @param  array<int, array{sock: resource, peer: int, wbuf: string}>  $conns
+     * @param  resource  $sock
+     */
+    private function relay(array &$conns, $sock): void
+    {
+        $id = $this->sockId($sock);
+        if (! isset($conns[$id])) {
+            return;
+        }
+
+        $data = @fread($sock, self::READ_CHUNK);
+        if ($data === false || ($data === '' && feof($sock))) {
+            $this->closePair($conns, $id);
+
+            return;
+        }
+        if ($data === '') {
+            return;
+        }
+
+        $peerId = $conns[$id]['peer'];
+        if (isset($conns[$peerId])) {
+            $conns[$peerId]['wbuf'] .= $data;
+            $this->flush($conns, $peerId);
+        }
+    }
+
+    /**
+     * @param  array<int, array{sock: resource, peer: int, wbuf: string}>  $conns
+     */
+    private function closeAll(array &$conns): void
+    {
         foreach (array_keys($conns) as $id) {
             $this->closePair($conns, $id);
         }
-
-        return self::SUCCESS;
     }
 
     /**

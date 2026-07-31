@@ -62,37 +62,12 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
             ->where('id', $this->connectionId)
             ->first();
 
-        if ($connection === null) {
-            // Deleted between dispatch and worker pickup — silently exit so
-            // the queue does not retry forever against a row that no longer
-            // exists.
-            return;
-        }
-
-        $enabled = (bool) $connection->enabled;
-        $consentExpiresAtRaw = $connection->consent_expires_at ?? null;
-        $consentValid = is_string($consentExpiresAtRaw)
-            && $consentExpiresAtRaw !== ''
-            && CarbonImmutable::parse($consentExpiresAtRaw)->isFuture();
-
-        if (! $enabled || ! $consentValid) {
-            // No provider call, no timestamp write, for a connection that
-            // is off or whose consent has expired.
-            return;
-        }
-
-        $rawUserId = $connection->user_id ?? null;
-        $userId = is_numeric($rawUserId) ? (int) $rawUserId : null;
-        if ($userId === null) {
-            return;
-        }
-
-        /** @var User|null $user */
-        $user = User::query()->where('id', $userId)->first();
+        $user = $this->resolveSyncableUser($connection);
         if ($user === null) {
             return;
         }
 
+        $userId = $user->id;
         $now = $clock->now()->toDateTimeString();
 
         try {
@@ -122,20 +97,46 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
                     'updated_at' => $now,
                 ]);
 
-            if ($isConsentFailure) {
-                $events->dispatch(new OpenBankingConsentFailed(
-                    connectionId: $this->connectionId,
-                    userId: $userId,
-                    reason: substr($e->getMessage(), 0, 500),
-                ));
-
-                // Terminal — do not rethrow. Retrying an expired/revoked
-                // consent cannot succeed until the user redoes the full
-                // re-link dance.
-                return;
+            // Non-consent failures rethrow to let the queue retry; a consent
+            // failure is terminal — retrying an expired/revoked consent cannot
+            // succeed until the user redoes the full re-link dance.
+            if (! $isConsentFailure) {
+                throw $e;
             }
 
-            throw $e;
+            $events->dispatch(new OpenBankingConsentFailed(
+                connectionId: $this->connectionId,
+                userId: $userId,
+                reason: substr($e->getMessage(), 0, 500),
+            ));
         }
+    }
+
+    private function resolveSyncableUser(?\stdClass $connection): ?User
+    {
+        if ($connection === null) {
+            // Deleted between dispatch and worker pickup — silently exit so
+            // the queue does not retry forever against a row that no longer
+            // exists.
+            return null;
+        }
+
+        $enabled = (bool) $connection->enabled;
+        $consentExpiresAtRaw = $connection->consent_expires_at ?? null;
+        $consentValid = is_string($consentExpiresAtRaw)
+            && $consentExpiresAtRaw !== ''
+            && CarbonImmutable::parse($consentExpiresAtRaw)->isFuture();
+
+        // No provider call, no timestamp write, for a connection that is off,
+        // whose consent has expired, or whose user_id is unusable.
+        $rawUserId = $connection->user_id ?? null;
+        if (! $enabled || ! $consentValid || ! is_numeric($rawUserId)) {
+            return null;
+        }
+
+        /** @var User|null $user */
+        $user = User::query()->where('id', (int) $rawUserId)->first();
+
+        return $user;
     }
 }

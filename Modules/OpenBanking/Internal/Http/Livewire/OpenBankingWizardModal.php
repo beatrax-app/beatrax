@@ -82,31 +82,14 @@ final class OpenBankingWizardModal extends Component
     {
         $this->errorMessage = '';
 
-        $resource = openssl_pkey_new([
-            'private_key_bits' => 2048,
-            'private_key_type' => OPENSSL_KEYTYPE_RSA,
-        ]);
-
-        if ($resource === false) {
-            $this->errorMessage = 'Could not generate a key pair on this machine — check your OpenSSL configuration.';
+        $keypair = $this->freshRsaKeypair();
+        if (is_string($keypair)) {
+            $this->errorMessage = $keypair;
 
             return;
         }
 
-        $exported = openssl_pkey_export($resource, $privateKeyPem);
-        if (! $exported || ! is_string($privateKeyPem) || $privateKeyPem === '') {
-            $this->errorMessage = 'Could not export the generated key pair.';
-
-            return;
-        }
-
-        $details = openssl_pkey_get_details($resource);
-        $publicKeyPem = $details === false ? null : ($details['key'] ?? null);
-        if (! is_string($publicKeyPem) || $publicKeyPem === '') {
-            $this->errorMessage = 'Could not read the generated public key.';
-
-            return;
-        }
+        [$privateKeyPem, $publicKeyPem] = $keypair;
 
         try {
             $secrets->save(new OpenBankingCredentials(
@@ -130,6 +113,33 @@ final class OpenBankingWizardModal extends Component
 
         $this->publicKeyPem = $publicKeyPem;
         $this->step = self::STEP_REGISTER;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|string the private + public PEM pair,
+     *                                            or a user-facing error message when a generation step fails
+     */
+    private function freshRsaKeypair(): array|string
+    {
+        $resource = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+        if ($resource === false) {
+            return 'Could not generate a key pair on this machine — check your OpenSSL configuration.';
+        }
+
+        $exported = openssl_pkey_export($resource, $privateKeyPem);
+        if (! $exported || ! is_string($privateKeyPem) || $privateKeyPem === '') {
+            return 'Could not export the generated key pair.';
+        }
+
+        $details = openssl_pkey_get_details($resource);
+        $publicKeyPem = $details === false ? null : ($details['key'] ?? null);
+
+        return is_string($publicKeyPem) && $publicKeyPem !== ''
+            ? [$privateKeyPem, $publicKeyPem]
+            : 'Could not read the generated public key.';
     }
 
     public function continueToApplicationId(): void
