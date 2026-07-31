@@ -433,7 +433,13 @@ the "extend window" flow re-runs a backfill overlapping the prior
 window, and the cursor-expiry fallback walk can also re-walk recent
 messages; refetching would burn provider quota for nothing. On a
 transaction failure the catch block unlinks the `.eml` so there is
-never an orphan blob without a matching index row. Per page,
+never an orphan blob without a matching index row. The already-indexed
+check, the `.eml`-then-DB-transaction write and its orphan cleanup live
+on a single per-run `InboxScanContext` readonly collaborator (built once
+in the job's `handle`/`prepareScan` and passed to each per-message
+helper), so `BackfillInboxJob` and `IncrementalScanJob` share one copy
+of that logic instead of each carrying nine positional arguments through
+their provider branches. Per page,
 `backfill_progress` is bumped through the state machine (so
 `BoundaryArchTest`'s `noOtherInboxScanStateMutator` covers it
 alongside status/cursor columns) and the loop sleeps two seconds via

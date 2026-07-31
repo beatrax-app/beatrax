@@ -10,7 +10,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -96,10 +95,6 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         /** @var User $user */
         $user = User::query()->where('id', $userId)->firstOrFail();
 
-        // Defensive window clamp — the slider clamps client-side
-        // but a crafted POST may carry an out-of-range value.
-        $window = max(1, min(12, $this->windowMonths));
-
         $senderPatterns = array_map(
             static fn ($s) => $s->emailPattern,
             $senderQuery->all($user),
@@ -115,69 +110,42 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        if ($provider === 'gmail') {
-            $this->runGmailBackfill(
-                $connection,
-                $clock,
-                $gmail,
-                $blobStore,
-                $mime,
-                $sm,
-                $userId,
-                $senderPatterns,
-                $window,
-            );
+        // Defensive window clamp — the slider clamps client-side
+        // but a crafted POST may carry an out-of-range value.
+        $window = max(1, min(12, $this->windowMonths));
 
-            return;
-        }
+        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId);
 
-        if ($provider === 'microsoft') {
-            $this->runMicrosoftBackfill(
-                $connection,
-                $clock,
-                $graph,
-                $blobStore,
-                $mime,
-                $sm,
-                $userId,
-                $senderPatterns,
-                $window,
-            );
-
-            return;
-        }
-
-        // Unknown provider — surface the misconfiguration without
-        // retrying forever. The inboxes row's CHECK trigger pair
-        // keeps gmail|microsoft the only legal production values, so
-        // this arm is reached only if data bypassed the migration.
-        $sm->applyStatus(
-            $this->inboxId,
-            'error',
-            "Unknown provider '{$provider}' — backfill cannot proceed.",
-        );
+        // The inboxes CHECK trigger pair keeps gmail|microsoft the only
+        // legal production values, so the default arm is reached only if
+        // data bypassed the migration; it surfaces the misconfiguration
+        // without retrying forever rather than walking an empty provider.
+        match ($provider) {
+            'gmail' => $this->runGmailBackfill($context, $gmail, $senderPatterns, $window),
+            'microsoft' => $this->runMicrosoftBackfill($context, $graph, $senderPatterns, $window),
+            default => $sm->applyStatus(
+                $this->inboxId,
+                'error',
+                "Unknown provider '{$provider}' — backfill cannot proceed.",
+            ),
+        };
     }
 
     /**
      * @param  list<string>  $senderPatterns
      */
     private function runGmailBackfill(
-        Connection $connection,
-        Clock $clock,
+        InboxScanContext $context,
         GmailApiClientContract $gmail,
-        EmlBlobStore $blobStore,
-        MimeHeaderParser $mime,
-        InboxScanStateMachine $sm,
-        int $userId,
         array $senderPatterns,
         int $windowMonths,
     ): void {
-        $sm->applyStatus($this->inboxId, 'backfilling');
+        $context->sm->applyStatus($this->inboxId, 'backfilling');
 
         // Honours the user-selected window: the Gmail after: operator
         // bounds the q= search to this date floor so the walk stops
         // at the slider value instead of racing the full-inbox quota.
-        $windowStart = $clock->now()->modify("-{$windowMonths} months")->toDateTimeImmutable();
+        $windowStart = $context->clock->now()->modify("-{$windowMonths} months")->toDateTimeImmutable();
 
         // Mutable accumulators captured by the page closure: the
         // running estimate is the max() of per-page hints, and the
@@ -191,12 +159,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
 
         try {
             $this->walkAndPersist(
-                $connection,
-                $clock,
-                $blobStore,
-                $mime,
-                $sm,
-                $userId,
+                $context,
                 fetchNextPage: function (?string $cursor) use ($gmail, $senderPatterns, $windowStart, $accum): array {
                     $page = $gmail->listSenderMessages($this->inboxId, $senderPatterns, $cursor, $windowStart);
                     $accum->estimated = max($accum->estimated, $page['resultSizeEstimate']);
@@ -211,7 +174,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                         'lastMessageDate' => null,
                     ];
                 },
-                extractMessageId: static fn (array $msgMeta): string => is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '',
+                extractMessageId: self::extractProviderMessageId(...),
                 fetchRawEml: fn (string $messageId): string => $gmail->getRawMessage($this->inboxId, $messageId),
                 extractInternalDate: static fn (array $msgMeta): ?DateTimeImmutable => null,
             );
@@ -219,36 +182,15 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             // Sets the baseline cursor only via the state machine's
             // sole-mutator surface so BoundaryArchTest stays green.
             if ($accum->highestHistoryId !== null) {
-                $sm->recordCursor(
+                $context->sm->recordCursor(
                     $this->inboxId,
                     ScanCursor::gmail($accum->highestHistoryId),
                 );
             }
 
-            $this->clearProgressAndIdle($connection, $clock, $sm);
-        } catch (RateLimitedException $e) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'rate_limited',
-                "Retry after {$e->retryAfterSeconds}s.",
-            );
-            throw $e;
-        } catch (InvalidGrantException $e) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'needs_reauth',
-                'OAuth grant revoked or expired.',
-            );
-            // Do not rethrow — needs_reauth is terminal until the
-            // user manually reconnects.
-            unset($e);
+            $this->clearProgressAndIdle($context);
         } catch (Throwable $e) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'error',
-                substr($e->getMessage(), 0, 500),
-            );
-            throw $e;
+            $this->transitionOnScanError($context, $e);
         }
     }
 
@@ -256,23 +198,18 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
      * @param  list<string>  $senderPatterns
      */
     private function runMicrosoftBackfill(
-        Connection $connection,
-        Clock $clock,
+        InboxScanContext $context,
         GraphApiClientContract $graph,
-        EmlBlobStore $blobStore,
-        MimeHeaderParser $mime,
-        InboxScanStateMachine $sm,
-        int $userId,
         array $senderPatterns,
         int $windowMonths,
     ): void {
-        $sm->applyStatus($this->inboxId, 'backfilling');
+        $context->sm->applyStatus($this->inboxId, 'backfilling');
 
         // Captures the wall-clock anchor before any provider call so
         // the post-walk deltaPage(null, anchor) baseline uses the
         // pre-walk timestamp, closing the multi-hour-backfill race
         // window (see architecture.md for the full argument).
-        $walkStartedAt = $clock->now()->toDateTimeImmutable();
+        $walkStartedAt = $context->clock->now()->toDateTimeImmutable();
         $windowStart = $walkStartedAt->modify("-{$windowMonths} months");
 
         // Mutable accumulators captured by the page closure: the
@@ -286,55 +223,23 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         };
 
         try {
-            // Backfill phase: non-delta walk of /me/messages via the
-            // (from in [...]) and receivedDateTime ge {start} filter;
-            // @odata.nextLink terminates the loop.
             $this->walkAndPersist(
-                $connection,
-                $clock,
-                $blobStore,
-                $mime,
-                $sm,
-                $userId,
+                $context,
                 fetchNextPage: function (?string $cursor) use ($graph, $senderPatterns, $windowStart, $accum): array {
-                    $page = $graph->listSenderMessagesPaged(
-                        $this->inboxId,
-                        $senderPatterns,
-                        $windowStart,
-                        $cursor,
-                    );
-                    // Graph returns no result-size estimate, so the
-                    // progress strip treats the running fetched count
-                    // itself as the per-page estimate.
+                    $page = $graph->listSenderMessagesPaged($this->inboxId, $senderPatterns, $windowStart, $cursor);
                     $accum->estimated = max($accum->estimated, count($page['messages']));
-                    $messages = $page['messages'];
-                    if ($messages !== []) {
-                        $lastReceived = $messages[count($messages) - 1]['receivedDateTime'] ?? null;
-                        if (is_string($lastReceived) && $lastReceived !== '') {
-                            $accum->lastMessageDate = $lastReceived;
-                        }
-                    }
+                    $accum->lastMessageDate = self::latestReceived($page['messages'], $accum->lastMessageDate);
 
                     return [
-                        'messages' => $messages,
+                        'messages' => $page['messages'],
                         'nextCursor' => $page['nextLink'],
                         'totalEstimated' => $accum->estimated,
                         'lastMessageDate' => $accum->lastMessageDate,
                     ];
                 },
-                extractMessageId: static fn (array $msgMeta): string => is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '',
+                extractMessageId: self::extractProviderMessageId(...),
                 fetchRawEml: fn (string $messageId): string => $graph->getRawMessage($this->inboxId, $messageId),
-                extractInternalDate: static function (array $msgMeta): ?DateTimeImmutable {
-                    $received = $msgMeta['receivedDateTime'] ?? null;
-                    if (! is_string($received) || $received === '') {
-                        return null;
-                    }
-                    try {
-                        return new DateTimeImmutable($received);
-                    } catch (Throwable) {
-                        return null;
-                    }
-                },
+                extractInternalDate: fn (array $msgMeta): ?DateTimeImmutable => $this->graphMessageInternalDate($msgMeta),
             );
 
             // Baseline phase: a single delta call after the walk ends
@@ -344,58 +249,30 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
             $deltaLink = $baseline['deltaLink'] ?? null;
             if ($deltaLink !== null && $deltaLink !== '') {
-                $sm->recordCursor(
+                $context->sm->recordCursor(
                     $this->inboxId,
                     ScanCursor::microsoft($deltaLink),
                 );
             }
 
-            $this->clearProgressAndIdle($connection, $clock, $sm);
-        } catch (RateLimitedException $e) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'rate_limited',
-                "Retry after {$e->retryAfterSeconds}s.",
-            );
-            throw $e;
-        } catch (InvalidGrantException $e) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'needs_reauth',
-                'OAuth grant revoked or expired.',
-            );
-            unset($e);
+            $this->clearProgressAndIdle($context);
         } catch (Throwable $e) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'error',
-                substr($e->getMessage(), 0, 500),
-            );
-            throw $e;
+            $this->transitionOnScanError($context, $e);
         }
     }
 
     // Provider-agnostic walker: iterates pages via the closure-based
-    // fetcher, writes each message's .eml then DB row (atomic +
-    // orphan-cleaned), updates the progress strip per page, and
-    // sleeps between pages so the provider quota isn't exhausted.
+    // fetcher, persists each new message through the scan context,
+    // updates the progress strip per page, and sleeps between pages so
+    // the provider quota isn't exhausted by a tight loop.
     /**
      * @param  Closure(?string): array{messages: list<array<string, mixed>>, nextCursor: ?string, totalEstimated: int, lastMessageDate: ?string}  $fetchNextPage
-     * @param  Closure(array<string, mixed>): string  $extractMessageId  the provider message id, used as
-     *                                                                   both the .eml filename and the unique row key
-     * @param  Closure(string): string  $fetchRawEml  the raw RFC 822 byte stream (Gmail
-     *                                                decodes base64url for us; Graph returns the bytes verbatim)
-     * @param  Closure(array<string, mixed>): ?DateTimeImmutable  $extractInternalDate  the provider-stamped
-     *                                                                                  internal_date, or null to fall back to the .eml's Date: header
-     *                                                                                  (Gmail's users.messages.list has no per-message receivedDateTime)
+     * @param  Closure(array<string, mixed>): string  $extractMessageId
+     * @param  Closure(string): string  $fetchRawEml
+     * @param  Closure(array<string, mixed>): ?DateTimeImmutable  $extractInternalDate
      */
     private function walkAndPersist(
-        Connection $connection,
-        Clock $clock,
-        EmlBlobStore $blobStore,
-        MimeHeaderParser $mime,
-        InboxScanStateMachine $sm,
-        int $userId,
+        InboxScanContext $context,
         Closure $fetchNextPage,
         Closure $extractMessageId,
         Closure $fetchRawEml,
@@ -413,80 +290,13 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             }
 
             foreach ($messages as $msgMeta) {
-                $messageId = $extractMessageId($msgMeta);
-                if ($messageId === '') {
-                    continue;
-                }
-
-                // Skip messages already fetched + indexed — both the
-                // "extend window" re-run and the cursor-expiry
-                // fallback walk can revisit recent messages, and
-                // refetching would burn provider quota for nothing.
-                $alreadyFetched = $connection->table('inbox_messages')
-                    ->where('inbox_id', $this->inboxId)
-                    ->where('provider_message_id', $messageId)
-                    ->exists();
-                if ($alreadyFetched) {
-                    continue;
-                }
-
-                $rawEml = $fetchRawEml($messageId);
-
-                // Provider-supplied internal date (Microsoft) vs.
-                // in-body Date: header (Gmail); when the provider
-                // stamps nothing, the fallback goes through the
-                // project Clock so test-frozen time stays honoured.
-                $internalDate = $extractInternalDate($msgMeta);
-                $fallbackDate = $internalDate ?? $clock->now()->toDateTimeImmutable();
-                $headers = $mime->parseHeadersWithFallbackDate($rawEml, $fallbackDate);
-
-                $emlPath = $blobStore->pathFor(
-                    $userId,
-                    $this->inboxId,
-                    $headers->internalDate,
-                    $messageId,
-                );
-                $blobStore->put($emlPath, $rawEml);
-
-                try {
-                    $connection->transaction(function () use (
-                        $connection,
-                        $userId,
-                        $messageId,
-                        $headers,
-                        $clock,
-                    ): void {
-                        $connection->statement('PRAGMA busy_timeout = 5000');
-                        $now = $clock->now()->toDateTimeString();
-                        $connection->table('inbox_messages')->insertOrIgnore([
-                            'user_id' => $userId,
-                            'inbox_id' => $this->inboxId,
-                            'provider_message_id' => $messageId,
-                            'internal_date' => $headers->internalDate->format('Y-m-d H:i:s'),
-                            'sender_email' => $headers->senderEmail,
-                            'sender_name' => $headers->senderName,
-                            'subject' => $headers->subject,
-                            'status' => 'fetched',
-                            'fetched_at' => $now,
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                        ]);
-                    });
-                } catch (Throwable $e) {
-                    // Orphan-cleanup: the .eml is on disk but the DB
-                    // insert never landed — unlink so there is no
-                    // untracked blob.
-                    $blobStore->delete($emlPath);
-                    throw $e;
-                }
-
-                $fetched++;
+                $fetched += $this->persistPageMessage($context, $msgMeta, $extractMessageId, $fetchRawEml, $extractInternalDate);
             }
 
             // Updates the live progress payload for /inboxes wire:poll,
             // routed through the state machine so BoundaryArchTest's
             // noOtherInboxScanStateMutator covers this column too.
-            $sm->recordBackfillProgress($this->inboxId, [
+            $context->sm->recordBackfillProgress($this->inboxId, [
                 'fetched_count' => $fetched,
                 'total_estimated' => $page['totalEstimated'],
                 'last_message_date' => $page['lastMessageDate'],
@@ -502,6 +312,30 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
             // is fakeable via Sleep::fake() in tests.
             Sleep::sleep(2);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $msgMeta
+     * @param  Closure(array<string, mixed>): string  $extractMessageId
+     * @param  Closure(string): string  $fetchRawEml
+     * @param  Closure(array<string, mixed>): ?DateTimeImmutable  $extractInternalDate
+     * @return int the row count persisted for this message, 0 when skipped
+     */
+    private function persistPageMessage(
+        InboxScanContext $context,
+        array $msgMeta,
+        Closure $extractMessageId,
+        Closure $fetchRawEml,
+        Closure $extractInternalDate,
+    ): int {
+        $messageId = $extractMessageId($msgMeta);
+        if ($messageId === '' || $context->alreadyIndexed($messageId)) {
+            return 0;
+        }
+
+        $context->storeFetchedMessage($messageId, $fetchRawEml($messageId), $extractInternalDate($msgMeta));
+
+        return 1;
     }
 
     // Laravel calls this after the worker exhausts its retry budget;
@@ -534,16 +368,83 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    private function clearProgressAndIdle(
-        Connection $connection,
-        Clock $clock,
-        InboxScanStateMachine $sm,
-    ): void {
+    private function clearProgressAndIdle(InboxScanContext $context): void
+    {
         // Clears the progress payload and flips status back to idle,
         // both through the state machine so its lifecycle write
         // boundary covers backfill_progress alongside status/cursor.
-        unset($connection, $clock);
-        $sm->recordBackfillProgress($this->inboxId, null);
-        $sm->applyStatus($this->inboxId, 'idle');
+        $context->sm->recordBackfillProgress($this->inboxId, null);
+        $context->sm->applyStatus($this->inboxId, 'idle');
+    }
+
+    // Both provider branches share one error envelope: rate-limit
+    // transitions and rethrows for the backoff curve, a revoked grant
+    // parks the inbox at needs_reauth without a rethrow, and any other
+    // throwable records the error before rethrowing to the failed hook.
+    private function transitionOnScanError(InboxScanContext $context, Throwable $e): void
+    {
+        match (true) {
+            $e instanceof RateLimitedException => $context->sm->applyStatus(
+                $this->inboxId,
+                'rate_limited',
+                "Retry after {$e->retryAfterSeconds}s.",
+            ),
+            $e instanceof InvalidGrantException => $context->sm->applyStatus(
+                $this->inboxId,
+                'needs_reauth',
+                'OAuth grant revoked or expired.',
+            ),
+            default => $context->sm->applyStatus(
+                $this->inboxId,
+                'error',
+                substr($e->getMessage(), 0, 500),
+            ),
+        };
+
+        if (! $e instanceof InvalidGrantException) {
+            throw $e;
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $messages
+     */
+    private static function latestReceived(array $messages, ?string $current): ?string
+    {
+        if ($messages === []) {
+            return $current;
+        }
+
+        $lastReceived = $messages[count($messages) - 1]['receivedDateTime'] ?? null;
+
+        return is_string($lastReceived) && $lastReceived !== '' ? $lastReceived : $current;
+    }
+
+    /**
+     * @param  array<string, mixed>  $msgMeta
+     */
+    private static function extractProviderMessageId(array $msgMeta): string
+    {
+        return is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
+    }
+
+    // Provider-stamped receivedDateTime is the canonical internal date
+    // for Microsoft; a null return lets the scan context fall back to
+    // the project Clock when the stamp is missing or unparseable.
+    /**
+     * @param  array<string, mixed>  $msgMeta
+     */
+    private function graphMessageInternalDate(array $msgMeta): ?DateTimeImmutable
+    {
+        $received = $msgMeta['receivedDateTime'] ?? null;
+        if (! is_string($received) || $received === '') {
+            return null;
+        }
+
+        try {
+            return new DateTimeImmutable($received);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }
