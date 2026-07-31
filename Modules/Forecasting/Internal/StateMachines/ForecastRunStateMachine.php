@@ -7,9 +7,9 @@ namespace Modules\Forecasting\Internal\StateMachines;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Internal\Exceptions\ForecastRunNotFoundException;
 use Modules\Forecasting\Internal\Exceptions\InvalidForecastRunTransitionException;
 use Modules\Forecasting\Models\ForecastRun;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/forecasting/architecture.md
@@ -71,7 +71,7 @@ final readonly class ForecastRunStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new ForecastRunNotFoundException(
                     "ForecastRunStateMachine: forecast_runs row {$runId} not found.",
                 );
             }
