@@ -10,6 +10,8 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Modules\Chains\Internal\CardStatementStateMachine;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Chains\Public\Enums\CardStatementCreditReason;
+use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
@@ -204,7 +206,7 @@ final class IcsSettlementResolver
             // card_statements.state — with the positive settlement delta.
             $settlement = $this->stateMachine->applySettlement($statementId, $settled, $user);
 
-            if ($settlement->newState === 'overpaid') {
+            if ($settlement->newState === CardStatementState::Overpaid->value) {
                 // Overpayment surplus carries forward. to_statement_id
                 // is set on the next resolver pass if/when the next
                 // statement period lands — write NULL here to keep the
@@ -216,7 +218,7 @@ final class IcsSettlementResolver
                     'from_statement_id' => $statementId,
                     'to_statement_id' => null,
                     'amount_minor' => $surplus,
-                    'reason' => 'overpayment',
+                    'reason' => CardStatementCreditReason::Overpayment->value,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -259,7 +261,7 @@ final class IcsSettlementResolver
                 $join->on('card_statements.account_id', '=', 'transactions.account_id')
                     ->on('card_statements.user_id', '=', 'transactions.user_id')
                     ->whereRaw('transactions.posted_at BETWEEN card_statements.period_start AND card_statements.period_end')
-                    ->whereIn('card_statements.state', ['settled', 'overpaid']);
+                    ->whereIn('card_statements.state', [CardStatementState::Settled->value, CardStatementState::Overpaid->value]);
             })
             ->leftJoin('chain_links', function ($join): void {
                 /** @var JoinClause $join */
@@ -327,7 +329,7 @@ final class IcsSettlementResolver
             ->table('card_statements')
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
-            ->whereIn('state', ['open', 'partially_settled'])
+            ->whereIn('state', [CardStatementState::Open->value, CardStatementState::PartiallySettled->value])
             ->where('period_start', '>', $periodEnd)
             ->orderBy('period_start')
             ->first(['id']);
@@ -348,11 +350,11 @@ final class IcsSettlementResolver
             'evidence' => [
                 'statement_id' => $closedStatementId,
                 'unaccounted_delta_minor' => 0,
-                'tolerance_used' => 'refund_after_close',
+                'tolerance_used' => CardStatementCreditReason::RefundAfterClose->value,
                 'covered_count' => 1,
                 'credits_applied_minor' => 0,
                 'signature_hash' => $signatureHash,
-                'reason' => 'refund_after_close',
+                'reason' => CardStatementCreditReason::RefundAfterClose->value,
             ],
         ], $user);
 
@@ -364,7 +366,7 @@ final class IcsSettlementResolver
             'from_statement_id' => $closedStatementId,
             'to_statement_id' => $nextStatementId,
             'amount_minor' => abs($refundAmount),
-            'reason' => 'refund_after_close',
+            'reason' => CardStatementCreditReason::RefundAfterClose->value,
             'created_at' => $now,
             'updated_at' => $now,
         ]);
@@ -388,7 +390,7 @@ final class IcsSettlementResolver
             ->table('card_statements')
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
-            ->whereIn('state', ['open', 'partially_settled'])
+            ->whereIn('state', [CardStatementState::Open->value, CardStatementState::PartiallySettled->value])
             ->whereBetween('period_end', [$windowStart, $windowEnd])
             ->orderBy('id')
             ->get([
