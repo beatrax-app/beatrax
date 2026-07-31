@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Token\AccessTokenInterface;
 use Modules\EmailScan\Internal\SafeMessage;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use RuntimeException;
@@ -87,7 +88,7 @@ class MicrosoftOAuthProvider
 
     public function refreshAccessToken(string $refreshToken): AccessTokenWithEmail
     {
-        $client = $this->secrets->loadProviderClient('microsoft');
+        $client = $this->secrets->loadProviderClient(MailProvider::Microsoft->value);
         if ($client === null) {
             throw new InboxNotConfiguredException(
                 'Microsoft OAuth client is not configured — run the OAuth-client wizard first.',
@@ -128,7 +129,7 @@ class MicrosoftOAuthProvider
 
     public function readEmail(string $accessToken): string
     {
-        $client = $this->secrets->loadProviderClient('microsoft');
+        $client = $this->secrets->loadProviderClient(MailProvider::Microsoft->value);
         if ($client === null) {
             throw new InboxNotConfiguredException(
                 'Microsoft OAuth client is not configured — run the OAuth-client wizard first.',

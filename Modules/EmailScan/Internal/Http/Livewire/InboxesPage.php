@@ -20,6 +20,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
 use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
@@ -240,7 +241,7 @@ final class InboxesPage extends Component
         if ($health === null) {
             throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
         }
-        if (in_array($health->status, ['backfilling', 'scanning'], strict: true)) {
+        if (in_array($health->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true)) {
             $this->dispatch('toast', message: 'Scan already in progress.');
 
             return;

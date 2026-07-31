@@ -27,6 +27,8 @@ use Modules\EmailScan\Internal\InvalidStateTransitionException;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Public\Dto\ScanCursor;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
 use Throwable;
@@ -93,17 +95,17 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             // gmail|microsoft the only legal production values, so it is
             // reached only if data bypassed the migration.
             match ($prepared->provider) {
-                'gmail' => $this->runGmailIncremental($prepared->context, $gmail, $prepared->senderPatterns, $prepared->stateRow),
-                'microsoft' => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow),
+                MailProvider::Gmail->value => $this->runGmailIncremental($prepared->context, $gmail, $prepared->senderPatterns, $prepared->stateRow),
+                MailProvider::Microsoft->value => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow),
                 default => $sm->applyStatus(
                     $this->inboxId,
-                    'error',
+                    InboxScanStatus::Error->value,
                     "Unknown provider '{$prepared->provider}' — incremental scan cannot proceed.",
                 ),
             };
 
-            if ($prepared->provider === 'gmail' || $prepared->provider === 'microsoft') {
-                $sm->applyStatus($this->inboxId, 'idle');
+            if ($prepared->provider === MailProvider::Gmail->value || $prepared->provider === MailProvider::Microsoft->value) {
+                $sm->applyStatus($this->inboxId, InboxScanStatus::Idle->value);
                 $sm->resetRetryAttempts($this->inboxId);
             }
         } catch (Throwable $e) {
@@ -166,7 +168,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         // Reconnect: no provider API call, since a revoked refresh
         // token cannot be repaired by another scan attempt.
         $currentStatus = is_string($stateRow->status) ? $stateRow->status : '';
-        if ($currentStatus === 'needs_reauth') {
+        if ($currentStatus === InboxScanStatus::NeedsReauth->value) {
             return null;
         }
 
@@ -193,7 +195,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         // the state machine rejects backfilling -> scanning, so a
         // rejected transition means skip rather than error.
         try {
-            $sm->applyStatus($this->inboxId, 'scanning');
+            $sm->applyStatus($this->inboxId, InboxScanStatus::Scanning->value);
 
             return true;
         } catch (InvalidStateTransitionException) {
@@ -344,7 +346,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         try {
             $sm->applyStatus(
                 $this->inboxId,
-                'error',
+                InboxScanStatus::Error->value,
                 substr($exception->getMessage(), 0, 500),
             );
         } catch (Throwable) {
@@ -363,12 +365,12 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             $e instanceof RateLimitedException => $sm->applyRateLimited($this->inboxId, $e->retryAfterSeconds),
             $e instanceof InvalidGrantException => $sm->applyStatus(
                 $this->inboxId,
-                'needs_reauth',
+                InboxScanStatus::NeedsReauth->value,
                 'OAuth grant revoked or expired.',
             ),
             default => $sm->applyStatus(
                 $this->inboxId,
-                'error',
+                InboxScanStatus::Error->value,
                 substr($e->getMessage(), 0, 500),
             ),
         };

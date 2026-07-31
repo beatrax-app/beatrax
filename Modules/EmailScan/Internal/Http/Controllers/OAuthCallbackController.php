@@ -18,6 +18,8 @@ use Modules\EmailScan\Internal\OAuth\InvalidStateException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthExchangeFailed;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
@@ -67,8 +69,8 @@ final class OAuthCallbackController
     private function resolveProvider(string $provider): GoogleOAuthProvider|MicrosoftOAuthProvider
     {
         return match ($provider) {
-            'gmail' => $this->googleOAuth,
-            'microsoft' => $this->microsoftOAuth,
+            MailProvider::Gmail->value => $this->googleOAuth,
+            MailProvider::Microsoft->value => $this->microsoftOAuth,
             default => throw new NotFoundHttpException('Unknown provider.'),
         };
     }
@@ -166,7 +168,7 @@ final class OAuthCallbackController
 
     private function missingRefreshTokenMessage(string $provider): string
     {
-        return $provider === 'gmail'
+        return $provider === MailProvider::Gmail->value
             ? 'Google did not return a refresh token. Publish your OAuth consent screen to "In production" and try again.'
             : 'The provider did not return a refresh token. Reconnect and grant offline access when prompted.';
     }
@@ -209,7 +211,7 @@ final class OAuthCallbackController
                 'user_id' => $userId,
                 'inbox_id' => $newId,
                 'folder' => 'INBOX',
-                'status' => 'idle',
+                'status' => InboxScanStatus::Idle->value,
                 'retry_attempts' => 0,
                 'created_at' => $now,
                 'updated_at' => $now,

@@ -35,7 +35,7 @@
     <flux:modal wire:key="oauth-modal-{{ $provider }}" name="oauth-client-wizard-{{ $provider }}" class="md:max-w-2xl" dismissible="false">
         <div class="space-y-6">
             <header>
-                @if ($provider === 'gmail')
+                @if ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value)
                     <flux:heading size="lg">Set up your Gmail OAuth client</flux:heading>
                 @else
                     <flux:heading size="lg">Set up your Microsoft 365 OAuth client</flux:heading>
@@ -45,7 +45,7 @@
                 </p>
             </header>
 
-            @if ($provider === 'gmail')
+            @if ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value)
                 <ol class="space-y-6">
                     <li class="flex items-start gap-4">
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900">1</span>
@@ -137,7 +137,7 @@
                         </div>
                     </li>
                 </ol>
-            @elseif ($provider === 'microsoft')
+            @elseif ($provider === \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value)
                 <ol class="space-y-6">
                     <li class="flex items-start gap-4">
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900">1</span>

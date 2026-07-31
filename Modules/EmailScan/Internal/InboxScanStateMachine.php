@@ -9,6 +9,8 @@ use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Public\Dto\ScanCursor;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 
 /**
@@ -25,20 +27,6 @@ final class InboxScanStateMachine
     // runaway retry count cannot push the delay to infinity.
     /** @var list<int> */
     private const BACKOFF_SCHEDULE = [60, 300, 900, 3600];
-
-    // Per-state allowed-target map; a transition not present here
-    // raises InvalidStateTransitionException — there is no
-    // "any state -> any state" escape hatch (see architecture.md for
-    // why the re-entrant and 'error'/'needs_reauth' entries exist).
-    /** @var array<string, list<string>> */
-    private const ALLOWED_TRANSITIONS = [
-        'idle' => ['idle', 'backfilling', 'scanning', 'needs_reauth', 'error'],
-        'backfilling' => ['backfilling', 'idle', 'rate_limited', 'needs_reauth', 'error'],
-        'scanning' => ['scanning', 'idle', 'rate_limited', 'needs_reauth', 'error'],
-        'rate_limited' => ['backfilling', 'scanning', 'idle', 'needs_reauth', 'error'],
-        'needs_reauth' => ['idle', 'needs_reauth'],
-        'error' => ['idle', 'backfilling', 'scanning', 'needs_reauth', 'error'],
-    ];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -79,7 +67,11 @@ final class InboxScanStateMachine
             // last_scan_at advances ONLY on success-shaped transitions
             // so the UI can surface "stuck since X" for a stalled
             // rate_limited / needs_reauth / error inbox.
-            if (in_array($newStatus, ['idle', 'backfilling', 'scanning'], strict: true)) {
+            if (in_array($newStatus, [
+                InboxScanStatus::Idle->value,
+                InboxScanStatus::Backfilling->value,
+                InboxScanStatus::Scanning->value,
+            ], strict: true)) {
                 $update['last_scan_at'] = $now;
             }
 
@@ -109,7 +101,7 @@ final class InboxScanStateMachine
             }
 
             $currentStatus = self::toString($row->status);
-            $this->guardTransition($inboxId, $currentStatus, 'rate_limited');
+            $this->guardTransition($inboxId, $currentStatus, InboxScanStatus::RateLimited->value);
 
             $newAttempts = self::toInt($row->retry_attempts) + 1;
             $now = $this->clock->now()->toDateTimeString();
@@ -118,7 +110,7 @@ final class InboxScanStateMachine
                 ->where('inbox_id', $inboxId)
                 ->where('folder', 'INBOX')
                 ->update([
-                    'status' => 'rate_limited',
+                    'status' => InboxScanStatus::RateLimited->value,
                     'retry_attempts' => $newAttempts,
                     'error_message' => "Retry after {$retryAfterSeconds}s.",
                     'updated_at' => $now,
@@ -201,9 +193,9 @@ final class InboxScanStateMachine
             }
 
             $update = ['updated_at' => $this->clock->now()->toDateTimeString()];
-            if ($cursor->provider === 'gmail' && $cursor->historyId !== null) {
+            if ($cursor->provider === MailProvider::Gmail->value && $cursor->historyId !== null) {
                 $update['last_history_id'] = $cursor->historyId;
-            } elseif ($cursor->provider === 'microsoft' && $cursor->deltaLink !== null) {
+            } elseif ($cursor->provider === MailProvider::Microsoft->value && $cursor->deltaLink !== null) {
                 $update['last_delta_link'] = $cursor->deltaLink;
             }
 
@@ -241,7 +233,10 @@ final class InboxScanStateMachine
 
     private function guardTransition(int $inboxId, string $currentStatus, string $newStatus): void
     {
-        $allowed = self::ALLOWED_TRANSITIONS[$currentStatus] ?? [];
+        $current = InboxScanStatus::tryFrom($currentStatus);
+        $allowed = $current === null
+            ? []
+            : array_map(static fn (InboxScanStatus $s): string => $s->value, $current->allowedNext());
         if (! in_array($newStatus, $allowed, strict: true)) {
             throw new InvalidStateTransitionException(
                 "InboxScanStateMachine: inbox {$inboxId} transition '{$currentStatus}' → '{$newStatus}' is not allowed.",

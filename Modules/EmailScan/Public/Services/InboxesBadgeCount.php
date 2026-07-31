@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
 
 // Top-nav "Inboxes" badge feed: sums discovered-sender candidates
 // awaiting review (matching DiscoveredSenderQuery's MIN_OCCURRENCES/
@@ -55,7 +56,7 @@ final class InboxesBadgeCount
                     DiscoveredSenderQuery::MIN_OCCURRENCES,
                     $threshold,
                     $user->id,
-                    'needs_reauth',
+                    InboxScanStatus::NeedsReauth->value,
                 ],
             );
 

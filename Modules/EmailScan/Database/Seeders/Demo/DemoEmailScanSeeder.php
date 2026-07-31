@@ -12,6 +12,8 @@ use Modules\EmailScan\Models\InboxMessage;
 use Modules\EmailScan\Models\InboxScanState;
 use Modules\EmailScan\Models\KnownSender;
 use Modules\EmailScan\Models\OAuthSecret;
+use Modules\EmailScan\Public\Enums\InboxScanStatus;
+use Modules\EmailScan\Public\Enums\MailProvider;
 
 /**
  * @link ../../../../../.docs/features/email-scan/architecture.md
@@ -32,14 +34,14 @@ final class DemoEmailScanSeeder
             return 0;
         }
 
-        $gmail = $this->upsertInbox($primary, 'gmail', self::GMAIL_EMAIL);
-        $microsoft = $this->upsertInbox($primary, 'microsoft', self::MS_EMAIL);
+        $gmail = $this->upsertInbox($primary, MailProvider::Gmail->value, self::GMAIL_EMAIL);
+        $microsoft = $this->upsertInbox($primary, MailProvider::Microsoft->value, self::MS_EMAIL);
 
         $this->upsertScanState($primary, $gmail, lastHistoryId: 'gmail-cursor-1234', lastDeltaLink: null);
         $this->upsertScanState($primary, $microsoft, lastHistoryId: null, lastDeltaLink: 'https://graph.microsoft.com/v1.0/me/messages/delta?$skiptoken=demo-cursor');
 
-        $this->upsertOAuthSecret($primary, 'gmail');
-        $this->upsertOAuthSecret($primary, 'microsoft');
+        $this->upsertOAuthSecret($primary, MailProvider::Gmail->value);
+        $this->upsertOAuthSecret($primary, MailProvider::Microsoft->value);
 
         $this->upsertKnownSender($primary, 'subscriptions@spotify.com', 'Spotify subscriptions');
         $this->upsertKnownSender($primary, 'noreply@bol.com', 'Bol.com receipts');
@@ -136,7 +138,7 @@ final class DemoEmailScanSeeder
                 'last_history_id' => $lastHistoryId,
                 'last_delta_link' => $lastDeltaLink,
                 'last_scan_at' => CarbonImmutable::now()->subHours(2),
-                'status' => 'idle',
+                'status' => InboxScanStatus::Idle->value,
                 'error_message' => null,
                 'retry_attempts' => 0,
             ],

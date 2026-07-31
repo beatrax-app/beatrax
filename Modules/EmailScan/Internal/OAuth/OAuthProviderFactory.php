@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal\OAuth;
 
 use League\OAuth2\Client\Provider\Google;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Psr\Http\Client\ClientInterface;
 use TheNetworg\OAuth2\Client\Provider\Azure;
@@ -30,7 +31,7 @@ final class OAuthProviderFactory
      */
     public function google(string $redirectUri): Google
     {
-        $client = $this->clientOrFail('gmail', 'Google');
+        $client = $this->clientOrFail(MailProvider::Gmail->value, 'Google');
 
         return new Google([
             'clientId' => $client['client_id'],
@@ -46,7 +47,7 @@ final class OAuthProviderFactory
      */
     public function microsoft(string $redirectUri): Azure
     {
-        $client = $this->clientOrFail('microsoft', 'Microsoft');
+        $client = $this->clientOrFail(MailProvider::Microsoft->value, 'Microsoft');
 
         return new Azure([
             'clientId' => $client['client_id'],

@@ -51,7 +51,7 @@
             @foreach ($activeBackfills as $inbox)
                 <div class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300">
                     <span>
-                        Backfilling {{ $inbox->provider === 'gmail' ? 'Gmail' : 'Microsoft 365' }} ({{ $inbox->email }}):
+                        Backfilling {{ $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365' }} ({{ $inbox->email }}):
                         <span style="font-variant-numeric: tabular-nums;">{{ number_format($inbox->backfillFetchedCount) }} / ~{{ number_format($inbox->backfillTotalEstimated ?? 0) }}</span>
                         messages
                     </span>
@@ -71,12 +71,12 @@
             <div class="mt-8 flex items-center justify-center gap-4">
                 <button
                     type="button"
-                    wire:click="openWizard('gmail')"
+                    wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value }}')"
                     class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                 >Connect Gmail</button>
                 <button
                     type="button"
-                    wire:click="openWizard('microsoft')"
+                    wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value }}')"
                     class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                 >Connect Microsoft 365</button>
             </div>
@@ -91,7 +91,7 @@
         <ul class="space-y-4">
             @foreach ($inboxes as $inbox)
                 @php
-                    $providerLabel = $inbox->provider === 'gmail' ? 'Gmail' : 'Microsoft 365';
+                    $providerLabel = $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365';
                     $windowText = $inbox->backfillWindowMonths === 1
                         ? '1 month'
                         : ($inbox->backfillWindowMonths.' months');
@@ -119,11 +119,11 @@
                         'error' => 'Error',
                     ][$inbox->status] ?? 'Idle';
 
-                    $scanDisabled = in_array($inbox->status, ['backfilling', 'scanning'], strict: true);
+                    $scanDisabled = in_array($inbox->status, [\Modules\EmailScan\Public\Enums\InboxScanStatus::Backfilling->value, \Modules\EmailScan\Public\Enums\InboxScanStatus::Scanning->value], strict: true);
 
                     // Inline retry-after detail for rate_limited rows.
                     $retryDetail = null;
-                    if ($inbox->status === 'rate_limited' && $inbox->retryAttempts > 0) {
+                    if ($inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::RateLimited->value && $inbox->retryAttempts > 0) {
                         // Mirror InboxScanStateMachine::BACKOFF_SCHEDULE [60,300,900,3600].
                         $schedule = [60, 300, 900, 3600];
                         $idx = max(0, min(count($schedule) - 1, $inbox->retryAttempts - 1));
@@ -137,7 +137,7 @@
                         }
                     }
 
-                    $errorTooltipId = $inbox->status === 'error' && $inbox->errorMessage !== null
+                    $errorTooltipId = $inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::Error->value && $inbox->errorMessage !== null
                         ? 'inbox-error-'.$inbox->inboxId
                         : null;
                 @endphp
@@ -171,7 +171,7 @@
                             <span class="text-xs text-amber-700 dark:text-amber-300">{{ $retryDetail }}</span>
                         @endif
 
-                        @if ($inbox->status === 'needs_reauth')
+                        @if ($inbox->status === \Modules\EmailScan\Public\Enums\InboxScanStatus::NeedsReauth->value)
                             <a
                                 href="{{ route('oauth.connect', ['provider' => $inbox->provider]) }}?inbox_id={{ $inbox->inboxId }}"
                                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-sm font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
@@ -202,7 +202,7 @@
                     <p class="text-xs text-slate-500 dark:text-slate-400">Connect a Gmail account so beatrax can scan it for receipts.</p>
                     <button
                         type="button"
-                        wire:click="openWizard('gmail')"
+                        wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value }}')"
                         class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                     >Connect Gmail</button>
                 </div>
@@ -211,7 +211,7 @@
                     <p class="text-xs text-slate-500 dark:text-slate-400">Connect a Microsoft 365 or Outlook.com account so beatrax can scan it for receipts.</p>
                     <button
                         type="button"
-                        wire:click="openWizard('microsoft')"
+                        wire:click="openWizard('{{ \Modules\EmailScan\Public\Enums\MailProvider::Microsoft->value }}')"
                         class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                     >Connect Microsoft 365</button>
                 </div>
