@@ -13,6 +13,7 @@ use Amp\Websocket\WebsocketMessage;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Mobile\Internal\Exceptions\LanSyncException;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
@@ -26,7 +27,6 @@ use Modules\Sync\Internal\Transport\SyncSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\GdkEpochDeliveryGateway;
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 
 use function Amp\Websocket\Client\connect;
 
@@ -96,9 +96,7 @@ final class LanSyncClient
 
             $admitted = $syncSession->authenticate($noiseSession, $identity->userId, $identity->deviceId);
             if (! $admitted) {
-                throw new RuntimeException(
-                    'LanSyncClient: desktop peer failed the confirmed-device auth gate (T-13-13).'
-                );
+                throw LanSyncException::peerFailedConfirmedDeviceGate();
             }
 
             $this->runCatchUp($connection, $syncSession, $identity->userId, $identity->deviceId, $deviceKeys);
@@ -140,7 +138,7 @@ final class LanSyncClient
     }
 
     /**
-     * @throws RuntimeException on premature disconnect.
+     * @throws LanSyncException on premature disconnect.
      */
     private function performHandshake(
         WebsocketConnection $connection,
@@ -158,7 +156,7 @@ final class LanSyncClient
 
         $msg2Message = $connection->receive(new TimeoutCancellation(self::READ_TIMEOUT_SECONDS));
         if ($msg2Message === null) {
-            throw new RuntimeException('LanSyncClient: peer disconnected before sending Noise msg2.');
+            throw LanSyncException::peerDisconnectedBeforeHandshakeMessage('msg2');
         }
         $initHs->readMessage($msg2Message->buffer());
 
@@ -279,11 +277,11 @@ final class LanSyncClient
                 // No more wraps pending — the desktop's fixed push step is
                 // over (it never sends anything further until the phone
                 // itself disconnects). Not an error.
-                return;
+                break;
             }
 
             if ($message === null) {
-                return;
+                break;
             }
 
             $decrypted = $syncSession->decrypt($message->buffer());
@@ -294,7 +292,7 @@ final class LanSyncClient
                 // Malformed frame — the desktop's fixed step only ever
                 // sends wrap frames, so treat this as "push is over" rather
                 // than throwing.
-                return;
+                break;
             }
 
             // The literal wire-protocol string mirrors
@@ -302,7 +300,7 @@ final class LanSyncClient
             // off-limits to this module directly, so this is not a class
             // reference. A non-wrap message ends this fixed step.
             if (($parsed['type'] ?? null) !== 'GDK_EPOCH_WRAP') {
-                return;
+                break;
             }
 
             $this->epochDelivery->receiveEpochWrap($decrypted, $userId, $session);

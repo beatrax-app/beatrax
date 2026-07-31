@@ -26,7 +26,7 @@ class BiometricUnlockBridge
     // cancelled, failed, or biometric unlock is not available. The caller
     // must treat a true result as nothing more than an authorization
     // signal - this class never derives, wraps, or unwraps key material.
-    public function prompt(string $reason = 'Unlock beatrax'): bool
+    public function prompt(): bool
     {
         if (! $this->isAvailable()) {
             return false;

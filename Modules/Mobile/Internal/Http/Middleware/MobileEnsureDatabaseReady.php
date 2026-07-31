@@ -65,22 +65,27 @@ final class MobileEnsureDatabaseReady
 
     private function isExempt(Request $request): bool
     {
-        $route = $request->route();
-        if ($route === null) {
-            return false;
-        }
-
-        $name = $route->getName();
+        $name = $request->route()?->getName();
         if (! is_string($name)) {
             return false;
         }
 
+        return $this->matchesExemptPrefix($name) || $this->matchesExemptSuffix($name);
+    }
+
+    private function matchesExemptPrefix(string $name): bool
+    {
         foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
             if (str_starts_with($name, $prefix)) {
                 return true;
             }
         }
 
+        return false;
+    }
+
+    private function matchesExemptSuffix(string $name): bool
+    {
         foreach (self::EXEMPT_ROUTE_SUFFIXES as $suffix) {
             if (str_ends_with($name, $suffix)) {
                 return true;

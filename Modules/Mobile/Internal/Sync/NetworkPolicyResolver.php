@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Sync;
 
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Mobile\Internal\Exceptions\NetworkPolicyException;
 use Native\Mobile\Facades\Network;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/mobile/architecture.md
@@ -32,11 +32,7 @@ final class NetworkPolicyResolver
     {
         $path = UserDataPathService::appPath(self::CONFIG_SUB);
 
-        if (! file_exists($path)) {
-            return false;
-        }
-
-        $json = file_get_contents($path);
+        $json = file_exists($path) ? file_get_contents($path) : false;
         if ($json === false || $json === '') {
             return false;
         }
@@ -50,17 +46,15 @@ final class NetworkPolicyResolver
     }
 
     /**
-     * @throws RuntimeException on an I/O failure.
+     * @throws NetworkPolicyException on an I/O failure.
      */
     public function setPauseOnCellular(bool $enabled): void
     {
         $path = UserDataPathService::appPath(self::CONFIG_SUB);
         $dir = dirname($path);
 
-        if (! is_dir($dir)) {
-            if (! @mkdir($dir, 0700, true)) {
-                throw new RuntimeException("Cannot create network-policy directory: {$dir}");
-            }
+        if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
+            throw NetworkPolicyException::directoryNotCreatable($dir);
         }
 
         $data = ['pause_on_cellular' => $enabled];
@@ -69,7 +63,7 @@ final class NetworkPolicyResolver
         // Suppressed so the `=== false` check decides; unsuppressed the
         // E_WARNING becomes an ErrorException first and the guard never ran.
         if (@file_put_contents($path, $json, LOCK_EX) === false) {
-            throw new RuntimeException("Cannot write network policy to: {$path}");
+            throw NetworkPolicyException::notWritable($path);
         }
     }
 

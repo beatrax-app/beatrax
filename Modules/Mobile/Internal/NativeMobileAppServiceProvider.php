@@ -43,15 +43,12 @@ final class NativeMobileAppServiceProvider
         }
     }
 
-    // class_exists()-guarded so a dial-out burst can be wired here
-    // without this file needing another structural edit - never a
-    // background listener that outlives a single request.
     private function triggerBoundedDialOutIfWired(): void
     {
-        $triggerService = 'Modules\Mobile\Internal\Sync\MobileSyncTriggerService';
-        if (! class_exists($triggerService)) {
-            return;
-        }
+        // Reserved wiring point: a bounded dial-out burst is dispatched from
+        // here once wired, so boot() already routes through it and never a
+        // background listener that outlives a single request. Intentionally
+        // inert today, which is why boot() tolerates it doing nothing.
     }
 
     // Registered only here, never from the shared MobileServiceProvider,

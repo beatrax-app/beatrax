@@ -43,14 +43,14 @@ final class InitialSyncPuller
         ?int $lanPort = null,
     ): array {
         $identity = $this->identityLoader->load($userId, $session);
-        if ($identity === null) {
-            // Locked / no key / sync never enabled - skip entirely. Data
-            // stays encrypted; the cursor is left untouched.
-            return $this->progress($userId);
-        }
+        $peerDeviceId = $identity === null
+            ? null
+            : $this->resolvePeerDeviceId($userId, $identity->deviceId);
 
-        $peerDeviceId = $this->resolvePeerDeviceId($userId, $identity->deviceId);
         if ($peerDeviceId === null) {
+            // Locked / no key / sync never enabled, or no confirmed peer
+            // yet - skip entirely. Data stays encrypted; the cursor is left
+            // untouched.
             return $this->progress($userId);
         }
 
@@ -60,6 +60,25 @@ final class InitialSyncPuller
             return $this->toProgressArray($cursor);
         }
 
+        return $this->advance($userId, $session, $peerDeviceId, $cursor, $lanHost, $lanPort);
+    }
+
+    // Drives one sync step against a resolved, not-yet-complete cursor and
+    // persists the advanced state. Split from pull() so the identity/peer/
+    // complete guards stay a flat prelude rather than nesting the whole
+    // apply-and-persist body behind them.
+    /**
+     * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string, reprojected_at: ?string}  $cursor
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string}
+     */
+    private function advance(
+        int $userId,
+        Session $session,
+        string $peerDeviceId,
+        array $cursor,
+        ?string $lanHost,
+        ?int $lanPort,
+    ): array {
         $result = $this->trigger->syncOnce($userId, $session, $lanHost, $lanPort);
 
         if ($result === null) {
@@ -111,7 +130,14 @@ final class InitialSyncPuller
             ? $recordsApplied
             : max($cursor['records_expected'] ?? 0, $recordsApplied);
 
-        $this->persistCursor($userId, $peerDeviceId, $recordsApplied, $recordsExpected, $lastHlcL, $lastHlcC, $phase, $reprojectedAt);
+        $this->persistCursor($userId, $peerDeviceId, new MobileSyncCursor(
+            recordsApplied: $recordsApplied,
+            recordsExpected: $recordsExpected,
+            lastHlcL: $lastHlcL,
+            lastHlcC: $lastHlcC,
+            phase: $phase,
+            reprojectedAt: $reprojectedAt,
+        ));
 
         return [
             'records_applied' => $recordsApplied,
@@ -223,16 +249,8 @@ final class InitialSyncPuller
         ];
     }
 
-    private function persistCursor(
-        int $userId,
-        string $peerDeviceId,
-        int $recordsApplied,
-        int $recordsExpected,
-        int $lastHlcL,
-        int $lastHlcC,
-        string $phase,
-        ?string $reprojectedAt,
-    ): void {
+    private function persistCursor(int $userId, string $peerDeviceId, MobileSyncCursor $cursor): void
+    {
         $now = $this->clock->now()->toIso8601String();
 
         // loadOrCreateCursor() above guarantees a row already exists for
@@ -243,12 +261,12 @@ final class InitialSyncPuller
             ->where('user_id', $userId)
             ->where('peer_device_id', $peerDeviceId)
             ->update([
-                'records_applied' => $recordsApplied,
-                'records_expected' => $recordsExpected,
-                'last_hlc_l' => $lastHlcL,
-                'last_hlc_c' => $lastHlcC,
-                'phase' => $phase,
-                'reprojected_at' => $reprojectedAt,
+                'records_applied' => $cursor->recordsApplied,
+                'records_expected' => $cursor->recordsExpected,
+                'last_hlc_l' => $cursor->lastHlcL,
+                'last_hlc_c' => $cursor->lastHlcC,
+                'phase' => $cursor->phase,
+                'reprojected_at' => $cursor->reprojectedAt,
                 'updated_at' => $now,
             ]);
     }
