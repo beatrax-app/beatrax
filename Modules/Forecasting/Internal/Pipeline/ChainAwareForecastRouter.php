@@ -69,53 +69,74 @@ final readonly class ChainAwareForecastRouter
 
         // Step 2/3 — synthesise the next ICS bulk-iDEAL settlement onto
         // the ASN funder account (the DTO's `accountId` is the funder).
-        $nextSettlement = $this->cardStatementQuery->nextSettlementForUser($user);
-        if ($nextSettlement !== null) {
-            $now = $this->clock->now()->startOfDay();
-            $dueDate = CarbonImmutable::parse($nextSettlement->dueDate->toIso8601String())->startOfDay();
-
-            // Drop on the floor when the settlement is in the past — the
-            // projection horizon only extends forward.
-            if ($dueDate->greaterThanOrEqualTo($now)) {
-                $settlementMinor = -abs($nextSettlement->amount->toMinor());
-                $synth = new ForecastContribution(
-                    date: $dueDate,
-                    pointMinor: $settlementMinor,
-                    lowMinor: $settlementMinor,
-                    highMinor: $settlementMinor,
-                    currency: $nextSettlement->amount->currency(),
-                    fxRateUsed: null,
-                    seriesId: 0,
-                    accountId: $nextSettlement->accountId,
-                );
-
-                // Scoped dedup: drop ONLY the contributions chain-routed
-                // onto the funder above that now collide with the
-                // synthesised settlement's (account, date) tuple. Any
-                // OTHER contribution sharing that tuple survives untouched.
-                $dedup = [];
-                $dueKey = $synth->accountId.'|'.$dueDate->toDateString();
-                foreach ($routed as $c) {
-                    $cKey = $c->accountId.'|'.$c->date->toDateString();
-                    if (
-                        $cKey === $dueKey
-                        && $c->seriesId !== 0
-                        && array_key_exists($c->seriesId, $chainRoutedSeriesIds)
-                    ) {
-                        continue;
-                    }
-                    $dedup[] = $c;
-                }
-                $dedup[] = $synth;
-                $routed = $dedup;
-            }
-        }
+        $routed = $this->appendSettlement($routed, $user, $chainRoutedSeriesIds);
 
         if ($viewByFunder) {
             $routed = $this->collapseByFunder($routed);
         }
 
         return $routed;
+    }
+
+    /**
+     * @param  list<ForecastContribution>  $routed
+     * @param  array<int, true>  $chainRoutedSeriesIds
+     * @return list<ForecastContribution>
+     */
+    private function appendSettlement(array $routed, User $user, array $chainRoutedSeriesIds): array
+    {
+        $nextSettlement = $this->cardStatementQuery->nextSettlementForUser($user);
+        if ($nextSettlement === null) {
+            return $routed;
+        }
+
+        $now = $this->clock->now()->startOfDay();
+        $dueDate = CarbonImmutable::parse($nextSettlement->dueDate->toIso8601String())->startOfDay();
+
+        // Drop on the floor when the settlement is in the past — the
+        // projection horizon only extends forward.
+        if ($dueDate->lessThan($now)) {
+            return $routed;
+        }
+
+        $settlementMinor = -abs($nextSettlement->amount->toMinor());
+        $synth = new ForecastContribution(
+            date: $dueDate,
+            pointMinor: $settlementMinor,
+            lowMinor: $settlementMinor,
+            highMinor: $settlementMinor,
+            currency: $nextSettlement->amount->currency(),
+            fxRateUsed: null,
+            seriesId: 0,
+            accountId: $nextSettlement->accountId,
+        );
+
+        return $this->dedupForSettlement($routed, $synth, $chainRoutedSeriesIds);
+    }
+
+    /**
+     * @param  list<ForecastContribution>  $routed
+     * @param  array<int, true>  $chainRoutedSeriesIds
+     * @return list<ForecastContribution>
+     */
+    private function dedupForSettlement(array $routed, ForecastContribution $synth, array $chainRoutedSeriesIds): array
+    {
+        // Scoped dedup: drop ONLY the contributions chain-routed onto the
+        // funder above that now collide with the synthesised settlement's
+        // (account, date) tuple. Any OTHER contribution sharing that tuple
+        // survives untouched.
+        $dueKey = $synth->accountId.'|'.$synth->date->toDateString();
+        $dedup = [];
+        foreach ($routed as $c) {
+            $cKey = $c->accountId.'|'.$c->date->toDateString();
+            if ($cKey === $dueKey && $c->seriesId !== 0 && array_key_exists($c->seriesId, $chainRoutedSeriesIds)) {
+                continue;
+            }
+            $dedup[] = $c;
+        }
+        $dedup[] = $synth;
+
+        return $dedup;
     }
 
     // Assumes contributions sharing a (accountId, date) tuple are already
@@ -179,16 +200,12 @@ final readonly class ChainAwareForecastRouter
         }
 
         $links = $this->chainQuery->confirmedAndDeterministicForSeries($seriesId, $user);
-        if ($links === []) {
-            $cache[$seriesId] = null;
 
-            return null;
-        }
-
-        // Prefer the most-recently-confirmed link: the dataset is
-        // already user-scoped + state/resolver-filtered; the first
-        // returned row is the canonical funder.
-        $cache[$seriesId] = $links[0]->funderAccountId;
+        // Prefer the most-recently-confirmed link: the dataset is already
+        // user-scoped + state/resolver-filtered, so the first returned row
+        // is the canonical funder. No links means the series has no chain,
+        // memoised as null.
+        $cache[$seriesId] = $links === [] ? null : $links[0]->funderAccountId;
 
         return $cache[$seriesId];
     }

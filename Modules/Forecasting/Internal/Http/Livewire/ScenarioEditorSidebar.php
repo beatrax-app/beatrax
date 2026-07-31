@@ -8,21 +8,14 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
-use Modules\Forecasting\Internal\Support\AmountStringParser;
+use Modules\Forecasting\Internal\Http\Livewire\Concerns\BuildsMutationForms;
+use Modules\Forecasting\Internal\Http\Livewire\Concerns\SummarisesMutations;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Actions\EditScenarioMutation;
 use Modules\Forecasting\Public\Actions\RemoveScenarioMutation;
 use Modules\Forecasting\Public\Actions\RenameScenario;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
-use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
-use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -31,6 +24,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ScenarioEditorSidebar extends Component
 {
+    use BuildsMutationForms;
+    use SummarisesMutations;
+
     public int $scenarioId = 0;
 
     public string $scenarioName = '';
@@ -155,17 +151,7 @@ final class ScenarioEditorSidebar extends Component
                 continue;
             }
             $this->selectedKind = $kind;
-            $payload = $m['payload'] ?? null;
-            /** @var array<string, mixed> $coerced */
-            $coerced = [];
-            if (is_array($payload)) {
-                foreach ($payload as $k => $v) {
-                    if (is_string($k)) {
-                        $coerced[$k] = $v;
-                    }
-                }
-            }
-            $this->form = $coerced;
+            $this->form = $this->coercePayloadForm($m['payload'] ?? null);
 
             return;
         }
@@ -215,6 +201,9 @@ final class ScenarioEditorSidebar extends Component
         try {
             ($action)($mutationId, $currentUser->user());
         } catch (NotFoundHttpException) {
+            // Already gone — a concurrent removal or a stale mutation id
+            // both resolve to the same "nothing left to remove" outcome,
+            // so the not-found is swallowed and the list still refreshes.
         }
         $this->refreshMutations($scenarioQuery, $currentUser);
         $this->dispatch('toast', message: 'Mutation removed. Undo');
@@ -278,6 +267,9 @@ final class ScenarioEditorSidebar extends Component
         try {
             ($action)($this->scenarioId, $currentUser->user());
         } catch (NotFoundHttpException) {
+            // Already deleted — treat a not-found scenario as success so
+            // the toast, event dispatch and cleanup below still run for
+            // the stale-id case.
         }
         $this->confirmingDeleteScenario = null;
         $this->dispatch('toast', message: 'Scenario deleted.');
@@ -328,151 +320,5 @@ final class ScenarioEditorSidebar extends Component
                 'summary' => $this->summaryFor($dto->kind, $dto->payload),
             ];
         }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function defaultFormFor(string $kind): array
-    {
-        return match ($kind) {
-            'cancel_series' => ['seriesId' => null],
-            'add_one_off' => ['date' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'note' => ''],
-            'add_recurring' => ['startDate' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
-            'change_series_amount' => ['seriesId' => null, 'newAmount' => ''],
-            'shift_series_date' => ['seriesId' => null, 'newNextDate' => '', 'scope' => ShiftScope::Next->value],
-            default => [],
-        };
-    }
-
-    private function buildPayloadFromForm(string $kind): ?ScenarioMutationPayload
-    {
-        try {
-            return match ($kind) {
-                'cancel_series' => new CancelSeriesPayload(
-                    seriesId: $this->intField('seriesId'),
-                ),
-                'add_one_off' => new AddOneOffPayload(
-                    date: $this->stringField('date'),
-                    amountMinor: $this->parseAmountMinor('amount'),
-                    currency: $this->stringField('currency', 'EUR'),
-                    direction: $this->stringField('direction', 'expense'),
-                    note: $this->optionalStringField('note'),
-                ),
-                'add_recurring' => new AddRecurringPayload(
-                    startDate: $this->stringField('startDate'),
-                    amountMinor: $this->parseAmountMinor('amount'),
-                    currency: $this->stringField('currency', 'EUR'),
-                    direction: $this->stringField('direction', 'expense'),
-                    cadence: $this->stringField('cadence', 'monthly'),
-                    note: $this->optionalStringField('note'),
-                ),
-                'change_series_amount' => new ChangeSeriesAmountPayload(
-                    seriesId: $this->intField('seriesId'),
-                    newAmountMinor: $this->parseAmountMinor('newAmount'),
-                ),
-                'shift_series_date' => new ShiftSeriesDatePayload(
-                    seriesId: $this->intField('seriesId'),
-                    newNextDate: $this->stringField('newNextDate'),
-                    scope: $this->stringField('scope', ShiftScope::Next->value),
-                ),
-                default => null,
-            };
-        } catch (\InvalidArgumentException $e) {
-            $this->formError = $e->getMessage();
-
-            return null;
-        }
-    }
-
-    private function intField(string $key): int
-    {
-        $value = $this->form[$key] ?? null;
-        if (! is_numeric($value)) {
-            throw new \InvalidArgumentException("Field '{$key}' is required.");
-        }
-
-        return (int) $value;
-    }
-
-    private function stringField(string $key, ?string $default = null): string
-    {
-        $value = $this->form[$key] ?? $default;
-        if (! is_string($value) || $value === '') {
-            if ($default !== null) {
-                return $default;
-            }
-            throw new \InvalidArgumentException("Field '{$key}' is required.");
-        }
-
-        return $value;
-    }
-
-    private function optionalStringField(string $key): ?string
-    {
-        $value = $this->form[$key] ?? null;
-        if (! is_string($value) || trim($value) === '') {
-            return null;
-        }
-
-        return $value;
-    }
-
-    private function parseAmountMinor(string $key): int
-    {
-        $value = $this->form[$key] ?? null;
-        if (is_string($value)) {
-            $raw = $value;
-        } elseif (is_numeric($value)) {
-            $raw = (string) $value;
-        } else {
-            throw new \InvalidArgumentException('Amount is required.');
-        }
-
-        return AmountStringParser::toMinor($raw);
-    }
-
-    private function summaryFor(string $kind, ScenarioMutationPayload $payload): string
-    {
-        // Resolve the series display name from the catalog already
-        // populated by render(); fall back to "series #N" only when the
-        // series is missing from the catalog (e.g. deleted or filtered).
-        $resolveName = function (int $seriesId): string {
-            foreach ($this->availableSeries as $entry) {
-                if ($entry['id'] === $seriesId && $entry['name'] !== '') {
-                    return $entry['name'];
-                }
-            }
-
-            return 'series #'.$seriesId;
-        };
-
-        if ($payload instanceof CancelSeriesPayload) {
-            return 'Cancel '.$resolveName($payload->seriesId);
-        }
-        if ($payload instanceof AddOneOffPayload) {
-            $sign = $payload->direction === 'income' ? '+' : '−';
-            $amount = number_format($payload->amountMinor / 100, 2, ',', '.');
-
-            return "{$sign}{$amount} {$payload->currency} on {$payload->date}";
-        }
-        if ($payload instanceof AddRecurringPayload) {
-            $sign = $payload->direction === 'income' ? '+' : '−';
-            $amount = number_format($payload->amountMinor / 100, 2, ',', '.');
-
-            return "{$sign}{$amount} {$payload->currency} {$payload->cadence} from {$payload->startDate}";
-        }
-        if ($payload instanceof ChangeSeriesAmountPayload) {
-            $amount = number_format($payload->newAmountMinor / 100, 2, ',', '.');
-
-            return $resolveName($payload->seriesId).": new amount {$amount}";
-        }
-        if ($payload instanceof ShiftSeriesDatePayload) {
-            $scope = $payload->scope === ShiftScope::AllSubsequent->value ? 'all subsequent' : 'next';
-
-            return $resolveName($payload->seriesId).": shift {$scope} to {$payload->newNextDate}";
-        }
-
-        return $kind;
     }
 }

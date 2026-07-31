@@ -36,41 +36,43 @@ final readonly class BalanceAnchorResolver
         $kind = self::toString($account->getAttribute('kind'));
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
 
-        if ($kind === 'asn') {
-            $anchor = $this->fromStatementSummaries($accountId, $user->id);
-            if ($anchor !== null) {
-                return $anchor;
-            }
-        } elseif ($kind === 'ics_card') {
-            $anchor = $this->fromCardStatements($accountId, $user->id);
-            if ($anchor !== null) {
-                return $anchor;
-            }
-        }
-
-        // Cross-kind fallback: when no statement-level anchor was
-        // available (or when the kind is paypal / CSV-only), honour
-        // the user-input opening_balance on the account row.
-        $anchor = $this->fromUserInputOpeningBalance($account);
+        // Statement-level anchor first (per kind), then the user-input
+        // opening_balance on the account row; the coalesce honours the
+        // same precedence as the original guard chain without returning
+        // from inside it.
+        $anchor = $this->fromStatementAnchor($kind, $accountId, $user->id)
+            ?? $this->fromUserInputOpeningBalance($account);
         if ($anchor !== null) {
             return $anchor;
         }
 
-        // For ICS card accounts with no statement AND no user-input
-        // opening balance, default to zero rather than summing every
-        // historical transaction — summing would double-count the
-        // historical billing events the projection is about to re-emit.
-        if ($kind === 'ics_card') {
-            return new BalanceAnchorDto(
-                accountId: $accountId,
-                openingBalanceMinor: 0,
-                currency: $defaultCurrency !== '' ? $defaultCurrency : 'EUR',
-                asOfDate: $this->clock->now()->startOfDay(),
-                source: 'ics_card_zero_anchor',
-            );
-        }
+        // ICS cards with no statement AND no user-input opening balance
+        // default to zero rather than summing every historical
+        // transaction — summing would double-count the billing events
+        // the projection is about to re-emit. Every other kind sums.
+        return $kind === 'ics_card'
+            ? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
+            : $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);
+    }
 
-        return $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);
+    private function fromStatementAnchor(string $kind, int $accountId, int $userId): ?BalanceAnchorDto
+    {
+        return match ($kind) {
+            'asn' => $this->fromStatementSummaries($accountId, $userId),
+            'ics_card' => $this->fromCardStatements($accountId, $userId),
+            default => null,
+        };
+    }
+
+    private function icsCardZeroAnchor(int $accountId, string $defaultCurrency): BalanceAnchorDto
+    {
+        return new BalanceAnchorDto(
+            accountId: $accountId,
+            openingBalanceMinor: 0,
+            currency: $defaultCurrency !== '' ? $defaultCurrency : 'EUR',
+            asOfDate: $this->clock->now()->startOfDay(),
+            source: 'ics_card_zero_anchor',
+        );
     }
 
     private function fromStatementSummaries(int $accountId, int $userId): ?BalanceAnchorDto

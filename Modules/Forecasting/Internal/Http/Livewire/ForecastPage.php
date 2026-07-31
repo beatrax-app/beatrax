@@ -13,12 +13,13 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Forecasting\Internal\Http\Livewire\Concerns\BuildsForecastCharts;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
 use Modules\Forecasting\Public\Actions\CreateScenario;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
-use Modules\Forecasting\Public\Dto\ForecastDto;
 use Modules\Forecasting\Public\Dto\ForecastPointDto;
+use Modules\Forecasting\Public\Dto\ScenarioDto;
 use Modules\Forecasting\Public\Services\ForecastQuery;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use stdClass;
@@ -29,16 +30,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class ForecastPage extends Component
 {
+    use BuildsForecastCharts;
     use CoercesScalars;
-
-    // Panel accent colours. The scenario panel is tinted by whether the
-    // scenario leaves the user better or worse off at day 30; the
-    // baseline panel is always neutral.
-    private const NEUTRAL_INK = '#0F172A';
-
-    private const BETTER_OFF_INK = '#047857';
-
-    private const WORSE_OFF_INK = '#BE123C';
 
     // 'all' is a sentinel value: it selects the All-accounts aggregate
     // view rather than a specific account id.
@@ -213,204 +206,41 @@ final class ForecastPage extends Component
     ): View {
         $user = $currentUser->user();
 
-        $accounts = $db->connection()->table('accounts')
-            ->where('user_id', $user->id)
-            ->orderBy('name')
-            ->orderBy('id')
-            ->get(['id', 'name', 'default_currency', 'kind']);
-
-        $accountList = [];
-        $firstAccountId = null;
-        foreach ($accounts as $account) {
-            /** @var stdClass $account */
-            $accountId = self::toInt($account->id);
-            $accountList[] = [
-                'id' => $accountId,
-                'name' => self::toString($account->name ?? null),
-                'default_currency' => self::toString($account->default_currency ?? null),
-                'kind' => self::toString($account->kind ?? null),
-            ];
-            if ($firstAccountId === null) {
-                $firstAccountId = $accountId;
-            }
-        }
-
-        // A tampered or stale ?account= value (anything that is neither
-        // 'all' nor a numeric account id) falls back to the All-accounts
-        // tab rather than rendering a blank page with no error.
-        if ($this->account !== 'all' && ! is_numeric($this->account)) {
-            $this->account = 'all';
-        }
-
+        $accountList = $this->resolveAccountList($db, $user);
+        $selectedAccountId = $this->normaliseAndResolveAccount($accountList);
         $isAllAccountsView = $this->account === 'all';
-        if ($isAllAccountsView) {
-            // Aggregate-tab render path. The page renders a single-line
-            // EUR-rollup chart instead of a per-account rangeArea band.
-            $selectedAccountId = null;
-        } else {
-            $selectedAccountId = (int) $this->account;
-            $owns = false;
-            foreach ($accountList as $a) {
-                if ($a['id'] === $selectedAccountId) {
-                    $owns = true;
-                    break;
-                }
-            }
-            if (! $owns) {
-                throw new NotFoundHttpException('Account not found.');
-            }
-        }
+        $isEmpty = $accountList === [];
 
-        $isEmpty = count($accountList) === 0;
-
-        $baseline = null;
-        $apexOptions = null;
-        $chartElementId = null;
-        $todayBalanceMinor = 0;
-        $horizonLowMinor = 0;
-        $horizonHighMinor = 0;
-        $defaultCurrency = 'EUR';
-        $effectiveBufferMinor = null;
-        $selectedAccountName = '';
-        $shortfallWindows = [];
-        /** @var list<array{date: string, point_minor: int}> $aggregatePoints */
-        $aggregatePoints = [];
-        $aggregateBufferFloor = 0;
-        $aggregateChartElementId = null;
-        $aggregateCurrency = 'EUR';
-
-        $scenario = null;
-        $scenarioApexOptions = null;
-        $scenarioChartElementId = null;
-        $scenarioPanelColor = self::NEUTRAL_INK;
-        /** @var array<int, int> $netDiff */
-        $netDiff = [];
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
-            $netDiff[$horizonKey] = 0;
-        }
-
-        // Read the user's saved scenarios so the picker is populated;
-        // shared between empty + populated states.
+        // Read the user's saved scenarios so the picker is populated, then
+        // refuse to render when the selected scenarioId belongs to another
+        // user (cross-user 404).
         $scenarios = $scenarioQuery->forUser($user);
-
-        // Wave 4 cross-user 404 on scenarioId — refuse to render if the
-        // selected scenarioId belongs to another user.
-        if ($this->scenarioId !== null) {
-            $owns = false;
-            foreach ($scenarios as $s) {
-                if ($s->id === $this->scenarioId) {
-                    $owns = true;
-                    break;
-                }
-            }
-            if (! $owns) {
-                throw new NotFoundHttpException('Scenario not found.');
-            }
-        }
-
-        if ($selectedAccountId !== null) {
-            $baseline = $forecastQuery->forUser($selectedAccountId, $this->horizon, null, $user);
-            $todayBalanceMinor = $baseline->todayBalanceMinor;
-            $defaultCurrency = $baseline->defaultCurrency;
-            $selectedAccountName = $baseline->accountName;
-            $lastPoint = $baseline->points === [] ? null : $baseline->points[count($baseline->points) - 1];
-            if ($lastPoint instanceof ForecastPointDto) {
-                $horizonLowMinor = $lastPoint->lowMinor;
-                $horizonHighMinor = $lastPoint->highMinor;
-            }
-
-            // Load the effective per-account buffer for the popover
-            // trigger label + the chart's annotations.yaxis shortfall
-            // band overlay.
-            $accountRow = $db->connection()->table('accounts')
-                ->where('id', $selectedAccountId)
-                ->where('user_id', $user->id)
-                ->first(['forecast_min_buffer_minor']);
-            if ($accountRow !== null && isset($accountRow->forecast_min_buffer_minor) && is_numeric($accountRow->forecast_min_buffer_minor)) {
-                $effectiveBufferMinor = (int) $accountRow->forecast_min_buffer_minor;
-            }
-
-            $windowRows = $db->connection()->table('forecast_shortfall_windows')
-                ->where('user_id', $user->id)
-                ->where('account_id', $selectedAccountId)
-                ->whereNull('scenario_id')
-                ->orderBy('starts_at')
-                ->get();
-            foreach ($windowRows as $row) {
-                /** @var stdClass $row */
-                $shortfallWindows[] = $mapper->mapShortfallWindow($row);
-            }
-
-            if ($this->scenarioId !== null) {
-                $scenario = $forecastQuery->forUser($selectedAccountId, $this->horizon, $this->scenarioId, $user);
-                $netDiff = $this->computeNetDiff($baseline, $scenario);
-                $scenarioPanelColor = $this->panelColorFor($netDiff[30]);
-            }
-
-            // Shared y-axis (RESEARCH Pitfall 2): compute the union range
-            // across both panels' points + the buffer floor so the chart's
-            // y-axis is identical and the visual delta is honest.
-            [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $effectiveBufferMinor);
-
-            $apexOptions = $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, self::NEUTRAL_INK);
-            $chartElementId = 'forecast-chart-baseline-'.$selectedAccountId;
-
-            if ($scenario !== null) {
-                $scenarioApexOptions = $this->buildApexOptions($scenario, $effectiveBufferMinor, $yMin, $yMax, $scenarioPanelColor);
-                $scenarioChartElementId = 'forecast-chart-scenario-'.$selectedAccountId.'-'.$this->scenarioId;
-            }
-        }
-
-        if ($isAllAccountsView && ! $isEmpty) {
-            [$aggregatePoints, $aggregateBufferFloor] = $this->computeAllAccountsAggregate(
-                accountList: $accountList,
-                horizon: $this->horizon,
-                forecastQuery: $forecastQuery,
-                db: $db,
-                user: $user,
-            );
-            $aggregateChartElementId = 'forecast-chart-aggregate-'.$this->horizon;
-        }
+        $this->assertScenarioOwnership($scenarios);
 
         // Clock is kept on the render() signature for a future explicit
         // "as of" badge; the current surface does not render one yet.
-        $now = $clock->now();
-        unset($now);
+        $clock->now();
 
-        $view = $views->make('forecasting::livewire.forecast-page', [
-            'accounts' => $accountList,
-            'selectedAccountId' => $selectedAccountId,
-            'selectedAccountName' => $selectedAccountName,
-            'selectedAccountCurrency' => $defaultCurrency,
-            'baseline' => $baseline,
-            'apexOptions' => $apexOptions,
-            'chartElementId' => $chartElementId,
-            'scenario' => $scenario,
-            'scenarioApexOptions' => $scenarioApexOptions,
-            'scenarioChartElementId' => $scenarioChartElementId,
-            'scenarioPanelColor' => $scenarioPanelColor,
-            'netDiff' => $netDiff,
-            'horizon' => $this->horizon,
-            'isEmpty' => $isEmpty,
-            'todayBalanceMinor' => $todayBalanceMinor,
-            'horizonLowMinor' => $horizonLowMinor,
-            'horizonHighMinor' => $horizonHighMinor,
-            'defaultCurrency' => $defaultCurrency,
-            'effectiveBufferMinor' => $effectiveBufferMinor,
-            'shortfallWindows' => $shortfallWindows,
-            'scenarios' => $scenarios,
-            'activeScenarioId' => $this->scenarioId,
-            'viewByFunder' => $this->viewByFunder,
-            'confirmingDeleteForScenarioId' => $this->confirmingDeleteForScenarioId,
-            'creatingScenario' => $this->creatingScenario,
-            'newScenarioName' => $this->newScenarioName,
-            'createScenarioError' => $this->createScenarioError,
-            'isAllAccountsView' => $isAllAccountsView,
-            'aggregatePoints' => $aggregatePoints,
-            'aggregateBufferFloor' => $aggregateBufferFloor,
-            'aggregateChartElementId' => $aggregateChartElementId,
-            'aggregateCurrency' => $aggregateCurrency,
-        ]);
+        $viewData = array_merge(
+            $this->selectedAccountView($selectedAccountId, $forecastQuery, $db, $user, $mapper),
+            $this->aggregateView($accountList, $isAllAccountsView, $isEmpty, $forecastQuery, $db, $user),
+            [
+                'accounts' => $accountList,
+                'selectedAccountId' => $selectedAccountId,
+                'horizon' => $this->horizon,
+                'isEmpty' => $isEmpty,
+                'scenarios' => $scenarios,
+                'activeScenarioId' => $this->scenarioId,
+                'viewByFunder' => $this->viewByFunder,
+                'confirmingDeleteForScenarioId' => $this->confirmingDeleteForScenarioId,
+                'creatingScenario' => $this->creatingScenario,
+                'newScenarioName' => $this->newScenarioName,
+                'createScenarioError' => $this->createScenarioError,
+                'isAllAccountsView' => $isAllAccountsView,
+            ],
+        );
+
+        $view = $views->make('forecasting::livewire.forecast-page', $viewData);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
         $view->extends('layouts.app', ['title' => 'Forecast · beatrax']);
@@ -419,221 +249,212 @@ final class ForecastPage extends Component
     }
 
     /**
-     * @link ../../../../../.docs/features/forecasting/architecture.md
-     *
-     * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
-     * @return array{0: list<array{date: string, point_minor: int}>, 1: int}
+     * @return list<array{id: int, name: string, default_currency: string, kind: string}>
      */
-    private function computeAllAccountsAggregate(
-        array $accountList,
-        int $horizon,
-        ForecastQuery $forecastQuery,
-        DatabaseManager $db,
-        User $user,
-    ): array {
-        /** @var array<string, int> $byDate */
-        $byDate = [];
-        foreach ($accountList as $account) {
-            $dto = $forecastQuery->forUser($account['id'], $horizon, null, $user);
-            foreach ($dto->points as $p) {
-                $byDate[$p->date] = ($byDate[$p->date] ?? 0) + $p->pointMinor;
-            }
-        }
-
-        ksort($byDate, SORT_STRING);
-        $aggregatePoints = [];
-        foreach ($byDate as $date => $sumPoint) {
-            $aggregatePoints[] = ['date' => $date, 'point_minor' => $sumPoint];
-        }
-
-        $bufferRows = $db->connection()->table('accounts')
+    private function resolveAccountList(DatabaseManager $db, User $user): array
+    {
+        $accounts = $db->connection()->table('accounts')
             ->where('user_id', $user->id)
-            ->whereNotNull('forecast_min_buffer_minor')
-            ->get(['forecast_min_buffer_minor']);
-        $bufferFloor = 0;
-        foreach ($bufferRows as $row) {
-            /** @var stdClass $row */
-            if (is_numeric($row->forecast_min_buffer_minor ?? null)) {
-                $bufferFloor += (int) $row->forecast_min_buffer_minor;
-            }
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get(['id', 'name', 'default_currency', 'kind']);
+
+        $accountList = [];
+        foreach ($accounts as $account) {
+            /** @var stdClass $account */
+            $accountList[] = [
+                'id' => self::toInt($account->id),
+                'name' => self::toString($account->name ?? null),
+                'default_currency' => self::toString($account->default_currency ?? null),
+                'kind' => self::toString($account->kind ?? null),
+            ];
         }
 
-        return [$aggregatePoints, $bufferFloor];
-    }
-
-    // Computed here rather than left to ApexCharts auto-scale so both
-    // panels render against identical y-axis bounds — otherwise the
-    // scenario panel's independent auto-scale would visually distort
-    // the baseline-vs-scenario delta.
-    /**
-     * @return array{0: float, 1: float}
-     */
-    private function computeSharedYAxisRange(ForecastDto $baseline, ?ForecastDto $scenario, ?int $effectiveBufferMinor): array
-    {
-        $lows = [];
-        $highs = [];
-        foreach ($baseline->points as $p) {
-            $lows[] = $p->lowMinor;
-            $highs[] = $p->highMinor;
-        }
-        if ($scenario !== null) {
-            foreach ($scenario->points as $p) {
-                $lows[] = $p->lowMinor;
-                $highs[] = $p->highMinor;
-            }
-        }
-        if ($effectiveBufferMinor !== null) {
-            $lows[] = $effectiveBufferMinor;
-            $highs[] = $effectiveBufferMinor;
-        }
-
-        $yMin = ($lows === [] ? 0 : min($lows)) / 100 - 1;
-        $yMax = ($highs === [] ? 0 : max($highs)) / 100 + 1;
-
-        return [$yMin, $yMax];
-    }
-
-    // Tints the scenario panel by the day-30 net difference. Exactly
-    // zero is neutral rather than green: an unchanged balance is not an
-    // improvement, and colouring it as one overstates the scenario.
-    private function panelColorFor(int $netDiffMinor): string
-    {
-        return match (true) {
-            $netDiffMinor > 0 => self::BETTER_OFF_INK,
-            $netDiffMinor < 0 => self::WORSE_OFF_INK,
-            default => self::NEUTRAL_INK,
-        };
+        return $accountList;
     }
 
     /**
-     * @return array<int, int>
+     * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
      */
-    private function computeNetDiff(ForecastDto $baseline, ForecastDto $scenario): array
+    private function normaliseAndResolveAccount(array $accountList): ?int
     {
-        $result = [];
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
-            $result[$horizonKey] = 0;
+        // A tampered or stale ?account= value (anything that is neither
+        // 'all' nor a numeric account id) falls back to the All-accounts
+        // tab rather than rendering a blank page with no error.
+        if ($this->account !== 'all' && ! is_numeric($this->account)) {
+            $this->account = 'all';
         }
-        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
-            if ($horizonKey > $baseline->horizonDays || $horizonKey > $scenario->horizonDays) {
-                continue;
-            }
-            $b = $this->pointAtIndex($baseline, $horizonKey);
-            $s = $this->pointAtIndex($scenario, $horizonKey);
-            // If either DTO is missing the day-N point (malformed
-            // result_json), skip this horizon rather than substituting
-            // the last-available point's value as if it were day-N.
-            if ($b === null || $s === null) {
-                continue;
-            }
-            $result[$horizonKey] = $s - $b;
+        if ($this->account === 'all') {
+            return null;
         }
 
-        return $result;
+        $selectedAccountId = (int) $this->account;
+        foreach ($accountList as $a) {
+            if ($a['id'] === $selectedAccountId) {
+                return $selectedAccountId;
+            }
+        }
+
+        throw new NotFoundHttpException('Account not found.');
     }
 
-    private function pointAtIndex(ForecastDto $dto, int $dayOffset): ?int
+    /**
+     * @param  list<ScenarioDto>  $scenarios
+     */
+    private function assertScenarioOwnership(array $scenarios): void
     {
-        $points = $dto->points;
-        if ($points === []) {
-            return null;
+        if ($this->scenarioId === null) {
+            return;
         }
-        if ($dayOffset > count($points) - 1) {
-            // Missing day-N point — surface a "skip" signal rather than
-            // silently substituting the last available point.
-            return null;
+        foreach ($scenarios as $s) {
+            if ($s->id === $this->scenarioId) {
+                return;
+            }
         }
 
-        return $points[$dayOffset]->pointMinor;
+        throw new NotFoundHttpException('Scenario not found.');
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildApexOptions(
-        ForecastDto $forecast,
-        ?int $effectiveBufferMinor = null,
-        ?float $yMinOverride = null,
-        ?float $yMaxOverride = null,
-        string $panelColor = self::NEUTRAL_INK,
+    private function selectedAccountView(
+        ?int $selectedAccountId,
+        ForecastQuery $forecastQuery,
+        DatabaseManager $db,
+        User $user,
+        ForecastDtoMapper $mapper,
     ): array {
-        $rangeData = [];
-        $lineData = [];
-        $lows = [];
-        $highs = [];
-
-        foreach ($forecast->points as $point) {
-            $rangeData[] = ['x' => $point->date, 'y' => [$point->lowMinor / 100, $point->highMinor / 100]];
-            $lineData[] = ['x' => $point->date, 'y' => $point->pointMinor / 100];
-            $lows[] = $point->lowMinor;
-            $highs[] = $point->highMinor;
+        /** @var array<int, int> $netDiff */
+        $netDiff = [];
+        foreach (ProjectForecastJob::HORIZON_DAYS as $horizonKey) {
+            $netDiff[$horizonKey] = 0;
         }
 
-        $yMin = $yMinOverride ?? (($lows === [] ? 0 : min($lows)) / 100 - 1);
-        $yMax = $yMaxOverride ?? (($highs === [] ? 0 : max($highs)) / 100 + 1);
+        $defaults = [
+            'selectedAccountName' => '',
+            'selectedAccountCurrency' => 'EUR',
+            'baseline' => null,
+            'apexOptions' => null,
+            'chartElementId' => null,
+            'scenario' => null,
+            'scenarioApexOptions' => null,
+            'scenarioChartElementId' => null,
+            'scenarioPanelColor' => self::NEUTRAL_INK,
+            'netDiff' => $netDiff,
+            'todayBalanceMinor' => 0,
+            'horizonLowMinor' => 0,
+            'horizonHighMinor' => 0,
+            'defaultCurrency' => 'EUR',
+            'effectiveBufferMinor' => null,
+            'shortfallWindows' => [],
+        ];
+        if ($selectedAccountId === null) {
+            return $defaults;
+        }
 
-        // Render the shortfall-band region BELOW the buffer floor so the
-        // user sees immediately where the projected balance dips below it.
-        // ApexCharts v5 requires the full annotations object shape: a bare
-        // [] serializes to a JSON array and crashes drawImageAnnos.
-        $annotations = ['yaxis' => [], 'xaxis' => [], 'points' => [], 'images' => []];
-        if ($effectiveBufferMinor !== null) {
-            $bufferValue = $effectiveBufferMinor / 100;
-            $annotations['yaxis'] = [
-                [
-                    'y' => $yMin - 10,
-                    'y2' => $bufferValue,
-                    'fillColor' => '#FECDD3',
-                    'opacity' => 0.4,
-                    'label' => ['text' => '', 'position' => 'left'],
-                ],
-            ];
+        $baseline = $forecastQuery->forUser($selectedAccountId, $this->horizon, null, $user);
+        $lastPoint = $baseline->points === [] ? null : $baseline->points[count($baseline->points) - 1];
+        $horizonLowMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->lowMinor : 0;
+        $horizonHighMinor = $lastPoint instanceof ForecastPointDto ? $lastPoint->highMinor : 0;
+
+        // Effective per-account buffer for the popover trigger label + the
+        // chart's annotations.yaxis shortfall band overlay; null when the
+        // account carries no buffer floor.
+        $accountRow = $db->connection()->table('accounts')
+            ->where('id', $selectedAccountId)
+            ->where('user_id', $user->id)
+            ->first(['forecast_min_buffer_minor']);
+        $effectiveBufferMinor = $accountRow !== null && isset($accountRow->forecast_min_buffer_minor) && is_numeric($accountRow->forecast_min_buffer_minor)
+            ? (int) $accountRow->forecast_min_buffer_minor
+            : null;
+
+        $windowRows = $db->connection()->table('forecast_shortfall_windows')
+            ->where('user_id', $user->id)
+            ->where('account_id', $selectedAccountId)
+            ->whereNull('scenario_id')
+            ->orderBy('starts_at')
+            ->get();
+        $shortfallWindows = [];
+        foreach ($windowRows as $row) {
+            /** @var stdClass $row */
+            $shortfallWindows[] = $mapper->mapShortfallWindow($row);
+        }
+
+        $scenario = null;
+        $scenarioPanelColor = self::NEUTRAL_INK;
+        if ($this->scenarioId !== null) {
+            $scenario = $forecastQuery->forUser($selectedAccountId, $this->horizon, $this->scenarioId, $user);
+            $netDiff = $this->computeNetDiff($baseline, $scenario);
+            $scenarioPanelColor = $this->panelColorFor($netDiff[30]);
+        }
+
+        // Shared y-axis (RESEARCH Pitfall 2): compute the union range
+        // across both panels' points + the buffer floor so the chart's
+        // y-axis is identical and the visual delta is honest.
+        [$yMin, $yMax] = $this->computeSharedYAxisRange($baseline, $scenario, $effectiveBufferMinor);
+
+        $scenarioApexOptions = null;
+        $scenarioChartElementId = null;
+        if ($scenario !== null) {
+            $scenarioApexOptions = $this->buildApexOptions($scenario, $effectiveBufferMinor, $yMin, $yMax, $scenarioPanelColor);
+            $scenarioChartElementId = 'forecast-chart-scenario-'.$selectedAccountId.'-'.$this->scenarioId;
         }
 
         return [
-            'chart' => [
-                'type' => 'rangeArea',
-                'height' => 320,
-                'animations' => ['enabled' => false],
-                'toolbar' => ['show' => false],
-                'zoom' => ['enabled' => false],
-                'fontFamily' => 'inherit',
-            ],
-            'series' => [
-                ['name' => 'Range', 'type' => 'rangeArea', 'data' => $rangeData],
-                ['name' => 'Point estimate', 'type' => 'line', 'data' => $lineData],
-            ],
-            'dataLabels' => ['enabled' => false],
-            'fill' => ['opacity' => [0.2, 1.0]],
-            'stroke' => ['curve' => 'straight', 'width' => [0, 2.5]],
-            'colors' => [$panelColor, $panelColor],
-            'xaxis' => [
-                'type' => 'datetime',
-                'labels' => ['style' => ['fontSize' => '12px', 'colors' => '#64748B']],
-            ],
-            'yaxis' => [
-                'min' => $yMin,
-                'max' => $yMax,
-                'forceNiceScale' => true,
-                'labels' => ['style' => ['fontSize' => '12px', 'colors' => '#64748B']],
-            ],
-            'grid' => ['borderColor' => '#E2E8F0', 'strokeDashArray' => 0],
-            'legend' => ['show' => false],
-            'tooltip' => ['shared' => true, 'intersect' => false],
-            'annotations' => $annotations,
-            // Phone-tuned responsive breakpoints baked into server-rendered
-            // options so the chart fills the container at phone width with
-            // fewer x-axis labels and no legend — no extra JS required.
-            'responsive' => [
-                [
-                    'breakpoint' => 768,
-                    'options' => [
-                        'chart' => ['height' => 240],
-                        'xaxis' => ['tickAmount' => 4],
-                        'legend' => ['show' => false],
-                    ],
-                ],
-            ],
+            'selectedAccountName' => $baseline->accountName,
+            'selectedAccountCurrency' => $baseline->defaultCurrency,
+            'baseline' => $baseline,
+            'apexOptions' => $this->buildApexOptions($baseline, $effectiveBufferMinor, $yMin, $yMax, self::NEUTRAL_INK),
+            'chartElementId' => 'forecast-chart-baseline-'.$selectedAccountId,
+            'scenario' => $scenario,
+            'scenarioApexOptions' => $scenarioApexOptions,
+            'scenarioChartElementId' => $scenarioChartElementId,
+            'scenarioPanelColor' => $scenarioPanelColor,
+            'netDiff' => $netDiff,
+            'todayBalanceMinor' => $baseline->todayBalanceMinor,
+            'horizonLowMinor' => $horizonLowMinor,
+            'horizonHighMinor' => $horizonHighMinor,
+            'defaultCurrency' => $baseline->defaultCurrency,
+            'effectiveBufferMinor' => $effectiveBufferMinor,
+            'shortfallWindows' => $shortfallWindows,
+        ];
+    }
+
+    /**
+     * @param  list<array{id: int, name: string, default_currency: string, kind: string}>  $accountList
+     * @return array<string, mixed>
+     */
+    private function aggregateView(
+        array $accountList,
+        bool $isAllAccountsView,
+        bool $isEmpty,
+        ForecastQuery $forecastQuery,
+        DatabaseManager $db,
+        User $user,
+    ): array {
+        if (! $isAllAccountsView || $isEmpty) {
+            return [
+                'aggregatePoints' => [],
+                'aggregateBufferFloor' => 0,
+                'aggregateChartElementId' => null,
+                'aggregateCurrency' => 'EUR',
+            ];
+        }
+
+        [$aggregatePoints, $aggregateBufferFloor] = $this->computeAllAccountsAggregate(
+            accountList: $accountList,
+            horizon: $this->horizon,
+            forecastQuery: $forecastQuery,
+            db: $db,
+            user: $user,
+        );
+
+        return [
+            'aggregatePoints' => $aggregatePoints,
+            'aggregateBufferFloor' => $aggregateBufferFloor,
+            'aggregateChartElementId' => 'forecast-chart-aggregate-'.$this->horizon,
+            'aggregateCurrency' => 'EUR',
         ];
     }
 }
