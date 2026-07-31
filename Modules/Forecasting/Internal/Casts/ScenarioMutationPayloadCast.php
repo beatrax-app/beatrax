@@ -7,12 +7,8 @@ namespace Modules\Forecasting\Internal\Casts;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
-use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 
 /**
  * @implements CastsAttributes<ScenarioMutationPayload, ScenarioMutationPayload>
@@ -45,16 +41,12 @@ final class ScenarioMutationPayloadCast implements CastsAttributes
             );
         }
 
-        return match ($kind) {
-            'cancel_series' => CancelSeriesPayload::from($decoded),
-            'add_one_off' => AddOneOffPayload::from($decoded),
-            'add_recurring' => AddRecurringPayload::from($decoded),
-            'change_series_amount' => ChangeSeriesAmountPayload::from($decoded),
-            'shift_series_date' => ShiftSeriesDatePayload::from($decoded),
-            default => throw new InvalidArgumentException(
-                "Unknown scenario mutation kind: {$kind}",
-            ),
-        };
+        $resolved = ScenarioMutationKind::tryFrom($kind);
+        if ($resolved === null) {
+            throw new InvalidArgumentException("Unknown scenario mutation kind: {$kind}");
+        }
+
+        return $resolved->payloadClass()::from($decoded);
     }
 
     /**

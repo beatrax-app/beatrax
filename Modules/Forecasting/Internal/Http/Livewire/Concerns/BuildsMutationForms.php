@@ -11,6 +11,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ScenarioMutationPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
@@ -29,11 +30,11 @@ trait BuildsMutationForms
     private function defaultFormFor(string $kind): array
     {
         return match ($kind) {
-            'cancel_series' => ['seriesId' => null],
-            'add_one_off' => ['date' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'note' => ''],
-            'add_recurring' => ['startDate' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
-            'change_series_amount' => ['seriesId' => null, 'newAmount' => ''],
-            'shift_series_date' => ['seriesId' => null, 'newNextDate' => '', 'scope' => ShiftScope::Next->value],
+            ScenarioMutationKind::CancelSeries->value => ['seriesId' => null],
+            ScenarioMutationKind::AddOneOff->value => ['date' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'note' => ''],
+            ScenarioMutationKind::AddRecurring->value => ['startDate' => '', 'amount' => '', 'currency' => 'EUR', 'direction' => 'expense', 'cadence' => SeriesCadence::Monthly->value, 'note' => ''],
+            ScenarioMutationKind::ChangeSeriesAmount->value => ['seriesId' => null, 'newAmount' => ''],
+            ScenarioMutationKind::ShiftSeriesDate->value => ['seriesId' => null, 'newNextDate' => '', 'scope' => ShiftScope::Next->value],
             default => [],
         };
     }
@@ -42,17 +43,17 @@ trait BuildsMutationForms
     {
         try {
             return match ($kind) {
-                'cancel_series' => new CancelSeriesPayload(
+                ScenarioMutationKind::CancelSeries->value => new CancelSeriesPayload(
                     seriesId: $this->intField('seriesId'),
                 ),
-                'add_one_off' => new AddOneOffPayload(
+                ScenarioMutationKind::AddOneOff->value => new AddOneOffPayload(
                     date: $this->stringField('date'),
                     amountMinor: $this->parseAmountMinor('amount'),
                     currency: $this->stringField('currency', 'EUR'),
                     direction: $this->stringField('direction', 'expense'),
                     note: $this->optionalStringField('note'),
                 ),
-                'add_recurring' => new AddRecurringPayload(
+                ScenarioMutationKind::AddRecurring->value => new AddRecurringPayload(
                     startDate: $this->stringField('startDate'),
                     amountMinor: $this->parseAmountMinor('amount'),
                     currency: $this->stringField('currency', 'EUR'),
@@ -60,11 +61,11 @@ trait BuildsMutationForms
                     cadence: $this->stringField('cadence', 'monthly'),
                     note: $this->optionalStringField('note'),
                 ),
-                'change_series_amount' => new ChangeSeriesAmountPayload(
+                ScenarioMutationKind::ChangeSeriesAmount->value => new ChangeSeriesAmountPayload(
                     seriesId: $this->intField('seriesId'),
                     newAmountMinor: $this->parseAmountMinor('newAmount'),
                 ),
-                'shift_series_date' => new ShiftSeriesDatePayload(
+                ScenarioMutationKind::ShiftSeriesDate->value => new ShiftSeriesDatePayload(
                     seriesId: $this->intField('seriesId'),
                     newNextDate: $this->stringField('newNextDate'),
                     scope: $this->stringField('scope', ShiftScope::Next->value),
