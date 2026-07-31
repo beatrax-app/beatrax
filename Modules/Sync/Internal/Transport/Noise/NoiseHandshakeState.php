@@ -28,6 +28,10 @@ final class NoiseHandshakeState
 
     private const XX_PROTOCOL = 'Noise_XX_25519_ChaChaPoly_BLAKE2b';
 
+    private const int PUBLIC_KEY_BYTES = 32;
+
+    private const int AEAD_TAG_BYTES = 16;
+
     private NoiseSymmetricState $symmetric;
 
     /** @var string 32-byte local static X25519 secret key */
@@ -279,61 +283,12 @@ final class NoiseHandshakeState
 
     private function processWriteToken(string $token): string
     {
-        switch ($token) {
-            case self::TOKEN_E:
-                if ($this->localEphemeralPublic === '') {
-                    $this->generateEphemeral();
-                }
-                $this->symmetric->mixHash($this->localEphemeralPublic);
-
-                return $this->localEphemeralPublic;
-
-            case self::TOKEN_S:
-                return $this->symmetric->encryptAndHash($this->localStaticPublic);
-
-            case self::TOKEN_EE:
-                $dh = $this->dh($this->localEphemeralSecret, $this->remoteEphemeralPublic);
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return '';
-
-            case self::TOKEN_ES:
-                // Initiator: DH(local_ephemeral, remote_static). Responder:
-                // DH(local_static, remote_ephemeral) — the commutativity trick.
-                if ($this->isInitiator) {
-                    $dh = $this->dh($this->localEphemeralSecret, $this->remoteStaticPublic);
-                } else {
-                    $dh = $this->dh($this->localStaticSecret, $this->remoteEphemeralPublic);
-                }
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return '';
-
-            case self::TOKEN_SE:
-                // Initiator: DH(local_static, remote_ephemeral). Responder:
-                // DH(local_ephemeral, remote_static).
-                if ($this->isInitiator) {
-                    $dh = $this->dh($this->localStaticSecret, $this->remoteEphemeralPublic);
-                } else {
-                    $dh = $this->dh($this->localEphemeralSecret, $this->remoteStaticPublic);
-                }
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return '';
-
-            case self::TOKEN_SS:
-                $dh = $this->dh($this->localStaticSecret, $this->remoteStaticPublic);
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return '';
-
-            default:
-                throw new \LogicException('Noise handshake: unknown write token: '.$token);
-        }
+        return match ($token) {
+            self::TOKEN_E => $this->emitLocalEphemeral(),
+            self::TOKEN_S => $this->symmetric->encryptAndHash($this->localStaticPublic),
+            self::TOKEN_EE, self::TOKEN_ES, self::TOKEN_SE, self::TOKEN_SS => $this->mixDhWrite($token),
+            default => throw new \LogicException('Noise handshake: unknown write token: '.$token),
+        };
     }
 
     /**
@@ -341,62 +296,95 @@ final class NoiseHandshakeState
      */
     private function processReadToken(string $token, string $message, int $offset): int
     {
-        switch ($token) {
-            case self::TOKEN_E:
-                $remoteEphemeral = substr($message, $offset, 32);
-                $this->remoteEphemeralPublic = $remoteEphemeral;
-                $this->symmetric->mixHash($remoteEphemeral);
+        return match ($token) {
+            self::TOKEN_E => $this->readRemoteEphemeral($message, $offset),
+            self::TOKEN_S => $this->readRemoteStatic($message, $offset),
+            self::TOKEN_EE, self::TOKEN_ES, self::TOKEN_SE, self::TOKEN_SS => $this->mixDhRead($token),
+            default => throw new \LogicException('Noise handshake: unknown read token: '.$token),
+        };
+    }
 
-                return 32;
-
-            case self::TOKEN_S:
-                // Before any mixKey: 32 bytes plaintext. After mixKey: 32+16
-                // bytes (with AEAD tag).
-                $encrypted = $this->hasKey() ? substr($message, $offset, 48) : substr($message, $offset, 32);
-                $remoteStatic = $this->symmetric->decryptAndHash($encrypted);
-                $this->remoteStaticPublic = $remoteStatic;
-
-                return $this->hasKey() ? 48 : 32;
-
-            case self::TOKEN_EE:
-                $dh = $this->dh($this->localEphemeralSecret, $this->remoteEphemeralPublic);
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return 0;
-
-            case self::TOKEN_ES:
-                if ($this->isInitiator) {
-                    $dh = $this->dh($this->localEphemeralSecret, $this->remoteStaticPublic);
-                } else {
-                    $dh = $this->dh($this->localStaticSecret, $this->remoteEphemeralPublic);
-                }
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return 0;
-
-            case self::TOKEN_SE:
-                if ($this->isInitiator) {
-                    $dh = $this->dh($this->localStaticSecret, $this->remoteEphemeralPublic);
-                } else {
-                    $dh = $this->dh($this->localEphemeralSecret, $this->remoteStaticPublic);
-                }
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return 0;
-
-            case self::TOKEN_SS:
-                $dh = $this->dh($this->localStaticSecret, $this->remoteStaticPublic);
-                $this->symmetric->mixKey($dh);
-                sodium_memzero($dh);
-
-                return 0;
-
-            default:
-                throw new \LogicException('Noise handshake: unknown read token: '.$token);
+    private function emitLocalEphemeral(): string
+    {
+        if ($this->localEphemeralPublic === '') {
+            $this->generateEphemeral();
         }
+        $this->symmetric->mixHash($this->localEphemeralPublic);
+
+        return $this->localEphemeralPublic;
+    }
+
+    private function readRemoteEphemeral(string $message, int $offset): int
+    {
+        $remoteEphemeral = substr($message, $offset, self::PUBLIC_KEY_BYTES);
+        $this->remoteEphemeralPublic = $remoteEphemeral;
+        $this->symmetric->mixHash($remoteEphemeral);
+
+        return self::PUBLIC_KEY_BYTES;
+    }
+
+    // Before any mixKey the 's' token is the raw public key; once keyed it
+    // carries the AEAD tag as well, so both the slice length and the consumed
+    // byte count switch on whether a key is already established.
+    /**
+     * @throws \RuntimeException on AEAD failure.
+     */
+    private function readRemoteStatic(string $message, int $offset): int
+    {
+        $length = $this->hasKey() ? self::PUBLIC_KEY_BYTES + self::AEAD_TAG_BYTES : self::PUBLIC_KEY_BYTES;
+        $encrypted = substr($message, $offset, $length);
+        $this->remoteStaticPublic = $this->symmetric->decryptAndHash($encrypted);
+
+        return $length;
+    }
+
+    // A keyed 'ee'/'es'/'se'/'ss' token mixes a shared secret but appends no
+    // bytes to the outbound message, so the write path returns an empty string.
+    private function mixDhWrite(string $token): string
+    {
+        $this->mixKeyedDh($token);
+
+        return '';
+    }
+
+    // The same keyed token consumes no bytes from the inbound message on the
+    // read path, so the number of bytes advanced is zero.
+    private function mixDhRead(string $token): int
+    {
+        $this->mixKeyedDh($token);
+
+        return 0;
+    }
+
+    // Runs one keyed Diffie-Hellman token, mixing the shared secret into the
+    // symmetric state and zeroing the scratch buffer immediately after.
+    private function mixKeyedDh(string $token): void
+    {
+        [$secret, $public] = $this->dhKeyPairForToken($token);
+        $dh = $this->dh($secret, $public);
+        $this->symmetric->mixKey($dh);
+        sodium_memzero($dh);
+    }
+
+    // The initiator/responder crossover for 'es' and 'se' is the Noise
+    // pattern's DH commutativity: each side pairs its own ephemeral against
+    // the peer's static (and vice versa) so both derive the same secret.
+    /**
+     * @return array{0: string, 1: string} [secretKey, publicKey]
+     */
+    private function dhKeyPairForToken(string $token): array
+    {
+        return match ($token) {
+            self::TOKEN_EE => [$this->localEphemeralSecret, $this->remoteEphemeralPublic],
+            self::TOKEN_ES => $this->isInitiator
+                ? [$this->localEphemeralSecret, $this->remoteStaticPublic]
+                : [$this->localStaticSecret, $this->remoteEphemeralPublic],
+            self::TOKEN_SE => $this->isInitiator
+                ? [$this->localStaticSecret, $this->remoteEphemeralPublic]
+                : [$this->localEphemeralSecret, $this->remoteStaticPublic],
+            self::TOKEN_SS => [$this->localStaticSecret, $this->remoteStaticPublic],
+            default => throw new \LogicException('Noise handshake: unknown DH token: '.$token),
+        };
     }
 
     /**

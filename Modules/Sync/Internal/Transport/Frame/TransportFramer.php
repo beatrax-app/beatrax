@@ -146,7 +146,30 @@ final class TransportFramer
      */
     private function arrayToEntry(array $row): OpLogEntry
     {
+        $this->assertRequiredKeys($row);
+
+        return new OpLogEntry(
+            table: $this->requireString($row, 'table'),
+            pk: $this->parsePk($row),
+            field: $this->requireString($row, 'field'),
+            value: $this->parseValue($row),
+            hlcL: $this->requireInt($row, 'hlc_l'),
+            hlcC: $this->requireInt($row, 'hlc_c'),
+            deviceId: $this->requireString($row, 'device_id'),
+            opType: $this->parseOpType($row),
+            signature: $this->requireString($row, 'signature'),
+            userId: $this->requireInt($row, 'user_id'),
+            gdkEpoch: $this->parseGdkEpoch($row),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function assertRequiredKeys(array $row): void
+    {
         $required = ['table', 'pk', 'field', 'hlc_l', 'hlc_c', 'device_id', 'op_type', 'signature', 'user_id'];
+
         foreach ($required as $key) {
             if (! array_key_exists($key, $row)) {
                 throw new \UnexpectedValueException(
@@ -154,7 +177,39 @@ final class TransportFramer
                 );
             }
         }
+    }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function requireString(array $row, string $key): string
+    {
+        $value = $row[$key] ?? null;
+        if (! is_string($value)) {
+            throw new \UnexpectedValueException("TransportFramer::decode — {$key} must be a string.");
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function requireInt(array $row, string $key): int
+    {
+        $value = $row[$key] ?? null;
+        if (! is_int($value)) {
+            throw new \UnexpectedValueException("TransportFramer::decode — {$key} must be an int.");
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function parseOpType(array $row): OpType
+    {
         $opTypeRaw = $row['op_type'];
         if (! is_string($opTypeRaw) && ! is_int($opTypeRaw)) {
             throw new \UnexpectedValueException(
@@ -169,72 +224,47 @@ final class TransportFramer
             );
         }
 
+        return $opType;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function parsePk(array $row): int|string
+    {
         $pkRaw = $row['pk'];
         if (! is_int($pkRaw) && ! is_string($pkRaw)) {
             throw new \UnexpectedValueException('TransportFramer::decode — pk must be int or string.');
         }
-        $pk = $pkRaw;
 
-        $table = $row['table'];
-        if (! is_string($table)) {
-            throw new \UnexpectedValueException('TransportFramer::decode — table must be a string.');
-        }
+        return $pkRaw;
+    }
 
-        $field = $row['field'];
-        if (! is_string($field)) {
-            throw new \UnexpectedValueException('TransportFramer::decode — field must be a string.');
-        }
-
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function parseValue(array $row): ?string
+    {
         $valueRaw = $row['value'] ?? null;
         if ($valueRaw !== null && ! is_string($valueRaw)) {
             throw new \UnexpectedValueException('TransportFramer::decode — value must be a string or null.');
         }
-        $value = $valueRaw;
 
-        $hlcL = $row['hlc_l'];
-        if (! is_int($hlcL)) {
-            throw new \UnexpectedValueException('TransportFramer::decode — hlc_l must be an int.');
-        }
+        return $valueRaw;
+    }
 
-        $hlcC = $row['hlc_c'];
-        if (! is_int($hlcC)) {
-            throw new \UnexpectedValueException('TransportFramer::decode — hlc_c must be an int.');
-        }
-
-        $deviceId = $row['device_id'];
-        if (! is_string($deviceId)) {
-            throw new \UnexpectedValueException('TransportFramer::decode — device_id must be a string.');
-        }
-
-        $signature = $row['signature'];
-        if (! is_string($signature)) {
-            throw new \UnexpectedValueException('TransportFramer::decode — signature must be a string.');
-        }
-
-        $userId = $row['user_id'];
-        if (! is_int($userId)) {
-            throw new \UnexpectedValueException('TransportFramer::decode — user_id must be an int.');
-        }
-
-        // Optional, backward-compatible with older wire frames that never
-        // carried this key: null means the value is plaintext.
+    // Optional, backward-compatible with older wire frames that never carried
+    // this key: null means the value is plaintext.
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function parseGdkEpoch(array $row): ?int
+    {
         $gdkEpochRaw = $row['gdk_epoch'] ?? null;
         if ($gdkEpochRaw !== null && ! is_int($gdkEpochRaw)) {
             throw new \UnexpectedValueException('TransportFramer::decode — gdk_epoch must be an int or null.');
         }
 
-        return new OpLogEntry(
-            table: $table,
-            pk: $pk,
-            field: $field,
-            value: $value,
-            hlcL: $hlcL,
-            hlcC: $hlcC,
-            deviceId: $deviceId,
-            opType: $opType,
-            signature: $signature,
-            userId: $userId,
-            gdkEpoch: $gdkEpochRaw,
-        );
+        return $gdkEpochRaw;
     }
 }

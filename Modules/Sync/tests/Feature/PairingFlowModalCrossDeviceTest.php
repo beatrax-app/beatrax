@@ -146,8 +146,8 @@ it('checkPairingState() drains the phone\'s frames and confirmMatch() sends this
 
     // PHONE, on its OWN separate database, admits the desktop once it
     // drains the desktop's PAIR_CONFIRM too.
-    $this->asDevice('phone', function () use ($session): void {
-        app(PairingGateway::class)->drainPairingFrames(PFM_PHONE_USER_ID, $session);
+    $this->asDevice('phone', function (): void {
+        app(PairingGateway::class)->drainPairingFrames(PFM_PHONE_USER_ID);
     });
     $this->asDevice('phone', function () use ($desktopIdentity): void {
         expect(app(DeviceRegistryService::class)->deviceKeys(PFM_PHONE_USER_ID))->toHaveKey($desktopIdentity->deviceId);
