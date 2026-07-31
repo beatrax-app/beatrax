@@ -11,6 +11,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\AccountKind;
 use stdClass;
 
 /**
@@ -50,7 +51,7 @@ final readonly class BalanceAnchorResolver
         // default to zero rather than summing every historical
         // transaction — summing would double-count the billing events
         // the projection is about to re-emit. Every other kind sums.
-        return $kind === 'ics_card'
+        return $kind === AccountKind::IcsCard->value
             ? $this->icsCardZeroAnchor($accountId, $defaultCurrency)
             : $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);
     }

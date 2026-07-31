@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\AccountKind;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#merchant-aliases
@@ -52,7 +53,7 @@ final class AccountNamer implements NamesAccounts
             'user_id' => $user->id,
             'name' => $trimmed,
             'slug' => $slugBody.'-'.strtolower($tail),
-            'kind' => 'asn',
+            'kind' => AccountKind::Asn->value,
             'iban' => $iban,
             'default_currency' => 'EUR',
         ]);

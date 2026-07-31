@@ -10,6 +10,7 @@ use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\AccountKind;
 
 /**
  * @link ../../../../.docs/features/chains/architecture.md
@@ -55,7 +56,7 @@ final class CardStatementUpserter implements UpsertsCardStatements
             ->table('statement_summaries')
             ->join('accounts', 'accounts.id', '=', 'statement_summaries.account_id')
             ->where('statement_summaries.user_id', $user->id)
-            ->where('accounts.kind', 'ics_card')
+            ->where('accounts.kind', AccountKind::IcsCard->value)
             ->select(
                 'statement_summaries.account_id',
                 'statement_summaries.import_run_id',

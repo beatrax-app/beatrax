@@ -18,6 +18,7 @@ use Modules\EmailScan\Public\Dto\InboxHealthLine;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\PerCurrencyTile;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -179,7 +180,7 @@ final class ThisPeriodAtAGlanceQuery
             ->table('card_statements')
             ->join('accounts', 'accounts.id', '=', 'card_statements.account_id')
             ->where('card_statements.user_id', $user->id)
-            ->where('accounts.kind', 'ics_card')
+            ->where('accounts.kind', AccountKind::IcsCard->value)
             ->whereIn('card_statements.state', ['open', 'partially_settled'])
             ->orderByDesc('card_statements.period_end')
             ->orderByDesc('card_statements.id')

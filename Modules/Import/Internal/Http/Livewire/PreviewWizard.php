@@ -23,6 +23,7 @@ use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Import\Public\Services\AccountNamer;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Enums\AccountKind;
 
 /**
  * @link ../../../../../.docs/features/import/architecture.md#preview-wizard-inline-account-naming
@@ -195,7 +196,7 @@ final class PreviewWizard extends Component
             'user_id' => $user->id,
             'name' => $trimmed,
             'slug' => $slugBody.'-ics-card',
-            'kind' => 'ics_card',
+            'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
             'default_currency' => 'EUR',
         ]);
@@ -358,7 +359,7 @@ final class PreviewWizard extends Component
         $icsAccountCount = $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
-            ->where('kind', 'ics_card')
+            ->where('kind', AccountKind::IcsCard->value)
             ->count();
 
         return $icsAccountCount === 0;
@@ -387,7 +388,7 @@ final class PreviewWizard extends Component
         $paypalAccountCount = $db->connection()
             ->table('accounts')
             ->where('user_id', $user->id)
-            ->where('kind', 'paypal')
+            ->where('kind', AccountKind::Paypal->value)
             ->count();
 
         return $paypalAccountCount === 0;
