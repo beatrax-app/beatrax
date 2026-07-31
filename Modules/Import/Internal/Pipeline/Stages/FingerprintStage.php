@@ -53,36 +53,27 @@ final class FingerprintStage
         }
 
         $existingFormat = is_string($existing->source_format) ? $existing->source_format : '';
+        $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
+        $incomingRef = $tx->sourceRef;
 
         // Statement-vs-statement collisions drop as duplicates without
-        // upgrading source_ref — the policy is "same transaction, never
-        // enrich" for bank-statement re-imports. Receipt-driven
-        // enrichment (one side a receipt format) still applies.
-        $incomingIsReceipt = $this->ranker->isReceiptFormat($tx->sourceFormat);
-        $existingIsReceipt = $this->ranker->isReceiptFormat($existingFormat);
-        if (! $incomingIsReceipt && ! $existingIsReceipt) {
+        // upgrading source_ref; enrichment applies only when one side is a
+        // receipt format and the incoming ref both exists and outranks the
+        // stored one.
+        $oneSideReceipt = $this->ranker->isReceiptFormat($tx->sourceFormat)
+            || $this->ranker->isReceiptFormat($existingFormat);
+
+        if ($incomingRef === null || ! $oneSideReceipt
+            || $this->ranker->rank($incomingRef, $tx->sourceFormat) <= $this->ranker->rank($existingRef, $existingFormat)) {
             return FingerprintDisposition::duplicate();
         }
 
-        $existingRef = is_string($existing->source_ref) ? $existing->source_ref : null;
-        $rawId = $existing->id;
-        $existingId = self::toInt($rawId);
-
-        $incomingRank = $this->ranker->rank($tx->sourceRef, $tx->sourceFormat);
-        $existingRank = $this->ranker->rank($existingRef, $existingFormat);
-
-        if ($incomingRank > $existingRank && $tx->sourceRef !== null) {
-            $conflictingFields = $this->detectConflicts($existing, $tx, $user);
-
-            return FingerprintDisposition::enriched(
-                existingId: $existingId,
-                fromSourceRef: $existingRef,
-                toSourceRef: $tx->sourceRef,
-                conflictingFields: $conflictingFields,
-            );
-        }
-
-        return FingerprintDisposition::duplicate();
+        return FingerprintDisposition::enriched(
+            existingId: self::toInt($existing->id),
+            fromSourceRef: $existingRef,
+            toSourceRef: $incomingRef,
+            conflictingFields: $this->detectConflicts($existing, $tx, $user),
+        );
     }
 
     /**
@@ -92,41 +83,57 @@ final class FingerprintStage
      */
     private function detectConflicts(stdClass $existing, CanonicalTransaction $tx, User $user): array
     {
-        $map = [];
+        return array_merge(
+            $this->encryptedTextConflict('counterparty_name', $existing->counterparty_name, $tx->counterpartyName, $user),
+            $this->encryptedTextConflict('description', $existing->description, $tx->description, $user),
+            self::currencyConflict($existing->currency, $tx->currency),
+            self::amountConflict($existing->amount_minor, $tx->amountMinor),
+        );
+    }
 
-        $storedName = is_string($existing->counterparty_name) ? $existing->counterparty_name : null;
-        if ($storedName !== null) {
-            $storedName = $this->codec->decryptValue('transactions', 'counterparty_name', $storedName, $user->id, ($this->session)())['value'];
-        }
-        if ($storedName !== null && $tx->counterpartyName !== null) {
-            if (self::stringsDiffer($storedName, $tx->counterpartyName)) {
-                $map['counterparty_name'] = ['stored' => $storedName, 'incoming' => $tx->counterpartyName];
-            }
-        }
-
-        $storedDescription = is_string($existing->description) ? $existing->description : null;
-        if ($storedDescription !== null) {
-            $storedDescription = $this->codec->decryptValue('transactions', 'description', $storedDescription, $user->id, ($this->session)())['value'];
-        }
-        if ($storedDescription !== null && $tx->description !== null) {
-            if (self::stringsDiffer($storedDescription, $tx->description)) {
-                $map['description'] = ['stored' => $storedDescription, 'incoming' => $tx->description];
-            }
+    // Decrypts the stored ciphertext before comparing so a re-encrypted
+    // but semantically-identical value is never flagged as a conflict.
+    /**
+     * @return array<string, array{stored: mixed, incoming: mixed}>
+     */
+    private function encryptedTextConflict(string $column, mixed $rawStored, ?string $incoming, User $user): array
+    {
+        $stored = is_string($rawStored) ? $rawStored : null;
+        if ($stored !== null) {
+            $stored = $this->codec->decryptValue('transactions', $column, $stored, $user->id, ($this->session)())['value'];
         }
 
-        $storedCurrency = is_string($existing->currency) ? $existing->currency : null;
-        if ($storedCurrency !== null && $tx->currency !== '') {
-            if (mb_strtoupper($storedCurrency) !== mb_strtoupper($tx->currency)) {
-                $map['currency'] = ['stored' => $storedCurrency, 'incoming' => $tx->currency];
-            }
+        if ($stored === null || $incoming === null || ! self::stringsDiffer($stored, $incoming)) {
+            return [];
         }
 
-        $storedAmount = is_numeric($existing->amount_minor) ? (int) $existing->amount_minor : null;
-        if ($storedAmount !== null && $storedAmount !== $tx->amountMinor) {
-            $map['amount_minor'] = ['stored' => $storedAmount, 'incoming' => $tx->amountMinor];
+        return [$column => ['stored' => $stored, 'incoming' => $incoming]];
+    }
+
+    /**
+     * @return array<string, array{stored: mixed, incoming: mixed}>
+     */
+    private static function currencyConflict(mixed $rawStored, string $incoming): array
+    {
+        $stored = is_string($rawStored) ? $rawStored : null;
+        if ($stored === null || $incoming === '' || mb_strtoupper($stored) === mb_strtoupper($incoming)) {
+            return [];
         }
 
-        return $map;
+        return ['currency' => ['stored' => $stored, 'incoming' => $incoming]];
+    }
+
+    /**
+     * @return array<string, array{stored: mixed, incoming: mixed}>
+     */
+    private static function amountConflict(mixed $rawStored, int $incoming): array
+    {
+        $stored = is_numeric($rawStored) ? (int) $rawStored : null;
+        if ($stored === null || $stored === $incoming) {
+            return [];
+        }
+
+        return ['amount_minor' => ['stored' => $stored, 'incoming' => $incoming]];
     }
 
     private static function stringsDiffer(string $a, string $b): bool

@@ -57,12 +57,8 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
         }
 
         $eventType = $this->extractFirstEventType($tx);
-        if ($eventType === null) {
-            return null;
-        }
-
-        $key = mb_strtolower($eventType);
-        if (! isset(self::EVENT_TYPES[$key])) {
+        $key = $eventType !== null ? mb_strtolower($eventType) : null;
+        if ($key === null || ! isset(self::EVENT_TYPES[$key])) {
             return null;
         }
 
@@ -80,19 +76,14 @@ final class PaypalCsvPaymentTypeHinter implements PaymentTypeHinter
     private function extractFirstEventType(CanonicalTransaction $tx): ?string
     {
         $rawPayload = $tx->rawPayload;
-        if (! is_array($rawPayload)) {
-            return null;
-        }
-
-        $events = $rawPayload['events'] ?? null;
+        $events = is_array($rawPayload) ? ($rawPayload['events'] ?? null) : null;
         if (! is_array($events) || $events === []) {
             return null;
         }
 
         // array_key_first is non-null because $events is non-empty
         // (the guard above returned null when $events === []).
-        $firstKey = array_key_first($events);
-        $first = $events[$firstKey];
+        $first = $events[array_key_first($events)];
         if (! is_array($first)) {
             return null;
         }
