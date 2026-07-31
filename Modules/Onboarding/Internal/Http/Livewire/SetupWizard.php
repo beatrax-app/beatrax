@@ -18,6 +18,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Onboarding\Internal\Services\ResumeStepResolver;
 use Modules\Onboarding\Internal\Services\WizardProgressInitializer;
 use Modules\Onboarding\Internal\Services\WizardStepRegistry;
+use Modules\Onboarding\Public\Enums\WizardStepStatus;
 use Modules\Onboarding\Public\Services\WizardProgressQuery;
 use Psr\Log\LoggerInterface;
 
@@ -64,7 +65,7 @@ final class SetupWizard extends Component
             $hadInProgress = $db->connection()
                 ->table('wizard_progress')
                 ->where('user_id', $user->id)
-                ->whereIn('status', ['in_progress', 'done', 'skipped'])
+                ->whereIn('status', [WizardStepStatus::InProgress->value, WizardStepStatus::Done->value, WizardStepStatus::Skipped->value])
                 ->exists();
             if (! $hadInProgress) {
                 $logger->info('SetupWizard: ?force=1 hit while no wizard step had progressed.', [
@@ -76,7 +77,7 @@ final class SetupWizard extends Component
                 ->table('wizard_progress')
                 ->where('user_id', $user->id)
                 ->update([
-                    'status' => 'pending',
+                    'status' => WizardStepStatus::Pending->value,
                     'completed_at' => null,
                     'updated_at' => $clock->now()->toDateTimeString(),
                 ]);
@@ -112,8 +113,8 @@ final class SetupWizard extends Component
 
         for ($i = 0; $i < $targetIndex; $i++) {
             $priorStep = $steps[$i];
-            $priorStatus = $progress[$priorStep]['status'] ?? 'pending';
-            if ($priorStatus !== 'done' && $priorStatus !== 'skipped') {
+            $priorStatus = $progress[$priorStep]['status'] ?? WizardStepStatus::Pending->value;
+            if ($priorStatus !== WizardStepStatus::Done->value && $priorStatus !== WizardStepStatus::Skipped->value) {
                 return;
             }
         }
@@ -130,7 +131,7 @@ final class SetupWizard extends Component
         WizardProgressQuery $query,
         Clock $clock,
     ): void {
-        $this->advance($db, $currentUser, $registry, $query, $clock, 'done');
+        $this->advance($db, $currentUser, $registry, $query, $clock, WizardStepStatus::Done->value);
     }
 
     // The skip button is hidden in the view for non-skippable steps, but
@@ -147,7 +148,7 @@ final class SetupWizard extends Component
             return;
         }
 
-        $this->advance($db, $currentUser, $registry, $query, $clock, 'skipped');
+        $this->advance($db, $currentUser, $registry, $query, $clock, WizardStepStatus::Skipped->value);
     }
 
     public function skipRest(
@@ -158,9 +159,9 @@ final class SetupWizard extends Component
         $db->connection()
             ->table('wizard_progress')
             ->where('user_id', $currentUser->id())
-            ->where('status', '!=', 'done')
+            ->where('status', '!=', WizardStepStatus::Done->value)
             ->update([
-                'status' => 'skipped',
+                'status' => WizardStepStatus::Skipped->value,
                 'completed_at' => $clock->now()->toDateTimeString(),
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
