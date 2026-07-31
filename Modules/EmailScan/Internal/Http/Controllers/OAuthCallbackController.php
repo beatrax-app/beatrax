@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidGrantException;
 use Modules\EmailScan\Internal\OAuth\InvalidStateException;
@@ -41,31 +42,56 @@ final class OAuthCallbackController
 
     public function __invoke(Request $request, string $provider): RedirectResponse
     {
-        $oauth = match ($provider) {
-            'gmail' => $this->googleOAuth,
-            'microsoft' => $this->microsoftOAuth,
-            default => throw new NotFoundHttpException('Unknown provider.'),
-        };
+        $oauth = $this->resolveProvider($provider);
 
-        $errorParam = $request->query('error');
-        if (is_string($errorParam) && $errorParam !== '') {
-            $description = $request->query('error_description');
-            $message = is_string($description) && $description !== ''
-                ? $description
-                : $errorParam;
-
-            return $this->redirector
-                ->route('inboxes.index')
-                ->with('oauth_canceled', $message);
+        $canceled = $this->canceledRedirect($request);
+        if ($canceled !== null) {
+            return $canceled;
         }
 
         // Resolve the current user before consuming the state, so the
         // consume call can verify the state's stored user_id matches —
         // a mismatch tears down the flow with InvalidStateException,
         // since the inbox must only attach to the initiating user.
-        $user = $this->currentUser->user();
-        $userId = $user->id;
+        $userId = $this->currentUser->user()->id;
+        $existingInboxId = $this->consumeStateOrFail($request, $provider, $userId);
 
+        $token = $this->exchangeToken($request, $oauth, $provider);
+        if (is_string($token)) {
+            return $this->failRedirect($token);
+        }
+
+        return $this->completeConnection($provider, $userId, $existingInboxId, $token);
+    }
+
+    private function resolveProvider(string $provider): GoogleOAuthProvider|MicrosoftOAuthProvider
+    {
+        return match ($provider) {
+            'gmail' => $this->googleOAuth,
+            'microsoft' => $this->microsoftOAuth,
+            default => throw new NotFoundHttpException('Unknown provider.'),
+        };
+    }
+
+    // Returns the user-cancelled redirect when the provider bounced back
+    // an ?error= param, or null to let the happy path continue.
+    private function canceledRedirect(Request $request): ?RedirectResponse
+    {
+        $errorParam = $request->query('error');
+        if (! is_string($errorParam) || $errorParam === '') {
+            return null;
+        }
+
+        $description = $request->query('error_description');
+        $message = is_string($description) && $description !== '' ? $description : $errorParam;
+
+        return $this->redirector
+            ->route('inboxes.index')
+            ->with('oauth_canceled', $message);
+    }
+
+    private function consumeStateOrFail(Request $request, string $provider, int $userId): int
+    {
         $stateParamRaw = $request->query('state');
         $stateParam = is_string($stateParamRaw) ? $stateParamRaw : '';
         $existingInboxId = $this->oauthState->consumeState($provider, $stateParam, $userId);
@@ -73,49 +99,81 @@ final class OAuthCallbackController
             throw new InvalidStateException('OAuth state mismatch.');
         }
 
+        return $existingInboxId;
+    }
+
+    // Returns the exchanged token on success, or a user-facing flash
+    // message when the callback carried no code or the provider rejected
+    // the exchange — both surface as an oauth_failed banner at /inboxes.
+    private function exchangeToken(
+        Request $request,
+        GoogleOAuthProvider|MicrosoftOAuthProvider $oauth,
+        string $provider,
+    ): AccessTokenWithEmail|string {
         $codeRaw = $request->query('code');
         $code = is_string($codeRaw) ? $codeRaw : '';
         if ($code === '') {
-            return $this->redirector
-                ->route('inboxes.index')
-                ->with('oauth_failed', 'OAuth callback returned no authorization code.');
+            return 'OAuth callback returned no authorization code.';
         }
-
-        $redirectUri = $this->loopback->forProvider($provider);
 
         try {
-            $tokenWithEmail = $oauth->exchangeAuthorizationCode($code, $redirectUri);
-        } catch (InvalidGrantException $e) {
-            return $this->redirector
-                ->route('inboxes.index')
-                ->with('oauth_failed', $e->getMessage());
-        } catch (OAuthExchangeFailed $e) {
-            return $this->redirector
-                ->route('inboxes.index')
-                ->with('oauth_failed', $e->getMessage());
+            return $oauth->exchangeAuthorizationCode($code, $this->loopback->forProvider($provider));
+        } catch (InvalidGrantException|OAuthExchangeFailed $e) {
+            return $e->getMessage();
         }
+    }
 
-        $now = $this->clock->now()->toDateTimeString();
-        $email = $tokenWithEmail->email;
-        $refreshToken = $tokenWithEmail->refreshToken;
-        $expiresAt = $tokenWithEmail->expiresAt;
+    private function completeConnection(
+        string $provider,
+        int $userId,
+        int $existingInboxId,
+        AccessTokenWithEmail $token,
+    ): RedirectResponse {
+        $refreshToken = $token->refreshToken;
 
         // Refuse to persist a brand-new inbox without a refresh token —
         // the next IncrementalScanJob would mark it needs_reauth on
         // first run. For Google this typically means the consent
         // screen is still in "Testing" status; surface a flash instead.
         if ($existingInboxId === 0 && ($refreshToken === null || $refreshToken === '')) {
-            return $this->redirector
-                ->route('inboxes.index')
-                ->with(
-                    'oauth_failed',
-                    $provider === 'gmail'
-                        ? 'Google did not return a refresh token. Publish your OAuth consent screen to "In production" and try again.'
-                        : 'The provider did not return a refresh token. Reconnect and grant offline access when prompted.',
-                );
+            return $this->failRedirect($this->missingRefreshTokenMessage($provider));
         }
 
-        $inboxId = $this->db->connection()->transaction(function () use (
+        $now = $this->clock->now()->toDateTimeString();
+        $inboxId = $this->persistInbox($existingInboxId, $userId, $provider, $token->email, $now);
+
+        // The chmod-600 JSON write happens after the DB commit, since
+        // the inbox id is only assigned by insertGetId(); a write
+        // failure on the new-inbox branch deletes both just-inserted
+        // rows, while the reconnect branch just surfaces a flash.
+        try {
+            $this->writeSecrets($existingInboxId, $inboxId, $provider, $token);
+        } catch (SecretsWriteFailed $e) {
+            if ($existingInboxId === 0) {
+                $this->rollbackInbox($inboxId, $userId);
+            }
+
+            return $this->failRedirect($e->getMessage());
+        }
+
+        // Clears any active oauth_reconsent_required banner row for
+        // this inbox so the SystemAlertsBanner stops surfacing the
+        // Reconnect prompt the moment the dance completes.
+        $this->acknowledgeReconsentAlerts($userId, $inboxId);
+
+        return $this->connectedRedirect($existingInboxId, $inboxId);
+    }
+
+    private function missingRefreshTokenMessage(string $provider): string
+    {
+        return $provider === 'gmail'
+            ? 'Google did not return a refresh token. Publish your OAuth consent screen to "In production" and try again.'
+            : 'The provider did not return a refresh token. Reconnect and grant offline access when prompted.';
+    }
+
+    private function persistInbox(int $existingInboxId, int $userId, string $provider, string $email, string $now): int
+    {
+        return $this->db->connection()->transaction(function () use (
             $existingInboxId, $userId, $provider, $email, $now,
         ): int {
             $connection = $this->db->connection();
@@ -159,63 +217,57 @@ final class OAuthCallbackController
 
             return $newId;
         });
+    }
 
-        // The chmod-600 JSON write happens after the DB commit, since
-        // the inbox id is only assigned by insertGetId(); a write
-        // failure on the new-inbox branch deletes both just-inserted
-        // rows, while the reconnect branch just surfaces a flash.
-        try {
-            if ($existingInboxId > 0) {
-                if ($refreshToken !== null) {
-                    $this->secrets->rotateRefreshToken(
-                        inboxId: $inboxId,
-                        newRefreshToken: $refreshToken,
-                        newAccessToken: $tokenWithEmail->accessToken,
-                        expiresAt: $expiresAt,
-                    );
-                }
-            } else {
-                // Already guarded above: $refreshToken is non-null and
-                // non-empty by this branch (the early-return rejects
-                // null / '' on the new-inbox path).
-                $this->secrets->saveInboxRefreshToken(
+    private function writeSecrets(int $existingInboxId, int $inboxId, string $provider, AccessTokenWithEmail $token): void
+    {
+        if ($existingInboxId > 0) {
+            if ($token->refreshToken !== null) {
+                $this->secrets->rotateRefreshToken(
                     inboxId: $inboxId,
-                    provider: $provider,
-                    email: $email,
-                    refreshToken: (string) $refreshToken,
-                    scope: $tokenWithEmail->scope,
-                    expiresAt: $expiresAt,
+                    newRefreshToken: $token->refreshToken,
+                    newAccessToken: $token->accessToken,
+                    expiresAt: $token->expiresAt,
                 );
             }
-        } catch (SecretsWriteFailed $e) {
-            if ($existingInboxId === 0) {
-                // Compensating rollback for the just-inserted rows so
-                // a failed secret write does not leave a ghost inbox
-                // visible on /inboxes with no credentials.
-                $this->db->connection()->transaction(function () use ($inboxId, $userId): void {
-                    $connection = $this->db->connection();
-                    $connection->statement('PRAGMA busy_timeout = 5000');
-                    $connection->table('inbox_scan_state')
-                        ->where('inbox_id', $inboxId)
-                        ->where('user_id', $userId)
-                        ->delete();
-                    $connection->table('inboxes')
-                        ->where('id', $inboxId)
-                        ->where('user_id', $userId)
-                        ->delete();
-                });
-            }
 
-            return $this->redirector
-                ->route('inboxes.index')
-                ->with('oauth_failed', $e->getMessage());
+            return;
         }
 
-        // Clears any active oauth_reconsent_required banner row for
-        // this inbox so the SystemAlertsBanner stops surfacing the
-        // Reconnect prompt the moment the dance completes.
-        $this->acknowledgeReconsentAlerts($userId, $inboxId);
+        // Already guarded in completeConnection: refreshToken is
+        // non-null and non-empty on the new-inbox path (the early
+        // return rejects null / '' there).
+        $this->secrets->saveInboxRefreshToken(
+            inboxId: $inboxId,
+            provider: $provider,
+            email: $token->email,
+            refreshToken: (string) $token->refreshToken,
+            scope: $token->scope,
+            expiresAt: $token->expiresAt,
+        );
+    }
 
+    // Compensating rollback for the just-inserted rows so a failed
+    // secret write does not leave a ghost inbox visible on /inboxes
+    // with no credentials.
+    private function rollbackInbox(int $inboxId, int $userId): void
+    {
+        $this->db->connection()->transaction(function () use ($inboxId, $userId): void {
+            $connection = $this->db->connection();
+            $connection->statement('PRAGMA busy_timeout = 5000');
+            $connection->table('inbox_scan_state')
+                ->where('inbox_id', $inboxId)
+                ->where('user_id', $userId)
+                ->delete();
+            $connection->table('inboxes')
+                ->where('id', $inboxId)
+                ->where('user_id', $userId)
+                ->delete();
+        });
+    }
+
+    private function connectedRedirect(int $existingInboxId, int $inboxId): RedirectResponse
+    {
         $redirect = $this->redirector
             ->route('inboxes.index')
             ->with('open_backfill_modal', $inboxId);
@@ -229,6 +281,13 @@ final class OAuthCallbackController
         }
 
         return $redirect;
+    }
+
+    private function failRedirect(string $message): RedirectResponse
+    {
+        return $this->redirector
+            ->route('inboxes.index')
+            ->with('oauth_failed', $message);
     }
 
     // Acknowledges every active oauth_reconsent_required system_alerts

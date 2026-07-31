@@ -70,38 +70,58 @@ final class OAuthClientWizardModal extends Component
             return null;
         }
 
-        if ($provider === 'microsoft') {
-            if ($this->clientId === '' || preg_match(self::MICROSOFT_CLIENT_ID_PATTERN, $this->clientId) !== 1) {
-                $this->errorMessage = 'Enter the application (client) ID — a UUID like 12345678-1234-1234-1234-123456789abc.';
+        $validationError = $this->validateCredentials($provider);
+        if ($validationError !== null) {
+            $this->errorMessage = $validationError;
 
-                return null;
-            }
-
-            if ($this->clientSecret === '') {
-                $this->errorMessage = 'Enter the client secret value Azure showed you when you created the secret.';
-
-                return null;
-            }
-        } else {
-            if ($this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com')) {
-                $this->errorMessage = 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.';
-
-                return null;
-            }
-
-            if ($this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-')) {
-                $this->errorMessage = 'Enter a Google OAuth client secret starting with GOCSPX-.';
-
-                return null;
-            }
-
-            if (! $this->publishedConfirmed) {
-                $this->errorMessage = "Confirm that you've pushed your OAuth consent screen to 'In production'.";
-
-                return null;
-            }
+            return null;
         }
 
+        return $this->persistAndRedirect($provider, $secrets, $loopback);
+    }
+
+    private function validateCredentials(string $provider): ?string
+    {
+        return $provider === 'microsoft'
+            ? $this->validateMicrosoftCredentials()
+            : $this->validateGoogleCredentials();
+    }
+
+    private function validateMicrosoftCredentials(): ?string
+    {
+        if ($this->clientId === '' || preg_match(self::MICROSOFT_CLIENT_ID_PATTERN, $this->clientId) !== 1) {
+            return 'Enter the application (client) ID — a UUID like 12345678-1234-1234-1234-123456789abc.';
+        }
+
+        if ($this->clientSecret === '') {
+            return 'Enter the client secret value Azure showed you when you created the secret.';
+        }
+
+        return null;
+    }
+
+    private function validateGoogleCredentials(): ?string
+    {
+        if ($this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com')) {
+            return 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.';
+        }
+
+        if ($this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-')) {
+            return 'Enter a Google OAuth client secret starting with GOCSPX-.';
+        }
+
+        if (! $this->publishedConfirmed) {
+            return "Confirm that you've pushed your OAuth consent screen to 'In production'.";
+        }
+
+        return null;
+    }
+
+    private function persistAndRedirect(
+        string $provider,
+        OAuthSecretsRepository $secrets,
+        LoopbackRedirectUri $loopback,
+    ): mixed {
         $redirectUri = $loopback->forProvider($provider);
 
         // Captures the secret into a local so the property can be
@@ -124,6 +144,11 @@ final class OAuthClientWizardModal extends Component
         $this->dispatch('modal-close', name: 'oauth-client-wizard-'.$provider);
         $this->dispatch('oauth-client-wizard:saved', provider: $provider);
 
+        return $this->afterSaveRedirect($provider);
+    }
+
+    private function afterSaveRedirect(string $provider): mixed
+    {
         // Re-consent flow: threads the inbox id back through the
         // connect route so the consent dance binds to the existing row
         // (preserving inbox_messages/.eml blobs/cursor) instead of
