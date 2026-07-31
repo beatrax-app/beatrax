@@ -32,32 +32,45 @@ final class FileOpenIntake
 
     public function receive(string $path): void
     {
-        $canonical = realpath($path);
-        if ($canonical === false) {
-            return;
-        }
-
-        if (! is_file($canonical)) {
-            return;
-        }
-
-        $extension = strtolower(pathinfo($canonical, PATHINFO_EXTENSION));
-        if (! in_array($extension, self::SUPPORTED_EXTENSIONS, true)) {
-            return;
-        }
-
-        // $extension is already constrained to SUPPORTED_EXTENSIONS
-        // above, and every supported extension has a matching
-        // MAX_BYTES entry.
-        $size = @filesize($canonical);
-        $cap = self::MAX_BYTES[$extension];
-        if ($size === false || $size > $cap) {
+        $accepted = $this->accept($path);
+        if ($accepted === null) {
             return;
         }
 
         $this->events->dispatch(new FileOpenedFromOs(
-            path: $canonical,
-            extension: $extension,
+            path: $accepted['path'],
+            extension: $accepted['extension'],
         ));
+    }
+
+    /**
+     * @return array{path: string, extension: string}|null
+     */
+    private function accept(string $path): ?array
+    {
+        $canonical = realpath($path);
+        if ($canonical === false || ! is_file($canonical)) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo($canonical, PATHINFO_EXTENSION));
+
+        return $this->withinCap($canonical, $extension)
+            ? ['path' => $canonical, 'extension' => $extension]
+            : null;
+    }
+
+    // $extension is constrained to SUPPORTED_EXTENSIONS before the
+    // MAX_BYTES lookup, and every supported extension has a matching
+    // MAX_BYTES entry, so the cap access can never miss.
+    private function withinCap(string $canonical, string $extension): bool
+    {
+        if (! in_array($extension, self::SUPPORTED_EXTENSIONS, true)) {
+            return false;
+        }
+
+        $size = @filesize($canonical);
+
+        return $size !== false && $size <= self::MAX_BYTES[$extension];
     }
 }

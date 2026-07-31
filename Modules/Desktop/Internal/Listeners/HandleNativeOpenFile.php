@@ -19,39 +19,50 @@ final class HandleNativeOpenFile
 
     public function handle(OpenFile $event): void
     {
-        $raw = $event->path;
-        $path = $this->normalize($raw);
+        $path = $this->normalize($event->path);
         if ($path === null) {
             return;
         }
+
         $this->intake->receive($path);
     }
 
-    // NativePHP's event delivers `path` as an untyped property; some
+    // NativePHP's event delivers `path` as an untyped property: some
     // versions send a plain string, others a keyed or list-shaped
-    // array. A key-aware lookup avoids picking a sibling metadata
-    // string (e.g. 'open-file') over the real path.
+    // array. A string passes through; an array is resolved key-first.
     private function normalize(mixed $raw): ?string
     {
-        if (is_string($raw)) {
-            return $raw;
-        }
-        if (is_array($raw)) {
-            $pathField = $raw['path'] ?? null;
-            if (is_string($pathField) && $pathField !== '') {
-                return $pathField;
-            }
+        return match (true) {
+            is_string($raw) => $raw,
+            is_array($raw) => $this->pathFromArray($raw),
+            default => null,
+        };
+    }
 
-            foreach ($raw as $key => $value) {
-                if ($key === 'path') {
-                    continue;
-                }
-                if (! is_int($key)) {
-                    continue;
-                }
-                if (is_string($value) && $value !== '') {
-                    return $value;
-                }
+    // A key-aware lookup takes the explicit `path` entry first so a
+    // sibling metadata string (e.g. 'open-file') is never picked over
+    // the real path; only then does it fall back to list iteration.
+    /**
+     * @param  array<array-key, mixed>  $raw
+     */
+    private function pathFromArray(array $raw): ?string
+    {
+        $keyed = $raw['path'] ?? null;
+        if (is_string($keyed) && $keyed !== '') {
+            return $keyed;
+        }
+
+        return $this->firstListString($raw);
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $raw
+     */
+    private function firstListString(array $raw): ?string
+    {
+        foreach ($raw as $key => $value) {
+            if (is_int($key) && is_string($value) && $value !== '') {
+                return $value;
             }
         }
 
