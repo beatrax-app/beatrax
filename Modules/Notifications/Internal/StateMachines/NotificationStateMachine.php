@@ -7,6 +7,8 @@ namespace Modules\Notifications\Internal\StateMachines;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
+use Modules\Notifications\Public\Enums\NotificationState;
 
 /**
  * @link ../../../../.docs/features/notifications/architecture.md
@@ -14,14 +16,6 @@ use Modules\Core\Public\Contracts\Clock;
 final class NotificationStateMachine
 {
     use CoercesScalars;
-
-    /**
-     * @var array<string, list<string>>
-     */
-    private const ALLOWED_TRANSITIONS = [
-        'open' => ['resolved'],
-        'resolved' => [],
-    ];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -47,13 +41,13 @@ final class NotificationStateMachine
             }
 
             $currentState = self::toString($row->state);
-            $this->guardTransition($notificationId, $currentState, 'resolved');
+            $this->guardTransition($notificationId, $currentState, NotificationState::Resolved->value);
 
             $connection->table('notifications')
                 ->where('id', $notificationId)
                 ->where('user_id', $userId)
                 ->update([
-                    'state' => 'resolved',
+                    'state' => NotificationState::Resolved->value,
                     'updated_at' => $this->clock->now()->toDateTimeString(),
                 ]);
         });
@@ -61,9 +55,12 @@ final class NotificationStateMachine
 
     private function guardTransition(string $notificationId, string $currentState, string $toState): void
     {
-        $allowed = self::ALLOWED_TRANSITIONS[$currentState] ?? [];
+        $current = NotificationState::tryFrom($currentState);
+        $allowed = $current === null
+            ? []
+            : array_map(static fn (NotificationState $next): string => $next->value, $current->allowedNext());
         if (! in_array($toState, $allowed, strict: true)) {
-            throw InvalidStateTransitionException::forTransition($notificationId, $currentState, $toState);
+            throw InvalidStateTransitionException::forTransition('notifications', $notificationId, $currentState, $toState);
         }
     }
 }

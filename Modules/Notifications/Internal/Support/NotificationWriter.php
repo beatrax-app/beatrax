@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Notifications\Public\Enums\NotificationState;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -37,7 +38,7 @@ final class NotificationWriter
         $attrs = [
             'id' => $id,
             'user_id' => $draft->userId,
-            'state' => 'open',
+            'state' => NotificationState::Open->value,
             'read_at' => null,
             'dismissed_at' => null,
             'title' => $draft->title,
