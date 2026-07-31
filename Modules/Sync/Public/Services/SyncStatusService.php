@@ -6,6 +6,7 @@ namespace Modules\Sync\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Enums\Duration;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
@@ -119,12 +120,12 @@ final readonly class SyncStatusService
     // that used to guard the minute and hour arms decided nothing.
     private static function humanizeGap(int $seconds): string
     {
-        $days = (int) floor($seconds / 86400);
+        $days = (int) floor($seconds / Duration::Day->seconds());
 
         return match (true) {
-            $seconds < 60 => 'just now',
-            $seconds < 3600 => ((int) floor($seconds / 60)).'m ago',
-            $seconds < 86400 => ((int) floor($seconds / 3600)).'h ago',
+            $seconds < Duration::Minute->seconds() => 'just now',
+            $seconds < Duration::Hour->seconds() => ((int) floor($seconds / Duration::Minute->seconds())).'m ago',
+            $seconds < Duration::Day->seconds() => ((int) floor($seconds / Duration::Hour->seconds())).'h ago',
             $days === 1 => '1 day ago',
             default => "{$days} days ago",
         };

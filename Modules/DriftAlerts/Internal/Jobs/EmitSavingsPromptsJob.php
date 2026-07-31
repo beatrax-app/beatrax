@@ -14,6 +14,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\DriftAlerts\Public\Services\SavingsInsightsQuery;
@@ -40,7 +41,7 @@ final class EmitSavingsPromptsJob implements ShouldBeUniqueUntilProcessing, Shou
 
     public function uniqueFor(): int
     {
-        return 3600;
+        return Duration::Hour->seconds();
     }
 
     public function uniqueVia(): Repository
