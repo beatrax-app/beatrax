@@ -22,6 +22,8 @@ use stdClass;
  */
 final class CalendarPage extends Component
 {
+    private const int HORIZON_MONTHS = 12;
+
     use CoercesScalars;
 
     #[Url(as: 'month', except: null)]
@@ -237,7 +239,7 @@ final class CalendarPage extends Component
             }
         }
 
-        $ceiling = $clock->now()->addMonths(12);
+        $ceiling = $clock->now()->addMonths(self::HORIZON_MONTHS);
         $atCeiling = ($year > $ceiling->year)
             || ($year === $ceiling->year && $month >= $ceiling->month);
 
@@ -278,7 +280,7 @@ final class CalendarPage extends Component
         // Also clamps to the 12-month forward ceiling so a tampered
         // ?year=&month= URL cannot render a month beyond the forecast
         // horizon — the same invariant nextMonth() enforces.
-        $ceiling = $now->addMonths(12);
+        $ceiling = $now->addMonths(self::HORIZON_MONTHS);
         if ($year > $ceiling->year || ($year === $ceiling->year && $month > $ceiling->month)) {
             $year = $ceiling->year;
             $month = $ceiling->month;
@@ -289,7 +291,7 @@ final class CalendarPage extends Component
 
     private function exceedsCeiling(int $year, int $month, Clock $clock): bool
     {
-        $ceiling = $clock->now()->addMonths(12);
+        $ceiling = $clock->now()->addMonths(self::HORIZON_MONTHS);
 
         return ($year > $ceiling->year)
             || ($year === $ceiling->year && $month > $ceiling->month);

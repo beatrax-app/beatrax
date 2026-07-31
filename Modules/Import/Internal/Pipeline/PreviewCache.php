@@ -18,6 +18,8 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  */
 final class PreviewCache
 {
+    private const int TTL_MINUTES = 30;
+
     public function __construct(
         private readonly Repository $cache,
         private readonly Clock $clock,
@@ -29,7 +31,7 @@ final class PreviewCache
      */
     public function put(int $importRunId, ImportPreviewResult $result, array $canonical, array $enrichments = []): void
     {
-        $ttl = $this->clock->now()->addMinutes(30);
+        $ttl = $this->clock->now()->addMinutes(self::TTL_MINUTES);
 
         $this->cache->put(
             $this->previewKey($importRunId),
@@ -185,7 +187,7 @@ final class PreviewCache
             enrichedCount: $preview->enrichedCount,
         );
 
-        $ttl = $this->clock->now()->addMinutes(30);
+        $ttl = $this->clock->now()->addMinutes(self::TTL_MINUTES);
         $this->cache->put($this->previewKey($importRunId), $rewritten->toArray(), $ttl);
 
         return true;
