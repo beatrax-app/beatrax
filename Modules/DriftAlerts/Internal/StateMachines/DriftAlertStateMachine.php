@@ -37,15 +37,10 @@ final class DriftAlertStateMachine extends GuardedStateMachine
     /** @return array<string, list<string>> */
     protected function allowedTransitions(): array
     {
-        $map = [];
-        foreach (DriftAlertState::cases() as $state) {
-            $map[$state->value] = array_map(
-                static fn (DriftAlertState $next): string => $next->value,
-                $state->allowedNext(),
-            );
-        }
-
-        return $map;
+        return $this->transitionMap(
+            DriftAlertState::cases(),
+            static fn (DriftAlertState $state): array => $state->allowedNext(),
+        );
     }
 
     protected function table(): string
