@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Corpus;
 
+use Modules\Tax\Public\Enums\TaxCountry;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
@@ -15,11 +16,6 @@ use Throwable;
 // return []. PARSE_EXCEPTION_ON_INVALID_TYPE guards against native-tag object instantiation.
 final class TaxCorpusLoader
 {
-    /**
-     * @var list<string>
-     */
-    private const ALLOWED_COUNTRIES = ['nl', 'de', 'be', 'fr', 'gb', 'us'];
-
     public function __construct(
         private readonly LoggerInterface $logger,
     ) {}
@@ -32,7 +28,7 @@ final class TaxCorpusLoader
     {
         $code = strtolower(trim($countryCode));
 
-        if (! in_array($code, self::ALLOWED_COUNTRIES, strict: true)) {
+        if (TaxCountry::tryFrom($code) === null) {
             // Not an error — the caller may be probing an unavailable
             // country for availability.
             return [];
