@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\CategoryKind;
 
 /**
  * @link ../../../../../.docs/features/budgets/architecture.md
@@ -51,7 +52,7 @@ final class DemoEnvelopeBudgetsSeeder
         /** @var array<string, int> $categoryIdBySlug */
         $categoryIdBySlug = $connection->table('categories')
             ->whereNull('user_id')
-            ->where('kind', 'expense')
+            ->where('kind', CategoryKind::Expense->value)
             ->pluck('id', 'slug')
             ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
             ->all();

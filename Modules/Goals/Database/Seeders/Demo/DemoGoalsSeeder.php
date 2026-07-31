@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Services\GoalWriter;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\AccountKind;
 
 // Savings goals for the demo install, anchored to the demo ASN current
 // account so the projected finish date has real cash-flow behind it. The
@@ -88,7 +89,7 @@ final class DemoGoalsSeeder
     {
         $account = Account::query()
             ->where('user_id', $user->id)
-            ->where('kind', 'asn')
+            ->where('kind', AccountKind::Asn->value)
             ->orderBy('id')
             ->first();
 

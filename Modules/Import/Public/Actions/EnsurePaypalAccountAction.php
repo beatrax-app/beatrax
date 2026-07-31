@@ -7,6 +7,7 @@ namespace Modules\Import\Public\Actions;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\AccountKind;
 
 // Without this synthetic-IBAN account, every imported PayPal row would
 // be an unknown-IBAN error and the statement_summaries writer would
@@ -48,7 +49,7 @@ final readonly class EnsurePaypalAccountAction
             'user_id' => $user->id,
             'name' => $name,
             'slug' => $slug,
-            'kind' => 'paypal',
+            'kind' => AccountKind::Paypal->value,
             'iban' => self::PAYPAL_OWN_IBAN,
             'default_currency' => 'EUR',
         ]);

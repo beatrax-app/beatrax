@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Budgets\Public\Dto\BudgetProgressRow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Ledger\Public\Services\SpendByCategoryQuery;
 
@@ -94,7 +95,7 @@ final class BudgetProgressQuery
     public function expenseCategories(User $user): array
     {
         $rows = $this->db->connection()->table('categories')
-            ->where('kind', 'expense')
+            ->where('kind', CategoryKind::Expense->value)
             ->where(static function (QueryBuilder $query) use ($user): void {
                 $query->whereNull('user_id')->orWhere('user_id', $user->id);
             })

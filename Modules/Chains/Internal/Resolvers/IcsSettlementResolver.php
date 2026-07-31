@@ -20,6 +20,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -83,7 +84,7 @@ final class IcsSettlementResolver
                     ->where('chain_links.state', '=', ChainLinkState::Confirmed->value);
             })
             ->where('transactions.user_id', $user->id)
-            ->where('accounts.kind', 'bank')
+            ->where('accounts.kind', AccountKind::Bank->value)
             ->where('transactions.type', 'transfer_out')
             ->whereNotNull('transactions.counterparty_iban')
             ->whereNull('chain_links.id')
@@ -109,7 +110,7 @@ final class IcsSettlementResolver
                 ? ''
                 : $this->codec->decryptValue('transactions', 'counterparty_iban', $storedCounterpartyIban, $user->id, ($this->session)())['value'];
             $aliasAccount = $this->aliasResolver->resolveAccount($counterpartyIban, $user->id);
-            if ($aliasAccount === null || $aliasAccount->kind !== 'ics_card') {
+            if ($aliasAccount === null || $aliasAccount->kind !== AccountKind::IcsCard->value) {
                 // Not an ASN→ICS hop — other transfer_out rows (bank-to-bank,
                 // ASN→PayPal funding) have their own resolvers.
                 continue;
@@ -269,7 +270,7 @@ final class IcsSettlementResolver
                     ->where('chain_links.kind', '=', ChainLinkKind::IcsBulkSettle->value);
             })
             ->where('transactions.user_id', $user->id)
-            ->where('accounts.kind', 'ics_card')
+            ->where('accounts.kind', AccountKind::IcsCard->value)
             ->where('transactions.type', 'refund')
             ->whereNull('chain_links.id')
             ->get([

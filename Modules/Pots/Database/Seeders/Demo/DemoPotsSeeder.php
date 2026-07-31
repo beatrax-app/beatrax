@@ -7,6 +7,7 @@ namespace Modules\Pots\Database\Seeders\Demo;
 use Modules\Core\Models\User;
 use Modules\Goals\Models\Goal;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Services\PotWriter;
 
@@ -82,7 +83,7 @@ final class DemoPotsSeeder
     {
         $account = Account::query()
             ->where('user_id', $user->id)
-            ->where('kind', 'asn')
+            ->where('kind', AccountKind::Asn->value)
             ->orderBy('id')
             ->first();
 

@@ -16,6 +16,7 @@ use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\CategoryKind;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -448,7 +449,7 @@ final class DemoNotificationsSeeder
         /** @var stdClass|null $row */
         $row = $this->db->connection()->table('categories')
             ->whereNull('user_id')
-            ->where('kind', 'expense')
+            ->where('kind', CategoryKind::Expense->value)
             ->where('slug', $slug)
             ->first(['id', 'name']);
 

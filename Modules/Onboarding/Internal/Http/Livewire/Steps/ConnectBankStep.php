@@ -22,6 +22,7 @@ use Modules\Import\Public\Dto\UnknownIban;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -195,7 +196,7 @@ final class ConnectBankStep extends Component
             'user_id' => $user->id,
             'name' => $bankLabel,
             'slug' => $this->slugFor($bankLabel, $unknown->iban),
-            'kind' => 'bank',
+            'kind' => AccountKind::Bank->value,
             'iban' => $unknown->iban,
             'default_currency' => 'EUR',
         ]);
@@ -261,7 +262,7 @@ final class ConnectBankStep extends Component
             default => match ($bankFormatHint) {
                 'asn-csv' => 'ASN bank',
                 'ing-csv' => 'ING bank',
-                default => 'bank',
+                default => AccountKind::Bank->value,
             },
         };
     }

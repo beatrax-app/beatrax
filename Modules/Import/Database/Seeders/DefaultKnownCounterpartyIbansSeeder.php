@@ -6,6 +6,7 @@ namespace Modules\Import\Database\Seeders;
 
 use Modules\Core\Models\User;
 use Modules\Import\Models\KnownCounterpartyIban;
+use Modules\Ledger\Public\Enums\AccountKind;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#module-boundary
@@ -18,12 +19,12 @@ final class DefaultKnownCounterpartyIbansSeeder
     private const ALIASES = [
         [
             'real_iban' => 'LU89751000135104200E',
-            'target_account_kind' => 'paypal',
+            'target_account_kind' => AccountKind::Paypal->value,
             'notes' => 'PayPal SARL et Cie SCA, Luxembourg.',
         ],
         [
             'real_iban' => 'NL08ABNA0526650664',
-            'target_account_kind' => 'ics_card',
+            'target_account_kind' => AccountKind::IcsCard->value,
             'notes' => 'International Card Services BV at ABN AMRO.',
         ],
     ];

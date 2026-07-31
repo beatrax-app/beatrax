@@ -18,6 +18,7 @@ use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Onboarding\Models\WizardProgress;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -163,7 +164,7 @@ final class ConnectCardStep extends Component
             'user_id' => $user->id,
             'name' => 'ICS card',
             'slug' => 'ics-card-ics-card',
-            'kind' => 'ics_card',
+            'kind' => AccountKind::IcsCard->value,
             'iban' => self::ICS_OWN_IBAN,
             'default_currency' => 'EUR',
         ]);

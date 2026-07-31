@@ -13,6 +13,7 @@ use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
@@ -55,7 +56,7 @@ final class CardStatementQuery
         $row = $this->db->connection()->table('card_statements')
             ->join('accounts', 'accounts.id', '=', 'card_statements.account_id')
             ->where('card_statements.user_id', $user->id)
-            ->where('accounts.kind', 'ics_card')
+            ->where('accounts.kind', AccountKind::IcsCard->value)
             ->whereIn('card_statements.state', [CardStatementState::Open->value, CardStatementState::PartiallySettled->value])
             ->orderByDesc('card_statements.period_end')
             ->orderByDesc('card_statements.id')
@@ -88,7 +89,7 @@ final class CardStatementQuery
         if ($historicalFunder === null) {
             $historicalFunder = $this->db->connection()->table('accounts')
                 ->where('user_id', $user->id)
-                ->where('kind', 'asn')
+                ->where('kind', AccountKind::Asn->value)
                 ->orderBy('id')
                 ->value('id');
         }
