@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
 use Modules\EmailScan\Public\Services\SecretsWriteFailed;
@@ -41,7 +42,7 @@ final class OAuthClientWizardModal extends Component
     #[On('oauth-client-wizard:open')]
     public function open(string $provider, ?int $inboxId = null): void
     {
-        $this->provider = in_array($provider, ['gmail', 'microsoft'], strict: true)
+        $this->provider = MailProvider::tryFrom($provider) !== null
             ? $provider
             : null;
         $this->reconnectInboxId = $inboxId !== null && $inboxId > 0 ? $inboxId : null;
@@ -64,7 +65,7 @@ final class OAuthClientWizardModal extends Component
         $this->errorMessage = '';
 
         $provider = $this->provider;
-        if (! is_string($provider) || ! in_array($provider, ['gmail', 'microsoft'], strict: true)) {
+        if (! is_string($provider) || MailProvider::tryFrom($provider) === null) {
             $this->errorMessage = 'Pick a provider before submitting.';
 
             return null;
