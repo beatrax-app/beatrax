@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\JobRunStatus;
 use Modules\Forecasting\Internal\Exceptions\InvalidForecastRunTransitionException;
 use Modules\Forecasting\Internal\StateMachines\ForecastRunStateMachine;
 use Modules\Forecasting\Models\ForecastRun;
@@ -56,13 +57,11 @@ function frsmRun(int $userId, string $status): ForecastRun
     ]);
 }
 
-it('locks the transition map shape', function (): void {
-    expect(ForecastRunStateMachine::transitionMap())->toBe([
-        'pending' => ['running', 'failed'],
-        'running' => ['complete', 'failed'],
-        'complete' => [],
-        'failed' => [],
-    ]);
+it('locks the run-status transition graph', function (): void {
+    expect(JobRunStatus::Pending->allowedNext())->toBe([JobRunStatus::Running, JobRunStatus::Failed]);
+    expect(JobRunStatus::Running->allowedNext())->toBe([JobRunStatus::Complete, JobRunStatus::Failed]);
+    expect(JobRunStatus::Complete->allowedNext())->toBe([]);
+    expect(JobRunStatus::Failed->allowedNext())->toBe([]);
 });
 
 it('transitions pending → running via start() and stamps started_at from the Clock', function (): void {
