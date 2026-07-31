@@ -11,5 +11,5 @@ use Modules\Ledger\Internal\Casts\MoneyMinorCast;
 
 final class BadBoundaryFixture
 {
-    public function __construct(private MoneyMinorCast $cast) {}
+    public function __construct(protected MoneyMinorCast $cast) {}
 }

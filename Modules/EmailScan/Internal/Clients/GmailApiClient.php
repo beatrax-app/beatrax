@@ -22,7 +22,6 @@ use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Events\InboxTokenFailed;
 use Modules\EmailScan\Public\Exceptions\InboxNotConfiguredException;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
-use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -161,28 +160,7 @@ final class GmailApiClient implements GmailApiClientContract
         ?string $pageToken = null,
     ): array {
         $resource = $this->messagesResource($inboxId);
-
-        // Each keyword is wrapped in double quotes so Gmail treats it
-        // as an exact-phrase match (avoids partial-word hits like
-        // "invoice" matching "invoiceless"); inner double quotes are
-        // backslash-escaped per Gmail's query-string conventions.
-        $quotedKeywords = array_map(
-            static fn (string $k): string => '"'.str_replace('"', '\\"', $k).'"',
-            $keywords,
-        );
-        $q = 'subject:('.implode(' OR ', $quotedKeywords).')';
-
-        if ($excludeSenders !== []) {
-            // Strip operator-significant characters so a malformed
-            // sender string cannot break the query: Gmail's exclude
-            // syntax is -from:(...) with OR-joined entries, and stray
-            // parentheses or a literal "OR" would read as an operator.
-            $safeExcludes = array_map(
-                static fn (string $s): string => str_replace(['(', ')', ' OR '], '', $s),
-                $excludeSenders,
-            );
-            $q .= ' -from:('.implode(' OR ', $safeExcludes).')';
-        }
+        $q = self::buildDiscoveryQuery($keywords, $excludeSenders);
 
         $params = ['q' => $q, 'maxResults' => 100];
         if ($pageToken !== null && $pageToken !== '') {
@@ -198,52 +176,10 @@ final class GmailApiClient implements GmailApiClientContract
         $messages = [];
         foreach ($response->getMessages() as $m) {
             $messageId = $m->getId();
-            if ($messageId === '') {
-                continue;
+            $candidate = $messageId === '' ? null : $this->discoveryCandidate($resource, $messageId);
+            if ($candidate !== null) {
+                $messages[] = $candidate;
             }
-
-            // Per-message metadata fetch — headers only, NO body. The
-            // payload's internalDate field is milliseconds since epoch;
-            // the From header is the parsed sender (RFC 822 syntax).
-            try {
-                $meta = $resource->get('me', $messageId, [
-                    'format' => 'metadata',
-                    'metadataHeaders' => ['From', 'Date'],
-                ]);
-            } catch (GoogleServiceException $e) {
-                // A single-message failure must not abort the whole
-                // discovery walk — surface it to the caller via the
-                // typed sentinel so the rate-limit envelope is honoured
-                // when applicable.
-                throw $this->mapRateLimit($e);
-            }
-
-            $internalDateMs = $meta->getInternalDate();
-            $internalDateIso = self::internalDateMsToIso($internalDateMs);
-
-            $payload = $meta->getPayload();
-            $fromAddress = '';
-            $fromName = null;
-            $headers = $payload->getHeaders();
-            foreach ($headers as $header) {
-                if (strcasecmp($header->getName(), 'From') === 0) {
-                    [$fromAddress, $fromName] = self::parseFromHeader($header->getValue());
-                    break;
-                }
-            }
-
-            if ($fromAddress === '') {
-                // Skip rows without a parseable sender — they would
-                // never make it into a candidate row anyway.
-                continue;
-            }
-
-            $messages[] = [
-                'id' => $messageId,
-                'fromAddress' => $fromAddress,
-                'fromName' => $fromName,
-                'internalDate' => $internalDateIso,
-            ];
         }
 
         $nextPageToken = $response->getNextPageToken();
@@ -257,6 +193,81 @@ final class GmailApiClient implements GmailApiClientContract
         ];
     }
 
+    // Composes the daily-discovery query string: keywords are wrapped in
+    // double quotes for exact-phrase matching (avoids partial-word hits
+    // like "invoice" matching "invoiceless"), inner quotes escaped per
+    // Gmail's conventions, joined under subject:(...).
+    /**
+     * @param  list<string>  $keywords
+     * @param  list<string>  $excludeSenders
+     */
+    private static function buildDiscoveryQuery(array $keywords, array $excludeSenders): string
+    {
+        $quotedKeywords = array_map(
+            static fn (string $k): string => '"'.str_replace('"', '\\"', $k).'"',
+            $keywords,
+        );
+        $q = 'subject:('.implode(' OR ', $quotedKeywords).')';
+
+        if ($excludeSenders === []) {
+            return $q;
+        }
+
+        // Strip operator-significant characters so a malformed sender
+        // string cannot break the query: Gmail's exclude syntax is
+        // -from:(...) with OR-joined entries, and stray parentheses or a
+        // literal "OR" would read as an operator.
+        $safeExcludes = array_map(
+            static fn (string $s): string => str_replace(['(', ')', ' OR '], '', $s),
+            $excludeSenders,
+        );
+
+        return $q.' -from:('.implode(' OR ', $safeExcludes).')';
+    }
+
+    // Fetches headers-only metadata for one discovery hit and folds it
+    // into a candidate row, or null when the message carries no parseable
+    // sender. NO body byte is fetched here — format=metadata keeps the
+    // discovery walk .eml-free.
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function discoveryCandidate(UsersMessages $resource, string $messageId): ?array
+    {
+        // A single-message failure must not abort the whole discovery
+        // walk — surface it to the caller via the typed sentinel so the
+        // rate-limit envelope is honoured when applicable. The From
+        // header is the parsed sender (RFC 822 syntax).
+        try {
+            $meta = $resource->get('me', $messageId, [
+                'format' => 'metadata',
+                'metadataHeaders' => ['From', 'Date'],
+            ]);
+        } catch (GoogleServiceException $e) {
+            throw $this->mapRateLimit($e);
+        }
+
+        $fromAddress = '';
+        $fromName = null;
+        foreach ($meta->getPayload()->getHeaders() as $header) {
+            if (strcasecmp($header->getName(), 'From') === 0) {
+                [$fromAddress, $fromName] = self::parseFromHeader($header->getValue());
+                break;
+            }
+        }
+
+        if ($fromAddress === '') {
+            return null;
+        }
+
+        return [
+            'id' => $messageId,
+            'fromAddress' => $fromAddress,
+            'fromName' => $fromName,
+            'internalDate' => self::internalDateMsToIso($meta->getInternalDate()),
+        ];
+    }
+
     // Builds a Gmail UsersMessages resource bound to a
     // freshly-refreshed access token, so a token rotation between two
     // calls is picked up transparently.
@@ -265,7 +276,7 @@ final class GmailApiClient implements GmailApiClientContract
         $gmail = $this->makeGmailService($inboxId);
         $resource = $gmail->users_messages;
         if (! $resource instanceof UsersMessages) {
-            throw new RuntimeException(
+            throw new GmailResourceUnavailableException(
                 'GmailApiClient: Gmail service has no users_messages resource.',
             );
         }
@@ -278,7 +289,7 @@ final class GmailApiClient implements GmailApiClientContract
         $gmail = $this->makeGmailService($inboxId);
         $resource = $gmail->users_history;
         if (! $resource instanceof UsersHistory) {
-            throw new RuntimeException(
+            throw new GmailResourceUnavailableException(
                 'GmailApiClient: Gmail service has no users_history resource.',
             );
         }
@@ -415,7 +426,7 @@ final class GmailApiClient implements GmailApiClientContract
         $padded = $value.str_repeat('=', (4 - strlen($value) % 4) % 4);
         $decoded = base64_decode(strtr($padded, '-_', '+/'), true);
         if ($decoded === false) {
-            throw new RuntimeException(
+            throw new GmailRawDecodeException(
                 'GmailApiClient: failed to base64url-decode message raw payload.',
             );
         }

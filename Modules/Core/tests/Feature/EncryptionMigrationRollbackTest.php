@@ -9,8 +9,8 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Ledger\Models\Account;
@@ -175,7 +175,7 @@ it('a genuine forced failure mid-pass (real KEK, real data) leaves zero half-enc
     // throwing, reads sync_encryption_state through the same (still open,
     // still-uncommitted) DB transaction to prove migration_in_progress was
     // genuinely observable as true at the injected-failure point.
-    $migration = new class($db, $this->app->make(BackupEncryptor::class), $this->app->make(AppLockKeyService::class), $this->app->make(Clock::class), $this->app->make(Container::class), $this->app->make(CacheRepository::class)) extends EncryptionMigrationService
+    $migration = new class($db, $this->app->make(PreMigrationSnapshot::class), $this->app->make(AppLockKeyService::class), $this->app->make(Clock::class), $this->app->make(Container::class), $this->app->make(CacheRepository::class)) extends EncryptionMigrationService
     {
         public bool $observedInProgressMidPass = false;
 

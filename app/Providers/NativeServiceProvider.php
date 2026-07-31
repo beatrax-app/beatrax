@@ -18,9 +18,17 @@ use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 // desktop build uses nativephp/desktop's own plugin surface instead.
 class NativeServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // No container bindings: this provider's only surface is plugins(),
+        // consumed by mobile-app/bootstrap/providers.php at native build time.
+    }
 
-    public function boot(): void {}
+    public function boot(): void
+    {
+        // Nothing to boot: native plugin registration happens through
+        // plugins(), never via the framework's boot lifecycle.
+    }
 
     /**
      * @return array<int, class-string<ServiceProvider>>

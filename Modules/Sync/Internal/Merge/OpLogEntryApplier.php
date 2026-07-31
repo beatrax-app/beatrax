@@ -2,28 +2,37 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sync\Internal\Merge\Concerns;
+namespace Modules\Sync\Internal\Merge;
 
+use Illuminate\Database\DatabaseManager;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 
-// The apply half of replay: takes the verified, HLC-sorted entries and writes
-// them to the real SQLite schema — partition by op-type, resolve each field
-// through its merge strategy, honour delete-wins tombstones, then run the
-// post-commit pair-link cascade and FTS5 freshness. Split from the verify half.
 /**
- * @link ../../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/architecture.md
  */
-trait AppliesOpLogEntries
+final readonly class OpLogEntryApplier
 {
+    private const string SYSTEM_FTS_DEVICE_ID = 'system-fts';
+
+    public function __construct(
+        private DatabaseManager $db,
+        private MergeRulesRegistry $rules,
+        private OpLogValueProjector $projector,
+        private OpLogQuarantine $quarantine,
+        private ?SearchIndexWriterContract $searchWriter = null,
+    ) {}
+
     /**
      * @param  list<OpLogEntry>  $verified
      * @return list<OpLogEntry>
      */
-    private function sortByHlc(array $verified): array
+    public function sortByHlc(array $verified): array
     {
         usort(
             $verified,
@@ -47,7 +56,7 @@ trait AppliesOpLogEntries
      *     2: array<string, array<int|string, array<string, list<OpLogEntry>>>>
      * }
      */
-    private function partitionByOpType(array $sorted): array
+    public function partitionByOpType(array $sorted): array
     {
         /** @var array<string, array<int|string, array<string, list<OpLogEntry>>>> $candidatesByField */
         $candidatesByField = [];
@@ -78,7 +87,7 @@ trait AppliesOpLogEntries
      * @param  array<string, array<int|string, OpLogEntry>>  $tombstones
      * @param  list<int>  $touchedTransactionIds
      */
-    private function applyCreates(
+    public function applyCreates(
         array $creates,
         array $tombstones,
         int $userId,
@@ -157,7 +166,7 @@ trait AppliesOpLogEntries
         $firstField = reset($fields);
 
         if ($firstField !== false && $firstField !== []) {
-            $this->quarantine($firstField[0], QuarantineReason::IncompleteCreateRow, $now);
+            $this->quarantine->record($firstField[0], QuarantineReason::IncompleteCreateRow, $now);
         }
 
         return false;
@@ -177,10 +186,10 @@ trait AppliesOpLogEntries
 
         foreach ($fields as $field => $fieldEntries) {
             try {
-                $resolved = $this->encodeColumnValue($this->resolveStrategy($table, $field)->resolve($fieldEntries));
-                $payload[$field] = $this->reencryptForProjection($table, $field, $resolved, $userId);
+                $resolved = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
+                $payload[$field] = $this->projector->reencryptForProjection($table, $field, $resolved, $userId);
             } catch (\Throwable) {
-                $this->quarantine($fieldEntries[0], QuarantineReason::StrategyError, $now);
+                $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
 
                 return null;
             }
@@ -191,7 +200,7 @@ trait AppliesOpLogEntries
             $suppliedUserId = is_numeric($suppliedUserIdValue) ? (int) $suppliedUserIdValue : null;
 
             if ($suppliedUserId !== $userId) {
-                $this->quarantine($fields['user_id'][0], QuarantineReason::CrossUser, $now);
+                $this->quarantine->record($fields['user_id'][0], QuarantineReason::CrossUser, $now);
 
                 return null;
             }
@@ -211,7 +220,7 @@ trait AppliesOpLogEntries
      * @param  list<int>  $touchedTransactionIds
      * @param  list<int>  $tombstonedTransactionIds
      */
-    private function applyFieldMerges(
+    public function applyFieldMerges(
         array $candidatesByField,
         array $tombstones,
         int $userId,
@@ -251,8 +260,8 @@ trait AppliesOpLogEntries
     private function applyFieldMerge(string $table, int|string $pk, string $field, array $fieldEntries, int $userId, string $now): void
     {
         try {
-            $columnValue = $this->encodeColumnValue($this->resolveStrategy($table, $field)->resolve($fieldEntries));
-            $columnValue = $this->reencryptForProjection($table, $field, $columnValue, $userId);
+            $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
+            $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
 
             $this->db->connection()
                 ->table($table)
@@ -260,7 +269,7 @@ trait AppliesOpLogEntries
                 ->where('user_id', $userId)
                 ->update([$field => $columnValue]);
         } catch (\Throwable) {
-            $this->quarantine($fieldEntries[0], QuarantineReason::StrategyError, $now);
+            $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
         }
     }
 
@@ -272,7 +281,7 @@ trait AppliesOpLogEntries
      * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
      * @param  list<int>  $tombstonedTransactionIds
      */
-    private function applyBareTombstones(
+    public function applyBareTombstones(
         array $candidatesByField,
         array $tombstones,
         int $userId,
@@ -358,7 +367,7 @@ trait AppliesOpLogEntries
      * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
      * @param  list<int>  $touchedTransactionIds
      */
-    private function applyPairCascades(array $pairCascades, int $userId, string $now, array &$touchedTransactionIds): void
+    public function applyPairCascades(array $pairCascades, int $userId, string $now, array &$touchedTransactionIds): void
     {
         foreach ($pairCascades as $cascade) {
             $newType = match ($cascade['deletedType']) {
@@ -406,7 +415,7 @@ trait AppliesOpLogEntries
         $this->db->connection()->table('op_log_entries')->updateOrInsert(
             [
                 'user_id' => $userId,
-                'device_id' => self::SYSTEM_CASCADE_DEVICE_ID,
+                'device_id' => OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID,
                 'table_name' => 'transactions',
                 'pk' => (string) $partnerId,
                 'field' => 'type',
@@ -430,7 +439,7 @@ trait AppliesOpLogEntries
      * @param  list<int>  $touchedTransactionIds
      * @param  list<int>  $tombstonedTransactionIds
      */
-    private function refreshSearchIndex(
+    public function refreshSearchIndex(
         array $touchedTransactionIds,
         array $tombstonedTransactionIds,
         int $userId,

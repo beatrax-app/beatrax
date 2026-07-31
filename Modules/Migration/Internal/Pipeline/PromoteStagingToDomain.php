@@ -348,8 +348,7 @@ final class PromoteStagingToDomain
                     $runId,
                     $user,
                     $sourceProduct,
-                    $prepared['rows'],
-                    $prepared['canonicals'],
+                    new PreparedTransactionBatch($prepared['rows'], $prepared['canonicals']),
                     $categoryIdMap,
                     $payeeNameMap,
                     $resolvedPayees,
@@ -414,8 +413,6 @@ final class PromoteStagingToDomain
     }
 
     /**
-     * @param  list<stdClass>  $newRows
-     * @param  list<CanonicalTransaction>  $newCanonicals
      * @param  array<string, int>  $categoryIdMap
      * @param  array<string, string>  $payeeNameMap
      * @param  array<string, true>  $resolvedPayees
@@ -425,12 +422,14 @@ final class PromoteStagingToDomain
         int $runId,
         User $user,
         string $sourceProduct,
-        array $newRows,
-        array $newCanonicals,
+        PreparedTransactionBatch $batch,
         array $categoryIdMap,
         array $payeeNameMap,
         array &$resolvedPayees,
     ): array {
+        $newRows = $batch->rows;
+        $newCanonicals = $batch->canonicals;
+
         $fingerprintsByIndex = [];
         foreach ($newCanonicals as $idx => $canonical) {
             $fingerprintsByIndex[$idx] = $this->fingerprints->compose($canonical);

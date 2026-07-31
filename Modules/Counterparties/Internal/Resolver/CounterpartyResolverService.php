@@ -75,6 +75,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
         // encrypter, and this class is reachable from a console command that
         // Artisan constructs merely to list it.
         private readonly SessionFactory $session,
+        private readonly CounterpartySlugResolver $slugResolver,
     ) {}
 
     public function resolve(CanonicalTransaction $tx, User $user): ?CounterpartyResolutionDto
@@ -346,8 +347,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
         ?string $merchantName,
         array $metadata,
     ): CounterpartyResolutionDto {
-        $baseSlug = $this->slugify($displayName);
-        $slug = $this->resolveSlugForUpsert($userId, $baseSlug, $displayName);
+        $slug = $this->slugResolver->resolveUnique($userId, $displayName);
 
         // display_name/merchant_name/iban route through the codec (a
         // no-op when encryption is disabled); slug/type stay plaintext as
@@ -382,68 +382,6 @@ final class CounterpartyResolverService implements CounterpartyResolver
             metadata: $metadata,
             counterpartyId: $row->id,
         );
-    }
-
-    // The stored display_name is decrypted before the identity comparison
-    // (see the slug-strategy note at the @link above) so an already-
-    // resolved counterparty is never wrongly treated as "taken by a
-    // different name" just because the column is now ciphertext.
-    private function resolveSlugForUpsert(
-        int $userId,
-        string $baseSlug,
-        string $displayName,
-    ): string {
-        if ($this->slugIsFreeFor($userId, $baseSlug, $displayName)) {
-            return $baseSlug;
-        }
-
-        $suffix = 2;
-        while (! $this->slugIsFreeFor($userId, $baseSlug.'-'.$suffix, $displayName)) {
-            $suffix++;
-        }
-
-        return $baseSlug.'-'.$suffix;
-    }
-
-    // Free means unused, or already held by this same counterparty. The
-    // stored name is decrypted before comparing so a row whose column is now
-    // ciphertext is not mistaken for a different holder. The base slug and
-    // every numbered candidate ask this one question.
-    private function slugIsFreeFor(int $userId, string $slug, string $displayName): bool
-    {
-        $existing = $this->db->connection()
-            ->table('counterparties')
-            ->where('user_id', $userId)
-            ->where('slug', $slug)
-            ->value('display_name');
-
-        return $existing === null
-            || (is_string($existing) && $this->decryptDisplayName($existing, $userId) === $displayName);
-    }
-
-    // Never throws — an undecryptable value falls back to the raw
-    // ciphertext string, which simply fails the identity comparison above
-    // and falls through to slug suffixing.
-    private function decryptDisplayName(string $stored, int $userId): string
-    {
-        return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, ($this->session)())['value'];
-    }
-
-    // Strips punctuation/accents to a lowercase ASCII approximation and
-    // collapses whitespace/underscores into single `-` separators; bounded
-    // to the column's 128-char UNIQUE-index width.
-    private function slugify(string $value): string
-    {
-        $ascii = (string) iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
-        $lower = strtolower($ascii);
-        $cleaned = preg_replace('/[^a-z0-9]+/', '-', $lower) ?? '';
-        $trimmed = trim($cleaned, '-');
-
-        if ($trimmed === '') {
-            return 'counterparty';
-        }
-
-        return substr($trimmed, 0, 128);
     }
 
     private function normaliseIban(?string $iban): ?string

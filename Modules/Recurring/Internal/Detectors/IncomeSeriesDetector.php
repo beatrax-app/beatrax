@@ -185,7 +185,6 @@ final class IncomeSeriesDetector implements SeriesDetector
 
         $latestRow = $rows[count($rows) - 1];
         $latestAmount = self::toInt($latestRow->amount_minor);
-        $nextExpectedAt = $cadenceResult['next_expected_at'];
 
         $detected = DetectedSeries::fromCadence($clusterKey, $cadenceResult, $latestAmount, $currency, $rows);
 

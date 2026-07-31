@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Anomaly\Database\Seeders\Demo\DemoAnomalyAlertsSeeder;
 use Modules\Auth\Database\Seeders\Demo\DemoRecoveryCodesSeeder;
@@ -238,183 +239,137 @@ final class DemoSeedCommand extends Command
     private function resetDemoData(): void
     {
         $connection = $this->db->connection();
+        $demoUserIds = $this->demoUserIds($connection);
 
-        $demoUserIds = $connection->table('users')
-            ->where('username', 'like', 'demo-%@beatrax.local')
-            ->pluck('id')
-            ->all();
-
-        $demoUserIds = array_map(
-            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
-            $demoUserIds,
-        );
-
-        // The composite UNIQUE index on transactions(user_id, fingerprint)
-        // means a stale row with the same fingerprint would block a
-        // re-seed; wipe transactions explicitly first so the order is
-        // observable in the logs rather than relying on the FK cascade.
-        $importRunIds = $connection->table('import_runs')
-            ->where('source_format', 'demo')
-            ->pluck('id')
-            ->all();
-
-        if ($importRunIds !== []) {
-            $importRunIds = array_map(
-                static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
-                $importRunIds,
-            );
-            $connection->table('transactions')
-                ->whereIn('import_run_id', $importRunIds)
-                ->delete();
-            $connection->table('import_runs')
-                ->whereIn('id', $importRunIds)
-                ->delete();
-        }
+        $this->purgeDemoImportRuns($connection);
 
         if ($demoUserIds !== []) {
-            // These tables carry a user_id column but aren't necessarily
-            // owned by an ImportRun; wiping them explicitly (rather than
-            // relying only on the users-cascade below) lets a partial
-            // reset still finish.
-            $connection->table('anomaly_alert_transitions')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('anomaly_alerts')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('saved_reports')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            // Rule children hang off rule_id rather than user_id, so they
-            // are cleared through their parent rules' ids.
-            $ruleIds = $connection->table('categorization_rules')
-                ->whereIn('user_id', $demoUserIds)
-                ->pluck('id')
-                ->all();
-            if ($ruleIds !== []) {
-                $connection->table('rule_actions')->whereIn('rule_id', $ruleIds)->delete();
-                $connection->table('rule_conditions')->whereIn('rule_id', $ruleIds)->delete();
-                $connection->table('categorization_rules')->whereIn('id', $ruleIds)->delete();
-            }
-            // Pot movements precede pots, and pots precede goals, so a
-            // partial reset never leaves a movement pointing at a deleted
-            // pot or a pot pointing at a deleted goal.
-            $connection->table('pot_movements')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('pots')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('goals')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('tax_transaction_tags')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('tax_deduction_categories')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('envelope_moves')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('envelope_assignments')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('envelope_settings')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('drift_alert_transitions')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('drift_alerts')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('recurring_series_transitions')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('recurring_series_occurrences')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('forecast_shortfall_windows')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('forecast_scenario_mutations')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('chain_links')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('recurring_series')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('forecast_scenarios')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('counterparties')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('merchant_aliases')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('merchant_memories')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('merchants')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('system_alerts')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('user_preferences')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('user_recovery_codes')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('community_merchant_mappings')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('wizard_progress')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('pending_enrichment_conflicts')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('file_imports')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('known_senders')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            // EmailScan child tables cascade from inboxes; wipe child
-            // rows first so a partial-reset state with orphan
-            // inbox_messages still cleans up.
-            $connection->table('discovered_senders')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('inbox_messages')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('inbox_scan_state')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('inboxes')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('oauth_secrets')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('accounts')
-                ->whereIn('user_id', $demoUserIds)
-                ->delete();
-            $connection->table('users')
-                ->whereIn('id', $demoUserIds)
-                ->delete();
+            $this->purgeUserScopedData($connection, $demoUserIds);
         }
 
         $this->info(sprintf(
             'Reset complete: cleared %d demo users + linked demo rows.',
             count($demoUserIds),
         ));
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function demoUserIds(ConnectionInterface $connection): array
+    {
+        $demoUserIds = $connection->table('users')
+            ->where('username', 'like', 'demo-%@beatrax.local')
+            ->pluck('id')
+            ->all();
+
+        return array_values(array_map(
+            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
+            $demoUserIds,
+        ));
+    }
+
+    // The composite UNIQUE index on transactions(user_id, fingerprint)
+    // means a stale row with the same fingerprint would block a re-seed;
+    // wipe transactions explicitly first so the order is observable in
+    // the logs rather than relying on the FK cascade.
+    private function purgeDemoImportRuns(ConnectionInterface $connection): void
+    {
+        $importRunIds = $connection->table('import_runs')
+            ->where('source_format', 'demo')
+            ->pluck('id')
+            ->all();
+
+        if ($importRunIds === []) {
+            return;
+        }
+
+        $importRunIds = array_map(
+            static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
+            $importRunIds,
+        );
+        $connection->table('transactions')->whereIn('import_run_id', $importRunIds)->delete();
+        $connection->table('import_runs')->whereIn('id', $importRunIds)->delete();
+    }
+
+    // Rule children hang off rule_id rather than user_id, so they are
+    // cleared through their parent rules' ids before the rules themselves.
+    /**
+     * @param  list<int>  $demoUserIds
+     */
+    private function purgeCategorizationRules(ConnectionInterface $connection, array $demoUserIds): void
+    {
+        $ruleIds = $connection->table('categorization_rules')
+            ->whereIn('user_id', $demoUserIds)
+            ->pluck('id')
+            ->all();
+
+        if ($ruleIds === []) {
+            return;
+        }
+
+        $connection->table('rule_actions')->whereIn('rule_id', $ruleIds)->delete();
+        $connection->table('rule_conditions')->whereIn('rule_id', $ruleIds)->delete();
+        $connection->table('categorization_rules')->whereIn('id', $ruleIds)->delete();
+    }
+
+    // Deletion order honours the FK dependency graph; SQLite's ON DELETE
+    // CASCADE collapses the rest. Each table carries a user_id column but
+    // isn't necessarily owned by an ImportRun, so wiping them explicitly
+    // lets a partial reset still finish.
+    /**
+     * @param  list<int>  $demoUserIds
+     */
+    private function purgeUserScopedData(ConnectionInterface $connection, array $demoUserIds): void
+    {
+        $connection->table('anomaly_alert_transitions')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('anomaly_alerts')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('saved_reports')->whereIn('user_id', $demoUserIds)->delete();
+
+        $this->purgeCategorizationRules($connection, $demoUserIds);
+
+        // Pot movements precede pots, and pots precede goals, so a partial
+        // reset never leaves a movement pointing at a deleted pot or a pot
+        // pointing at a deleted goal.
+        $connection->table('pot_movements')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('pots')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('goals')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('tax_transaction_tags')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('tax_deduction_categories')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('envelope_moves')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('envelope_assignments')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('envelope_settings')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('drift_alert_transitions')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('drift_alerts')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('recurring_series_transitions')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('recurring_series_occurrences')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('forecast_shortfall_windows')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('forecast_scenario_mutations')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('chain_links')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('recurring_series')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('forecast_scenarios')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('counterparties')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('merchant_aliases')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('merchant_memories')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('merchants')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('system_alerts')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('user_preferences')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('user_recovery_codes')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('community_merchant_mappings')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('wizard_progress')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('pending_enrichment_conflicts')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('file_imports')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('known_senders')->whereIn('user_id', $demoUserIds)->delete();
+
+        // EmailScan child tables cascade from inboxes; wipe child rows
+        // first so a partial-reset state with orphan inbox_messages still
+        // cleans up before the parent inboxes and accounts go.
+        $connection->table('discovered_senders')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('inbox_messages')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('inbox_scan_state')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('inboxes')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('oauth_secrets')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('accounts')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('users')->whereIn('id', $demoUserIds)->delete();
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
+use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Exceptions\UnsafeProviderRequestException;
@@ -65,6 +66,7 @@ beforeEach(function (): void {
             $this->clock,
             $this->createStub(EventsDispatcher::class),
             $this->createStub(DatabaseManager::class),
+            new GraphErrorMapper($this->clock),
             new GuzzleClient(['handler' => HandlerStack::create(new MockHandler($responses))]),
         );
     };
@@ -185,6 +187,19 @@ it('falls back to a fixed phrase when the error body is not the documented shape
     'error object carries neither message nor code' => ['{"error":{}}'],
 ]);
 
+// An HTTP error status on a paging call reaches the BadResponseException
+// arm of getJson, which forwards the response to the error mapper — the
+// same collaborator getRawMessage uses — so the Graph error envelope is
+// surfaced through the typed sentinel here too.
+it('maps a Graph error status on a paging call through the error mapper', function (): void {
+    $client = ($this->makeClient)([
+        new Response(500, ['Content-Type' => 'application/json'], (string) json_encode(['error' => ['message' => 'graph exploded']])),
+    ]);
+
+    expect(fn () => $client->deltaPage(1, null))
+        ->toThrow(RuntimeException::class, 'graph exploded');
+});
+
 // A transport failure that never produced a response — DNS, a refused
 // connection, a timeout — is a different shape from an HTTP error, and reaches
 // a different arm. Graph's own error envelope does not exist in this case, so
@@ -239,6 +254,7 @@ it('refuses to act on an inbox with no persisted credentials', function (): void
         $this->clock,
         $this->createStub(EventsDispatcher::class),
         $this->createStub(DatabaseManager::class),
+        new GraphErrorMapper($this->clock),
         new GuzzleClient(['handler' => HandlerStack::create(new MockHandler([]))]),
     );
 

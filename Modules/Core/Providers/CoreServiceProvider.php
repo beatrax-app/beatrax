@@ -13,6 +13,7 @@ use Modules\Core\Internal\Console\FailedJobsCommand;
 use Modules\Core\Internal\Console\InstallCommand;
 use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
+use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Internal\Http\Livewire\AppSidebar;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\EncryptedBackupDownload;
@@ -82,6 +83,7 @@ final class CoreServiceProvider extends ServiceProvider
         // Modules\Sync\Internal\Crypto singletons (GdkKeyringService /
         // OpLogFieldCrypto) already registered by SyncServiceProvider::
         // register() — binding order across module providers doesn't matter.
+        $this->app->singleton(PreMigrationSnapshot::class);
         $this->app->singleton(EncryptionMigrationService::class);
 
         if (! class_exists(User::class, false)) {

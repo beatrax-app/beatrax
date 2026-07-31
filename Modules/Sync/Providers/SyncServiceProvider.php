@@ -190,6 +190,11 @@ final class SyncServiceProvider extends ServiceProvider
             'PairingStateMachine',
             'WordCodeEncoder',
             'QrPayloadBuilder',
+            // Collaborators PairingTokenService delegates to: device-registry
+            // admission and the relayed PAIR_CONFIRM anti-forgery gate. Each
+            // owns the crypto deps it uses so the host stays a thin orchestrator.
+            'PairedDeviceAdmitter',
+            'PeerConfirmVerifier',
             // Relay courier for the cross-device both-confirm handshake
             // (PairingFrame is static-only, no binding needed).
             'PairingRelayCourier',
