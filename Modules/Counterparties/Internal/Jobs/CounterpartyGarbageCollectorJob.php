@@ -16,6 +16,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -34,11 +35,7 @@ final class CounterpartyGarbageCollectorJob implements ShouldBeUniqueUntilProces
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
+    use TunedQueueJob;
 
     public function __construct(
         public readonly int $userId,

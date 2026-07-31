@@ -15,6 +15,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Anomaly\Internal\AnomalyEvaluator;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use stdClass;
@@ -28,15 +29,11 @@ final class SafetyNetAnomalySweepJob implements ShouldBeUniqueUntilProcessing, S
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use TunedQueueJob;
 
     private const RECENT_WINDOW_DAYS = 30;
 
     private const CHUNK = 500;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
 
     public function __construct(
         public readonly int $userId,

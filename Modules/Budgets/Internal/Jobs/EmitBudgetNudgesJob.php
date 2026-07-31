@@ -19,6 +19,7 @@ use Modules\Budgets\Public\Dto\EnvelopeRow;
 use Modules\Budgets\Public\Events\BudgetThresholdCrossed;
 use Modules\Budgets\Public\Services\CarryoverQuery;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Ledger\Public\Dto\Period;
@@ -32,11 +33,7 @@ final class EmitBudgetNudgesJob implements ShouldBeUniqueUntilProcessing, Should
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
+    use TunedQueueJob;
 
     public function __construct(
         public readonly int $userId,

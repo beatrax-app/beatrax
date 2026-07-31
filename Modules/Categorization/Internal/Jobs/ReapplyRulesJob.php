@@ -20,6 +20,7 @@ use Modules\Categorization\Internal\Services\RowMatcher;
 use Modules\Categorization\Internal\Services\RuleApplier;
 use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -48,17 +49,13 @@ final class ReapplyRulesJob implements ShouldBeUnique, ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use TunedQueueJob;
 
     private const CHUNK = 500;
 
     // Long enough to outlive the whole run (including retries) plus a
     // reasonable UI poll gap after completion.
     private const PROGRESS_TTL_SECONDS = 3600;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
 
     public function __construct(
         public readonly int $userId,

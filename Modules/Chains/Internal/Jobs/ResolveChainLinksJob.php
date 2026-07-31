@@ -17,6 +17,7 @@ use Modules\Chains\Internal\Resolvers\PaypalFundingResolver;
 use Modules\Chains\Internal\Resolvers\RetypeByAliasResolver;
 use Modules\Chains\Public\Contracts\UpsertsCardStatements;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Transfers\Public\Contracts\PairsTransferLegs;
@@ -30,13 +31,10 @@ final class ResolveChainLinksJob implements ShouldBeUniqueUntilProcessing, Shoul
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
-
-    public int $tries = 3;
+    use TunedQueueJob;
 
     // Backoff delays in seconds between the three retry attempts above:
     // 1 minute, 5 minutes, 15 minutes.
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
 
     public function __construct(public readonly int $userId) {}
 

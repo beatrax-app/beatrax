@@ -15,6 +15,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\LockStore;
 use Modules\OpenBanking\Public\Events\OpenBankingConsentFailed;
@@ -31,11 +32,7 @@ final class SyncOpenBankingAccountJob implements ShouldBeUniqueUntilProcessing, 
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
+    use TunedQueueJob;
 
     public function __construct(public readonly int $connectionId) {}
 

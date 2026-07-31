@@ -13,6 +13,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
 use Modules\Anomaly\Internal\StateMachines\InvalidStateTransitionException;
 use Modules\Anomaly\Models\AnomalyAlert;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
 use stdClass;
 
@@ -28,13 +29,9 @@ final class ReviveExpiredAnomalySnoozesJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use TunedQueueJob;
 
     private const CHUNK = 500;
-
-    public int $tries = 3;
-
-    /** @var list<int> */
-    public array $backoff = [60, 300, 900];
 
     public function handle(DatabaseManager $db, AnomalyAlertStateMachine $stateMachine, Clock $clock): void
     {
