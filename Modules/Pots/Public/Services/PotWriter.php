@@ -44,7 +44,7 @@ final class PotWriter
         }
 
         $this->assertOwnedAccount($user, $accountId);
-        $this->assertXorLink($goalId, $categoryId);
+        $this->assertXorLink($categoryId);
 
         if ($goalId !== null) {
             $this->assertGoalOwnedAndFree($user, $goalId);
@@ -125,7 +125,7 @@ final class PotWriter
             throw new \InvalidArgumentException('Enter a name for this pot.');
         }
 
-        $this->assertXorLink($goalId, $categoryId);
+        $this->assertXorLink($categoryId);
 
         if ($goalId !== null && $goalId !== $pot->goal_id) {
             $this->assertGoalOwnedAndFree($user, $goalId);
@@ -419,7 +419,7 @@ final class PotWriter
     /**
      * @throws \InvalidArgumentException when a category link is attempted
      */
-    private function assertXorLink(?int $goalId, ?int $categoryId): void
+    private function assertXorLink(?int $categoryId): void
     {
         if ($categoryId !== null) {
             throw new \InvalidArgumentException(

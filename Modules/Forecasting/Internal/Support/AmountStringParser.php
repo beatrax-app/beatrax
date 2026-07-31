@@ -82,11 +82,9 @@ final class AmountStringParser
             // Both present — the LAST separator is the decimal mark; the
             // earlier-occurring one (or copies of it) is a thousands
             // separator and is stripped.
-            if ($commaPos > $dotPos) {
-                return str_replace(',', '.', str_replace('.', '', $normalised));
-            }
-
-            return str_replace(',', '', $normalised);
+            return $commaPos > $dotPos
+                ? str_replace(',', '.', str_replace('.', '', $normalised))
+                : str_replace(',', '', $normalised);
         }
         if ($commaPos !== false) {
             return str_replace(',', '.', $normalised);

@@ -53,28 +53,8 @@ final class CorpusYamlReader
      */
     public function readEntries(string $path): array
     {
-        if (! is_file($path)) {
-            $this->logger->warning('CorpusYamlReader: corpus file is missing.', ['path' => $path]);
-
-            return [];
-        }
-
-        try {
-            /** @var mixed $parsed */
-            $parsed = Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-        } catch (ParseException $e) {
-            $this->logger->warning('CorpusYamlReader: failed to parse YAML.', [
-                'path' => $path,
-                'exception_message' => $e->getMessage(),
-            ]);
-
-            return [];
-        } catch (Throwable $e) {
-            $this->logger->warning('CorpusYamlReader: unexpected error reading YAML.', [
-                'path' => $path,
-                'exception_class' => $e::class,
-            ]);
-
+        $parsed = $this->parseFile($path);
+        if ($parsed === false) {
             return [];
         }
 
@@ -92,6 +72,31 @@ final class CorpusYamlReader
         }
 
         return $entries;
+    }
+
+    /**
+     * @return mixed the parsed YAML value, or false when the file is missing
+     *               or could not be read (both already logged)
+     */
+    private function parseFile(string $path): mixed
+    {
+        if (! is_file($path)) {
+            $this->logger->warning('CorpusYamlReader: corpus file is missing.', ['path' => $path]);
+
+            return false;
+        }
+
+        try {
+            return Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+        } catch (Throwable $e) {
+            $this->logger->warning('CorpusYamlReader: failed to read YAML.', [
+                'path' => $path,
+                'exception_class' => $e::class,
+                'exception_message' => $e instanceof ParseException ? $e->getMessage() : null,
+            ]);
+
+            return false;
+        }
     }
 
     private function stringConfig(string $key): string

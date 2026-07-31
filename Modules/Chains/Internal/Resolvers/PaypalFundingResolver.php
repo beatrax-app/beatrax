@@ -166,55 +166,68 @@ final class PaypalFundingResolver
         $normalisedMerchant = self::toString($row->counterparty_normalized ?? null);
         $bookedAt = self::toString($row->booked_at ?? null);
         $amountMinor = self::toInt($row->amount_minor ?? null);
+        $fromTxId = self::toInt($row->tx_id ?? null);
 
         foreach ($events as $event) {
-            if (! is_array($event)) {
-                continue;
+            $link = $this->fundingEventLink($event, $normalisedMerchant, $bookedAt, $amountMinor, $fromTxId, $user);
+            if ($link !== null) {
+                return $link;
             }
-            $eventType = isset($event['type']) && is_string($event['type']) ? $event['type'] : '';
-            if (! in_array($eventType, self::FUNDING_EVENT_TYPES, true)) {
-                continue;
-            }
-
-            $eventRow = $event['row'] ?? [];
-            if (! is_array($eventRow)) {
-                continue;
-            }
-
-            $iban = $this->extractIbanFromEventRow($eventRow);
-            if ($iban === null) {
-                continue;
-            }
-
-            $accountId = $this->accountIdForIban($iban, $user);
-            if ($accountId === null) {
-                continue;
-            }
-
-            $partnerId = $this->findPartnerOnAccount($accountId, -$amountMinor, $bookedAt, $user);
-            if ($partnerId === null) {
-                continue;
-            }
-
-            $referenceId = $eventRow['Reference Txn ID'] ?? null;
-
-            return [
-                'from_transaction_id' => self::toInt($row->tx_id ?? null),
-                'to_transaction_id' => $partnerId,
-                'kind' => 'paypal_funding',
-                'state' => 'confirmed',
-                'confidence' => '1.000',
-                'resolver' => 'auto',
-                'evidence' => [
-                    'matched_iban' => $iban,
-                    'matched_reference_id' => is_string($referenceId) && $referenceId !== '' ? $referenceId : null,
-                    'event_type' => $eventType,
-                    'signature_hash' => $this->signatureHash($normalisedMerchant, $iban),
-                ],
-            ];
         }
 
         return null;
+    }
+
+    /**
+     * @return array{type: string, row: array<int|string, mixed>}|null
+     */
+    private function fundingEventRow(mixed $event): ?array
+    {
+        if (! is_array($event)) {
+            return null;
+        }
+        $eventType = isset($event['type']) && is_string($event['type']) ? $event['type'] : '';
+        $eventRow = $event['row'] ?? [];
+        if (! in_array($eventType, self::FUNDING_EVENT_TYPES, true) || ! is_array($eventRow)) {
+            return null;
+        }
+
+        return ['type' => $eventType, 'row' => $eventRow];
+    }
+
+    /**
+     * @return ?array<string, mixed>
+     */
+    private function fundingEventLink(mixed $event, string $normalisedMerchant, string $bookedAt, int $amountMinor, int $fromTxId, User $user): ?array
+    {
+        $parsed = $this->fundingEventRow($event);
+        if ($parsed === null) {
+            return null;
+        }
+
+        $iban = $this->extractIbanFromEventRow($parsed['row']);
+        $accountId = $iban === null ? null : $this->accountIdForIban($iban, $user);
+        $partnerId = $accountId === null ? null : $this->findPartnerOnAccount($accountId, -$amountMinor, $bookedAt, $user);
+        if ($iban === null || $partnerId === null) {
+            return null;
+        }
+
+        $referenceId = $parsed['row']['Reference Txn ID'] ?? null;
+
+        return [
+            'from_transaction_id' => $fromTxId,
+            'to_transaction_id' => $partnerId,
+            'kind' => 'paypal_funding',
+            'state' => 'confirmed',
+            'confidence' => '1.000',
+            'resolver' => 'auto',
+            'evidence' => [
+                'matched_iban' => $iban,
+                'matched_reference_id' => is_string($referenceId) && $referenceId !== '' ? $referenceId : null,
+                'event_type' => $parsed['type'],
+                'signature_hash' => $this->signatureHash($normalisedMerchant, $iban),
+            ],
+        ];
     }
 
     /**

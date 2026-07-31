@@ -94,11 +94,7 @@ final readonly class ForecastQuery
      */
     private function decodeCompletedRun(mixed $row): ?array
     {
-        if ($row === null) {
-            return null;
-        }
-        /** @var stdClass $row */
-        if (self::toString($row->status ?? null) !== 'complete') {
+        if (! $row instanceof stdClass || self::toString($row->status ?? null) !== 'complete') {
             return null;
         }
         $rawJson = self::toString($row->result_json ?? null);
