@@ -55,82 +55,113 @@ final readonly class AppLockMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($this->currentUser->isAuthenticated()) {
-            $session = $request->session();
-            $routeName = $request->route()?->getName();
-
-            $userId = $this->currentUser->user()->id;
-
-            if ($this->lockState->isLocked($session)) {
-                $lockedConfig = $this->resolveConfig($session, $userId);
-
-                // A locked session whose user has no enabled lock can never be
-                // opened -- no PIN hash to verify against, no enrolled
-                // biometric. Release it rather than redirect, so a session
-                // locked before the lock was turned off is not stranded.
-                if ($lockedConfig === null || ! $lockedConfig['lock_enabled']) {
-                    $this->lockState->clearStaleLock($session);
-
-                    /** @var Response $response */
-                    $response = $next($request);
-
-                    return $response;
-                }
-
-                if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
-                    return new RedirectResponse($this->urls->route('auth.lock'));
-                }
-
-                /** @var Response $response */
-                $response = $next($request);
-
-                return $response;
-            }
-
-            $config = $this->resolveConfig($session, $userId);
-
-            if ($config !== null && $config['lock_enabled']) {
-                $now = $this->clock->now();
-                $idleMs = $config['idle_timeout_minutes'] * 60 * 1000;
-
-                $lastActivity = $config['last_activity_at'];
-                if ($lastActivity !== null) {
-                    $elapsedMs = $now->diffInMilliseconds($lastActivity, absolute: true);
-
-                    if ($elapsedMs >= $idleMs) {
-                        $this->lockState->lock($session);
-                        $session->forget(self::SESSION_CONFIG_CACHE);
-
-                        if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)) {
-                            return new RedirectResponse($this->urls->route('auth.lock'));
-                        }
-
-                        /** @var Response $response */
-                        $response = $next($request);
-
-                        return $response;
-                    }
-                }
-
-                // Exempt routes (lock screen, logout) don't count as
-                // activity, and neither do Livewire update requests:
-                // wire:poll traffic would otherwise hold the idle timer
-                // open forever.
-                if (! in_array($routeName, self::ALLOWED_ROUTE_NAMES, true)
-                    && ! $request->headers->has(self::LIVEWIRE_HEADER)) {
-                    $nowStr = $now->toDateTimeString();
-                    $this->db->connection()
-                        ->table('user_app_lock_configs')
-                        ->where('user_id', $userId)
-                        ->update(['last_activity_at' => $nowStr]);
-
-                    // Update the cached last_activity_at so the next request within
-                    // the TTL window uses the refreshed timestamp without a DB read.
-                    $this->refreshCachedActivity($session, $now);
-                }
-            }
+        if (! $this->currentUser->isAuthenticated()) {
+            return $this->pass($request, $next);
         }
 
+        $session = $request->session();
+        $routeName = $request->route()?->getName();
+        $userId = $this->currentUser->user()->id;
+
+        if ($this->lockState->isLocked($session)) {
+            return $this->handleLocked($request, $next, $session, $userId, $routeName);
+        }
+
+        return $this->handleUnlocked($request, $next, $session, $userId, $routeName);
+    }
+
+    private function handleLocked(Request $request, Closure $next, Session $session, int $userId, ?string $routeName): Response
+    {
+        $lockedConfig = $this->resolveConfig($session, $userId);
+
+        // A locked session whose user has no enabled lock can never be
+        // opened -- no PIN hash to verify against, no enrolled biometric.
+        // Release it rather than redirect, so a session locked before the
+        // lock was turned off is not stranded.
+        if ($lockedConfig === null || ! $lockedConfig['lock_enabled']) {
+            $this->lockState->clearStaleLock($session);
+
+            return $this->pass($request, $next);
+        }
+
+        if (! $this->isExemptRoute($routeName)) {
+            return new RedirectResponse($this->urls->route('auth.lock'));
+        }
+
+        return $this->pass($request, $next);
+    }
+
+    private function handleUnlocked(Request $request, Closure $next, Session $session, int $userId, ?string $routeName): Response
+    {
+        $config = $this->resolveConfig($session, $userId);
+        if ($config === null || ! $config['lock_enabled']) {
+            return $this->pass($request, $next);
+        }
+
+        if ($this->isIdleExpired($config)) {
+            return $this->lockForIdle($request, $next, $session, $routeName);
+        }
+
+        $this->recordActivity($request, $session, $userId, $routeName);
+
+        return $this->pass($request, $next);
+    }
+
+    /**
+     * @param  array{lock_enabled: bool, idle_timeout_minutes: int, last_activity_at: CarbonImmutable|null, cached_at: int}  $config
+     */
+    private function isIdleExpired(array $config): bool
+    {
+        $lastActivity = $config['last_activity_at'];
+        if ($lastActivity === null) {
+            return false;
+        }
+
+        $idleMs = $config['idle_timeout_minutes'] * 60 * 1000;
+        $elapsedMs = $this->clock->now()->diffInMilliseconds($lastActivity, absolute: true);
+
+        return $elapsedMs >= $idleMs;
+    }
+
+    private function lockForIdle(Request $request, Closure $next, Session $session, ?string $routeName): Response
+    {
+        $this->lockState->lock($session);
+        $session->forget(self::SESSION_CONFIG_CACHE);
+
+        if (! $this->isExemptRoute($routeName)) {
+            return new RedirectResponse($this->urls->route('auth.lock'));
+        }
+
+        return $this->pass($request, $next);
+    }
+
+    // Exempt routes (lock screen, logout) don't count as activity, and
+    // neither do Livewire update requests: wire:poll traffic would otherwise
+    // hold the idle timer open forever.
+    private function recordActivity(Request $request, Session $session, int $userId, ?string $routeName): void
+    {
+        if ($this->isExemptRoute($routeName) || $request->headers->has(self::LIVEWIRE_HEADER)) {
+            return;
+        }
+
+        $now = $this->clock->now();
+        $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update(['last_activity_at' => $now->toDateTimeString()]);
+
+        // Update the cached last_activity_at so the next request within
+        // the TTL window uses the refreshed timestamp without a DB read.
+        $this->refreshCachedActivity($session, $now);
+    }
+
+    private function isExemptRoute(?string $routeName): bool
+    {
+        return in_array($routeName, self::ALLOWED_ROUTE_NAMES, true);
+    }
+
+    private function pass(Request $request, Closure $next): Response
+    {
         /** @var Response $response */
         $response = $next($request);
 

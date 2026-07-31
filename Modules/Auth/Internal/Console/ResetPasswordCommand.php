@@ -38,6 +38,11 @@ class ResetPasswordCommand extends Command
             return self::FAILURE;
         }
 
+        return $this->resetInteractively();
+    }
+
+    private function resetInteractively(): int
+    {
         // The required `username` argument is narrowed to a string by
         // Larastan against the typed signature, so no is_string() guard
         // is needed here.
@@ -51,20 +56,8 @@ class ResetPasswordCommand extends Command
             return self::FAILURE;
         }
 
-        $passwordInput = $this->secret('New password');
-        $confirmInput = $this->secret('Confirm new password');
-        $password = is_string($passwordInput) ? $passwordInput : '';
-        $confirm = is_string($confirmInput) ? $confirmInput : '';
-
-        if ($password !== $confirm) {
-            $this->error('The two passwords do not match.');
-
-            return self::FAILURE;
-        }
-
-        if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
-            $this->error('Use at least 12 characters.');
-
+        $password = $this->promptForPassword();
+        if ($password === null) {
             return self::FAILURE;
         }
 
@@ -78,5 +71,27 @@ class ResetPasswordCommand extends Command
         $this->info("Password updated for {$user->username}.");
 
         return self::SUCCESS;
+    }
+
+    private function promptForPassword(): ?string
+    {
+        $passwordInput = $this->secret('New password');
+        $confirmInput = $this->secret('Confirm new password');
+        $password = is_string($passwordInput) ? $passwordInput : '';
+        $confirm = is_string($confirmInput) ? $confirmInput : '';
+
+        if ($password !== $confirm) {
+            $this->error('The two passwords do not match.');
+
+            return null;
+        }
+
+        if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
+            $this->error('Use at least 12 characters.');
+
+            return null;
+        }
+
+        return $password;
     }
 }
