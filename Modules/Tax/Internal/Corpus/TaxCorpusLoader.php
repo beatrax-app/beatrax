@@ -34,35 +34,52 @@ final class TaxCorpusLoader
             return [];
         }
 
-        $path = resource_path("corpus/tax/{$code}.yaml");
+        $parsed = $this->readCorpusYaml(resource_path("corpus/tax/{$code}.yaml"));
 
+        return $this->extractEntries($parsed);
+    }
+
+    // Reads and decodes a corpus file, tolerating every failure mode with a
+    // logged warning and a null return: a missing file, a ParseException
+    // (including the native-tag object guard), or any other read error.
+    private function readCorpusYaml(string $path): mixed
+    {
         if (! is_file($path)) {
             $this->logger->warning('TaxCorpusLoader: corpus file is missing.', ['path' => $path]);
 
-            return [];
+            return null;
         }
 
         try {
-            /** @var mixed $parsed */
-            $parsed = Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+            return Yaml::parseFile($path, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
         } catch (ParseException $e) {
             $this->logger->warning('TaxCorpusLoader: failed to parse YAML.', [
                 'path' => $path,
                 'exception_message' => $e->getMessage(),
             ]);
-
-            return [];
         } catch (Throwable $e) {
             $this->logger->warning('TaxCorpusLoader: unexpected error reading YAML.', [
                 'path' => $path,
                 'exception_class' => $e::class,
             ]);
+        }
 
+        return null;
+    }
+
+    /**
+     * @return list<array<int|string, mixed>> Each entry has at least 'key' and 'name'.
+     */
+    private function extractEntries(mixed $parsed): array
+    {
+        if ($parsed === null) {
+            // A null here means readCorpusYaml already logged the missing-file
+            // or parse failure; stay quiet rather than double-warning.
             return [];
         }
 
         if (! is_array($parsed) || ! isset($parsed['entries']) || ! is_array($parsed['entries'])) {
-            $this->logger->warning('TaxCorpusLoader: YAML root has no `entries:` list.', ['path' => $path]);
+            $this->logger->warning('TaxCorpusLoader: YAML root has no `entries:` list.');
 
             return [];
         }
