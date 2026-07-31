@@ -30,6 +30,9 @@ final class GoalProjectionService
     // shows "building a projection" copy instead until enough signal accrues.
     private const int MIN_OBSERVATION_DAYS = 7;
 
+    /** @var array{date: null, beyondHorizon: false} */
+    private const array NO_PROJECTION = ['date' => null, 'beyondHorizon' => false];
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly ExchangeRateService $fx,
@@ -41,22 +44,43 @@ final class GoalProjectionService
      */
     public function project(Goal $goal, int $contributedMinor, User $user): array
     {
-        if ($goal->account_id === null) {
-            return ['date' => null, 'beyondHorizon' => false];
-        }
-
         $accountId = $goal->account_id;
-
-        if ($contributedMinor >= $goal->target_minor) {
-            return ['date' => null, 'beyondHorizon' => false];
+        if ($accountId === null || $contributedMinor >= $goal->target_minor) {
+            return self::NO_PROJECTION;
         }
 
-        // Bound by the goal's own start_date — it cannot have contributions
-        // before it started.
+        $dailyRateMinor = $this->dailyContributionRate($goal, $accountId, $user);
+        if ($dailyRateMinor <= 0.0) {
+            return self::NO_PROJECTION;
+        }
+
+        $remainingMinor = $goal->target_minor - $contributedMinor;
+        $daysToFinish = (int) ceil($remainingMinor / $dailyRateMinor);
+        $projectedDate = CarbonImmutable::today()->addDays($daysToFinish)->format('Y-m-d');
+        $beyondHorizon = $daysToFinish > self::HORIZON_LIMIT_DAYS;
+
+        if (! $beyondHorizon) {
+            $this->warmForecastCache($accountId, $daysToFinish, $user);
+        }
+
+        return ['date' => $projectedDate, 'beyondHorizon' => $beyondHorizon];
+    }
+
+    // Run-rate over the trailing window, converted into the goal's own
+    // target_currency so the numerator shares a unit with target_minor. Returns
+    // 0.0 while the goal is younger than the minimum observation window, so one
+    // early deposit cannot extrapolate a misleadingly-soon finish.
+    private function dailyContributionRate(Goal $goal, int $accountId, User $user): float
+    {
         $windowStart = CarbonImmutable::today()->subDays(self::TRAILING_WINDOW_DAYS)->toDateString();
         $effectiveStart = $goal->start_date->toDateString() > $windowStart
             ? $goal->start_date->toDateString()
             : $windowStart;
+
+        $elapsedDays = CarbonImmutable::parse($effectiveStart)->diffInDays(CarbonImmutable::today());
+        if ($elapsedDays < self::MIN_OBSERVATION_DAYS) {
+            return 0.0;
+        }
 
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $user->id)
@@ -65,52 +89,29 @@ final class GoalProjectionService
             ->where('posted_at', '>=', $effectiveStart)
             ->get(['amount_minor', 'currency']);
 
-        // Converted into the goal's own target_currency so the run-rate
-        // numerator shares a unit with target_minor, the remaining-amount
-        // denominator.
         $windowSum = 0;
         foreach ($rows as $r) {
             $money = Money::ofMinor(self::toInt($r->amount_minor), self::toString($r->currency));
-            $result = $this->fx->convertToBase($money, $goal->target_currency);
-            $windowSum += $result->converted->toMinor();
+            $windowSum += $this->fx->convertToBase($money, $goal->target_currency)->converted->toMinor();
         }
 
-        // Divide by the actual elapsed observation window, not the constant
-        // trailing-window length — a goal younger than that window would
-        // otherwise have its rate systematically understated.
-        $elapsedDays = CarbonImmutable::parse($effectiveStart)->diffInDays(CarbonImmutable::today());
-        if ($elapsedDays < self::MIN_OBSERVATION_DAYS) {
-            return ['date' => null, 'beyondHorizon' => false];
-        }
+        return $windowSum / max(1, $elapsedDays);
+    }
 
-        $observationDays = max(1, $elapsedDays);
-        $dailyRateMinor = $windowSum / $observationDays;
-
-        if ($dailyRateMinor <= 0.0) {
-            return ['date' => null, 'beyondHorizon' => false];
-        }
-
-        $remainingMinor = $goal->target_minor - $contributedMinor;
-        $daysToFinish = (int) ceil($remainingMinor / $dailyRateMinor);
-        $projectedDate = CarbonImmutable::today()->addDays($daysToFinish)->format('Y-m-d');
-
-        if ($daysToFinish > self::HORIZON_LIMIT_DAYS) {
-            return ['date' => $projectedDate, 'beyondHorizon' => true];
-        }
-
+    // Warms the forecast cache as a sanity signal only — never the source of
+    // the contribution figure (a ForecastDto point is the account's balance
+    // trajectory, not a goal contribution). A missing/cross-user account falls
+    // back to run-rate only defensively.
+    private function warmForecastCache(int $accountId, int $daysToFinish, User $user): void
+    {
         $horizon = $this->coveringHorizon($daysToFinish);
 
         try {
-            // Used as a sanity signal only — never as the source of the
-            // contribution figure itself (a ForecastDto point is the
-            // account's balance trajectory, not a goal contribution).
             $this->forecast->forUser($accountId, $horizon, null, $user);
         } catch (NotFoundHttpException) {
             // Cross-user or missing account — should not occur given FK +
             // scope, but fall back to run-rate only defensively.
         }
-
-        return ['date' => $projectedDate, 'beyondHorizon' => false];
     }
 
     private function coveringHorizon(int $daysToFinish): int

@@ -414,6 +414,55 @@ it('uses the linked pot balance as contributedMinor instead of the transaction s
     expect($rows[0]->contributedMinor)->toBe(40000);
 });
 
+it('converts a linked pot balance into the goal target_currency when they differ', function (): void {
+    // EUR->USD = 1.10 gives the derived USD->EUR cross-rate the pot balance
+    // is converted with (a USD pot funding a EUR goal).
+    DB::table('exchange_rates')->insert([
+        'base_currency' => 'EUR',
+        'quote_currency' => 'USD',
+        'rate_date' => CarbonImmutable::now()->toDateString(),
+        'rate' => '1.10000000',
+        'source' => 'test',
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'target_minor' => 200000,
+        'target_currency' => 'EUR',
+        'start_date' => CarbonImmutable::now()->subDays(10)->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal->id,
+        'currency' => 'USD',
+    ]);
+
+    DB::table('pot_movements')->insert([
+        'user_id' => $this->user->id,
+        'pot_id' => $pot->id,
+        'counterpart_pot_id' => null,
+        'amount_minor' => 110000,
+        'currency' => 'USD',
+        'kind' => 'fund',
+        'memo' => null,
+        'created_at' => CarbonImmutable::now(),
+        'updated_at' => CarbonImmutable::now(),
+    ]);
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    // 110000 USD / 1.10 = 100000 EUR — the pot path FX-converts into the
+    // goal's target_currency rather than reporting the raw USD minor units.
+    expect($rows[0]->contributedMinor)->toBe(100000);
+    expect($rows[0]->currency)->toBe('EUR');
+});
+
 it('falls back to transfer tracking for a goal with no linked pot', function (): void {
     $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
     Goal::factory()->create([

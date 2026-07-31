@@ -27,20 +27,12 @@ final class GoalsSummaryCard extends Component
 
         $rows = $query->forUser($currentUser->user());
 
-        // Sort by projected finish date (soonest first), then by target date as
-        // a fallback when there is no projection (null sorts to the end).
+        // Sort by projected finish date (soonest first). The leading
+        // null-check flag pushes goals without a projection to the end; the
+        // date string then breaks ties among goals that do have one.
         usort($rows, static function (GoalProgressRow $a, GoalProgressRow $b): int {
-            if ($a->projectedFinishDate === null && $b->projectedFinishDate === null) {
-                return 0;
-            }
-            if ($a->projectedFinishDate === null) {
-                return 1;
-            }
-            if ($b->projectedFinishDate === null) {
-                return -1;
-            }
-
-            return strcmp($a->projectedFinishDate, $b->projectedFinishDate);
+            return [$a->projectedFinishDate === null, (string) $a->projectedFinishDate]
+                <=> [$b->projectedFinishDate === null, (string) $b->projectedFinishDate];
         });
 
         $top3 = array_slice($rows, 0, 3);

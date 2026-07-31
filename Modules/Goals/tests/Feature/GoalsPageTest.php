@@ -7,6 +7,7 @@ use Modules\Core\Models\User;
 use Modules\Goals\Internal\Http\Livewire\GoalsPage;
 use Modules\Goals\Models\Goal;
 use Modules\Ledger\Models\Account;
+use Modules\Pots\Models\Pot;
 
 /**
  * Wave 0 RED stubs for GOAL-01 and GOAL-05.
@@ -253,6 +254,155 @@ it('cross-user cannot edit another users goal', function (): void {
         'id' => $foreignGoal->id,
         'name' => 'Hacked',
     ]);
+});
+
+// ---------------------------------------------------------------------------
+// Inline validation feedback
+// ---------------------------------------------------------------------------
+
+it('shows a name error and writes nothing when the name is blank', function (): void {
+    Livewire::test(GoalsPage::class)
+        ->set('name', '')
+        ->set('targetAmount', '1000.00')
+        ->set('targetDate', '2027-01-01')
+        ->call('createGoal')
+        ->assertSet('errorName', 'Enter a name for your goal.')
+        ->assertNotDispatched('toast');
+
+    $this->assertDatabaseCount('goals', 0);
+});
+
+it('shows a date error when the target date is blank', function (): void {
+    Livewire::test(GoalsPage::class)
+        ->set('name', 'Dated goal')
+        ->set('targetAmount', '1000.00')
+        ->set('targetDate', '')
+        ->call('createGoal')
+        ->assertSet('errorDate', 'Choose a target date.')
+        ->assertNotDispatched('toast');
+
+    $this->assertDatabaseMissing('goals', ['name' => 'Dated goal']);
+});
+
+it('surfaces a linked-pot error when the goal write rejects the account', function (): void {
+    Livewire::test(GoalsPage::class)
+        ->set('name', 'Bad account goal')
+        ->set('targetAmount', '1000.00')
+        ->set('targetDate', '2027-01-01')
+        ->set('accountId', '999999')
+        ->call('createGoal')
+        ->assertSet('errorLinkedPot', 'Account not owned by the authenticated user.')
+        ->assertNotDispatched('toast');
+
+    $this->assertDatabaseMissing('goals', ['name' => 'Bad account goal']);
+});
+
+it('resets the form instead of writing when updating a goal the user does not own', function (): void {
+    $other = User::create([
+        'username' => 'mallory',
+        'password' => 'x',
+        'period_start_day' => 1,
+    ]);
+    $foreignGoal = Goal::factory()->create([
+        'user_id' => $other->id,
+        'name' => 'Mallory goal',
+        'status' => 'active',
+    ]);
+
+    // A valid name + date clears validation so the write is attempted; the
+    // cross-user goal id then raises GoalNotFoundException, which resets the
+    // form rather than surfacing a field error.
+    Livewire::test(GoalsPage::class)
+        ->set('editGoalId', $foreignGoal->id)
+        ->set('name', 'Hacked')
+        ->set('targetAmount', '100.00')
+        ->set('targetDate', '2027-01-01')
+        ->call('updateGoal')
+        ->assertNotDispatched('toast')
+        ->assertSet('editGoalId', 0)
+        ->assertSet('name', '');
+
+    $this->assertDatabaseMissing('goals', ['id' => $foreignGoal->id, 'name' => 'Hacked']);
+});
+
+// ---------------------------------------------------------------------------
+// Linked-pot reconciliation
+// ---------------------------------------------------------------------------
+
+it('links a selected pot to the goal on create', function (): void {
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => null,
+        'category_id' => null,
+    ]);
+
+    Livewire::test(GoalsPage::class)
+        ->set('name', 'Linked goal')
+        ->set('targetAmount', '1000.00')
+        ->set('targetDate', '2027-01-01')
+        ->set('accountId', (string) $this->account->id)
+        ->set('linkedPotId', (string) $pot->id)
+        ->call('createGoal')
+        ->assertDispatched('toast');
+
+    $goal = Goal::query()->where('name', 'Linked goal')->firstOrFail();
+    $this->assertDatabaseHas('pots', ['id' => $pot->id, 'goal_id' => $goal->id]);
+});
+
+it('relinks the goal to a different pot on update', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'status' => 'active',
+    ]);
+    $potA = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal->id,
+    ]);
+    $potB = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => null,
+    ]);
+
+    Livewire::test(GoalsPage::class)
+        ->set('editGoalId', $goal->id)
+        ->set('name', 'Renamed')
+        ->set('targetAmount', '500.00')
+        ->set('targetDate', '2027-06-01')
+        ->set('accountId', (string) $this->account->id)
+        ->set('linkedPotId', (string) $potB->id)
+        ->call('updateGoal')
+        ->assertDispatched('toast');
+
+    $this->assertDatabaseHas('pots', ['id' => $potB->id, 'goal_id' => $goal->id]);
+    $this->assertDatabaseHas('pots', ['id' => $potA->id, 'goal_id' => null]);
+});
+
+it('clears the pot link when the picker is emptied on update', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'status' => 'active',
+    ]);
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal->id,
+    ]);
+
+    Livewire::test(GoalsPage::class)
+        ->set('editGoalId', $goal->id)
+        ->set('name', 'Renamed')
+        ->set('targetAmount', '500.00')
+        ->set('targetDate', '2027-06-01')
+        ->set('linkedPotId', '')
+        ->call('updateGoal')
+        ->assertDispatched('toast');
+
+    $this->assertDatabaseHas('pots', ['id' => $pot->id, 'goal_id' => null]);
 });
 
 it('cross-user cannot archive another users goal', function (): void {
