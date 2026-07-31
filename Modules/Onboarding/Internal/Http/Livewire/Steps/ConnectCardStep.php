@@ -13,6 +13,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\SafeTrace;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -47,7 +48,7 @@ final class ConnectCardStep extends Component
     {
         return [
             'statements' => ['array', 'min:1'],
-            'statements.*' => ['file', 'max:10240', 'extensions:pdf'],
+            'statements.*' => ['file', 'max:'.UploadLimits::MAX_KB, 'extensions:pdf'],
         ];
     }
 

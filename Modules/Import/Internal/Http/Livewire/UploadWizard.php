@@ -12,6 +12,7 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Psr\Log\LoggerInterface;
@@ -85,7 +86,7 @@ final class UploadWizard extends Component
         $sizeRule = match ($this->sourceFormat) {
             'mbox' => 'max:1048576',
             'eml' => 'max:20480',
-            default => 'max:10240',
+            default => 'max:'.UploadLimits::MAX_KB,
         };
 
         return [
