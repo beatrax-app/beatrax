@@ -16,6 +16,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
 use stdClass;
@@ -29,11 +30,7 @@ final class DetectIcsStatementReadyJob implements ShouldBeUniqueUntilProcessing,
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
+    use TunedQueueJob;
 
     public function __construct(public readonly int $userId) {}
 
