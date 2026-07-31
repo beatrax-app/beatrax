@@ -10,10 +10,12 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
@@ -103,7 +105,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         [$filtered, $cadenceResult] = $qualified;
 
         $clusterKey = $this->clusterKeyComposer->compose(
-            'expense',
+            Direction::Expense->value,
             $counterparty,
             $currency,
             $cadenceResult['cadence']->value,
@@ -115,7 +117,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         /** @var RecurringSeries|null $existingBySameCluster */
         $existingBySameCluster = RecurringSeries::query()
             ->where('user_id', $user->id)
-            ->where('direction', 'expense')
+            ->where('direction', Direction::Expense->value)
             ->where('cluster_key', $clusterKey)
             ->where('latest_currency', $currency)
             ->first();
@@ -127,7 +129,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
-            ->where('direction', 'expense')
+            ->where('direction', Direction::Expense->value)
             ->where('cluster_counterparty_key', $counterparty)
             ->where('latest_currency', $currency)
             ->first();
@@ -150,11 +152,11 @@ final class ExpenseSeriesDetector implements SeriesDetector
         // (counterparty, currency) pair across every cadence variant; a
         // snoozed row would surface a different amount than the one the user
         // paused on, and the next sweep's expiry pass unpauses it first.
-        if (in_array($existing->state, ['rejected', 'snoozed'], true)) {
+        if (in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true)) {
             return;
         }
 
-        $this->refresher->refresh($existing, $counterparty, $detected, $user, 'expense');
+        $this->refresher->refresh($existing, $counterparty, $detected, $user, Direction::Expense->value);
     }
 
     // A cluster qualifies once it still has enough occurrences after the
@@ -195,10 +197,15 @@ final class ExpenseSeriesDetector implements SeriesDetector
     {
         $row = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->where('direction', 'expense')
+            ->where('direction', Direction::Expense->value)
             ->where('cluster_counterparty_key', $counterparty)
             ->where('latest_currency', $currency)
-            ->whereIn('state', ['pending', 'approved', 'cadence_changed', 'snoozed'])
+            ->whereIn('state', [
+                RecurringSeriesState::Pending->value,
+                RecurringSeriesState::Approved->value,
+                RecurringSeriesState::CadenceChanged->value,
+                RecurringSeriesState::Snoozed->value,
+            ])
             ->first(['variance_tolerance_percent']);
 
         if ($row === null) {
@@ -254,9 +261,9 @@ final class ExpenseSeriesDetector implements SeriesDetector
 
         $newId = $connection->table('recurring_series')->insertGetId([
             'user_id' => $user->id,
-            'direction' => 'expense',
+            'direction' => Direction::Expense->value,
             'detected_name' => $counterparty,
-            'state' => 'pending',
+            'state' => RecurringSeriesState::Pending->value,
             'cadence' => $detected->cadence->value,
             'latest_amount_minor' => $detected->latestAmountMinor,
             'latest_currency' => $detected->currency,
@@ -275,7 +282,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $this->events->dispatch(new RecurringSeriesDetected(
             seriesId: $newId,
             userId: $user->id,
-            direction: 'expense',
+            direction: Direction::Expense->value,
             detectedName: $counterparty,
             cadence: $detected->cadence->value,
         ));
@@ -283,7 +290,7 @@ final class ExpenseSeriesDetector implements SeriesDetector
         $this->events->dispatch(new RecurringSeriesMetricsRefreshed(
             userId: $user->id,
             recurringSeriesId: $newId,
-            direction: 'expense',
+            direction: Direction::Expense->value,
             cadence: $detected->cadence->value,
             latestAmountMinor: $detected->latestAmountMinor,
             latestCurrency: $detected->currency,

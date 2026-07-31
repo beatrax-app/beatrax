@@ -23,6 +23,7 @@ use Modules\Recurring\Internal\Detectors\IncomeSeriesDetector;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Psr\Log\LoggerInterface;
 
 // Dispatched daily from routes/console.php's recurring.detect scheduler
@@ -137,7 +138,7 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
         $rows = $db->connection()->table('recurring_series')
             ->select(['id'])
             ->where('user_id', $user->id)
-            ->where('state', 'snoozed')
+            ->where('state', RecurringSeriesState::Snoozed->value)
             ->where('snoozed_until', '<=', $now)
             ->get();
 
@@ -159,7 +160,7 @@ final class DetectRecurringSeriesJob implements ShouldBeUniqueUntilProcessing, S
             }
             /** @var RecurringSeries $series */
             $series = RecurringSeries::query()->findOrFail($id);
-            $stateMachine->transition($series, 'pending', 'snooze_expired', 'detector');
+            $stateMachine->transition($series, RecurringSeriesState::Pending->value, 'snooze_expired', 'detector');
         }
     }
 }

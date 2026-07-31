@@ -7,8 +7,10 @@ namespace Modules\Recurring\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Models\RecurringSeriesTransition;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 
 // updateOrCreate() reuses the existing row on a second seed run.
 // Transitions bypass RecurringSeriesStateMachine since the demo data
@@ -29,7 +31,7 @@ final class DemoRecurringSeeder
             'cadence' => 'monthly',
             'dayOfMonth' => 11,
             'clusterKey' => 'demo:spotify:monthly:1099',
-            'state' => 'approved',
+            'state' => RecurringSeriesState::Approved->value,
         ],
         [
             'detectedName' => 'Netflix International BV',
@@ -38,7 +40,7 @@ final class DemoRecurringSeeder
             'cadence' => 'monthly',
             'dayOfMonth' => 15,
             'clusterKey' => 'demo:netflix:monthly:1499',
-            'state' => 'approved',
+            'state' => RecurringSeriesState::Approved->value,
         ],
         [
             'detectedName' => 'Sport City Nederland BV',
@@ -47,7 +49,7 @@ final class DemoRecurringSeeder
             'cadence' => 'monthly',
             'dayOfMonth' => 1,
             'clusterKey' => 'demo:sport-city:monthly:2500',
-            'state' => 'approved',
+            'state' => RecurringSeriesState::Approved->value,
         ],
         [
             'detectedName' => 'KPN BV',
@@ -56,7 +58,7 @@ final class DemoRecurringSeeder
             'cadence' => 'monthly',
             'dayOfMonth' => 3,
             'clusterKey' => 'demo:kpn:monthly:4500',
-            'state' => 'approved',
+            'state' => RecurringSeriesState::Approved->value,
         ],
         [
             'detectedName' => 'NRC Media',
@@ -65,7 +67,7 @@ final class DemoRecurringSeeder
             'cadence' => 'monthly',
             'dayOfMonth' => 7,
             'clusterKey' => 'demo:nrc:monthly:750',
-            'state' => 'snoozed',
+            'state' => RecurringSeriesState::Snoozed->value,
         ],
         [
             'detectedName' => 'NordVPN s.r.o.',
@@ -74,7 +76,7 @@ final class DemoRecurringSeeder
             'cadence' => 'monthly',
             'dayOfMonth' => 13,
             'clusterKey' => 'demo:nordvpn:monthly:499',
-            'state' => 'rejected',
+            'state' => RecurringSeriesState::Rejected->value,
         ],
     ];
 
@@ -84,8 +86,8 @@ final class DemoRecurringSeeder
     private const TRANSITIONS = [
         [
             'clusterKey' => 'demo:nrc:monthly:750',
-            'fromState' => 'approved',
-            'toState' => 'snoozed',
+            'fromState' => RecurringSeriesState::Approved->value,
+            'toState' => RecurringSeriesState::Snoozed->value,
             'reason' => 'missed_occurrence',
             'actor' => 'detector',
             'ageDays' => 12,
@@ -93,8 +95,8 @@ final class DemoRecurringSeeder
         ],
         [
             'clusterKey' => 'demo:netflix:monthly:1499',
-            'fromState' => 'approved',
-            'toState' => 'cadence_changed',
+            'fromState' => RecurringSeriesState::Approved->value,
+            'toState' => RecurringSeriesState::CadenceChanged->value,
             'reason' => 'amount_change',
             'actor' => 'detector',
             'ageDays' => 6,
@@ -102,8 +104,8 @@ final class DemoRecurringSeeder
         ],
         [
             'clusterKey' => 'demo:nordvpn:monthly:499',
-            'fromState' => 'cadence_changed',
-            'toState' => 'rejected',
+            'fromState' => RecurringSeriesState::CadenceChanged->value,
+            'toState' => RecurringSeriesState::Rejected->value,
             'reason' => 'user_action',
             'actor' => 'user',
             'ageDays' => 2,
@@ -190,14 +192,14 @@ final class DemoRecurringSeeder
         // Snoozed rows carry an explicit `snoozed_until` so the resume
         // logic on /recurring shows the wake-up date. Rejected rows
         // never re-fire so the timestamp stays null.
-        $snoozedUntil = $row['state'] === 'snoozed'
+        $snoozedUntil = $row['state'] === RecurringSeriesState::Snoozed->value
             ? $today->addDays(30)->setTime(0, 0)
             : null;
 
         RecurringSeries::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
-                'direction' => 'expense',
+                'direction' => Direction::Expense->value,
                 'cluster_key' => $row['clusterKey'],
                 'latest_currency' => 'EUR',
             ],

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Events\RecurringSeriesRejected;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -37,11 +38,11 @@ final class RejectRecurringSeries
             throw new NotFoundHttpException('Recurring series not found.');
         }
 
-        if ($series->state === 'rejected') {
+        if ($series->state === RecurringSeriesState::Rejected->value) {
             return;
         }
 
-        $this->stateMachine->transition($series, 'rejected', 'user_action', 'user');
+        $this->stateMachine->transition($series, RecurringSeriesState::Rejected->value, 'user_action', 'user');
 
         $this->events->dispatch(new RecurringSeriesRejected(
             seriesId: $series->id,

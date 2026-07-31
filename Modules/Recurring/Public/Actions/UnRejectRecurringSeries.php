@@ -7,6 +7,7 @@ namespace Modules\Recurring\Public\Actions;
 use Modules\Core\Models\User;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -30,10 +31,10 @@ final class UnRejectRecurringSeries
             throw new NotFoundHttpException('Recurring series not found.');
         }
 
-        if ($series->state !== 'rejected') {
+        if ($series->state !== RecurringSeriesState::Rejected->value) {
             return;
         }
 
-        $this->stateMachine->transition($series, 'pending', 'user_action', 'user');
+        $this->stateMachine->transition($series, RecurringSeriesState::Pending->value, 'user_action', 'user');
     }
 }

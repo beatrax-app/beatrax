@@ -11,10 +11,12 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Models\RecurringSeries;
 use Modules\Recurring\Public\Contracts\SeriesDetector;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 use Modules\Recurring\Public\Events\RecurringSeriesDetected;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
@@ -154,7 +156,7 @@ final class IncomeSeriesDetector implements SeriesDetector
         }
 
         $clusterKey = $this->clusterKeyComposer->compose(
-            'income',
+            Direction::Income->value,
             $counterpartyKey,
             $currency,
             $cadenceResult['cadence']->value,
@@ -163,7 +165,7 @@ final class IncomeSeriesDetector implements SeriesDetector
         /** @var RecurringSeries|null $existingBySameCluster */
         $existingBySameCluster = RecurringSeries::query()
             ->where('user_id', $user->id)
-            ->where('direction', 'income')
+            ->where('direction', Direction::Income->value)
             ->where('cluster_key', $clusterKey)
             ->where('latest_currency', $currency)
             ->first();
@@ -174,7 +176,7 @@ final class IncomeSeriesDetector implements SeriesDetector
         /** @var RecurringSeries|null $existingByCounterparty */
         $existingByCounterparty = RecurringSeries::query()
             ->where('user_id', $user->id)
-            ->where('direction', 'income')
+            ->where('direction', Direction::Income->value)
             ->where('cluster_counterparty_key', $counterpartyKey)
             ->where('latest_currency', $currency)
             ->first();
@@ -197,11 +199,11 @@ final class IncomeSeriesDetector implements SeriesDetector
         // (counterparty, currency) pair across every cadence variant; a
         // snoozed row would surface a different amount than the one the user
         // paused on, and the next sweep's expiry pass unpauses it first.
-        if (in_array($existing->state, ['rejected', 'snoozed'], true)) {
+        if (in_array($existing->state, [RecurringSeriesState::Rejected->value, RecurringSeriesState::Snoozed->value], true)) {
             return;
         }
 
-        $this->refresher->refresh($existing, $counterpartyKey, $detected, $user, 'income');
+        $this->refresher->refresh($existing, $counterpartyKey, $detected, $user, Direction::Income->value);
     }
 
     // A cluster qualifies once it has enough occurrences and the intervals
@@ -234,9 +236,9 @@ final class IncomeSeriesDetector implements SeriesDetector
 
         $newId = $connection->table('recurring_series')->insertGetId([
             'user_id' => $user->id,
-            'direction' => 'income',
+            'direction' => Direction::Income->value,
             'detected_name' => $counterpartyNormalized,
-            'state' => 'pending',
+            'state' => RecurringSeriesState::Pending->value,
             'cadence' => $detected->cadence->value,
             'latest_amount_minor' => $detected->latestAmountMinor,
             'latest_currency' => $detected->currency,
@@ -255,7 +257,7 @@ final class IncomeSeriesDetector implements SeriesDetector
         $this->events->dispatch(new RecurringSeriesDetected(
             seriesId: $newId,
             userId: $user->id,
-            direction: 'income',
+            direction: Direction::Income->value,
             detectedName: $counterpartyNormalized,
             cadence: $detected->cadence->value,
         ));
@@ -263,7 +265,7 @@ final class IncomeSeriesDetector implements SeriesDetector
         $this->events->dispatch(new RecurringSeriesMetricsRefreshed(
             userId: $user->id,
             recurringSeriesId: $newId,
-            direction: 'income',
+            direction: Direction::Income->value,
             cadence: $detected->cadence->value,
             latestAmountMinor: $detected->latestAmountMinor,
             latestCurrency: $detected->currency,

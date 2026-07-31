@@ -41,15 +41,10 @@ final class AnomalyAlertStateMachine extends GuardedStateMachine
     /** @return array<string, list<string>> */
     protected function allowedTransitions(): array
     {
-        $map = [];
-        foreach (AnomalyAlertState::cases() as $state) {
-            $map[$state->value] = array_map(
-                static fn (AnomalyAlertState $next): string => $next->value,
-                $state->allowedNext(),
-            );
-        }
-
-        return $map;
+        return $this->transitionMap(
+            AnomalyAlertState::cases(),
+            static fn (AnomalyAlertState $state): array => $state->allowedNext(),
+        );
     }
 
     protected function table(): string
