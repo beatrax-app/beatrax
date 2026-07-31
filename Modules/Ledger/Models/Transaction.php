@@ -53,16 +53,10 @@ final class Transaction extends Model
 {
     use BelongsToUser;
 
-    // The DB-layer BEFORE INSERT/UPDATE triggers on transactions reject
-    // any value outside this list regardless of write path, so this
-    // constant is the authoritative human-readable reference — the
-    // migration mirrors the same list inside the trigger body.
-    /** @var list<string> */
-    public const TYPES = ['expense', 'income', 'transfer_out', 'transfer_in', 'fee', 'refund', 'adjustment'];
-
-    // Three-state lifecycle uncleared -> cleared -> reconciled. Unlike
-    // TYPES, status carries no DB-layer trigger — this constant is the
-    // sole source of truth for the enum every write path validates against.
+    // Three-state lifecycle uncleared -> cleared -> reconciled. Unlike the
+    // transaction type (now Ledger\Public\Enums\TransactionType), status
+    // carries no DB-layer trigger — this constant is the sole source of truth
+    // for the enum every write path validates against.
     /** @var list<string> */
     public const STATUSES = ['uncleared', 'cleared', 'reconciled'];
 

@@ -81,7 +81,7 @@ return new class extends Migration
         // blueprint compiler can rebuild the transactions table on
         // column add, which silently drops triggers attached to the
         // previous incarnation. The allowed-type list must stay in
-        // sync with `Modules\Ledger\Models\Transaction::TYPES`.
+        // sync with `Modules\Ledger\Public\Enums\TransactionType`.
         $connection->statement('DROP TRIGGER IF EXISTS transactions_type_check_insert');
         $connection->statement('DROP TRIGGER IF EXISTS transactions_type_check_update');
         $allowedTypes = "'expense','income','transfer_out','transfer_in','fee','refund','adjustment'";

@@ -24,12 +24,12 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
-use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -95,7 +95,7 @@ final class TransactionDetail extends Component
         $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
     }
 
-    // Allow-listed via Transaction::TYPES — any other value raises
+    // Allow-listed via TransactionType — any other value raises
     // InvalidArgumentException before any DB read. Same-user scoping is
     // enforced by firstOrFail() on a query filtered by user_id; a
     // cross-user invocation raises NotFoundHttpException (404).
@@ -109,7 +109,7 @@ final class TransactionDetail extends Component
         Dispatcher $events,
         SavesTransactionSplit $splitter,
     ): void {
-        if (! in_array($newType, Transaction::TYPES, true)) {
+        if (TransactionType::tryFrom($newType) === null) {
             throw new InvalidArgumentException(sprintf(
                 "Invalid transaction type: '%s'",
                 $newType,
@@ -137,7 +137,7 @@ final class TransactionDetail extends Component
         // collapse the split first, through the sole mutator, before
         // the type leaves the splittable set.
         $didUnsplit = false;
-        if (! SplittableTypes::contains($newType)) {
+        if (! TransactionType::tryFrom($newType)->isSplittable()) {
             $firstLeg = $db->connection()
                 ->table('transaction_splits')
                 ->where('transaction_id', $this->transactionId)
@@ -155,11 +155,11 @@ final class TransactionDetail extends Component
 
         $partnerId = $tx->pair_transaction_id;
         $breaksPair = $partnerId !== null
-            && ! in_array($newType, ['transfer_out', 'transfer_in'], true);
+            && ! in_array($newType, TransactionType::transferValues(), true);
 
         $db->connection()->transaction(static function () use ($tx, $newType, $partnerId, $user, $breaksPair): void {
             $tx->type = $newType;
-            if (! in_array($newType, ['transfer_out', 'transfer_in'], true)) {
+            if (! in_array($newType, TransactionType::transferValues(), true)) {
                 $tx->pair_transaction_id = null;
             }
             $tx->save();
@@ -544,7 +544,7 @@ final class TransactionDetail extends Component
         // Offered for any non-transfer type. The category options list
         // is only loaded when needed — transfer detail pages never
         // render the Split section at all.
-        $isSplittable = SplittableTypes::contains($transaction->type);
+        $isSplittable = (TransactionType::tryFrom($transaction->type)?->isSplittable() === true);
         $splitCategories = $isSplittable ? $categoryOptions->for($currentUser->user()) : [];
 
         // Gates the "View chain" button on whether this transaction

@@ -82,7 +82,7 @@ return new class extends Migration
         // UPDATE triggers. The trigger fires for every write path — Eloquent
         // create/save AND raw insertOrIgnore — so a single application-layer
         // bypass cannot land a bad type. The list must stay in sync with
-        // Modules\Ledger\Models\Transaction::TYPES.
+        // Modules\Ledger\Public\Enums\TransactionType.
         $allowedTypes = "'expense','income','transfer_out','transfer_in','fee','refund','adjustment'";
         DB::statement(sprintf(
             "CREATE TRIGGER transactions_type_check_insert BEFORE INSERT ON transactions FOR EACH ROW

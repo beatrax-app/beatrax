@@ -14,9 +14,9 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Ledger\Public\ValueObjects\SplittableTypes;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -106,7 +106,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         }
 
         $parentType = self::toString($parent->type);
-        if (! SplittableTypes::contains($parentType)) {
+        if (TransactionType::tryFrom($parentType)?->isSplittable() !== true) {
             throw new InvalidArgumentException("Transaction type '{$parentType}' is not splittable.");
         }
 

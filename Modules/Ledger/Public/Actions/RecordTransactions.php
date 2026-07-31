@@ -15,6 +15,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Dto\RecordResult;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -87,7 +88,7 @@ final class RecordTransactions implements RecordsTransactions
                 if ($row->userId === null) {
                     throw new InvalidArgumentException('CanonicalTransaction.userId must not be null when recording transactions.');
                 }
-                if (! in_array($row->type, Transaction::TYPES, true)) {
+                if (TransactionType::tryFrom($row->type) === null) {
                     throw new InvalidArgumentException("Invalid transaction type: '{$row->type}'");
                 }
 

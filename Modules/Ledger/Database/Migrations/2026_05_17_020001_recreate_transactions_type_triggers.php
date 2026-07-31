@@ -31,7 +31,7 @@ return new class extends Migration
      *
      * The trigger DDL is identical to the original definition in the
      * create migration; allowed type list must stay in sync with
-     * `Modules\\Ledger\\Models\\Transaction::TYPES`.
+     * `Modules\\Ledger\\Public\\Enums\\TransactionType`.
      */
     public function up(): void
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Merge\Concerns;
 
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\OpType;
@@ -319,7 +320,7 @@ trait AppliesOpLogEntries
             ? (int) $txRow->pair_transaction_id
             : null;
 
-        if ($pairId !== null && in_array($txType, ['transfer_in', 'transfer_out'], true)) {
+        if ($pairId !== null && in_array($txType, TransactionType::transferValues(), true)) {
             $pairCascades[] = [
                 'partnerId' => $pairId,
                 'deletedType' => $txType,
