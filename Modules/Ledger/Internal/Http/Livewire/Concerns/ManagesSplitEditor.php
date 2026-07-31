@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -334,7 +335,7 @@ trait ManagesSplitEditor
             ->where('user_id', $userId)
             ->value('status');
 
-        if ($status === 'reconciled') {
+        if ($status === ClearedStatus::Reconciled->value) {
             $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;

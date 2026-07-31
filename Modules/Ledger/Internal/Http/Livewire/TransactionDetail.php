@@ -24,6 +24,7 @@ use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Contracts\SetsTransactionNote;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Http\Livewire\Concerns\HandlesClearedStatus;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
@@ -126,7 +127,7 @@ final class TransactionDetail extends Component
 
         // Reconciled lock: warn-first, no write. Reads the already
         // user-scoped $tx just loaded above — no extra query needed.
-        if ($tx->status === 'reconciled') {
+        if ($tx->status === ClearedStatus::Reconciled->value) {
             $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
@@ -227,7 +228,7 @@ final class TransactionDetail extends Component
             ->where('user_id', $user->id)
             ->value('status');
 
-        if ($status === 'reconciled') {
+        if ($status === ClearedStatus::Reconciled->value) {
             $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
@@ -287,7 +288,7 @@ final class TransactionDetail extends Component
             ->where('user_id', $user->id)
             ->value('status');
 
-        if ($status === 'reconciled') {
+        if ($status === ClearedStatus::Reconciled->value) {
             $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
@@ -368,7 +369,7 @@ final class TransactionDetail extends Component
             throw new NotFoundHttpException;
         }
 
-        if ($status === 'reconciled') {
+        if ($status === ClearedStatus::Reconciled->value) {
             $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
@@ -419,7 +420,7 @@ final class TransactionDetail extends Component
             throw new NotFoundHttpException;
         }
 
-        if ($status === 'reconciled') {
+        if ($status === ClearedStatus::Reconciled->value) {
             $this->dispatch('toast', message: self::RECONCILED_NOTICE);
 
             return;
@@ -564,7 +565,7 @@ final class TransactionDetail extends Component
         ];
 
         $clearedState = $this->clearedStatusFor([$this->transactionId], $db, $currentUser);
-        $clearedStatus = $clearedState[$this->transactionId] ?? 'cleared';
+        $clearedStatus = $clearedState[$this->transactionId] ?? ClearedStatus::Cleared->value;
 
         // Only user-owned rows for the reassignment picker. display_name
         // is ciphertext at rest once encryption is enabled, so the

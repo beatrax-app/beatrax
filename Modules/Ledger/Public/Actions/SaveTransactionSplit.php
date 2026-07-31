@@ -14,6 +14,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Exceptions\SplitSumMismatchException;
 use Modules\Ledger\Public\ValueObjects\Money;
@@ -101,7 +102,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         // Reconciled lock: reuses the already user-scoped parent load
         // above — no extra query. TransactionDetail's catch blocks
         // convert this into a warn toast, staying warn-first end-to-end.
-        if (self::toString($parent->status) === 'reconciled') {
+        if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
             throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
         }
 
@@ -359,7 +360,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
 
             // Reconciled lock: reuses the already user-scoped parent
             // load above — no extra query.
-            if (self::toString($parent->status) === 'reconciled') {
+            if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
                 throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
             }
 

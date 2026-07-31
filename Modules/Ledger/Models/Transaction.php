@@ -13,6 +13,7 @@ use Modules\Core\Public\Concerns\BelongsToUser;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Internal\Casts\MoneyMinorCast;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Sync\Public\Casts\EncryptedJsonCast;
 
 /**
@@ -53,12 +54,16 @@ final class Transaction extends Model
 {
     use BelongsToUser;
 
-    // Three-state lifecycle uncleared -> cleared -> reconciled. Unlike the
-    // transaction type (now Ledger\Public\Enums\TransactionType), status
-    // carries no DB-layer trigger — this constant is the sole source of truth
-    // for the enum every write path validates against.
+    // Three-state lifecycle uncleared -> cleared -> reconciled, owned by
+    // Ledger\Public\Enums\ClearedStatus (status carries no DB-layer trigger,
+    // unlike the transaction type). This allow-list is the enum's values, kept
+    // for the write paths that validate a raw string against the set.
     /** @var list<string> */
-    public const STATUSES = ['uncleared', 'cleared', 'reconciled'];
+    public const STATUSES = [
+        ClearedStatus::Uncleared->value,
+        ClearedStatus::Cleared->value,
+        ClearedStatus::Reconciled->value,
+    ];
 
     /** @var list<string> */
     protected $fillable = [

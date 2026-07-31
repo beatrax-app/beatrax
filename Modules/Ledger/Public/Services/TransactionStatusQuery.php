@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ledger\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 
 /**
  * @link ../../../../.docs/features/ledger/architecture.md
@@ -24,7 +25,7 @@ final class TransactionStatusQuery
             ->table('transactions')
             ->where('id', $transactionId)
             ->where('user_id', $userId)
-            ->value('status') === 'reconciled';
+            ->value('status') === ClearedStatus::Reconciled->value;
     }
 
     /**
@@ -41,7 +42,7 @@ final class TransactionStatusQuery
             ->table('transactions')
             ->where('user_id', $userId)
             ->whereIn('id', $ids)
-            ->where('status', 'reconciled')
+            ->where('status', ClearedStatus::Reconciled->value)
             ->pluck('id')
             ->all();
 

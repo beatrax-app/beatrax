@@ -11,6 +11,7 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Sync\Public\Events\TransactionMutated;
 
 /**
@@ -51,7 +52,7 @@ final class ReconciliationWriter
             $candidateIds = $connection->table('transactions')
                 ->where('account_id', $accountId)
                 ->where('user_id', $user->id)
-                ->where('status', 'cleared')
+                ->where('status', ClearedStatus::Cleared->value)
                 ->where('posted_at', '<=', $statementDateString)
                 ->pluck('id')
                 ->map(static fn (mixed $id): int => self::toInt($id))
@@ -64,9 +65,9 @@ final class ReconciliationWriter
             $affected = $connection->table('transactions')
                 ->whereIn('id', $candidateIds)
                 ->where('user_id', $user->id)
-                ->where('status', 'cleared')
+                ->where('status', ClearedStatus::Cleared->value)
                 ->update([
-                    'status' => 'reconciled',
+                    'status' => ClearedStatus::Reconciled->value,
                     'updated_at' => $reconciledAt,
                 ]);
 
@@ -78,7 +79,7 @@ final class ReconciliationWriter
 
             $transactionIds = $connection->table('transactions')
                 ->whereIn('id', $candidateIds)
-                ->where('status', 'reconciled')
+                ->where('status', ClearedStatus::Reconciled->value)
                 ->where('updated_at', $reconciledAt)
                 ->pluck('id')
                 ->map(static fn (mixed $id): int => self::toInt($id))
@@ -92,7 +93,7 @@ final class ReconciliationWriter
                 transactionId: $transactionId,
                 userId: $user->id,
                 mutationType: 'edit',
-                dirtyFields: ['status' => 'reconciled'],
+                dirtyFields: ['status' => ClearedStatus::Reconciled->value],
             ));
         }
 
@@ -110,7 +111,7 @@ final class ReconciliationWriter
             ->where('user_id', $user->id)
             ->first(['id', 'status']);
 
-        if ($row === null || $row->status !== 'reconciled') {
+        if ($row === null || $row->status !== ClearedStatus::Reconciled->value) {
             return;
         }
 
@@ -123,9 +124,9 @@ final class ReconciliationWriter
             $affected = $connection->table('transactions')
                 ->where('id', $transactionId)
                 ->where('user_id', $user->id)
-                ->where('status', 'reconciled')
+                ->where('status', ClearedStatus::Reconciled->value)
                 ->update([
-                    'status' => 'cleared',
+                    'status' => ClearedStatus::Cleared->value,
                     'updated_at' => $this->clock->now(),
                 ]);
         });
@@ -138,7 +139,7 @@ final class ReconciliationWriter
             transactionId: $transactionId,
             userId: $user->id,
             mutationType: 'edit',
-            dirtyFields: ['status' => 'cleared'],
+            dirtyFields: ['status' => ClearedStatus::Cleared->value],
         ));
     }
 

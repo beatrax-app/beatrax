@@ -6,6 +6,7 @@ namespace Modules\Ledger\Public\Dto;
 
 use Carbon\CarbonImmutable;
 use Modules\Import\Public\Enums\PaymentType;
+use Modules\Ledger\Public\Enums\ClearedStatus;
 use Spatie\LaravelData\Data;
 
 /**
@@ -291,7 +292,7 @@ final class CanonicalTransaction extends Data
             'source_ref' => $this->sourceRef,
             'raw_payload' => $this->rawPayload === null ? null : json_encode($this->rawPayload),
             'payment_type' => ($this->paymentType ?? PaymentType::Unknown)->value,
-            'status' => $this->sourceFormat === 'manual' ? 'uncleared' : 'cleared',
+            'status' => $this->sourceFormat === 'manual' ? ClearedStatus::Uncleared->value : ClearedStatus::Cleared->value,
         ];
     }
 }
