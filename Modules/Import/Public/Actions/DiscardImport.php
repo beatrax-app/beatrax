@@ -8,6 +8,7 @@ use Modules\Core\Models\User;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Exceptions\ImportAlreadyConfirmedException;
 use Modules\Ledger\Models\ImportRun;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 
 // Refuses to discard an already-confirmed run — flipping a confirmed
 // row would orphan the ledger rows it created. The wizard UI never
@@ -25,11 +26,11 @@ final class DiscardImport
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        if ($importRun->status === 'confirmed') {
+        if ($importRun->status === ImportRunStatus::Confirmed->value) {
             throw new ImportAlreadyConfirmedException($importRunId);
         }
 
-        $importRun->update(['status' => 'discarded']);
+        $importRun->update(['status' => ImportRunStatus::Discarded->value]);
 
         $this->cache->forget($importRunId);
     }

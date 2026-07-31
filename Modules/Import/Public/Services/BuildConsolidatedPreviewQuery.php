@@ -11,6 +11,7 @@ use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
 use Modules\Import\Public\Dto\ConsolidatedPreviewSection;
 use Modules\Import\Public\Dto\PreviewRowDto;
+use Modules\Ledger\Public\Enums\ImportRunStatus;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#consolidated-preview-multi-run-commit
@@ -104,7 +105,7 @@ final readonly class BuildConsolidatedPreviewQuery
             ->table('import_runs')
             ->whereIn('id', $importRunIds)
             ->where('user_id', $user->id)
-            ->where('status', '!=', 'confirmed')
+            ->where('status', '!=', ImportRunStatus::Confirmed->value)
             ->where('created_at', '>=', $cutoff)
             ->select(['id', 'source_format'])
             ->get();
