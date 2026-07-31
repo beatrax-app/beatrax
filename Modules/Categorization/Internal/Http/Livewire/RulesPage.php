@@ -14,6 +14,9 @@ use Modules\Categorization\Internal\Jobs\ReapplyRulesJob;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
+use Modules\Categorization\Public\Enums\ActionType;
+use Modules\Categorization\Public\Enums\ConditionOperator;
+use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -129,11 +132,11 @@ final class RulesPage extends Component
 
     public static function conditionFragment(RuleConditionDto $condition): string
     {
-        $displayField = $condition->valueType === 'string' ? $condition->field : $condition->valueType;
+        $displayField = $condition->valueType === ConditionValueType::Text->value ? $condition->field : $condition->valueType;
         $opLabel = RuleFormModal::operatorOptionsFor($displayField)[$condition->op] ?? $condition->op;
 
-        if ($condition->valueType !== 'string') {
-            if ($condition->op === 'between' && $condition->value2 !== null) {
+        if ($condition->valueType !== ConditionValueType::Text->value) {
+            if ($condition->op === ConditionOperator::Between->value && $condition->value2 !== null) {
                 return "{$displayField} {$opLabel} {$condition->value} and {$condition->value2}";
             }
 
@@ -146,9 +149,9 @@ final class RulesPage extends Component
     public static function actionChipLabel(RuleActionDto $action): string
     {
         return match ($action->type) {
-            'category' => 'Category: '.($action->categoryPath ?? '—'),
-            'counterparty' => 'Counterparty: '.($action->counterpartyName ?? '—'),
-            'note' => 'Note',
+            ActionType::Category->value => 'Category: '.($action->categoryPath ?? '—'),
+            ActionType::Counterparty->value => 'Counterparty: '.($action->counterpartyName ?? '—'),
+            ActionType::Note->value => 'Note',
             default => 'Tax tag',
         };
     }

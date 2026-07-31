@@ -7,6 +7,9 @@ namespace Modules\Categorization\Internal\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Models\RuleAction;
+use Modules\Categorization\Public\Enums\ConditionOperator;
+use Modules\Categorization\Public\Enums\ConditionValueType;
+use Modules\Categorization\Public\Enums\RuleCombinator;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use stdClass;
@@ -44,7 +47,7 @@ final class RuleEngine
         foreach ($rules as $rule) {
             $ruleId = self::toInt($rule->id);
             $priority = self::toInt($rule->priority);
-            $combinator = $rule->combinator === 'any' ? 'any' : 'all';
+            $combinator = RuleCombinator::coerce(is_string($rule->combinator) ? $rule->combinator : null);
 
             /** @var iterable<stdClass> $conditions */
             $conditions = $connection
@@ -58,7 +61,7 @@ final class RuleEngine
                 $results[] = $this->conditionMatches($condition, $tx);
             }
 
-            $fires = $combinator === 'all'
+            $fires = $combinator === RuleCombinator::All
                 ? ($results !== [] && ! in_array(false, $results, true))
                 : in_array(true, $results, true);
 
@@ -102,17 +105,20 @@ final class RuleEngine
     // settledAmountMinor / postedAt.
     private function conditionMatches(stdClass $condition, RuleMatchInput $tx): bool
     {
-        $valueType = is_string($condition->value_type) ? $condition->value_type : '';
-        $op = is_string($condition->op) ? $condition->op : '';
+        $valueType = ConditionValueType::tryFrom(is_string($condition->value_type) ? $condition->value_type : '');
+        $op = ConditionOperator::tryFrom(is_string($condition->op) ? $condition->op : '');
         $field = is_string($condition->field) ? $condition->field : '';
         $value = is_string($condition->value) ? $condition->value : '';
         $value2 = is_string($condition->value2) ? $condition->value2 : null;
 
+        if ($valueType === null || $op === null) {
+            return false;
+        }
+
         return match ($valueType) {
-            'string' => self::matchString($op, self::targetFieldValue($tx, $field), $value),
-            'amount' => self::matchAmount($op, $tx->settledAmountMinor, self::toIntValue($value), $value2 !== null ? self::toIntValue($value2) : null),
-            'date' => self::matchDate($op, $tx->postedAt, $value, $value2),
-            default => false,
+            ConditionValueType::Text => self::matchString($op, self::targetFieldValue($tx, $field), $value),
+            ConditionValueType::Amount => self::matchAmount($op, $tx->settledAmountMinor, self::toIntValue($value), $value2 !== null ? self::toIntValue($value2) : null),
+            ConditionValueType::Date => self::matchDate($op, $tx->postedAt, $value, $value2),
         };
     }
 
@@ -129,7 +135,7 @@ final class RuleEngine
 
     // Unicode-safe, case-insensitive matching via mb_strtolower/mb_strpos
     // — never a SQL pattern-match clause.
-    private static function matchString(string $op, ?string $target, string $value): bool
+    private static function matchString(ConditionOperator $op, ?string $target, string $value): bool
     {
         if ($target === null || $value === '') {
             return false;
@@ -139,20 +145,20 @@ final class RuleEngine
         $v = mb_strtolower($value);
 
         return match ($op) {
-            'equals' => $t === $v,
-            'starts_with' => mb_strpos($t, $v) === 0,
-            'contains' => mb_strpos($t, $v) !== false,
+            ConditionOperator::Equals => $t === $v,
+            ConditionOperator::StartsWith => mb_strpos($t, $v) === 0,
+            ConditionOperator::Contains => mb_strpos($t, $v) !== false,
             default => false,
         };
     }
 
-    private static function matchAmount(string $op, int $target, int $value, ?int $value2): bool
+    private static function matchAmount(ConditionOperator $op, int $target, int $value, ?int $value2): bool
     {
         return match ($op) {
-            '>' => $target > $value,
-            '<' => $target < $value,
-            'equals' => $target === $value,
-            'between' => $value2 !== null
+            ConditionOperator::GreaterThan => $target > $value,
+            ConditionOperator::LessThan => $target < $value,
+            ConditionOperator::Equals => $target === $value,
+            ConditionOperator::Between => $value2 !== null
                 && $target >= min($value, $value2)
                 && $target <= max($value, $value2),
             default => false,
@@ -162,15 +168,15 @@ final class RuleEngine
     // $value/$value2 are date strings; comparisons are calendar-date-level
     // (both sides normalized to start-of-day) so a postedAt timestamp
     // later the same day as an `after` boundary still compares correctly.
-    private static function matchDate(string $op, CarbonImmutable $target, string $value, ?string $value2): bool
+    private static function matchDate(ConditionOperator $op, CarbonImmutable $target, string $value, ?string $value2): bool
     {
         $t = $target->startOfDay();
         $v = CarbonImmutable::parse($value)->startOfDay();
 
         return match ($op) {
-            'after' => $t->greaterThan($v),
-            'before' => $t->lessThan($v),
-            'between' => $value2 !== null && self::withinInclusiveRange($t, $v, CarbonImmutable::parse($value2)->startOfDay()),
+            ConditionOperator::After => $t->greaterThan($v),
+            ConditionOperator::Before => $t->lessThan($v),
+            ConditionOperator::Between => $value2 !== null && self::withinInclusiveRange($t, $v, CarbonImmutable::parse($value2)->startOfDay()),
             default => false,
         };
     }
