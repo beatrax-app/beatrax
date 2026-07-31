@@ -31,6 +31,8 @@ use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
  */
 final class DriftPage extends Component
 {
+    private const int MAX_UNTIL_MONTHS = 6;
+
     // open (default) / history / dismissed, persisted via #[Url] so
     // back-button and bookmarks behave.
     #[Url(as: 'tab', except: 'open')]
@@ -83,7 +85,7 @@ final class DriftPage extends Component
         if ($until->lessThanOrEqualTo($now)) {
             return;
         }
-        if ($until->greaterThan($now->addMonths(6))) {
+        if ($until->greaterThan($now->addMonths(self::MAX_UNTIL_MONTHS))) {
             return;
         }
 
@@ -143,7 +145,7 @@ final class DriftPage extends Component
         if ($until->lessThanOrEqualTo($now)) {
             return;
         }
-        if ($until->greaterThan($now->addMonths(6))) {
+        if ($until->greaterThan($now->addMonths(self::MAX_UNTIL_MONTHS))) {
             return;
         }
 

@@ -20,6 +20,8 @@ final class RateProviderRegistry
 
     private const int CIRCUIT_OPEN_THRESHOLD = 3;
 
+    private const int CIRCUIT_OPEN_TTL_HOURS = 6;
+
     /** @param list<RateProvider> $providers Sorted by priority() DESC at injection time. */
     public function __construct(
         private readonly array $providers,
@@ -82,7 +84,7 @@ final class RateProviderRegistry
         $current = self::toInt($this->cache->get($cacheKey, 0));
 
         if ($current === 0) {
-            $this->cache->put($cacheKey, 1, CarbonImmutable::now()->addHours(6));
+            $this->cache->put($cacheKey, 1, CarbonImmutable::now()->addHours(self::CIRCUIT_OPEN_TTL_HOURS));
 
             return;
         }
