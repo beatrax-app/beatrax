@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Calendar\Internal\Services\AccountResolver;
 use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
@@ -139,7 +140,7 @@ it('defaults balance to spendable-kind accounts when balanceAccountIds is null (
     // Verify the spendable constant: asn is in the ON set
     // We do this by checking that the spendable default would include $asnId
     // and exclude $icsId via a direct constant check.
-    $spendableKinds = (new ReflectionClass(CalendarQuery::class))
+    $spendableKinds = (new ReflectionClass(AccountResolver::class))
         ->getConstant('SPENDABLE_KINDS');
     expect($spendableKinds)->toContain('asn');
     expect($spendableKinds)->toContain('bank');
