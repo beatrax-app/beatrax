@@ -42,15 +42,10 @@ final class DeviceKeySigner
         try {
             $sigBin = sodium_hex2bin($sigHex);
 
-            if ($sigBin === '') {
-                return false;
-            }
-
-            return sodium_crypto_sign_verify_detached(
-                $sigBin,
-                $payload,
-                $publicKeyBin,
-            );
+            // A blank decode short-circuits to false rather than reaching the
+            // AEAD verify — an empty signature can never be valid.
+            return $sigBin !== ''
+                && sodium_crypto_sign_verify_detached($sigBin, $payload, $publicKeyBin);
         } catch (SodiumException) {
             return false;
         }

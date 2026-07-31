@@ -124,7 +124,7 @@ final class PairingGateway
     // frame. Callers invoke this at the TOP of their poll handler, before
     // re-reading local pairing state. Never throws out of the poll — every
     // failure inside the courier's drain loop is caught, logged, and skipped.
-    public function drainPairingFrames(int $userId, Session $session): void
+    public function drainPairingFrames(int $userId): void
     {
         $this->relayCourier->drainAndApply($userId);
     }
@@ -260,12 +260,8 @@ final class PairingGateway
             ->where('user_id', $userId)
             ->first(['initiator_ed25519_pub_hex', 'responder_ed25519_pub_hex']);
 
-        if ($row === null) {
-            return [];
-        }
-
-        $initiatorEd = is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
-        $responderEd = is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
+        $initiatorEd = $row !== null && is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
+        $responderEd = $row !== null && is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
 
         if ($initiatorEd === null || $responderEd === null) {
             return [];

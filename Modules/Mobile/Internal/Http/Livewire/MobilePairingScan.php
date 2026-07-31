@@ -260,7 +260,7 @@ final class MobilePairingScan extends Component
         // in turn lets shouldDeferSelfMint() correctly keep this device
         // from self-minting once its keyring is meant to converge instead.
         try {
-            $gateway->drainPairingFrames($userId, $session);
+            $gateway->drainPairingFrames($userId);
         } catch (Throwable $e) {
             $logger->warning('MobilePairingScan: cross-device relay drain failed during poll.', [
                 'user_id' => $userId,

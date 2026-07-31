@@ -162,33 +162,8 @@ final class GdkRotationService
      */
     public function fanOutAllEpochsToDevice(int $userId, int $newDeviceRegistryId, Session $session): void
     {
-        $connection = $this->db->connection();
-
-        $recipient = $connection->table('device_registry')
-            ->where('id', $newDeviceRegistryId)
-            ->where('user_id', $userId)
-            ->first(['device_id', 'x25519_public_key_hex', 'is_self', 'confirmed_at']);
-
+        $recipient = $this->resolveFanOutRecipient($userId, $newDeviceRegistryId);
         if ($recipient === null) {
-            return;
-        }
-
-        // Defense-in-depth (threat-model item 1): never wrap to an
-        // unconfirmed device, even if this method is ever mis-called.
-        if ($recipient->confirmed_at === null) {
-            return;
-        }
-
-        // No wrap-to-self, mirroring rotateAndRevoke()'s own self-exclusion —
-        // the acting device already has every epoch in its own keyring.
-        if ((bool) $recipient->is_self === true) {
-            return;
-        }
-
-        $recipientDeviceId = is_string($recipient->device_id) ? $recipient->device_id : null;
-        $recipientPubHex = is_string($recipient->x25519_public_key_hex) ? $recipient->x25519_public_key_hex : null;
-
-        if ($recipientDeviceId === null || $recipientPubHex === null) {
             return;
         }
 
@@ -197,15 +172,16 @@ final class GdkRotationService
         // this user — in that case the foreach below enqueues zero wraps.
         $keyring = $this->keyringService->loadKeyring($userId, $session);
         $selfDeviceId = $this->selfDeviceId($userId);
+        $recipientDeviceId = $recipient['deviceId'];
 
         try {
             // Inside the try, like the per-epoch conversion below it. Outside,
             // a libsodium failure here escaped as a raw SodiumException while
             // the identical call a few lines down was translated — one fault
             // reported as two types, depending on which key it was converting.
-            $recipientPub = $this->sodium->hexToBin($recipientPubHex);
+            $recipientPub = $this->sodium->hexToBin($recipient['pubHex']);
 
-            $connection->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId): void {
+            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId): void {
                 foreach ($keyring->epochs() as $epoch) {
                     $rawKey = $this->sodium->hexToBin($epoch->keyHex);
 
@@ -225,6 +201,38 @@ final class GdkRotationService
         } catch (SodiumException $e) {
             throw CryptoOperationFailedException::during('GDK epoch fan-out to a device', $e);
         }
+    }
+
+    // Only a confirmed, non-self device carrying both a device_id and an
+    // X25519 public key is an eligible fan-out target. Never wrapping to an
+    // unconfirmed device is threat-model defense-in-depth; the self-exclusion
+    // mirrors rotateAndRevoke() — the acting device already holds every epoch.
+    /**
+     * @return array{deviceId: string, pubHex: string}|null
+     */
+    private function resolveFanOutRecipient(int $userId, int $newDeviceRegistryId): ?array
+    {
+        $recipient = $this->db->connection()->table('device_registry')
+            ->where('id', $newDeviceRegistryId)
+            ->where('user_id', $userId)
+            ->first(['device_id', 'x25519_public_key_hex', 'is_self', 'confirmed_at']);
+
+        if ($recipient === null) {
+            return null;
+        }
+
+        $deviceId = is_string($recipient->device_id) ? $recipient->device_id : null;
+        $pubHex = is_string($recipient->x25519_public_key_hex) ? $recipient->x25519_public_key_hex : null;
+
+        if ($recipient->confirmed_at === null
+            || (bool) $recipient->is_self === true
+            || $deviceId === null
+            || $pubHex === null
+        ) {
+            return null;
+        }
+
+        return ['deviceId' => $deviceId, 'pubHex' => $pubHex];
     }
 
     private function selfDeviceId(int $userId): ?string

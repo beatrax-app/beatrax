@@ -23,6 +23,14 @@ final class MdnsBrowser
     // loop instead.
     private const int DEFAULT_BROWSE_TIMEOUT_SECONDS = 3;
 
+    private const int MAX_PORT = 65535;
+
+    private const string DISCOVERY_MODE_MDNS = 'mdns';
+
+    private const string DISCOVERY_MODE_MANUAL = 'manual';
+
+    private const int AVAHI_MIN_FIELDS = 10;
+
     public function __construct(
         private readonly DeviceRegistryService $registryService,
     ) {}
@@ -50,7 +58,7 @@ final class MdnsBrowser
                         deviceId: $manual['deviceId'],
                         host: $manual['host'],
                         port: $manual['port'],
-                        discoveryMode: 'manual',
+                        discoveryMode: self::DISCOVERY_MODE_MANUAL,
                     );
                 }
             }
@@ -152,36 +160,43 @@ final class MdnsBrowser
      */
     private function parseAvahiLine(string $line, array $confirmedDeviceIds): ?DiscoveredPeer
     {
-        $parts = explode(';', $line);
-        if (count($parts) < 10) {
+        $fields = $this->parseAvahiFields($line);
+        if ($fields === null) {
             return null;
         }
 
-        $name = $parts[3];
-        $host = $parts[7];
-        $portStr = $parts[8];
-        $txt = $parts[9];
-
-        $port = is_numeric($portStr) ? (int) $portStr : 0;
-        if ($port <= 0 || $port > 65535) {
-            return null;
-        }
-
-        $deviceId = $this->extractDeviceId($txt, $name);
+        $deviceId = $this->confirmedDeviceId($fields['txt'], $fields['name'], $confirmedDeviceIds);
         if ($deviceId === null) {
-            return null;
-        }
-
-        if (! in_array($deviceId, $confirmedDeviceIds, true)) {
             return null;
         }
 
         return new DiscoveredPeer(
             deviceId: $deviceId,
-            host: $host !== '' ? $host : 'localhost',
-            port: $port,
-            discoveryMode: 'mdns',
+            host: $fields['host'] !== '' ? $fields['host'] : 'localhost',
+            port: $fields['port'],
+            discoveryMode: self::DISCOVERY_MODE_MDNS,
         );
+    }
+
+    // Splits and range-checks the semicolon-delimited avahi record before any
+    // device-id work, so a short row or an out-of-range port never reaches
+    // the confirmation lookup.
+    /**
+     * @return array{name: string, host: string, port: int, txt: string}|null
+     */
+    private function parseAvahiFields(string $line): ?array
+    {
+        $parts = explode(';', $line);
+        if (count($parts) < self::AVAHI_MIN_FIELDS) {
+            return null;
+        }
+
+        $port = is_numeric($parts[8]) ? (int) $parts[8] : 0;
+        if ($port <= 0 || $port > self::MAX_PORT) {
+            return null;
+        }
+
+        return ['name' => $parts[3], 'host' => $parts[7], 'port' => $port, 'txt' => $parts[9]];
     }
 
     // Format: Add 3 5 local _beatrax-sync._tcp. Beatrax-{deviceId}. dns-sd -B
@@ -194,21 +209,13 @@ final class MdnsBrowser
     private function parseDnsSdLine(string $line, array $confirmedDeviceIds): ?DiscoveredPeer
     {
         $parts = preg_split('/\s+/', trim($line));
-        if (! is_array($parts)) {
-            return null;
-        }
-
-        $instanceName = end($parts);
+        $instanceName = is_array($parts) ? end($parts) : false;
         if (! is_string($instanceName)) {
             return null;
         }
 
-        $deviceId = $this->extractDeviceId('', $instanceName);
+        $deviceId = $this->confirmedDeviceId('', $instanceName, $confirmedDeviceIds);
         if ($deviceId === null) {
-            return null;
-        }
-
-        if (! in_array($deviceId, $confirmedDeviceIds, true)) {
             return null;
         }
 
@@ -216,8 +223,24 @@ final class MdnsBrowser
             deviceId: $deviceId,
             host: '',
             port: 0,
-            discoveryMode: 'mdns',
+            discoveryMode: self::DISCOVERY_MODE_MDNS,
         );
+    }
+
+    // Extracts the advertised device id and confirms it against the caller's
+    // trusted set in one step — an unknown or unconfirmed device_id yields
+    // null so neither parser ever surfaces a peer outside the trust boundary.
+    /**
+     * @param  list<string>  $confirmedDeviceIds
+     */
+    private function confirmedDeviceId(string $txt, string $instanceName, array $confirmedDeviceIds): ?string
+    {
+        $deviceId = $this->extractDeviceId($txt, $instanceName);
+        if ($deviceId === null) {
+            return null;
+        }
+
+        return in_array($deviceId, $confirmedDeviceIds, true) ? $deviceId : null;
     }
 
     // TXT format: did={deviceId}. Instance name fallback: Beatrax-{deviceId}

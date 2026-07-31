@@ -298,20 +298,40 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         /** @var RelayMailbox $relayMailbox */
         $relayMailbox = $container->make(RelayMailbox::class);
 
-        $peerDeviceId = $session->peerDeviceId();
-        if ($peerDeviceId !== null && $peerDeviceId !== '') {
-            foreach ($relayMailbox->drain($peerDeviceId, self::MAX_GDK_WRAPS_PER_CONNECT) as $row) {
-                $blob = is_string($row->blob) ? $row->blob : '';
-                $rowId = is_numeric($row->id) ? (int) $row->id : null;
-                if ($blob === '' || $rowId === null) {
-                    continue;
-                }
+        $this->drainOutboundWrapsToPeer($client, $session, $relayMailbox);
+        $this->drainInboundWrapsForLocalDevice($container, $relayMailbox);
+    }
 
-                $client->sendBinary($session->encrypt($blob));
-                $relayMailbox->confirm($rowId);
-            }
+    // Forwards sealed-box GDK epoch wraps addressed to the connected peer over
+    // the live Noise session, confirming each mailbox row only once it has been
+    // handed to the transport so an interrupted drain is retried next connect.
+    private function drainOutboundWrapsToPeer(
+        WebsocketClient $client,
+        SyncSession $session,
+        RelayMailbox $relayMailbox,
+    ): void {
+        $peerDeviceId = $session->peerDeviceId();
+        if ($peerDeviceId === null || $peerDeviceId === '') {
+            return;
         }
 
+        foreach ($relayMailbox->drain($peerDeviceId, self::MAX_GDK_WRAPS_PER_CONNECT) as $row) {
+            $blob = is_string($row->blob) ? $row->blob : '';
+            $rowId = is_numeric($row->id) ? (int) $row->id : null;
+            if ($blob === '' || $rowId === null) {
+                continue;
+            }
+
+            $client->sendBinary($session->encrypt($blob));
+            $relayMailbox->confirm($rowId);
+        }
+    }
+
+    // Applies sealed-box GDK epoch wraps addressed to THIS device via the
+    // control handler, mirroring the outbound drain so a locally-addressed
+    // backlog is consumed on the same connect instead of the relay round-trip.
+    private function drainInboundWrapsForLocalDevice(Container $container, RelayMailbox $relayMailbox): void
+    {
         if ($this->localDeviceId === ''
             || ! $container->bound(GdkEpochControlHandler::class)
             || ! $container->bound(LaravelSession::class)
