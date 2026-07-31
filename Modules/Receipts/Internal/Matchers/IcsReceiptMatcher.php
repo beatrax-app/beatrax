@@ -16,6 +16,7 @@ use Modules\Receipts\Public\Dto\ChainHintPayload\FundedByCardPayload;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 use Throwable;
 
 // Claims messages whose sender domain is exactly ics.nl or icscards.nl
@@ -70,18 +71,32 @@ final class IcsReceiptMatcher implements SenderMatcher
     public function match(string $emlRaw): MatchOutcomeDto
     {
         $parsed = $this->reader->read($emlRaw);
+        $body = $this->resolveBody($parsed);
+        if ($body === '') {
+            return MatchOutcomeDto::unmatched();
+        }
+        if ($this->isStatementShape($parsed, $body)) {
+            return MatchOutcomeDto::skipped('pdf_attachment_v2_only');
+        }
 
+        return $this->parseReceipt($parsed, $body);
+    }
+
+    private function resolveBody(ParsedMimeMessage $parsed): string
+    {
         $body = $parsed->textBody;
         if ($body === null || $body === '') {
             $body = $this->stripHtml($parsed->htmlBody ?? '');
         }
-        if ($body === '') {
-            return MatchOutcomeDto::unmatched();
-        }
 
-        // A PDF attachment with no extractable inline amount is the
-        // monthly-statement shape, not a transactional receipt — skip
-        // with a stable reason rather than mis-parsing it.
+        return $body;
+    }
+
+    // A PDF attachment with no extractable inline amount is the
+    // monthly-statement shape, not a transactional receipt — skip it
+    // rather than mis-parsing it.
+    private function isStatementShape(ParsedMimeMessage $parsed, string $body): bool
+    {
         $hasPdfAttachment = false;
         foreach ($parsed->attachmentFilenames as $filename) {
             if (str_ends_with(strtolower($filename), '.pdf')) {
@@ -89,48 +104,53 @@ final class IcsReceiptMatcher implements SenderMatcher
                 break;
             }
         }
-        if (
-            $hasPdfAttachment
-            && preg_match(self::AMOUNT_REGEX, $body) !== 1
-        ) {
-            return MatchOutcomeDto::skipped('pdf_attachment_v2_only');
-        }
 
-        // Merchant: labelled form preferred; loose <td> fallback parses
-        // the first non-empty cell when older templates omit the label.
-        $merchant = null;
-        if (preg_match(self::MERCHANT_REGEX, $body, $merchantMatches) === 1) {
-            $merchant = trim($merchantMatches[1]);
-        } elseif ($parsed->htmlBody !== null && $parsed->htmlBody !== '') {
-            $merchant = $this->firstTableCell($parsed->htmlBody);
-        }
+        return $hasPdfAttachment && preg_match(self::AMOUNT_REGEX, $body) !== 1;
+    }
+
+    private function parseReceipt(ParsedMimeMessage $parsed, string $body): MatchOutcomeDto
+    {
+        $merchant = $this->extractMerchant($parsed, $body);
         if ($merchant === null || $merchant === '') {
             return MatchOutcomeDto::unmatched();
         }
-
-        if (preg_match(self::AMOUNT_REGEX, $body, $amountMatches) !== 1) {
-            return MatchOutcomeDto::unmatched();
-        }
-        $amountMinor = $this->toMinorOrNull($amountMatches[1], 'EUR');
+        $amountMinor = $this->negatedAmountMinor($body);
         if ($amountMinor === null) {
             return MatchOutcomeDto::unmatched();
         }
-        $amountMinor = -$amountMinor;
 
-        $reference = null;
-        if (preg_match(self::REFERENCE_REGEX, $body, $referenceMatches) === 1) {
-            $reference = $referenceMatches[1];
+        return $this->buildOutcome($parsed, $body, $merchant, $amountMinor);
+    }
+
+    // Merchant: labelled form preferred; loose <td> fallback parses the
+    // first non-empty cell when older templates omit the label.
+    private function extractMerchant(ParsedMimeMessage $parsed, string $body): ?string
+    {
+        if (preg_match(self::MERCHANT_REGEX, $body, $merchantMatches) === 1) {
+            return trim($merchantMatches[1]);
+        }
+        if ($parsed->htmlBody !== null && $parsed->htmlBody !== '') {
+            return $this->firstTableCell($parsed->htmlBody);
         }
 
-        $cardLast4 = null;
-        $cardMatchFull = null;
-        $cardMatchOffset = null;
-        if (preg_match(self::CARD_LAST4_REGEX, $body, $cardMatches, PREG_OFFSET_CAPTURE) === 1) {
-            $cardLast4 = $cardMatches[1][0];
-            $cardMatchFull = $cardMatches[0][0];
-            $cardMatchOffset = $cardMatches[0][1];
+        return null;
+    }
+
+    private function negatedAmountMinor(string $body): ?int
+    {
+        if (preg_match(self::AMOUNT_REGEX, $body, $amountMatches) !== 1) {
+            return null;
+        }
+        $amountMinor = $this->toMinorOrNull($amountMatches[1], 'EUR');
+        if ($amountMinor === null) {
+            return null;
         }
 
+        return -$amountMinor;
+    }
+
+    private function buildOutcome(ParsedMimeMessage $parsed, string $body, string $merchant, int $amountMinor): MatchOutcomeDto
+    {
         $dateRaw = $parsed->headers['date'] ?? '';
         try {
             $bookedAt = CarbonImmutable::parse($dateRaw)->startOfDay();
@@ -138,32 +158,47 @@ final class IcsReceiptMatcher implements SenderMatcher
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }
 
-        $chainHints = [];
-        $chainEvidence = null;
-        if ($cardLast4 !== null) {
-            $chainHints[] = new FundedByCardPayload(cardLast4: $cardLast4);
-            // $cardMatchFull/$cardMatchOffset are always set alongside
-            // $cardLast4 above, so a fresh regex pass isn't needed to
-            // snip the audit-evidence excerpt around the anchor.
-            $chainEvidence = trim(substr($body, max(0, $cardMatchOffset - 5), strlen($cardMatchFull) + 10));
+        $dto = $this->buildDto($parsed, $body, $merchant, $amountMinor, $bookedAt);
+
+        return MatchOutcomeDto::parsed($dto);
+    }
+
+    private function buildDto(
+        ParsedMimeMessage $parsed,
+        string $body,
+        string $merchant,
+        int $amountMinor,
+        CarbonImmutable $bookedAt,
+    ): ParsedReceiptDto {
+        $reference = null;
+        if (preg_match(self::REFERENCE_REGEX, $body, $referenceMatches) === 1) {
+            $reference = $referenceMatches[1];
         }
 
-        $subject = $parsed->headers['subject'] ?? '';
-        $sender = $parsed->headers['from'] ?? '';
+        $cardLast4 = null;
+        $chainHints = [];
+        $chainEvidence = null;
+        if (preg_match(self::CARD_LAST4_REGEX, $body, $cardMatches, PREG_OFFSET_CAPTURE) === 1) {
+            $cardLast4 = $cardMatches[1][0];
+            $chainHints[] = new FundedByCardPayload(cardLast4: $cardLast4);
+            // The offset capture around the anchor snips the
+            // audit-evidence excerpt without a second regex pass.
+            $chainEvidence = trim(substr($body, max(0, $cardMatches[0][1] - 5), strlen($cardMatches[0][0]) + 10));
+        }
 
         $rawPayload = [
             'matcher_key' => 'ics-receipt',
             'reference' => $reference,
             'card_last4' => $cardLast4,
-            'subject' => $subject,
-            'sender' => $sender,
+            'subject' => $parsed->headers['subject'] ?? '',
+            'sender' => $parsed->headers['from'] ?? '',
             'body_excerpt' => substr($body, 0, 200),
         ];
         if ($chainEvidence !== null) {
             $rawPayload['chain_hint_evidence'] = $chainEvidence;
         }
 
-        $dto = new ParsedReceiptDto(
+        return new ParsedReceiptDto(
             merchantName: $merchant,
             amountMinor: $amountMinor,
             currency: 'EUR',
@@ -176,8 +211,6 @@ final class IcsReceiptMatcher implements SenderMatcher
             rawPayload: $rawPayload,
             chainHints: $chainHints,
         );
-
-        return MatchOutcomeDto::parsed($dto);
     }
 
     private function stripHtml(string $html): string
