@@ -6,6 +6,7 @@ namespace Modules\Categorization\Internal\Http\Livewire\Concerns;
 
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 
 // The pure translation layer between the form's UI rows and the backend's
 // (field, value_type)/payload shapes: field-to-type maps, blank-row
@@ -93,10 +94,10 @@ trait MapsRuleRows
         if ($dto->valueType === 'amount') {
             // The DB stores signed integer minor units; the form input
             // displays the project's Dutch-decimal Euro convention, so
-            // round-trip through formatAmount() rather than showing the
-            // raw minor-unit string back to the user.
-            $value = is_numeric($dto->value) ? self::formatAmount((int) $dto->value) : $dto->value;
-            $value2 = $dto->value2 !== null && is_numeric($dto->value2) ? self::formatAmount((int) $dto->value2) : $dto->value2;
+            // round-trip through MoneyInput::formatMinor() rather than
+            // showing the raw minor-unit string back to the user.
+            $value = is_numeric($dto->value) ? MoneyInput::formatMinor((int) $dto->value) : $dto->value;
+            $value2 = $dto->value2 !== null && is_numeric($dto->value2) ? MoneyInput::formatMinor((int) $dto->value2) : $dto->value2;
         } else {
             $value = $dto->value;
             $value2 = $dto->value2;
@@ -148,11 +149,11 @@ trait MapsRuleRows
         if ($valueType !== 'amount') {
             return false;
         }
-        if ($value2 !== null && self::parseAmount($value2) === null) {
+        if ($value2 !== null && MoneyInput::tryToMinor($value2) === null) {
             return true;
         }
 
-        return self::parseAmount($value) === null;
+        return MoneyInput::tryToMinor($value) === null;
     }
 
     /**
@@ -169,9 +170,9 @@ trait MapsRuleRows
             // into signed integer minor units before persistence.
             // conditionRowError() has already rejected an unparsable
             // value by this point, so the `?? 0` fallback is unreachable.
-            $value = (string) (self::parseAmount($condition['value']) ?? 0);
+            $value = (string) (MoneyInput::tryToMinor($condition['value']) ?? 0);
             $value2 = $condition['op'] === 'between'
-                ? (string) (self::parseAmount($condition['value2'] ?? '') ?? 0)
+                ? (string) (MoneyInput::tryToMinor($condition['value2'] ?? '') ?? 0)
                 : null;
         } else {
             $value = trim($condition['value']);
@@ -186,53 +187,6 @@ trait MapsRuleRows
             'value' => $value,
             'value2' => $value2,
         ];
-    }
-
-    // Signed (allows a leading '-') because an amount condition compares
-    // against settledAmountMinor, a signed BIGINT. Accepts plain
-    // ("12.50"), Dutch grouped ("1.234,56"), and comma-decimal ("12,50")
-    // forms; the rightmost of '.' or ',' is the decimal separator.
-    private static function parseAmount(string $value): ?int
-    {
-        $trimmed = str_replace([' ', "\u{00A0}"], '', trim($value));
-        if ($trimmed === '') {
-            return null;
-        }
-
-        $negative = str_starts_with($trimmed, '-');
-        $unsigned = $negative ? substr($trimmed, 1) : $trimmed;
-
-        $lastDot = strrpos($unsigned, '.');
-        $lastComma = strrpos($unsigned, ',');
-        if ($lastDot !== false && $lastComma !== false) {
-            $unsigned = $lastComma > $lastDot
-                ? str_replace(['.', ','], ['', '.'], $unsigned)
-                : str_replace(',', '', $unsigned);
-        } elseif ($lastComma !== false) {
-            $unsigned = str_replace(',', '.', $unsigned);
-        }
-
-        if (preg_match('/^\d{1,12}(\.\d{1,2})?$/', $unsigned) !== 1) {
-            return null;
-        }
-
-        [$whole, $frac] = array_pad(explode('.', $unsigned, 2), 2, '');
-        $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
-
-        return $negative ? -$minor : $minor;
-    }
-
-    // e.g. -5000 -> "-50,00", so an amount condition loaded via
-    // conditionFromDto() round-trips through parseAmount() unchanged if
-    // the user submits it untouched.
-    private static function formatAmount(int $minor): string
-    {
-        $negative = $minor < 0;
-        $abs = abs($minor);
-        $whole = intdiv($abs, 100);
-        $cents = $abs % 100;
-
-        return ($negative ? '-' : '').$whole.','.str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
     }
 
     /**
