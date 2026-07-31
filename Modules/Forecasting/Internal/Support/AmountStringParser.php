@@ -26,31 +26,9 @@ final class AmountStringParser
         }
 
         $negative = false;
-        if (str_starts_with($trimmed, '-')) {
-            $negative = true;
-            $trimmed = ltrim(substr($trimmed, 1));
-        } elseif (str_starts_with($trimmed, '+')) {
-            $trimmed = ltrim(substr($trimmed, 1));
-        }
+        $trimmed = self::stripSign($trimmed, $negative);
 
-        $normalised = str_replace([' '], '', $trimmed);
-        $commaPos = strrpos($normalised, ',');
-        $dotPos = strrpos($normalised, '.');
-        if ($commaPos !== false && $dotPos !== false) {
-            // Both present — the LAST separator is the decimal mark; the
-            // earlier-occurring one (or copies of it) is a thousands
-            // separator and is stripped.
-            if ($commaPos > $dotPos) {
-                $normalised = str_replace('.', '', $normalised);
-                $normalised = str_replace(',', '.', $normalised);
-            } else {
-                $normalised = str_replace(',', '', $normalised);
-            }
-        } elseif ($commaPos !== false) {
-            $normalised = str_replace(',', '.', $normalised);
-        }
-        // Else: only dots (or none). Leave dots in place so "12.50"
-        // parses as 12.50 (not 1250).
+        $normalised = self::normaliseDecimalSeparators(str_replace([' '], '', $trimmed));
 
         if (! is_numeric($normalised)) {
             throw new InvalidArgumentException('Amount must be a number.');
@@ -77,5 +55,45 @@ final class AmountStringParser
         }
 
         return $minor;
+    }
+
+    /**
+     * @param  bool  $negative  set to true when a leading '-' is stripped
+     */
+    private static function stripSign(string $trimmed, bool &$negative): string
+    {
+        if (str_starts_with($trimmed, '-')) {
+            $negative = true;
+
+            return ltrim(substr($trimmed, 1));
+        }
+        if (str_starts_with($trimmed, '+')) {
+            return ltrim(substr($trimmed, 1));
+        }
+
+        return $trimmed;
+    }
+
+    private static function normaliseDecimalSeparators(string $normalised): string
+    {
+        $commaPos = strrpos($normalised, ',');
+        $dotPos = strrpos($normalised, '.');
+        if ($commaPos !== false && $dotPos !== false) {
+            // Both present — the LAST separator is the decimal mark; the
+            // earlier-occurring one (or copies of it) is a thousands
+            // separator and is stripped.
+            if ($commaPos > $dotPos) {
+                return str_replace(',', '.', str_replace('.', '', $normalised));
+            }
+
+            return str_replace(',', '', $normalised);
+        }
+        if ($commaPos !== false) {
+            return str_replace(',', '.', $normalised);
+        }
+
+        // Else: only dots (or none). Leave dots in place so "12.50"
+        // parses as 12.50 (not 1250).
+        return $normalised;
     }
 }

@@ -59,29 +59,15 @@ final readonly class ForecastQuery
 
         $asOf = $this->clock->now()->startOfDay();
 
-        if ($row === null) {
-            return $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf);
-        }
-        /** @var stdClass $row */
-        $status = self::toString($row->status ?? null);
-        if ($status !== 'complete') {
-            return $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf);
-        }
-
-        $rawJson = self::toString($row->result_json ?? null);
-        if ($rawJson === '') {
+        // A missing run, a not-yet-complete run, or an unparseable
+        // result_json all resolve to the same "still computing" sentinel;
+        // decodeCompletedRun returns null for every one of those cases.
+        $decoded = $this->decodeCompletedRun($row);
+        if ($decoded === null) {
             return $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf);
         }
 
-        $decoded = json_decode($rawJson, associative: true);
-        if (! is_array($decoded)) {
-            return $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf);
-        }
-        $accountsBlock = $decoded['accounts'] ?? null;
-        if (! is_array($accountsBlock)) {
-            $accountsBlock = [];
-        }
-
+        $accountsBlock = is_array($decoded['accounts'] ?? null) ? $decoded['accounts'] : [];
         $accountResult = $accountsBlock[(string) $accountId] ?? $accountsBlock[$accountId] ?? null;
         if (! is_array($accountResult)) {
             return $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf, $user);
@@ -101,6 +87,28 @@ final readonly class ForecastQuery
             isComputing: false,
             seriesConfidence: $confidence,
         );
+    }
+
+    /**
+     * @return array<mixed, mixed>|null
+     */
+    private function decodeCompletedRun(mixed $row): ?array
+    {
+        if ($row === null) {
+            return null;
+        }
+        /** @var stdClass $row */
+        if (self::toString($row->status ?? null) !== 'complete') {
+            return null;
+        }
+        $rawJson = self::toString($row->result_json ?? null);
+        if ($rawJson === '') {
+            return null;
+        }
+
+        $decoded = json_decode($rawJson, associative: true);
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**
