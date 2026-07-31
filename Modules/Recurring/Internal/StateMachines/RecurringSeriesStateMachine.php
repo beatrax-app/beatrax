@@ -71,9 +71,4 @@ final class RecurringSeriesStateMachine extends GuardedStateMachine
     {
         return SeriesRowVanishedException::forSeries($id);
     }
-
-    protected function invalidTransition(int $id, string $from, string $to): Throwable
-    {
-        return InvalidStateTransitionException::forTransition($id, $from, $to);
-    }
 }

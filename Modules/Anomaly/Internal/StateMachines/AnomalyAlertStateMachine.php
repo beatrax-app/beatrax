@@ -77,9 +77,4 @@ final class AnomalyAlertStateMachine extends GuardedStateMachine
             "AnomalyAlertStateMachine: anomaly_alerts row {$id} not found.",
         );
     }
-
-    protected function invalidTransition(int $id, string $from, string $to): Throwable
-    {
-        return InvalidStateTransitionException::forTransition($id, $from, $to);
-    }
 }
