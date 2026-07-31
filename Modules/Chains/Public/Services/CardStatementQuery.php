@@ -19,6 +19,8 @@ final class CardStatementQuery
 {
     use CoercesScalars;
 
+    public const int STATEMENT_DUE_GRACE_DAYS = 5;
+
     public function __construct(private readonly DatabaseManager $db) {}
 
     public function openForAccount(int $accountId, User $user): ?CardStatement
@@ -97,7 +99,7 @@ final class CardStatementQuery
         return new NextSettlementDto(
             accountId: self::toInt($historicalFunder),
             amount: Money::ofMinor(self::toInt($row->open_balance_minor), 'EUR'),
-            dueDate: $periodEnd->addDays(5)->startOfDay(),
+            dueDate: $periodEnd->addDays(self::STATEMENT_DUE_GRACE_DAYS)->startOfDay(),
             statementId: self::toInt($row->statement_id),
             state: self::toString($row->state),
         );
