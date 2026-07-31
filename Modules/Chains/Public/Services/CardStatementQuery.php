@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\CardStatement;
 use Modules\Chains\Public\Dto\NextSettlementDto;
+use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
@@ -32,7 +33,7 @@ final class CardStatementQuery
         $row = $this->db->connection()->table('card_statements')
             ->where('user_id', $user->id)
             ->where('account_id', $accountId)
-            ->whereIn('state', ['open', 'partially_settled'])
+            ->whereIn('state', [CardStatementState::Open->value, CardStatementState::PartiallySettled->value])
             ->orderByDesc('period_end')
             ->orderByDesc('id')
             ->first(['id']);
@@ -55,7 +56,7 @@ final class CardStatementQuery
             ->join('accounts', 'accounts.id', '=', 'card_statements.account_id')
             ->where('card_statements.user_id', $user->id)
             ->where('accounts.kind', 'ics_card')
-            ->whereIn('card_statements.state', ['open', 'partially_settled'])
+            ->whereIn('card_statements.state', [CardStatementState::Open->value, CardStatementState::PartiallySettled->value])
             ->orderByDesc('card_statements.period_end')
             ->orderByDesc('card_statements.id')
             ->select(

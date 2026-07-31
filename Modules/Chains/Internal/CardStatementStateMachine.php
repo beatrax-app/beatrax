@@ -6,6 +6,7 @@ namespace Modules\Chains\Internal;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Public\Dto\StatementSettlement;
+use Modules\Chains\Public\Enums\CardStatementState;
 use Modules\Chains\Public\Exceptions\CardStatementNotFoundException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -52,9 +53,9 @@ final class CardStatementStateMachine
             $prevState = self::toString($row->state);
             $newOpen = $prevOpen - $deltaMinor;
             $newState = match (true) {
-                abs($newOpen) <= self::SETTLED_TOLERANCE_MINOR => 'settled',
-                $newOpen < -self::SETTLED_TOLERANCE_MINOR => 'overpaid',
-                $newOpen > 0 && $prevOpen > $newOpen => 'partially_settled',
+                abs($newOpen) <= self::SETTLED_TOLERANCE_MINOR => CardStatementState::Settled->value,
+                $newOpen < -self::SETTLED_TOLERANCE_MINOR => CardStatementState::Overpaid->value,
+                $newOpen > 0 && $prevOpen > $newOpen => CardStatementState::PartiallySettled->value,
                 default => $prevState,
             };
 
