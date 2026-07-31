@@ -12,6 +12,7 @@ use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Import\Public\Actions\CreateMerchantAlias;
 use Modules\Import\Public\Services\PatternGeneralizer;
@@ -88,15 +89,14 @@ final class RenameCounterpartyPopover extends Component
             $priority = (is_numeric($maxPriority) ? (int) $maxPriority : 0) + 10;
 
             try {
-                ($createRule)(
-                    $user,
-                    $priority,
-                    'all',
-                    true,
-                    null,
-                    [['field' => 'description', 'op' => 'contains', 'value_type' => 'string', 'value' => $generalizedTrimmed]],
-                    [['type' => 'category', 'payload' => ['category_id' => $this->categoryHint]]],
-                );
+                ($createRule)($user, new RuleInput(
+                    priority: $priority,
+                    combinator: 'all',
+                    active: true,
+                    notes: null,
+                    conditions: [['field' => 'description', 'op' => 'contains', 'value_type' => 'string', 'value' => $generalizedTrimmed]],
+                    actions: [['type' => 'category', 'payload' => ['category_id' => $this->categoryHint]]],
+                ));
             } catch (ValidationException) {
                 // A zero-condition/zero-action rejection can't happen
                 // here (both are always supplied); a duplicate-rule

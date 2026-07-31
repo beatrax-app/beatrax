@@ -12,6 +12,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -95,19 +96,14 @@ final class CorrectionDivergenceToast extends Component
         UpdateCategorizationRule $updateRule,
         CategorizationRuleQuery $rules,
     ): void {
-        if ($this->ruleId === null || $this->newCategoryId === null) {
-            return;
-        }
-        if (! $currentUser->isAuthenticated()) {
+        if ($this->ruleId === null || $this->newCategoryId === null || ! $currentUser->isAuthenticated()) {
             return;
         }
 
         $user = $currentUser->user();
         $rule = $rules->findForUser($user, $this->ruleId);
         if ($rule === null) {
-            $this->flashMessage = 'Rule no longer exists.';
-            $this->visible = false;
-            $this->resetPayload();
+            $this->dismissWith('Rule no longer exists.');
 
             return;
         }
@@ -140,41 +136,33 @@ final class CorrectionDivergenceToast extends Component
         }
 
         try {
-            ($updateRule)(
-                $user,
-                $this->ruleId,
-                $rule->priority,
-                $rule->combinator,
-                $rule->active,
-                $rule->notes,
-                $conditionsPayload,
-                $actionsPayload,
-            );
-        } catch (ValidationException) {
-            // A category_id-only payload cannot trip the UNIQUE
-            // violation today, but this is defence-in-depth against a
-            // future allowed-keys expansion.
-            $this->flashMessage = 'Could not update rule.';
-
-            return;
-        } catch (NotFoundHttpException) {
-            // The ruleId no longer maps to a row visible to the user —
-            // deleted in another tab, or a tampered event payload.
-            $this->flashMessage = 'Rule no longer exists.';
-            $this->visible = false;
-            $this->resetPayload();
-
-            return;
-        } catch (InvalidArgumentException) {
-            // Unreachable from the normal flow (the event always carries
-            // the user's own newCategoryId), but a tampered payload could
-            // land here.
-            $this->flashMessage = 'Invalid category — please refresh the page.';
-
-            return;
+            ($updateRule)($user, $this->ruleId, new RuleInput(
+                priority: $rule->priority,
+                combinator: $rule->combinator,
+                active: $rule->active,
+                notes: $rule->notes,
+                conditions: $conditionsPayload,
+                actions: $actionsPayload,
+            ));
+            $this->dismissWith('Rule updated.');
+        } catch (ValidationException|NotFoundHttpException|InvalidArgumentException $e) {
+            // NotFoundHttpException dismisses the toast — the ruleId maps to no
+            // visible row (deleted elsewhere, or tampered). ValidationException
+            // (a future allowed-keys expansion) and InvalidArgumentException (a
+            // tampered category id) are unreachable normally and leave it open.
+            if ($e instanceof NotFoundHttpException) {
+                $this->dismissWith('Rule no longer exists.');
+            } else {
+                $this->flashMessage = $e instanceof ValidationException
+                    ? 'Could not update rule.'
+                    : 'Invalid category — please refresh the page.';
+            }
         }
+    }
 
-        $this->flashMessage = 'Rule updated.';
+    private function dismissWith(string $message): void
+    {
+        $this->flashMessage = $message;
         $this->visible = false;
         $this->resetPayload();
     }

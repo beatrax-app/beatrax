@@ -85,83 +85,21 @@ final readonly class CategorizationRuleQuery
 
         $connection = $this->db->connection();
 
-        /** @var iterable<stdClass> $conditionRows */
+        /** @var iterable<int, stdClass> $conditionRows */
         $conditionRows = $connection->table('rule_conditions')
             ->whereIn('rule_id', $ruleIds)
             ->orderBy('id')
             ->get();
 
-        /** @var iterable<stdClass> $actionRows */
+        /** @var iterable<int, stdClass> $actionRows */
         $actionRows = $connection->table('rule_actions')
             ->whereIn('rule_id', $ruleIds)
             ->orderBy('position')
             ->orderBy('id')
             ->get();
 
-        /** @var array<int, array<string, mixed>> $decodedPayloads keyed by rule_actions.id */
-        $decodedPayloads = [];
-        /** @var list<int> $categoryIds */
-        $categoryIds = [];
-        /** @var list<int> $counterpartyIds */
-        $counterpartyIds = [];
-
-        foreach ($actionRows as $actionRow) {
-            $payload = self::decodePayload($actionRow->payload);
-            $decodedPayloads[self::toInt($actionRow->id)] = $payload;
-
-            $type = is_string($actionRow->type) ? $actionRow->type : '';
-            if ($type === 'category' && isset($payload['category_id']) && is_numeric($payload['category_id'])) {
-                $categoryIds[] = (int) $payload['category_id'];
-            }
-            if ($type === 'counterparty' && isset($payload['counterparty_id']) && is_numeric($payload['counterparty_id'])) {
-                $counterpartyIds[] = (int) $payload['counterparty_id'];
-            }
-        }
-
-        $categoryPaths = $this->resolveCategoryPaths(array_values(array_unique($categoryIds)), $userId);
-        $counterpartyNames = $this->resolveCounterpartyNames(array_values(array_unique($counterpartyIds)), $userId);
-
-        /** @var array<int, list<RuleConditionDto>> $conditionsByRule */
-        $conditionsByRule = [];
-        foreach ($conditionRows as $conditionRow) {
-            $ruleId = self::toInt($conditionRow->rule_id);
-            $conditionsByRule[$ruleId][] = new RuleConditionDto(
-                id: self::toInt($conditionRow->id),
-                field: is_string($conditionRow->field) ? $conditionRow->field : '',
-                op: is_string($conditionRow->op) ? $conditionRow->op : '',
-                valueType: is_string($conditionRow->value_type) ? $conditionRow->value_type : '',
-                value: is_string($conditionRow->value) ? $conditionRow->value : '',
-                value2: isset($conditionRow->value2) && is_string($conditionRow->value2) ? $conditionRow->value2 : null,
-            );
-        }
-
-        /** @var array<int, list<RuleActionDto>> $actionsByRule */
-        $actionsByRule = [];
-        foreach ($actionRows as $actionRowForDto) {
-            $ruleId = self::toInt($actionRowForDto->rule_id);
-            $actionId = self::toInt($actionRowForDto->id);
-            $type = is_string($actionRowForDto->type) ? $actionRowForDto->type : '';
-            $payload = $decodedPayloads[$actionId] ?? [];
-
-            $categoryPath = null;
-            if ($type === 'category' && isset($payload['category_id']) && is_numeric($payload['category_id'])) {
-                $categoryPath = $categoryPaths[(int) $payload['category_id']] ?? null;
-            }
-
-            $counterpartyName = null;
-            if ($type === 'counterparty' && isset($payload['counterparty_id']) && is_numeric($payload['counterparty_id'])) {
-                $counterpartyName = $counterpartyNames[(int) $payload['counterparty_id']] ?? null;
-            }
-
-            $actionsByRule[$ruleId][] = new RuleActionDto(
-                id: $actionId,
-                position: self::toInt($actionRowForDto->position),
-                type: $type,
-                payload: $payload,
-                categoryPath: $categoryPath,
-                counterpartyName: $counterpartyName,
-            );
-        }
+        $conditionsByRule = self::buildConditionsByRule($conditionRows);
+        $actionsByRule = $this->buildActionsByRule($actionRows, $userId);
 
         $out = [];
         foreach ($ruleIds as $ruleId) {
@@ -173,6 +111,110 @@ final readonly class CategorizationRuleQuery
         }
 
         return $out;
+    }
+
+    /**
+     * @param  iterable<int, stdClass>  $conditionRows
+     * @return array<int, list<RuleConditionDto>>
+     */
+    private static function buildConditionsByRule(iterable $conditionRows): array
+    {
+        $byRule = [];
+        foreach ($conditionRows as $row) {
+            $byRule[self::toInt($row->rule_id)][] = new RuleConditionDto(
+                id: self::toInt($row->id),
+                field: self::toString($row->field),
+                op: self::toString($row->op),
+                valueType: self::toString($row->value_type),
+                value: self::toString($row->value),
+                value2: self::toStringOrNull($row->value2 ?? null),
+            );
+        }
+
+        return $byRule;
+    }
+
+    // Two passes over the same rows: the first collects the category and
+    // counterparty ids so each set of display strings resolves in one query,
+    // the second builds the DTOs with those strings attached — label work the
+    // read boundary owns and the hot per-transaction RuleEngine never pays.
+    /**
+     * @param  iterable<int, stdClass>  $actionRows
+     * @return array<int, list<RuleActionDto>>
+     */
+    private function buildActionsByRule(iterable $actionRows, int $userId): array
+    {
+        /** @var array<int, array<string, mixed>> $decodedPayloads keyed by rule_actions.id */
+        $decodedPayloads = [];
+        $categoryIds = [];
+        $counterpartyIds = [];
+        foreach ($actionRows as $row) {
+            $payload = self::decodePayload($row->payload);
+            $decodedPayloads[self::toInt($row->id)] = $payload;
+            $type = self::toString($row->type);
+            $categoryIds[] = self::categoryIdOf($type, $payload);
+            $counterpartyIds[] = self::counterpartyIdOf($type, $payload);
+        }
+
+        $categoryPaths = $this->resolveCategoryPaths(self::uniqueInts($categoryIds), $userId);
+        $counterpartyNames = $this->resolveCounterpartyNames(self::uniqueInts($counterpartyIds), $userId);
+
+        $byRule = [];
+        foreach ($actionRows as $row) {
+            $actionId = self::toInt($row->id);
+            $type = self::toString($row->type);
+            $payload = $decodedPayloads[$actionId] ?? [];
+            $categoryId = self::categoryIdOf($type, $payload);
+            $counterpartyId = self::counterpartyIdOf($type, $payload);
+
+            $byRule[self::toInt($row->rule_id)][] = new RuleActionDto(
+                id: $actionId,
+                position: self::toInt($row->position),
+                type: $type,
+                payload: $payload,
+                categoryPath: $categoryId === null ? null : ($categoryPaths[$categoryId] ?? null),
+                counterpartyName: $counterpartyId === null ? null : ($counterpartyNames[$counterpartyId] ?? null),
+            );
+        }
+
+        return $byRule;
+    }
+
+    // The category id a `category` action names, or null for any other action
+    // type or a payload missing a numeric id.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private static function categoryIdOf(string $type, array $payload): ?int
+    {
+        return $type === 'category' ? self::payloadIntId($payload, 'category_id') : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private static function counterpartyIdOf(string $type, array $payload): ?int
+    {
+        return $type === 'counterparty' ? self::payloadIntId($payload, 'counterparty_id') : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private static function payloadIntId(array $payload, string $key): ?int
+    {
+        $value = $payload[$key] ?? null;
+
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    /**
+     * @param  list<int|null>  $ids
+     * @return list<int>
+     */
+    private static function uniqueInts(array $ids): array
+    {
+        return array_values(array_unique(array_filter($ids, static fn (?int $id): bool => $id !== null)));
     }
 
     /**
