@@ -7,6 +7,8 @@ namespace Modules\Chains\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Chains\Models\ChainLink;
+use Modules\Chains\Public\Enums\ChainLinkKind;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
@@ -71,7 +73,7 @@ final class DemoChainsSeeder
                 userId: $user->id,
                 fromTransactionId: $charge->id,
                 toTransactionId: $funder->id,
-                kind: 'paypal_funding',
+                kind: ChainLinkKind::PaypalFunding->value,
                 evidence: [
                     'amount_matched_minor' => abs($charge->amount_minor),
                     'date_offset_days' => 0,
@@ -121,7 +123,7 @@ final class DemoChainsSeeder
                 userId: $user->id,
                 fromTransactionId: $expense->id,
                 toTransactionId: $settlement->id,
-                kind: 'ics_bulk_settle',
+                kind: ChainLinkKind::IcsBulkSettle->value,
                 evidence: [
                     'statement_period_end' => $settlement->posted_at->toDateString(),
                     'unaccounted_delta_minor' => 0,
@@ -152,7 +154,7 @@ final class DemoChainsSeeder
         $this->upsertHintCandidateLink(
             userId: $user->id,
             fromTransactionId: $expense->id,
-            kind: 'funded_by_card_hint',
+            kind: ChainLinkKind::FundedByCardHint->value,
             evidence: [
                 'card_last_four' => '1234',
                 'source_receipt' => 'demo-coolblue-receipt.eml',
@@ -182,7 +184,7 @@ final class DemoChainsSeeder
         $this->upsertHintCandidateLink(
             userId: $user->id,
             fromTransactionId: $refund->id,
-            kind: 'refund_of_hint',
+            kind: ChainLinkKind::RefundOfHint->value,
             evidence: [
                 'original_order_ref' => 'ORD-DEMO-99',
                 'source_receipt' => 'demo-bol-refund-receipt.eml',
@@ -238,7 +240,7 @@ final class DemoChainsSeeder
             'from_transaction_id' => $fromTransactionId,
             'to_transaction_id' => $toTransactionId,
             'kind' => $kind,
-            'state' => 'confirmed',
+            'state' => ChainLinkState::Confirmed->value,
             'confidence' => $confidence,
             'resolver' => 'auto',
             'evidence' => $evidence,
@@ -275,7 +277,7 @@ final class DemoChainsSeeder
             'from_transaction_id' => $fromTransactionId,
             'to_transaction_id' => null,
             'kind' => $kind,
-            'state' => 'candidate',
+            'state' => ChainLinkState::Candidate->value,
             'confidence' => $confidence,
             'resolver' => 'receipt_hint',
             'evidence' => $evidence,

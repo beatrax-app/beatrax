@@ -132,7 +132,7 @@
                 >Show {{ $nextChunk }} more · {{ count($visibleChildren) }} of {{ $childTotal }}</button>
             @endif
         </div>
-    @elseif ($node->kind === 'ics_bulk_settle')
+    @elseif ($node->kind === \Modules\Chains\Public\Enums\ChainLinkKind::IcsBulkSettle->value)
         {{-- Empty fan-out edge case (D-93 discretion) — a refund-only
              month leaves a bulk-settle node covering zero ICS charges. --}}
         <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">

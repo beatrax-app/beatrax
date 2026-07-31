@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Chains\Internal\Presentation;
 
+use Modules\Chains\Public\Enums\ChainLinkKind;
 use Modules\Ledger\Public\ValueObjects\Money;
 
 // Turns a hint's evidence JSON into the lines the review queue shows under
@@ -25,9 +26,9 @@ final class HintEvidenceSummary
         }
 
         return match ($kind) {
-            'ics_bulk_settle' => self::bulkSettleLines($evidence, $currency),
-            'funded_by_card_hint' => self::cardLines($evidence),
-            'refund_of_hint' => self::refundLines($evidence),
+            ChainLinkKind::IcsBulkSettle->value => self::bulkSettleLines($evidence, $currency),
+            ChainLinkKind::FundedByCardHint->value => self::cardLines($evidence),
+            ChainLinkKind::RefundOfHint->value => self::refundLines($evidence),
             default => [],
         };
     }

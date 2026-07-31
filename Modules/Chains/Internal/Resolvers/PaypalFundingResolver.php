@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Internal\ChainLinkInsertHelper;
+use Modules\Chains\Public\Enums\ChainLinkKind;
+use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -104,7 +106,7 @@ final class PaypalFundingResolver
             ->leftJoin('chain_links', function ($join): void {
                 /** @var JoinClause $join */
                 $join->on('chain_links.from_transaction_id', '=', 'transactions.id')
-                    ->where('chain_links.kind', '=', 'paypal_funding');
+                    ->where('chain_links.kind', '=', ChainLinkKind::PaypalFunding->value);
             })
             ->where('transactions.user_id', $user->id)
             ->where('accounts.kind', 'paypal')
@@ -217,8 +219,8 @@ final class PaypalFundingResolver
         return [
             'from_transaction_id' => $fromTxId,
             'to_transaction_id' => $partnerId,
-            'kind' => 'paypal_funding',
-            'state' => 'confirmed',
+            'kind' => ChainLinkKind::PaypalFunding->value,
+            'state' => ChainLinkState::Confirmed->value,
             'confidence' => '1.000',
             'resolver' => 'auto',
             'evidence' => [
@@ -297,8 +299,8 @@ final class PaypalFundingResolver
             ->leftJoin('chain_links as existing', function ($join): void {
                 /** @var JoinClause $join */
                 $join->on('existing.to_transaction_id', '=', 'tx.id')
-                    ->where('existing.kind', '=', 'paypal_funding')
-                    ->whereIn('existing.state', ['confirmed', 'candidate']);
+                    ->where('existing.kind', '=', ChainLinkKind::PaypalFunding->value)
+                    ->whereIn('existing.state', [ChainLinkState::Confirmed->value, ChainLinkState::Candidate->value]);
             })
             ->where('tx.user_id', $user->id)
             ->where('tx.type', 'transfer_out')
@@ -353,8 +355,8 @@ final class PaypalFundingResolver
         return [
             'from_transaction_id' => self::toInt($row->tx_id ?? null),
             'to_transaction_id' => $partnerId,
-            'kind' => 'paypal_funding',
-            'state' => $ambiguous ? 'candidate' : 'confirmed',
+            'kind' => ChainLinkKind::PaypalFunding->value,
+            'state' => $ambiguous ? ChainLinkState::Candidate->value : ChainLinkState::Confirmed->value,
             'confidence' => $ambiguous
                 ? self::ASN_DIRECT_AMBIGUOUS_CONFIDENCE
                 : self::ASN_DIRECT_UNIQUE_CONFIDENCE,
@@ -469,8 +471,8 @@ final class PaypalFundingResolver
         return [
             'from_transaction_id' => self::toInt($row->tx_id ?? null),
             'to_transaction_id' => $bestId,
-            'kind' => 'paypal_funding',
-            'state' => 'candidate',
+            'kind' => ChainLinkKind::PaypalFunding->value,
+            'state' => ChainLinkState::Candidate->value,
             'confidence' => $this->formatConfidence($confidence),
             'resolver' => 'auto',
             'evidence' => [
