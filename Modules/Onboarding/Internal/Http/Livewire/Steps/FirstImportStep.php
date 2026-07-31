@@ -275,43 +275,41 @@ final class FirstImportStep extends Component
                 continue;
             }
             $decoded = json_decode($dataRaw, true);
-            if (! is_array($decoded)) {
-                continue;
+            if (is_array($decoded)) {
+                $ids = array_merge($ids, $this->runIdsFromStashRow($decoded));
             }
+        }
 
-            $bankId = $decoded['bank_import_run_id'] ?? null;
-            if (is_int($bankId) && $bankId > 0) {
-                $ids[] = $bankId;
+        // array_unique keeps first-occurrence order, which the row query
+        // already fixes as bank → PayPal → ICS card → email; array_values
+        // re-indexes the survivors back into a clean list.
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $decoded
+     * @return list<int>
+     */
+    private function runIdsFromStashRow(array $decoded): array
+    {
+        $ids = [];
+        foreach (['bank_import_run_id', 'paypal_import_run_id'] as $key) {
+            $value = $decoded[$key] ?? null;
+            if (is_int($value) && $value > 0) {
+                $ids[] = $value;
             }
+        }
 
-            $paypalId = $decoded['paypal_import_run_id'] ?? null;
-            if (is_int($paypalId) && $paypalId > 0) {
-                $ids[] = $paypalId;
-            }
-
-            $cardIds = $decoded['card_import_run_ids'] ?? null;
-            if (is_array($cardIds)) {
-                foreach ($cardIds as $cardId) {
-                    if (is_int($cardId) && $cardId > 0) {
-                        $ids[] = $cardId;
-                    }
+        $cardIds = $decoded['card_import_run_ids'] ?? null;
+        if (is_array($cardIds)) {
+            foreach ($cardIds as $cardId) {
+                if (is_int($cardId) && $cardId > 0) {
+                    $ids[] = $cardId;
                 }
             }
         }
 
-        // Deduplicate while preserving first-occurrence order.
-        // (bank → PayPal → ICS card → email, per the row query above)
-        $seen = [];
-        $out = [];
-        foreach ($ids as $id) {
-            if (array_key_exists($id, $seen)) {
-                continue;
-            }
-            $seen[$id] = true;
-            $out[] = $id;
-        }
-
-        return $out;
+        return $ids;
     }
 
     /**

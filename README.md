@@ -10,6 +10,7 @@
   <a href="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml"><img alt="ci" src="https://github.com/beatrax-app/beatrax/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml"><img alt="shared checks" src="https://github.com/beatrax-app/beatrax/actions/workflows/shared.yml/badge.svg"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=beatrax-app_beatrax"><img alt="quality gate" src="https://sonarcloud.io/api/project_badges/measure?project=beatrax-app_beatrax&metric=alert_status"></a>
+  <a href="https://sonarcloud.io/project/issues?id=beatrax-app_beatrax&resolved=false"><img alt="sonar issues" src="https://img.shields.io/sonar/violations/beatrax-app_beatrax?server=https%3A%2F%2Fsonarcloud.io&label=sonar%20issues"></a>
   <a href="https://sonarcloud.io/component_measures?id=beatrax-app_beatrax&metric=coverage"><img alt="coverage" src="https://img.shields.io/sonar/coverage/beatrax-app_beatrax?server=https%3A%2F%2Fsonarcloud.io&label=coverage"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/beatrax-app/beatrax"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/beatrax-app/beatrax/badge"></a>
   <img alt="License: Hippocratic 3.0" src="https://img.shields.io/badge/license-Hippocratic--3.0-blue.svg">
