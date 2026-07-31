@@ -464,6 +464,12 @@ it('setTaxCountry rejects a code outside the allow-list (no-op)', function (): v
     expect($countryCode)->toBeNull();
 });
 
+it('renders the country allow-list even when unauthenticated (no throw at mount)', function (): void {
+    Livewire::test(TaxSettingsSection::class)
+        ->assertOk()
+        ->assertViewHas('allowedCountries', ['nl', 'de', 'be', 'fr', 'gb', 'us']);
+});
+
 it('settings page blade includes the tax settings section livewire tag', function (): void {
     $content = file_get_contents(
         dirname(__DIR__, 4).'/Modules/Core/Resources/views/livewire/settings-page.blade.php'
