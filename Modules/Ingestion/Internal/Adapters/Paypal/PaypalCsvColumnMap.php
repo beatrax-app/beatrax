@@ -40,23 +40,17 @@ final class PaypalCsvColumnMap
      */
     public function value(string $canonical, string $language, array $row): ?string
     {
-        if (! isset(self::COLUMNS[$language][$canonical])) {
+        $header = self::COLUMNS[$language][$canonical] ?? null;
+        if ($header === null) {
             return null;
         }
 
-        $header = self::COLUMNS[$language][$canonical];
-        if (array_key_exists($header, $row)) {
-            return trim($row[$header]);
-        }
-
         // PayPal's NL export ships `"Bruto "` and `"Kosten "` with a
-        // trailing space INSIDE the quoted token. Try the trailing-space
-        // variant before giving up so the parser tolerates both shapes.
-        $headerWithTrailingSpace = $header.' ';
-        if (array_key_exists($headerWithTrailingSpace, $row)) {
-            return trim($row[$headerWithTrailingSpace]);
-        }
+        // trailing space INSIDE the quoted token, so the trailing-space
+        // variant is consulted as a fallback before giving up — both shapes
+        // resolve to the same canonical column.
+        $raw = $row[$header] ?? $row[$header.' '] ?? null;
 
-        return null;
+        return $raw === null ? null : trim($raw);
     }
 }
