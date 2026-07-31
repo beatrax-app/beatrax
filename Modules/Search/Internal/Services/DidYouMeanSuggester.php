@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Search\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
@@ -31,38 +32,49 @@ final class DidYouMeanSuggester
 
     public function suggest(User $user, string $query): ?string
     {
-        $query = trim($query);
+        $targetWord = $this->targetWord($query);
+        if ($targetWord === null) {
+            return null;
+        }
 
+        $corpusWords = $this->buildCorpus($user);
+        if ($corpusWords === []) {
+            return null;
+        }
+
+        return $this->bestSuggestion($targetWord, $corpusWords);
+    }
+
+    // The suggestion target is the query's last whitespace-delimited
+    // word, lowercased; a query under 4 chars or with no words has no
+    // meaningful target and suppresses suggestions entirely.
+    private function targetWord(string $query): ?string
+    {
+        $query = trim($query);
         if (strlen($query) < 4) {
             return null;
         }
 
-        $rawWords = explode(' ', $query);
-        $words = array_values(array_filter($rawWords, static fn (string $w): bool => $w !== ''));
-        if ($words === []) {
-            return null;
-        }
-        $targetWord = strtolower($words[count($words) - 1]);
+        $words = array_values(array_filter(
+            explode(' ', $query),
+            static fn (string $w): bool => $w !== '',
+        ));
 
-        $names = $this->db->connection()
-            ->table('transactions')
-            ->where('user_id', $user->id)
-            ->whereNotNull('counterparty_name')
-            ->where('counterparty_name', '!=', '')
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
-            ->limit(self::CANDIDATE_ROW_CAP)
-            ->pluck('counterparty_name');
+        return $words === [] ? null : strtolower($words[count($words) - 1]);
+    }
 
+    // Decrypt-then-tally corpus over a bounded most-recent window: a
+    // word => frequency map built from the user's counterparty names.
+    /**
+     * @return array<array-key, int> keyed by corpus word (numeric keys coerce to int)
+     */
+    private function buildCorpus(User $user): array
+    {
         $userId = $user->id;
         $encryptionEnabled = $this->encryptionService->isEnabled($userId);
 
-        // Keys are corpus words; PHP coerces purely-numeric word keys
-        // to int, so the key type is array-key, not string (normalized
-        // back below).
-        /** @var array<array-key, int> $corpusWords */
         $corpusWords = [];
-        foreach ($names as $name) {
+        foreach ($this->recentCounterpartyNames($user) as $name) {
             if (! is_string($name) || $name === '') {
                 continue;
             }
@@ -75,37 +87,63 @@ final class DidYouMeanSuggester
                 continue;
             }
 
-            $decrypted = $result['value'];
-            if ($decrypted === '') {
-                continue;
-            }
-            $tokens = preg_split('/\s+/', strtolower($decrypted));
-            if ($tokens === false) {
-                continue;
-            }
-            foreach ($tokens as $word) {
-                $word = trim($word);
-                if (strlen($word) >= 3) {
-                    $corpusWords[$word] = ($corpusWords[$word] ?? 0) + 1;
-                }
+            foreach ($this->corpusTokens($result['value']) as $word) {
+                $corpusWords[$word] = ($corpusWords[$word] ?? 0) + 1;
             }
         }
 
-        if ($corpusWords === []) {
-            return null;
+        return $corpusWords;
+    }
+
+    /**
+     * @return Collection<int, mixed>
+     */
+    private function recentCounterpartyNames(User $user): Collection
+    {
+        return $this->db->connection()
+            ->table('transactions')
+            ->where('user_id', $user->id)
+            ->whereNotNull('counterparty_name')
+            ->where('counterparty_name', '!=', '')
+            ->orderByDesc('posted_at')
+            ->orderByDesc('id')
+            ->limit(self::CANDIDATE_ROW_CAP)
+            ->pluck('counterparty_name');
+    }
+
+    /**
+     * @return list<string> lowercased corpus tokens of at least 3 chars
+     */
+    private function corpusTokens(string $decrypted): array
+    {
+        if ($decrypted === '') {
+            return [];
+        }
+        $tokens = preg_split('/\s+/', strtolower($decrypted));
+        if ($tokens === false) {
+            return [];
         }
 
+        return array_values(array_filter(
+            array_map('trim', $tokens),
+            static fn (string $w): bool => strlen($w) >= 3,
+        ));
+    }
+
+    // Nearest corpus word within levenshtein 2, ties broken by higher
+    // frequency; the target word itself is never its own suggestion.
+    /**
+     * @param  array<array-key, int>  $corpusWords
+     */
+    private function bestSuggestion(string $targetWord, array $corpusWords): ?string
+    {
         $bestWord = null;
         $bestDist = PHP_INT_MAX;
         $bestFreq = -1;
 
         foreach ($corpusWords as $corpusWord => $freq) {
             $word = (string) $corpusWord;
-
             if ($word === $targetWord) {
-                // An exact word is not a suggestion candidate for
-                // itself, but does not suppress suggestions derived
-                // from other corpus words.
                 continue;
             }
 
@@ -117,10 +155,6 @@ final class DidYouMeanSuggester
             }
         }
 
-        if ($bestDist <= 2 && $bestWord !== null) {
-            return $bestWord;
-        }
-
-        return null;
+        return $bestDist <= 2 ? $bestWord : null;
     }
 }

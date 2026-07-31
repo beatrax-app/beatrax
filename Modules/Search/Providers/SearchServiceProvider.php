@@ -13,9 +13,11 @@ use Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint;
 use Modules\Search\Internal\Listeners\IndexTransactionOnImport;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\EntityNameSearch;
+use Modules\Search\Internal\Services\FtsCandidateResolver;
 use Modules\Search\Internal\Services\QueryParser;
 use Modules\Search\Internal\Services\SearchIndexWriter;
 use Modules\Search\Internal\Services\SearchResultsProviderImpl;
+use Modules\Search\Internal\Services\SearchRowMapper;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Search\Public\Contracts\SearchResultsProvider;
 use Modules\Search\Public\Services\FtsHealthCheck;
@@ -47,6 +49,14 @@ final class SearchServiceProvider extends ServiceProvider
                 SearchResultsProvider::class,
                 SearchResultsProviderImpl::class,
             );
+        }
+
+        if (class_exists(FtsCandidateResolver::class)) {
+            $this->app->singleton(FtsCandidateResolver::class);
+        }
+
+        if (class_exists(SearchRowMapper::class)) {
+            $this->app->singleton(SearchRowMapper::class);
         }
 
         if (class_exists(SearchQuery::class)) {
