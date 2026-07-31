@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -32,7 +33,7 @@ final readonly class CounterpartyIndexQuery
      */
     public function forUser(User $user, string $typeFilter = 'all'): Collection
     {
-        $resolvedType = $typeFilter === 'self' ? 'self_account' : $typeFilter;
+        $resolvedType = $typeFilter === 'self' ? CounterpartyType::SelfAccount->value : $typeFilter;
 
         $query = $this->db->connection()->table('counterparties')->where('user_id', $user->id);
         if ($resolvedType !== 'all') {
@@ -87,7 +88,7 @@ final readonly class CounterpartyIndexQuery
         $displayName = $storedDisplayName === ''
             ? ''
             : $this->codec->decryptValue('counterparties', 'display_name', $storedDisplayName, $userId, $this->session)['value'];
-        $type = is_string($cpRow->type ?? null) ? $cpRow->type : 'unknown';
+        $type = is_string($cpRow->type ?? null) ? $cpRow->type : CounterpartyType::Unknown->value;
 
         // 12-month total + transaction count via a single aggregate query,
         // covered by the (user_id, counterparty_id) composite index.
@@ -188,7 +189,7 @@ final readonly class CounterpartyIndexQuery
 
             // Map the resolver's `self_account` storage type onto the
             // `self` chip key the UI uses.
-            $chipKey = $type === 'self_account' ? 'self' : $type;
+            $chipKey = $type === CounterpartyType::SelfAccount->value ? 'self' : $type;
             if (array_key_exists($chipKey, $counts)) {
                 $counts[$chipKey] = $cnt;
             }

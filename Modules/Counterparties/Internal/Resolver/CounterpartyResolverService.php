@@ -16,6 +16,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Dto\CounterpartyResolutionDto;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Events\CounterpartyResolved;
 use Modules\Import\Public\Contracts\ResolvesKnownCounterpartyIban;
 use Modules\Import\Public\Services\MerchantNameResolver;
@@ -125,7 +126,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
         }
 
         return new CounterpartyResolutionDto(
-            type: 'self_account',
+            type: CounterpartyType::SelfAccount->value,
             displayName: $tx->counterpartyName ?? $iban,
             slug: '',
             iban: $iban,
@@ -166,7 +167,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
         return $this->upsert(
             userId: $userId,
-            type: 'bank',
+            type: CounterpartyType::Bank->value,
             displayName: $displayName,
             iban: $iban,
             merchantName: null,
@@ -191,7 +192,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
         return $this->upsert(
             userId: $userId,
-            type: 'merchant',
+            type: CounterpartyType::Merchant->value,
             displayName: $merchantName,
             iban: $this->normaliseIban($tx->counterpartyIban),
             merchantName: $merchantName,
@@ -212,7 +213,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
         return $this->upsert(
             userId: $userId,
-            type: 'personal',
+            type: CounterpartyType::Personal->value,
             // displayName is the trimmed counterparty name; the slug
             // derives from the displayName only (no IBAN suffix) — the
             // privacy default enforced by PrivacyDefaultsTest.
@@ -240,7 +241,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
             $tx,
             $userId,
             $this->ruleProvider->governmentRules(),
-            'government',
+            CounterpartyType::Government->value,
             fn (ClassificationRule $rule): array => [
                 $this->governmentDisplayName($rule, $tx),
                 ['matched_keyword' => $rule->pattern],
@@ -254,7 +255,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
             $tx,
             $userId,
             $this->ruleProvider->bankFeeRules(),
-            'bank',
+            CounterpartyType::Bank->value,
             fn (ClassificationRule $rule): array => [
                 $rule->name ?? 'Bank fee',
                 ['subcategory' => 'fee', 'matched_keyword' => $rule->pattern],
@@ -328,7 +329,7 @@ final class CounterpartyResolverService implements CounterpartyResolver
 
         return $this->upsert(
             userId: $userId,
-            type: 'unknown',
+            type: CounterpartyType::Unknown->value,
             displayName: $displayName,
             iban: $iban,
             merchantName: null,

@@ -107,7 +107,7 @@
                     <tr class="group border-b border-slate-100 dark:border-slate-800" wire:key="envelope-row-{{ $row->categoryId }}">
                         <td class="px-4 py-2">
                             <span class="truncate text-slate-900 dark:text-slate-100">{{ $row->categoryName }}</span>
-                            @if ($row->overspendMode === 'carry_negative')
+                            @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
                                 <span class="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Carries negative</span>
                             @endif
                             @if ($row->nonEurSpentMinor != 0)
@@ -145,8 +145,8 @@
                                 aria-label="If {{ $row->categoryName }} is overspent"
                                 class="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300"
                             >
-                                <option value="reduce_to_budget" @selected($row->overspendMode === 'reduce_to_budget')>Reduce next month's ready-to-assign</option>
-                                <option value="carry_negative" @selected($row->overspendMode === 'carry_negative')>Carry the negative in this envelope</option>
+                                <option value="reduce_to_budget" @selected($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::ReduceToBudget->value)>Reduce next month's ready-to-assign</option>
+                                <option value="carry_negative" @selected($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)>Carry the negative in this envelope</option>
                             </select>
                         </td>
                         <td class="px-4 py-2 text-right align-top">
@@ -226,7 +226,7 @@
                     <div class="flex-1 min-w-0">
                         <p class="primary truncate">
                             {{ $row->categoryName }}
-                            @if ($row->overspendMode === 'carry_negative')
+                            @if ($row->overspendMode === \Modules\Budgets\Public\Enums\OverspendMode::CarryNegative->value)
                                 <span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-[2px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Carries negative</span>
                             @endif
                             @if ($row->nonEurSpentMinor != 0)

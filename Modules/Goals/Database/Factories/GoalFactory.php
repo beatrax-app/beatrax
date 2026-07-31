@@ -7,6 +7,7 @@ namespace Modules\Goals\Database\Factories;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Enums\GoalStatus;
 
 // user_id is left null in the default definition so callers always supply it
 // explicitly — silently assuming user_id=1 creates hard-to-debug cross-test
@@ -30,7 +31,7 @@ final class GoalFactory extends Factory
             'target_currency' => 'EUR',
             'start_date' => CarbonImmutable::now()->toDateString(),
             'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
-            'status' => 'active',
+            'status' => GoalStatus::Active->value,
         ];
     }
 }

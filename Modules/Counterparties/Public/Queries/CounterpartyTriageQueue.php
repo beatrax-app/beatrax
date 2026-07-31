@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
+use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Import\Public\Services\MerchantNameResolver;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -48,7 +49,7 @@ final readonly class CounterpartyTriageQueue
         // return type.
         $rawRows = $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
-            ->where('type', 'unknown')
+            ->where('type', CounterpartyType::Unknown->value)
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit(self::SCAN_LIMIT)
@@ -156,7 +157,7 @@ final readonly class CounterpartyTriageQueue
     {
         return $this->db->connection()->table('counterparties')
             ->where('user_id', $user->id)
-            ->where('type', 'unknown')
+            ->where('type', CounterpartyType::Unknown->value)
             ->count();
     }
 }

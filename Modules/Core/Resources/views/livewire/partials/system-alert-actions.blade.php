@@ -105,8 +105,8 @@
             data-testid="resolve-alert-{{ $alert->id }}"
             @class([
                 'rounded px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-                'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-600 dark:hover:bg-rose-400 dark:bg-rose-500' => $alert->severity === 'critical',
-                'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300' => $alert->severity !== 'critical',
+                'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-600 dark:hover:bg-rose-400 dark:bg-rose-500' => $alert->severity === \Modules\Core\Public\Enums\SystemAlertSeverity::Critical->value,
+                'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300' => $alert->severity !== \Modules\Core\Public\Enums\SystemAlertSeverity::Critical->value,
             ])
         >Mark as resolved</button>
 @endswitch

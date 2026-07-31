@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Budgets\Internal\Fold\FoldContext;
 use Modules\Budgets\Internal\Fold\FoldStep;
 use Modules\Budgets\Public\Dto\EnvelopeRow;
+use Modules\Budgets\Public\Enums\OverspendMode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -28,7 +29,7 @@ final class CarryoverQuery
 
     private const CURRENCY = 'EUR';
 
-    private const DEFAULT_OVERSPEND_MODE = 'reduce_to_budget';
+    private const DEFAULT_OVERSPEND_MODE = OverspendMode::ReduceToBudget->value;
 
     // The default over-budget notify threshold (percent) for an envelope
     // with no explicit envelope_settings.threshold_percent. Single source
