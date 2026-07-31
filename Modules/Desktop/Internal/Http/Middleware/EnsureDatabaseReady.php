@@ -43,21 +43,21 @@ final class EnsureDatabaseReady
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($this->isExempt($request)) {
-            /** @var Response $response */
-            $response = $next($request);
+        return $this->firstLaunchRedirect($request) ?? $this->passThrough($request, $next);
+    }
 
-            return $response;
-        }
+    private function firstLaunchRedirect(Request $request): ?RedirectResponse
+    {
+        return match (true) {
+            $this->isExempt($request) => null,
+            $this->bootstrap->hasPendingMigrations() => new RedirectResponse($this->urls->route('desktop.setup')),
+            $this->bootstrap->isFreshInstall() => new RedirectResponse($this->urls->route('desktop.welcome')),
+            default => null,
+        };
+    }
 
-        if ($this->bootstrap->hasPendingMigrations()) {
-            return new RedirectResponse($this->urls->route('desktop.setup'));
-        }
-
-        if ($this->bootstrap->isFreshInstall()) {
-            return new RedirectResponse($this->urls->route('desktop.welcome'));
-        }
-
+    private function passThrough(Request $request, Closure $next): Response
+    {
         /** @var Response $response */
         $response = $next($request);
 
@@ -67,21 +67,27 @@ final class EnsureDatabaseReady
     private function isExempt(Request $request): bool
     {
         $route = $request->route();
-        if ($route === null) {
-            return false;
-        }
-
-        $name = $route->getName();
+        $name = $route === null ? null : $route->getName();
         if (! is_string($name)) {
             return false;
         }
 
+        return $this->hasExemptPrefix($name) || $this->hasExemptSuffix($name);
+    }
+
+    private function hasExemptPrefix(string $name): bool
+    {
         foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
             if (str_starts_with($name, $prefix)) {
                 return true;
             }
         }
 
+        return false;
+    }
+
+    private function hasExemptSuffix(string $name): bool
+    {
         foreach (self::EXEMPT_ROUTE_SUFFIXES as $suffix) {
             if (str_ends_with($name, $suffix)) {
                 return true;

@@ -22,10 +22,10 @@ final class LockOnWindowHideOrClose
         private readonly SessionFactory $session,
     ) {}
 
-    // Accepts both WindowHidden and WindowClosed via the object type
-    // hint so both route through this one handler; the event payload
-    // itself is never inspected.
-    public function handle(object $event): void
+    // Wired to both WindowHidden and WindowClosed in the provider so
+    // both route through this one handler; the event payload itself is
+    // never inspected, so no parameter is bound.
+    public function handle(): void
     {
         $this->keyService->withhold(($this->session)());
     }

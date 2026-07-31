@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Listeners;
 
-use Illuminate\Auth\Events\Login;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
 
 // The pending file-open intent is session-scoped: a user logging in on
@@ -17,7 +16,7 @@ final class ContinuePendingFileIntentAfterLogin
         private readonly PendingFileIntent $intent,
     ) {}
 
-    public function handle(Login $event): void
+    public function handle(): void
     {
         // Reading here — for its realpath()/is_file() side effect —
         // guarantees the next /desktop/file-staging navigation either

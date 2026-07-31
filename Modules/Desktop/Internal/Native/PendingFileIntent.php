@@ -46,24 +46,31 @@ final class PendingFileIntent implements RemembersPendingFileIntent
         if (! is_array($raw)) {
             return null;
         }
+
+        $intent = $this->canonicalize($raw);
+        if ($intent === null) {
+            $this->clear();
+        }
+
+        return $intent;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $raw
+     * @return array{path: string, extension: string}|null
+     */
+    private function canonicalize(array $raw): ?array
+    {
         $path = $raw['path'] ?? null;
         $extension = $raw['extension'] ?? null;
-        if (! is_string($path) || ! is_string($extension)) {
-            $this->clear();
-
+        if (! is_string($path) || ! is_string($extension) || ! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
             return null;
         }
-        if (! in_array($extension, self::ALLOWED_EXTENSIONS, true)) {
-            $this->clear();
 
-            return null;
-        }
         // A flash drive unmounted between the double-click and login
         // makes realpath() return false — discard the stale intent.
         $canonical = realpath($path);
         if ($canonical === false || ! is_file($canonical)) {
-            $this->clear();
-
             return null;
         }
 

@@ -375,3 +375,36 @@ it('single instance file open focuses the existing window', function (): void {
         fn (FileOpenedFromOs $event): bool => $event->path === realpath($runningPath),
     );
 })->group('phase-15');
+
+it('PendingFileIntent discards a malformed stored intent and clears the session', function (): void {
+    // A stored row whose `path` is not a string (session tampering or a
+    // shape mismatch from an older build) must be treated as absent:
+    // pending() returns null and forgets the key so the next read is
+    // clean rather than repeatedly re-parsing a broken row.
+    /** @var PendingFileIntent $intent */
+    $intent = app(PendingFileIntent::class);
+
+    session()->put(PendingFileIntent::SESSION_KEY, [
+        'path' => 1234,
+        'extension' => 'csv',
+    ]);
+
+    expect($intent->pending())->toBeNull();
+    expect(session()->has(PendingFileIntent::SESSION_KEY))->toBeFalse();
+})->group('phase-15');
+
+it('PendingFileIntent discards a stored intent whose extension is not allow-listed', function (): void {
+    // A well-typed row whose extension falls outside the allow-list is
+    // still rejected and cleared — the allow-list is re-checked on read,
+    // not only when the intent is first remembered.
+    /** @var PendingFileIntent $intent */
+    $intent = app(PendingFileIntent::class);
+
+    session()->put(PendingFileIntent::SESSION_KEY, [
+        'path' => __FILE__,
+        'extension' => 'exe',
+    ]);
+
+    expect($intent->pending())->toBeNull();
+    expect(session()->has(PendingFileIntent::SESSION_KEY))->toBeFalse();
+})->group('phase-15');
