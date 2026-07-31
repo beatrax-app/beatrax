@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\Tax\Internal\Actions;
 
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Modules\Tax\Public\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Public\Exceptions\DuplicateTaxCategoryNameException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -33,7 +35,6 @@ final class TaxCategoryWriter
 
         $connection = $this->db->connection();
         $now = Carbon::now()->toDateTimeString();
-        $inserted = 0;
 
         // sort_order continues after the user's existing categories (as
         // add() does) so seeding a second country appends its block
@@ -43,59 +44,103 @@ final class TaxCategoryWriter
             ->max('sort_order');
         $sortBase = is_numeric($maxOrder) ? (int) $maxOrder + 1 : 0;
 
+        $inserted = 0;
         foreach ($entries as $entry) {
-            $key = is_string($entry['key'] ?? null) ? $entry['key'] : '';
-            $name = is_string($entry['name'] ?? null) ? $entry['name'] : '';
-            if ($key === '' || $name === '') {
-                continue;
+            /** @var array<int|string, mixed> $entry */
+            $didInsert = $this->seedEntry(
+                $connection,
+                $user->id,
+                $countryCode,
+                $entry,
+                $now,
+                $sortBase + $inserted,
+            );
+
+            if ($didInsert) {
+                $inserted++;
             }
-
-            // Check if this corpus_key already exists for the user (the
-            // INSERT-only contract).
-            $existingId = $connection->table('tax_deduction_categories')
-                ->where('user_id', $user->id)
-                ->where('corpus_key', $key)
-                ->value('id');
-
-            if ($existingId !== null) {
-                // Already seeded — skip to preserve any rename the user
-                // has made since.
-                continue;
-            }
-
-            // A user-created category may already carry this exact name;
-            // inserting would violate unique(user_id, name) and 500 the
-            // settings/wizard country pickers. Skip — the user's own
-            // category wins.
-            $nameTaken = $connection->table('tax_deduction_categories')
-                ->where('user_id', $user->id)
-                ->where('name', $name)
-                ->exists();
-
-            if ($nameTaken) {
-                continue;
-            }
-
-            $shortName = is_string($entry['short_name'] ?? null) ? $entry['short_name'] : null;
-            $hint = is_string($entry['hint'] ?? null) ? $entry['hint'] : null;
-
-            $connection->table('tax_deduction_categories')->insert([
-                'user_id' => $user->id,
-                'name' => $name,
-                'short_name' => $shortName,
-                'hint' => $hint,
-                'corpus_key' => $key,
-                'country_code' => $countryCode,
-                'status' => 'active',
-                'sort_order' => $sortBase + $inserted,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-
-            $inserted++;
         }
 
         return $inserted;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $entry
+     * @return bool Whether a row was actually inserted for this entry.
+     */
+    private function seedEntry(
+        ConnectionInterface $connection,
+        int $userId,
+        string $countryCode,
+        array $entry,
+        string $now,
+        int $sortOrder,
+    ): bool {
+        $key = self::stringField($entry, 'key');
+        $name = self::stringField($entry, 'name');
+        if ($key === '' || $name === '') {
+            return false;
+        }
+
+        // INSERT-only contract: skip a corpus_key already seeded (preserving
+        // any later rename) and skip a name the user's own category already
+        // holds, which would otherwise violate unique(user_id, name) and 500
+        // the settings/wizard country pickers.
+        if ($this->userAlreadyHas($connection, $userId, $key, $name)) {
+            return false;
+        }
+
+        $connection->table('tax_deduction_categories')->insert([
+            'user_id' => $userId,
+            'name' => $name,
+            'short_name' => self::nullableStringField($entry, 'short_name'),
+            'hint' => self::nullableStringField($entry, 'hint'),
+            'corpus_key' => $key,
+            'country_code' => $countryCode,
+            'status' => 'active',
+            'sort_order' => $sortOrder,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return true;
+    }
+
+    private function userAlreadyHas(ConnectionInterface $connection, int $userId, string $key, string $name): bool
+    {
+        $keySeeded = $connection->table('tax_deduction_categories')
+            ->where('user_id', $userId)
+            ->where('corpus_key', $key)
+            ->exists();
+
+        if ($keySeeded) {
+            return true;
+        }
+
+        return $connection->table('tax_deduction_categories')
+            ->where('user_id', $userId)
+            ->where('name', $name)
+            ->exists();
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $entry
+     */
+    private static function stringField(array $entry, string $key): string
+    {
+        $value = $entry[$key] ?? null;
+
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $entry
+     */
+    private static function nullableStringField(array $entry, string $key): ?string
+    {
+        $value = $entry[$key] ?? null;
+
+        return is_string($value) ? $value : null;
     }
 
     /**
@@ -150,7 +195,9 @@ final class TaxCategoryWriter
             ->value('id');
 
         if (! is_int($id)) {
-            throw new \RuntimeException('Failed to retrieve new category id.');
+            // Defensive: the row was just inserted, so a non-int id here
+            // means the write was silently lost or the connection is broken.
+            throw new CategoryPersistenceException('Failed to retrieve new category id.');
         }
 
         return $id;

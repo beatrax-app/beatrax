@@ -49,6 +49,46 @@ it('all six shipped country files parse and yield at least 3 entries each', func
     }
 })->with(['nl', 'de', 'be', 'fr', 'gb', 'us']);
 
+it('logs a warning and returns empty list when a known country has no corpus file', function (): void {
+    /** @var LoggerInterface&MockInterface $logger */
+    $logger = Mockery::mock(LoggerInterface::class);
+    $logger->shouldReceive('warning')->once();
+
+    $loader = new TaxCorpusLoader($logger);
+
+    // Move a shipped country's corpus aside so the enum still accepts the
+    // code but the file is absent, then always restore it.
+    $corpusPath = resource_path('corpus/tax/us.yaml');
+    $stashed = $corpusPath.'.stash';
+    rename($corpusPath, $stashed);
+
+    try {
+        expect($loader->loadForCountry('us'))->toBeEmpty();
+    } finally {
+        rename($stashed, $corpusPath);
+    }
+});
+
+it('logs a warning and returns empty list when the YAML has no entries list', function (): void {
+    /** @var LoggerInterface&MockInterface $logger */
+    $logger = Mockery::mock(LoggerInterface::class);
+    $logger->shouldReceive('warning')->once();
+
+    $loader = new TaxCorpusLoader($logger);
+
+    // Valid YAML that parses cleanly but carries no `entries:` root key.
+    $corpusPath = resource_path('corpus/tax/nl.yaml');
+    $backup = file_get_contents($corpusPath);
+    assert(is_string($backup));
+    file_put_contents($corpusPath, "meta:\n  country: nl\n");
+
+    try {
+        expect($loader->loadForCountry('nl'))->toBeEmpty();
+    } finally {
+        file_put_contents($corpusPath, $backup);
+    }
+});
+
 it('logs a warning and returns empty list when the corpus file contains malformed YAML', function (): void {
     /** @var LoggerInterface&MockInterface $logger */
     $logger = Mockery::mock(LoggerInterface::class);
