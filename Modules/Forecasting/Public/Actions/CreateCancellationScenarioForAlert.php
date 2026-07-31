@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -54,7 +55,7 @@ final class CreateCancellationScenarioForAlert
         try {
             return $this->db->connection()->transaction(function () use ($user, $scenarioName, $seriesId): int {
                 $scenarioId = ($this->createScenario)($user, $scenarioName);
-                ($this->addMutation)($scenarioId, $user, 'cancel_series', new CancelSeriesPayload(seriesId: $seriesId));
+                ($this->addMutation)($scenarioId, $user, ScenarioMutationKind::CancelSeries->value, new CancelSeriesPayload(seriesId: $seriesId));
 
                 return $scenarioId;
             });

@@ -15,6 +15,7 @@ use Modules\Forecasting\Public\Actions\DeleteScenario;
 use Modules\Forecasting\Public\Actions\EditScenarioMutation;
 use Modules\Forecasting\Public\Actions\RemoveScenarioMutation;
 use Modules\Forecasting\Public\Actions\RenameScenario;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -92,7 +93,7 @@ final class ScenarioEditorSidebar extends Component
 
     public function selectKind(string $kind): void
     {
-        if (! in_array($kind, ['cancel_series', 'add_one_off', 'add_recurring', 'change_series_amount', 'shift_series_date'], true)) {
+        if (ScenarioMutationKind::tryFrom($kind) === null) {
             return;
         }
         $this->selectedKind = $kind;

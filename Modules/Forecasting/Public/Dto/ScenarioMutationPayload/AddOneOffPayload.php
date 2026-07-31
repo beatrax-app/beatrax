@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Dto\ScenarioMutationPayload;
 
 use InvalidArgumentException;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Ledger\Public\Enums\Direction;
 
 /**
@@ -32,6 +33,6 @@ final class AddOneOffPayload extends ScenarioMutationPayload
 
     public function kind(): string
     {
-        return 'add_one_off';
+        return ScenarioMutationKind::AddOneOff->value;
     }
 }

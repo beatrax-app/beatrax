@@ -13,6 +13,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
 use Modules\Forecasting\Public\Services\ScenarioQuery;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
@@ -290,7 +291,7 @@ final readonly class ScenarioApplier
     {
         $series = $this->seriesQuery->forSeries($payload->seriesId, $user);
         if ($series === null) {
-            $this->logCrossUserMismatchIfAny('change_series_amount', $payload->seriesId, $user);
+            $this->logCrossUserMismatchIfAny(ScenarioMutationKind::ChangeSeriesAmount->value, $payload->seriesId, $user);
 
             return $contributions;
         }

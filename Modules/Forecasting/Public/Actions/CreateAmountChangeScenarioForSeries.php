@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use stdClass;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -42,7 +43,7 @@ final class CreateAmountChangeScenarioForSeries
                 ($this->addMutation)(
                     $scenarioId,
                     $user,
-                    'change_series_amount',
+                    ScenarioMutationKind::ChangeSeriesAmount->value,
                     new ChangeSeriesAmountPayload(seriesId: $recurringSeriesId, newAmountMinor: $newAmountMinor),
                 );
 

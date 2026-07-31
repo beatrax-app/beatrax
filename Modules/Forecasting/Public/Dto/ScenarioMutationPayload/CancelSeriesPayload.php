@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Public\Dto\ScenarioMutationPayload;
 
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
+
 /**
  * @see ScenarioMutationPayload
  */
@@ -15,6 +17,6 @@ final class CancelSeriesPayload extends ScenarioMutationPayload
 
     public function kind(): string
     {
-        return 'cancel_series';
+        return ScenarioMutationKind::CancelSeries->value;
     }
 }

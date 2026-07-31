@@ -130,23 +130,23 @@
             @if ($selectedKind === null)
                 <p class="text-xs text-slate-500 dark:text-slate-400">Pick a mutation kind:</p>
                 <div class="mt-2 grid grid-cols-1 gap-2">
-                    <button type="button" wire:click="selectKind('cancel_series')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
+                    <button type="button" wire:click="selectKind('{{ \Modules\Forecasting\Public\Enums\ScenarioMutationKind::CancelSeries->value }}')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
                         <span class="font-medium text-slate-900 dark:text-slate-100">Cancel a series</span>
                         <span class="block text-xs text-slate-500 dark:text-slate-400">Drop every projected occurrence of an approved series.</span>
                     </button>
-                    <button type="button" wire:click="selectKind('add_one_off')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
+                    <button type="button" wire:click="selectKind('{{ \Modules\Forecasting\Public\Enums\ScenarioMutationKind::AddOneOff->value }}')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
                         <span class="font-medium text-slate-900 dark:text-slate-100">Add a one-off charge or credit</span>
                         <span class="block text-xs text-slate-500 dark:text-slate-400">A single hypothetical event on a specific date.</span>
                     </button>
-                    <button type="button" wire:click="selectKind('add_recurring')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
+                    <button type="button" wire:click="selectKind('{{ \Modules\Forecasting\Public\Enums\ScenarioMutationKind::AddRecurring->value }}')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
                         <span class="font-medium text-slate-900 dark:text-slate-100">Add a recurring series</span>
                         <span class="block text-xs text-slate-500 dark:text-slate-400">A hypothetical new subscription or income stream.</span>
                     </button>
-                    <button type="button" wire:click="selectKind('change_series_amount')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
+                    <button type="button" wire:click="selectKind('{{ \Modules\Forecasting\Public\Enums\ScenarioMutationKind::ChangeSeriesAmount->value }}')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
                         <span class="font-medium text-slate-900 dark:text-slate-100">Change a series amount</span>
                         <span class="block text-xs text-slate-500 dark:text-slate-400">Model a price hike or drop on an existing series.</span>
                     </button>
-                    <button type="button" wire:click="selectKind('shift_series_date')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
+                    <button type="button" wire:click="selectKind('{{ \Modules\Forecasting\Public\Enums\ScenarioMutationKind::ShiftSeriesDate->value }}')" class="rounded-md border border-slate-200 bg-white p-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:border-slate-700">
                         <span class="font-medium text-slate-900 dark:text-slate-100">Shift a series date</span>
                         <span class="block text-xs text-slate-500 dark:text-slate-400">Move the next or all subsequent occurrences forward.</span>
                     </button>

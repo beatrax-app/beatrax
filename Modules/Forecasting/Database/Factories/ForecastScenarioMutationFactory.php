@@ -11,6 +11,7 @@ use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ChangeSeriesAmountPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\ShiftSeriesDatePayload;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 
 /**
  * @extends Factory<ForecastScenarioMutation>
@@ -26,7 +27,7 @@ final class ForecastScenarioMutationFactory extends Factory
         return [
             'user_id' => null,
             'forecast_scenario_id' => null,
-            'kind' => 'cancel_series',
+            'kind' => ScenarioMutationKind::CancelSeries->value,
             'target_series_id' => 42,
             'payload' => new CancelSeriesPayload(seriesId: 42),
         ];
@@ -35,7 +36,7 @@ final class ForecastScenarioMutationFactory extends Factory
     public function cancelSeries(int $seriesId): self
     {
         return $this->state(fn (array $attributes): array => [
-            'kind' => 'cancel_series',
+            'kind' => ScenarioMutationKind::CancelSeries->value,
             'target_series_id' => $seriesId,
             'payload' => new CancelSeriesPayload(seriesId: $seriesId),
         ]);
@@ -44,7 +45,7 @@ final class ForecastScenarioMutationFactory extends Factory
     public function addOneOff(string $date, int $amountMinor, string $currency, string $direction): self
     {
         return $this->state(fn (array $attributes): array => [
-            'kind' => 'add_one_off',
+            'kind' => ScenarioMutationKind::AddOneOff->value,
             'target_series_id' => null,
             'payload' => new AddOneOffPayload(
                 date: $date,
@@ -63,7 +64,7 @@ final class ForecastScenarioMutationFactory extends Factory
         string $cadence,
     ): self {
         return $this->state(fn (array $attributes): array => [
-            'kind' => 'add_recurring',
+            'kind' => ScenarioMutationKind::AddRecurring->value,
             'target_series_id' => null,
             'payload' => new AddRecurringPayload(
                 startDate: $startDate,
@@ -78,7 +79,7 @@ final class ForecastScenarioMutationFactory extends Factory
     public function changeSeriesAmount(int $seriesId, int $newAmountMinor): self
     {
         return $this->state(fn (array $attributes): array => [
-            'kind' => 'change_series_amount',
+            'kind' => ScenarioMutationKind::ChangeSeriesAmount->value,
             'target_series_id' => $seriesId,
             'payload' => new ChangeSeriesAmountPayload(
                 seriesId: $seriesId,
@@ -90,7 +91,7 @@ final class ForecastScenarioMutationFactory extends Factory
     public function shiftSeriesDate(int $seriesId, string $newNextDate, string $scope): self
     {
         return $this->state(fn (array $attributes): array => [
-            'kind' => 'shift_series_date',
+            'kind' => ScenarioMutationKind::ShiftSeriesDate->value,
             'target_series_id' => $seriesId,
             'payload' => new ShiftSeriesDatePayload(
                 seriesId: $seriesId,

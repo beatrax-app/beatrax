@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Dto\ScenarioMutationPayload;
 
 use InvalidArgumentException;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Forecasting\Public\Enums\ShiftScope;
 
 /**
@@ -29,6 +30,6 @@ final class ShiftSeriesDatePayload extends ScenarioMutationPayload
 
     public function kind(): string
     {
-        return 'shift_series_date';
+        return ScenarioMutationKind::ShiftSeriesDate->value;
     }
 }
