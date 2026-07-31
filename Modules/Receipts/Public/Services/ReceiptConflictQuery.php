@@ -53,16 +53,11 @@ final readonly class ReceiptConflictQuery
         } catch (Exception) {
             return $raw;
         }
-        if ($decoded === null) {
-            return null;
-        }
-        if (is_string($decoded)) {
-            return $decoded;
-        }
-        if (is_scalar($decoded)) {
-            return (string) $decoded;
-        }
 
-        return null;
+        return match (true) {
+            is_string($decoded) => $decoded,
+            is_scalar($decoded) => (string) $decoded,
+            default => null,
+        };
     }
 }

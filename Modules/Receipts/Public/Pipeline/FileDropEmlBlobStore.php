@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Filesystem\Filesystem;
 use InvalidArgumentException;
+use Modules\Receipts\Public\Exceptions\FileDropBlobWriteException;
 use RuntimeException;
 use Throwable;
 
@@ -54,12 +55,8 @@ final class FileDropEmlBlobStore
         $dir = dirname($absolutePath);
         $dirExisted = $this->files->isDirectory($dir);
         $this->files->ensureDirectoryExists($dir, self::DIR_MODE, recursive: true);
-        if (! $dirExisted) {
-            if (! @chmod($dir, self::DIR_MODE)) {
-                throw new RuntimeException(
-                    "FileDropEmlBlobStore: failed to chmod 0700 on newly-created directory {$dir}.",
-                );
-            }
+        if (! $dirExisted && ! @chmod($dir, self::DIR_MODE)) {
+            throw FileDropBlobWriteException::chmodDirectoryFailed($dir);
         }
 
         $tmp = $absolutePath.'.tmp';
@@ -72,18 +69,14 @@ final class FileDropEmlBlobStore
         $fp = @fopen($tmp, 'wb');
         if ($fp === false) {
             umask($previousUmask);
-            throw new RuntimeException(
-                "FileDropEmlBlobStore: could not open temp file at {$tmp}.",
-            );
+            throw FileDropBlobWriteException::couldNotOpenTempFile($tmp);
         }
 
         try {
             @flock($fp, LOCK_EX);
             $written = @fwrite($fp, $rawMime);
             if ($written === false || $written !== strlen($rawMime)) {
-                throw new RuntimeException(
-                    "FileDropEmlBlobStore: short write to temp file at {$tmp}.",
-                );
+                throw FileDropBlobWriteException::shortWrite($tmp);
             }
             @fflush($fp);
             if (function_exists('fsync')) {
@@ -94,15 +87,11 @@ final class FileDropEmlBlobStore
             $fp = null;
 
             if (! @chmod($tmp, self::FILE_MODE)) {
-                throw new RuntimeException(
-                    "FileDropEmlBlobStore: failed to chmod temp file at {$tmp}.",
-                );
+                throw FileDropBlobWriteException::chmodTempFileFailed($tmp);
             }
 
             if (! @rename($tmp, $absolutePath)) {
-                throw new RuntimeException(
-                    "FileDropEmlBlobStore: atomic rename failed from {$tmp} to {$absolutePath}.",
-                );
+                throw FileDropBlobWriteException::atomicRenameFailed($tmp, $absolutePath);
             }
         } catch (Throwable $e) {
             if (is_resource($fp)) {
@@ -113,9 +102,7 @@ final class FileDropEmlBlobStore
             if ($e instanceof RuntimeException) {
                 throw $e;
             }
-            throw new RuntimeException(
-                "FileDropEmlBlobStore: unexpected failure writing {$absolutePath}.",
-            );
+            throw FileDropBlobWriteException::unexpectedFailure($absolutePath);
         } finally {
             umask($previousUmask);
         }

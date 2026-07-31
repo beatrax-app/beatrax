@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Modules\Receipts\Public\Pipeline;
 
 use Generator;
-use RuntimeException;
+use Modules\Receipts\Public\Exceptions\MboxReadException;
 
 // Streaming mboxrd iterator: messages split on lines starting with the
 // literal "From " (stripped); an escaped body line ('>From ') is
@@ -20,7 +20,7 @@ final class MboxIterator
     {
         $fh = @fopen($mboxPath, 'rb');
         if ($fh === false) {
-            throw new RuntimeException("MboxIterator: cannot open mbox at {$mboxPath}.");
+            throw MboxReadException::couldNotOpen($mboxPath);
         }
         try {
             $buffer = '';

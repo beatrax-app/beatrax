@@ -40,28 +40,24 @@ final class DemoReceiptsSeeder
             return 0;
         }
 
-        $this->upsertFileImport(
-            $primary,
+        $this->upsertFileImport($primary, new DemoFileImportSpec(
             providerMessageId: 'demo-paypal-receipt-001',
             sourceFilename: 'demo-paypal-receipt.eml',
-            sourceKind: 'eml',
             senderEmail: 'service@paypal.com',
             senderName: 'PayPal',
             subject: 'Receipt for your payment',
             matcherKey: 'paypal-receipt',
             ageHours: 48,
-        );
-        $this->upsertFileImport(
-            $primary,
+        ));
+        $this->upsertFileImport($primary, new DemoFileImportSpec(
             providerMessageId: 'demo-ics-statement-001',
             sourceFilename: 'demo-ics-statement.eml',
-            sourceKind: 'eml',
             senderEmail: 'noreply@ics.nl',
             senderName: 'ICS Cards',
             subject: 'Uw maandafschrift is beschikbaar',
             matcherKey: 'ics-receipt',
             ageHours: 72,
-        );
+        ));
 
         $bolPaypalTransaction = Transaction::query()
             ->where('user_id', $primary->id)
@@ -87,22 +83,13 @@ final class DemoReceiptsSeeder
             ->count();
     }
 
-    private function upsertFileImport(
-        User $user,
-        string $providerMessageId,
-        string $sourceFilename,
-        string $sourceKind,
-        string $senderEmail,
-        string $senderName,
-        string $subject,
-        string $matcherKey,
-        int $ageHours,
-    ): void {
+    private function upsertFileImport(User $user, DemoFileImportSpec $spec): void
+    {
         $connection = $this->db->connection();
 
         $existing = $connection->table('file_imports')
             ->where('user_id', $user->id)
-            ->where('provider_message_id', $providerMessageId)
+            ->where('provider_message_id', $spec->providerMessageId)
             ->exists();
 
         if ($existing) {
@@ -110,20 +97,20 @@ final class DemoReceiptsSeeder
         }
 
         $now = CarbonImmutable::now();
-        $internalDate = $now->subHours($ageHours);
+        $internalDate = $now->subHours($spec->ageHours);
 
         $connection->table('file_imports')->insert([
             'user_id' => $user->id,
-            'source_kind' => $sourceKind,
-            'source_filename' => $sourceFilename,
-            'provider_message_id' => $providerMessageId,
+            'source_kind' => $spec->sourceKind(),
+            'source_filename' => $spec->sourceFilename,
+            'provider_message_id' => $spec->providerMessageId,
             'internal_date' => $internalDate,
-            'sender_email' => $senderEmail,
-            'sender_name' => $senderName,
-            'subject' => $subject,
-            'eml_path' => 'demo://receipts/'.$providerMessageId.'.eml',
+            'sender_email' => $spec->senderEmail,
+            'sender_name' => $spec->senderName,
+            'subject' => $spec->subject,
+            'eml_path' => 'demo://receipts/'.$spec->providerMessageId.'.eml',
             'status' => 'parsed',
-            'matcher_key' => $matcherKey,
+            'matcher_key' => $spec->matcherKey,
             'fetched_at' => $internalDate->addMinutes(5),
             'created_at' => $now,
             'updated_at' => $now,

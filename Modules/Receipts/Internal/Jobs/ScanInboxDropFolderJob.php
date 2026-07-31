@@ -78,53 +78,86 @@ final class ScanInboxDropFolderJob implements ShouldBeUniqueUntilProcessing, Sho
         $processedDir = $baseDir.'/processed/'.$ym;
         $failedDir = $baseDir.'/failed/'.$ym;
 
-        $candidates = $this->topLevelCandidates($files, $baseDir);
-        foreach ($candidates as $path) {
-            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        foreach ($this->topLevelCandidates($files, $baseDir) as $path) {
             try {
-                if ($ext === 'eml') {
-                    $bytes = $files->get($path);
-                    ($recordReceipt)($bytes, $userRow, basename($path));
-                } elseif ($ext === 'mbox') {
-                    foreach ($mboxIterator->iterate($path) as $entry) {
-                        $emlBytes = $entry['eml'];
-                        if ($emlBytes === '') {
-                            continue;
-                        }
-                        ($recordReceipt)($emlBytes, $userRow, basename($path).'@'.$entry['index']);
-                    }
-                } else {
+                if (! $this->recordCandidate($files, $recordReceipt, $mboxIterator, $userRow, $path)) {
                     // Unknown extension on a top-level file — leave it
                     // alone; don't move and don't error.
                     continue;
                 }
                 $this->moveTo($files, $path, $processedDir);
             } catch (Throwable $e) {
-                $logger->warning(
-                    'ScanInboxDropFolderJob: per-file processing failed.',
-                    [
-                        'user_id' => $this->userId,
-                        'path' => $path,
-                        'exception' => $e::class,
-                        'message' => $e->getMessage(),
-                    ],
-                );
-                try {
-                    $this->moveTo($files, $path, $failedDir);
-                    $errorPath = $failedDir.'/'.basename($path).'.error.txt';
-                    $files->put($errorPath, substr($e->getMessage(), 0, 500));
-                } catch (Throwable $inner) {
-                    $logger->warning(
-                        'ScanInboxDropFolderJob: failed to quarantine failed file.',
-                        [
-                            'user_id' => $this->userId,
-                            'path' => $path,
-                            'exception' => $inner::class,
-                            'message' => $inner->getMessage(),
-                        ],
-                    );
-                }
+                $this->quarantine($files, $logger, $path, $failedDir, $e);
             }
+        }
+    }
+
+    // Dispatches a top-level candidate by extension: .eml runs once,
+    // .mbox streams each contained message. Returns false for an
+    // unrecognised extension so the caller leaves the file untouched.
+    private function recordCandidate(
+        Filesystem $files,
+        RecordReceipt $recordReceipt,
+        MboxIterator $mboxIterator,
+        User $user,
+        string $path,
+    ): bool {
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        return match ($ext) {
+            'eml' => $this->recordEmlFile($recordReceipt, $files, $user, $path),
+            'mbox' => $this->recordMboxFile($recordReceipt, $mboxIterator, $user, $path),
+            default => false,
+        };
+    }
+
+    private function recordEmlFile(RecordReceipt $recordReceipt, Filesystem $files, User $user, string $path): bool
+    {
+        ($recordReceipt)($files->get($path), $user, basename($path));
+
+        return true;
+    }
+
+    private function recordMboxFile(RecordReceipt $recordReceipt, MboxIterator $mboxIterator, User $user, string $path): bool
+    {
+        foreach ($mboxIterator->iterate($path) as $entry) {
+            if ($entry['eml'] === '') {
+                continue;
+            }
+            ($recordReceipt)($entry['eml'], $user, basename($path).'@'.$entry['index']);
+        }
+
+        return true;
+    }
+
+    // Moves a failed file into failed/{year-month}/ with a sibling
+    // .error.txt excerpt. A secondary failure here is logged rather than
+    // rethrown so one poisoned file cannot stall the whole scan.
+    private function quarantine(Filesystem $files, LoggerInterface $logger, string $path, string $failedDir, Throwable $e): void
+    {
+        $logger->warning(
+            'ScanInboxDropFolderJob: per-file processing failed.',
+            [
+                'user_id' => $this->userId,
+                'path' => $path,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ],
+        );
+        try {
+            $this->moveTo($files, $path, $failedDir);
+            $errorPath = $failedDir.'/'.basename($path).'.error.txt';
+            $files->put($errorPath, substr($e->getMessage(), 0, 500));
+        } catch (Throwable $inner) {
+            $logger->warning(
+                'ScanInboxDropFolderJob: failed to quarantine failed file.',
+                [
+                    'user_id' => $this->userId,
+                    'path' => $path,
+                    'exception' => $inner::class,
+                    'message' => $inner->getMessage(),
+                ],
+            );
         }
     }
 
