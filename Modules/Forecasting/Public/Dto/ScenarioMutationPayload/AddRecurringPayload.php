@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Dto\ScenarioMutationPayload;
 
 use InvalidArgumentException;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Public\Enums\SeriesCadence;
 
@@ -45,6 +46,6 @@ final class AddRecurringPayload extends ScenarioMutationPayload
 
     public function kind(): string
     {
-        return 'add_recurring';
+        return ScenarioMutationKind::AddRecurring->value;
     }
 }

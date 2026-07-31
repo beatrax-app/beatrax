@@ -12,6 +12,7 @@ use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Models\ForecastScenarioMutation;
 use Modules\Forecasting\Models\ForecastShortfallWindow;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
+use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Ledger\Models\Account;
 
 final class DemoForecastSeeder
@@ -101,7 +102,7 @@ final class DemoForecastSeeder
         $existing = ForecastScenarioMutation::query()
             ->where('user_id', $user->id)
             ->where('forecast_scenario_id', $whatIf->id)
-            ->where('kind', 'add_one_off')
+            ->where('kind', ScenarioMutationKind::AddOneOff->value)
             ->exists();
 
         if ($existing) {
@@ -120,7 +121,7 @@ final class DemoForecastSeeder
         $mutation = new ForecastScenarioMutation;
         $mutation->user_id = $user->id;
         $mutation->forecast_scenario_id = $whatIf->id;
-        $mutation->kind = 'add_one_off';
+        $mutation->kind = ScenarioMutationKind::AddOneOff->value;
         $mutation->target_series_id = null;
         $mutation->payload = $payload;
         $mutation->save();
