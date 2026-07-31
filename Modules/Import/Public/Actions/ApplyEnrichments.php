@@ -12,9 +12,11 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Import\Public\Contracts\AppliesEnrichments;
 use Modules\Import\Public\Dto\PendingEnrichment;
 use Modules\Import\Public\Services\SourceRefRanker;
+use Modules\Receipts\Public\Enums\ReceiptConflictChoice;
 use Modules\Receipts\Public\Events\ReceiptConflictDetected;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
+use stdClass;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#applying-enrichments
@@ -46,11 +48,11 @@ final class ApplyEnrichments implements AppliesEnrichments
         // Single indexed SELECT on users.id; the per-call cost is
         // negligible at single-user scale and stays correct at multi-
         // user scale because we never store this on the action instance.
-        $userPolicy = $this->loadReceiptConflictPolicy($user);
+        $userChoice = $this->loadReceiptConflictChoice($user);
 
         $count = 0;
         foreach ($enrichments as $enrichment) {
-            if ($this->applyOne($enrichment, $user, $userPolicy)) {
+            if ($this->applyOne($enrichment, $user, $userChoice)) {
                 $count++;
             }
         }
@@ -58,9 +60,9 @@ final class ApplyEnrichments implements AppliesEnrichments
         return $count;
     }
 
-    private function applyOne(PendingEnrichment $enrichment, User $user, string $userPolicy): bool
+    private function applyOne(PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): bool
     {
-        $applied = $this->db->connection()->transaction(function () use ($enrichment, $user, $userPolicy): bool {
+        $applied = $this->db->connection()->transaction(function () use ($enrichment, $user, $userChoice): bool {
             $row = $this->db->connection()
                 ->table('transactions')
                 ->where('id', $enrichment->existingTransactionId)
@@ -68,62 +70,11 @@ final class ApplyEnrichments implements AppliesEnrichments
                 ->lockForUpdate()
                 ->first(['id', 'source_ref', 'source_format', 'enriched_from']);
 
-            if ($row === null) {
+            if ($row === null || ! $this->shouldEnrich($row, $enrichment)) {
                 return false;
             }
 
-            $existingRef = is_string($row->source_ref) ? $row->source_ref : null;
-            if ($existingRef !== null && $existingRef === $enrichment->newSourceRef) {
-                return false;
-            }
-
-            // Re-evaluate rank against the stored ref at write time, not
-            // just the preview-time snapshot — a parallel import between
-            // preview and confirm may have already stored a stronger
-            // reference, which this check stops from being overwritten.
-            $existingFormat = is_string($row->source_format) ? $row->source_format : '';
-            $incomingRank = $this->ranker->rank($enrichment->newSourceRef, $enrichment->sourceFormat);
-            $existingRank = $this->ranker->rank($existingRef, $existingFormat);
-
-            if ($incomingRank <= $existingRank) {
-                $this->logger->debug(
-                    'Skipping enrichment: stored source_ref is already at least as strong',
-                    [
-                        'transaction_id' => $enrichment->existingTransactionId,
-                        'existing_format' => $existingFormat,
-                        'existing_rank' => $existingRank,
-                        'incoming_format' => $enrichment->sourceFormat,
-                        'incoming_rank' => $incomingRank,
-                    ],
-                );
-
-                return false;
-            }
-
-            $extraUpdates = $this->resolveFieldConflicts($enrichment, $user, $userPolicy);
-
-            $rawEnrichedFrom = is_string($row->enriched_from) ? $row->enriched_from : null;
-            $provenance = $this->decodeEnrichedFrom($rawEnrichedFrom);
-            $added = ['source_ref'];
-            foreach (array_keys($extraUpdates) as $columnName) {
-                $added[] = $columnName;
-            }
-            $provenance[] = [
-                'format' => $enrichment->sourceFormat,
-                'ran_at' => $this->clock->now()->toIso8601String(),
-                'import_run_id' => $enrichment->importRunId,
-                'added' => $added,
-            ];
-
-            $this->db->connection()
-                ->table('transactions')
-                ->where('id', $enrichment->existingTransactionId)
-                ->where('user_id', $user->id)
-                ->update($extraUpdates + [
-                    'source_ref' => $enrichment->newSourceRef,
-                    'enriched_from' => json_encode($provenance, JSON_THROW_ON_ERROR),
-                    'updated_at' => $this->clock->now()->toDateTimeString(),
-                ]);
+            $this->writeEnrichment($row, $enrichment, $user, $userChoice);
 
             return true;
         });
@@ -131,36 +82,94 @@ final class ApplyEnrichments implements AppliesEnrichments
         return $applied === true;
     }
 
+    // Re-evaluates rank against the stored ref at write time, not just the
+    // preview-time snapshot — a parallel import between preview and confirm
+    // may have already stored a stronger reference, which this check stops
+    // from being overwritten.
+    private function shouldEnrich(stdClass $row, PendingEnrichment $enrichment): bool
+    {
+        $existingRef = is_string($row->source_ref) ? $row->source_ref : null;
+        if ($existingRef !== null && $existingRef === $enrichment->newSourceRef) {
+            return false;
+        }
+
+        $existingFormat = is_string($row->source_format) ? $row->source_format : '';
+        $incomingRank = $this->ranker->rank($enrichment->newSourceRef, $enrichment->sourceFormat);
+        $existingRank = $this->ranker->rank($existingRef, $existingFormat);
+
+        if ($incomingRank <= $existingRank) {
+            $this->logger->debug(
+                'Skipping enrichment: stored source_ref is already at least as strong',
+                [
+                    'transaction_id' => $enrichment->existingTransactionId,
+                    'existing_format' => $existingFormat,
+                    'existing_rank' => $existingRank,
+                    'incoming_format' => $enrichment->sourceFormat,
+                    'incoming_rank' => $incomingRank,
+                ],
+            );
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private function writeEnrichment(stdClass $row, PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): void
+    {
+        $extraUpdates = $this->resolveFieldConflicts($enrichment, $user, $userChoice);
+
+        $rawEnrichedFrom = is_string($row->enriched_from) ? $row->enriched_from : null;
+        $provenance = $this->decodeEnrichedFrom($rawEnrichedFrom);
+        $provenance[] = [
+            'format' => $enrichment->sourceFormat,
+            'ran_at' => $this->clock->now()->toIso8601String(),
+            'import_run_id' => $enrichment->importRunId,
+            'added' => array_merge(['source_ref'], array_keys($extraUpdates)),
+        ];
+
+        $this->db->connection()
+            ->table('transactions')
+            ->where('id', $enrichment->existingTransactionId)
+            ->where('user_id', $user->id)
+            ->update($extraUpdates + [
+                'source_ref' => $enrichment->newSourceRef,
+                'enriched_from' => json_encode($provenance, JSON_THROW_ON_ERROR),
+                'updated_at' => $this->clock->now()->toDateTimeString(),
+            ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
-    private function resolveFieldConflicts(PendingEnrichment $enrichment, User $user, string $userPolicy): array
+    private function resolveFieldConflicts(PendingEnrichment $enrichment, User $user, ?ReceiptConflictChoice $userChoice): array
     {
         if ($enrichment->conflictingFields === []) {
             return [];
         }
 
-        $isReceipt = $this->ranker->isReceiptFormat($enrichment->sourceFormat);
-
-        if ($userPolicy === 'unset') {
-            if (! $isReceipt) {
-                // Non-receipt source — the conflict toast flow is the
-                // receipt-vs-CSV mitigation only. For other paths, keep
-                // the stored value silently (the safer default) and
-                // leave source_ref to be enriched.
-                return [];
-            }
-            $this->holdConflicts($enrichment, $user);
-
-            return [];
-        }
-
-        if ($userPolicy === 'prefer_receipt') {
-            return $this->extractIncomingValues($enrichment, $user);
-        }
-
-        // prefer_first_write: keep the stored value verbatim — no
+        // PreferFirstWrite keeps the stored value verbatim, so no
         // per-field updates land.
+        return match ($userChoice) {
+            null => $this->resolveUnsetPolicy($enrichment, $user),
+            ReceiptConflictChoice::PreferReceipt => $this->extractIncomingValues($enrichment, $user),
+            ReceiptConflictChoice::PreferFirstWrite => [],
+        };
+    }
+
+    // The conflict toast flow is the receipt-vs-CSV mitigation only: a
+    // receipt source holds its conflicts for the user to resolve, while
+    // any other source keeps the stored value silently (the safer
+    // default) and lets source_ref enrich on its own.
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveUnsetPolicy(PendingEnrichment $enrichment, User $user): array
+    {
+        if ($this->ranker->isReceiptFormat($enrichment->sourceFormat)) {
+            $this->holdConflicts($enrichment, $user);
+        }
+
         return [];
     }
 
@@ -224,38 +233,31 @@ final class ApplyEnrichments implements AppliesEnrichments
         return $this->codec->encryptAttrs('transactions', $updates, $user->id, ($this->session)());
     }
 
-    private function loadReceiptConflictPolicy(User $user): string
+    private function loadReceiptConflictChoice(User $user): ?ReceiptConflictChoice
     {
         $row = $this->db->connection()
             ->table('users')
             ->where('id', $user->id)
             ->first(['receipt_conflict_resolution']);
 
-        if ($row === null) {
-            return 'unset';
-        }
+        $value = $row !== null && is_string($row->receipt_conflict_resolution)
+            ? $row->receipt_conflict_resolution
+            : null;
 
-        $value = is_string($row->receipt_conflict_resolution) ? $row->receipt_conflict_resolution : 'unset';
-        if (! in_array($value, ['unset', 'prefer_receipt', 'prefer_first_write'], true)) {
-            return 'unset';
-        }
-
-        return $value;
+        // A null or unrecognised column (including the stored 'unset'
+        // sentinel) reads as no choice — the receipt-vs-first-write toast
+        // has not been answered yet, handled by the null match arm above.
+        return $value === null ? null : ReceiptConflictChoice::tryFrom($value);
     }
 
     private static function scalarToString(mixed $value): ?string
     {
-        if ($value === null) {
-            return null;
-        }
-        if (is_string($value)) {
-            return $value;
-        }
-        if (is_scalar($value)) {
-            return (string) $value;
-        }
-
-        return null;
+        return match (true) {
+            $value === null => null,
+            is_string($value) => $value,
+            is_scalar($value) => (string) $value,
+            default => null,
+        };
     }
 
     /**

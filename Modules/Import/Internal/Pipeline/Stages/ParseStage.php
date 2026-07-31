@@ -8,13 +8,13 @@ use Generator;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
+use Modules\Import\Public\Exceptions\ReceiptParseException;
 use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Receipts\Public\Actions\RecordReceipt;
 use Modules\Receipts\Public\Pipeline\MboxIterator;
 use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
-use RuntimeException;
 
 /**
  * @link ../../../../../.docs/architecture/ingestion-pipeline.md#1-parse-parsestage
@@ -42,10 +42,7 @@ final class ParseStage
     ): Generator {
         if (in_array($sourceFormat, self::RECEIPT_FORMATS, strict: true)) {
             if ($user === null) {
-                throw new RuntimeException(sprintf(
-                    "ParseStage: sourceFormat '%s' requires a User context.",
-                    $sourceFormat,
-                ));
+                throw ReceiptParseException::missingUserContext($sourceFormat);
             }
 
             yield from $this->runReceiptArm($localPath, $sourceFormat, $user);
@@ -67,10 +64,7 @@ final class ParseStage
             try {
                 $bytes = $this->files->get($localPath);
             } catch (FileNotFoundException $e) {
-                throw new RuntimeException(
-                    "ParseStage: cannot read .eml at {$localPath}.",
-                    previous: $e,
-                );
+                throw ReceiptParseException::unreadable($localPath, $e);
             }
 
             $outcome = ($this->recordReceipt)($bytes, $user, $sourceFilename);

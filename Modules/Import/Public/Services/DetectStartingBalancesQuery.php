@@ -13,6 +13,10 @@ use Modules\Import\Public\Dto\StartingBalanceCandidate;
  */
 final readonly class DetectStartingBalancesQuery
 {
+    // CAMT.053 carries an explicit <OpngBal> element, so on a date tie it
+    // is preferred over MT940's sometimes-recomputed running total.
+    private const CAMT_FORMAT = 'camt053';
+
     /**
      * @param  iterable<DetectsStartingBalance>  $detectors  Per-source detectors bound under the `starting-balance.detector` container tag, in registration order.
      */
@@ -69,16 +73,24 @@ final readonly class DetectStartingBalancesQuery
      */
     private static function pickWinner(array $forAccount): array
     {
-        if ($forAccount === []) {
-            return [];
+        if (count($forAccount) < 2) {
+            return $forAccount;
         }
 
-        if (count($forAccount) === 1) {
-            return [$forAccount[0]];
+        $atEarliest = self::earliestDated($forAccount);
+        if (count($atEarliest) === 1) {
+            return [$atEarliest[0]];
         }
 
-        // 1. Earliest openingBalanceDate wins. Find the minimum date
-        //    across the group; drop anything later.
+        return self::breakDateTie($atEarliest);
+    }
+
+    /**
+     * @param  list<StartingBalanceCandidate>  $forAccount
+     * @return list<StartingBalanceCandidate>
+     */
+    private static function earliestDated(array $forAccount): array
+    {
         $earliestDate = null;
         foreach ($forAccount as $candidate) {
             if ($earliestDate === null || $candidate->openingBalanceDate < $earliestDate) {
@@ -86,52 +98,36 @@ final readonly class DetectStartingBalancesQuery
             }
         }
 
-        $atEarliest = [];
-        foreach ($forAccount as $candidate) {
-            if ($candidate->openingBalanceDate === $earliestDate) {
-                $atEarliest[] = $candidate;
-            }
-        }
+        return array_values(array_filter(
+            $forAccount,
+            static fn (StartingBalanceCandidate $candidate): bool => $candidate->openingBalanceDate === $earliestDate,
+        ));
+    }
 
-        if (count($atEarliest) === 1) {
-            return [$atEarliest[0]];
-        }
+    /**
+     * @param  list<StartingBalanceCandidate>  $atEarliest
+     * @return list<StartingBalanceCandidate>
+     */
+    private static function breakDateTie(array $atEarliest): array
+    {
+        $camt053 = array_values(array_filter(
+            $atEarliest,
+            static fn (StartingBalanceCandidate $candidate): bool => $candidate->sourceFormat === self::CAMT_FORMAT,
+        ));
+        $other = array_values(array_filter(
+            $atEarliest,
+            static fn (StartingBalanceCandidate $candidate): bool => $candidate->sourceFormat !== self::CAMT_FORMAT,
+        ));
 
-        // 2. On a date tie, prefer canonical CAMT.053 over MT940 (CAMT
-        //    carries an explicit <OpngBal> element; MT940 sometimes
-        //    recomputes a running total).
-        $camt053 = [];
-        $other = [];
-        foreach ($atEarliest as $candidate) {
-            if ($candidate->sourceFormat === 'camt053') {
-                $camt053[] = $candidate;
-            } else {
-                $other[] = $candidate;
-            }
-        }
-
-        if (count($camt053) === 1 && $other !== []) {
-            return [$camt053[0]];
-        }
-
-        if (count($camt053) === 0 && count($other) === 1) {
-            return [$other[0]];
-        }
-
-        // CAMT-only with multiple winners — still tied on both date and
-        // source: surface every remaining candidate.
-        if (count($camt053) >= 2) {
-            return $camt053;
-        }
-
-        // No CAMT in the tie and multiple non-CAMT candidates — still
-        // tied: surface every remaining candidate.
-        if (count($other) >= 2) {
-            return $other;
-        }
-
-        // Fallback: every entry tied at the same date with no CAMT/
-        // non-CAMT split possible — surface them all.
-        return $atEarliest;
+        // A single canonical CAMT.053 wins outright; a single non-CAMT
+        // wins only when no CAMT is present. Any remaining multi-way tie
+        // surfaces every still-tied candidate for manual resolution.
+        return match (true) {
+            count($camt053) === 1 && $other !== [] => [$camt053[0]],
+            $camt053 === [] && count($other) === 1 => [$other[0]],
+            count($camt053) >= 2 => $camt053,
+            count($other) >= 2 => $other,
+            default => $atEarliest,
+        };
     }
 }

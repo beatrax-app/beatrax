@@ -28,6 +28,27 @@ final class AliasMatchPreviewQuery
             return AliasMatchPreviewResultDto::withoutMatches('Pattern is too short to test.');
         }
 
+        $needle = mb_strtolower($trimmed);
+        $matched = [];
+        $total = 0;
+        foreach ($this->recentTransactions($userId) as $row) {
+            if (! self::rowContains($row, $needle)) {
+                continue;
+            }
+            $total++;
+            if (count($matched) < self::SAMPLE_LIMIT) {
+                $matched[] = $row;
+            }
+        }
+
+        return AliasMatchPreviewResultDto::withMatches($total, $matched);
+    }
+
+    /**
+     * @return iterable<stdClass>
+     */
+    private function recentTransactions(int $userId): iterable
+    {
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('transactions')
             ->where('user_id', $userId)
@@ -36,24 +57,15 @@ final class AliasMatchPreviewQuery
             ->limit(self::SCAN_LIMIT)
             ->get();
 
-        $needle = mb_strtolower($trimmed);
-        $matched = [];
-        $total = 0;
-        foreach ($rows as $row) {
-            $description = isset($row->description) && is_string($row->description) ? $row->description : '';
-            $counterparty = isset($row->counterparty_name) && is_string($row->counterparty_name) ? $row->counterparty_name : '';
-            $haystack = mb_strtolower($description !== '' ? $description : $counterparty);
-            if ($haystack === '') {
-                continue;
-            }
-            if (mb_strpos($haystack, $needle) !== false) {
-                $total++;
-                if (count($matched) < self::SAMPLE_LIMIT) {
-                    $matched[] = $row;
-                }
-            }
-        }
+        return $rows;
+    }
 
-        return AliasMatchPreviewResultDto::withMatches($total, $matched);
+    private static function rowContains(stdClass $row, string $needle): bool
+    {
+        $description = isset($row->description) && is_string($row->description) ? $row->description : '';
+        $counterparty = isset($row->counterparty_name) && is_string($row->counterparty_name) ? $row->counterparty_name : '';
+        $haystack = mb_strtolower($description !== '' ? $description : $counterparty);
+
+        return $haystack !== '' && mb_strpos($haystack, $needle) !== false;
     }
 }

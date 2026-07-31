@@ -25,20 +25,29 @@ final class MerchantNameResolver
 
     public function resolve(string $rawDescription, int $userId): ?string
     {
-        $connection = $this->db->connection();
+        return $this->userExactMatch($rawDescription, $userId)
+            ?? $this->userGeneralizedMatch($rawDescription, $userId)
+            ?? $this->corpus->lookupExact($rawDescription)
+            ?? $this->corpus->lookupGeneralized($rawDescription)
+            ?? $this->corpus->lookupRegex($rawDescription);
+    }
 
-        $exact = $connection->table('merchant_aliases')
+    private function userExactMatch(string $rawDescription, int $userId): ?string
+    {
+        $exact = $this->db->connection()->table('merchant_aliases')
             ->where('user_id', $userId)
             ->where('pattern', $rawDescription)
             ->value('friendly_name');
-        if (is_string($exact) && $exact !== '') {
-            return $exact;
-        }
 
+        return is_string($exact) && $exact !== '' ? $exact : null;
+    }
+
+    private function userGeneralizedMatch(string $rawDescription, int $userId): ?string
+    {
         $haystack = mb_strtolower($rawDescription);
 
         /** @var iterable<stdClass> $generalized */
-        $generalized = $connection->table('merchant_aliases')
+        $generalized = $this->db->connection()->table('merchant_aliases')
             ->where('user_id', $userId)
             ->orderBy('id')
             ->limit(self::GENERALIZED_SCAN_LIMIT)
@@ -47,27 +56,9 @@ final class MerchantNameResolver
         foreach ($generalized as $row) {
             $needle = is_string($row->generalized_pattern) ? $row->generalized_pattern : '';
             $friendly = is_string($row->friendly_name) ? $row->friendly_name : '';
-            if ($needle === '' || $friendly === '') {
-                continue;
-            }
-            if (mb_strpos($haystack, mb_strtolower($needle)) !== false) {
+            if ($needle !== '' && $friendly !== '' && mb_strpos($haystack, mb_strtolower($needle)) !== false) {
                 return $friendly;
             }
-        }
-
-        $communityExact = $this->corpus->lookupExact($rawDescription);
-        if ($communityExact !== null) {
-            return $communityExact;
-        }
-
-        $communityGeneralized = $this->corpus->lookupGeneralized($rawDescription);
-        if ($communityGeneralized !== null) {
-            return $communityGeneralized;
-        }
-
-        $communityRegex = $this->corpus->lookupRegex($rawDescription);
-        if ($communityRegex !== null) {
-            return $communityRegex;
         }
 
         return null;

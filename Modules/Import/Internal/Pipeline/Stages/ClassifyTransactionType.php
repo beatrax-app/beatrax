@@ -11,12 +11,27 @@ use Modules\Ingestion\Public\Exceptions\MissingPaypalTransactionTypeMapException
 use Modules\Ingestion\Public\Exceptions\UnknownPaypalEventTypeException;
 use Modules\Ingestion\Public\Paypal\PaypalCsvEventTypeMap;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\TransactionType;
 
 /**
  * @link ../../../../../.docs/architecture/ingestion-pipeline.md#4-transaction-type-classification-classifytransactiontype
  */
 final class ClassifyTransactionType
 {
+    private const PAYPAL_FORMAT = 'paypal-csv';
+
+    // Types NormalizeStage already settled that classification must not
+    // override, plus the transfer legs that exclude a row from the
+    // amount-sign income default.
+    private const TERMINAL_TYPES = [TransactionType::Refund, TransactionType::Fee, TransactionType::Adjustment];
+
+    private const NON_INCOME_TYPES = [
+        TransactionType::TransferIn,
+        TransactionType::TransferOut,
+        TransactionType::Refund,
+        TransactionType::Fee,
+    ];
+
     public function __construct(
         private readonly PaypalCsvEventTypeMap $eventTypes,
         private readonly DatabaseManager $db,
@@ -25,80 +40,102 @@ final class ClassifyTransactionType
 
     public function run(CanonicalTransaction $tx, User $user): CanonicalTransaction
     {
-        if (in_array($tx->type, ['refund', 'fee', 'adjustment'], true)) {
+        if (in_array(TransactionType::tryFrom($tx->type), self::TERMINAL_TYPES, true)) {
             return $tx;
         }
 
-        // Two-arm cross-account-IBAN check, both scoped by $user->id:
-        // the alias bridge (Arm A) maps real institution IBANs to the
-        // user's synthetic-IBAN account; the literal own-IBAN match
-        // (Arm B) catches transfers between two of the user's accounts.
-        if ($tx->counterpartyIban !== null && $tx->counterpartyIban !== '') {
-            // Arm A — alias bridge: real institution IBAN -> user's
-            // own synthetic-IBAN account whose kind matches the alias.
-            $aliasAccount = $this->aliasResolver->resolveAccount($tx->counterpartyIban, $user->id);
-            if ($aliasAccount !== null && $aliasAccount->id !== $tx->accountId) {
-                return $tx->withType($tx->amountMinor < 0 ? 'transfer_out' : 'transfer_in');
-            }
+        $resolved = $this->transferType($tx, $user)
+            ?? $this->paypalType($tx)
+            ?? $this->incomeType($tx);
 
-            // Arm B — literal own-IBAN match: catches bank-to-bank
-            // transfers between two of the user's own accounts.
-            $isOwnAccount = $this->db->connection()
-                ->table('accounts')
-                ->where('user_id', $user->id)
-                ->where('iban', $tx->counterpartyIban)
-                ->where('id', '!=', $tx->accountId)
-                ->count() > 0;
-            if ($isOwnAccount) {
-                return $tx->withType($tx->amountMinor < 0 ? 'transfer_out' : 'transfer_in');
-            }
+        return $resolved === null ? $tx : $tx->withType($resolved);
+    }
+
+    // Two-arm cross-account-IBAN check, both scoped by $user->id: the
+    // alias bridge (Arm A) maps real institution IBANs to the user's
+    // synthetic-IBAN account; the literal own-IBAN match (Arm B) catches
+    // transfers between two of the user's own accounts.
+    private function transferType(CanonicalTransaction $tx, User $user): ?string
+    {
+        if ($tx->counterpartyIban === null || $tx->counterpartyIban === '') {
+            return null;
         }
 
+        $aliasAccount = $this->aliasResolver->resolveAccount($tx->counterpartyIban, $user->id);
+        $bridged = $aliasAccount !== null && $aliasAccount->id !== $tx->accountId;
+
+        if (! $bridged && ! $this->matchesOwnAccount($tx, $user)) {
+            return null;
+        }
+
+        return ($tx->amountMinor < 0 ? TransactionType::TransferOut : TransactionType::TransferIn)->value;
+    }
+
+    private function matchesOwnAccount(CanonicalTransaction $tx, User $user): bool
+    {
+        return $this->db->connection()
+            ->table('accounts')
+            ->where('user_id', $user->id)
+            ->where('iban', $tx->counterpartyIban)
+            ->where('id', '!=', $tx->accountId)
+            ->count() > 0;
+    }
+
+    private function paypalType(CanonicalTransaction $tx): ?string
+    {
         $rawPayload = $tx->rawPayload;
-        if (is_array($rawPayload) && ($rawPayload['format'] ?? null) === 'paypal-csv') {
-            $events = $rawPayload['events'] ?? null;
-            $parentEventType = null;
-            if (is_array($events) && $events !== []) {
-                $firstEvent = $events[array_key_first($events)] ?? null;
-                if (is_array($firstEvent) && isset($firstEvent['type']) && is_string($firstEvent['type'])) {
-                    $parentEventType = $firstEvent['type'];
-                }
-            }
-            $language = $rawPayload['language'] ?? null;
-            if (
-                is_string($parentEventType)
-                && $parentEventType !== ''
-                && is_string($language)
-                && $language !== ''
-            ) {
-                try {
-                    $mappedType = $this->eventTypes->transactionType($parentEventType, $language);
-
-                    return $tx->withType($mappedType);
-                } catch (MissingPaypalTransactionTypeMapException $missing) {
-                    // Code-internal inconsistency (MAP entry with no
-                    // TRANSACTION_TYPE) — re-throw so it fails loudly
-                    // at parse time. Extends UnknownPaypalEventTypeException,
-                    // so this narrower catch MUST come before that one.
-                    throw $missing;
-                } catch (UnknownPaypalEventTypeException) {
-                    // Unmapped event type is a user-data condition, not
-                    // a bug (the adapter already raised at parse time
-                    // for genuinely-unmappable events) — fall through
-                    // to the amount-sign default rather than aborting.
-                }
-            }
+        if (! is_array($rawPayload) || ($rawPayload['format'] ?? null) !== self::PAYPAL_FORMAT) {
+            return null;
         }
 
-        if (
-            $tx->amountMinor > 0
-            && ! in_array($tx->type, ['transfer_in', 'transfer_out', 'refund', 'fee'], true)
-        ) {
-            return $tx->withType('income');
+        $parentEventType = self::firstEventType($rawPayload);
+        $language = $rawPayload['language'] ?? null;
+        if ($parentEventType === null || ! is_string($language) || $language === '') {
+            return null;
         }
 
-        // Step 5 — default: keep NormalizeStage's amount-sign-derived
-        // default (negative → expense, zero → adjustment).
-        return $tx;
+        return $this->mapPaypalEvent($parentEventType, $language);
+    }
+
+    // Unmapped event types are user data, not bugs (the adapter already
+    // raised at parse time for genuinely-unmappable events), so they fall
+    // through to null. A MissingPaypalTransactionTypeMapException is a
+    // code-internal inconsistency and re-throws loudly.
+    private function mapPaypalEvent(string $parentEventType, string $language): ?string
+    {
+        try {
+            return $this->eventTypes->transactionType($parentEventType, $language);
+        } catch (MissingPaypalTransactionTypeMapException $missing) {
+            throw $missing;
+        } catch (UnknownPaypalEventTypeException) {
+            return null;
+        }
+    }
+
+    private function incomeType(CanonicalTransaction $tx): ?string
+    {
+        if ($tx->amountMinor > 0 && ! in_array(TransactionType::tryFrom($tx->type), self::NON_INCOME_TYPES, true)) {
+            return TransactionType::Income->value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<mixed>  $rawPayload
+     */
+    private static function firstEventType(array $rawPayload): ?string
+    {
+        $events = $rawPayload['events'] ?? null;
+        if (! is_array($events) || $events === []) {
+            return null;
+        }
+
+        $firstEvent = $events[array_key_first($events)] ?? null;
+        if (! is_array($firstEvent) || ! isset($firstEvent['type']) || ! is_string($firstEvent['type']) || $firstEvent['type'] === '') {
+            return null;
+        }
+
+        return $firstEvent['type'];
     }
 }
