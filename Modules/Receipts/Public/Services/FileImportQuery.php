@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\Receipts\Public\Dto\FileImportDto;
 use stdClass;
 
@@ -19,8 +20,6 @@ use stdClass;
 final readonly class FileImportQuery
 {
     use CoercesScalars;
-
-    private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];
 
     public function __construct(private DatabaseManager $db) {}
 
@@ -49,9 +48,9 @@ final readonly class FileImportQuery
      */
     public function latestForStatus(User $user, string $status): Generator
     {
-        if (! in_array($status, self::ALLOWED_STATUSES, strict: true)) {
+        if (InboxMessageStatus::tryFrom($status) === null) {
             throw new InvalidArgumentException(
-                "FileImportQuery::latestForStatus expected one of ['fetched','parsed','skipped','unmatched'], got '{$status}'."
+                'FileImportQuery::latestForStatus expected one of: '.implode(', ', array_column(InboxMessageStatus::cases(), 'value')).", got '{$status}'."
             );
         }
 
