@@ -9,7 +9,6 @@ use InvalidArgumentException;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
-use RuntimeException;
 
 // The single legal mutator of `anomaly_alerts.state` and the sole
 // inserter into `anomaly_alert_transitions`, enforced at three layers:
@@ -79,7 +78,7 @@ final class AnomalyAlertStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new AnomalyAlertNotFoundException(
                     "AnomalyAlertStateMachine: anomaly_alerts row {$alertId} not found.",
                 );
             }

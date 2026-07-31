@@ -7,6 +7,7 @@ namespace Modules\Migration\Internal\Services;
 use Generator;
 use JsonException;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Migration\Internal\Exceptions\UnrecognizedActualBudgetTypeException;
 use PDO;
 use Pdo\Sqlite as PdoSqlite;
 use PDOStatement;
@@ -180,7 +181,7 @@ final class ActualSqliteReader
         return match ($value) {
             'envelope', 'rollover' => 'envelope',
             'tracking', 'report' => 'tracking',
-            default => throw new RuntimeException("unrecognized Actual preferences.budgetType value '{$value}'"),
+            default => throw new UnrecognizedActualBudgetTypeException("unrecognized Actual preferences.budgetType value '{$value}'"),
         };
     }
 

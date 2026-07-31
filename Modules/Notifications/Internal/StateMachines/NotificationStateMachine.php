@@ -7,7 +7,6 @@ namespace Modules\Notifications\Internal\StateMachines;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/notifications/architecture.md
@@ -42,7 +41,7 @@ final class NotificationStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new NotificationNotFoundException(
                     "NotificationStateMachine: notifications row {$notificationId} not found for user {$userId}.",
                 );
             }
@@ -64,9 +63,7 @@ final class NotificationStateMachine
     {
         $allowed = self::ALLOWED_TRANSITIONS[$currentState] ?? [];
         if (! in_array($toState, $allowed, strict: true)) {
-            throw new RuntimeException(
-                "Illegal notifications transition for id={$notificationId}: {$currentState} -> {$toState}",
-            );
+            throw InvalidStateTransitionException::forTransition($notificationId, $currentState, $toState);
         }
     }
 }

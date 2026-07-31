@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
+use Modules\Tax\Public\Exceptions\DuplicateTaxCategoryNameException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -100,7 +101,7 @@ final class TaxCategoryWriter
     /**
      * @return int The new category's id.
      *
-     * @throws \RuntimeException When a category with the same name already exists for the user.
+     * @throws DuplicateTaxCategoryNameException When a category with the same name already exists for the user.
      */
     public function add(int $userId, string $name, ?string $shortName = null, ?string $hint = null): int
     {
@@ -120,7 +121,7 @@ final class TaxCategoryWriter
             ->exists();
 
         if ($exists) {
-            throw new \RuntimeException('A category with this name already exists.');
+            throw new DuplicateTaxCategoryNameException('A category with this name already exists.');
         }
 
         $maxOrder = $connection->table('tax_deduction_categories')
@@ -158,7 +159,7 @@ final class TaxCategoryWriter
     /**
      * @throws NotFoundHttpException When the category id is not owned by the user.
      * @throws \InvalidArgumentException When the new name is empty.
-     * @throws \RuntimeException When another category already carries the new name.
+     * @throws DuplicateTaxCategoryNameException When another category already carries the new name.
      */
     public function rename(int $userId, int $categoryId, string $name): void
     {
@@ -187,7 +188,7 @@ final class TaxCategoryWriter
             ->exists();
 
         if ($nameTaken) {
-            throw new \RuntimeException('A category with this name already exists.');
+            throw new DuplicateTaxCategoryNameException('A category with this name already exists.');
         }
 
         $connection->table('tax_deduction_categories')

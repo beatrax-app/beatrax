@@ -9,7 +9,6 @@ use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DriftAlerts\Models\DriftAlert;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/drift-alerts/architecture.md
@@ -71,7 +70,7 @@ final class DriftAlertStateMachine
                 ->first();
 
             if ($row === null) {
-                throw new RuntimeException(
+                throw new DriftAlertNotFoundException(
                     "DriftAlertStateMachine: drift_alerts row {$alertId} not found.",
                 );
             }
