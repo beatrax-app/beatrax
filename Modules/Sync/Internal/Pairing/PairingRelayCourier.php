@@ -69,32 +69,14 @@ final class PairingRelayCourier
     // and skipped. A row is deleted only when TERMINALLY handled (see @link).
     public function drainAndApply(int $userId): void
     {
-        $selfDeviceId = $this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 1)
-            ->value('device_id');
-
-        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
+        $credentials = $this->resolveDrainCredentials($userId);
+        if ($credentials === null) {
             return;
         }
 
-        if (! $this->relayConfig->isConfigured()) {
-            return;
-        }
-
-        $drainToken = $this->relayConfig->deriveDeviceToken($selfDeviceId);
-        if ($drainToken === null) {
-            return;
-        }
-
-        try {
-            $rows = $this->relayClient->drain($selfDeviceId, $drainToken);
-        } catch (Throwable $e) {
-            $this->logger?->warning('PairingRelayCourier: drain failed.', [
-                'user_id' => $userId,
-                'exception' => $e::class,
-            ]);
-
+        $drainToken = $credentials['token'];
+        $rows = $this->drainRows($userId, $credentials['deviceId'], $drainToken);
+        if ($rows === null) {
             return;
         }
 
@@ -107,6 +89,50 @@ final class PairingRelayCourier
                     'exception' => $e::class,
                 ]);
             }
+        }
+    }
+
+    // No self device, an unconfigured relay, and a missing drain token all
+    // mean "nothing to poll" — collapsed to a single null so the caller bails
+    // silently without three separate guard returns.
+    /**
+     * @return array{deviceId: string, token: string}|null
+     */
+    private function resolveDrainCredentials(int $userId): ?array
+    {
+        $selfDeviceId = $this->db->connection()->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->value('device_id');
+
+        if (! is_string($selfDeviceId) || $selfDeviceId === '' || ! $this->relayConfig->isConfigured()) {
+            return null;
+        }
+
+        $drainToken = $this->relayConfig->deriveDeviceToken($selfDeviceId);
+        if ($drainToken === null) {
+            return null;
+        }
+
+        return ['deviceId' => $selfDeviceId, 'token' => $drainToken];
+    }
+
+    // A drain failure is logged and reported as null (never thrown out of the
+    // poll) so a transient relay outage never aborts the caller's loop.
+    /**
+     * @return list<array<string, mixed>>|null
+     */
+    private function drainRows(int $userId, string $selfDeviceId, string $drainToken): ?array
+    {
+        try {
+            return $this->relayClient->drain($selfDeviceId, $drainToken);
+        } catch (Throwable $e) {
+            $this->logger?->warning('PairingRelayCourier: drain failed.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+            ]);
+
+            return null;
         }
     }
 

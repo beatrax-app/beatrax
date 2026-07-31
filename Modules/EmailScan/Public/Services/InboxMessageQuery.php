@@ -9,6 +9,7 @@ use Generator;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Enums\InboxMessageStatus;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
 use stdClass;
 
@@ -20,8 +21,6 @@ readonly class InboxMessageQuery
 {
     use CoercesScalars;
 
-    private const ALLOWED_STATUSES = ['fetched', 'parsed', 'skipped', 'unmatched'];
-
     public function __construct(private DatabaseManager $db) {}
 
     /**
@@ -29,9 +28,9 @@ readonly class InboxMessageQuery
      */
     public function forStatus(string $status): Generator
     {
-        if (! in_array($status, self::ALLOWED_STATUSES, strict: true)) {
+        if (InboxMessageStatus::tryFrom($status) === null) {
             throw new InvalidArgumentException(
-                "InboxMessageQuery::forStatus expected one of ['fetched','parsed','skipped','unmatched'], got '{$status}'."
+                'InboxMessageQuery::forStatus expected one of: '.implode(', ', array_column(InboxMessageStatus::cases(), 'value')).", got '{$status}'."
             );
         }
 

@@ -9,6 +9,8 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
+use Modules\Sync\Internal\Pairing\Concerns\AdmitsPairedDevices;
+use Modules\Sync\Internal\Pairing\Concerns\VerifiesPeerConfirmFrames;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 /**
@@ -16,6 +18,9 @@ use Modules\Sync\Internal\Signing\DeviceKeySigner;
  */
 final class PairingTokenService
 {
+    use AdmitsPairedDevices;
+    use VerifiesPeerConfirmFrames;
+
     private const int TTL_MINUTES = 10;
 
     private const int ACCEPT_GRACE_MINUTES = 5;
@@ -381,118 +386,6 @@ final class PairingTokenService
         };
     }
 
-    // The full PAIR_CONFIRM gate sequence, in the order the gates depend on
-    // each other: locate the row, establish which side this device is, then
-    // authenticate the frame against the identity that row bound. A null
-    // return is a fail-closed rejection at any one of them.
-    private function authenticatePeerConfirm(
-        int $userId,
-        string $tokenHash,
-        string $confirmingDeviceId,
-        string $peerDeviceId,
-        string $sigHex,
-    ): ?PeerConfirmContext {
-        $now = $this->clock->now();
-
-        $row = $this->db->connection()->table('pairing_tokens')
-            ->where('user_id', $userId)
-            ->where('token_hash', $tokenHash)
-            ->whereIn('state', [PairingStateMachine::AWAITING_CONFIRM, PairingStateMachine::CONFIRMED])
-            ->where('expires_at', '>', $now->toIso8601String())
-            ->first();
-
-        if ($row === null || ! $this->tokenHashMatches($row, $tokenHash)) {
-            return null;
-        }
-
-        $localSide = $this->localSideForAddressedFrame($row, $userId, $peerDeviceId);
-
-        // $localSide is checked here rather than inside the callee so the
-        // signature check below is never reached without a known local side —
-        // the peer columns it reads are chosen by that side.
-        if ($localSide === null
-            || ! $this->peerSignatureAuthentic($row, $localSide, $tokenHash, $confirmingDeviceId, $peerDeviceId, $sigHex)) {
-            return null;
-        }
-
-        return $this->peerConfirmContextFor($row, $localSide);
-    }
-
-    // Which side of this handshake the local device owns, but only for a frame
-    // actually addressed to it. $peerDeviceId is populated by the SENDER from
-    // ITS OWN view of who the recipient is, so on receipt it must equal THIS
-    // device's self identity or the frame was never meant for this device.
-    private function localSideForAddressedFrame(\stdClass $row, int $userId, string $peerDeviceId): ?string
-    {
-        $selfDeviceId = $this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 1)
-            ->value('device_id');
-
-        if (! is_string($selfDeviceId) || $selfDeviceId === '' || ! hash_equals($selfDeviceId, $peerDeviceId)) {
-            return null;
-        }
-
-        return $this->sideOwnedBy($row, $selfDeviceId);
-    }
-
-    // The anti-forgery gate: the frame must be signed by the key this row
-    // bound for the peer side, and must claim to come from that same bound
-    // device id. Both are checked against the ROW, never against the frame's
-    // own assertions about who it is.
-    private function peerSignatureAuthentic(
-        \stdClass $row,
-        string $localSide,
-        string $tokenHash,
-        string $confirmingDeviceId,
-        string $peerDeviceId,
-        string $sigHex,
-    ): bool {
-        $peerBoundDeviceId = $this->peerSideColumn($row, $localSide, 'device_id');
-        $peerPublicKeyHex = $this->peerSideColumn($row, $localSide, 'ed25519_pub_hex');
-
-        // A frame purporting to be from some other device id is rejected even
-        // before touching sodium.
-        if ($peerBoundDeviceId === null
-            || $peerPublicKeyHex === null
-            || ! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
-            return false;
-        }
-
-        try {
-            $peerPublicKeyBin = SafetyNumberDeriver::hexToRawKey($peerPublicKeyHex);
-        } catch (InvalidPublicKeyException) {
-            return false;
-        }
-
-        $message = PairingFrame::confirmSigningMessage($tokenHash, $confirmingDeviceId, $peerDeviceId);
-
-        return $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin);
-    }
-
-    // Reads one of the peer side's columns — whichever side the local device
-    // is NOT. Both sides store the same column suffixes under their own prefix.
-    private function peerSideColumn(\stdClass $row, string $localSide, string $suffix): ?string
-    {
-        $prefix = $localSide === 'initiator' ? 'responder_' : 'initiator_';
-        $value = $row->{$prefix.$suffix} ?? null;
-
-        return is_string($value) ? $value : null;
-    }
-
-    private function peerConfirmContextFor(\stdClass $row, string $localSide): PeerConfirmContext
-    {
-        $localConfirmedColumn = $localSide === 'initiator' ? 'initiator_confirmed_at' : 'responder_confirmed_at';
-        $peerConfirmedColumn = $localSide === 'initiator' ? 'responder_confirmed_at' : 'initiator_confirmed_at';
-
-        return new PeerConfirmContext(
-            row: $row,
-            rowId: is_numeric($row->id) ? (int) $row->id : 0,
-            peerConfirmedColumn: $peerConfirmedColumn,
-            localConfirmedAt: is_string($row->{$localConfirmedColumn}) ? $row->{$localConfirmedColumn} : null,
-        );
-    }
-
     // Stamps the peer's confirmation if it is not already recorded, then
     // re-reads the row so the state decision is made against what is actually
     // persisted rather than against the pre-update copy.
@@ -584,139 +477,6 @@ final class PairingTokenService
         }
 
         return PairingStateMachine::CONFIRMED;
-    }
-
-    // Idempotent: a re-confirm updates the existing (user_id, device_id) row
-    // rather than inserting a duplicate (the composite key is UNIQUE).
-    private function admitResponderDevice(\stdClass $row, int $userId): void
-    {
-        $deviceId = is_string($row->responder_device_id) ? $row->responder_device_id : null;
-        $responderEd = is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
-        $responderKx = is_string($row->responder_x25519_pub_hex) ? $row->responder_x25519_pub_hex : null;
-        $initiatorEd = is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
-
-        if ($deviceId === null || $responderEd === null || $responderKx === null || $initiatorEd === null) {
-            return;
-        }
-
-        // Never admit a responder whose device_id collides with this user's
-        // own self device — a crafted responder_device_id equal to the
-        // self-row id would otherwise overwrite the local identity's own keys.
-        $selfDeviceId = $this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 1)
-            ->value('device_id');
-
-        if (is_string($selfDeviceId) && hash_equals($selfDeviceId, $deviceId)) {
-            return;
-        }
-
-        $safetyWords = implode(' ', $this->safetyNumberDeriver->deriveWords($initiatorEd, $responderEd));
-        $now = $this->clock->now()->toIso8601String();
-
-        $registry = $this->db->connection()->table('device_registry');
-
-        // Scope the lookup/update to NON-self rows — defense-in-depth so an
-        // admit can never mutate the local self-row even if the collision
-        // guard above is ever bypassed.
-        $existing = $registry
-            ->where('user_id', $userId)
-            ->where('device_id', $deviceId)
-            ->where('is_self', 0)
-            ->first();
-
-        if ($existing !== null) {
-            $this->db->connection()->table('device_registry')
-                ->where('user_id', $userId)
-                ->where('device_id', $deviceId)
-                ->where('is_self', 0)
-                ->update([
-                    'ed25519_public_key_hex' => $responderEd,
-                    'x25519_public_key_hex' => $responderKx,
-                    'safety_number_words' => $safetyWords,
-                    'confirmed_at' => $now,
-                    'updated_at' => $now,
-                ]);
-
-            return;
-        }
-
-        $this->db->connection()->table('device_registry')->insert([
-            'user_id' => $userId,
-            'device_id' => $deviceId,
-            'name' => $this->deviceNameDetector->detect(),
-            'ed25519_public_key_hex' => $responderEd,
-            'x25519_public_key_hex' => $responderKx,
-            'safety_number_words' => $safetyWords,
-            'is_self' => 0,
-            'paired_at' => $now,
-            'confirmed_at' => $now,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-    }
-
-    // The counterpart of admitResponderDevice() (same shape). Only ever
-    // called from finalizeIfBothConfirmed()'s initiator_seeded_at branch —
-    // never for a placeholder issue()-created row (see @link).
-    private function admitInitiatorDevice(\stdClass $row, int $userId): void
-    {
-        $deviceId = is_string($row->initiator_device_id) ? $row->initiator_device_id : null;
-        $initiatorEd = is_string($row->initiator_ed25519_pub_hex) ? $row->initiator_ed25519_pub_hex : null;
-        $initiatorKx = is_string($row->initiator_x25519_pub_hex) ? $row->initiator_x25519_pub_hex : null;
-        $responderEd = is_string($row->responder_ed25519_pub_hex) ? $row->responder_ed25519_pub_hex : null;
-
-        if ($deviceId === null || $initiatorEd === null || $initiatorKx === null || $responderEd === null) {
-            return;
-        }
-
-        $selfDeviceId = $this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('is_self', 1)
-            ->value('device_id');
-
-        if (is_string($selfDeviceId) && hash_equals($selfDeviceId, $deviceId)) {
-            return;
-        }
-
-        $safetyWords = implode(' ', $this->safetyNumberDeriver->deriveWords($initiatorEd, $responderEd));
-        $now = $this->clock->now()->toIso8601String();
-
-        $existing = $this->db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('device_id', $deviceId)
-            ->where('is_self', 0)
-            ->first();
-
-        if ($existing !== null) {
-            $this->db->connection()->table('device_registry')
-                ->where('user_id', $userId)
-                ->where('device_id', $deviceId)
-                ->where('is_self', 0)
-                ->update([
-                    'ed25519_public_key_hex' => $initiatorEd,
-                    'x25519_public_key_hex' => $initiatorKx,
-                    'safety_number_words' => $safetyWords,
-                    'confirmed_at' => $now,
-                    'updated_at' => $now,
-                ]);
-
-            return;
-        }
-
-        $this->db->connection()->table('device_registry')->insert([
-            'user_id' => $userId,
-            'device_id' => $deviceId,
-            'name' => $this->deviceNameDetector->detect(),
-            'ed25519_public_key_hex' => $initiatorEd,
-            'x25519_public_key_hex' => $initiatorKx,
-            'safety_number_words' => $safetyWords,
-            'is_self' => 0,
-            'paired_at' => $now,
-            'confirmed_at' => $now,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
     }
 
     public function expire(int $tokenId, int $userId): void
