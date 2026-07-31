@@ -127,39 +127,20 @@ trait ManagesSplitEditor
         $this->pendingRemoveIndex = null;
     }
 
-    // The other leg (not the one the user clicked remove on) becomes
-    // the surviving category via SavesTransactionSplit::unsplit().
+    // The other leg (not the one the user clicked remove on) becomes the
+    // surviving category. A never-persisted editor collapses in memory;
+    // persistUnsplit() owns that distinction and the mutator call.
     public function confirmRemoveToOneAction(SavesTransactionSplit $splitter, CurrentUser $currentUser): void
     {
         if ($this->pendingRemoveIndex === null || count($this->legs) !== 2) {
             return;
         }
 
-        // A never-persisted editor has no split to reverse — backing
-        // out must be a pure in-memory collapse, not a durable write.
-        // Only call the mutator when a persisted split actually exists.
-        if (! $this->hasPersistedSplit) {
-            $this->resetSplitEditor();
-            $this->confirmRemoveToOne = false;
-            $this->pendingRemoveIndex = null;
-            $this->dispatch('toast', message: 'Removed — one category remains');
-
-            return;
-        }
-
         $survivorIndex = $this->pendingRemoveIndex === 0 ? 1 : 0;
-        $survivorCategoryId = self::legCategoryId($this->legs[$survivorIndex]);
+        $error = $this->persistUnsplit($splitter, $currentUser, $survivorIndex, 'Choose a category before removing.');
 
-        if ($survivorCategoryId === null) {
-            $this->splitError = 'Choose a category before removing.';
-
-            return;
-        }
-
-        try {
-            $splitter->unsplit($currentUser->user(), $this->transactionId, $survivorCategoryId);
-        } catch (InvalidArgumentException $e) {
-            $this->splitError = $e->getMessage();
+        if ($error !== null) {
+            $this->splitError = $error;
 
             return;
         }
@@ -201,29 +182,10 @@ trait ManagesSplitEditor
             return;
         }
 
-        // Never-persisted editor — collapse purely in memory, no
-        // mutator call, no category write, no op-log entry.
-        if (! $this->hasPersistedSplit) {
-            $this->resetSplitEditor();
-            $this->confirmUnsplit = false;
-            $this->unsplitSurvivorIndex = null;
-            $this->dispatch('toast', message: 'Unsplit — restored to a single category');
+        $error = $this->persistUnsplit($splitter, $currentUser, $this->unsplitSurvivorIndex, 'Choose a category before unsplitting.');
 
-            return;
-        }
-
-        $survivorCategoryId = self::legCategoryId($this->legs[$this->unsplitSurvivorIndex]);
-
-        if ($survivorCategoryId === null) {
-            $this->splitError = 'Choose a category before unsplitting.';
-
-            return;
-        }
-
-        try {
-            $splitter->unsplit($currentUser->user(), $this->transactionId, $survivorCategoryId);
-        } catch (InvalidArgumentException $e) {
-            $this->splitError = $e->getMessage();
+        if ($error !== null) {
+            $this->splitError = $error;
 
             return;
         }
@@ -232,6 +194,33 @@ trait ManagesSplitEditor
         $this->confirmUnsplit = false;
         $this->unsplitSurvivorIndex = null;
         $this->dispatch('toast', message: 'Unsplit — restored to a single category');
+    }
+
+    // Drives the chosen survivor category through the unsplit mutator when
+    // a split is actually persisted; a never-saved editor has nothing to
+    // reverse, so this reports success and lets the caller collapse it in
+    // memory. Returns an error string to surface, or null to finish.
+    private function persistUnsplit(
+        SavesTransactionSplit $splitter,
+        CurrentUser $currentUser,
+        int $survivorIndex,
+        string $missingCategoryMessage,
+    ): ?string {
+        if ($this->hasPersistedSplit) {
+            $survivorCategoryId = self::legCategoryId($this->legs[$survivorIndex]);
+
+            if ($survivorCategoryId === null) {
+                return $missingCategoryMessage;
+            }
+
+            try {
+                $splitter->unsplit($currentUser->user(), $this->transactionId, $survivorCategoryId);
+            } catch (InvalidArgumentException $e) {
+                return $e->getMessage();
+            }
+        }
+
+        return null;
     }
 
     // Re-validates server-side (the disabled Save button is a UX gate
@@ -265,7 +254,35 @@ trait ManagesSplitEditor
 
         $parentMinor = is_numeric($parent->settled_amount_minor) ? (int) $parent->settled_amount_minor : 0;
 
-        /** @var list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}> $legsPayload */
+        $legsPayload = $this->buildLegsPayload($parentMinor);
+
+        if ($legsPayload === null) {
+            return;
+        }
+
+        try {
+            $splitter->save($currentUser->user(), $this->transactionId, $legsPayload);
+
+            // Reload persisted legs (real DB ids) + tax state so subsequent
+            // edits/removals correctly diff against the now-saved rows.
+            $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
+            $this->dispatch('toast', message: 'Split saved');
+        } catch (SplitSumMismatchException) {
+            $this->splitError = "Couldn't save — leg totals must match the transaction total exactly.";
+        } catch (InvalidArgumentException $e) {
+            $this->splitError = $e->getMessage();
+        }
+    }
+
+    // Parses and validates every leg into the mutator's payload shape,
+    // signing each settled amount to match the parent. Returns null and
+    // sets splitError on the first leg that fails to parse or carries no
+    // category, so the caller aborts without saving anything.
+    /**
+     * @return list<array{id: ?int, category_id: int, settled_amount_minor: int, note: ?string}>|null
+     */
+    private function buildLegsPayload(int $parentMinor): ?array
+    {
         $legsPayload = [];
 
         foreach ($this->legs as $leg) {
@@ -273,14 +290,14 @@ trait ManagesSplitEditor
             if ($abs === null) {
                 $this->splitError = "Amount can't be €0,00";
 
-                return;
+                return null;
             }
 
             $categoryId = self::legCategoryId($leg);
             if ($categoryId === null) {
                 $this->splitError = 'Choose a category.';
 
-                return;
+                return null;
             }
 
             $trimmedNote = trim($leg['note']);
@@ -293,22 +310,7 @@ trait ManagesSplitEditor
             ];
         }
 
-        try {
-            $splitter->save($currentUser->user(), $this->transactionId, $legsPayload);
-        } catch (SplitSumMismatchException) {
-            $this->splitError = "Couldn't save — leg totals must match the transaction total exactly.";
-
-            return;
-        } catch (InvalidArgumentException $e) {
-            $this->splitError = $e->getMessage();
-
-            return;
-        }
-
-        // Reload persisted legs (real DB ids) + tax state so subsequent
-        // edits/removals correctly diff against the now-saved rows.
-        $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
-        $this->dispatch('toast', message: 'Split saved');
+        return $legsPayload;
     }
 
     // A no-op for a leg that has not yet been persisted (no id) — leg-
