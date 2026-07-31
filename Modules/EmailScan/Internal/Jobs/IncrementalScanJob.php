@@ -85,26 +85,84 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
     ): void {
-        $connection = $db->connection();
-
-        $inboxRow = $connection->table('inboxes')->where('id', $this->inboxId)->first();
-        if ($inboxRow === null) {
-            // Inbox deleted between dispatch and worker pickup —
-            // silently exit so the queue doesn't retry forever.
+        $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery);
+        if ($prepared === null) {
             return;
         }
+
+        try {
+            // The default arm surfaces a misconfigured provider without
+            // retrying forever; the inboxes CHECK trigger pair keeps
+            // gmail|microsoft the only legal production values, so it is
+            // reached only if data bypassed the migration.
+            match ($prepared->provider) {
+                'gmail' => $this->runGmailIncremental($prepared->context, $gmail, $prepared->senderPatterns, $prepared->stateRow),
+                'microsoft' => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow),
+                default => $sm->applyStatus(
+                    $this->inboxId,
+                    'error',
+                    "Unknown provider '{$prepared->provider}' — incremental scan cannot proceed.",
+                ),
+            };
+
+            if ($prepared->provider === 'gmail' || $prepared->provider === 'microsoft') {
+                $sm->applyStatus($this->inboxId, 'idle');
+                $sm->resetRetryAttempts($this->inboxId);
+            }
+        } catch (Throwable $e) {
+            $this->transitionOnScanError($sm, $e);
+        }
+    }
+
+    // Folds the inbox-missing, state-missing, needs-reauth, no-sender
+    // and reject-transition preconditions into one nullable return so
+    // handle() dispatches on a ready scan without any early-exit noise.
+    private function prepareScan(
+        DatabaseManager $db,
+        Clock $clock,
+        EmlBlobStore $blobStore,
+        MimeHeaderParser $mime,
+        InboxScanStateMachine $sm,
+        KnownSenderQuery $senderQuery,
+    ): ?PreparedScan {
+        $connection = $db->connection();
+
+        $rows = $this->loadScannableRows($connection);
+        if ($rows === null) {
+            return null;
+        }
+        [$inboxRow, $stateRow] = $rows;
 
         $rawUserId = $inboxRow->user_id;
         $userId = is_numeric($rawUserId) ? (int) $rawUserId : 0;
         $rawProvider = $inboxRow->provider;
         $provider = is_string($rawProvider) ? $rawProvider : '';
 
+        $senderPatterns = $this->senderPatternsFor($userId, $senderQuery);
+        if ($senderPatterns === [] || ! $this->beginScanning($sm)) {
+            return null;
+        }
+
+        $context = new InboxScanContext($this->inboxId, $clock, $sm, $connection, $blobStore, $mime, $userId);
+
+        return new PreparedScan($context, $provider, $senderPatterns, $stateRow);
+    }
+
+    /**
+     * @return array{0: \stdClass, 1: \stdClass}|null
+     */
+    private function loadScannableRows(Connection $connection): ?array
+    {
+        $inboxRow = $connection->table('inboxes')->where('id', $this->inboxId)->first();
         $stateRow = $connection->table('inbox_scan_state')
             ->where('inbox_id', $this->inboxId)
             ->where('folder', 'INBOX')
             ->first();
-        if ($stateRow === null) {
-            return;
+        if ($inboxRow === null || $stateRow === null) {
+            // Inbox deleted between dispatch and worker pickup, or no
+            // scan-state row exists yet — silently exit so the queue
+            // doesn't retry forever.
+            return null;
         }
 
         // needs_reauth inboxes are terminal until the user hits
@@ -112,84 +170,37 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         // token cannot be repaired by another scan attempt.
         $currentStatus = is_string($stateRow->status) ? $stateRow->status : '';
         if ($currentStatus === 'needs_reauth') {
-            return;
+            return null;
         }
 
+        return [$inboxRow, $stateRow];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function senderPatternsFor(int $userId, KnownSenderQuery $senderQuery): array
+    {
         /** @var User $user */
         $user = User::query()->where('id', $userId)->firstOrFail();
 
-        $senderPatterns = array_map(
+        return array_map(
             static fn ($s) => $s->emailPattern,
             $senderQuery->all($user),
         );
-        if ($senderPatterns === []) {
-            // Nothing to scan; leave the row idle (also covers the
-            // first-run-before-seeds-shipped edge case without throwing).
-            return;
-        }
+    }
 
-        // Collapses the contention case where a backfill is
-        // mid-flight: the state machine rejects backfilling ->
-        // scanning, so detect it upfront and skip rather than error.
+    private function beginScanning(InboxScanStateMachine $sm): bool
+    {
+        // Collapses the contention case where a backfill is mid-flight:
+        // the state machine rejects backfilling -> scanning, so a
+        // rejected transition means skip rather than error.
         try {
             $sm->applyStatus($this->inboxId, 'scanning');
+
+            return true;
         } catch (InvalidStateTransitionException) {
-            return;
-        }
-
-        try {
-            if ($provider === 'gmail') {
-                $this->runGmailIncremental(
-                    $connection,
-                    $clock,
-                    $gmail,
-                    $blobStore,
-                    $mime,
-                    $sm,
-                    $userId,
-                    $senderPatterns,
-                    $stateRow,
-                );
-            } elseif ($provider === 'microsoft') {
-                $this->runMicrosoftIncremental(
-                    $connection,
-                    $clock,
-                    $graph,
-                    $blobStore,
-                    $mime,
-                    $sm,
-                    $userId,
-                    $senderPatterns,
-                    $stateRow,
-                );
-            } else {
-                $sm->applyStatus(
-                    $this->inboxId,
-                    'error',
-                    "Unknown provider '{$provider}' — incremental scan cannot proceed.",
-                );
-
-                return;
-            }
-
-            $sm->applyStatus($this->inboxId, 'idle');
-            $sm->resetRetryAttempts($this->inboxId);
-        } catch (RateLimitedException $e) {
-            $sm->applyRateLimited($this->inboxId, $e->retryAfterSeconds);
-            throw $e;
-        } catch (InvalidGrantException) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'needs_reauth',
-                'OAuth grant revoked or expired.',
-            );
-        } catch (Throwable $e) {
-            $sm->applyStatus(
-                $this->inboxId,
-                'error',
-                substr($e->getMessage(), 0, 500),
-            );
-            throw $e;
+            return false;
         }
     }
 
@@ -197,13 +208,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
      * @param  list<string>  $senderPatterns
      */
     private function runGmailIncremental(
-        Connection $connection,
-        Clock $clock,
+        InboxScanContext $context,
         GmailApiClientContract $gmail,
-        EmlBlobStore $blobStore,
-        MimeHeaderParser $mime,
-        InboxScanStateMachine $sm,
-        int $userId,
         array $senderPatterns,
         \stdClass $stateRow,
     ): void {
@@ -214,89 +220,39 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $messageIds = [];
-        $newHistoryId = null;
+        [$messageIds, $newHistoryId] = $this->fetchGmailHistory($gmail, $context->clock, $stateRow, $senderPatterns, $startHistoryId);
 
-        try {
-            $history = $gmail->listHistory($this->inboxId, $startHistoryId);
-            $messageIds = $this->extractGmailHistoryMessageIds($history['history']);
-            $newHistoryId = $history['historyId'];
-        } catch (CursorExpiredException) {
-            $messageIds = $this->gmailFallbackWalk(
-                $gmail,
-                $stateRow,
-                $senderPatterns,
-                $clock,
-            );
-            // listSenderMessages never returns a historyId (Gmail
-            // surfaces it via getProfile in production), so the prior
-            // cursor is kept — the next run re-attempts listHistory.
-        }
-
-        $now = $clock->now()->toDateTimeString();
         foreach ($messageIds as $messageId) {
-            // Skips a message already fetched+indexed: the history
-            // walk can legitimately re-surface one a prior backfill
-            // already persisted, and refetching burns quota for nothing.
-            $alreadyFetched = $connection->table('inbox_messages')
-                ->where('inbox_id', $this->inboxId)
-                ->where('provider_message_id', $messageId)
-                ->exists();
-            if ($alreadyFetched) {
-                continue;
-            }
-
-            $rawEml = $gmail->getRawMessage($this->inboxId, $messageId);
-            // Gmail's users.history.list stamps no per-message
-            // internalDate, so the project Clock is the fallback when
-            // the .eml carries no parseable Date: header (keeping
-            // test-frozen time honoured rather than a raw 'now').
-            $headers = $mime->parseHeadersWithFallbackDate(
-                $rawEml,
-                $clock->now()->toDateTimeImmutable(),
-            );
-            $emlPath = $blobStore->pathFor(
-                $userId,
-                $this->inboxId,
-                $headers->internalDate,
-                $messageId,
-            );
-            $blobStore->put($emlPath, $rawEml);
-
-            try {
-                $connection->transaction(function () use (
-                    $connection,
-                    $userId,
-                    $messageId,
-                    $headers,
-                    $now,
-                ): void {
-                    $connection->statement('PRAGMA busy_timeout = 5000');
-                    $connection->table('inbox_messages')->insertOrIgnore([
-                        'user_id' => $userId,
-                        'inbox_id' => $this->inboxId,
-                        'provider_message_id' => $messageId,
-                        'internal_date' => $headers->internalDate->format('Y-m-d H:i:s'),
-                        'sender_email' => $headers->senderEmail,
-                        'sender_name' => $headers->senderName,
-                        'subject' => $headers->subject,
-                        'status' => 'fetched',
-                        'fetched_at' => $now,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                });
-            } catch (Throwable $e) {
-                $blobStore->delete($emlPath);
-                throw $e;
+            if (! $context->alreadyIndexed($messageId)) {
+                $context->storeFetchedMessage($messageId, $gmail->getRawMessage($this->inboxId, $messageId), null);
             }
         }
 
         if (is_string($newHistoryId) && $newHistoryId !== '') {
-            $sm->recordCursor(
-                $this->inboxId,
-                ScanCursor::gmail($newHistoryId),
-            );
+            $context->sm->recordCursor($this->inboxId, ScanCursor::gmail($newHistoryId));
+        }
+    }
+
+    /**
+     * @param  list<string>  $senderPatterns
+     * @return array{0: list<string>, 1: ?string}
+     */
+    private function fetchGmailHistory(
+        GmailApiClientContract $gmail,
+        Clock $clock,
+        \stdClass $stateRow,
+        array $senderPatterns,
+        string $startHistoryId,
+    ): array {
+        try {
+            $history = $gmail->listHistory($this->inboxId, $startHistoryId);
+
+            return [$this->extractGmailHistoryMessageIds($history['history']), $history['historyId']];
+        } catch (CursorExpiredException) {
+            // listSenderMessages never returns a historyId (Gmail
+            // surfaces it via getProfile in production), so the prior
+            // cursor is kept — the next run re-attempts listHistory.
+            return [$this->gmailFallbackWalk($gmail, $stateRow, $senderPatterns, $clock), null];
         }
     }
 
@@ -304,13 +260,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
      * @param  list<string>  $senderPatterns
      */
     private function runMicrosoftIncremental(
-        Connection $connection,
-        Clock $clock,
+        InboxScanContext $context,
         GraphApiClientContract $graph,
-        EmlBlobStore $blobStore,
-        MimeHeaderParser $mime,
-        InboxScanStateMachine $sm,
-        int $userId,
         array $senderPatterns,
         \stdClass $stateRow,
     ): void {
@@ -319,116 +270,73 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $messages = [];
-        $newDeltaLink = null;
+        [$messages, $newDeltaLink] = $this->fetchGraphDelta($graph, $context->clock, $stateRow, $senderPatterns, $storedDeltaLink);
 
-        try {
-            $page = $graph->deltaPage($this->inboxId, $storedDeltaLink);
-            $messages = $page['messages'];
-            $newDeltaLink = $page['deltaLink'];
-        } catch (CursorExpiredException) {
-            // Fallback walk anchored to the pre-walk timestamp, then
-            // re-baselined via deltaPage(null, $walkStartedAt) — the
-            // same pattern BackfillInboxJob uses to close the
-            // gap-window race (see architecture.md).
-            $walkStartedAt = $clock->now()->toDateTimeImmutable();
-            $messages = $this->graphFallbackWalk(
-                $graph,
-                $stateRow,
-                $senderPatterns,
-                $clock,
-            );
-            $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
-            $newDeltaLink = $baseline['deltaLink'];
-        }
-
-        // Client-side post-filter: Graph's delta endpoint doesn't
-        // honour a from-address $filter, so senders outside the
-        // allow-list are dropped here (the fallback walk already
-        // filters server-side via listSenderMessagesPaged).
-        $now = $clock->now()->toDateTimeString();
         foreach ($messages as $msgMeta) {
-            $senderAddr = '';
-            if (isset($msgMeta['from']) && is_array($msgMeta['from'])) {
-                $emailAddress = $msgMeta['from']['emailAddress'] ?? null;
-                if (is_array($emailAddress)) {
-                    $rawAddr = $emailAddress['address'] ?? null;
-                    if (is_string($rawAddr)) {
-                        $senderAddr = strtolower($rawAddr);
-                    }
-                }
-            }
-            if (! $this->matchesAnyPattern($senderAddr, $senderPatterns)) {
-                continue;
-            }
-
-            $messageId = is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
-            if ($messageId === '') {
-                continue;
-            }
-
-            // Skips a message already fetched+indexed: both the delta
-            // walk and the fallback walk can legitimately re-surface
-            // one a prior pass already persisted.
-            $alreadyFetched = $connection->table('inbox_messages')
-                ->where('inbox_id', $this->inboxId)
-                ->where('provider_message_id', $messageId)
-                ->exists();
-            if ($alreadyFetched) {
-                continue;
-            }
-
-            $rawEml = $graph->getRawMessage($this->inboxId, $messageId);
-
-            $received = $msgMeta['receivedDateTime'] ?? null;
-            $fallbackDate = is_string($received) && $received !== ''
-                ? $this->safeParseDate($received, $clock)
-                : $clock->now()->toDateTimeImmutable();
-            $headers = $mime->parseHeadersWithFallbackDate($rawEml, $fallbackDate);
-
-            $emlPath = $blobStore->pathFor(
-                $userId,
-                $this->inboxId,
-                $headers->internalDate,
-                $messageId,
-            );
-            $blobStore->put($emlPath, $rawEml);
-
-            try {
-                $connection->transaction(function () use (
-                    $connection,
-                    $userId,
-                    $messageId,
-                    $headers,
-                    $now,
-                ): void {
-                    $connection->statement('PRAGMA busy_timeout = 5000');
-                    $connection->table('inbox_messages')->insertOrIgnore([
-                        'user_id' => $userId,
-                        'inbox_id' => $this->inboxId,
-                        'provider_message_id' => $messageId,
-                        'internal_date' => $headers->internalDate->format('Y-m-d H:i:s'),
-                        'sender_email' => $headers->senderEmail,
-                        'sender_name' => $headers->senderName,
-                        'subject' => $headers->subject,
-                        'status' => 'fetched',
-                        'fetched_at' => $now,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                });
-            } catch (Throwable $e) {
-                $blobStore->delete($emlPath);
-                throw $e;
-            }
+            $this->persistDeltaMessage($context, $graph, $msgMeta, $senderPatterns);
         }
 
         if (is_string($newDeltaLink) && $newDeltaLink !== '') {
-            $sm->recordCursor(
-                $this->inboxId,
-                ScanCursor::microsoft($newDeltaLink),
-            );
+            $context->sm->recordCursor($this->inboxId, ScanCursor::microsoft($newDeltaLink));
         }
+    }
+
+    /**
+     * @param  list<string>  $senderPatterns
+     * @return array{0: list<array<string, mixed>>, 1: ?string}
+     */
+    private function fetchGraphDelta(
+        GraphApiClientContract $graph,
+        Clock $clock,
+        \stdClass $stateRow,
+        array $senderPatterns,
+        string $storedDeltaLink,
+    ): array {
+        try {
+            $page = $graph->deltaPage($this->inboxId, $storedDeltaLink);
+
+            return [$page['messages'], $page['deltaLink']];
+        } catch (CursorExpiredException) {
+            // Fallback walk anchored to the pre-walk timestamp, then
+            // re-baselined via deltaPage(null, walkStartedAt) — the same
+            // pattern BackfillInboxJob uses to close the gap-window race.
+            $walkStartedAt = $clock->now()->toDateTimeImmutable();
+            $messages = $this->graphFallbackWalk($graph, $stateRow, $senderPatterns, $clock);
+            $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
+
+            return [$messages, $baseline['deltaLink']];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $msgMeta
+     * @param  list<string>  $senderPatterns
+     */
+    private function persistDeltaMessage(
+        InboxScanContext $context,
+        GraphApiClientContract $graph,
+        array $msgMeta,
+        array $senderPatterns,
+    ): void {
+        // Client-side post-filter: Graph's delta endpoint doesn't honour
+        // a from-address filter, so senders outside the allow-list are
+        // dropped here (the fallback walk already filters server-side
+        // via listSenderMessagesPaged).
+        $senderAddr = self::extractSenderAddress($msgMeta);
+        if (! $this->matchesAnyPattern($senderAddr, $senderPatterns)) {
+            return;
+        }
+
+        $messageId = self::extractProviderMessageId($msgMeta);
+        if ($messageId === '' || $context->alreadyIndexed($messageId)) {
+            return;
+        }
+
+        $context->storeFetchedMessage(
+            $messageId,
+            $graph->getRawMessage($this->inboxId, $messageId),
+            $this->graphMessageInternalDate($msgMeta, $context->clock),
+        );
     }
 
     // Laravel calls this after the worker exhausts its retry budget;
@@ -445,6 +353,31 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         } catch (Throwable) {
             // Invalid transitions are acceptable on this hook — they
             // must not escalate into a hard queue-worker error.
+        }
+    }
+
+    // Rate-limit bumps retry_attempts + stamps the retry hint and
+    // rethrows for the backoff curve, a revoked grant parks the inbox
+    // at needs_reauth without a rethrow, and any other throwable records
+    // the error before rethrowing to the failed hook.
+    private function transitionOnScanError(InboxScanStateMachine $sm, Throwable $e): void
+    {
+        match (true) {
+            $e instanceof RateLimitedException => $sm->applyRateLimited($this->inboxId, $e->retryAfterSeconds),
+            $e instanceof InvalidGrantException => $sm->applyStatus(
+                $this->inboxId,
+                'needs_reauth',
+                'OAuth grant revoked or expired.',
+            ),
+            default => $sm->applyStatus(
+                $this->inboxId,
+                'error',
+                substr($e->getMessage(), 0, 500),
+            ),
+        };
+
+        if (! $e instanceof InvalidGrantException) {
+            throw $e;
         }
     }
 
@@ -570,14 +503,54 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
                 if (str_ends_with($senderAddr, $p)) {
                     return true;
                 }
-            } else {
-                if (str_contains($senderAddr, $p)) {
-                    return true;
-                }
+            } elseif (str_contains($senderAddr, $p)) {
+                return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $msgMeta
+     */
+    private static function extractSenderAddress(array $msgMeta): string
+    {
+        $from = $msgMeta['from'] ?? null;
+        if (! is_array($from)) {
+            return '';
+        }
+        $emailAddress = $from['emailAddress'] ?? null;
+        if (! is_array($emailAddress)) {
+            return '';
+        }
+        $rawAddr = $emailAddress['address'] ?? null;
+
+        return is_string($rawAddr) ? strtolower($rawAddr) : '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $msgMeta
+     */
+    private static function extractProviderMessageId(array $msgMeta): string
+    {
+        return is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
+    }
+
+    // Provider-stamped receivedDateTime is the canonical internal date
+    // for Microsoft; a null return lets the scan context fall back to
+    // the project Clock when the stamp is missing.
+    /**
+     * @param  array<string, mixed>  $msgMeta
+     */
+    private function graphMessageInternalDate(array $msgMeta, Clock $clock): ?DateTimeImmutable
+    {
+        $received = $msgMeta['receivedDateTime'] ?? null;
+        if (! is_string($received) || $received === '') {
+            return null;
+        }
+
+        return $this->safeParseDate($received, $clock);
     }
 
     private function safeParseDate(string $raw, Clock $clock): DateTimeImmutable
