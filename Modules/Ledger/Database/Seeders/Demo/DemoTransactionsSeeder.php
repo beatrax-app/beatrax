@@ -12,6 +12,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 /**
@@ -512,7 +513,7 @@ final class DemoTransactionsSeeder
         $pairs = Transaction::query()
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
-            ->whereIn('type', ['transfer_in', 'transfer_out'])
+            ->whereIn('type', TransactionType::transferValues())
             ->whereIn('description', ['PayPal top-up', 'Top-up from ASN'])
             ->get(['id', 'type', 'posted_at', 'amount_minor', 'description']);
 

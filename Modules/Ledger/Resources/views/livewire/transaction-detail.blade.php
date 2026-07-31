@@ -389,9 +389,9 @@
                         class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                     >
                         <option value="">Choose a type…</option>
-                        @foreach (\Modules\Ledger\Models\Transaction::TYPES as $type)
-                            @if ($type !== $transaction->type)
-                                <option value="{{ $type }}">{{ $type }}</option>
+                        @foreach (\Modules\Ledger\Public\Enums\TransactionType::cases() as $type)
+                            @if ($type->value !== $transaction->type)
+                                <option value="{{ $type->value }}">{{ $type->value }}</option>
                             @endif
                         @endforeach
                     </select>
