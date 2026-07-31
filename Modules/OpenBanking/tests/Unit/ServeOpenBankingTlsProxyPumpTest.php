@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Console\OutputStyle;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\OpenBanking\Internal\Console\ServeOpenBankingTlsCommand;
 use Modules\OpenBanking\Internal\Tls\LoopbackTlsCertificate;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Process\Process;
 
 /*
  * The proxy loop's pump/relay/select helpers, driven directly over real
@@ -265,4 +269,172 @@ it('selectSockets surfaces the ready read set and the buffered write set', funct
     expect($readSet)->not->toBeNull()
         ->and($readSet)->toContain($readableNear)
         ->and($writeSet)->toContain($bufferedNear);
+});
+
+/**
+ * Drives the command's private `running` flag; the loop reads it every tick and
+ * there is no public setter outside the signal handler.
+ */
+function tlsSetRunning(ServeOpenBankingTlsCommand $command, bool $running): void
+{
+    $property = new ReflectionProperty(ServeOpenBankingTlsCommand::class, 'running');
+    $property->setAccessible(true);
+    $property->setValue($command, $running);
+}
+
+/**
+ * Gives the command a throwaway output sink so its newLine()/error() calls have
+ * somewhere to write when the loop is exercised outside a real console run.
+ */
+function tlsSilenceOutput(ServeOpenBankingTlsCommand $command): void
+{
+    $command->setOutput(new OutputStyle(new ArrayInput([]), new BufferedOutput));
+}
+
+it('accept pairs the client with a reachable backend and tracks both halves', function (): void {
+    $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    $backend = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($server)->not->toBeFalse()->and($backend)->not->toBeFalse();
+    $backendPort = (int) explode(':', stream_socket_get_name($backend, false))[1];
+
+    $client = @stream_socket_client('tcp://'.stream_socket_get_name($server, false), $errno, $errstr, 1);
+    expect($client)->not->toBeFalse();
+    $this->tlsCloseables = [$server, $backend, $client];
+
+    $conns = [];
+    $args = [$server, $backendPort, &$conns];
+    tlsPumpMethod('accept')->invokeArgs($this->tlsCommand, $args);
+
+    // The accepted client and its freshly dialled upstream are both registered.
+    expect($conns)->toHaveCount(2);
+    foreach ($conns as $conn) {
+        $this->tlsCloseables[] = $conn['sock'];
+    }
+});
+
+it('flush is a no-op for an untracked or empty half', function (): void {
+    $conns = [];
+    $args = [&$conns, 123];
+    tlsPumpMethod('flush')->invokeArgs($this->tlsCommand, $args);
+
+    expect($conns)->toBe([]);
+});
+
+it('flush drains the buffered bytes onto the socket', function (): void {
+    [$near, $far] = tlsSocketPair();
+    $this->tlsCloseables = [$near, $far];
+
+    $id = (int) $near;
+    $conns = [$id => ['sock' => $near, 'peer' => 999, 'wbuf' => 'payload']];
+    $args = [&$conns, $id];
+    tlsPumpMethod('flush')->invokeArgs($this->tlsCommand, $args);
+
+    expect(fread($far, 4096))->toBe('payload')
+        ->and($conns[$id]['wbuf'])->toBe('');
+});
+
+it('flush tears the pair down when the socket write fails', function (): void {
+    // A read-only handle is an open resource whose fwrite() returns false, so it
+    // trips the write-failure branch without the TypeError a closed resource
+    // would raise.
+    $readOnly = fopen('php://temp', 'r');
+    [$peerNear, $peerFar] = tlsSocketPair();
+    $this->tlsCloseables = [$readOnly, $peerNear, $peerFar];
+
+    $id = (int) $readOnly;
+    $peerId = (int) $peerNear;
+    $conns = [
+        $id => ['sock' => $readOnly, 'peer' => $peerId, 'wbuf' => 'payload'],
+        $peerId => ['sock' => $peerNear, 'peer' => $id, 'wbuf' => ''],
+    ];
+
+    $args = [&$conns, $id];
+    tlsPumpMethod('flush')->invokeArgs($this->tlsCommand, $args);
+
+    expect($conns)->toBe([]);
+});
+
+it('closePair flushes the peer buffer before closing both halves', function (): void {
+    [$near, $far] = tlsSocketPair();
+    [$peerNear, $peerFar] = tlsSocketPair();
+    $this->tlsCloseables = [$far, $peerFar];
+
+    $id = (int) $near;
+    $peerId = (int) $peerNear;
+    $conns = [
+        $id => ['sock' => $near, 'peer' => $peerId, 'wbuf' => ''],
+        $peerId => ['sock' => $peerNear, 'peer' => $id, 'wbuf' => 'lastgasp'],
+    ];
+
+    $args = [&$conns, $id];
+    tlsPumpMethod('closePair')->invokeArgs($this->tlsCommand, $args);
+
+    // The peer's queued bytes were pushed out before the sockets were torn down.
+    expect($conns)->toBe([])
+        ->and(fread($peerFar, 4096))->toBe('lastgasp');
+});
+
+it('closePair ignores an id it is not tracking', function (): void {
+    $conns = [];
+    $args = [&$conns, 42];
+    tlsPumpMethod('closePair')->invokeArgs($this->tlsCommand, $args);
+
+    expect($conns)->toBe([]);
+});
+
+it('runProxyLoop returns success and closes cleanly when it is no longer running', function (): void {
+    $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($server)->not->toBeFalse();
+    $this->tlsCloseables = [$server];
+
+    tlsSetRunning($this->tlsCommand, false);
+    $result = tlsPumpMethod('runProxyLoop')->invokeArgs($this->tlsCommand, [$server, 8080, null]);
+
+    expect($result)->toBe(ServeOpenBankingTlsCommand::SUCCESS);
+});
+
+it('runProxyLoop aborts with failure when the backend process has died', function (): void {
+    $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($server)->not->toBeFalse();
+    $this->tlsCloseables = [$server];
+
+    tlsSilenceOutput($this->tlsCommand);
+    // An unstarted process reports not-running, so the first tick trips the
+    // backend-died guard and exits.
+    $backend = new Process(['true']);
+    $result = tlsPumpMethod('runProxyLoop')->invokeArgs($this->tlsCommand, [$server, 8080, $backend]);
+
+    expect($result)->toBe(ServeOpenBankingTlsCommand::FAILURE);
+});
+
+it('runProxyLoop idles on an empty tick, then stops when the backend dies', function (): void {
+    $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($server)->not->toBeFalse();
+    $this->tlsCloseables = [$server];
+
+    tlsSilenceOutput($this->tlsCommand);
+    $backend = Mockery::mock(Process::class);
+    // Alive for the idle tick, dead on the next one.
+    $backend->shouldReceive('isRunning')->andReturn(true, false);
+    $result = tlsPumpMethod('runProxyLoop')->invokeArgs($this->tlsCommand, [$server, 8080, $backend]);
+
+    expect($result)->toBe(ServeOpenBankingTlsCommand::FAILURE);
+});
+
+it('runProxyLoop pumps a ready tick before the backend stops', function (): void {
+    $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($server)->not->toBeFalse();
+    $client = @stream_socket_client('tcp://'.stream_socket_get_name($server, false), $errno, $errstr, 1);
+    expect($client)->not->toBeFalse();
+    $this->tlsCloseables = [$server, $client];
+
+    tlsSilenceOutput($this->tlsCommand);
+    $backend = Mockery::mock(Process::class);
+    $backend->shouldReceive('isRunning')->andReturn(true, false);
+
+    // A pending client makes the first tick readable, so pumpWritable/pumpReadable
+    // both run; backend port 1 is unreachable, so the accepted client is dropped.
+    $result = tlsPumpMethod('runProxyLoop')->invokeArgs($this->tlsCommand, [$server, 1, $backend]);
+
+    expect($result)->toBe(ServeOpenBankingTlsCommand::FAILURE);
 });
