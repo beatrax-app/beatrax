@@ -39,7 +39,7 @@ final class CloseActionController
                 ['choice' => is_string($choice) ? $choice : gettype($choice)],
             );
 
-            return new Response('', 422);
+            return new Response('', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $this->applyChoice->apply($choice);

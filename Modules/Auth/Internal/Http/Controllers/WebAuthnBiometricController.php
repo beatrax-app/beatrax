@@ -13,6 +13,7 @@ use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Symfony\Component\HttpFoundation\Response;
 
 // These routes sit in the standard 'web' middleware group, so
 // VerifyCsrfToken IS enforced -- there is no JSON exemption. lock.js reads
@@ -90,7 +91,7 @@ final class WebAuthnBiometricController
         // real key bytes, not the opaque custody handle, on native bundles.
         $dataKey = $lockState->heldKey($session);
         if ($dataKey === null) {
-            return new JsonResponse(['enrolled' => false, 'error' => 'Session not unlocked.'], 403);
+            return new JsonResponse(['enrolled' => false, 'error' => 'Session not unlocked.'], Response::HTTP_FORBIDDEN);
         }
 
         $ua = $request->userAgent() ?? '';
@@ -110,7 +111,7 @@ final class WebAuthnBiometricController
 
             return new JsonResponse(['enrolled' => true]);
         } catch (\Throwable) {
-            return new JsonResponse(['enrolled' => false, 'error' => 'Enrollment failed.'], 422);
+            return new JsonResponse(['enrolled' => false, 'error' => 'Enrollment failed.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 }
