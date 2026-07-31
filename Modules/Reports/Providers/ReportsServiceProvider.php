@@ -18,6 +18,10 @@ final class ReportsServiceProvider extends ServiceProvider
 
     private const REPORT_CSV_EXPORTER_CLASS = 'Modules\Reports\Internal\Services\ReportCsvExporter';
 
+    private const SPEND_FILTER_APPLIER_CLASS = 'Modules\Reports\Internal\Aggregation\SpendFilterApplier';
+
+    private const REPORT_DEFINITION_REQUEST_FACTORY_CLASS = 'Modules\Reports\Internal\Http\ReportDefinitionRequestFactory';
+
     private const SAVE_REPORT_CLASS = 'Modules\Reports\Public\Actions\SaveReport';
 
     private const UPDATE_REPORT_CLASS = 'Modules\Reports\Public\Actions\UpdateReport';
@@ -37,6 +41,10 @@ final class ReportsServiceProvider extends ServiceProvider
         $this->singletonIfExists(self::REPORT_AGGREGATOR_CLASS);
         $this->singletonIfExists(self::TIME_BUCKET_GENERATOR_CLASS);
         $this->singletonIfExists(self::REPORT_CSV_EXPORTER_CLASS);
+        // Stateless aggregation/HTTP collaborators — singletons avoid a
+        // fresh instantiation per report run and per export request.
+        $this->singletonIfExists(self::SPEND_FILTER_APPLIER_CLASS);
+        $this->singletonIfExists(self::REPORT_DEFINITION_REQUEST_FACTORY_CLASS);
         // Actions are stateless — safe as singletons, avoiding a fresh
         // instantiation per request.
         $this->singletonIfExists(self::SAVE_REPORT_CLASS);

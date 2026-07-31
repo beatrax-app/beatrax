@@ -68,7 +68,8 @@ final class ReportAggregator
 
     private function buildTransactionResult(User $user, Period $period, ReportDefinition $definition): ReportResultDto
     {
-        $queryForCurrency = fn (string $currency): array => $this->dimensionRows($user, $period, $definition, $currency);
+        $filters = self::filtersFor($definition);
+        $queryForCurrency = fn (string $currency): array => $this->dimensionRows($user, $period, $definition, $currency, $filters);
 
         // discoverCurrencies() must see the same accounts/categories/
         // counterparties filters the dimension query itself applies, so a
@@ -80,74 +81,36 @@ final class ReportAggregator
             $definition->metric,
             $definition->currencyMode,
             $queryForCurrency,
+            $filters,
+        );
+    }
+
+    // A row-level ABS(settled_amount_minor) predicate honoring
+    // amountDirection in/out/both is threaded into every dimension query
+    // via this value object, so totals/chart/table/CSV never silently
+    // ignore an active amount filter.
+    private static function filtersFor(ReportDefinition $definition): SpendQueryFilters
+    {
+        return new SpendQueryFilters(
             accountIds: $definition->accounts,
             categoryIds: $definition->categories,
             counterpartyIds: $definition->counterparties,
+            amountMinMinor: self::amountToMinor($definition->amountMin),
+            amountMaxMinor: self::amountToMinor($definition->amountMax),
+            amountDirection: $definition->amountDirection,
         );
     }
 
     /**
      * @return list<ReportResultRow>
      */
-    private function dimensionRows(User $user, Period $period, ReportDefinition $definition, string $currency): array
+    private function dimensionRows(User $user, Period $period, ReportDefinition $definition, string $currency, SpendQueryFilters $filters): array
     {
-        // A row-level ABS(settled_amount_minor) predicate honoring
-        // amountDirection in/out/both, threaded into every dimension query
-        // so totals/chart/table/CSV never silently ignore an active
-        // amount filter.
-        $amountMinMinor = self::amountToMinor($definition->amountMin);
-        $amountMaxMinor = self::amountToMinor($definition->amountMax);
-
         return match ($definition->dimension) {
-            'category' => $this->categorySpendQuery->forUserAndPeriod(
-                $user,
-                $period,
-                $definition->metric,
-                $currency,
-                accountIds: $definition->accounts,
-                categoryIds: $definition->categories,
-                counterpartyIds: $definition->counterparties,
-                amountMinMinor: $amountMinMinor,
-                amountMaxMinor: $amountMaxMinor,
-                amountDirection: $definition->amountDirection,
-            ),
-            'counterparty' => $this->counterpartySpendQuery->forUserAndPeriod(
-                $user,
-                $period,
-                $definition->metric,
-                $currency,
-                accountIds: $definition->accounts,
-                categoryIds: $definition->categories,
-                counterpartyIds: $definition->counterparties,
-                amountMinMinor: $amountMinMinor,
-                amountMaxMinor: $amountMaxMinor,
-                amountDirection: $definition->amountDirection,
-            ),
-            'account' => $this->accountSpendQuery->forUserAndPeriod(
-                $user,
-                $period,
-                $definition->metric,
-                $currency,
-                accountIds: $definition->accounts,
-                categoryIds: $definition->categories,
-                counterpartyIds: $definition->counterparties,
-                amountMinMinor: $amountMinMinor,
-                amountMaxMinor: $amountMaxMinor,
-                amountDirection: $definition->amountDirection,
-            ),
-            'time_bucket' => $this->timeBucketSpendQuery->forUserAndPeriod(
-                $user,
-                $period,
-                $definition->metric,
-                $currency,
-                $definition->granularity,
-                accountIds: $definition->accounts,
-                categoryIds: $definition->categories,
-                counterpartyIds: $definition->counterparties,
-                amountMinMinor: $amountMinMinor,
-                amountMaxMinor: $amountMaxMinor,
-                amountDirection: $definition->amountDirection,
-            ),
+            'category' => $this->categorySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
+            'counterparty' => $this->counterpartySpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
+            'account' => $this->accountSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $filters),
+            'time_bucket' => $this->timeBucketSpendQuery->forUserAndPeriod($user, $period, $definition->metric, $currency, $definition->granularity, $filters),
             default => throw new InvalidArgumentException("Unknown report dimension: {$definition->dimension}"),
         };
     }

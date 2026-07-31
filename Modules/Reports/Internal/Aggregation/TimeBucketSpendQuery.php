@@ -24,16 +24,11 @@ final class TimeBucketSpendQuery
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly TimeBucketGenerator $timeBucketGenerator,
+        private readonly SpendFilterApplier $filterApplier,
     ) {}
 
     /**
      * @param  string  $metric  'spend' | 'income' | 'net'
-     * @param  list<int>  $accountIds  restrict to these account ids (empty = no restriction); applied alongside the user_id guard, so a foreign id only narrows this user's own result, never widens it
-     * @param  list<int>  $categoryIds  restrict to these category ids (empty = no restriction)
-     * @param  list<int>  $counterpartyIds  restrict to these counterparty ids (empty = no restriction)
-     * @param  ?int  $amountMinMinor  restrict to rows whose ABS(settled_amount_minor) >= this (empty = no restriction)
-     * @param  ?int  $amountMaxMinor  restrict to rows whose ABS(settled_amount_minor) <= this (empty = no restriction)
-     * @param  string  $amountDirection  'in' | 'out' | 'both' — restricts to settled_amount_minor > 0 / < 0 / no restriction
      * @return list<ReportResultRow>
      */
     public function forUserAndPeriod(
@@ -42,12 +37,7 @@ final class TimeBucketSpendQuery
         string $metric,
         string $currency,
         ?ReportGranularity $granularity = null,
-        array $accountIds = [],
-        array $categoryIds = [],
-        array $counterpartyIds = [],
-        ?int $amountMinMinor = null,
-        ?int $amountMaxMinor = null,
-        string $amountDirection = 'both',
+        SpendQueryFilters $filters = new SpendQueryFilters,
     ): array {
         $buckets = $this->timeBucketGenerator->generate($period, $granularity ?? ReportGranularity::default());
         $types = self::metricTypes($metric);
@@ -62,13 +52,7 @@ final class TimeBucketSpendQuery
                 ->where('settled_currency', $currency)
                 ->where('posted_at', '>=', $bucket->start->toDateString())
                 ->where('posted_at', '<', $bucket->endExclusive->toDateString())
-                ->when($accountIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('account_id', $accountIds))
-                ->when($categoryIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('category_id', $categoryIds))
-                ->when($counterpartyIds !== [], static fn (QueryBuilder $q): QueryBuilder => $q->whereIn('counterparty_id', $counterpartyIds))
-                ->when($amountMinMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(settled_amount_minor) >= ?', [$amountMinMinor]))
-                ->when($amountMaxMinor !== null, static fn (QueryBuilder $q): QueryBuilder => $q->whereRaw('ABS(settled_amount_minor) <= ?', [$amountMaxMinor]))
-                ->when($amountDirection === 'in', static fn (QueryBuilder $q): QueryBuilder => $q->where('settled_amount_minor', '>', 0))
-                ->when($amountDirection === 'out', static fn (QueryBuilder $q): QueryBuilder => $q->where('settled_amount_minor', '<', 0))
+                ->tap(fn (QueryBuilder $q): QueryBuilder => $this->filterApplier->apply($q, $filters))
                 ->selectRaw($amountExpr.' AS amount_minor')
                 ->first();
 
