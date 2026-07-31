@@ -15,6 +15,7 @@ use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 use Throwable;
 
 // Claims messages whose sender is EXACTLY googleplay-noreply@google.com
@@ -82,31 +83,16 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
             return MatchOutcomeDto::skipped('googleplay-refund-v2');
         }
 
-        if (preg_match(self::ORDER_ID_REGEX, $body, $orderMatches) !== 1) {
+        return $this->parseReceipt($parsed, $body, $subject);
+    }
+
+    private function parseReceipt(ParsedMimeMessage $parsed, string $body, string $subject): MatchOutcomeDto
+    {
+        $charge = $this->extractCharge($body);
+        if ($charge === null) {
             return MatchOutcomeDto::unmatched();
         }
-        $orderId = $orderMatches[0];
-
-        if (preg_match(self::USD_AMOUNT_REGEX, $body, $usdMatches) !== 1) {
-            return MatchOutcomeDto::unmatched();
-        }
-        $nativeMinor = $this->toMinorOrNull($usdMatches[1], 'USD');
-        if ($nativeMinor === null) {
-            return MatchOutcomeDto::unmatched();
-        }
-        $nativeMinor = -$nativeMinor;
-
-        $settledMinor = $nativeMinor;
-        $settledCurrency = 'USD';
-        if (preg_match(self::EUR_SETTLED_REGEX, $body, $eurMatches) === 1) {
-            $eurValue = $this->toMinorOrNull($eurMatches[1], 'EUR');
-            if ($eurValue !== null) {
-                $settledMinor = -$eurValue;
-                $settledCurrency = 'EUR';
-            }
-        }
-
-        $merchant = $this->extractMerchant($body);
+        [$orderId, $nativeMinor, $settledMinor, $settledCurrency, $merchant] = $charge;
 
         $dateRaw = $parsed->headers['date'] ?? '';
         try {
@@ -135,6 +121,39 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         );
 
         return MatchOutcomeDto::parsed($dto);
+    }
+
+    // Native USD charge is mandatory; the parenthesised EUR leg is the
+    // optional settled amount. A missing order id, missing USD anchor,
+    // or an unparseable USD figure all mean "not a Google Play receipt".
+    /**
+     * @return array{string, int, int, string, string}|null
+     */
+    private function extractCharge(string $body): ?array
+    {
+        if (
+            preg_match(self::ORDER_ID_REGEX, $body, $orderMatches) !== 1
+            || preg_match(self::USD_AMOUNT_REGEX, $body, $usdMatches) !== 1
+        ) {
+            return null;
+        }
+        $nativeMinor = $this->toMinorOrNull($usdMatches[1], 'USD');
+        if ($nativeMinor === null) {
+            return null;
+        }
+        $nativeMinor = -$nativeMinor;
+
+        $settledMinor = $nativeMinor;
+        $settledCurrency = 'USD';
+        if (preg_match(self::EUR_SETTLED_REGEX, $body, $eurMatches) === 1) {
+            $eurValue = $this->toMinorOrNull($eurMatches[1], 'EUR');
+            if ($eurValue !== null) {
+                $settledMinor = -$eurValue;
+                $settledCurrency = 'EUR';
+            }
+        }
+
+        return [$orderMatches[0], $nativeMinor, $settledMinor, $settledCurrency, $this->extractMerchant($body)];
     }
 
     // Preference order: the Item: line, then the subscription anchor,

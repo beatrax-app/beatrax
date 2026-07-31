@@ -89,23 +89,38 @@ final class DispatchChainHintsFromReceipt
         $rawEvidence = $hint['evidence'] ?? '';
         $evidence = is_string($rawEvidence) ? $rawEvidence : '';
 
-        if ($type === 'funded_by_card') {
-            $cardLast4 = $hint['card_last4'] ?? null;
-            if (! is_string($cardLast4) || $cardLast4 === '') {
-                return null;
-            }
+        return match ($type) {
+            'funded_by_card' => $this->rehydrateFundedByCard($hint, $evidence),
+            'refund_of' => $this->rehydrateRefundOf($hint, $evidence),
+            default => null,
+        };
+    }
 
-            return [$type, new FundedByCardPayload(cardLast4: $cardLast4), $evidence];
+    /**
+     * @param  array<int|string, mixed>  $hint
+     * @return array{string, object, string}|null
+     */
+    private function rehydrateFundedByCard(array $hint, string $evidence): ?array
+    {
+        $cardLast4 = $hint['card_last4'] ?? null;
+        if (! is_string($cardLast4) || $cardLast4 === '') {
+            return null;
         }
-        if ($type === 'refund_of') {
-            $original = $hint['original_reference_id'] ?? null;
-            if (! is_string($original) || $original === '') {
-                return null;
-            }
 
-            return [$type, new RefundOfPayload(originalReferenceId: $original), $evidence];
+        return ['funded_by_card', new FundedByCardPayload(cardLast4: $cardLast4), $evidence];
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $hint
+     * @return array{string, object, string}|null
+     */
+    private function rehydrateRefundOf(array $hint, string $evidence): ?array
+    {
+        $original = $hint['original_reference_id'] ?? null;
+        if (! is_string($original) || $original === '') {
+            return null;
         }
 
-        return null;
+        return ['refund_of', new RefundOfPayload(originalReferenceId: $original), $evidence];
     }
 }
