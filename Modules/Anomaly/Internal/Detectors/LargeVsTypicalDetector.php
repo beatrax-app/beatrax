@@ -9,6 +9,7 @@ use Modules\Anomaly\Internal\Support\RobustStatistics;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Enums\Direction;
 
 /**
  * @link ../../../../.docs/features/anomaly/architecture.md
@@ -37,8 +38,8 @@ final readonly class LargeVsTypicalDetector
             return null;
         }
 
-        $direction = self::directionFromType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense');
-        $types = self::typesForDirection($direction);
+        $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : 'expense')->value;
+        $types = Direction::from($direction)->transactionTypes();
         $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
         $categoryId = self::toIntOrNull($txn['category_id'] ?? null);
         $windowStart = $this->clock->now()
@@ -161,25 +162,5 @@ final readonly class LargeVsTypicalDetector
         $int = (int) $value;
 
         return $int > 0 ? $int : null;
-    }
-
-    private static function directionFromType(string $type): string
-    {
-        return match ($type) {
-            'income', 'transfer_in', 'refund' => 'income',
-            default => 'expense',
-        };
-    }
-
-    // The baseline must compare like with like: an expense charge against
-    // the expense-side history, an inflow against the income-side history.
-    /**
-     * @return list<string>
-     */
-    private static function typesForDirection(string $direction): array
-    {
-        return $direction === 'income'
-            ? ['income', 'transfer_in', 'refund']
-            : ['expense', 'transfer_out', 'fee', 'adjustment'];
     }
 }

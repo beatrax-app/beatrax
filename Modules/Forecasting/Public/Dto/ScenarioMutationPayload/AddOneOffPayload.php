@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace Modules\Forecasting\Public\Dto\ScenarioMutationPayload;
 
 use InvalidArgumentException;
+use Modules\Ledger\Public\Enums\Direction;
 
 /**
  * @see ScenarioMutationPayload
  */
 final class AddOneOffPayload extends ScenarioMutationPayload
 {
-    public const ALLOWED_DIRECTIONS = ['expense', 'income'];
-
     public function __construct(
         public readonly string $date,
         public readonly int $amountMinor,
@@ -24,9 +23,9 @@ final class AddOneOffPayload extends ScenarioMutationPayload
         // corrupted DB row raises here rather than silently flipping an
         // income mutation into an expense (ScenarioApplier treats any
         // non-'income' value as expense via a sign flip).
-        if (! in_array($direction, self::ALLOWED_DIRECTIONS, true)) {
+        if (Direction::tryFrom($direction) === null) {
             throw new InvalidArgumentException(
-                "AddOneOffPayload.direction must be one of: 'expense' | 'income'; got '{$direction}'."
+                'AddOneOffPayload.direction must be one of: '.implode(' | ', array_map(static fn (Direction $d): string => "'".$d->value."'", Direction::cases()))."; got '{$direction}'."
             );
         }
     }
