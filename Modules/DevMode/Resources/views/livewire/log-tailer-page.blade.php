@@ -590,13 +590,14 @@
                 // the truncate toast wording and the totals-strip render
                 // use the same units.
                 humanBytes(bytes) {
+                    const BYTES_PER_UNIT = 1024;
                     if (typeof bytes !== 'number' || !isFinite(bytes) || bytes <= 0) { return '0 B'; }
-                    if (bytes < 1024) { return bytes + ' B'; }
-                    const kb = bytes / 1024;
-                    if (kb < 1024) { return kb.toFixed(1) + ' KB'; }
-                    const mb = kb / 1024;
-                    if (mb < 1024) { return mb.toFixed(1) + ' MB'; }
-                    return (mb / 1024).toFixed(2) + ' GB';
+                    if (bytes < BYTES_PER_UNIT) { return bytes + ' B'; }
+                    const kb = bytes / BYTES_PER_UNIT;
+                    if (kb < BYTES_PER_UNIT) { return kb.toFixed(1) + ' KB'; }
+                    const mb = kb / BYTES_PER_UNIT;
+                    if (mb < BYTES_PER_UNIT) { return mb.toFixed(1) + ' MB'; }
+                    return (mb / BYTES_PER_UNIT).toFixed(2) + ' GB';
                 },
             }));
         });

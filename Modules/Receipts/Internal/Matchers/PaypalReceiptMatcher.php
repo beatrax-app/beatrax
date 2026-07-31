@@ -15,6 +15,7 @@ use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
 use Modules\Receipts\Public\Pipeline\EmlMimeReader;
+use Modules\Receipts\Public\Pipeline\ParsedMimeMessage;
 use Throwable;
 
 // Claims messages whose sender domain is exactly paypal.com (exact
@@ -85,27 +86,26 @@ final class PaypalReceiptMatcher implements SenderMatcher
             return MatchOutcomeDto::skipped('paypal-login-notification');
         }
 
-        if (preg_match(self::TRANSACTION_ID_REGEX, $body, $txMatches) !== 1) {
-            return MatchOutcomeDto::unmatched();
-        }
-        $transactionId = $txMatches[1];
+        return $this->parseReceipt($parsed, $body, $subject);
+    }
 
-        $amountPair = $this->extractNativeAmount($body);
-        if ($amountPair === null) {
+    private function parseReceipt(ParsedMimeMessage $parsed, string $body, string $subject): MatchOutcomeDto
+    {
+        $charge = $this->extractCharge($body);
+        $merchant = $this->resolveMerchant($body);
+        if ($charge === null || $merchant === null) {
             return MatchOutcomeDto::unmatched();
         }
-        [$nativeAmountMinor, $nativeCurrency] = $amountPair;
 
-        $settled = $this->extractSettledLeg($body, $nativeCurrency, $nativeAmountMinor);
-        [$settledAmountMinor, $settledCurrency] = $settled;
+        return $this->buildOutcome($parsed, $body, $subject, $charge, $merchant);
+    }
 
-        if (preg_match(self::MERCHANT_REGEX, $body, $merchantMatches) !== 1) {
-            return MatchOutcomeDto::unmatched();
-        }
-        $merchant = trim($merchantMatches[1]);
-        if ($merchant === '') {
-            return MatchOutcomeDto::unmatched();
-        }
+    /**
+     * @param  array{string, int, string, int, string}  $charge
+     */
+    private function buildOutcome(ParsedMimeMessage $parsed, string $body, string $subject, array $charge, string $merchant): MatchOutcomeDto
+    {
+        [$transactionId, $nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency] = $charge;
 
         $dateRaw = $parsed->headers['date'] ?? '';
         try {
@@ -137,6 +137,34 @@ final class PaypalReceiptMatcher implements SenderMatcher
     }
 
     /**
+     * @return array{string, int, string, int, string}|null
+     */
+    private function extractCharge(string $body): ?array
+    {
+        if (preg_match(self::TRANSACTION_ID_REGEX, $body, $txMatches) !== 1) {
+            return null;
+        }
+        $amountPair = $this->extractNativeAmount($body);
+        if ($amountPair === null) {
+            return null;
+        }
+        [$nativeAmountMinor, $nativeCurrency] = $amountPair;
+        [$settledAmountMinor, $settledCurrency] = $this->extractSettledLeg($body, $nativeCurrency, $nativeAmountMinor);
+
+        return [$txMatches[1], $nativeAmountMinor, $nativeCurrency, $settledAmountMinor, $settledCurrency];
+    }
+
+    private function resolveMerchant(string $body): ?string
+    {
+        if (preg_match(self::MERCHANT_REGEX, $body, $merchantMatches) !== 1) {
+            return null;
+        }
+        $merchant = trim($merchantMatches[1]);
+
+        return $merchant === '' ? null : $merchant;
+    }
+
+    /**
      * @return array{int, string}|null
      */
     private function extractNativeAmount(string $body): ?array
@@ -144,29 +172,49 @@ final class PaypalReceiptMatcher implements SenderMatcher
         // USD is checked first when both `$ X USD` and `EUR Y` appear
         // (foreign-currency receipt shape: native USD, settled EUR) —
         // its anchor is more specific than the bare EUR anchor.
-        if (preg_match(self::USD_AMOUNT_REGEX, $body, $m) === 1) {
-            $minor = $this->toMinorOrNull($m[1], 'USD');
-            if ($minor !== null) {
-                return [-$minor, 'USD'];
-            }
-        }
+        return $this->nativeFromUsd($body)
+            ?? $this->nativeFromEur($body)
+            ?? $this->nativeFromLabelled($body);
+    }
 
-        if (preg_match(self::EUR_AMOUNT_REGEX, $body, $m) === 1) {
-            $minor = $this->toMinorOrNull($m[1], 'EUR');
-            if ($minor !== null) {
-                return [-$minor, 'EUR'];
-            }
+    /**
+     * @return array{int, string}|null
+     */
+    private function nativeFromUsd(string $body): ?array
+    {
+        if (preg_match(self::USD_AMOUNT_REGEX, $body, $m) !== 1) {
+            return null;
         }
+        $minor = $this->toMinorOrNull($m[1], 'USD');
 
-        if (preg_match(self::LABELLED_AMOUNT_REGEX, $body, $m) === 1) {
-            $currency = $m[1] !== '' ? strtoupper($m[1]) : 'EUR';
-            $minor = $this->toMinorOrNull($m[2], $currency);
-            if ($minor !== null) {
-                return [-$minor, $currency];
-            }
+        return $minor === null ? null : [-$minor, 'USD'];
+    }
+
+    /**
+     * @return array{int, string}|null
+     */
+    private function nativeFromEur(string $body): ?array
+    {
+        if (preg_match(self::EUR_AMOUNT_REGEX, $body, $m) !== 1) {
+            return null;
         }
+        $minor = $this->toMinorOrNull($m[1], 'EUR');
 
-        return null;
+        return $minor === null ? null : [-$minor, 'EUR'];
+    }
+
+    /**
+     * @return array{int, string}|null
+     */
+    private function nativeFromLabelled(string $body): ?array
+    {
+        if (preg_match(self::LABELLED_AMOUNT_REGEX, $body, $m) !== 1) {
+            return null;
+        }
+        $currency = $m[1] !== '' ? strtoupper($m[1]) : 'EUR';
+        $minor = $this->toMinorOrNull($m[2], $currency);
+
+        return $minor === null ? null : [-$minor, $currency];
     }
 
     /**

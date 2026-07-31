@@ -39,13 +39,11 @@ final class ColdStartEnrollmentService
         // enclave.
         sodium_memzero($dataKey);
 
-        if (! $ok) {
-            return false;
+        if ($ok) {
+            $this->gateway->markColdStartEnrolled($userId, true);
         }
 
-        $this->gateway->markColdStartEnrolled($userId, true);
-
-        return true;
+        return $ok;
     }
 
     public function disable(int $userId): void

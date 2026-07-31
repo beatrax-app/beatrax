@@ -16,6 +16,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
 use Modules\Recurring\Public\Events\PaymentReminderDue;
@@ -44,7 +45,7 @@ final class EmitPaymentRemindersJob implements ShouldBeUniqueUntilProcessing, Sh
 
     public function uniqueFor(): int
     {
-        return 3600;
+        return Duration::Hour->seconds();
     }
 
     public function uniqueVia(): Repository

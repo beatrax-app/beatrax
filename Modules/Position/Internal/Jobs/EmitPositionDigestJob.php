@@ -18,6 +18,7 @@ use Illuminate\Queue\SerializesModels;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Duration;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Position\Public\Dto\PositionSummaryDto;
@@ -47,7 +48,7 @@ final class EmitPositionDigestJob implements ShouldBeUniqueUntilProcessing, Shou
 
     public function uniqueFor(): int
     {
-        return 3600;
+        return Duration::Hour->seconds();
     }
 
     public function uniqueVia(): Repository

@@ -158,3 +158,111 @@ it('does not touch rows whose userId mismatches the job target (T-07-09 cross-us
     $row = DB::table('inbox_messages')->where('user_id', $otherUser->id)->first();
     expect($row->status)->toBe('fetched');
 });
+
+it('marks a fetched row unmatched when its blob is missing (re-fetch, not phantom-orphan)', function (): void {
+    DB::table('inboxes')->insert([
+        'user_id' => $this->fixtureUser->id,
+        'provider' => 'gmail',
+        'email' => 'cardholder@gmail.test',
+        'created_at' => '2026-05-17 00:00:00',
+        'updated_at' => '2026-05-17 00:00:00',
+    ]);
+    $inboxId = (int) DB::table('inboxes')->where('user_id', $this->fixtureUser->id)->value('id');
+
+    // Insert the fetched row WITHOUT ever writing its .eml blob, so the
+    // job takes the missing-blob branch.
+    $internalDate = new DateTimeImmutable('2026-05-17T09:42:13+02:00');
+    $now = $internalDate->format('Y-m-d H:i:s');
+    DB::table('inbox_messages')->insert([
+        'user_id' => $this->fixtureUser->id,
+        'inbox_id' => $inboxId,
+        'provider_message_id' => 'rcpt-missing-blob',
+        'internal_date' => $now,
+        'sender_email' => 'service@paypal.com',
+        'sender_name' => null,
+        'subject' => 'Receipt',
+        'status' => 'fetched',
+        'matcher_key' => null,
+        'fetched_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+    $rowId = (int) DB::table('inbox_messages')
+        ->where('user_id', $this->fixtureUser->id)
+        ->where('provider_message_id', 'rcpt-missing-blob')
+        ->value('id');
+
+    $dto = new InboxMessageDto(
+        id: $rowId,
+        userId: $this->fixtureUser->id,
+        inboxId: $inboxId,
+        providerMessageId: 'rcpt-missing-blob',
+        internalDate: $internalDate,
+        senderEmail: 'service@paypal.com',
+        senderName: null,
+        subject: 'Receipt',
+        status: 'fetched',
+        fetchedAt: $internalDate,
+    );
+
+    $this->app->instance(
+        InboxMessageQuery::class,
+        new FakeInboxMessageQuery([$dto], $this->app->make(DatabaseManager::class)),
+    );
+
+    $job = new ProcessFetchedInboxMessagesJob($this->fixtureUser->id);
+    $job->handle(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
+        $this->app->make(Filesystem::class),
+        $this->app->make(InboxMessageQuery::class),
+        $this->app->make(EmlBlobStore::class),
+        $this->app->make(RecordReceipt::class),
+        $this->app->make(ReceiptSourceAdapter::class),
+        $this->app->make(NormalizeStage::class),
+        $this->app->make(RecordsTransactions::class),
+    );
+
+    expect(DB::table('inbox_messages')->where('id', $rowId)->value('status'))->toBe('unmatched');
+});
+
+it('records a parsed receipt but writes no transaction when no Account matches the synthetic IBAN', function (): void {
+    DB::table('inboxes')->insert([
+        'user_id' => $this->fixtureUser->id,
+        'provider' => 'gmail',
+        'email' => 'cardholder@gmail.test',
+        'created_at' => '2026-05-17 00:00:00',
+        'updated_at' => '2026-05-17 00:00:00',
+    ]);
+    $inboxId = (int) DB::table('inboxes')->where('user_id', $this->fixtureUser->id)->value('id');
+
+    // A Google Play receipt resolves to the synthetic IBAN GOOGLE-PLAY,
+    // for which the fixture user has NO Account — so bridgeToLedger
+    // returns early and no canonical transaction is written, while the
+    // inbox row still transitions to parsed.
+    $googleBytes = (string) file_get_contents(__DIR__.'/../fixtures/googleplay/current-receipt.eml');
+    $seed = $this->seedInboxRowAndBlob;
+    $row = $seed($this->fixtureUser->id, $inboxId, 'rcpt-noacct', 'googleplay-noreply@google.com', 'Your Google Play Order Receipt', new DateTimeImmutable('2026-05-17T09:30:00+00:00'), $googleBytes);
+
+    $this->app->instance(
+        InboxMessageQuery::class,
+        new FakeInboxMessageQuery([$row], $this->app->make(DatabaseManager::class)),
+    );
+
+    $job = new ProcessFetchedInboxMessagesJob($this->fixtureUser->id);
+    $job->handle(
+        $this->app->make(DatabaseManager::class),
+        $this->app->make(Clock::class),
+        $this->app->make(Filesystem::class),
+        $this->app->make(InboxMessageQuery::class),
+        $this->app->make(EmlBlobStore::class),
+        $this->app->make(RecordReceipt::class),
+        $this->app->make(ReceiptSourceAdapter::class),
+        $this->app->make(NormalizeStage::class),
+        $this->app->make(RecordsTransactions::class),
+    );
+
+    expect(DB::table('inbox_messages')->where('id', $row->id)->value('status'))->toBe('parsed');
+    expect(DB::table('inbox_messages')->where('id', $row->id)->value('matcher_key'))->toBe('google-play-receipt');
+    expect(Transaction::query()->where('user_id', $this->fixtureUser->id)->count())->toBe(0);
+});

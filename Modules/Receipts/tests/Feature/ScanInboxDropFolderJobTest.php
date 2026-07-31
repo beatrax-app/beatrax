@@ -199,6 +199,20 @@ it('skips top-level files with non-eml/mbox extensions', function (): void {
     expect(file_exists($readmePath))->toBeTrue();
 });
 
+it('streams a dropped .mbox archive through the matcher and moves it to processed/{YYYY-MM}/', function (): void {
+    // small.mbox holds 5 synthetic messages — none are receipts, so the
+    // matcher returns unmatched for each, but recordMboxFile still walks
+    // every entry and reports success, so the archive is moved to
+    // processed/ rather than quarantined.
+    $sourcePath = seedDroppedEml($this->baseDir, 'archive.mbox', 'mbox/small.mbox');
+
+    runScanJob($this->user->id);
+
+    expect(file_exists($sourcePath))->toBeFalse();
+    $processedPath = $this->baseDir.'/processed/2026-05/archive.mbox';
+    expect(file_exists($processedPath))->toBeTrue();
+});
+
 it('registers the routes/console.php Schedule entry under the receipts.scan-drop-folder name', function (): void {
     $contents = (string) file_get_contents(base_path('routes/console.php'));
     expect($contents)->toContain('receipts.scan-drop-folder');
