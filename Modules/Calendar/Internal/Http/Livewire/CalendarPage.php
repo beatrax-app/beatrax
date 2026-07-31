@@ -8,9 +8,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Calendar\Internal\Services\CalendarQuery;
+use Modules\Calendar\Public\Dto\CalendarDayDto;
 use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -191,16 +193,7 @@ final class CalendarPage extends Component
             ->orderBy('id')
             ->get(['id', 'name', 'kind']);
 
-        $accountRoster = [];
-        foreach ($accounts as $account) {
-            /** @var stdClass $account */
-            $accountId = self::toInt($account->id);
-            $accountRoster[] = [
-                'id' => $accountId,
-                'name' => self::toString($account->name ?? null),
-                'kind' => self::toString($account->kind ?? null),
-            ];
-        }
+        $accountRoster = self::buildAccountRoster($accounts);
 
         // A user with zero accounts has nothing to filter on — pass null
         // ("no filter") so series not yet linked to any account still
@@ -213,43 +206,17 @@ final class CalendarPage extends Component
             $accountRoster === [] ? null : $this->balanceAccountIds,
         );
 
-        $hasEntries = false;
-        foreach ($days as $day) {
-            if ($day->entries !== []) {
-                $hasEntries = true;
-                break;
-            }
-        }
-
-        $selectedDayDto = null;
-        if ($this->selectedDay !== null) {
-            foreach ($days as $day) {
-                if ($day->date->toDateString() === $this->selectedDay) {
-                    $selectedDayDto = $day;
-                    break;
-                }
-            }
-        }
-
-        $isComputingAny = false;
-        foreach ($days as $day) {
-            if ($day->isComputing) {
-                $isComputingAny = true;
-                break;
-            }
-        }
-
         $ceiling = $clock->now()->addMonths(self::HORIZON_MONTHS);
         $atCeiling = ($year > $ceiling->year)
             || ($year === $ceiling->year && $month >= $ceiling->month);
 
         $view = $views->make('calendar::livewire.calendar-page', [
             'days' => $days,
-            'hasEntries' => $hasEntries,
-            'selectedDayDto' => $selectedDayDto,
+            'hasEntries' => self::daysHaveEntries($days),
+            'selectedDayDto' => $this->findSelectedDay($days),
             'displayYear' => $year,
             'displayMonth' => $month,
-            'isComputingAny' => $isComputingAny,
+            'isComputingAny' => self::daysAreComputing($days),
             'accountRoster' => $accountRoster,
             'atCeiling' => $atCeiling,
         ]);
@@ -263,6 +230,70 @@ final class CalendarPage extends Component
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * @param  Collection<int, stdClass>  $accounts
+     * @return list<array{id: int, name: string, kind: string}>
+     */
+    private static function buildAccountRoster(Collection $accounts): array
+    {
+        $roster = [];
+        foreach ($accounts as $account) {
+            $roster[] = [
+                'id' => self::toInt($account->id),
+                'name' => self::toString($account->name ?? null),
+                'kind' => self::toString($account->kind ?? null),
+            ];
+        }
+
+        return $roster;
+    }
+
+    /**
+     * @param  list<CalendarDayDto>  $days
+     */
+    private static function daysHaveEntries(array $days): bool
+    {
+        foreach ($days as $day) {
+            if ($day->entries !== []) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<CalendarDayDto>  $days
+     */
+    private static function daysAreComputing(array $days): bool
+    {
+        foreach ($days as $day) {
+            if ($day->isComputing) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<CalendarDayDto>  $days
+     */
+    private function findSelectedDay(array $days): ?CalendarDayDto
+    {
+        if ($this->selectedDay === null) {
+            return null;
+        }
+
+        foreach ($days as $day) {
+            if ($day->date->toDateString() === $this->selectedDay) {
+                return $day;
+            }
+        }
+
+        return null;
+    }
 
     /**
      * @return array{year: int, month: int}

@@ -221,6 +221,42 @@ it('places the anchor month itself on the anchor day (WR-04 invertibility)', fun
     expect(cqplEntryDates($july, 'July-Anchor'))->toBe(['2026-07-31']);
 });
 
+it('steps a quarterly series by three-month index from the anchor (WR-04)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqplUser('quarterly-step');
+
+    // Quarterly bill anchored 2026-07-15, first observed 2026-01-15 so the
+    // inception floor admits the backward-stepped occurrences.
+    $series = cqplSeries($user, 'Quarterly-Bill', CarbonImmutable::parse('2026-07-15'), 'quarterly');
+    cqplOccurrence($db, $user->id, $series->id, '2026-01-15');
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+
+    // April is one quarter before the July anchor; the intervening months
+    // must carry no entry.
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 4), 'Quarterly-Bill'))->toBe(['2026-04-15']);
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 5), 'Quarterly-Bill'))->toBe([]);
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 7), 'Quarterly-Bill'))->toBe(['2026-07-15']);
+});
+
+it('steps a yearly series by one-year index from the anchor (WR-04)', function (): void {
+    $db = app(DatabaseManager::class);
+    $user = cqplUser('yearly-step');
+
+    // Yearly bill anchored 2026-07-15, first observed 2024-07-15 so a prior
+    // year is inside the inception floor.
+    $series = cqplSeries($user, 'Yearly-Bill', CarbonImmutable::parse('2026-07-15'), 'yearly');
+    cqplOccurrence($db, $user->id, $series->id, '2024-07-15');
+
+    /** @var CalendarQuery $calendarQuery */
+    $calendarQuery = app(CalendarQuery::class);
+
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2025, 7), 'Yearly-Bill'))->toBe(['2025-07-15']);
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2025, 8), 'Yearly-Bill'))->toBe([]);
+    expect(cqplEntryDates($calendarQuery->forMonth($user, 2026, 7), 'Yearly-Bill'))->toBe(['2026-07-15']);
+});
+
 it('keeps an entry expected slightly before its first observed payment (WR-03 slack)', function (): void {
     $db = app(DatabaseManager::class);
     $user = cqplUser('inception-slack');
