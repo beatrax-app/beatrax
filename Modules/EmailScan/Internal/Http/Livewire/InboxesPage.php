@@ -20,6 +20,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
 use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Services\DiscoveredSenderQuery;
 use Modules\EmailScan\Public\Services\InboxQuery;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -113,7 +114,7 @@ final class InboxesPage extends Component
 
         $user = $currentUser->user();
         $inbox = $inboxQuery->findForUser($reconnectId, $user);
-        if ($inbox !== null && in_array($inbox->provider, ['gmail', 'microsoft'], strict: true)) {
+        if ($inbox !== null && MailProvider::tryFrom($inbox->provider) !== null) {
             $this->dispatch(
                 'oauth-client-wizard:open',
                 provider: $inbox->provider,
@@ -302,7 +303,7 @@ final class InboxesPage extends Component
         string $provider,
         OAuthSecretsRepository $secrets,
     ): mixed {
-        if (! in_array($provider, ['gmail', 'microsoft'], strict: true)) {
+        if (MailProvider::tryFrom($provider) === null) {
             return null;
         }
 

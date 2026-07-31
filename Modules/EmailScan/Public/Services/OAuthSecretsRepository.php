@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\EmailScan\Models\OAuthSecret;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\Exceptions\ScanStateNotFoundException;
 use Throwable;
 
@@ -21,8 +22,6 @@ use Throwable;
 class OAuthSecretsRepository
 {
     use CoercesScalars;
-
-    private const ALLOWED_PROVIDERS = ['gmail', 'microsoft'];
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -292,7 +291,7 @@ class OAuthSecretsRepository
 
     private function assertProvider(string $provider): void
     {
-        if (! in_array($provider, self::ALLOWED_PROVIDERS, strict: true)) {
+        if (MailProvider::tryFrom($provider) === null) {
             throw new InvalidArgumentException(
                 "OAuthSecretsRepository: provider must be 'gmail' or 'microsoft', got '{$provider}'."
             );

@@ -9,6 +9,7 @@ use Illuminate\Contracts\Session\Session;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\EmailScan\Public\Enums\MailProvider;
 use Throwable;
 
 /**
@@ -16,8 +17,6 @@ use Throwable;
  */
 final class OAuthStateRepository
 {
-    private const ALLOWED_PROVIDERS = ['gmail', 'microsoft'];
-
     // Maximum lifetime of an issued state entry in seconds (10 minutes
     // covers a typical OAuth round-trip including an MFA prompt);
     // consumeState rejects entries older than this.
@@ -116,7 +115,7 @@ final class OAuthStateRepository
 
     private function assertProvider(string $provider): void
     {
-        if (! in_array($provider, self::ALLOWED_PROVIDERS, strict: true)) {
+        if (MailProvider::tryFrom($provider) === null) {
             throw new InvalidArgumentException(
                 "OAuthStateRepository: provider must be 'gmail' or 'microsoft', got '{$provider}'.",
             );
