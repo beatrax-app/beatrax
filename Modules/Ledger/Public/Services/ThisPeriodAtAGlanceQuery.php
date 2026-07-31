@@ -9,6 +9,7 @@ use DateTimeImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Chains\Public\Dto\CardStatementForecastTile;
+use Modules\Chains\Public\Services\CardStatementQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
@@ -199,7 +200,7 @@ final class ThisPeriodAtAGlanceQuery
 
         return new CardStatementForecastTile(
             amount: Money::ofMinor($openBalanceMinor, 'EUR'),
-            dueDate: $periodEnd->addDays(5)->startOfDay(),
+            dueDate: $periodEnd->addDays(CardStatementQuery::STATEMENT_DUE_GRACE_DAYS)->startOfDay(),
             statementId: self::toInt($row->id),
             state: self::toString($row->state),
         );
