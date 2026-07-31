@@ -6,6 +6,8 @@ namespace Modules\Budgets\Public\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
+use Modules\Budgets\Internal\Fold\FoldContext;
+use Modules\Budgets\Internal\Fold\FoldStep;
 use Modules\Budgets\Public\Dto\EnvelopeRow;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -25,6 +27,8 @@ final class CarryoverQuery
     use CoercesScalars;
 
     private const CURRENCY = 'EUR';
+
+    private const DEFAULT_OVERSPEND_MODE = 'reduce_to_budget';
 
     // The default over-budget notify threshold (percent) for an envelope
     // with no explicit envelope_settings.threshold_percent. Single source
@@ -92,99 +96,29 @@ final class CarryoverQuery
             $carriedIn[$categoryId] = 0;
         }
 
+        $context = new FoldContext($expenseCategories, $overspendModeByCategory, $notifyThresholdByCategory);
         $result = null;
 
         foreach ($periodsWalk as $period) {
             $periodKey = $period->start->toDateString();
-            $assignedByCategory = $assignedByPeriod[$periodKey] ?? [];
-            $movedByCategory = $movedByPeriod[$periodKey] ?? [];
+            $step = $this->foldPeriod(
+                $user,
+                $period,
+                $context,
+                $assignedByPeriod[$periodKey] ?? [],
+                $movedByPeriod[$periodKey] ?? [],
+                $poolCarry,
+                $carriedIn,
+            );
 
-            // Single round trip per period (already legs ∪ unsplit-parents
-            // safe -- never a fresh GROUP BY that could double-count a
-            // split transaction's spend).
-            $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
-            $income = $this->glance->incomeForPeriod($user, $period, self::CURRENCY);
-
-            $totalAssignedMoney = Money::ofMinor(0, self::CURRENCY);
-            foreach ($assignedByCategory as $assignedMinor) {
-                $totalAssignedMoney = $totalAssignedMoney->plus(Money::ofMinor($assignedMinor, self::CURRENCY));
-            }
-
-            $toBudgetMoney = Money::ofMinor($income, self::CURRENCY)
-                ->plus(Money::ofMinor($poolCarry, self::CURRENCY))
-                ->minus($totalAssignedMoney);
-
-            $nextCarriedIn = [];
-            $shortfallMoney = Money::ofMinor(0, self::CURRENCY);
-            $rows = [];
-            $overspentCount = 0;
-
-            foreach ($expenseCategories as $categoryId => $categoryName) {
-                $assigned = $assignedByCategory[$categoryId] ?? 0;
-                $moved = $movedByCategory[$categoryId] ?? 0;
-                $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
-                $carriedInForCategory = $carriedIn[$categoryId] ?? 0;
-
-                // Sums this category's non-EUR settled spend so the grid can
-                // surface it rather than vanish it -- see architecture.md
-                // ("nonEurSpentMinor") for why this is never folded in.
-                $nonEurSpent = 0;
-                $prefix = "{$categoryId}|";
-                foreach ($spentByKey as $key => $minor) {
-                    $keyStr = self::toString($key);
-                    if (str_starts_with($keyStr, $prefix) && ! str_ends_with($keyStr, '|'.self::CURRENCY)) {
-                        $nonEurSpent += self::toInt($minor);
-                    }
-                }
-
-                $availableMoney = Money::ofMinor($assigned, self::CURRENCY)
-                    ->plus(Money::ofMinor($carriedInForCategory, self::CURRENCY))
-                    ->plus(Money::ofMinor($moved, self::CURRENCY))
-                    ->minus(Money::ofMinor($spent, self::CURRENCY));
-                $available = $availableMoney->toMinor();
-
-                $mode = $overspendModeByCategory[$categoryId] ?? 'reduce_to_budget';
-                $notifyThreshold = $notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
-
-                if ($available < 0 && $mode === 'reduce_to_budget') {
-                    // Resets to 0 next period and debits the pool exactly
-                    // once per overspent envelope per period.
-                    $shortfallMoney = $shortfallMoney->plus($availableMoney);
-                    $nextCarriedIn[$categoryId] = 0;
-                } else {
-                    // Positive availability rolls forward as-is; carry_negative
-                    // keeps the negative in the envelope, never touching the pool.
-                    $nextCarriedIn[$categoryId] = $available;
-                }
-
-                if ($available < 0) {
-                    $overspentCount++;
-                }
-
-                $rows[$categoryId] = new EnvelopeRow(
-                    categoryId: $categoryId,
-                    categoryName: $categoryName,
-                    assignedMinor: $assigned,
-                    spentMinor: $spent,
-                    carriedInMinor: $carriedInForCategory,
-                    netMovedMinor: $moved,
-                    availableMinor: $available,
-                    overspendMode: $mode,
-                    currency: self::CURRENCY,
-                    nonEurSpentMinor: $nonEurSpent,
-                    notifyThresholdPercent: $notifyThreshold,
-                );
-            }
-
-            $poolCarryMoney = $toBudgetMoney->plus($shortfallMoney);
-            $poolCarry = $poolCarryMoney->toMinor();
-            $carriedIn = $nextCarriedIn;
+            $poolCarry = $step->poolCarry;
+            $carriedIn = $step->carriedIn;
 
             if ($period->start->equalTo($targetBounded->start)) {
                 $result = [
-                    'toBudgetMinor' => $toBudgetMoney->toMinor(),
-                    'overspentCount' => $overspentCount,
-                    'rows' => $rows,
+                    'toBudgetMinor' => $step->toBudgetMinor,
+                    'overspentCount' => $step->overspentCount,
+                    'rows' => $step->rows,
                 ];
             }
         }
@@ -226,6 +160,115 @@ final class CarryoverQuery
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * @param  array<int, int>  $assignedByCategory
+     * @param  array<int, int>  $movedByCategory
+     * @param  array<int, int>  $carriedIn
+     */
+    private function foldPeriod(
+        User $user,
+        Period $period,
+        FoldContext $context,
+        array $assignedByCategory,
+        array $movedByCategory,
+        int $poolCarry,
+        array $carriedIn,
+    ): FoldStep {
+        // Single round trip per period (already legs ∪ unsplit-parents
+        // safe -- never a fresh GROUP BY that could double-count a
+        // split transaction's spend).
+        $spentByKey = $this->spendByCategory->forUserAndPeriodByCurrency($user->id, $period);
+        $income = $this->glance->incomeForPeriod($user, $period, self::CURRENCY);
+
+        $totalAssignedMoney = Money::ofMinor(0, self::CURRENCY);
+        foreach ($assignedByCategory as $assignedMinor) {
+            $totalAssignedMoney = $totalAssignedMoney->plus(Money::ofMinor($assignedMinor, self::CURRENCY));
+        }
+
+        $toBudgetMoney = Money::ofMinor($income, self::CURRENCY)
+            ->plus(Money::ofMinor($poolCarry, self::CURRENCY))
+            ->minus($totalAssignedMoney);
+
+        $nextCarriedIn = [];
+        $shortfallMoney = Money::ofMinor(0, self::CURRENCY);
+        $rows = [];
+        $overspentCount = 0;
+
+        foreach ($context->expenseCategories as $categoryId => $categoryName) {
+            $assigned = $assignedByCategory[$categoryId] ?? 0;
+            $moved = $movedByCategory[$categoryId] ?? 0;
+            $spent = $spentByKey["{$categoryId}|".self::CURRENCY] ?? 0;
+            $carriedInForCategory = $carriedIn[$categoryId] ?? 0;
+            $nonEurSpent = $this->sumNonEurSpent($spentByKey, $categoryId);
+
+            $availableMoney = Money::ofMinor($assigned, self::CURRENCY)
+                ->plus(Money::ofMinor($carriedInForCategory, self::CURRENCY))
+                ->plus(Money::ofMinor($moved, self::CURRENCY))
+                ->minus(Money::ofMinor($spent, self::CURRENCY));
+            $available = $availableMoney->toMinor();
+
+            $mode = $context->overspendModeByCategory[$categoryId] ?? self::DEFAULT_OVERSPEND_MODE;
+            $notifyThreshold = $context->notifyThresholdByCategory[$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT;
+
+            if ($available < 0 && $mode === self::DEFAULT_OVERSPEND_MODE) {
+                // Resets to 0 next period and debits the pool exactly
+                // once per overspent envelope per period.
+                $shortfallMoney = $shortfallMoney->plus($availableMoney);
+                $nextCarriedIn[$categoryId] = 0;
+            } else {
+                // Positive availability rolls forward as-is; carry_negative
+                // keeps the negative in the envelope, never touching the pool.
+                $nextCarriedIn[$categoryId] = $available;
+            }
+
+            if ($available < 0) {
+                $overspentCount++;
+            }
+
+            $rows[$categoryId] = new EnvelopeRow(
+                categoryId: $categoryId,
+                categoryName: $categoryName,
+                assignedMinor: $assigned,
+                spentMinor: $spent,
+                carriedInMinor: $carriedInForCategory,
+                netMovedMinor: $moved,
+                availableMinor: $available,
+                overspendMode: $mode,
+                currency: self::CURRENCY,
+                nonEurSpentMinor: $nonEurSpent,
+                notifyThresholdPercent: $notifyThreshold,
+            );
+        }
+
+        return new FoldStep(
+            poolCarry: $toBudgetMoney->plus($shortfallMoney)->toMinor(),
+            carriedIn: $nextCarriedIn,
+            toBudgetMinor: $toBudgetMoney->toMinor(),
+            overspentCount: $overspentCount,
+            rows: $rows,
+        );
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $spentByKey
+     */
+    private function sumNonEurSpent(array $spentByKey, int $categoryId): int
+    {
+        // Sums this category's non-EUR settled spend so the grid can
+        // surface it rather than vanish it -- see architecture.md
+        // ("nonEurSpentMinor") for why this is never folded in.
+        $nonEurSpent = 0;
+        $prefix = "{$categoryId}|";
+        foreach ($spentByKey as $key => $minor) {
+            $keyStr = self::toString($key);
+            if (str_starts_with($keyStr, $prefix) && ! str_ends_with($keyStr, '|'.self::CURRENCY)) {
+                $nonEurSpent += self::toInt($minor);
+            }
+        }
+
+        return $nonEurSpent;
     }
 
     /**
