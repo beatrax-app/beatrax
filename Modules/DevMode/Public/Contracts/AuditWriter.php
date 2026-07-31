@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\DevMode\Public\Contracts;
 
 use Carbon\CarbonInterface;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 
 // Cross-module audit-write seam: every Dev Console action crossing an
 // operational trust boundary (artisan run, destructive queue action,
@@ -12,25 +13,11 @@ use Carbon\CarbonInterface;
 // rows into dev_mode_audit; NullAuditWriter is the ad-hoc-test fallback.
 interface AuditWriter
 {
-    // stdoutExcerpt/errorExcerpt are bounded by the calling pipeline —
-    // already passed through RedactionExcerptCap's scrub + 8 KiB cap.
-    // runId, when provided, lets finalizeCommandRun() locate and update
-    // the same row later; one-shot legacy callers may pass null.
-    /**
-     * @param  array<string, mixed>  $args
-     */
-    public function recordCommandRun(
-        string $command,
-        array $args,
-        string $tier,
-        int $callerUserId,
-        CarbonInterface $startedAt,
-        ?CarbonInterface $finishedAt,
-        ?int $exitCode,
-        string $stdoutExcerpt,
-        string $errorExcerpt,
-        ?string $runId = null,
-    ): void;
+    // The run's stdoutExcerpt/errorExcerpt are bounded by the calling
+    // pipeline — already passed through RedactionExcerptCap's scrub + 8
+    // KiB cap. A non-null CommandRunAudit::$runId lets finalizeCommandRun()
+    // locate and update the same row later; one-shot callers leave it null.
+    public function recordCommandRun(CommandRunAudit $run): void;
 
     // Returns true when the row was located and updated, false when no
     // matching row existed (callers fall back to a fresh

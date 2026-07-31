@@ -10,6 +10,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\ProcessLiveness;
+use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -51,109 +52,9 @@ final readonly class ArtisanStreamController
         }
 
         $startOffset = $this->resolveStartOffset($request);
-        $runIdLocal = $runId;
-        $registry = $this->registry;
-        $tailer = $this->tailer;
-        $finalize = $this->finalize;
-        $liveness = $this->liveness;
 
-        $response = new StreamedResponse(static function () use (
-            $record,
-            $startOffset,
-            $registry,
-            $tailer,
-            $runIdLocal,
-            $finalize,
-            $liveness,
-        ): void {
-            @ini_set('output_buffering', '0');
-            @ini_set('zlib.output_compression', '0');
-            @ignore_user_abort(true);
-            // PHP's max_execution_time is wall-clock — without this the
-            // SSE loop is killed at the php.ini default (30s in the shipped
-            // nativephp/php-bin) long before STREAM_TIMEOUT_SECONDS.
-            @set_time_limit(0);
-
-            $offset = $startOffset;
-            $deadline = microtime(true) + self::STREAM_TIMEOUT_SECONDS;
-
-            while (microtime(true) < $deadline) {
-                $result = $tailer->tailOnce($record->outPath, $offset);
-                $offset = $result['newOffset'];
-
-                if ($result['chunk'] !== '') {
-                    echo 'id: '.$offset."\n";
-                    echo self::SSE_DATA_PREFIX.json_encode([
-                        'line' => $result['chunk'],
-                    ], JSON_UNESCAPED_SLASHES)."\n\n";
-                    @ob_flush();
-                    @flush();
-                }
-
-                // A gone PID means the spawner-detached child has
-                // finished; emit the terminal `done` event with
-                // whatever exit code is recoverable (best-effort — the
-                // audit pipeline reads the exit code authoritatively).
-                if (! $liveness->isAlive($record->pid)) {
-                    // Read once more in case the child wrote a final
-                    // chunk between the previous tail and the exit.
-                    $finalChunk = $tailer->tailOnce($record->outPath, $offset);
-                    if ($finalChunk['chunk'] !== '') {
-                        $offset = $finalChunk['newOffset'];
-                        echo 'id: '.$offset."\n";
-                        echo self::SSE_DATA_PREFIX.json_encode([
-                            'line' => $finalChunk['chunk'],
-                        ], JSON_UNESCAPED_SLASHES)."\n\n";
-                    }
-
-                    $fresh = $registry->find($runIdLocal);
-                    $exit = $fresh?->exitCode;
-                    $cancelled = $fresh?->status === 'cancelled';
-
-                    // Mark finished in the registry so subsequent SSE
-                    // reconnects observe a terminal status; FinalizeRunAudit
-                    // (below) then writes the dev_mode_audit row that
-                    // captures the authoritative exit code + stdout excerpt.
-                    if ($fresh !== null && $fresh->status === 'running') {
-                        $registry->markFinished($runIdLocal, $exit ?? 0);
-                    }
-
-                    // Finalize audit write happens-before the terminal
-                    // done event; a failure never propagates out of the
-                    // SSE handler but is still logged best-effort so an
-                    // operator can see a corrupt row or a DB error.
-                    try {
-                        ($finalize)($runIdLocal, $exit, $cancelled);
-                    } catch (\Throwable $finalizeError) {
-                        try {
-                            Container::getInstance()
-                                ->make(LoggerInterface::class)
-                                ->error('FinalizeRunAudit failed for run '.$runIdLocal, [
-                                    'exception' => $finalizeError->getMessage(),
-                                    'exception_class' => get_class($finalizeError),
-                                ]);
-                        } catch (\Throwable) {
-                            // Last-resort no-op — the SSE frame still
-                            // closes cleanly.
-                        }
-                    }
-
-                    echo "event: done\n";
-                    echo self::SSE_DATA_PREFIX.json_encode([
-                        'exit' => $exit,
-                        'cancelled' => $cancelled,
-                    ], JSON_UNESCAPED_SLASHES)."\n\n";
-                    @ob_flush();
-                    @flush();
-                    break;
-                }
-
-                if (connection_aborted() !== 0) {
-                    break;
-                }
-
-                usleep(self::TICK_MICROSECONDS);
-            }
+        $response = new StreamedResponse(function () use ($record, $startOffset, $runId): void {
+            $this->streamLoop($record, $startOffset, $runId);
         });
 
         $response->headers->set('Content-Type', 'text/event-stream');
@@ -162,6 +63,125 @@ final readonly class ArtisanStreamController
         $response->headers->set('Connection', 'keep-alive');
 
         return $response;
+    }
+
+    // Long-poll SSE loop: tail the run's stdout, emit each new chunk, and
+    // close with a terminal `done` event once the detached child's PID is
+    // gone or the client disconnects — bounded by STREAM_TIMEOUT_SECONDS.
+    private function streamLoop(RunRecord $record, int $startOffset, string $runId): void
+    {
+        @ini_set('output_buffering', '0');
+        @ini_set('zlib.output_compression', '0');
+        @ignore_user_abort(true);
+        // PHP's max_execution_time is wall-clock — without this the SSE
+        // loop is killed at the php.ini default (30s in the shipped
+        // nativephp/php-bin) long before STREAM_TIMEOUT_SECONDS.
+        @set_time_limit(0);
+
+        $offset = $startOffset;
+        $deadline = microtime(true) + self::STREAM_TIMEOUT_SECONDS;
+
+        while (microtime(true) < $deadline) {
+            $result = $this->tailer->tailOnce($record->outPath, $offset);
+            $offset = $result['newOffset'];
+            if ($result['chunk'] !== '') {
+                $this->writeChunkFrame($result['chunk'], $offset);
+                $this->flushOutput();
+            }
+
+            // A gone PID means the spawner-detached child has finished;
+            // emit the terminal `done` event with whatever exit code is
+            // recoverable (the audit pipeline reads it authoritatively).
+            if (! $this->liveness->isAlive($record->pid)) {
+                $this->emitTerminal($runId, $record->outPath, $offset);
+                break;
+            }
+
+            if (connection_aborted() !== 0) {
+                break;
+            }
+
+            usleep(self::TICK_MICROSECONDS);
+        }
+    }
+
+    // Flush any last chunk, pin a terminal status in the registry so SSE
+    // reconnects observe it, write the authoritative audit row, then emit
+    // the SSE `done` event carrying the recoverable exit code.
+    private function emitTerminal(string $runId, string $outPath, int $offset): void
+    {
+        $offset = $this->emitFinalChunk($outPath, $offset);
+
+        $fresh = $this->registry->find($runId);
+        $exit = $fresh?->exitCode;
+        $cancelled = $fresh?->status === 'cancelled';
+
+        if ($fresh !== null && $fresh->status === 'running') {
+            $this->registry->markFinished($runId, $exit ?? 0);
+        }
+
+        $this->safelyFinalize($runId, $exit, $cancelled);
+
+        echo "event: done\n";
+        echo self::SSE_DATA_PREFIX.json_encode([
+            'exit' => $exit,
+            'cancelled' => $cancelled,
+        ], JSON_UNESCAPED_SLASHES)."\n\n";
+        $this->flushOutput();
+    }
+
+    // Reads once more in case the child wrote a final chunk between the
+    // previous tail and its exit; returns the advanced byte offset.
+    private function emitFinalChunk(string $outPath, int $offset): int
+    {
+        $finalChunk = $this->tailer->tailOnce($outPath, $offset);
+        if ($finalChunk['chunk'] === '') {
+            return $offset;
+        }
+
+        $offset = $finalChunk['newOffset'];
+        $this->writeChunkFrame($finalChunk['chunk'], $offset);
+
+        return $offset;
+    }
+
+    // The finalize audit write happens-before the terminal done event; a
+    // failure never propagates out of the SSE handler but is still logged
+    // best-effort so an operator can see a corrupt row or a DB error.
+    private function safelyFinalize(string $runId, ?int $exit, bool $cancelled): void
+    {
+        try {
+            ($this->finalize)($runId, $exit, $cancelled);
+        } catch (\Throwable $finalizeError) {
+            $this->logFinalizeFailure($runId, $finalizeError);
+        }
+    }
+
+    private function logFinalizeFailure(string $runId, \Throwable $error): void
+    {
+        try {
+            Container::getInstance()
+                ->make(LoggerInterface::class)
+                ->error('FinalizeRunAudit failed for run '.$runId, [
+                    'exception' => $error->getMessage(),
+                    'exception_class' => get_class($error),
+                ]);
+        } catch (\Throwable) {
+            // Last-resort no-op — the SSE frame still closes cleanly even
+            // if the logger itself cannot be resolved or fails to write.
+        }
+    }
+
+    private function writeChunkFrame(string $chunk, int $offset): void
+    {
+        echo 'id: '.$offset."\n";
+        echo self::SSE_DATA_PREFIX.json_encode(['line' => $chunk], JSON_UNESCAPED_SLASHES)."\n\n";
+    }
+
+    private function flushOutput(): void
+    {
+        @ob_flush();
+        @flush();
     }
 
     // Browser EventSource sends Last-Event-ID on auto-reconnect; tests +

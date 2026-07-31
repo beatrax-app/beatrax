@@ -33,21 +33,7 @@ final readonly class RecentLogEntriesReader
      */
     public function recent(int $limit): array
     {
-        $path = UserDataPathService::dailyLogFile();
-        if (! is_file($path)) {
-            return [];
-        }
-
-        try {
-            $all = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        } catch (Throwable) {
-            return [];
-        }
-        if (! is_array($all)) {
-            return [];
-        }
-
-        $tail = array_slice($all, -self::LINE_READ_CAP);
+        $tail = array_slice($this->readLogLines(), -self::LINE_READ_CAP);
 
         $entries = [];
         foreach ($tail as $raw) {
@@ -89,6 +75,28 @@ final readonly class RecentLogEntriesReader
         }
 
         return $out;
+    }
+
+    // Reads today's daily log defensively — a missing file, a read
+    // throwable, or a non-array result all collapse to an empty list so
+    // the dashboard widget renders rather than erroring on a bad file.
+    /**
+     * @return list<string>
+     */
+    private function readLogLines(): array
+    {
+        $path = UserDataPathService::dailyLogFile();
+        if (! is_file($path)) {
+            return [];
+        }
+
+        try {
+            $all = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        } catch (Throwable) {
+            return [];
+        }
+
+        return is_array($all) ? $all : [];
     }
 
     // Returns null when the line does not match the standard format —

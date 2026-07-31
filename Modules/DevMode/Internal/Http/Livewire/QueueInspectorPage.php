@@ -265,8 +265,7 @@ final class QueueInspectorPage extends Component
             // larastan-strict-rules does not flag the dynamic property
             // access on the raw query builder's per-column properties.
             $vars = get_object_vars($row);
-            $idRaw = $vars['id'] ?? null;
-            $key = is_int($idRaw) ? (string) $idRaw : (is_string($idRaw) ? $idRaw : '');
+            $key = self::stringKey($vars['id'] ?? null);
             $queue = $vars['queue'] ?? null;
             $attempts = $vars['attempts'] ?? null;
             $createdAt = $vars['created_at'] ?? null;
@@ -324,29 +323,37 @@ final class QueueInspectorPage extends Component
     {
         $out = [];
         foreach ($raw as $row) {
-            $vars = get_object_vars($row);
-            $idRaw = $vars['id'] ?? null;
-            $id = is_string($idRaw) ? $idRaw : '';
-            $name = $vars['name'] ?? null;
-            $pendingJobs = $vars['pending_jobs'] ?? null;
-            $failedJobs = $vars['failed_jobs'] ?? null;
-            $cancelledAt = $vars['cancelled_at'] ?? null;
-            $finishedAt = $vars['finished_at'] ?? null;
-            $createdAt = $vars['created_at'] ?? null;
-            $options = $vars['options'] ?? null;
-            $out[] = [
-                'key' => $id,
-                'name' => is_string($name) ? $name : '',
-                'pendingJobs' => is_int($pendingJobs) ? $pendingJobs : 0,
-                'failedJobs' => is_int($failedJobs) ? $failedJobs : 0,
-                'cancelledAt' => is_int($cancelledAt) ? $cancelledAt : null,
-                'finishedAt' => is_int($finishedAt) ? $finishedAt : null,
-                'createdAt' => is_int($createdAt) ? $createdAt : null,
-                'options' => is_string($options) ? $options : null,
-            ];
+            $out[] = $this->mapBatchRow(get_object_vars($row));
         }
 
         return $out;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $vars
+     * @return QueueRow
+     */
+    private function mapBatchRow(array $vars): array
+    {
+        $id = $vars['id'] ?? null;
+        $name = $vars['name'] ?? null;
+        $pendingJobs = $vars['pending_jobs'] ?? null;
+        $failedJobs = $vars['failed_jobs'] ?? null;
+        $cancelledAt = $vars['cancelled_at'] ?? null;
+        $finishedAt = $vars['finished_at'] ?? null;
+        $createdAt = $vars['created_at'] ?? null;
+        $options = $vars['options'] ?? null;
+
+        return [
+            'key' => is_string($id) ? $id : '',
+            'name' => is_string($name) ? $name : '',
+            'pendingJobs' => is_int($pendingJobs) ? $pendingJobs : 0,
+            'failedJobs' => is_int($failedJobs) ? $failedJobs : 0,
+            'cancelledAt' => is_int($cancelledAt) ? $cancelledAt : null,
+            'finishedAt' => is_int($finishedAt) ? $finishedAt : null,
+            'createdAt' => is_int($createdAt) ? $createdAt : null,
+            'options' => is_string($options) ? $options : null,
+        ];
     }
 
     // Pending + failed rows expose a payload column; batches use the
@@ -374,6 +381,18 @@ final class QueueInspectorPage extends Component
         }
 
         return null;
+    }
+
+    // The pending `jobs` table keys on an int id; failed jobs and batches
+    // key on a string uuid. Coerces either to the string row key the
+    // Blade selection model expects, defaulting to '' for absent ids.
+    private static function stringKey(mixed $idRaw): string
+    {
+        if (is_int($idRaw)) {
+            return (string) $idRaw;
+        }
+
+        return is_string($idRaw) ? $idRaw : '';
     }
 
     private function prettyJsonString(string $raw): string

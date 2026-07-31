@@ -58,17 +58,7 @@ final class CommandPaletteModal extends Component
             return;
         }
 
-        $row = [
-            'id' => $id,
-            'label' => is_string($entry['label'] ?? null) ? $entry['label'] : $id,
-            'icon' => is_string($entry['icon'] ?? null) ? $entry['icon'] : '',
-            'hint' => is_string($entry['hint'] ?? null) ? $entry['hint'] : '',
-            'source' => is_string($entry['source'] ?? null) ? $entry['source'] : 'view',
-            'url' => is_string($entry['url'] ?? null) ? $entry['url'] : null,
-            'handler' => is_string($entry['handler'] ?? null) ? $entry['handler'] : null,
-            'name' => is_string($entry['name'] ?? null) ? $entry['name'] : null,
-            'tier' => is_string($entry['tier'] ?? null) ? $entry['tier'] : null,
-        ];
+        $row = $this->normalizeRecentEntry($entry, $id);
 
         // Dedup: drop any prior occurrence so the new entry lands at
         // the head of the list. Cap at RECENT_LIMIT after the
@@ -212,20 +202,32 @@ final class CommandPaletteModal extends Component
             if ($id === null || $id === '') {
                 continue;
             }
-            $rows[] = [
-                'id' => $id,
-                'label' => is_string($entry['label'] ?? null) ? $entry['label'] : $id,
-                'icon' => is_string($entry['icon'] ?? null) ? $entry['icon'] : '',
-                'hint' => is_string($entry['hint'] ?? null) ? $entry['hint'] : '',
-                'source' => is_string($entry['source'] ?? null) ? $entry['source'] : 'view',
-                'url' => is_string($entry['url'] ?? null) ? $entry['url'] : null,
-                'handler' => is_string($entry['handler'] ?? null) ? $entry['handler'] : null,
-                'name' => is_string($entry['name'] ?? null) ? $entry['name'] : null,
-                'tier' => is_string($entry['tier'] ?? null) ? $entry['tier'] : null,
-            ];
+            $rows[] = $this->normalizeRecentEntry($entry, $id);
         }
 
         return $rows;
+    }
+
+    // Single source of truth for the Recent row's nine-field shape, used
+    // by both the pick handler and the cache reader so the defensive
+    // string-coercions never drift between the two paths.
+    /**
+     * @param  array<array-key, mixed>  $entry
+     * @return array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string}
+     */
+    private function normalizeRecentEntry(array $entry, string $id): array
+    {
+        return [
+            'id' => $id,
+            'label' => is_string($entry['label'] ?? null) ? $entry['label'] : $id,
+            'icon' => is_string($entry['icon'] ?? null) ? $entry['icon'] : '',
+            'hint' => is_string($entry['hint'] ?? null) ? $entry['hint'] : '',
+            'source' => is_string($entry['source'] ?? null) ? $entry['source'] : 'view',
+            'url' => is_string($entry['url'] ?? null) ? $entry['url'] : null,
+            'handler' => is_string($entry['handler'] ?? null) ? $entry['handler'] : null,
+            'name' => is_string($entry['name'] ?? null) ? $entry['name'] : null,
+            'tier' => is_string($entry['tier'] ?? null) ? $entry['tier'] : null,
+        ];
     }
 
     private function recentCacheKey(int $userId): string

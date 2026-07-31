@@ -98,19 +98,29 @@ final class SystemSnapshotPage extends Component
     {
         try {
             $rows = $db->connection()->select('PRAGMA '.$pragma);
-            if ($rows === []) {
-                return '(unset)';
-            }
-            $first = $rows[0];
-            if (! is_object($first)) {
-                return '(empty)';
-            }
-            $vars = get_object_vars($first);
-            foreach ($vars as $value) {
-                return (string) (is_scalar($value) ? $value : json_encode($value));
-            }
         } catch (Throwable $e) {
             return 'error: '.$e->getMessage();
+        }
+
+        return $this->firstPragmaValue($rows);
+    }
+
+    // '(unset)' for no rows, the first column's scalar (json-encoded when
+    // not scalar) otherwise, and '(empty)' when the row exposes no columns
+    // — folding the not-an-object case into that same empty result.
+    /**
+     * @param  array<array-key, mixed>  $rows
+     */
+    private function firstPragmaValue(array $rows): string
+    {
+        if ($rows === []) {
+            return '(unset)';
+        }
+
+        $first = reset($rows);
+        $vars = is_object($first) ? get_object_vars($first) : [];
+        foreach ($vars as $value) {
+            return (string) (is_scalar($value) ? $value : json_encode($value));
         }
 
         return '(empty)';
