@@ -13,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
 use Modules\Forecasting\Internal\Pipeline\ProjectionPipeline;
 
@@ -25,14 +26,10 @@ final class ProjectForecastJob implements ShouldBeUniqueUntilProcessing, ShouldQ
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use TunedQueueJob;
 
     /** @var list<int> */
     public const HORIZON_DAYS = [30, 60, 90, 180, 365];
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
 
     public function __construct(
         public readonly int $userId,

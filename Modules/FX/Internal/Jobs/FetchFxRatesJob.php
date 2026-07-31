@@ -13,6 +13,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Support\LockStore;
 use Modules\FX\Internal\RateProviderRegistry;
 use Psr\Log\LoggerInterface;
@@ -26,15 +27,11 @@ final class FetchFxRatesJob implements ShouldBeUniqueUntilProcessing, ShouldQueu
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use TunedQueueJob;
 
     private const float RATE_MIN = 0.00001;
 
     private const float RATE_MAX = 100_000.0;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
 
     public function __construct(public readonly int $userId) {}
 

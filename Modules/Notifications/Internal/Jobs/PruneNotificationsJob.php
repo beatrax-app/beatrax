@@ -14,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\LockStore;
 use Psr\Log\LoggerInterface;
@@ -27,6 +28,7 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+    use TunedQueueJob;
 
     // Matches CounterpartyGarbageCollectorJob's retention window exactly
     // - one retention number across the project. Kept as a named
@@ -35,11 +37,6 @@ final class PruneNotificationsJob implements ShouldBeUniqueUntilProcessing, Shou
     private const int RETENTION_DAYS = 365;
 
     private const int CHUNK_SIZE = 500;
-
-    public int $tries = 3;
-
-    /** @var array<int, int> */
-    public array $backoff = [60, 300, 900];
 
     public function __construct(
         public readonly int $userId,
