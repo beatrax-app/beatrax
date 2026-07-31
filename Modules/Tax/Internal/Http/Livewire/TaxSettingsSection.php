@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Public\Enums\TaxCountry;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -18,11 +19,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class TaxSettingsSection extends Component
 {
-    /**
-     * @var list<string>
-     */
-    private const ALLOWED_COUNTRIES = ['nl', 'de', 'be', 'fr', 'gb', 'us'];
-
     public string $taxCountryCode = '';
 
     public string $newCategoryName = '';
@@ -35,6 +31,13 @@ final class TaxSettingsSection extends Component
 
     public function mount(CurrentUser $currentUser, DatabaseManager $db): void
     {
+        // Guard unauth at mount, mirroring render()'s guard — a Livewire
+        // hydrate whose session expired must still mount and render rather
+        // than throw when it reaches user().
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
         $user = $currentUser->user();
 
         /** @var string|null $code */
@@ -53,7 +56,7 @@ final class TaxSettingsSection extends Component
         Clock $clock,
         TaxCategoryWriter $writer,
     ): void {
-        if (! in_array($code, self::ALLOWED_COUNTRIES, strict: true)) {
+        if (TaxCountry::tryFrom($code) === null) {
             return;
         }
 
@@ -142,7 +145,7 @@ final class TaxSettingsSection extends Component
         if (! $currentUser->isAuthenticated()) {
             return $views->make('tax::livewire.tax-settings-section', [
                 'categories' => [],
-                'allowedCountries' => self::ALLOWED_COUNTRIES,
+                'allowedCountries' => array_column(TaxCountry::cases(), 'value'),
             ]);
         }
 
@@ -150,7 +153,7 @@ final class TaxSettingsSection extends Component
 
         return $views->make('tax::livewire.tax-settings-section', [
             'categories' => $categories,
-            'allowedCountries' => self::ALLOWED_COUNTRIES,
+            'allowedCountries' => array_column(TaxCountry::cases(), 'value'),
         ]);
     }
 }
