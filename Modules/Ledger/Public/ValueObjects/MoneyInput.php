@@ -43,6 +43,16 @@ final class MoneyInput
         return $negative ? -$minor : $minor;
     }
 
+    // The magnitude-only variant: like tryToMinor(), but rejects zero and
+    // negatives. For inputs whose sign is fixed by context — a split leg, a
+    // pot/goal/budget target — where "0,00" or a minus is not a valid entry.
+    public static function tryToPositiveMinor(string $value): ?int
+    {
+        $minor = self::tryToMinor($value);
+
+        return $minor !== null && $minor > 0 ? $minor : null;
+    }
+
     // e.g. -5000 -> "-50,00": the plain, symbol-free Dutch-decimal form the
     // amount inputs round-trip through, so a value shown then submitted
     // untouched parses back to the same minor units via tryToMinor().

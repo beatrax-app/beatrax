@@ -492,13 +492,10 @@ final class TransactionDetail extends Component
 
     // Split legs are entered as positive magnitudes — the sign belongs to
     // the parent transaction — so a zero or negative entry is not a valid
-    // leg amount. The parsing itself is the shared MoneyInput; this only
-    // adds the leg-specific positivity rule on top.
+    // leg amount.
     private static function parseAmount(string $value): ?int
     {
-        $minor = MoneyInput::tryToMinor($value);
-
-        return $minor !== null && $minor > 0 ? $minor : null;
+        return MoneyInput::tryToPositiveMinor($value);
     }
 
     // Integer-only arithmetic (intdiv/modulo), never float division,

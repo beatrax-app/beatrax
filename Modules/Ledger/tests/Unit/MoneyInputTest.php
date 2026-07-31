@@ -56,3 +56,11 @@ it('formats the magnitude only, dropping the sign', function (): void {
 it('round-trips format then parse back to the same minor units', function (int $minor): void {
     expect(MoneyInput::tryToMinor(MoneyInput::formatMinor($minor)))->toBe($minor);
 })->with([0, 5, 1250, -5000, 123456, -1]);
+
+it('tryToPositiveMinor accepts a positive amount', function (): void {
+    expect(MoneyInput::tryToPositiveMinor('12,50'))->toBe(1250);
+});
+
+it('tryToPositiveMinor rejects zero, negatives and malformed input', function (string $bad): void {
+    expect(MoneyInput::tryToPositiveMinor($bad))->toBeNull();
+})->with(['0', '0,00', '-1', '-50,00', '', 'abc']);
