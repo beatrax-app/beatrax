@@ -223,68 +223,11 @@ final class ArtisanRunnerPage extends Component
             ->limit(100)
             ->get();
 
-        $runs = $audit->map(function (object $row): array {
-            $vars = get_object_vars($row);
-            $propertiesRaw = $vars['properties'] ?? null;
-            $decoded = is_string($propertiesRaw) ? json_decode($propertiesRaw, true) : null;
-            $properties = is_array($decoded) ? $decoded : [];
+        $runs = $audit->map(fn (object $row): array => $this->mapAuditRow($row));
 
-            $command = is_string($properties['command'] ?? null) ? $properties['command'] : '';
-            $tier = is_string($properties['tier'] ?? null) ? $properties['tier'] : 'safe';
-            $exitCode = is_int($properties['exit_code'] ?? null) ? $properties['exit_code'] : null;
-            $finishedAt = is_string($properties['finished_at'] ?? null) ? $properties['finished_at'] : null;
-            $argsRaw = $properties['args'] ?? null;
-            $args = is_array($argsRaw) ? $argsRaw : [];
-            $cancelled = ($args['__cancelled'] ?? false) === true;
-            $excerpt = is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : null;
-            unset($args['__cancelled']);
-
-            // Pending eager-write (no exit, no finish) → 'running' so
-            // the RunCard opens the SSE live tail; anything else with
-            // a finish marker → 'done'.
-            $status = match (true) {
-                $cancelled => 'cancelled',
-                $exitCode === null && $finishedAt === null => 'running',
-                default => 'done',
-            };
-
-            // Prefer the spawn-time UUID so data-run-id matches the SSE
-            // route argument; fall back to the audit row id for
-            // pre-eager-write rows (already finalized, excerpt inline).
-            $runIdFromProps = is_string($properties['run_id'] ?? null) ? $properties['run_id'] : '';
-            $idRaw = $vars['id'] ?? null;
-            $runId = $runIdFromProps !== '' ? $runIdFromProps : match (true) {
-                is_int($idRaw) => (string) $idRaw,
-                is_string($idRaw) => $idRaw,
-                default => '',
-            };
-
-            // startedAt prefers the spawn-time clock value baked
-            // into properties; falls back to row->created_at.
-            $startedAtIso = is_string($properties['started_at'] ?? null)
-                ? $properties['started_at']
-                : null;
-            if ($startedAtIso === null) {
-                $createdAtRaw = $vars['created_at'] ?? null;
-                $startedAtIso = is_string($createdAtRaw)
-                    ? CarbonImmutable::parse($createdAtRaw)->toIso8601String()
-                    : null;
-            }
-
-            return [
-                'runId' => $runId,
-                'command' => $command,
-                'args' => $args,
-                'tier' => $tier,
-                'status' => $status,
-                'startedAt' => $startedAtIso,
-                'exitCode' => $exitCode,
-                'excerpt' => $excerpt,
-            ];
-        });
-
-        // Apply filter chip. `running` now genuinely matches in-flight
-        // rows (eager audit + sweep keeps them current).
+        // Apply the filter chip. `running` now genuinely matches in-flight
+        // rows (the eager audit write plus the per-render sweep keep them
+        // current); `failed` keeps only non-zero exit codes.
         $filtered = match ($this->filter) {
             'running' => $runs->where('status', 'running')->values(),
             'failed' => $runs->filter(fn (array $r): bool => is_int($r['exitCode'] ?? null) && $r['exitCode'] !== 0)->values(),
@@ -292,17 +235,113 @@ final class ArtisanRunnerPage extends Component
             default => $runs,
         };
 
-        $heartbeatTs = $cache->get(WriteWorkerHeartbeat::CACHE_KEY);
-        $heartbeatTs = is_int($heartbeatTs) ? $heartbeatTs : null;
-        $workerAlive = $heartbeatTs !== null
-            && $heartbeatTs > ($clock->now()->getTimestamp() - WriteWorkerHeartbeat::TTL_SECONDS);
-
         return $views->make('dev::livewire.artisan-runner-page', [
             'runs' => $filtered,
             'safeCommands' => $registry->safe(),
-            'workerAlive' => $workerAlive,
+            'workerAlive' => $this->workerIsAlive($cache, $clock),
             'filter' => $this->filter,
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapAuditRow(object $row): array
+    {
+        $vars = get_object_vars($row);
+        $properties = $this->decodeProperties($vars['properties'] ?? null);
+
+        $exitCode = is_int($properties['exit_code'] ?? null) ? $properties['exit_code'] : null;
+        $finishedAt = is_string($properties['finished_at'] ?? null) ? $properties['finished_at'] : null;
+        $argsRaw = $properties['args'] ?? null;
+        $args = is_array($argsRaw) ? $argsRaw : [];
+        $cancelled = ($args['__cancelled'] ?? false) === true;
+        unset($args['__cancelled']);
+
+        return [
+            'runId' => $this->resolveRunId($properties, $vars),
+            'command' => is_string($properties['command'] ?? null) ? $properties['command'] : '',
+            'args' => $args,
+            'tier' => is_string($properties['tier'] ?? null) ? $properties['tier'] : 'safe',
+            'status' => $this->runStatus($cancelled, $exitCode, $finishedAt),
+            'startedAt' => $this->resolveStartedAt($properties, $vars),
+            'exitCode' => $exitCode,
+            'excerpt' => is_string($properties['stdout_excerpt'] ?? null) ? $properties['stdout_excerpt'] : null,
+        ];
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function decodeProperties(mixed $rawProperties): array
+    {
+        $decoded = is_string($rawProperties) ? json_decode($rawProperties, true) : null;
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    // Pending eager-write (no exit, no finish) → 'running' so the RunCard
+    // opens the SSE live tail; a cancel marker wins outright, and anything
+    // else carrying a finish marker → 'done'.
+    private function runStatus(bool $cancelled, ?int $exitCode, ?string $finishedAt): string
+    {
+        return match (true) {
+            $cancelled => 'cancelled',
+            $exitCode === null && $finishedAt === null => 'running',
+            default => 'done',
+        };
+    }
+
+    // Prefer the spawn-time UUID so data-run-id matches the SSE route
+    // argument; fall back to the audit row id for pre-eager-write rows
+    // (already finalized, excerpt inline).
+    /**
+     * @param  array<array-key, mixed>  $properties
+     * @param  array<array-key, mixed>  $vars
+     */
+    private function resolveRunId(array $properties, array $vars): string
+    {
+        $runIdFromProps = is_string($properties['run_id'] ?? null) ? $properties['run_id'] : '';
+        if ($runIdFromProps !== '') {
+            return $runIdFromProps;
+        }
+
+        $idRaw = $vars['id'] ?? null;
+
+        return match (true) {
+            is_int($idRaw) => (string) $idRaw,
+            is_string($idRaw) => $idRaw,
+            default => '',
+        };
+    }
+
+    // startedAt prefers the spawn-time clock value baked into properties;
+    // falls back to row->created_at when the eager write predates it.
+    /**
+     * @param  array<array-key, mixed>  $properties
+     * @param  array<array-key, mixed>  $vars
+     */
+    private function resolveStartedAt(array $properties, array $vars): ?string
+    {
+        $startedAtIso = is_string($properties['started_at'] ?? null) ? $properties['started_at'] : null;
+        if ($startedAtIso !== null) {
+            return $startedAtIso;
+        }
+
+        $createdAtRaw = $vars['created_at'] ?? null;
+
+        return is_string($createdAtRaw)
+            ? CarbonImmutable::parse($createdAtRaw)->toIso8601String()
+            : null;
+    }
+
+    private function workerIsAlive(CacheRepository $cache, Clock $clock): bool
+    {
+        $heartbeatTs = $cache->get(WriteWorkerHeartbeat::CACHE_KEY);
+        $heartbeatTs = is_int($heartbeatTs) ? $heartbeatTs : null;
+
+        return $heartbeatTs !== null
+            && $heartbeatTs > ($clock->now()->getTimestamp() - WriteWorkerHeartbeat::TTL_SECONDS);
     }
 
     // Caps at 25 rows per render. A row whose RunRegistry entry has

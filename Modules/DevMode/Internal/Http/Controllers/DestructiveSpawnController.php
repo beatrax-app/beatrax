@@ -14,7 +14,7 @@ use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Internal\Services\DevModeFlag;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\CommandSpec;
-use RuntimeException;
+use Modules\DevMode\Public\Exceptions\SpawnedRunVanishedException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
@@ -102,7 +102,7 @@ final readonly class DestructiveSpawnController
         $runId = $this->spawner->start($command, $args, $user->id(), 'destructive');
         $record = $this->runs->find($runId);
         if ($record === null) {
-            throw new RuntimeException("DestructiveSpawnController: RunRegistry lost record for run {$runId} immediately after spawn.");
+            throw SpawnedRunVanishedException::immediatelyAfterSpawn('DestructiveSpawnController', $runId);
         }
 
         return new JsonResponse([

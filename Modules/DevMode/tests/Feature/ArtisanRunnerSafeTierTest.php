@@ -12,6 +12,7 @@ use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 
 /*
  * ArtisanRunnerPage + AuditLogPage + fallback SAFE-only modal +
@@ -136,20 +137,20 @@ it('shows prior runs on /dev/audit with the tier chip + non-zero exit-code highl
 
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'db:restore', args: ['from' => '/tmp/x'], tier: 'destructive',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 2, stdoutExcerpt: 'failed', errorExcerpt: '',
-    );
-    $writer->recordCommandRun(
+    ));
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear', args: [], tier: 'safe',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: 'done', errorExcerpt: '',
-    );
+    ));
 
     $response = $this->actingAs($user)->get('/dev/audit');
     $response->assertStatus(200);
@@ -168,20 +169,20 @@ it('filters /dev/audit?tier=destructive to only destructive rows', function (): 
 
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear', args: [], tier: 'safe',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: '', errorExcerpt: '',
-    );
-    $writer->recordCommandRun(
+    ));
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'migrate:fresh', args: [], tier: 'destructive',
         callerUserId: $user->id,
         startedAt: CarbonImmutable::now(),
         finishedAt: CarbonImmutable::now(),
         exitCode: 0, stdoutExcerpt: '', errorExcerpt: '',
-    );
+    ));
 
     // Sanity: both rows are present without filter
     expect(DB::table('dev_mode_audit')->count())->toBe(2);

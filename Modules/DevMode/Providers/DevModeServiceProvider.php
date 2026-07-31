@@ -69,11 +69,32 @@ final class DevModeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // SAFE + DESTRUCTIVE tier roster. NEVER-EXPOSED commands
-        // (migrate, migrate:rollback, db:seed) are deliberately absent —
-        // the spawner whitelists against CommandRegistry::find() so any
-        // attempt to spawn one throws InvalidArgumentException first.
+        $this->registerCommandRegistry();
+        $this->registerProcessServices();
+        $this->registerNavigationRegistry();
+        $this->registerAppActionRegistry();
+        $this->registerRedactionServices();
+        $this->registerAuditServices();
+    }
+
+    // SAFE + DESTRUCTIVE tier roster. NEVER-EXPOSED commands (migrate,
+    // migrate:rollback, db:seed) are deliberately absent — the spawner
+    // whitelists against CommandRegistry::find() so any attempt to spawn
+    // one throws InvalidArgumentException first.
+    private function registerCommandRegistry(): void
+    {
         $this->app->singleton(DevCommandRegistry::class, static fn (): CommandRegistry => new CommandRegistry([
+            ...self::safeCommands(),
+            ...self::destructiveCommands(),
+        ]));
+    }
+
+    /**
+     * @return list<CommandSpec>
+     */
+    private static function safeCommands(): array
+    {
+        return [
             new CommandSpec(
                 name: 'db:backup',
                 label: 'Back up database',
@@ -184,7 +205,15 @@ final class DevModeServiceProvider extends ServiceProvider
                 argsSchema: [],
                 description: 'Re-compute every transaction fingerprint using the current normalization version.',
             ),
+        ];
+    }
 
+    /**
+     * @return list<CommandSpec>
+     */
+    private static function destructiveCommands(): array
+    {
+        return [
             new CommandSpec(
                 name: 'db:restore',
                 label: 'Restore database',
@@ -260,8 +289,11 @@ final class DevModeServiceProvider extends ServiceProvider
                 argsSchema: [],
                 description: 'Idempotent first-run setup. Re-running on a configured install is destructive.',
             ),
-        ]));
+        ];
+    }
 
+    private function registerProcessServices(): void
+    {
         $this->app->singleton(RunRegistry::class, static fn (Application $app): RunRegistry => new RunRegistry(
             $app->make(CacheRepository::class),
             $app->make(Clock::class),
@@ -276,132 +308,115 @@ final class DevModeServiceProvider extends ServiceProvider
             $app->make(AuditWriter::class),
         ));
 
-        // The full roster of authenticated app views (main-app surfaces
-        // + Dev Console sub-routes) is materialised lazily through the
-        // UrlGenerator, after every module has registered its routes.
-        // `dev.`-prefixed ids are filtered for non-developers at JSON-emit time.
+        // The dev-shell layout gates `nav-disabled` on Router::has(...)
+        // at render time, so runtime truth wins over this constant;
+        // the constant's `enabled` field only documents intended state.
+        $this->app->singleton(DevSidebarItems::class, static fn (): DevSidebarItems => new DevSidebarItems);
+    }
+
+    // The full roster of authenticated app views (main-app surfaces + Dev
+    // Console sub-routes) is materialised lazily through the UrlGenerator,
+    // after every module has registered its routes. `dev.`-prefixed ids
+    // are filtered for non-developers at JSON-emit time.
+    private function registerNavigationRegistry(): void
+    {
         $this->app->singleton(NavigationRegistry::class, static function (Application $app): NavigationRegistryImpl {
             $router = $app->make(Router::class);
 
-            // Resolves a route name to a relative URL, or null when the
-            // route is absent in the current bundle (Horizon iframe,
-            // optional sub-features), so the registry stays well-defined
-            // across every load order.
-            $resolve = static function (string $name) use ($router): ?string {
-                if (! $router->getRoutes()->hasNamedRoute($name)) {
-                    return null;
-                }
-
-                try {
-                    $resolved = $router->getRoutes()->getByName($name)?->uri();
-                } catch (\Throwable) {
-                    return null;
-                }
-
-                if (! is_string($resolved) || $resolved === '') {
-                    return null;
-                }
-
-                return '/'.ltrim($resolved, '/');
-            };
-
-            $entries = [];
-
-            // Main-app nav. Each entry's `id` mirrors the route name so
-            // the palette's Recent cache dedupes on the canonical
-            // identifier.
-            $nav = [
-                ['id' => 'dashboard', 'label' => 'Dashboard', 'hint' => 'Recent activity overview', 'icon' => '◆', 'route' => 'dashboard', 'keywords' => ['home', 'main', 'this month']],
-                ['id' => 'transactions.index', 'label' => 'Transactions', 'hint' => 'Browse transactions', 'icon' => '≡', 'route' => 'transactions.index', 'keywords' => ['txn', 'ledger']],
-                ['id' => 'forecast.index', 'label' => 'Forecasts', 'hint' => 'What-if scenarios', 'icon' => '↗', 'route' => 'forecast.index', 'keywords' => ['scenario', 'predict']],
-                ['id' => 'calendar.index', 'label' => 'Calendar', 'hint' => 'Upcoming fixed payments and projected daily balance', 'icon' => '▦', 'route' => 'calendar.index', 'keywords' => ['bills', 'payments', 'balance', 'cash flow']],
-                ['id' => 'recurring.index', 'label' => 'Recurring', 'hint' => 'Subscriptions and fixed payments', 'icon' => '↻', 'route' => 'recurring.index', 'keywords' => ['subscriptions', 'fixed']],
-                ['id' => 'chains.review', 'label' => 'Chains', 'hint' => 'Cross-account funding chains', 'icon' => '⇉', 'route' => 'chains.review', 'keywords' => ['routing', 'funding']],
-                ['id' => 'drift.index', 'label' => 'Drift Alerts', 'hint' => 'Subscription-price drift watch', 'icon' => '⚠', 'route' => 'drift.index', 'keywords' => ['alerts', 'price']],
-                ['id' => 'imports.new', 'label' => 'Imports', 'hint' => 'Upload statements', 'icon' => '⊕', 'route' => 'imports.new', 'keywords' => ['upload', 'csv', 'mt940', 'camt']],
-                ['id' => 'inboxes.index', 'label' => 'Email', 'hint' => 'Connected inboxes', 'icon' => '✉', 'route' => 'inboxes.index', 'keywords' => ['inbox', 'gmail', 'imap']],
-                ['id' => 'uncategorized', 'label' => 'Categorization', 'hint' => 'Review uncategorized transactions', 'icon' => '⌕', 'route' => 'uncategorized', 'keywords' => ['rules', 'tag']],
-                ['id' => 'settings', 'label' => 'Settings', 'hint' => 'App preferences', 'icon' => '⚙', 'route' => 'settings', 'keywords' => ['prefs', 'config', 'profile']],
-                ['id' => 'tax.index', 'label' => 'Tax', 'hint' => 'Deductible records and per-year export', 'icon' => '⊞', 'route' => 'tax.index', 'keywords' => ['deduction', 'aangifte', 'export', 'records']],
-            ];
-
-            foreach ($nav as $row) {
-                $resolvedUrl = $resolve($row['route']);
-                if ($resolvedUrl === null) {
-                    continue;
-                }
-                $entries[] = new NavigationEntry(
-                    id: $row['id'],
-                    label: $row['label'],
-                    hint: $row['hint'],
-                    icon: $row['icon'],
-                    url: $resolvedUrl,
-                    keywords: $row['keywords'],
-                );
-            }
-
-            // Dev Console sub-routes. Filtered at JSON-emit time by
-            // CommandPaletteModal::buildRegistry() so non-developers
-            // never see these labels — defense-in-depth on top of the
-            // EnsureDeveloperMode middleware on the routes themselves.
-            $devNav = [
-                ['id' => 'dev.overview', 'label' => 'Dev Overview', 'hint' => 'System tiles + recent runs', 'icon' => '›_', 'route' => 'dev.overview', 'keywords' => ['dev', 'console']],
-                ['id' => 'dev.artisan', 'label' => 'Artisan runner', 'hint' => 'Run whitelisted commands', 'icon' => '›_', 'route' => 'dev.artisan', 'keywords' => ['command', 'cli']],
-                ['id' => 'dev.audit', 'label' => 'Dev audit log', 'hint' => 'Every dev-mode action', 'icon' => '⌗', 'route' => 'dev.audit', 'keywords' => ['history', 'activity']],
-                ['id' => 'dev.logs', 'label' => 'Log tailer', 'hint' => 'Live laravel-*.log stream', 'icon' => '≡', 'route' => 'dev.logs', 'keywords' => ['tail', 'errors']],
-                ['id' => 'dev.queue', 'label' => 'Queue inspector', 'hint' => 'Pending / failed / batches', 'icon' => '↻', 'route' => 'dev.queue', 'keywords' => ['jobs', 'failed', 'batches']],
-                ['id' => 'dev.doctor', 'label' => 'Doctor', 'hint' => 'System probes', 'icon' => '⚙', 'route' => 'dev.doctor', 'keywords' => ['probes', 'diagnose']],
-                ['id' => 'dev.sql', 'label' => 'SQL panel', 'hint' => 'SELECT-only browser', 'icon' => '⌕', 'route' => 'dev.sql', 'keywords' => ['query', 'schema']],
-                ['id' => 'dev.system', 'label' => 'System snapshot', 'hint' => 'Env + paths + config', 'icon' => '◇', 'route' => 'dev.system', 'keywords' => ['env', 'config']],
-                ['id' => 'dev.horizon', 'label' => 'Horizon', 'hint' => 'Embedded queue dashboard', 'icon' => '↗', 'route' => 'dev.horizon', 'keywords' => ['queue', 'dashboard']],
-                ['id' => 'dev.sync-health', 'label' => 'Sync Health', 'hint' => 'Quarantined / skipped merge ops', 'icon' => '⇄', 'route' => 'dev.sync-health', 'keywords' => ['sync', 'quarantine', 'merge', 'oplog']],
-            ];
-
-            foreach ($devNav as $row) {
-                $devUrl = $resolve($row['route']);
-                if ($devUrl === null) {
-                    continue;
-                }
-                $entries[] = new NavigationEntry(
-                    id: $row['id'],
-                    label: $row['label'],
-                    hint: $row['hint'],
-                    icon: $row['icon'],
-                    url: $devUrl,
-                    keywords: $row['keywords'],
-                );
-            }
-
-            return new NavigationRegistryImpl($entries);
+            return new NavigationRegistryImpl(array_merge(
+                self::navEntries($router, self::mainNavRows()),
+                self::navEntries($router, self::devNavRows()),
+            ));
         });
+    }
 
-        // URL-shaped actions resolve route names through the
-        // UrlGenerator at resolution time so missing routes drop out
-        // cleanly. The handlerEvent rows ("Scan email now", "Toggle
-        // theme") dispatch as Livewire browser events instead of a URL.
+    // Resolves each row's route name to a relative URL, dropping rows
+    // whose route is absent in the current bundle (Horizon iframe,
+    // optional sub-features) so the registry stays well-defined across
+    // every load order.
+    /**
+     * @param  list<array{id: string, label: string, hint: string, icon: string, route: string, keywords: list<string>}>  $rows
+     * @return list<NavigationEntry>
+     */
+    private static function navEntries(Router $router, array $rows): array
+    {
+        $entries = [];
+        foreach ($rows as $row) {
+            $url = self::resolveRouteUrl($router, $row['route']);
+            if ($url === null) {
+                continue;
+            }
+            $entries[] = new NavigationEntry(
+                id: $row['id'],
+                label: $row['label'],
+                hint: $row['hint'],
+                icon: $row['icon'],
+                url: $url,
+                keywords: $row['keywords'],
+            );
+        }
+
+        return $entries;
+    }
+
+    // Main-app nav. Each entry's `id` mirrors the route name so the
+    // palette's Recent cache dedupes on the canonical identifier.
+    /**
+     * @return list<array{id: string, label: string, hint: string, icon: string, route: string, keywords: list<string>}>
+     */
+    private static function mainNavRows(): array
+    {
+        return [
+            ['id' => 'dashboard', 'label' => 'Dashboard', 'hint' => 'Recent activity overview', 'icon' => '◆', 'route' => 'dashboard', 'keywords' => ['home', 'main', 'this month']],
+            ['id' => 'transactions.index', 'label' => 'Transactions', 'hint' => 'Browse transactions', 'icon' => '≡', 'route' => 'transactions.index', 'keywords' => ['txn', 'ledger']],
+            ['id' => 'forecast.index', 'label' => 'Forecasts', 'hint' => 'What-if scenarios', 'icon' => '↗', 'route' => 'forecast.index', 'keywords' => ['scenario', 'predict']],
+            ['id' => 'calendar.index', 'label' => 'Calendar', 'hint' => 'Upcoming fixed payments and projected daily balance', 'icon' => '▦', 'route' => 'calendar.index', 'keywords' => ['bills', 'payments', 'balance', 'cash flow']],
+            ['id' => 'recurring.index', 'label' => 'Recurring', 'hint' => 'Subscriptions and fixed payments', 'icon' => '↻', 'route' => 'recurring.index', 'keywords' => ['subscriptions', 'fixed']],
+            ['id' => 'chains.review', 'label' => 'Chains', 'hint' => 'Cross-account funding chains', 'icon' => '⇉', 'route' => 'chains.review', 'keywords' => ['routing', 'funding']],
+            ['id' => 'drift.index', 'label' => 'Drift Alerts', 'hint' => 'Subscription-price drift watch', 'icon' => '⚠', 'route' => 'drift.index', 'keywords' => ['alerts', 'price']],
+            ['id' => 'imports.new', 'label' => 'Imports', 'hint' => 'Upload statements', 'icon' => '⊕', 'route' => 'imports.new', 'keywords' => ['upload', 'csv', 'mt940', 'camt']],
+            ['id' => 'inboxes.index', 'label' => 'Email', 'hint' => 'Connected inboxes', 'icon' => '✉', 'route' => 'inboxes.index', 'keywords' => ['inbox', 'gmail', 'imap']],
+            ['id' => 'uncategorized', 'label' => 'Categorization', 'hint' => 'Review uncategorized transactions', 'icon' => '⌕', 'route' => 'uncategorized', 'keywords' => ['rules', 'tag']],
+            ['id' => 'settings', 'label' => 'Settings', 'hint' => 'App preferences', 'icon' => '⚙', 'route' => 'settings', 'keywords' => ['prefs', 'config', 'profile']],
+            ['id' => 'tax.index', 'label' => 'Tax', 'hint' => 'Deductible records and per-year export', 'icon' => '⊞', 'route' => 'tax.index', 'keywords' => ['deduction', 'aangifte', 'export', 'records']],
+        ];
+    }
+
+    // Dev Console sub-routes. Filtered at JSON-emit time by
+    // CommandPaletteModal::buildRegistry() so non-developers never see
+    // these labels — defense-in-depth on top of the EnsureDeveloperMode
+    // middleware on the routes themselves.
+    /**
+     * @return list<array{id: string, label: string, hint: string, icon: string, route: string, keywords: list<string>}>
+     */
+    private static function devNavRows(): array
+    {
+        return [
+            ['id' => 'dev.overview', 'label' => 'Dev Overview', 'hint' => 'System tiles + recent runs', 'icon' => '›_', 'route' => 'dev.overview', 'keywords' => ['dev', 'console']],
+            ['id' => 'dev.artisan', 'label' => 'Artisan runner', 'hint' => 'Run whitelisted commands', 'icon' => '›_', 'route' => 'dev.artisan', 'keywords' => ['command', 'cli']],
+            ['id' => 'dev.audit', 'label' => 'Dev audit log', 'hint' => 'Every dev-mode action', 'icon' => '⌗', 'route' => 'dev.audit', 'keywords' => ['history', 'activity']],
+            ['id' => 'dev.logs', 'label' => 'Log tailer', 'hint' => 'Live laravel-*.log stream', 'icon' => '≡', 'route' => 'dev.logs', 'keywords' => ['tail', 'errors']],
+            ['id' => 'dev.queue', 'label' => 'Queue inspector', 'hint' => 'Pending / failed / batches', 'icon' => '↻', 'route' => 'dev.queue', 'keywords' => ['jobs', 'failed', 'batches']],
+            ['id' => 'dev.doctor', 'label' => 'Doctor', 'hint' => 'System probes', 'icon' => '⚙', 'route' => 'dev.doctor', 'keywords' => ['probes', 'diagnose']],
+            ['id' => 'dev.sql', 'label' => 'SQL panel', 'hint' => 'SELECT-only browser', 'icon' => '⌕', 'route' => 'dev.sql', 'keywords' => ['query', 'schema']],
+            ['id' => 'dev.system', 'label' => 'System snapshot', 'hint' => 'Env + paths + config', 'icon' => '◇', 'route' => 'dev.system', 'keywords' => ['env', 'config']],
+            ['id' => 'dev.horizon', 'label' => 'Horizon', 'hint' => 'Embedded queue dashboard', 'icon' => '↗', 'route' => 'dev.horizon', 'keywords' => ['queue', 'dashboard']],
+            ['id' => 'dev.sync-health', 'label' => 'Sync Health', 'hint' => 'Quarantined / skipped merge ops', 'icon' => '⇄', 'route' => 'dev.sync-health', 'keywords' => ['sync', 'quarantine', 'merge', 'oplog']],
+        ];
+    }
+
+    // URL-shaped actions resolve route names through the UrlGenerator at
+    // resolution time so missing routes drop out cleanly. The handlerEvent
+    // rows ("Scan email now", "Toggle theme") dispatch as Livewire browser
+    // events instead of a URL.
+    private function registerAppActionRegistry(): void
+    {
         $this->app->singleton(AppActionRegistry::class, static function (Application $app): AppActionRegistryImpl {
             $router = $app->make(Router::class);
-            $resolve = static function (string $name) use ($router): ?string {
-                if (! $router->getRoutes()->hasNamedRoute($name)) {
-                    return null;
-                }
-
-                try {
-                    $resolved = $router->getRoutes()->getByName($name)?->uri();
-                } catch (\Throwable) {
-                    return null;
-                }
-
-                if (! is_string($resolved) || $resolved === '') {
-                    return null;
-                }
-
-                return '/'.ltrim($resolved, '/');
-            };
 
             $actions = [];
 
-            $importsNew = $resolve('imports.new');
+            $importsNew = self::resolveRouteUrl($router, 'imports.new');
             if ($importsNew !== null) {
                 $actions[] = new AppAction(
                     id: 'action.run-import',
@@ -414,7 +429,7 @@ final class DevModeServiceProvider extends ServiceProvider
                 );
             }
 
-            $inboxes = $resolve('inboxes.index');
+            $inboxes = self::resolveRouteUrl($router, 'inboxes.index');
             if ($inboxes !== null) {
                 $actions[] = new AppAction(
                     id: 'action.scan-email',
@@ -427,7 +442,7 @@ final class DevModeServiceProvider extends ServiceProvider
                 );
             }
 
-            $settings = $resolve('settings');
+            $settings = self::resolveRouteUrl($router, 'settings');
             if ($settings !== null) {
                 $actions[] = new AppAction(
                     id: 'action.open-profile',
@@ -452,7 +467,10 @@ final class DevModeServiceProvider extends ServiceProvider
 
             return new AppActionRegistryImpl($actions);
         });
+    }
 
+    private function registerRedactionServices(): void
+    {
         // Lazily loads the decrypted oauth_secrets.client_secret + every
         // string in tokens_blob on first all()/compiledPattern() call;
         // the Eloquent observer registered in boot() busts this cache
@@ -476,7 +494,10 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->app->singleton(RedactSecretsProcessor::class, static fn (Application $app): RedactSecretsProcessor => new RedactSecretsProcessor(
             $app->make(OAuthScrubSet::class),
         ));
+    }
 
+    private function registerAuditServices(): void
+    {
         $this->app->singleton(AuditWriter::class, static fn (Application $app): SpatieAuditWriter => new SpatieAuditWriter(
             $app->make(CurrentUser::class),
             $app->make(Clock::class),
@@ -490,11 +511,24 @@ final class DevModeServiceProvider extends ServiceProvider
             $app->make(RunRegistry::class),
             $app->make(Clock::class),
         ));
+    }
 
-        // The dev-shell layout gates `nav-disabled` on Router::has(...)
-        // at render time, so runtime truth wins over this constant;
-        // the constant's `enabled` field only documents intended state.
-        $this->app->singleton(DevSidebarItems::class, static fn (): DevSidebarItems => new DevSidebarItems);
+    // Resolves a route name to a relative URL, or null when the route is
+    // absent in the current bundle (Horizon iframe, optional sub-features)
+    // or its lookup throws, so callers stay well-defined across load order.
+    private static function resolveRouteUrl(Router $router, string $name): ?string
+    {
+        if (! $router->getRoutes()->hasNamedRoute($name)) {
+            return null;
+        }
+
+        try {
+            $resolved = $router->getRoutes()->getByName($name)?->uri();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return is_string($resolved) && $resolved !== '' ? '/'.ltrim($resolved, '/') : null;
     }
 
     public function boot(Router $router, LivewireManager $livewire, Dispatcher $events, ConfigRepository $config): void

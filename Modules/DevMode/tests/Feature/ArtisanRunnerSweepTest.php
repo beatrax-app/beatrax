@@ -8,8 +8,10 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DevMode\Internal\Http\Livewire\ArtisanRunnerPage;
+use Modules\DevMode\Internal\Process\RunRecord;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 
 /*
  * ArtisanRunnerPage::render now drives a pending-row sweep before
@@ -48,7 +50,7 @@ it('sweep finalizes a pending audit row whose underlying PID has exited', functi
     $runId = 'sweep-dead-1';
 
     // Eager audit row — what CommandSpawner writes today.
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
         tier: 'safe',
@@ -59,12 +61,12 @@ it('sweep finalizes a pending audit row whose underlying PID has exited', functi
         stdoutExcerpt: '',
         errorExcerpt: '',
         runId: $runId,
-    );
+    ));
 
     // RunRegistry record with a guaranteed-dead PID. 999999 is well
     // above the macOS PID range cap (~99998) so posix_kill returns
     // false and the sweep treats the row as ready to finalize.
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: 999999,
         command: 'cache:clear',
@@ -72,8 +74,9 @@ it('sweep finalizes a pending audit row whose underlying PID has exited', functi
         startedAt: $clock->now(),
         callerUserId: $user->getKey(),
         tier: 'safe',
+        status: 'running',
         outPath: sys_get_temp_dir().'/sweep-dead-1.out',
-    );
+    ));
 
     Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)
@@ -105,7 +108,7 @@ it('sweep leaves a pending row alone when the underlying PID is still alive', fu
 
     $runId = 'sweep-live-1';
 
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
         tier: 'safe',
@@ -116,11 +119,11 @@ it('sweep leaves a pending row alone when the underlying PID is still alive', fu
         stdoutExcerpt: '',
         errorExcerpt: '',
         runId: $runId,
-    );
+    ));
 
     // Use the test runner's own PID — guaranteed alive for the
     // duration of this assertion.
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: $runId,
         pid: getmypid(),
         command: 'cache:clear',
@@ -128,8 +131,9 @@ it('sweep leaves a pending row alone when the underlying PID is still alive', fu
         startedAt: $clock->now(),
         callerUserId: $user->getKey(),
         tier: 'safe',
+        status: 'running',
         outPath: sys_get_temp_dir().'/sweep-live-1.out',
-    );
+    ));
 
     Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class)
@@ -155,7 +159,7 @@ it('renders a pending audit row with status=running so the RunCard opens the SSE
     /** @var Clock $clock */
     $clock = app(Clock::class);
 
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
         tier: 'safe',
@@ -166,13 +170,13 @@ it('renders a pending audit row with status=running so the RunCard opens the SSE
         stdoutExcerpt: '',
         errorExcerpt: '',
         runId: 'render-pending-1',
-    );
+    ));
     // Stash a RunRegistry record with the current pid so the sweep
     // does NOT finalize the row out from under us before the render
     // assertion runs.
     /** @var RunRegistry $registry */
     $registry = app(RunRegistry::class);
-    $registry->store(
+    $registry->store(new RunRecord(
         runId: 'render-pending-1',
         pid: getmypid(),
         command: 'cache:clear',
@@ -180,8 +184,9 @@ it('renders a pending audit row with status=running so the RunCard opens the SSE
         startedAt: CarbonImmutable::now(),
         callerUserId: $user->getKey(),
         tier: 'safe',
+        status: 'running',
         outPath: sys_get_temp_dir().'/render-pending-1.out',
-    );
+    ));
 
     $component = Livewire::actingAs($user)
         ->test(ArtisanRunnerPage::class);

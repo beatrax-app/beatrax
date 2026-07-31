@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 
 /*
  * SpatieAuditWriter eager-write + finalize-update round-trip.
@@ -44,7 +45,7 @@ it('recordCommandRun with a runId stores run_id in properties', function (): voi
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
 
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
         tier: 'safe',
@@ -55,7 +56,7 @@ it('recordCommandRun with a runId stores run_id in properties', function (): voi
         stdoutExcerpt: '',
         errorExcerpt: '',
         runId: 'run-eager-1',
-    );
+    ));
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -75,7 +76,7 @@ it('finalizeCommandRun updates the existing row in place (no second row created)
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
 
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'config:show',
         args: ['config' => 'app'],
         tier: 'safe',
@@ -86,7 +87,7 @@ it('finalizeCommandRun updates the existing row in place (no second row created)
         stdoutExcerpt: '',
         errorExcerpt: '',
         runId: 'run-finalize-1',
-    );
+    ));
 
     expect(auditRows())->toBe(1);
 
@@ -135,7 +136,7 @@ it('finalizeCommandRun with cancelled=true merges __cancelled into args', functi
     /** @var AuditWriter $writer */
     $writer = app(AuditWriter::class);
 
-    $writer->recordCommandRun(
+    $writer->recordCommandRun(new CommandRunAudit(
         command: 'cache:clear',
         args: [],
         tier: 'safe',
@@ -146,7 +147,7 @@ it('finalizeCommandRun with cancelled=true merges __cancelled into args', functi
         stdoutExcerpt: '',
         errorExcerpt: '',
         runId: 'run-cancel-1',
-    );
+    ));
 
     $writer->finalizeCommandRun(
         runId: 'run-cancel-1',

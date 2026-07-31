@@ -7,6 +7,7 @@ namespace Modules\DevMode\Internal\Audit;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\DevMode\Internal\Process\RunRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
+use Modules\DevMode\Public\Dto\CommandRunAudit;
 
 /**
  * @link ../../../../.docs/features/dev-mode/architecture.md
@@ -65,7 +66,7 @@ final readonly class FinalizeRunAudit
             return;
         }
 
-        $this->audit->recordCommandRun(
+        $this->audit->recordCommandRun(new CommandRunAudit(
             command: $record->command,
             args: array_merge($record->args, $cancelled ? ['__cancelled' => true] : []),
             tier: $record->tier,
@@ -76,7 +77,7 @@ final readonly class FinalizeRunAudit
             stdoutExcerpt: $excerpt,
             errorExcerpt: '',
             runId: $runId,
-        );
+        ));
     }
 
     // Returns empty string if the file vanished between spawn and
