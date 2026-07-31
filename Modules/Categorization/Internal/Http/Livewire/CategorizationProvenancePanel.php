@@ -7,9 +7,10 @@ namespace Modules\Categorization\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
-use JsonException;
 use Livewire\Component;
+use Modules\Categorization\Public\Actions\AssignCategory;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -117,78 +118,74 @@ final class CategorizationProvenancePanel extends Component
         CurrentUser $currentUser,
         CategorizationRuleQuery $rules,
     ): void {
-        $userId = $currentUser->user()->id;
-
-        $raw = $db->connection()
-            ->table('transactions')
-            ->where('id', $this->transactionId)
-            ->where('user_id', $userId)
-            ->value('auto_category_provenance');
-
-        if (! is_string($raw) || $raw === '') {
-            $this->variant = 'none';
-            $this->ruleId = null;
-
-            return;
-        }
-
-        // auto_category_provenance is best-effort audit metadata — a
-        // corrupt JSON payload must NOT crash the transaction detail
-        // render; the JsonException catch falls back to the 'none'
-        // variant so the panel renders empty instead of throwing.
-        try {
-            /** @var mixed $decoded */
-            $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            $this->variant = 'none';
-            $this->ruleId = null;
-
-            return;
-        }
-        if (! is_array($decoded)) {
-            $this->variant = 'none';
+        // AssignCategory::readPriorProvenance owns the read-and-decode shape,
+        // returning null for a missing, empty, or corrupt payload — the panel
+        // then renders the empty 'none' variant rather than throwing mid
+        // transaction-detail render.
+        $decoded = AssignCategory::readPriorProvenance($db, $this->transactionId, $currentUser->user()->id);
+        if ($decoded === null) {
+            $this->applyEmptyVariant('none');
 
             return;
         }
 
         $source = $decoded['source'] ?? null;
-        if ($source === 'rule') {
-            $ruleIdRaw = $decoded['rule_id'] ?? null;
-            $ruleId = is_numeric($ruleIdRaw) ? (int) $ruleIdRaw : 0;
-            if ($ruleId !== 0) {
-                $dto = $rules->findForUser($currentUser->user(), $ruleId);
-                if ($dto !== null) {
-                    $this->variant = 'rule';
-                    $this->ruleId = $dto->id;
-                    $this->conditionSummary = $dto->conditions === []
-                        ? ''
-                        : RulesPage::conditionFragment($dto->conditions[0]);
-
-                    $categoryPath = '';
-                    foreach ($dto->actions as $action) {
-                        if ($action->type === 'category') {
-                            $categoryPath = $action->categoryPath ?? '';
-
-                            break;
-                        }
-                    }
-                    $this->categoryPath = $categoryPath;
-
-                    return;
-                }
-            }
-            // Rule no longer exists (deleted) — fall through to
-            // memory / none.
-        }
-
-        if ($source === 'memory') {
-            $this->variant = 'memory';
-            $this->ruleId = null;
-
+        if ($source === 'rule' && $this->hydrateRuleVariant($decoded, $currentUser, $rules)) {
             return;
         }
 
-        $this->variant = 'none';
+        // A 'memory' provenance shows the Override action; a 'rule' whose row no
+        // longer resolves (deleted — the historical rule_id still sits in the
+        // JSON) falls through here to 'none' alongside every unknown source.
+        $this->applyEmptyVariant($source === 'memory' ? 'memory' : 'none');
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function hydrateRuleVariant(
+        array $decoded,
+        CurrentUser $currentUser,
+        CategorizationRuleQuery $rules,
+    ): bool {
+        $ruleIdRaw = $decoded['rule_id'] ?? null;
+        $ruleId = is_numeric($ruleIdRaw) ? (int) $ruleIdRaw : 0;
+        if ($ruleId === 0) {
+            return false;
+        }
+
+        $dto = $rules->findForUser($currentUser->user(), $ruleId);
+        if ($dto === null) {
+            return false;
+        }
+
+        $this->variant = 'rule';
+        $this->ruleId = $dto->id;
+        $this->conditionSummary = $dto->conditions === []
+            ? ''
+            : RulesPage::conditionFragment($dto->conditions[0]);
+        $this->categoryPath = self::categoryPathOf($dto->actions);
+
+        return true;
+    }
+
+    /**
+     * @param  list<RuleActionDto>  $actions
+     */
+    private static function categoryPathOf(array $actions): string
+    {
+        foreach ($actions as $action) {
+            if ($action->type === 'category') {
+                return $action->categoryPath ?? '';
+            }
+        }
+
+        return '';
+    }
+
+    private function applyEmptyVariant(string $variant): void
+    {
+        $this->variant = $variant;
         $this->ruleId = null;
     }
 }

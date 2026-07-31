@@ -6,6 +6,7 @@ namespace Modules\Categorization\Database\Seeders\Demo;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 
 // Author-side rules for the demo install, covering the merchants the
@@ -112,20 +113,19 @@ final class DemoCategorizationRulesSeeder
             $actions[] = ['type' => 'note', 'payload' => ['mode' => 'set', 'text' => $row['note']]];
         }
 
-        $this->createRule->__invoke(
-            $user,
-            $row['priority'],
-            'all',
-            $row['active'],
-            $row['notes'],
-            [[
+        $this->createRule->__invoke($user, new RuleInput(
+            priority: $row['priority'],
+            combinator: 'all',
+            active: $row['active'],
+            notes: $row['notes'],
+            conditions: [[
                 'field' => 'description',
                 'op' => 'contains',
                 'value_type' => 'string',
                 'value' => $row['match'],
             ]],
-            $actions,
-        );
+            actions: $actions,
+        ));
     }
 
     /**

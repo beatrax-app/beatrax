@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
@@ -87,18 +88,20 @@ beforeEach(function (): void {
 it('persists a valid multi-condition/multi-action rule as one parent + N conditions + M actions atomically', function (): void {
     $ruleId = ($this->create)(
         $this->user,
-        10,
-        'all',
-        true,
-        'notes here',
-        [
-            ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-            ['op' => '>', 'value_type' => 'amount', 'value' => '-5000'],
-        ],
-        [
-            ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-            ['type' => 'counterparty', 'payload' => ['counterparty_id' => $this->counterparty->id]],
-        ],
+        new RuleInput(
+            priority: 10,
+            combinator: 'all',
+            active: true,
+            notes: 'notes here',
+            conditions: [
+                ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
+                ['op' => '>', 'value_type' => 'amount', 'value' => '-5000'],
+            ],
+            actions: [
+                ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
+                ['type' => 'counterparty', 'payload' => ['counterparty_id' => $this->counterparty->id]],
+            ],
+        ),
     );
 
     expect($ruleId)->toBeGreaterThan(0);
@@ -117,17 +120,19 @@ it('persists a valid multi-condition/multi-action rule as one parent + N conditi
 it('CategorizationRuleQuery::forUser round-trips a persisted rule into nested condition/action DTOs', function (): void {
     $ruleId = ($this->create)(
         $this->user,
-        10,
-        'all',
-        true,
-        null,
-        [
-            ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-        ],
-        [
-            ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-            ['type' => 'counterparty', 'payload' => ['counterparty_id' => $this->counterparty->id]],
-        ],
+        new RuleInput(
+            priority: 10,
+            combinator: 'all',
+            active: true,
+            notes: null,
+            conditions: [
+                ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
+            ],
+            actions: [
+                ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
+                ['type' => 'counterparty', 'payload' => ['counterparty_id' => $this->counterparty->id]],
+            ],
+        ),
     );
 
     $dtos = $this->query->forUser($this->user);
@@ -148,17 +153,17 @@ it('CategorizationRuleQuery::forUser round-trips a persisted rule into nested co
 });
 
 it('CategorizationRuleQuery::forUser returns rules ordered priority asc, then id asc', function (): void {
-    $lowPriorityId = ($this->create)($this->user, 50, 'all', true, null, [
+    $lowPriorityId = ($this->create)($this->user, new RuleInput(priority: 50, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'FIRST'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]);
+    ]));
 
-    $highPriorityId = ($this->create)($this->user, 5, 'all', true, null, [
+    $highPriorityId = ($this->create)($this->user, new RuleInput(priority: 5, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SECOND'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]);
+    ]));
 
     $dtos = $this->query->forUser($this->user);
 
@@ -168,72 +173,72 @@ it('CategorizationRuleQuery::forUser returns rules ordered priority asc, then id
 });
 
 it('CategorizationRuleQuery::findForUser returns null for a rule owned by another user', function (): void {
-    $ruleId = ($this->create)($this->user, 10, 'all', true, null, [
+    $ruleId = ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]);
+    ]));
 
     expect($this->query->findForUser($this->otherUser, $ruleId))->toBeNull();
     expect($this->query->findForUser($this->user, $ruleId))->not->toBeNull();
 });
 
 it('rejects a condition whose (op, value_type) pair is outside the validity matrix', function (): void {
-    expect(fn () => ($this->create)($this->user, 10, 'all', true, null, [
+    expect(fn () => ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['op' => 'starts_with', 'value_type' => 'amount', 'value' => '100'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]))->toThrow(InvalidArgumentException::class);
+    ])))->toThrow(InvalidArgumentException::class);
 });
 
 it('rejects a between condition missing value2', function (): void {
-    expect(fn () => ($this->create)($this->user, 10, 'all', true, null, [
+    expect(fn () => ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['op' => 'between', 'value_type' => 'amount', 'value' => '100'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]))->toThrow(InvalidArgumentException::class);
+    ])))->toThrow(InvalidArgumentException::class);
 });
 
 it('rejects an action payload referencing a counterparty not visible to the user', function (): void {
-    expect(fn () => ($this->create)($this->user, 10, 'all', true, null, [
+    expect(fn () => ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-    ], [
+    ], actions: [
         ['type' => 'counterparty', 'payload' => ['counterparty_id' => $this->foreignCounterparty->id]],
-    ]))->toThrow(InvalidArgumentException::class);
+    ])))->toThrow(InvalidArgumentException::class);
 });
 
 it('rejects a zero-condition rule', function (): void {
-    expect(fn () => ($this->create)($this->user, 10, 'all', true, null, [], [
+    expect(fn () => ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]))->toThrow(ValidationException::class);
+    ])))->toThrow(ValidationException::class);
 });
 
 it('rejects a zero-action rule', function (): void {
-    expect(fn () => ($this->create)($this->user, 10, 'all', true, null, [
+    expect(fn () => ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-    ], []))->toThrow(ValidationException::class);
+    ], actions: [])))->toThrow(ValidationException::class);
 });
 
 it('rejects a tax_tag action referencing a deduction category not visible to the user', function (): void {
     $db = app(DatabaseManager::class);
     $foreignDeductionCategoryId = ruleAuthoringDeductionCategory($db, $this->otherUser->id, 'Foreign Deduction');
 
-    expect(fn () => ($this->create)($this->user, 10, 'all', true, null, [
+    expect(fn () => ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-    ], [
+    ], actions: [
         ['type' => 'tax_tag', 'payload' => ['deduction_category_id' => $foreignDeductionCategoryId]],
-    ]))->toThrow(InvalidArgumentException::class);
+    ])))->toThrow(InvalidArgumentException::class);
 });
 
 it('accepts a tax_tag action referencing a deduction category visible to the user', function (): void {
     $db = app(DatabaseManager::class);
     $deductionCategoryId = ruleAuthoringDeductionCategory($db, $this->user->id, 'Home Office');
 
-    $ruleId = ($this->create)($this->user, 10, 'all', true, null, [
+    $ruleId = ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-    ], [
+    ], actions: [
         ['type' => 'tax_tag', 'payload' => ['deduction_category_id' => $deductionCategoryId]],
-    ]);
+    ]));
 
     expect($ruleId)->toBeGreaterThan(0);
 });
@@ -241,12 +246,12 @@ it('accepts a tax_tag action referencing a deduction category visible to the use
 it('updates an existing rule via a PK-preserving diff — surviving conditions keep their id, removed ones are deleted, new ones are inserted', function (): void {
     $db = app(DatabaseManager::class);
 
-    $ruleId = ($this->create)($this->user, 10, 'all', true, null, [
+    $ruleId = ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
         ['field' => 'description', 'op' => 'equals', 'value_type' => 'string', 'value' => 'REMOVE ME'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]);
+    ]));
 
     $survivingConditionId = $db->connection()->table('rule_conditions')
         ->where('rule_id', $ruleId)
@@ -257,17 +262,19 @@ it('updates an existing rule via a PK-preserving diff — surviving conditions k
     ($this->update)(
         $this->user,
         $ruleId,
-        20,
-        'any',
-        true,
-        'updated notes',
-        [
-            ['id' => (int) $survivingConditionId, 'field' => 'merchant', 'op' => 'starts_with', 'value_type' => 'string', 'value' => 'SPOT'],
-            ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'NEW CONDITION'],
-        ],
-        [
-            ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-        ],
+        new RuleInput(
+            priority: 20,
+            combinator: 'any',
+            active: true,
+            notes: 'updated notes',
+            conditions: [
+                ['id' => (int) $survivingConditionId, 'field' => 'merchant', 'op' => 'starts_with', 'value_type' => 'string', 'value' => 'SPOT'],
+                ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'NEW CONDITION'],
+            ],
+            actions: [
+                ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
+            ],
+        ),
     );
 
     $conditions = $db->connection()->table('rule_conditions')->where('rule_id', $ruleId)->orderBy('id')->get();
@@ -288,24 +295,26 @@ it('updates an existing rule via a PK-preserving diff — surviving conditions k
 });
 
 it('raises a 404-not-403 NotFoundHttpException when updating a rule owned by another user', function (): void {
-    $ruleId = ($this->create)($this->user, 10, 'all', true, null, [
+    $ruleId = ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-    ]);
+    ]));
 
     expect(fn () => ($this->update)(
         $this->otherUser,
         $ruleId,
-        10,
-        'all',
-        true,
-        null,
-        [
-            ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-        ],
-        [
-            ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
-        ],
+        new RuleInput(
+            priority: 10,
+            combinator: 'all',
+            active: true,
+            notes: null,
+            conditions: [
+                ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
+            ],
+            actions: [
+                ['type' => 'category', 'payload' => ['category_id' => $this->category->id]],
+            ],
+        ),
     ))->toThrow(NotFoundHttpException::class);
 });

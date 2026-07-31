@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\RuleFormModal;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Models\User;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -105,12 +106,14 @@ it('CategorizationRuleQuery decrypts the counterparty-action label', function ()
     $create = Container::getInstance()->make(CreateCategorizationRule::class);
     $create(
         $user,
-        10,
-        'all',
-        true,
-        null,
-        [['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'GYM']],
-        [['type' => 'counterparty', 'payload' => ['counterparty_id' => $counterpartyId]]],
+        new RuleInput(
+            priority: 10,
+            combinator: 'all',
+            active: true,
+            notes: null,
+            conditions: [['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'GYM']],
+            actions: [['type' => 'counterparty', 'payload' => ['counterparty_id' => $counterpartyId]]],
+        ),
     );
 
     /** @var CategorizationRuleQuery $query */

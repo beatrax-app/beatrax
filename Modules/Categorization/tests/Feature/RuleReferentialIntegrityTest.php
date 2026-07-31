@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
@@ -43,11 +44,11 @@ it('deactivates the owning rule when its referenced category is deleted', functi
         'display_order' => 1,
     ]);
 
-    $ruleId = ($this->create)($this->user, 10, 'all', true, null, [
+    $ruleId = ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'SPOTIFY'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $category->id]],
-    ]);
+    ]));
 
     $db = app(DatabaseManager::class);
     expect((bool) $db->connection()->table('categorization_rules')->where('id', $ruleId)->value('active'))->toBeTrue();
@@ -66,11 +67,11 @@ it('deactivates the owning rule when its referenced counterparty is deleted', fu
         'merchant_name' => 'NETFLIX',
     ]);
 
-    $ruleId = ($this->create)($this->user, 10, 'all', true, null, [
+    $ruleId = ($this->create)($this->user, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'NETFLIX'],
-    ], [
+    ], actions: [
         ['type' => 'counterparty', 'payload' => ['counterparty_id' => $counterparty->id]],
-    ]);
+    ]));
 
     $db = app(DatabaseManager::class);
     expect((bool) $db->connection()->table('categorization_rules')->where('id', $ruleId)->value('active'))->toBeTrue();
@@ -99,11 +100,11 @@ it('scopes the deactivation UPDATE by user_id — does not touch a different use
         'display_order' => 1,
     ]);
 
-    $otherRuleId = ($this->create)($otherUser, 10, 'all', true, null, [
+    $otherRuleId = ($this->create)($otherUser, new RuleInput(priority: 10, combinator: 'all', active: true, notes: null, conditions: [
         ['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => 'AH'],
-    ], [
+    ], actions: [
         ['type' => 'category', 'payload' => ['category_id' => $otherCategory->id]],
-    ]);
+    ]));
 
     $category->delete();
 

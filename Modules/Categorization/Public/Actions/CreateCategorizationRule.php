@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use JsonException;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 
@@ -45,46 +46,37 @@ final class CreateCategorizationRule
         private readonly Clock $clock,
     ) {}
 
-    // $conditions/$actions are untrusted, caller-supplied arrays; every
-    // element is validated field-by-field before use, never assumed to
-    // already conform to a shape.
-    /**
-     * @param  list<array<string, mixed>>  $conditions
-     * @param  list<array<string, mixed>>  $actions
-     */
+    // $input->conditions/$input->actions are untrusted, caller-supplied
+    // arrays; every element is validated field-by-field before use, never
+    // assumed to already conform to a shape.
     public function __invoke(
         User $user,
-        int $priority,
-        string $combinator,
-        bool $active,
-        ?string $notes,
-        array $conditions,
-        array $actions,
+        RuleInput $input,
     ): int {
-        if (! in_array($combinator, self::VALID_COMBINATORS, true)) {
+        if (! in_array($input->combinator, self::VALID_COMBINATORS, true)) {
             throw new InvalidArgumentException(
-                "CreateCategorizationRule: invalid combinator '{$combinator}'."
+                "CreateCategorizationRule: invalid combinator '{$input->combinator}'."
             );
         }
 
-        if ($conditions === []) {
+        if ($input->conditions === []) {
             throw ValidationException::withMessages([
                 'conditions' => 'Add at least one condition.',
             ]);
         }
-        if ($actions === []) {
+        if ($input->actions === []) {
             throw ValidationException::withMessages([
                 'actions' => 'Add at least one action.',
             ]);
         }
 
         $normalizedConditions = [];
-        foreach ($conditions as $condition) {
+        foreach ($input->conditions as $condition) {
             $normalizedConditions[] = self::normalizeCondition($condition);
         }
 
         $normalizedActions = [];
-        foreach ($actions as $index => $action) {
+        foreach ($input->actions as $index => $action) {
             $normalizedActions[] = self::normalizeAction($this->db, $action, $index, $user->id);
         }
 
@@ -92,15 +84,15 @@ final class CreateCategorizationRule
         $db = $this->db;
 
         try {
-            return $db->connection()->transaction(static function () use ($db, $normalizedConditions, $normalizedActions, $user, $priority, $combinator, $active, $notes, $now): int {
+            return $db->connection()->transaction(static function () use ($db, $normalizedConditions, $normalizedActions, $user, $input, $now): int {
                 $connection = $db->connection();
 
                 $ruleId = $connection->table('categorization_rules')->insertGetId([
                     'user_id' => $user->id,
-                    'priority' => $priority,
-                    'combinator' => $combinator,
-                    'active' => $active,
-                    'notes' => $notes,
+                    'priority' => $input->priority,
+                    'combinator' => $input->combinator,
+                    'active' => $input->active,
+                    'notes' => $input->notes,
                     'hits_count' => 0,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -148,31 +140,28 @@ final class CreateCategorizationRule
      */
     private static function normalizeCondition(array $condition): array
     {
-        $valueType = isset($condition['value_type']) && is_string($condition['value_type']) ? $condition['value_type'] : '';
+        $valueType = self::stringOrDefault($condition, 'value_type', '');
         if (! array_key_exists($valueType, self::OP_VALUE_TYPE_MATRIX)) {
             throw new InvalidArgumentException(
                 "CreateCategorizationRule: invalid value_type '{$valueType}'."
             );
         }
 
-        $op = isset($condition['op']) && is_string($condition['op']) ? $condition['op'] : '';
+        $op = self::stringOrDefault($condition, 'op', '');
         if (! in_array($op, self::OP_VALUE_TYPE_MATRIX[$valueType], true)) {
             throw new InvalidArgumentException(
                 "CreateCategorizationRule: op '{$op}' is not valid for value_type '{$valueType}'."
             );
         }
 
-        $value = isset($condition['value']) && is_string($condition['value']) ? trim($condition['value']) : '';
+        $value = trim(self::stringOrDefault($condition, 'value', ''));
         if ($value === '') {
             throw new InvalidArgumentException(
                 'CreateCategorizationRule: condition value must not be empty.'
             );
         }
 
-        $rawValue2 = $condition['value2'] ?? null;
-        $value2 = is_string($rawValue2) ? trim($rawValue2) : null;
-        $value2 = $value2 === '' ? null : $value2;
-
+        $value2 = self::normalizedValue2($condition);
         if ($op === 'between' && $value2 === null) {
             throw new InvalidArgumentException(
                 "CreateCategorizationRule: op 'between' requires a non-null value2."
@@ -180,19 +169,10 @@ final class CreateCategorizationRule
         }
 
         if ($valueType === 'amount') {
-            if (preg_match(self::AMOUNT_VALUE_PATTERN, $value) !== 1) {
-                throw new InvalidArgumentException(
-                    "CreateCategorizationRule: amount condition value '{$value}' must be an integer minor-unit string."
-                );
-            }
-            if ($value2 !== null && preg_match(self::AMOUNT_VALUE_PATTERN, $value2) !== 1) {
-                throw new InvalidArgumentException(
-                    "CreateCategorizationRule: amount condition value2 '{$value2}' must be an integer minor-unit string."
-                );
-            }
+            self::assertAmountMinorUnits($value, $value2);
         }
 
-        $field = isset($condition['field']) && is_string($condition['field']) ? $condition['field'] : 'merchant';
+        $field = self::stringOrDefault($condition, 'field', 'merchant');
         if (! in_array($field, self::VALID_CONDITION_FIELDS, true)) {
             throw new InvalidArgumentException(
                 "CreateCategorizationRule: invalid field '{$field}'."
@@ -206,6 +186,49 @@ final class CreateCategorizationRule
             'value' => $value,
             'value2' => $value2,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private static function stringOrDefault(array $data, string $key, string $default): string
+    {
+        $value = $data[$key] ?? null;
+
+        return is_string($value) ? $value : $default;
+    }
+
+    // A blank value2 collapses to null so an absent upper bound and an empty
+    // one are the same thing — a `between` op without it is rejected upstream.
+    /**
+     * @param  array<string, mixed>  $condition
+     */
+    private static function normalizedValue2(array $condition): ?string
+    {
+        $raw = $condition['value2'] ?? null;
+        if (! is_string($raw)) {
+            return null;
+        }
+        $trimmed = trim($raw);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    // Both bounds must already be integer minor-unit strings — the caller is
+    // responsible for the Euro-decimal -> minor-unit scaling, so a raw decimal
+    // Euro string is rejected here rather than silently truncated at match time.
+    private static function assertAmountMinorUnits(string $value, ?string $value2): void
+    {
+        if (preg_match(self::AMOUNT_VALUE_PATTERN, $value) !== 1) {
+            throw new InvalidArgumentException(
+                "CreateCategorizationRule: amount condition value '{$value}' must be an integer minor-unit string."
+            );
+        }
+        if ($value2 !== null && preg_match(self::AMOUNT_VALUE_PATTERN, $value2) !== 1) {
+            throw new InvalidArgumentException(
+                "CreateCategorizationRule: amount condition value2 '{$value2}' must be an integer minor-unit string."
+            );
+        }
     }
 
     /**

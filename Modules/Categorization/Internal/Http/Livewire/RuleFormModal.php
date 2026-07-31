@@ -16,6 +16,7 @@ use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Dto\RuleConditionDto;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -129,46 +130,51 @@ final class RuleFormModal extends Component
     // Keeps a condition row's `op` valid whenever its `field` (and thus
     // its value_type) changes, and clears a stale `value2` whenever the
     // row's `op` moves away from `between`.
-    public function updated(string $name, mixed $value): void
+    public function updated(string $name): void
     {
         if (preg_match('/^conditions\.(\d+)\.field$/', $name, $matches) === 1) {
-            $index = (int) $matches[1];
-            if (! isset($this->conditions[$index])) {
-                return;
-            }
-            $validOps = array_keys(self::operatorOptionsFor($this->conditions[$index]['field']));
-            if (! in_array($this->conditions[$index]['op'], $validOps, true)) {
-                $this->conditions[$index]['op'] = $validOps[0] ?? 'contains';
-            }
+            $this->realignConditionOp((int) $matches[1]);
+        } elseif (preg_match('/^conditions\.(\d+)\.op$/', $name, $matches) === 1) {
+            $this->clearStaleUpperBound((int) $matches[1]);
+        } elseif (preg_match('/^actions\.(\d+)\./', $name, $matches) === 1) {
+            $this->coerceActionIds((int) $matches[1]);
+        }
+    }
 
+    // A changed `field` can invalidate the row's `op` (its value_type moved),
+    // so snap `op` back to the first operator the new field allows.
+    private function realignConditionOp(int $index): void
+    {
+        if (! isset($this->conditions[$index])) {
             return;
         }
+        $validOps = array_keys(self::operatorOptionsFor($this->conditions[$index]['field']));
+        if (! in_array($this->conditions[$index]['op'], $validOps, true)) {
+            $this->conditions[$index]['op'] = $validOps[0] ?? 'contains';
+        }
+    }
 
-        if (preg_match('/^conditions\.(\d+)\.op$/', $name, $matches) === 1) {
-            $index = (int) $matches[1];
-            if (! isset($this->conditions[$index])) {
-                return;
-            }
-            if ($this->conditions[$index]['op'] !== 'between') {
-                $this->conditions[$index]['value2'] = null;
-            }
+    // An `op` that moved away from `between` leaves a stale upper bound behind,
+    // so drop the now-meaningless value2 the row still carries.
+    private function clearStaleUpperBound(int $index): void
+    {
+        if (isset($this->conditions[$index]) && $this->conditions[$index]['op'] !== 'between') {
+            $this->conditions[$index]['value2'] = null;
+        }
+    }
 
+    // Livewire binds <select> values as strings; re-coerce to ?int after each
+    // update, otherwise a picked id arrives as "20" and blows up
+    // actionRowError().
+    private function coerceActionIds(int $index): void
+    {
+        if (! isset($this->actions[$index])) {
             return;
         }
-
-        // Livewire binds <select> values as strings; re-coerce to ?int
-        // after each update, otherwise a picked id arrives as "20" and
-        // blows up actionRowError().
-        if (preg_match('/^actions\.(\d+)\./', $name, $matches) === 1) {
-            $index = (int) $matches[1];
-            if (! isset($this->actions[$index])) {
-                return;
-            }
-            $this->actions[$index]['category_id'] = self::intIdOrNull($this->actions[$index]['category_id']);
-            $this->actions[$index]['counterparty_id'] = self::intIdOrNull($this->actions[$index]['counterparty_id']);
-            $this->actions[$index]['deduction_category_id'] = self::intIdOrNull($this->actions[$index]['deduction_category_id']);
-            $this->actions[$index]['year_override'] = self::intIdOrNull($this->actions[$index]['year_override']);
-        }
+        $this->actions[$index]['category_id'] = self::intIdOrNull($this->actions[$index]['category_id']);
+        $this->actions[$index]['counterparty_id'] = self::intIdOrNull($this->actions[$index]['counterparty_id']);
+        $this->actions[$index]['deduction_category_id'] = self::intIdOrNull($this->actions[$index]['deduction_category_id']);
+        $this->actions[$index]['year_override'] = self::intIdOrNull($this->actions[$index]['year_override']);
     }
 
     private static function intIdOrNull(mixed $value): ?int
@@ -229,47 +235,94 @@ final class RuleFormModal extends Component
     ): void {
         $this->resetErrors();
 
-        $hasErrors = false;
-
-        $trimmedPriority = trim($this->priorityInput);
-        $priority = 0;
-        if (preg_match('/^-?\d+$/', $trimmedPriority) !== 1) {
-            $this->errorPriority = 'Priority must be a whole number.';
-            $hasErrors = true;
-        } else {
-            $priority = (int) $trimmedPriority;
-        }
-
-        if ($this->conditions === []) {
-            $this->errorConditions = 'Add at least one condition.';
-            $hasErrors = true;
-        } else {
-            foreach ($this->conditions as $index => $condition) {
-                $message = self::conditionRowError($condition, $index);
-                if ($message !== null) {
-                    $this->conditionErrors[$index] = $message;
-                    $hasErrors = true;
-                }
-            }
-        }
-
-        if ($this->actions === []) {
-            $this->errorActions = 'Add at least one action.';
-            $hasErrors = true;
-        } else {
-            foreach ($this->actions as $index => $action) {
-                $message = self::actionRowError($action, $index);
-                if ($message !== null) {
-                    $this->actionErrors[$index] = $message;
-                    $hasErrors = true;
-                }
-            }
-        }
-
-        if ($hasErrors) {
+        $priority = $this->validatedPriority();
+        if ($priority === null) {
             return;
         }
 
+        // Capture the create-vs-update outcome before persist() runs, since a
+        // successful persist resets editingRuleId to null.
+        $action = $this->editingRuleId === null ? 'created' : 'updated';
+        $ruleId = $this->persist($currentUser, $priority, $create, $update);
+        if ($ruleId === null) {
+            return;
+        }
+
+        $this->dispatch('rule-form:saved', ruleId: $ruleId, action: $action);
+        $this->dispatch('modal-close', name: 'rule-form');
+        $this->resetToBlankForm();
+    }
+
+    // Returns the parsed priority, or null when any field failed validation —
+    // every row error is recorded on its own property first so the whole form
+    // surfaces its problems in one pass rather than one per submit.
+    private function validatedPriority(): ?int
+    {
+        $trimmedPriority = trim($this->priorityInput);
+        $priorityValid = preg_match('/^-?\d+$/', $trimmedPriority) === 1;
+        if (! $priorityValid) {
+            $this->errorPriority = 'Priority must be a whole number.';
+        }
+
+        $conditionsInvalid = $this->collectConditionErrors();
+        $actionsInvalid = $this->collectActionErrors();
+
+        if (! $priorityValid || $conditionsInvalid || $actionsInvalid) {
+            return null;
+        }
+
+        return (int) $trimmedPriority;
+    }
+
+    private function collectConditionErrors(): bool
+    {
+        if ($this->conditions === []) {
+            $this->errorConditions = 'Add at least one condition.';
+
+            return true;
+        }
+
+        $hasErrors = false;
+        foreach ($this->conditions as $index => $condition) {
+            $message = self::conditionRowError($condition, $index);
+            if ($message !== null) {
+                $this->conditionErrors[$index] = $message;
+                $hasErrors = true;
+            }
+        }
+
+        return $hasErrors;
+    }
+
+    private function collectActionErrors(): bool
+    {
+        if ($this->actions === []) {
+            $this->errorActions = 'Add at least one action.';
+
+            return true;
+        }
+
+        $hasErrors = false;
+        foreach ($this->actions as $index => $action) {
+            $message = self::actionRowError($action);
+            if ($message !== null) {
+                $this->actionErrors[$index] = $message;
+                $hasErrors = true;
+            }
+        }
+
+        return $hasErrors;
+    }
+
+    // Both actions return the rule id, so the create/update choice is one
+    // return; the three failure types share one catch that maps each to its
+    // own message. Returns null on any failure, having set the error state.
+    private function persist(
+        CurrentUser $currentUser,
+        int $priority,
+        CreateCategorizationRule $create,
+        UpdateCategorizationRule $update,
+    ): ?int {
         $conditionsPayload = array_map(self::conditionPayload(...), $this->conditions);
         $actionsPayload = [];
         foreach ($this->actions as $index => $action) {
@@ -277,41 +330,53 @@ final class RuleFormModal extends Component
         }
 
         $user = $currentUser->user();
+        $input = new RuleInput(
+            priority: $priority,
+            combinator: $this->combinator,
+            active: $this->active,
+            notes: $this->notes,
+            conditions: $conditionsPayload,
+            actions: $actionsPayload,
+        );
 
         try {
-            if ($this->editingRuleId === null) {
-                $ruleId = ($create)($user, $priority, $this->combinator, $this->active, $this->notes, $conditionsPayload, $actionsPayload);
-                $action = 'created';
-            } else {
-                ($update)($user, $this->editingRuleId, $priority, $this->combinator, $this->active, $this->notes, $conditionsPayload, $actionsPayload);
-                $ruleId = $this->editingRuleId;
-                $action = 'updated';
-            }
-        } catch (ValidationException $e) {
+            return $this->editingRuleId === null
+                ? ($create)($user, $input)
+                : ($update)($user, $this->editingRuleId, $input);
+        } catch (ValidationException|InvalidArgumentException|NotFoundHttpException $e) {
+            $this->applyPersistError($e);
+
+            return null;
+        }
+    }
+
+    private function applyPersistError(ValidationException|InvalidArgumentException|NotFoundHttpException $e): void
+    {
+        if ($e instanceof ValidationException) {
             $messages = $e->errors();
             $this->errorConditions = self::firstMessage($messages, 'conditions') ?? $this->errorConditions;
             $this->errorActions = self::firstMessage($messages, 'actions') ?? $this->errorActions;
             $this->errorGeneral = self::firstMessage($messages, 'value') ?? $this->errorGeneral;
 
             return;
-        } catch (InvalidArgumentException) {
-            // All causes are tampered-payload-only — the form's dropdowns
-            // can only emit valid options.
-            $this->errorGeneral = 'Invalid rule data — pick from the dropdowns and try again.';
+        }
 
-            return;
-        } catch (NotFoundHttpException) {
+        if ($e instanceof NotFoundHttpException) {
             // $editingRuleId no longer maps to a row visible to the user
-            // (deleted in another tab, or a tampered ruleId).
+            // (deleted in another tab, or a tampered ruleId) — close the modal.
             $this->errorGeneral = 'That rule is no longer available.';
             $this->dispatch('modal-close', name: 'rule-form');
 
             return;
         }
 
-        $this->dispatch('rule-form:saved', ruleId: $ruleId, action: $action);
-        $this->dispatch('modal-close', name: 'rule-form');
+        // InvalidArgumentException: every cause is tampered-payload-only — the
+        // form's own dropdowns can only emit valid options.
+        $this->errorGeneral = 'Invalid rule data — pick from the dropdowns and try again.';
+    }
 
+    private function resetToBlankForm(): void
+    {
         $this->editingRuleId = null;
         $this->combinator = 'all';
         $this->priorityInput = '10';
@@ -447,17 +512,20 @@ final class RuleFormModal extends Component
         $payload = $dto->payload;
 
         if ($dto->type === 'category') {
-            $row['category_id'] = isset($payload['category_id']) && is_numeric($payload['category_id']) ? (int) $payload['category_id'] : null;
+            $row['category_id'] = self::intIdOrNull($payload['category_id'] ?? null);
         } elseif ($dto->type === 'counterparty') {
-            $row['counterparty_id'] = isset($payload['counterparty_id']) && is_numeric($payload['counterparty_id']) ? (int) $payload['counterparty_id'] : null;
+            $row['counterparty_id'] = self::intIdOrNull($payload['counterparty_id'] ?? null);
         } elseif ($dto->type === 'note') {
-            $row['note_text'] = isset($payload['text']) && is_string($payload['text']) ? $payload['text'] : '';
-            $row['note_mode'] = isset($payload['mode']) && is_string($payload['mode']) ? $payload['mode'] : 'set';
+            $noteText = $payload['text'] ?? null;
+            $row['note_text'] = is_string($noteText) ? $noteText : '';
+            $noteMode = $payload['mode'] ?? null;
+            $row['note_mode'] = is_string($noteMode) ? $noteMode : 'set';
         } else {
-            $row['deduction_category_id'] = isset($payload['deduction_category_id']) && is_numeric($payload['deduction_category_id']) ? (int) $payload['deduction_category_id'] : null;
-            if (isset($payload['year']) && is_numeric($payload['year'])) {
+            $row['deduction_category_id'] = self::intIdOrNull($payload['deduction_category_id'] ?? null);
+            $year = self::intIdOrNull($payload['year'] ?? null);
+            if ($year !== null) {
                 $row['year_override_enabled'] = true;
-                $row['year_override'] = (int) $payload['year'];
+                $row['year_override'] = $year;
             }
         }
 
@@ -469,34 +537,38 @@ final class RuleFormModal extends Component
      */
     private static function conditionRowError(array $condition, int $index): ?string
     {
+        $position = $index + 1;
         $value = trim($condition['value']);
-        if ($value === '') {
-            return 'Enter a value for condition '.($index + 1).'.';
-        }
-
         $valueType = self::valueTypeFor($condition['field']);
+        $isBetween = $condition['op'] === 'between';
+        $value2 = $isBetween ? trim($condition['value2'] ?? '') : null;
 
-        if ($condition['op'] === 'between') {
-            $value2 = trim($condition['value2'] ?? '');
-            if ($value2 === '') {
-                return 'Pick a lower and upper bound for condition '.($index + 1).'.';
-            }
-            if ($valueType === 'amount' && self::parseAmount($value2) === null) {
-                return 'Enter a valid amount for condition '.($index + 1).'.';
-            }
+        return match (true) {
+            $value === '' => "Enter a value for condition {$position}.",
+            $isBetween && $value2 === '' => "Pick a lower and upper bound for condition {$position}.",
+            self::hasInvalidAmount($valueType, $value, $value2) => "Enter a valid amount for condition {$position}.",
+            default => null,
+        };
+    }
+
+    // An amount condition's bounds must each parse; a non-amount value type
+    // never fails here. value2 is only present for a `between` op.
+    private static function hasInvalidAmount(string $valueType, string $value, ?string $value2): bool
+    {
+        if ($valueType !== 'amount') {
+            return false;
+        }
+        if ($value2 !== null && self::parseAmount($value2) === null) {
+            return true;
         }
 
-        if ($valueType === 'amount' && self::parseAmount($value) === null) {
-            return 'Enter a valid amount for condition '.($index + 1).'.';
-        }
-
-        return null;
+        return self::parseAmount($value) === null;
     }
 
     /**
      * @param  array{id: ?int, type: string, category_id: ?int, counterparty_id: ?int, note_text: string, note_mode: string, deduction_category_id: ?int, year_override_enabled: bool, year_override: ?int}  $action
      */
-    private static function actionRowError(array $action, int $index): ?string
+    private static function actionRowError(array $action): ?string
     {
         return match ($action['type']) {
             'category' => self::isEmptyId($action['category_id']) ? 'Pick a category for this action.' : null,
