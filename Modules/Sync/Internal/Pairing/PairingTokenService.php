@@ -8,19 +8,12 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Identity\DeviceNameDetector;
-use Modules\Sync\Internal\Pairing\Concerns\AdmitsPairedDevices;
-use Modules\Sync\Internal\Pairing\Concerns\VerifiesPeerConfirmFrames;
-use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
  */
 final class PairingTokenService
 {
-    use AdmitsPairedDevices;
-    use VerifiesPeerConfirmFrames;
-
     private const int TTL_MINUTES = 10;
 
     private const int ACCEPT_GRACE_MINUTES = 5;
@@ -29,9 +22,8 @@ final class PairingTokenService
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly PairingStateMachine $stateMachine,
-        private readonly SafetyNumberDeriver $safetyNumberDeriver,
-        private readonly DeviceNameDetector $deviceNameDetector,
-        private readonly DeviceKeySigner $deviceKeySigner,
+        private readonly PairedDeviceAdmitter $admitter,
+        private readonly PeerConfirmVerifier $peerConfirmVerifier,
     ) {}
 
     // Mints a pairing token for the initiator and persists its hash. Returns
@@ -163,7 +155,7 @@ final class PairingTokenService
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
-        if ($row === null || ! $this->tokenHashMatches($row, $tokenHash)) {
+        if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
             return false;
         }
 
@@ -264,7 +256,7 @@ final class PairingTokenService
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
-        if ($row === null || ! $this->tokenHashMatches($row, $tokenHash)) {
+        if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
             return false;
         }
 
@@ -367,7 +359,7 @@ final class PairingTokenService
         string $peerDeviceId,
         string $sigHex,
     ): ?string {
-        $context = $this->authenticatePeerConfirm(
+        $context = $this->peerConfirmVerifier->authenticatePeerConfirm(
             $userId,
             $tokenHash,
             $confirmingDeviceId,
@@ -410,15 +402,6 @@ final class PairingTokenService
         return $freshRow === null ? null : $this->finalizeIfBothConfirmed($freshRow, $userId);
     }
 
-    // Re-checks the hash the row was located by, in constant time. The WHERE
-    // already matched it, so this guards the column and the query disagreeing
-    // — a stored value that is not a string, or a driver comparison that is
-    // not byte-exact. All three frame handlers asked this, identically.
-    private function tokenHashMatches(\stdClass $row, string $tokenHash): bool
-    {
-        return is_string($row->token_hash) && hash_equals($row->token_hash, $tokenHash);
-    }
-
     // The side this device may confirm on this token, or null when the token
     // is unknown or the device owns neither side.
     private function confirmableSideFor(int $tokenId, int $userId, string $deviceId): ?string
@@ -428,23 +411,7 @@ final class PairingTokenService
             ->where('user_id', $userId)
             ->first(['initiator_device_id', 'responder_device_id']);
 
-        return $token === null ? null : $this->sideOwnedBy($token, $deviceId);
-    }
-
-    // Shared head of confirm() and applyPeerConfirm(): which side of the
-    // pairing a device id owns, or null when it owns neither. hash_equals
-    // rather than === because the ids being compared come from a frame the
-    // far side controls.
-    private function sideOwnedBy(\stdClass $row, string $deviceId): ?string
-    {
-        $initiator = is_string($row->initiator_device_id) ? $row->initiator_device_id : null;
-        $responder = is_string($row->responder_device_id) ? $row->responder_device_id : null;
-
-        return match (true) {
-            $initiator !== null && hash_equals($initiator, $deviceId) => 'initiator',
-            $responder !== null && hash_equals($responder, $deviceId) => 'responder',
-            default => null,
-        };
+        return $token === null ? null : PairingRowGuards::sideOwnedBy($token, $deviceId);
     }
 
     // Shared tail of confirm() and applyPeerConfirm(): both reach the exact
@@ -466,14 +433,14 @@ final class PairingTokenService
             ->where('user_id', $userId)
             ->update(['state' => PairingStateMachine::CONFIRMED]);
 
-        $this->admitResponderDevice($row, $userId);
+        $this->admitter->admitResponderDevice($row, $userId);
 
         // ALSO admit the initiator into the local registry — but ONLY for a
         // row seeded from a genuinely scanned QR (initiator_seeded_at IS NOT
         // NULL, set exclusively by seedFromInitiator()) — never for a
         // placeholder issue()-created row's device id.
         if (is_string($row->initiator_seeded_at)) {
-            $this->admitInitiatorDevice($row, $userId);
+            $this->admitter->admitInitiatorDevice($row, $userId);
         }
 
         return PairingStateMachine::CONFIRMED;

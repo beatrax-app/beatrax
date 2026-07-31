@@ -12,7 +12,7 @@ use Modules\Ledger\Public\Contracts\RecordsTransactions;
 
 final class GoodBoundaryFixture
 {
-    public function __construct(private RecordsTransactions $writer) {}
+    public function __construct(protected RecordsTransactions $writer) {}
 
     /**
      * @return Builder<Transaction>

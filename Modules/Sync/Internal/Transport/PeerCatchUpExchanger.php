@@ -109,31 +109,42 @@ final readonly class PeerCatchUpExchanger
         $entries = [];
 
         foreach ($rows as $row) {
-            $opType = OpType::tryFrom(is_string($row->op_type) ? $row->op_type : '');
-            if ($opType === null) {
-                continue;
+            $entry = $this->mapRowToEntry($row);
+            if ($entry !== null) {
+                $entries[] = $entry;
             }
-
-            $entries[] = new OpLogEntry(
-                table: is_string($row->table_name) ? $row->table_name : '',
-                pk: self::normalizePk($row->pk),
-                field: is_string($row->field) ? $row->field : '',
-                value: is_string($row->value) ? $row->value : null,
-                hlcL: is_numeric($row->hlc_l) ? (int) $row->hlc_l : 0,
-                hlcC: is_numeric($row->hlc_c) ? (int) $row->hlc_c : 0,
-                deviceId: is_string($row->device_id) ? $row->device_id : '',
-                opType: $opType,
-                signature: is_string($row->signature) ? $row->signature : '',
-                userId: is_numeric($row->user_id) ? (int) $row->user_id : 0,
-                // The GDK epoch tag MUST travel with the ciphertext over the
-                // wire — the op-log value column doubles as the
-                // transport-encrypted payload; dropping this here would
-                // leave the receiving peer unable to decrypt it.
-                gdkEpoch: property_exists($row, 'gdk_epoch') && is_numeric($row->gdk_epoch) ? (int) $row->gdk_epoch : null,
-            );
         }
 
         return $entries;
+    }
+
+    // Maps one op_log_entries row to an OpLogEntry, or null when its op_type
+    // is not a known OpType — an unknown op can never be safely replayed by a
+    // peer, so it is dropped from the exchange.
+    private function mapRowToEntry(\stdClass $row): ?OpLogEntry
+    {
+        $opType = OpType::tryFrom(is_string($row->op_type) ? $row->op_type : '');
+        if ($opType === null) {
+            return null;
+        }
+
+        return new OpLogEntry(
+            table: is_string($row->table_name) ? $row->table_name : '',
+            pk: self::normalizePk($row->pk),
+            field: is_string($row->field) ? $row->field : '',
+            value: is_string($row->value) ? $row->value : null,
+            hlcL: is_numeric($row->hlc_l) ? (int) $row->hlc_l : 0,
+            hlcC: is_numeric($row->hlc_c) ? (int) $row->hlc_c : 0,
+            deviceId: is_string($row->device_id) ? $row->device_id : '',
+            opType: $opType,
+            signature: is_string($row->signature) ? $row->signature : '',
+            userId: is_numeric($row->user_id) ? (int) $row->user_id : 0,
+            // The GDK epoch tag MUST travel with the ciphertext over the
+            // wire — the op-log value column doubles as the
+            // transport-encrypted payload; dropping this here would
+            // leave the receiving peer unable to decrypt it.
+            gdkEpoch: property_exists($row, 'gdk_epoch') && is_numeric($row->gdk_epoch) ? (int) $row->gdk_epoch : null,
+        );
     }
 
     // Accumulates entries per frame, starting a new frame whenever the next

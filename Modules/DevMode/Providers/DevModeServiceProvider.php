@@ -50,6 +50,7 @@ use Modules\DevMode\Internal\Navigation\NavigationRegistryImpl;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Internal\Process\FileTailer;
 use Modules\DevMode\Internal\Process\RunRegistry;
+use Modules\DevMode\Internal\Queue\QueueRowLoader;
 use Modules\DevMode\Internal\Services\OAuthScrubSet;
 use Modules\DevMode\Public\Contracts\AppActionRegistry;
 use Modules\DevMode\Public\Contracts\AuditWriter;
@@ -75,6 +76,17 @@ final class DevModeServiceProvider extends ServiceProvider
         $this->registerAppActionRegistry();
         $this->registerRedactionServices();
         $this->registerAuditServices();
+        $this->registerQueueServices();
+    }
+
+    // QueueInspectorPage resolves QueueRowLoader on demand each render
+    // (never as a persisted Livewire property); binding it here makes the
+    // collaborator's DatabaseManager dependency explicit at the container.
+    private function registerQueueServices(): void
+    {
+        $this->app->singleton(QueueRowLoader::class, static fn (Application $app): QueueRowLoader => new QueueRowLoader(
+            $app->make(DatabaseManager::class),
+        ));
     }
 
     // SAFE + DESTRUCTIVE tier roster. NEVER-EXPOSED commands (migrate,

@@ -307,7 +307,12 @@ final class NoiseHandshakeState
     private function emitLocalEphemeral(): string
     {
         if ($this->localEphemeralPublic === '') {
-            $this->generateEphemeral();
+            // Generate a fresh ephemeral keypair, then zero the combined
+            // keypair scratch buffer once its halves are split out.
+            $keypair = sodium_crypto_kx_keypair();
+            $this->localEphemeralPublic = sodium_crypto_kx_publickey($keypair);
+            $this->localEphemeralSecret = sodium_crypto_kx_secretkey($keypair);
+            sodium_memzero($keypair);
         }
         $this->symmetric->mixHash($this->localEphemeralPublic);
 
@@ -331,7 +336,7 @@ final class NoiseHandshakeState
      */
     private function readRemoteStatic(string $message, int $offset): int
     {
-        $length = $this->hasKey() ? self::PUBLIC_KEY_BYTES + self::AEAD_TAG_BYTES : self::PUBLIC_KEY_BYTES;
+        $length = $this->symmetric->isKeyed() ? self::PUBLIC_KEY_BYTES + self::AEAD_TAG_BYTES : self::PUBLIC_KEY_BYTES;
         $encrypted = substr($message, $offset, $length);
         $this->remoteStaticPublic = $this->symmetric->decryptAndHash($encrypted);
 
@@ -357,24 +362,15 @@ final class NoiseHandshakeState
     }
 
     // Runs one keyed Diffie-Hellman token, mixing the shared secret into the
-    // symmetric state and zeroing the scratch buffer immediately after.
+    // symmetric state and zeroing the scratch buffer after. The 'es'/'se'
+    // crossover is the Noise pattern's DH commutativity: each side pairs its
+    // own ephemeral against the peer's static so both derive the same secret.
+    /**
+     * @throws \RuntimeException on sodium failure.
+     */
     private function mixKeyedDh(string $token): void
     {
-        [$secret, $public] = $this->dhKeyPairForToken($token);
-        $dh = $this->dh($secret, $public);
-        $this->symmetric->mixKey($dh);
-        sodium_memzero($dh);
-    }
-
-    // The initiator/responder crossover for 'es' and 'se' is the Noise
-    // pattern's DH commutativity: each side pairs its own ephemeral against
-    // the peer's static (and vice versa) so both derive the same secret.
-    /**
-     * @return array{0: string, 1: string} [secretKey, publicKey]
-     */
-    private function dhKeyPairForToken(string $token): array
-    {
-        return match ($token) {
+        [$secret, $public] = match ($token) {
             self::TOKEN_EE => [$this->localEphemeralSecret, $this->remoteEphemeralPublic],
             self::TOKEN_ES => $this->isInitiator
                 ? [$this->localEphemeralSecret, $this->remoteStaticPublic]
@@ -385,35 +381,15 @@ final class NoiseHandshakeState
             self::TOKEN_SS => [$this->localStaticSecret, $this->remoteStaticPublic],
             default => throw new \LogicException('Noise handshake: unknown DH token: '.$token),
         };
-    }
 
-    /**
-     * @throws \RuntimeException on sodium failure.
-     */
-    private function dh(string $secretKey, string $publicKey): string
-    {
         try {
-            $result = sodium_crypto_scalarmult($secretKey, $publicKey);
+            $dh = sodium_crypto_scalarmult($secret, $public);
         } catch (SodiumException $e) {
             throw CryptoOperationFailedException::during('Noise Diffie-Hellman', $e);
         }
 
-        return $result;
-    }
-
-    private function generateEphemeral(): void
-    {
-        $keypair = sodium_crypto_kx_keypair();
-        $this->localEphemeralPublic = sodium_crypto_kx_publickey($keypair);
-        $this->localEphemeralSecret = sodium_crypto_kx_secretkey($keypair);
-        sodium_memzero($keypair);
-    }
-
-    // Sizes the encrypted 's' token: an unkeyed 's' is the raw 32-byte
-    // public key, a keyed 's' is 32 bytes + the 16-byte AEAD tag = 48 bytes.
-    private function hasKey(): bool
-    {
-        return $this->symmetric->isKeyed();
+        $this->symmetric->mixKey($dh);
+        sodium_memzero($dh);
     }
 
     private function assertNotSplit(): void

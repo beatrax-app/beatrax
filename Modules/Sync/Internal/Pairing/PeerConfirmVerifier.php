@@ -2,24 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sync\Internal\Pairing\Concerns;
+namespace Modules\Sync\Internal\Pairing;
 
-use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
-use Modules\Sync\Internal\Pairing\PairingFrame;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
-use Modules\Sync\Internal\Pairing\PeerConfirmContext;
-use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
+use Illuminate\Database\DatabaseManager;
+use Modules\Core\Public\Contracts\Clock;
+use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 /**
- * @link ../../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/architecture.md
  */
-trait VerifiesPeerConfirmFrames
+final class PeerConfirmVerifier
 {
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly Clock $clock,
+        private readonly DeviceKeySigner $deviceKeySigner,
+    ) {}
+
     // The full PAIR_CONFIRM gate sequence, in the order the gates depend on
     // each other: locate the row, establish which side this device is, then
     // authenticate the frame against the identity that row bound. A null
     // return is a fail-closed rejection at any one of them.
-    private function authenticatePeerConfirm(
+    public function authenticatePeerConfirm(
         int $userId,
         string $tokenHash,
         string $confirmingDeviceId,
@@ -35,7 +39,7 @@ trait VerifiesPeerConfirmFrames
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
-        if ($row === null || ! $this->tokenHashMatches($row, $tokenHash)) {
+        if ($row === null || ! PairingRowGuards::tokenHashMatches($row, $tokenHash)) {
             return null;
         }
 
@@ -67,7 +71,7 @@ trait VerifiesPeerConfirmFrames
             return null;
         }
 
-        return $this->sideOwnedBy($row, $selfDeviceId);
+        return PairingRowGuards::sideOwnedBy($row, $selfDeviceId);
     }
 
     // The anti-forgery gate: the frame must be signed by the key this row

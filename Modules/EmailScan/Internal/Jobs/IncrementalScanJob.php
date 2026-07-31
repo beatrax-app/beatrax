@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\EmailScan\Internal\Jobs;
 
-use DateTimeImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -83,6 +82,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         MimeHeaderParser $mime,
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
+        ScanMessageMapper $mapper,
     ): void {
         $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery);
         if ($prepared === null) {
@@ -95,8 +95,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             // gmail|microsoft the only legal production values, so it is
             // reached only if data bypassed the migration.
             match ($prepared->provider) {
-                MailProvider::Gmail->value => $this->runGmailIncremental($prepared->context, $gmail, $prepared->senderPatterns, $prepared->stateRow),
-                MailProvider::Microsoft->value => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow),
+                MailProvider::Gmail->value => $this->runGmailIncremental($prepared->context, $gmail, $prepared->senderPatterns, $prepared->stateRow, $mapper),
+                MailProvider::Microsoft->value => $this->runMicrosoftIncremental($prepared->context, $graph, $prepared->senderPatterns, $prepared->stateRow, $mapper),
                 default => $sm->applyStatus(
                     $this->inboxId,
                     InboxScanStatus::Error->value,
@@ -211,6 +211,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         GmailApiClientContract $gmail,
         array $senderPatterns,
         \stdClass $stateRow,
+        ScanMessageMapper $mapper,
     ): void {
         $startHistoryId = is_string($stateRow->last_history_id ?? null) ? $stateRow->last_history_id : '';
         if ($startHistoryId === '') {
@@ -219,7 +220,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        [$messageIds, $newHistoryId] = $this->fetchGmailHistory($gmail, $context->clock, $stateRow, $senderPatterns, $startHistoryId);
+        [$messageIds, $newHistoryId] = $this->fetchGmailHistory($gmail, $context->clock, $stateRow, $senderPatterns, $startHistoryId, $mapper);
 
         foreach ($messageIds as $messageId) {
             if (! $context->alreadyIndexed($messageId)) {
@@ -242,16 +243,17 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         \stdClass $stateRow,
         array $senderPatterns,
         string $startHistoryId,
+        ScanMessageMapper $mapper,
     ): array {
         try {
             $history = $gmail->listHistory($this->inboxId, $startHistoryId);
 
-            return [$this->extractGmailHistoryMessageIds($history['history']), $history['historyId']];
+            return [$mapper->extractGmailHistoryMessageIds($history['history']), $history['historyId']];
         } catch (CursorExpiredException) {
             // listSenderMessages never returns a historyId (Gmail
             // surfaces it via getProfile in production), so the prior
             // cursor is kept — the next run re-attempts listHistory.
-            return [$this->gmailFallbackWalk($gmail, $stateRow, $senderPatterns, $clock), null];
+            return [$this->gmailFallbackWalk($gmail, $stateRow, $senderPatterns, $clock, $mapper), null];
         }
     }
 
@@ -263,16 +265,17 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         GraphApiClientContract $graph,
         array $senderPatterns,
         \stdClass $stateRow,
+        ScanMessageMapper $mapper,
     ): void {
         $storedDeltaLink = is_string($stateRow->last_delta_link ?? null) ? $stateRow->last_delta_link : '';
         if ($storedDeltaLink === '') {
             return;
         }
 
-        [$messages, $newDeltaLink] = $this->fetchGraphDelta($graph, $context->clock, $stateRow, $senderPatterns, $storedDeltaLink);
+        [$messages, $newDeltaLink] = $this->fetchGraphDelta($graph, $context->clock, $stateRow, $senderPatterns, $storedDeltaLink, $mapper);
 
         foreach ($messages as $msgMeta) {
-            $this->persistDeltaMessage($context, $graph, $msgMeta, $senderPatterns);
+            $this->persistDeltaMessage($context, $graph, $msgMeta, $senderPatterns, $mapper);
         }
 
         if (is_string($newDeltaLink) && $newDeltaLink !== '') {
@@ -290,6 +293,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         \stdClass $stateRow,
         array $senderPatterns,
         string $storedDeltaLink,
+        ScanMessageMapper $mapper,
     ): array {
         try {
             $page = $graph->deltaPage($this->inboxId, $storedDeltaLink);
@@ -300,7 +304,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
             // re-baselined via deltaPage(null, walkStartedAt) — the same
             // pattern BackfillInboxJob uses to close the gap-window race.
             $walkStartedAt = $clock->now()->toDateTimeImmutable();
-            $messages = $this->graphFallbackWalk($graph, $stateRow, $senderPatterns, $clock);
+            $messages = $this->graphFallbackWalk($graph, $stateRow, $senderPatterns, $clock, $mapper);
             $baseline = $graph->deltaPage($this->inboxId, null, $walkStartedAt);
 
             return [$messages, $baseline['deltaLink']];
@@ -316,17 +320,18 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         GraphApiClientContract $graph,
         array $msgMeta,
         array $senderPatterns,
+        ScanMessageMapper $mapper,
     ): void {
         // Client-side post-filter: Graph's delta endpoint doesn't honour
         // a from-address filter, so senders outside the allow-list are
         // dropped here (the fallback walk already filters server-side
         // via listSenderMessagesPaged).
-        $senderAddr = self::extractSenderAddress($msgMeta);
-        if (! $this->matchesAnyPattern($senderAddr, $senderPatterns)) {
+        $senderAddr = $mapper->extractSenderAddress($msgMeta);
+        if (! $mapper->matchesAnyPattern($senderAddr, $senderPatterns)) {
             return;
         }
 
-        $messageId = self::extractProviderMessageId($msgMeta);
+        $messageId = $mapper->extractProviderMessageId($msgMeta);
         if ($messageId === '' || $context->alreadyIndexed($messageId)) {
             return;
         }
@@ -334,7 +339,7 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         $context->storeFetchedMessage(
             $messageId,
             $graph->getRawMessage($this->inboxId, $messageId),
-            $this->graphMessageInternalDate($msgMeta, $context->clock),
+            $mapper->graphMessageInternalDate($msgMeta),
         );
     }
 
@@ -380,40 +385,6 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         }
     }
 
-    // Pulls provider message ids out of a Gmail history.list response;
-    // each entry may carry a messagesAdded array of
-    // {message: {id, threadId}} objects, and the messagesDeleted/
-    // labelAdded shapes are ignored (a deleted message has nothing to fetch).
-    /**
-     * @param  list<array<string, mixed>>  $historyEntries
-     * @return list<string>
-     */
-    private function extractGmailHistoryMessageIds(array $historyEntries): array
-    {
-        $ids = [];
-        foreach ($historyEntries as $entry) {
-            $added = $entry['messagesAdded'] ?? null;
-            if (! is_array($added)) {
-                continue;
-            }
-            foreach ($added as $msgAdded) {
-                if (! is_array($msgAdded)) {
-                    continue;
-                }
-                $message = $msgAdded['message'] ?? null;
-                if (! is_array($message)) {
-                    continue;
-                }
-                $id = $message['id'] ?? null;
-                if (is_string($id) && $id !== '') {
-                    $ids[] = $id;
-                }
-            }
-        }
-
-        return $ids;
-    }
-
     // Date-bounded fallback walk over Gmail's listSenderMessages,
     // invoked when listHistory's startHistoryId has aged out; passes
     // $windowStart = last_scan_at - FALLBACK_WALK_DAYS so the
@@ -427,9 +398,10 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         \stdClass $stateRow,
         array $senderPatterns,
         Clock $clock,
+        ScanMessageMapper $mapper,
     ): array {
         $lastScanAt = is_string($stateRow->last_scan_at ?? null) && $stateRow->last_scan_at !== ''
-            ? $this->safeParseDate($stateRow->last_scan_at, $clock)
+            ? $mapper->safeParseDate($stateRow->last_scan_at)
             : $clock->now()->toDateTimeImmutable();
         $windowStart = $lastScanAt->modify('-'.self::FALLBACK_WALK_DAYS.' days');
 
@@ -466,9 +438,10 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         \stdClass $stateRow,
         array $senderPatterns,
         Clock $clock,
+        ScanMessageMapper $mapper,
     ): array {
         $lastScanAt = is_string($stateRow->last_scan_at ?? null) && $stateRow->last_scan_at !== ''
-            ? $this->safeParseDate($stateRow->last_scan_at, $clock)
+            ? $mapper->safeParseDate($stateRow->last_scan_at)
             : $clock->now()->toDateTimeImmutable();
         $windowStart = $lastScanAt->modify('-'.self::FALLBACK_WALK_DAYS.' days');
 
@@ -486,78 +459,5 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         } while ($nextLink !== null && $nextLink !== '');
 
         return $results;
-    }
-
-    // Matches a sender address against a pattern list: patterns
-    // starting with '@' match by domain suffix, otherwise a substring
-    // containment match (case-insensitive, both sides lowercased).
-    /**
-     * @param  list<string>  $patterns
-     */
-    private function matchesAnyPattern(string $senderAddr, array $patterns): bool
-    {
-        foreach ($patterns as $pattern) {
-            $p = strtolower($pattern);
-            if (str_starts_with($p, '@')) {
-                if (str_ends_with($senderAddr, $p)) {
-                    return true;
-                }
-            } elseif (str_contains($senderAddr, $p)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param  array<string, mixed>  $msgMeta
-     */
-    private static function extractSenderAddress(array $msgMeta): string
-    {
-        $from = $msgMeta['from'] ?? null;
-        if (! is_array($from)) {
-            return '';
-        }
-        $emailAddress = $from['emailAddress'] ?? null;
-        if (! is_array($emailAddress)) {
-            return '';
-        }
-        $rawAddr = $emailAddress['address'] ?? null;
-
-        return is_string($rawAddr) ? strtolower($rawAddr) : '';
-    }
-
-    /**
-     * @param  array<string, mixed>  $msgMeta
-     */
-    private static function extractProviderMessageId(array $msgMeta): string
-    {
-        return is_string($msgMeta['id'] ?? null) ? $msgMeta['id'] : '';
-    }
-
-    // Provider-stamped receivedDateTime is the canonical internal date
-    // for Microsoft; a null return lets the scan context fall back to
-    // the project Clock when the stamp is missing.
-    /**
-     * @param  array<string, mixed>  $msgMeta
-     */
-    private function graphMessageInternalDate(array $msgMeta, Clock $clock): ?DateTimeImmutable
-    {
-        $received = $msgMeta['receivedDateTime'] ?? null;
-        if (! is_string($received) || $received === '') {
-            return null;
-        }
-
-        return $this->safeParseDate($received, $clock);
-    }
-
-    private function safeParseDate(string $raw, Clock $clock): DateTimeImmutable
-    {
-        try {
-            return new DateTimeImmutable($raw);
-        } catch (Throwable) {
-            return $clock->now()->toDateTimeImmutable();
-        }
     }
 }
