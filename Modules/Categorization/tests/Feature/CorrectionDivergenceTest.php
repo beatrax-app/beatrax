@@ -10,6 +10,7 @@ use Livewire\Livewire;
 use Modules\Categorization\Internal\Http\Livewire\CorrectionDivergenceToast;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Events\CategorizationDiverged;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
@@ -67,12 +68,14 @@ function seedDivergenceRule(User $user, int $categoryId, string $value = 'SPOTIF
 
     return ($create)(
         $user,
-        10,
-        'all',
-        true,
-        null,
-        [['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => $value]],
-        [['type' => 'category', 'payload' => ['category_id' => $categoryId]]],
+        new RuleInput(
+            priority: 10,
+            combinator: 'all',
+            active: true,
+            notes: null,
+            conditions: [['field' => 'merchant', 'op' => 'contains', 'value_type' => 'string', 'value' => $value]],
+            actions: [['type' => 'category', 'payload' => ['category_id' => $categoryId]]],
+        ),
     );
 }
 

@@ -12,6 +12,7 @@ use Modules\Categorization\Internal\Jobs\ReapplyRulesJob;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
@@ -61,7 +62,7 @@ function seedRulePageRule(User $user, int $priority, array $conditions, array $a
     /** @var CreateCategorizationRule $create */
     $create = Container::getInstance()->make(CreateCategorizationRule::class);
 
-    return ($create)($user, $priority, 'all', true, null, $conditions, $actions);
+    return ($create)($user, new RuleInput(priority: $priority, combinator: 'all', active: true, notes: null, conditions: $conditions, actions: $actions));
 }
 
 it('renders the empty state when the user has no rules', function (): void {

@@ -11,6 +11,7 @@ use Modules\Categorization\Internal\Services\RuleEngine;
 use Modules\Categorization\Internal\Services\RuleMatchInput;
 use Modules\Categorization\Public\Actions\CreateCategorizationRule;
 use Modules\Categorization\Public\Actions\UpdateCategorizationRule;
+use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Core\Models\User;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Ledger\Models\Category;
@@ -61,7 +62,7 @@ function seedFormRule(User $user, int $priority, string $combinator, array $cond
     /** @var CreateCategorizationRule $create */
     $create = Container::getInstance()->make(CreateCategorizationRule::class);
 
-    return ($create)($user, $priority, $combinator, true, null, $conditions, $actions);
+    return ($create)($user, new RuleInput(priority: $priority, combinator: $combinator, active: true, notes: null, conditions: $conditions, actions: $actions));
 }
 
 it('opens in create mode when rule-form:open fires without a ruleId', function (): void {

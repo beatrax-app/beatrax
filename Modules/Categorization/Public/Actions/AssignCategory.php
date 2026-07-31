@@ -91,13 +91,14 @@ final class AssignCategory implements AssignsCategory
         }
 
         // auto_category_provenance is best-effort audit metadata — a
-        // corrupt JSON payload must NOT crash a reclassify request; the
-        // JsonException catch falls back to no-prior-provenance.
+        // corrupt JSON payload must NOT crash a reclassify request, so a
+        // JsonException falls through to the no-prior-provenance path the
+        // is_array guard below already owns.
         try {
             /** @var mixed $decoded */
             $decoded = json_decode($raw, associative: true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            return null;
+            $decoded = null;
         }
         if (! is_array($decoded)) {
             return null;
