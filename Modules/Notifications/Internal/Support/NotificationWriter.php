@@ -26,64 +26,60 @@ final class NotificationWriter
         private readonly SessionFactory $session,
     ) {}
 
-    /**
-     * @param  array<string, mixed>|null  $params
-     */
-    public function write(
-        int $userId,
-        string $triggerType,
-        string $subjectKey,
-        string $occurrence,
-        string $title,
-        string $body,
-        ?array $params = null,
-        ?string $deepLinkRoute = null,
-    ): string {
-        $id = $this->keys->derive($userId, $triggerType, $subjectKey, $occurrence);
+    public function write(NotificationDraft $draft): string
+    {
+        $id = $this->keys->derive($draft->userId, $draft->triggerType, $draft->subjectKey, $draft->occurrence);
         $now = $this->clock->now()->toDateTimeString();
-        $paramsJson = $params !== null ? json_encode($params, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) : null;
+        $paramsJson = $draft->params !== null
+            ? json_encode($draft->params, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)
+            : null;
 
         $attrs = [
             'id' => $id,
-            'user_id' => $userId,
+            'user_id' => $draft->userId,
             'state' => 'open',
             'read_at' => null,
             'dismissed_at' => null,
-            'title' => $title,
-            'body' => $body,
+            'title' => $draft->title,
+            'body' => $draft->body,
             'params' => $paramsJson,
-            'trigger_type' => $triggerType,
+            'trigger_type' => $draft->triggerType,
             'created_at' => $now,
             'updated_at' => $now,
         ];
 
-        $encrypted = $this->codec->encryptAttrs('notifications', $attrs, $userId, ($this->session)());
+        $encrypted = $this->codec->encryptAttrs('notifications', $attrs, $draft->userId, ($this->session)());
 
         $affected = $this->db->connection()->table('notifications')->insertOrIgnore($encrypted);
 
         if ($affected === 1) {
-            $this->events->dispatch(new NotificationMutated(
-                notificationId: $id,
-                userId: $userId,
-                mutationType: 'create',
-                dirtyFields: [
-                    'title' => $title,
-                    'body' => $body,
-                    'trigger_type' => $triggerType,
-                    'params' => $paramsJson,
-                ],
-            ));
-
-            $this->events->dispatch(new NotificationDeliverable(
-                notificationId: $id,
-                userId: $userId,
-                triggerType: $triggerType,
-                title: $title,
-                body: $body,
-                deepLinkRoute: $deepLinkRoute,
-            ));
+            $this->dispatchCreated($id, $draft, $paramsJson);
         }
 
         return $id;
+    }
+
+    private function dispatchCreated(string $id, NotificationDraft $draft, ?string $paramsJson): void
+    {
+        $this->events->dispatch(new NotificationMutated(
+            notificationId: $id,
+            userId: $draft->userId,
+            mutationType: 'create',
+            dirtyFields: [
+                'title' => $draft->title,
+                'body' => $draft->body,
+                'trigger_type' => $draft->triggerType,
+                'params' => $paramsJson,
+            ],
+        ));
+
+        $this->events->dispatch(new NotificationDeliverable(
+            notificationId: $id,
+            userId: $draft->userId,
+            triggerType: $draft->triggerType,
+            title: $draft->title,
+            body: $draft->body,
+            deepLinkRoute: $draft->deepLinkRoute,
+        ));
     }
 }

@@ -46,19 +46,12 @@ final class SuppressionEvaluator
 
         $prefs = $this->preferences->forCurrentDevice($user);
 
-        if ($this->seeding) {
-            return new DeliveryDecision(false, 'seeding', $prefs->hideDetails);
-        }
-
-        if (! $this->triggerEnabled($prefs, $triggerType)) {
-            return new DeliveryDecision(false, 'trigger_disabled', $prefs->hideDetails);
-        }
-
-        if ($this->insideQuietHours($prefs, $at)) {
-            return new DeliveryDecision(false, 'quiet_hours', $prefs->hideDetails);
-        }
-
-        return new DeliveryDecision(true, 'ok', $prefs->hideDetails);
+        return match (true) {
+            $this->seeding => new DeliveryDecision(false, 'seeding', $prefs->hideDetails),
+            ! $this->triggerEnabled($prefs, $triggerType) => new DeliveryDecision(false, 'trigger_disabled', $prefs->hideDetails),
+            $this->insideQuietHours($prefs, $at) => new DeliveryDecision(false, 'quiet_hours', $prefs->hideDetails),
+            default => new DeliveryDecision(true, 'ok', $prefs->hideDetails),
+        };
     }
 
     // Runs $callback with delivery globally suppressed, restoring the
@@ -117,27 +110,17 @@ final class SuppressionEvaluator
     // time >= from OR time < to.
     private function insideQuietHours(NotificationPreferencesDto $prefs, CarbonImmutable $at): bool
     {
-        if (! $prefs->quietHoursEnabled) {
-            return false;
-        }
-
         $from = $prefs->quietHoursFrom;
         $to = $prefs->quietHoursTo;
 
-        if ($from === null || $to === null) {
+        if (! $prefs->quietHoursEnabled || $from === null || $to === null || $from === $to) {
             return false;
         }
 
         $now = $at->format('H:i');
 
-        if ($from === $to) {
-            return false;
-        }
-
-        if ($from < $to) {
-            return $now >= $from && $now < $to;
-        }
-
-        return $now >= $from || $now < $to;
+        return $from < $to
+            ? ($now >= $from && $now < $to)
+            : ($now >= $from || $now < $to);
     }
 }

@@ -7,6 +7,7 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Position\Public\Dto\PositionSummaryDto;
@@ -28,7 +29,7 @@ final class PersistPositionDigest
     public function handle(PositionDigestDue $event): void
     {
         try {
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST,
                 subjectKey: 'position',
@@ -37,7 +38,7 @@ final class PersistPositionDigest
                 body: $this->composeBody($event->position),
                 params: ['target_kind' => 'dashboard'],
                 deepLinkRoute: $this->urls->route('dashboard'),
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating digest job run.
