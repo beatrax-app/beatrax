@@ -30,15 +30,35 @@ final class EmitOAuthReauthRequiredAlert
 
     public function handle(): void
     {
+        if ($this->shouldEmitAlert()) {
+            SystemAlert::query()->create([
+                'user_id' => $this->currentUser->id(),
+                'kind' => self::REAUTH_KIND,
+                'severity' => 'warning',
+                'message' => self::MESSAGE,
+            ]);
+        }
+    }
+
+    private function shouldEmitAlert(): bool
+    {
         if (! $this->currentUser->isAuthenticated()) {
-            return;
+            return false;
         }
 
         $backupPath = $this->paths->secrets().DIRECTORY_SEPARATOR.self::BACKUP_FILENAME;
         if (! $this->files->exists($backupPath)) {
-            return;
+            return false;
         }
 
+        return ! $this->userAlreadyHandled();
+    }
+
+    // "Handled" means the user has either re-authorized (an
+    // oauth_secrets row exists) or already has an open reauth alert,
+    // so a duplicate must not be raised.
+    private function userAlreadyHandled(): bool
+    {
         $userId = $this->currentUser->id();
         $connection = $this->db->connection();
 
@@ -49,23 +69,13 @@ final class EmitOAuthReauthRequiredAlert
             ->where('user_id', $userId)
             ->exists();
         if ($hasSecrets) {
-            return;
+            return true;
         }
 
-        $alreadyAlerted = $connection->table('system_alerts')
+        return $connection->table('system_alerts')
             ->where('user_id', $userId)
             ->where('kind', self::REAUTH_KIND)
             ->whereNull('acknowledged_at')
             ->exists();
-        if ($alreadyAlerted) {
-            return;
-        }
-
-        SystemAlert::query()->create([
-            'user_id' => $userId,
-            'kind' => self::REAUTH_KIND,
-            'severity' => 'warning',
-            'message' => self::MESSAGE,
-        ]);
     }
 }

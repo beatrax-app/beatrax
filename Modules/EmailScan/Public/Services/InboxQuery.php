@@ -116,21 +116,7 @@ final class InboxQuery
 
     private function makeDto(stdClass $row): InboxHealthDto
     {
-        $backfillProgressRaw = $row->backfill_progress ?? null;
-        $fetched = null;
-        $totalEstimated = null;
-
-        if (is_string($backfillProgressRaw) && $backfillProgressRaw !== '') {
-            $decoded = json_decode($backfillProgressRaw, true);
-            if (is_array($decoded)) {
-                $fetched = isset($decoded['fetched_count']) && is_numeric($decoded['fetched_count'])
-                    ? (int) $decoded['fetched_count']
-                    : null;
-                $totalEstimated = isset($decoded['total_estimated']) && is_numeric($decoded['total_estimated'])
-                    ? (int) $decoded['total_estimated']
-                    : null;
-            }
-        }
+        [$fetched, $totalEstimated] = $this->parseBackfillProgress($row->backfill_progress ?? null);
 
         $status = self::toString($row->status ?? null);
         if ($status === '') {
@@ -141,29 +127,57 @@ final class InboxQuery
             $status = 'idle';
         }
 
-        $lastScanAt = null;
-        $lastScanRaw = self::toString($row->last_scan_at ?? null);
-        if ($lastScanRaw !== '') {
-            try {
-                $lastScanAt = new DateTimeImmutable($lastScanRaw);
-            } catch (\Throwable) {
-                $lastScanAt = null;
-            }
-        }
-
         return new InboxHealthDto(
             inboxId: self::toInt($row->id),
             userId: self::toInt($row->user_id),
             provider: self::toString($row->provider),
             email: self::toString($row->email),
             backfillWindowMonths: self::toInt($row->backfill_window_months),
-            lastScanAt: $lastScanAt,
+            lastScanAt: $this->parseLastScanAt($row->last_scan_at ?? null),
             status: $status,
             retryAttempts: self::toInt($row->retry_attempts ?? 0),
             errorMessage: $this->toNullableString($row->error_message ?? null),
             backfillFetchedCount: $fetched,
             backfillTotalEstimated: $totalEstimated,
         );
+    }
+
+    /**
+     * @return array{0: ?int, 1: ?int}
+     */
+    private function parseBackfillProgress(mixed $raw): array
+    {
+        if (! is_string($raw) || $raw === '') {
+            return [null, null];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return [null, null];
+        }
+
+        $fetched = isset($decoded['fetched_count']) && is_numeric($decoded['fetched_count'])
+            ? (int) $decoded['fetched_count']
+            : null;
+        $totalEstimated = isset($decoded['total_estimated']) && is_numeric($decoded['total_estimated'])
+            ? (int) $decoded['total_estimated']
+            : null;
+
+        return [$fetched, $totalEstimated];
+    }
+
+    private function parseLastScanAt(mixed $raw): ?DateTimeImmutable
+    {
+        $lastScanRaw = self::toString($raw);
+        if ($lastScanRaw === '') {
+            return null;
+        }
+
+        try {
+            return new DateTimeImmutable($lastScanRaw);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function toNullableString(mixed $value): ?string
