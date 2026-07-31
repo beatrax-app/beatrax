@@ -9,15 +9,12 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
-use Modules\Core\Public\Services\EncryptionMigrationService;
-use Modules\Core\Public\Services\SessionFactory;
-use Modules\Search\Internal\Services\Concerns\MapsSearchRows;
-use Modules\Search\Internal\Services\Concerns\ResolvesFtsCandidates;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
+use Modules\Search\Internal\Services\FtsCandidateResolver;
 use Modules\Search\Internal\Services\QueryParser;
+use Modules\Search\Internal\Services\SearchRowMapper;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Dto\SearchResultPage;
-use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // Full-text search read entry point for /transactions and the ⌘K
 // palette: FTS5 MATCH + SQL filters + highlight + cursor pagination.
@@ -28,32 +25,16 @@ use Modules\Sync\Public\Services\SensitiveColumnCodec;
  */
 final class SearchQuery
 {
-    private const MATCH_NOTHING = '1 = 0';
-
     use CoercesScalars;
-    use MapsSearchRows;
-    use ResolvesFtsCandidates;
 
-    // SQLite's highlight()/snippet() do not HTML-escape surrounding
-    // text, so matches are marked with these control-char sentinels
-    // (never present in transaction text) instead of literal <mark> —
-    // decorateHighlight() escapes the string, then swaps them in.
-    private const MARK_START = "\x02";
-
-    private const MARK_END = "\x03";
-
-    // Bounds the candidate window the <3-char LIKE fallback decrypts,
-    // most-recent-first, so a short query never decrypts an entire
-    // multi-year history on every keystroke.
-    private const LIKE_FALLBACK_CANDIDATE_CAP = 500;
+    private const MATCH_NOTHING = '1 = 0';
 
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly QueryParser $parser,
         private readonly DidYouMeanSuggester $suggester,
-        private readonly SensitiveColumnCodec $codec,
-        private readonly SessionFactory $session,
-        private readonly EncryptionMigrationService $encryptionService,
+        private readonly FtsCandidateResolver $ftsResolver,
+        private readonly SearchRowMapper $rowMapper,
     ) {}
 
     public function search(
@@ -70,11 +51,17 @@ final class SearchQuery
 
         $filters = $this->mergeTokenFilters($user, $filters, $parsedFilters);
 
-        // null means "no text query" (filters-only mode) — the base
-        // query is scoped by user_id + filters directly, with no
-        // whereIn over a materialized id list (avoids the
-        // SQLITE_MAX_VARIABLE_NUMBER crash on full history).
-        $candidateIds = $this->resolveCandidateIds($user, $textQuery, $filters);
+        // null means "no text query" (filters-only mode) — the base query
+        // is scoped by user_id + filters directly, with no whereIn over a
+        // materialized id list (avoids the SQLITE_MAX_VARIABLE_NUMBER
+        // crash on full history); the fallback scan reuses applyFilters.
+        $candidateIds = $this->ftsResolver->resolve(
+            $user,
+            $textQuery,
+            function (Builder $candidateQuery) use ($user, $filters): void {
+                $this->applyFilters($candidateQuery, $user, $filters);
+            },
+        );
 
         // The amount-query branch only fires when the text branch
         // found no candidates — otherwise a bare numeric query like
@@ -124,7 +111,7 @@ final class SearchQuery
 
         $highlights = [];
         if (strlen($textQuery) >= 3 && $candidateIds !== null && count($candidateIds) > 0) {
-            $highlights = $this->loadHighlights($user, $textQuery, self::toIntList($sliced->pluck('id')->all()));
+            $highlights = $this->ftsResolver->loadHighlights($user, $textQuery, self::toIntList($sliced->pluck('id')->all()));
         }
 
         $dtos = [];
@@ -133,7 +120,7 @@ final class SearchQuery
         foreach ($sliced as $row) {
             $rowId = self::toInt($row->id);
             $highlight = $highlights[$rowId] ?? null;
-            $dtos[] = $this->mapRow($row, $highlight, $user->id);
+            $dtos[] = $this->rowMapper->map($row, $highlight, $user->id);
             $lastId = $rowId;
             $lastPostedAt = self::toString($row->posted_at);
         }
@@ -167,7 +154,7 @@ final class SearchQuery
             $hits[] = [
                 'id' => $row->id,
                 'counterpartyName' => $row->counterpartyName,
-                'amount' => $this->formatMinorAmount($row->amountMinor, $row->amountCurrency),
+                'amount' => $this->rowMapper->formatMinorAmount($row->amountMinor, $row->amountCurrency),
                 'snippet' => $row->snippet,
                 'url' => '/transactions/'.$row->id,
             ];

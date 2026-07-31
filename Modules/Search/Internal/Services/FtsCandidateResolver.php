@@ -2,10 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Modules\Search\Internal\Services\Concerns;
+namespace Modules\Search\Internal\Services;
 
+use Closure;
+use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
-use Modules\Search\Public\Dto\SearchFilters;
+use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Services\SessionFactory;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 // The candidate-id half of a search: turn the text query into a bounded
@@ -13,17 +19,33 @@ use stdClass;
 // decrypt-then-substring LIKE fallback, plus the highlight/snippet load
 // that reuses the same MATCH expression.
 /**
- * @link ../../../../../.docs/features/search/architecture.md
+ * @link ../../../../.docs/features/search/architecture.md
  */
-trait ResolvesFtsCandidates
+final class FtsCandidateResolver
 {
+    use CoercesScalars;
+
+    // Bounds the candidate window the <3-char LIKE fallback decrypts,
+    // most-recent-first, so a short query never decrypts an entire
+    // multi-year history on every keystroke.
+    public const LIKE_FALLBACK_CANDIDATE_CAP = 500;
+
+    public function __construct(
+        private readonly DatabaseManager $db,
+        private readonly SensitiveColumnCodec $codec,
+        private readonly SessionFactory $session,
+        private readonly EncryptionMigrationService $encryptionService,
+    ) {}
+
     // Returns null for the empty-text (filters-only) branch to signal
-    // "apply no id restriction"; otherwise a bounded list of matched
-    // ids (possibly empty) via FTS5 MATCH or the LIKE fallback.
+    // "apply no id restriction"; otherwise a bounded matched-id list via
+    // FTS5 MATCH or the LIKE fallback, whose scan runs the caller's
+    // filter routine so it honours the same active filters as the query.
     /**
+     * @param  Closure(Builder): void  $applyFilters
      * @return list<int>|null
      */
-    private function resolveCandidateIds(User $user, string $textQuery, SearchFilters $filters): ?array
+    public function resolve(User $user, string $textQuery, Closure $applyFilters): ?array
     {
         if ($textQuery === '') {
             return null;
@@ -34,38 +56,89 @@ trait ResolvesFtsCandidates
         // query with no >=3-char word falls back to the LIKE scan.
         $ftsWords = $this->significantFtsWords($textQuery);
         if (strlen($textQuery) < 3 || $ftsWords === []) {
-            return $this->likeFallbackIds($user, $textQuery, $filters);
+            return $this->likeFallbackIds($user, $textQuery, $applyFilters);
         }
 
-        return self::toIntList(
-            $this->db->connection()
-                ->table('transaction_search_fts')
-                ->whereRaw('transaction_search_fts MATCH ?', [$this->ftsMatchExpression($ftsWords)])
-                ->join(
-                    'transaction_search_docs',
-                    'transaction_search_docs.transaction_id',
-                    '=',
-                    'transaction_search_fts.rowid',
-                )
-                ->where('transaction_search_docs.user_id', $user->id)
-                ->pluck('transaction_search_fts.rowid')
-                ->all(),
-        );
+        $rowids = $this->db->connection()
+            ->table('transaction_search_fts')
+            ->whereRaw('transaction_search_fts MATCH ?', [$this->ftsMatchExpression($ftsWords)])
+            ->join(
+                'transaction_search_docs',
+                'transaction_search_docs.transaction_id',
+                '=',
+                'transaction_search_fts.rowid',
+            )
+            ->where('transaction_search_docs.user_id', $user->id)
+            ->pluck('transaction_search_fts.rowid')
+            ->all();
+
+        return array_values(array_map(static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0, $rowids));
+    }
+
+    /**
+     * @param  list<int>  $rowIds
+     * @return array<int, stdClass>
+     */
+    public function loadHighlights(User $user, string $textQuery, array $rowIds): array
+    {
+        if ($rowIds === []) {
+            return [];
+        }
+
+        $ftsWords = $this->significantFtsWords($textQuery);
+        if ($ftsWords === []) {
+            return [];
+        }
+        $ftsMatch = $this->ftsMatchExpression($ftsWords);
+
+        $highlightRows = $this->db->connection()
+            ->table('transaction_search_fts')
+            ->selectRaw(
+                'transaction_search_fts.rowid,
+                 highlight(transaction_search_fts, 0, ?, ?) AS highlighted_body,
+                 snippet(transaction_search_fts, 0, ?, ?, ?, 12) AS snippet_body',
+                [
+                    HighlightSentinels::START,
+                    HighlightSentinels::END,
+                    HighlightSentinels::START,
+                    HighlightSentinels::END,
+                    '…',
+                ],
+            )
+            ->whereRaw('transaction_search_fts MATCH ?', [$ftsMatch])
+            ->join(
+                'transaction_search_docs',
+                'transaction_search_docs.transaction_id',
+                '=',
+                'transaction_search_fts.rowid',
+            )
+            ->where('transaction_search_docs.user_id', $user->id)
+            ->whereIn('transaction_search_fts.rowid', $rowIds)
+            ->get();
+
+        /** @var array<int, stdClass> $result */
+        $result = [];
+        foreach ($highlightRows as $hl) {
+            $result[self::toInt($hl->rowid)] = $hl;
+        }
+
+        return $result;
     }
 
     // Fallback for queries too short for FTS5. Narrows the candidate set
     // in SQL on cheap plaintext dimensions only, then decrypts +
     // substring-matches in PHP (a no-op pass-through when disabled).
     /**
+     * @param  Closure(Builder): void  $applyFilters
      * @return list<int>
      */
-    private function likeFallbackIds(User $user, string $textQuery, SearchFilters $filters): array
+    private function likeFallbackIds(User $user, string $textQuery, Closure $applyFilters): array
     {
         $query = $this->db->connection()
             ->table('transactions')
             ->where('transactions.user_id', $user->id);
 
-        $this->applyFilters($query, $user, $filters);
+        $applyFilters($query);
 
         /** @var iterable<stdClass> $candidates */
         $candidates = $query
@@ -120,50 +193,6 @@ trait ResolvesFtsCandidates
     }
 
     /**
-     * @param  list<int>  $rowIds
-     * @return array<int, stdClass>
-     */
-    private function loadHighlights(User $user, string $textQuery, array $rowIds): array
-    {
-        if ($rowIds === []) {
-            return [];
-        }
-
-        $ftsWords = $this->significantFtsWords($textQuery);
-        if ($ftsWords === []) {
-            return [];
-        }
-        $ftsMatch = $this->ftsMatchExpression($ftsWords);
-
-        $highlightRows = $this->db->connection()
-            ->table('transaction_search_fts')
-            ->selectRaw(
-                'transaction_search_fts.rowid,
-                 highlight(transaction_search_fts, 0, ?, ?) AS highlighted_body,
-                 snippet(transaction_search_fts, 0, ?, ?, ?, 12) AS snippet_body',
-                [self::MARK_START, self::MARK_END, self::MARK_START, self::MARK_END, '…'],
-            )
-            ->whereRaw('transaction_search_fts MATCH ?', [$ftsMatch])
-            ->join(
-                'transaction_search_docs',
-                'transaction_search_docs.transaction_id',
-                '=',
-                'transaction_search_fts.rowid',
-            )
-            ->where('transaction_search_docs.user_id', $user->id)
-            ->whereIn('transaction_search_fts.rowid', $rowIds)
-            ->get();
-
-        /** @var array<int, stdClass> $result */
-        $result = [];
-        foreach ($highlightRows as $hl) {
-            $result[self::toInt($hl->rowid)] = $hl;
-        }
-
-        return $result;
-    }
-
-    /**
      * @return list<string> the query's words of at least 3 chars
      */
     private function significantFtsWords(string $textQuery): array
@@ -174,8 +203,8 @@ trait ResolvesFtsCandidates
         ));
     }
 
-    // Each word is double-quote-wrapped with embedded quotes doubled,
-    // the standard FTS5 MATCH escaping, then AND-joined.
+    // Each word is double-quote-wrapped with embedded quotes doubled, the
+    // standard FTS5 MATCH escaping, then AND-joined.
     /**
      * @param  list<string>  $ftsWords
      */

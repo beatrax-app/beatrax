@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Modules\Search\Internal\Services\Concerns;
+namespace Modules\Search\Internal\Services;
 
 use Carbon\CarbonImmutable;
+use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Search\Public\Dto\SearchRowDto;
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
 // The row-shaping half of a search: turn a raw joined transactions row
@@ -14,11 +17,18 @@ use stdClass;
 // the counterparty name, resolving the secondary-currency leg, and
 // converting match sentinels into XSS-safe <mark> markup.
 /**
- * @link ../../../../../.docs/features/search/architecture.md
+ * @link ../../../../.docs/features/search/architecture.md
  */
-trait MapsSearchRows
+final class SearchRowMapper
 {
-    private function mapRow(stdClass $row, ?stdClass $highlight, int $userId): SearchRowDto
+    use CoercesScalars;
+
+    public function __construct(
+        private readonly SensitiveColumnCodec $codec,
+        private readonly SessionFactory $session,
+    ) {}
+
+    public function map(stdClass $row, ?stdClass $highlight, int $userId): SearchRowDto
     {
         // Read-side decrypt — transactions.counterparty_name is
         // ciphertext at rest once encryption is enabled; a pass-through
@@ -46,9 +56,17 @@ trait MapsSearchRows
         );
     }
 
+    // Routes through brick/money (via the Ledger Money VO) so the palette
+    // presents amounts exactly like the /transactions table and never
+    // reintroduces float division for money.
+    public function formatMinorAmount(int $minor, string $currency): string
+    {
+        return Money::ofMinor($minor, $currency)->format();
+    }
+
     // The secondary leg is only shown when it exists and settles in a
-    // different currency from the displayed one — same-currency or
-    // absent legs collapse to null/null.
+    // different currency from the displayed one — same-currency or absent
+    // legs collapse to null/null.
     /**
      * @return array{0: ?int, 1: ?string}
      */
@@ -91,7 +109,7 @@ trait MapsSearchRows
 
         $highlightedBody = self::toString($highlight->highlighted_body);
         $parts = explode(chr(12), $highlightedBody, 2);
-        $highlightedCounterparty = $parts[0] !== '' && str_contains($parts[0], self::MARK_START)
+        $highlightedCounterparty = $parts[0] !== '' && str_contains($parts[0], HighlightSentinels::START)
             ? self::decorateHighlight($parts[0])
             : null;
 
@@ -100,7 +118,7 @@ trait MapsSearchRows
         // counterparty" dedup guard could never match once encryption is
         // enabled.
         $snippetBody = self::toString($highlight->snippet_body);
-        $snippetPlain = str_replace([self::MARK_START, self::MARK_END], '', $snippetBody);
+        $snippetPlain = str_replace([HighlightSentinels::START, HighlightSentinels::END], '', $snippetBody);
         $snippet = $snippetBody !== '' && $snippetPlain !== ($counterpartyName ?? '')
             ? self::decorateHighlight($snippetBody)
             : null;
@@ -117,17 +135,9 @@ trait MapsSearchRows
         $escaped = htmlspecialchars($marked, ENT_QUOTES, 'UTF-8');
 
         return str_replace(
-            [self::MARK_START, self::MARK_END],
+            [HighlightSentinels::START, HighlightSentinels::END],
             ['<mark>', '</mark>'],
             $escaped,
         );
-    }
-
-    // Routes through brick/money (via the Ledger Money VO) so the palette
-    // presents amounts exactly like the /transactions table and never
-    // reintroduces float division for money.
-    private function formatMinorAmount(int $minor, string $currency): string
-    {
-        return Money::ofMinor($minor, $currency)->format();
     }
 }

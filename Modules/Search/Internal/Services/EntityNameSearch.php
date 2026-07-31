@@ -41,8 +41,8 @@ final class EntityNameSearch
         return [
             ...$this->counterpartyMatches($user, $q),
             ...$this->categoryMatches($user, $q),
-            ...$this->goalMatches($user, $q),
-            ...$this->potMatches($user, $q),
+            ...$this->ownedNameMatches($user, $q, 'goals', 'goal', '/goals'),
+            ...$this->ownedNameMatches($user, $q, 'pots', 'pot', '/pots'),
             ...$this->recurringMatches($user, $q),
         ];
     }
@@ -135,13 +135,15 @@ final class EntityNameSearch
         return $results;
     }
 
+    // Goals and pots share the same shape: own-rows-only, LIKE on `name`,
+    // and a fixed section URL. The $type/$url pair is all that varies.
     /**
      * @return list<array{id: int, type: string, label: string, url: string}>
      */
-    private function goalMatches(User $user, string $q): array
+    private function ownedNameMatches(User $user, string $q, string $table, string $type, string $url): array
     {
         $rows = $this->db->connection()
-            ->table('goals')
+            ->table($table)
             ->where('user_id', $user->id)
             ->where('name', 'LIKE', $this->likePattern($q))
             ->limit(self::ENTITY_MATCH_LIMIT)
@@ -151,34 +153,9 @@ final class EntityNameSearch
         foreach ($rows as $row) {
             $results[] = [
                 'id' => $this->intField($row, 'id'),
-                'type' => 'goal',
+                'type' => $type,
                 'label' => is_string($row->name) ? $row->name : '',
-                'url' => '/goals',
-            ];
-        }
-
-        return $results;
-    }
-
-    /**
-     * @return list<array{id: int, type: string, label: string, url: string}>
-     */
-    private function potMatches(User $user, string $q): array
-    {
-        $rows = $this->db->connection()
-            ->table('pots')
-            ->where('user_id', $user->id)
-            ->where('name', 'LIKE', $this->likePattern($q))
-            ->limit(self::ENTITY_MATCH_LIMIT)
-            ->get(['id', 'name']);
-
-        $results = [];
-        foreach ($rows as $row) {
-            $results[] = [
-                'id' => $this->intField($row, 'id'),
-                'type' => 'pot',
-                'label' => is_string($row->name) ? $row->name : '',
-                'url' => '/pots',
+                'url' => $url,
             ];
         }
 

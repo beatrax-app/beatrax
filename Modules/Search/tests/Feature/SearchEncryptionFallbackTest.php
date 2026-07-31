@@ -13,6 +13,7 @@ use Modules\Ledger\Public\Actions\RecordTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Search\Internal\Services\DidYouMeanSuggester;
 use Modules\Search\Internal\Services\EntityNameSearch;
+use Modules\Search\Internal\Services\FtsCandidateResolver;
 use Modules\Search\Public\Dto\SearchFilters;
 use Modules\Search\Public\Services\SearchQuery;
 use Modules\Sync\Tests\Support\EnablesEncryptionForUser;
@@ -153,8 +154,9 @@ it('the short-query fallback candidate scan is bounded, not an unbounded full-hi
     // RESEARCH Pitfall 3 / T-14.1-06: assert the fallback's candidate
     // window is a genuinely bounded constant (not, say, PHP_INT_MAX or an
     // unbounded ->get() with no limit()) — the mechanism a naive
-    // full-history decrypt regression would violate.
-    $reflection = new ReflectionClass(SearchQuery::class);
+    // full-history decrypt regression would violate. The cap now lives on
+    // FtsCandidateResolver, which owns the fallback scan.
+    $reflection = new ReflectionClass(FtsCandidateResolver::class);
     $constant = $reflection->getConstant('LIKE_FALLBACK_CANDIDATE_CAP');
 
     expect($constant)->toBeInt();
