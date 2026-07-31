@@ -29,6 +29,10 @@ final class EnvelopeWriter
 
     private const CURRENCY = 'EUR';
 
+    public const MIN_NOTIFY_THRESHOLD_PERCENT = 1;
+
+    public const MAX_NOTIFY_THRESHOLD_PERCENT = 200;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
@@ -208,7 +212,8 @@ final class EnvelopeWriter
     {
         $this->assertCategoryAccessible($user, $categoryId);
 
-        if ($thresholdPercent !== null && ($thresholdPercent < 1 || $thresholdPercent > 200)) {
+        if ($thresholdPercent !== null
+            && ($thresholdPercent < self::MIN_NOTIFY_THRESHOLD_PERCENT || $thresholdPercent > self::MAX_NOTIFY_THRESHOLD_PERCENT)) {
             throw new InvalidArgumentException('Notify threshold must be between 1 and 200.');
         }
 
@@ -324,15 +329,13 @@ final class EnvelopeWriter
 
         $periodDate = $periodStart->toDateString();
 
-        /** @var array{debitId: int, creditId: int}|null $ids */
-        $ids = null;
-
         // One shared correlation id for both paired rows, so undoMove()
         // matches the counterpart deterministically rather than by
         // second-precision created_at.
         $groupId = (string) Str::uuid();
 
-        $this->db->connection()->transaction(function () use ($user, $fromCategoryId, $toCategoryId, $periodDate, $minor, $memo, $groupId, &$ids): void {
+        /** @var array{debitId: int, creditId: int} $ids */
+        $ids = $this->db->connection()->transaction(function () use ($user, $fromCategoryId, $toCategoryId, $periodDate, $minor, $memo, $groupId): array {
             $connection = $this->db->connection();
             $now = $this->clock->now();
 
@@ -364,12 +367,8 @@ final class EnvelopeWriter
                 'updated_at' => $now,
             ]));
 
-            $ids = ['debitId' => $debitId, 'creditId' => $creditId];
+            return ['debitId' => $debitId, 'creditId' => $creditId];
         });
-
-        if ($ids === null) {
-            throw new \RuntimeException('Move failed to write both paired rows.');
-        }
 
         $this->events->dispatch(new EnvelopeMoveMutated(
             moveId: $ids['debitId'],

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Modules\Budgets\Internal\Http\Livewire\BudgetsPage;
 use Modules\Budgets\Public\Services\CarryoverQuery;
+use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -120,4 +121,18 @@ it('does not leak one user\'s threshold to another user', function (): void {
     // A reports 60; B reports the default 90 — no cross-user bleed.
     expect(thresholdRowFor($this->user, $this->groceries->id)->notifyThresholdPercent)->toBe(60);
     expect(thresholdRowFor($userB, $this->groceries->id)->notifyThresholdPercent)->toBe(90);
+});
+
+it('rejects an out-of-range threshold at the writer boundary, independent of the component guard', function (): void {
+    $writer = app(EnvelopeWriter::class);
+
+    expect(fn () => $writer->setNotifyThreshold($this->user, $this->groceries->id, 250))
+        ->toThrow(InvalidArgumentException::class);
+    expect(fn () => $writer->setNotifyThreshold($this->user, $this->groceries->id, 0))
+        ->toThrow(InvalidArgumentException::class);
+
+    $this->assertDatabaseMissing('envelope_settings', [
+        'user_id' => $this->user->id,
+        'category_id' => $this->groceries->id,
+    ]);
 });
