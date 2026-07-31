@@ -64,41 +64,16 @@ final readonly class DeepLinkResolver
         );
     }
 
-    // Re-reads and decrypts the notification's own params column,
-    // user-scoped. Never throws - a missing row, unencryptable/malformed
-    // JSON, or an unexpected shape all collapse to [null, null].
+    // Extracts the (target_kind, target_id) pair from the decoded params.
+    // A missing decode or an off-shape value for either key collapses that
+    // slot to null rather than throwing.
     /**
      * @return array{0: ?string, 1: ?int}
      */
     private function readTarget(string $notificationId, User $user): array
     {
-        $row = $this->db->connection()->table('notifications')
-            ->where('id', $notificationId)
-            ->where('user_id', $user->id)
-            ->first(['params']);
-
-        if (! $row instanceof stdClass) {
-            return [null, null];
-        }
-
-        $raw = $row->params ?? null;
-        if (! is_string($raw) || $raw === '') {
-            return [null, null];
-        }
-
-        $decrypted = $this->codec->decryptRow('notifications', ['params' => $raw], $user->id, $this->session);
-        $paramsJson = $decrypted['params'] ?? null;
-        if (! is_string($paramsJson) || $paramsJson === '') {
-            return [null, null];
-        }
-
-        try {
-            $params = json_decode($paramsJson, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return [null, null];
-        }
-
-        if (! is_array($params)) {
+        $params = $this->decodeParams($notificationId, $user);
+        if ($params === null) {
             return [null, null];
         }
 
@@ -108,22 +83,52 @@ final readonly class DeepLinkResolver
         return [$targetKind, $targetId];
     }
 
+    // Re-reads, decrypts, and JSON-decodes the notification's own params
+    // column, user-scoped. Every failure mode - a missing row, a
+    // non-string/empty payload, unencryptable or malformed JSON, or a
+    // non-array shape - collapses to null rather than throwing.
+    /**
+     * @return array<array-key, mixed>|null
+     */
+    private function decodeParams(string $notificationId, User $user): ?array
+    {
+        $row = $this->db->connection()->table('notifications')
+            ->where('id', $notificationId)
+            ->where('user_id', $user->id)
+            ->first(['params']);
+
+        $raw = $row instanceof stdClass ? $row->params ?? null : null;
+        if (! is_string($raw) || $raw === '') {
+            return null;
+        }
+
+        $decrypted = $this->codec->decryptRow('notifications', ['params' => $raw], $user->id, $this->session);
+        $paramsJson = $decrypted['params'] ?? null;
+        if (! is_string($paramsJson) || $paramsJson === '') {
+            return null;
+        }
+
+        try {
+            $params = json_decode($paramsJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            $params = null;
+        }
+
+        return is_array($params) ? $params : null;
+    }
+
     /**
      * @return array{0: ?string, 1: bool}
      */
     private function resolveTarget(?string $targetKind, ?int $targetId, User $user): array
     {
-        if ($targetKind === null) {
-            return [null, true];
-        }
-
-        if (in_array($targetKind, self::ALWAYS_LIVE_KINDS, true)) {
+        if ($targetKind !== null && in_array($targetKind, self::ALWAYS_LIVE_KINDS, true)) {
             $url = $this->urlForAlwaysLive($targetKind);
 
             return [$url, $url === null];
         }
 
-        if ($targetId === null) {
+        if ($targetKind === null || $targetId === null) {
             return [null, true];
         }
 

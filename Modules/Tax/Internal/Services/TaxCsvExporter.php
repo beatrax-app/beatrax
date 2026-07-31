@@ -109,16 +109,10 @@ final class TaxCsvExporter
 
     private static function str(mixed $value): string
     {
-        if ($value === null) {
-            return '';
-        }
-        if (is_string($value)) {
-            return $value;
-        }
-        if (is_scalar($value)) {
-            return (string) $value;
-        }
-
-        return '';
+        return match (true) {
+            is_string($value) => $value,
+            is_scalar($value) => (string) $value,
+            default => '',
+        };
     }
 }

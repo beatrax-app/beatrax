@@ -239,9 +239,10 @@ trait HandlesTaxTagging
         $categoryId = array_key_exists('categoryId', $this->batchSuggestion)
             ? $this->batchSuggestion['categoryId']
             : $this->pickerCategoryId;
+        $livePickerNote = $this->pickerNote !== '' ? $this->pickerNote : null;
         $note = array_key_exists('note', $this->batchSuggestion)
             ? $this->batchSuggestion['note']
-            : ($this->pickerNote !== '' ? $this->pickerNote : null);
+            : $livePickerNote;
 
         foreach ($ids as $txId) {
             $tag->execute(

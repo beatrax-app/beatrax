@@ -147,13 +147,10 @@ final class BudgetsPage extends Component
 
         if ($raw === '') {
             $threshold = null;
-        } elseif (ctype_digit($raw)) {
+        } elseif (ctype_digit($raw)
+            && (int) $raw >= EnvelopeWriter::MIN_NOTIFY_THRESHOLD_PERCENT
+            && (int) $raw <= EnvelopeWriter::MAX_NOTIFY_THRESHOLD_PERCENT) {
             $threshold = (int) $raw;
-            if ($threshold < 1 || $threshold > 200) {
-                $this->thresholdErrors[$categoryId] = 'Enter a whole number between 1 and 200.';
-
-                return;
-            }
         } else {
             $this->thresholdErrors[$categoryId] = 'Enter a whole number between 1 and 200.';
 
@@ -230,15 +227,12 @@ final class BudgetsPage extends Component
         }
 
         $toCategoryId = $this->moveToCategoryId !== '' ? (int) $this->moveToCategoryId : 0;
-        if ($toCategoryId <= 0) {
-            $this->moveError = 'Choose an envelope to move money to.';
-
-            return;
-        }
-
         $minor = $writer->parseAmount($this->moveAmount);
-        if ($minor === null) {
-            $this->moveError = 'Enter an amount greater than zero.';
+
+        if ($toCategoryId <= 0 || $minor === null) {
+            $this->moveError = $toCategoryId <= 0
+                ? 'Choose an envelope to move money to.'
+                : 'Enter an amount greater than zero.';
 
             return;
         }
@@ -248,24 +242,20 @@ final class BudgetsPage extends Component
 
         try {
             $writer->move($currentUser->user(), $this->moveFromCategoryId, $toCategoryId, $period->start, $minor, $memo);
+
+            $this->moveFromCategoryId = 0;
+            $this->moveToCategoryId = '';
+            $this->moveAmount = '';
+            $this->moveMemo = '';
+            $this->dispatch('modal-close', name: 'envelope-move');
+            $this->toast('Money moved.');
         } catch (InvalidArgumentException $e) {
             $this->moveError = $e->getMessage();
-
-            return;
         } catch (\RuntimeException) {
             // A non-validation writer failure must surface as a calm inline
             // error, never escape as an unhandled 500.
             $this->moveError = 'Could not complete the move — please try again.';
-
-            return;
         }
-
-        $this->moveFromCategoryId = 0;
-        $this->moveToCategoryId = '';
-        $this->moveAmount = '';
-        $this->moveMemo = '';
-        $this->dispatch('modal-close', name: 'envelope-move');
-        $this->toast('Money moved.');
     }
 
     public function undoMove(CurrentUser $currentUser, EnvelopeWriter $writer, int $moveId): void
@@ -320,25 +310,8 @@ final class BudgetsPage extends Component
         $toBudgetMinor = $fold['toBudgetMinor'];
         $overspentCount = $fold['overspentCount'];
 
-        foreach ($rows as $categoryId => $row) {
-            if (! array_key_exists($categoryId, $this->assignedInputs)) {
-                $this->assignedInputs[$categoryId] = $row->assignedMinor > 0
-                    ? $this->minorToDecimal($row->assignedMinor)
-                    : '';
-            }
-        }
-
-        // Seeded from EXPLICIT stored values only: an envelope with no
-        // explicit threshold stays blank so the placeholder default shows,
-        // rather than pre-filling the resolved value as if user-set.
-        $explicitThresholds = $this->explicitThresholds($db, $user->id);
-        foreach ($rows as $categoryId => $row) {
-            if (! array_key_exists($categoryId, $this->thresholdInputs)) {
-                $this->thresholdInputs[$categoryId] = array_key_exists($categoryId, $explicitThresholds)
-                    ? (string) $explicitThresholds[$categoryId]
-                    : '';
-            }
-        }
+        $this->seedAssignedInputs($rows);
+        $this->seedThresholdInputs($db, $user->id, $rows);
 
         $genesis = $this->genesisPeriod($user, $db, $periods);
         $max = $this->maxPeriod($periods);
@@ -404,13 +377,7 @@ final class BudgetsPage extends Component
         }
 
         $parsed = CarbonImmutable::createFromFormat(self::PERIOD_DATE_FORMAT, $this->periodStartStr);
-        if ($parsed === null) {
-            $this->periodStartStr = null;
-
-            return $periods->current();
-        }
-
-        if ($parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
+        if ($parsed === null || $parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
             $this->periodStartStr = null;
 
             return $periods->current();
@@ -472,6 +439,38 @@ final class BudgetsPage extends Component
         }
 
         return $map;
+    }
+
+    /**
+     * @param  array<int, EnvelopeRow>  $rows
+     */
+    private function seedAssignedInputs(array $rows): void
+    {
+        foreach ($rows as $categoryId => $row) {
+            if (! array_key_exists($categoryId, $this->assignedInputs)) {
+                $this->assignedInputs[$categoryId] = $row->assignedMinor > 0
+                    ? $this->minorToDecimal($row->assignedMinor)
+                    : '';
+            }
+        }
+    }
+
+    /**
+     * @param  array<int, EnvelopeRow>  $rows
+     */
+    private function seedThresholdInputs(DatabaseManager $db, int $userId, array $rows): void
+    {
+        // Seeded from EXPLICIT stored values only: an envelope with no
+        // explicit threshold stays blank so the placeholder default shows,
+        // rather than pre-filling the resolved value as if user-set.
+        $explicitThresholds = $this->explicitThresholds($db, $userId);
+        foreach (array_keys($rows) as $categoryId) {
+            if (! array_key_exists($categoryId, $this->thresholdInputs)) {
+                $this->thresholdInputs[$categoryId] = array_key_exists($categoryId, $explicitThresholds)
+                    ? (string) $explicitThresholds[$categoryId]
+                    : '';
+            }
+        }
     }
 
     private function periodHasAssignments(DatabaseManager $db, int $userId, Period $period): bool

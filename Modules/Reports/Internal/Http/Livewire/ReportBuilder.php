@@ -185,8 +185,13 @@ final class ReportBuilder extends Component
     {
         if (! $currentUser->isAuthenticated()) {
             // Defensive branch: the 'auth' middleware already blocks
-            // unauthenticated access before this method ever runs.
-            return new StreamedResponse(static function (): void {});
+            // unauthenticated access before this method ever runs, so the
+            // stream body is intentionally empty here.
+            return new StreamedResponse(static function (): void {
+                // No authenticated user means no report to stream; an empty
+                // body satisfies the StreamedResponse contract without
+                // exposing another user's data.
+            });
         }
 
         $user = $currentUser->user();

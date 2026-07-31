@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Calendar\Internal\Services\CalendarQuery;
+use Modules\Calendar\Internal\Services\OccurrenceMatcher;
 use Modules\Core\Models\User;
 use Modules\Recurring\Models\RecurringSeries;
 
@@ -284,7 +285,7 @@ it('clamps the weekly match window to ±3 days so one payment marks only the nea
 });
 
 it('verifies MATCH_WINDOW_DAYS constant equals 7', function (): void {
-    $window = (new ReflectionClass(CalendarQuery::class))
+    $window = (new ReflectionClass(OccurrenceMatcher::class))
         ->getConstant('MATCH_WINDOW_DAYS');
 
     expect($window)->toBe(7);

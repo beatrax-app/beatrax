@@ -7,6 +7,7 @@ namespace Modules\Notifications\Internal\Listeners;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
@@ -33,7 +34,7 @@ final class PersistIcsStatementReady
         $deepLinkRoute = $this->resolveDeepLinkRoute();
 
         try {
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY,
                 subjectKey: 'ics-card',
@@ -42,7 +43,7 @@ final class PersistIcsStatementReady
                 body: "Download it from the ICS portal and drop it into beatrax to keep this card's spending up to date.",
                 params: ['target_kind' => 'ics-import'],
                 deepLinkRoute: $deepLinkRoute,
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating detector job run.

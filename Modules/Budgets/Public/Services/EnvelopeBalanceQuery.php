@@ -62,27 +62,7 @@ final class EnvelopeBalanceQuery
 
         $result = [];
         foreach ($rows as $row) {
-            $direction = self::toString($row->kind) === 'move_in' ? 'in' : 'out';
-
-            $createdAtRaw = $row->created_at ?? null;
-            $createdAt = '';
-            if ($createdAtRaw !== null && $createdAtRaw !== '') {
-                try {
-                    $createdAt = CarbonImmutable::parse(self::toString($createdAtRaw))->format('Y-m-d H:i');
-                } catch (\Throwable) {
-                    $createdAt = '';
-                }
-            }
-
-            $result[] = new EnvelopeMoveRow(
-                id: self::toInt($row->id),
-                direction: $direction,
-                amountMinor: self::toInt($row->amount_minor),
-                counterpartCategoryId: self::toInt($row->counterpart_category_id),
-                counterpartCategoryName: self::toString($row->counterpart_category_name),
-                memo: is_string($row->memo) ? $row->memo : null,
-                createdAt: $createdAt,
-            );
+            $result[] = $this->mapMoveRow($row);
         }
 
         return $result;
@@ -134,29 +114,35 @@ final class EnvelopeBalanceQuery
                 continue;
             }
 
-            $direction = self::toString($row->kind) === 'move_in' ? 'in' : 'out';
-
-            $createdAtRaw = $row->created_at ?? null;
-            $createdAt = '';
-            if ($createdAtRaw !== null && $createdAtRaw !== '') {
-                try {
-                    $createdAt = CarbonImmutable::parse(self::toString($createdAtRaw))->format('Y-m-d H:i');
-                } catch (\Throwable) {
-                    $createdAt = '';
-                }
-            }
-
-            $buckets[$categoryId][] = new EnvelopeMoveRow(
-                id: self::toInt($row->id),
-                direction: $direction,
-                amountMinor: self::toInt($row->amount_minor),
-                counterpartCategoryId: self::toInt($row->counterpart_category_id),
-                counterpartCategoryName: self::toString($row->counterpart_category_name),
-                memo: is_string($row->memo) ? $row->memo : null,
-                createdAt: $createdAt,
-            );
+            $buckets[$categoryId][] = $this->mapMoveRow($row);
         }
 
         return $buckets;
+    }
+
+    private function mapMoveRow(\stdClass $row): EnvelopeMoveRow
+    {
+        return new EnvelopeMoveRow(
+            id: self::toInt($row->id),
+            direction: self::toString($row->kind) === 'move_in' ? 'in' : 'out',
+            amountMinor: self::toInt($row->amount_minor),
+            counterpartCategoryId: self::toInt($row->counterpart_category_id),
+            counterpartCategoryName: self::toString($row->counterpart_category_name),
+            memo: is_string($row->memo) ? $row->memo : null,
+            createdAt: $this->formatCreatedAt($row->created_at ?? null),
+        );
+    }
+
+    private function formatCreatedAt(mixed $createdAtRaw): string
+    {
+        if ($createdAtRaw === null || $createdAtRaw === '') {
+            return '';
+        }
+
+        try {
+            return CarbonImmutable::parse(self::toString($createdAtRaw))->format('Y-m-d H:i');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }

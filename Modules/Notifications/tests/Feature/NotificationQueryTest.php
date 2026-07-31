@@ -146,6 +146,15 @@ it('returns the first page rather than throwing on a malformed cursor', function
     expect($rows)->toHaveCount(1);
 });
 
+it('returns the first page when the cursor is valid base64 but not valid JSON', function (): void {
+    $user = queryUser('query-cursor-bad-json');
+    insertNotification($this->db, $user->id, str_repeat('7', 64));
+
+    $rows = $this->query->allForUser($user, base64_encode('not json at all'));
+
+    expect($rows)->toHaveCount(1);
+});
+
 it('does not let user A see user B rows', function (): void {
     $userA = queryUser('query-user-a');
     $userB = queryUser('query-user-b');

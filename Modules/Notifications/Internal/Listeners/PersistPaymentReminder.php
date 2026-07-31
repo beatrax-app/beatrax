@@ -6,6 +6,7 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\NotificationCopy;
 use Modules\Recurring\Public\Events\PaymentReminderDue;
@@ -39,7 +40,7 @@ final class PersistPaymentReminder
                 ? "{$event->displayName} — expected around {$dayLabel}, {$amountText}."
                 : "{$event->displayName} — due {$dayLabel} ({$event->dueDate->format('d M')}), {$amountText}.";
 
-            $this->writer->write(
+            $this->writer->write(new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_PAYMENT_REMINDER,
                 subjectKey: (string) $event->seriesId,
@@ -51,7 +52,7 @@ final class PersistPaymentReminder
                 body: $body,
                 params: ['target_kind' => 'series', 'target_id' => $event->seriesId],
                 deepLinkRoute: $this->urls->route('recurring.series.show', ['seriesId' => $event->seriesId]),
-            );
+            ));
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating reminder job run.
