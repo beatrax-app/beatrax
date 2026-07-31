@@ -15,6 +15,7 @@ use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
+use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
 use Modules\EmailScan\Internal\Http\Livewire\BackfillWindowModal;
 use Modules\EmailScan\Internal\Http\Livewire\InboxesPage;
 use Modules\EmailScan\Internal\Http\Livewire\OAuthClientWizardModal;
@@ -22,6 +23,7 @@ use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\DetectIcsStatementReadyJob;
 use Modules\EmailScan\Internal\Jobs\DiscoveryScanJob;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Modules\EmailScan\Internal\Jobs\ScanMessageMapper;
 use Modules\EmailScan\Internal\Listeners\EmitOAuthReauthRequiredAlert;
 use Modules\EmailScan\Internal\Listeners\RaiseReconsentAlertOnTokenFailure;
 use Modules\EmailScan\Internal\MimeHeaderParser;
@@ -65,6 +67,10 @@ final class EmailScanServiceProvider extends ServiceProvider
         // backfill / incremental-scan job pipeline.
         $this->app->singleton(EmlBlobStore::class);
         $this->app->singleton(MimeHeaderParser::class);
+        // Cohesive collaborators the scan clients/jobs delegate to: Graph
+        // error-envelope mapping and provider message-payload parsing.
+        $this->app->singleton(GraphErrorMapper::class);
+        $this->app->singleton(ScanMessageMapper::class);
         $this->app->singleton(GmailApiClient::class);
         // Tests rebind the contract to FakeGmailApiClient via
         // $this->app->instance(GmailApiClientContract::class, ...).

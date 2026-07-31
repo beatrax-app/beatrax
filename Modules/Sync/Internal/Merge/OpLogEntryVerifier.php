@@ -2,30 +2,48 @@
 
 declare(strict_types=1);
 
-namespace Modules\Sync\Internal\Merge\Concerns;
+namespace Modules\Sync\Internal\Merge;
 
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Database\DatabaseManager;
+use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkKeyring;
+use Modules\Sync\Internal\Crypto\GdkKeyringService;
+use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
+use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
+use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
-// The verify half of replay: filters entries through the cross-user and Ed25519
-// gates, durably persists every accepted entry BEFORE any decrypt, and decrypts
-// GDK-tagged sensitive values for strategy resolution — routing every rejection
-// or fail-closed decrypt to quarantine. Split from the apply half.
 /**
- * @link ../../../../../.docs/features/sync/architecture.md
+ * @link ../../../../.docs/features/sync/architecture.md
  */
-trait VerifiesOpLogEntries
+final readonly class OpLogEntryVerifier
 {
+    /**
+     * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
+     */
+    public function __construct(
+        private DatabaseManager $db,
+        private MergeRulesRegistry $rules,
+        private SensitiveFieldRegistry $sensitiveFields,
+        private array $deviceKeys,
+        private DeviceKeySigner $signer,
+        private ?OpLogFieldCrypto $fieldCrypto,
+        private ?GdkKeyringService $keyringService,
+        private ?Session $session,
+        private OpLogQuarantine $quarantine,
+    ) {}
+
     // Filters to the scoped $userId (defense in depth) and the Ed25519 gate,
     // durably persisting every accepted entry BEFORE any decrypt. The GDK
     // keyring is loaded at most once per call, lazily, and kept local — never
-    // instance state, since this readonly replayer is reused across calls.
+    // instance state, since this readonly verifier is reused across calls.
     /**
      * @param  list<OpLogEntry>  $entries
      * @return list<OpLogEntry>
      */
-    private function verifyPersistAndPrepare(array $entries, int $userId, string $now): array
+    public function verifyPersistAndPrepare(array $entries, int $userId, string $now): array
     {
         $verified = [];
         $keyring = null;
@@ -66,7 +84,7 @@ trait VerifiesOpLogEntries
         $reason = $this->rejectionReason($entry, $userId);
 
         if ($reason !== null) {
-            $this->quarantine($entry, $reason, $now);
+            $this->quarantine->record($entry, $reason, $now);
 
             return false;
         }
@@ -90,6 +108,15 @@ trait VerifiesOpLogEntries
             ! $this->verifySignature($entry) => QuarantineReason::ForgedSignature,
             default => null,
         };
+    }
+
+    // Whether a device id belongs to a deterministically re-derived system op
+    // (e.g. the pair-link cascade) that legitimately bypasses the Ed25519
+    // signature gate. Produced ONLY by the replayer itself and reproduced
+    // identically on rebuild, so trusted by construction.
+    private function isSystemDevice(string $deviceId): bool
+    {
+        return $deviceId === OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID;
     }
 
     private function verifySignature(OpLogEntry $entry): bool
@@ -132,7 +159,7 @@ trait VerifiesOpLogEntries
     // Decrypts a GDK-tagged sensitive entry's value for strategy resolution.
     // Returns a NEW OpLogEntry carrying the decrypted plaintext (->gdkEpoch
     // unchanged, needed so a later write-back knows the source was
-    // encrypted). Returns null (quarantined) on any decrypt failure — NEVER throws.
+    // encrypted). Returns null (quarantined) on any decrypt failure.
     private function decryptForStrategy(OpLogEntry $entry, ?GdkKeyring $keyring, string $now): ?OpLogEntry
     {
         if ($entry->value === null || $entry->gdkEpoch === null) {
@@ -142,7 +169,7 @@ trait VerifiesOpLogEntries
         $plain = $this->decryptEntryValue($entry, $keyring);
 
         if ($plain === null) {
-            $this->quarantine($entry, QuarantineReason::GdkDecryptFailed, $now);
+            $this->quarantine->record($entry, QuarantineReason::GdkDecryptFailed, $now);
 
             return null;
         }
@@ -192,9 +219,9 @@ trait VerifiesOpLogEntries
         return $plain === false ? null : $plain;
     }
 
-    // Loads $userId's GDK keyring, or null when it cannot currently be
-    // loaded (crypto services unavailable, no session, app locked, or GDK
-    // never enabled). Never throws — callers treat null as "cannot decrypt right now".
+    // Loads $userId's GDK keyring, or null when it cannot currently be loaded
+    // (crypto services unavailable, no session, app locked, or GDK never
+    // enabled). Never throws — callers treat null as "cannot decrypt now".
     private function tryLoadKeyring(int $userId): ?GdkKeyring
     {
         if ($this->keyringService === null || $this->session === null) {

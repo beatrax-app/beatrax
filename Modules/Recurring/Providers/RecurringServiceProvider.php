@@ -24,6 +24,7 @@ use Modules\Recurring\Internal\Http\Livewire\RecurringPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringReviewPage;
 use Modules\Recurring\Internal\Http\Livewire\RecurringSeriesDetailPage;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
+use Modules\Recurring\Internal\Queries\RecurringSeriesProjector;
 use Modules\Recurring\Internal\Services\BusRecurringDetectionDispatcher;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
@@ -80,6 +81,7 @@ final class RecurringServiceProvider extends ServiceProvider
             },
         );
 
+        $this->app->singleton(RecurringSeriesProjector::class);
         $this->app->singleton(RecurringSeriesQuery::class);
         $this->app->singleton(FixedPaymentsViewQuery::class);
         $this->app->singleton(ApproveRecurringSeries::class);

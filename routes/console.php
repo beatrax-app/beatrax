@@ -32,6 +32,11 @@ use Modules\Recurring\Internal\Jobs\EmitPaymentRemindersJob;
 // App-wide artisan command bindings live here. Module-local artisan
 // commands are registered from each module's ServiceProvider.
 
+// Shared daily slot for the user-notification schedules (reminders,
+// digest, savings prompts): deliberately after the 09:00 FX refresh so
+// every converted figure reflects the day's already-fresh rate.
+$notificationsDailyTime = '09:15';
+
 // Hourly incremental scan: enumerate every connected inbox across
 // every user and dispatch IncrementalScanJob for each id. The job's
 // ShouldBeUniqueUntilProcessing lock (uniqueId=inboxId, uniqueFor=600)
@@ -420,7 +425,7 @@ Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): v
         $leadDays = $prefs->forCurrentDevice($user)->reminderLeadDays;
         $bus->dispatch(new EmitPaymentRemindersJob($user->id, $leadDays));
     });
-})->name('notifications.reminders')->dailyAt('09:15')->withoutOverlapping(30);
+})->name('notifications.reminders')->dailyAt($notificationsDailyTime)->withoutOverlapping(30);
 
 // 09:15 — deliberately AFTER `fx.daily-refresh` (09:00 above): any
 // converted figure the digest shows uses the day's already-fresh FX rate
@@ -436,7 +441,7 @@ Schedule::call(function (Dispatcher $bus, NotificationPreferenceQuery $prefs): v
         $cadence = $prefs->forCurrentDevice($user)->digestCadence;
         $bus->dispatch(new EmitPositionDigestJob($user->id, $cadence));
     });
-})->name('notifications.digest')->dailyAt('09:15')->withoutOverlapping(30);
+})->name('notifications.digest')->dailyAt($notificationsDailyTime)->withoutOverlapping(30);
 
 // Hourly (not daily) so "you're at 90%" arrives near the spend that
 // actually crossed the threshold rather than up to a day later. D-06's
@@ -454,7 +459,7 @@ Schedule::call(function (Dispatcher $bus): void {
     User::query()->lazyById(100)->each(function (User $user) use ($bus): void {
         $bus->dispatch(new EmitSavingsPromptsJob($user->id));
     });
-})->name('notifications.savings-prompts')->dailyAt('09:15')->withoutOverlapping(30);
+})->name('notifications.savings-prompts')->dailyAt($notificationsDailyTime)->withoutOverlapping(30);
 
 // 04:30 — the D-18/D-37 notification-inbox retention sweep. 04:30
 // deliberately sits between the two other daily-maintenance windows

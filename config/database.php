@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use Modules\Core\Public\Services\UserDataPathService;
 
+// Loopback default shared by every server-connection host that falls
+// back when its DB_* / REDIS_* env var is unset — a self-hosted server
+// overrides these explicitly.
+$loopbackHost = '127.0.0.1';
+
 return [
 
     /*
@@ -33,7 +38,7 @@ return [
      * point at the same database file and PRAGMA defaults without a
      * config() lookup during config-load time.
      */
-    'connections' => (static function (): array {
+    'connections' => (static function () use ($loopbackHost): array {
         $sqlite = [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
@@ -87,7 +92,7 @@ return [
             'pgsql' => [
                 'driver' => 'pgsql',
                 'url' => env('DB_URL'),
-                'host' => env('DB_HOST', '127.0.0.1'),
+                'host' => env('DB_HOST', $loopbackHost),
                 'port' => env('DB_PORT', '5432'),
                 'database' => env('DB_DATABASE', 'beatrax'),
                 'username' => env('DB_USERNAME', 'beatrax'),
@@ -102,7 +107,7 @@ return [
             'mysql' => [
                 'driver' => 'mysql',
                 'url' => env('DB_URL'),
-                'host' => env('DB_HOST', '127.0.0.1'),
+                'host' => env('DB_HOST', $loopbackHost),
                 'port' => env('DB_PORT', '3306'),
                 'database' => env('DB_DATABASE', 'beatrax'),
                 'username' => env('DB_USERNAME', 'beatrax'),
@@ -119,7 +124,7 @@ return [
             'mariadb' => [
                 'driver' => 'mariadb',
                 'url' => env('DB_URL'),
-                'host' => env('DB_HOST', '127.0.0.1'),
+                'host' => env('DB_HOST', $loopbackHost),
                 'port' => env('DB_PORT', '3306'),
                 'database' => env('DB_DATABASE', 'beatrax'),
                 'username' => env('DB_USERNAME', 'beatrax'),
@@ -166,7 +171,7 @@ return [
         ],
         'default' => [
             'url' => env('REDIS_URL'),
-            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'host' => env('REDIS_HOST', $loopbackHost),
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
@@ -174,7 +179,7 @@ return [
         ],
         'cache' => [
             'url' => env('REDIS_URL'),
-            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'host' => env('REDIS_HOST', $loopbackHost),
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),

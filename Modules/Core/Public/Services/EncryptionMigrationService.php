@@ -10,11 +10,10 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
-use Modules\Core\Public\Services\Concerns\TakesPreMigrationSnapshot;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Throwable;
 
@@ -23,8 +22,6 @@ use Throwable;
  */
 class EncryptionMigrationService
 {
-    use TakesPreMigrationSnapshot;
-
     // Mirrors the CHUNK_SIZE idiom already established by
     // RecordTransactions/ReapplyRulesJob.
     private const CHUNK_SIZE = 500;
@@ -33,18 +30,9 @@ class EncryptionMigrationService
 
     private const PROGRESS_TTL_SECONDS = 3600;
 
-    // See architecture.md for the tax_transaction_tags/transaction_splits
-    // backfill rationale.
-    private const PROJECTION_COLUMNS = [
-        'transactions' => ['note', 'description', 'counterparty_name', 'counterparty_iban', 'raw_payload'],
-        'counterparties' => ['display_name', 'merchant_name', 'iban'],
-        'tax_transaction_tags' => ['note'],
-        'transaction_splits' => ['note'],
-    ];
-
     public function __construct(
         protected readonly DatabaseManager $db,
-        private readonly FileEncryptor $backupEncryptor,
+        private readonly PreMigrationSnapshot $snapshot,
         private readonly AppLockKeyService $appLockKeyService,
         private readonly Clock $clock,
         private readonly Container $container,
@@ -133,7 +121,7 @@ class EncryptionMigrationService
         // Backup-first: snapshot the pre-migration plaintext BEFORE
         // the transaction even opens — before the GDK epoch exists, before
         // any row is touched.
-        $snapshotPath = $this->takeSnapshot($userId, $connection, $kek);
+        $snapshotPath = $this->snapshot->takeSnapshot($userId, $connection, $kek);
 
         // $support is constructed OUTSIDE the transaction closure so the SAME
         // instance is reachable both inside (to stage + encrypt) and after it
@@ -171,7 +159,7 @@ class EncryptionMigrationService
             // staged `.tmp` and restore plaintext — only reached for genuine
             // rollbacks, never post-commit (which would corrupt the epoch).
             $support->discardStagedEpoch();
-            $this->restoreFromSnapshot($snapshotPath, $kek, $connection);
+            $this->snapshot->restoreFromSnapshot($snapshotPath, $kek, $connection);
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
 
             throw $e;
@@ -270,7 +258,7 @@ class EncryptionMigrationService
         int $total,
         int &$processed,
     ): void {
-        $columns = self::PROJECTION_COLUMNS[$table] ?? [];
+        $columns = PreMigrationSnapshot::PROJECTION_COLUMNS[$table] ?? [];
         if ($columns === []) {
             return;
         }

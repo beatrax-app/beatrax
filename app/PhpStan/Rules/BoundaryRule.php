@@ -46,21 +46,19 @@ final class BoundaryRule implements Rule
         $imported = $node->name->toString();
         $importedModule = $this->extractModuleFromFqn($imported);
 
-        if ($importedModule === null || $importedModule === $importerModule) {
+        if ($importedModule === null
+            || $importedModule === $importerModule
+            || ! $this->violatesBoundary($imported, $importedModule)) {
             return [];
         }
 
-        if (! $this->violatesBoundary($imported, $importedModule)) {
-            return [];
-        }
-
-        $error = RuleErrorBuilder::message(sprintf(
-            'Cross-module Internal/Models import forbidden: %s cannot use %s',
-            $importerModule,
-            $imported,
-        ))->identifier('beatrax.boundary')->build();
-
-        return [$error];
+        return [
+            RuleErrorBuilder::message(sprintf(
+                'Cross-module Internal/Models import forbidden: %s cannot use %s',
+                $importerModule,
+                $imported,
+            ))->identifier('beatrax.boundary')->build(),
+        ];
     }
 
     private function extractModuleFromNamespace(?string $namespace): ?string

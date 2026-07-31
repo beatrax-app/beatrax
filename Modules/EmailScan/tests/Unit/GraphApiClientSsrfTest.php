@@ -7,6 +7,7 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\EmailScan\Internal\Clients\GraphApiClient;
+use Modules\EmailScan\Internal\Clients\GraphErrorMapper;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Dto\InboxCredentials;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -69,7 +70,7 @@ beforeEach(function (): void {
     /** @var DatabaseManager&MockObject $db */
     $db = $this->createStub(DatabaseManager::class);
 
-    $this->client = new GraphApiClient($this->secrets, $this->oauth, $this->clock, $events, $db);
+    $this->client = new GraphApiClient($this->secrets, $this->oauth, $this->clock, $events, $db, new GraphErrorMapper($this->clock));
 });
 
 it('rejects a deltaPage follow-up against an attacker-controlled host before any bearer token is attached', function (): void {

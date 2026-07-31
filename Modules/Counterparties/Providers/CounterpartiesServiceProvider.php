@@ -12,6 +12,7 @@ use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Internal\Pipeline\ResolveCounterpartyStage;
 use Modules\Counterparties\Internal\Resolver\CounterpartyResolverService;
+use Modules\Counterparties\Internal\Resolver\CounterpartySlugResolver;
 use Modules\Counterparties\Public\Contracts\CounterpartyResolver;
 use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
 
@@ -22,6 +23,7 @@ final class CounterpartiesServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(CounterpartySlugResolver::class);
         $this->app->singleton(CounterpartyResolver::class, CounterpartyResolverService::class);
         $this->app->singleton(ResolvesCounterparties::class, ResolveCounterpartyStage::class);
     }
