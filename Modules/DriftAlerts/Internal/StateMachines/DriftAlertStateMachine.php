@@ -73,9 +73,4 @@ final class DriftAlertStateMachine extends GuardedStateMachine
             "DriftAlertStateMachine: drift_alerts row {$id} not found.",
         );
     }
-
-    protected function invalidTransition(int $id, string $from, string $to): Throwable
-    {
-        return InvalidStateTransitionException::forTransition($id, $from, $to);
-    }
 }

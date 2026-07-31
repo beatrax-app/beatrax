@@ -6,7 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
-use Modules\Recurring\Internal\StateMachines\InvalidStateTransitionException;
+use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Internal\StateMachines\SeriesRowVanishedException;
 use Modules\Recurring\Models\RecurringSeries;

@@ -6,10 +6,10 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
-use Modules\Anomaly\Internal\StateMachines\InvalidStateTransitionException;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Anomaly\Models\AnomalyAlertTransition;
 use Modules\Core\Models\User;
+use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 
 uses(RefreshDatabase::class);
 

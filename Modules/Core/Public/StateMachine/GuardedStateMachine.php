@@ -40,8 +40,6 @@ abstract class GuardedStateMachine
 
     abstract protected function notFound(int $id): Throwable;
 
-    abstract protected function invalidTransition(int $id, string $from, string $to): Throwable;
-
     // Short machine name for the "unknown actor" rejection message — the only
     // place a concrete machine's own identity surfaces in the shared algorithm.
     abstract protected function label(): string;
@@ -83,7 +81,7 @@ abstract class GuardedStateMachine
             $currentState = self::toString($row->state);
             $allowed = $this->allowedTransitions()[$currentState] ?? [];
             if (! in_array($toState, $allowed, strict: true)) {
-                throw $this->invalidTransition($id, $currentState, $toState);
+                throw InvalidStateTransitionException::forTransition($this->table(), $id, $currentState, $toState);
             }
 
             $now = $this->clock->now()->toDateTimeString();

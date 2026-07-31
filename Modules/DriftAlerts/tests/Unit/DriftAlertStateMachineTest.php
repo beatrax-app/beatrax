@@ -6,8 +6,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use Modules\DriftAlerts\Internal\StateMachines\DriftAlertStateMachine;
-use Modules\DriftAlerts\Internal\StateMachines\InvalidStateTransitionException;
 use Modules\DriftAlerts\Models\DriftAlert;
 use Modules\DriftAlerts\Models\DriftAlertTransition;
 

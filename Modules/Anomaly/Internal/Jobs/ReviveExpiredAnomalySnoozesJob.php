@@ -11,10 +11,10 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Modules\Anomaly\Internal\StateMachines\AnomalyAlertStateMachine;
-use Modules\Anomaly\Internal\StateMachines\InvalidStateTransitionException;
 use Modules\Anomaly\Models\AnomalyAlert;
 use Modules\Core\Public\Concerns\TunedQueueJob;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\StateMachine\InvalidStateTransitionException;
 use stdClass;
 
 // Global (no `user_id` scope): alerts may belong to any user, and
