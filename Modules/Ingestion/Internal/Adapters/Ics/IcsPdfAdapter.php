@@ -26,6 +26,10 @@ final class IcsPdfAdapter implements SourceAdapter
     // per-transaction raw payload before persistence (security policy).
     private const SCRUB_LITERAL = '<discarded per security policy>';
 
+    // One euro summary cell: an amount followed by its Af/Bij direction
+    // marker, as it renders in the statement's four-column summary block.
+    private const AMOUNT_AF_BIJ_FRAGMENT = '€\s+([\d.,]+)\s+(?:Af|Bij)';
+
     /** @var array<string, int> */
     private const MONTH_ABBREV = [
         'jan' => 1, 'feb' => 2, 'mrt' => 3, 'apr' => 4,
@@ -168,29 +172,27 @@ final class IcsPdfAdapter implements SourceAdapter
         }
 
         $count = count($lines);
-        for ($i = 0; $i < $count; $i++) {
-            $line = $lines[$i];
-            $trimmed = trim($line);
-            if ($trimmed === '') {
-                continue;
-            }
+        // A while loop (not for) because an FX row consumes two input lines,
+        // so the cursor advances by a variable step the body decides — the
+        // counter is never rewritten behind a fixed for-increment.
+        $i = 0;
+        while ($i < $count) {
+            $trimmed = trim($lines[$i]);
+            if ($trimmed === '' || ! $this->looksLikeTransactionRow($trimmed)) {
+                $i++;
 
-            if (! $this->looksLikeTransactionRow($trimmed)) {
                 continue;
             }
 
             $block = $trimmed;
-            // FX rows span two lines; fold the following Wisselkoers line
-            // into this block when present.
-            if ($i + 1 < $count) {
-                $next = trim($lines[$i + 1]);
-                if (str_starts_with($next, IcsPdfExtractionMap::FX_LINE_ANCHOR)) {
-                    $block .= "\n".$next;
-                    $i++;
-                }
+            $next = $i + 1 < $count ? trim($lines[$i + 1]) : '';
+            if (str_starts_with($next, IcsPdfExtractionMap::FX_LINE_ANCHOR)) {
+                $block .= "\n".$next;
+                $i++;
             }
 
             yield $block;
+            $i++;
         }
     }
 
@@ -251,10 +253,12 @@ final class IcsPdfAdapter implements SourceAdapter
         }
 
         // Dates are the two leading date tokens at the start of `rest`
-        // (transaction date, then booked date).
+        // (transaction date, then booked date). Months are matched as bare
+        // three-letter runs and validated below against MONTH_ABBREV, so an
+        // unknown abbreviation still fails without a costly inline alternation.
         if (
             preg_match(
-                '/^(\d{1,2})\s+(jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)\.?\s+(\d{1,2})\s+(jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)\.?\s+(.*)$/i',
+                '/^(\d{1,2})\s+([a-z]{3})\.?\s+(\d{1,2})\s+([a-z]{3})\.?\s+(.*)$/i',
                 $rest,
                 $dateMatch,
             ) !== 1
@@ -338,22 +342,14 @@ final class IcsPdfAdapter implements SourceAdapter
             return null;
         }
 
-        // Strip a trailing two-letter country code (` NL`, ` US`, ` GB`,
-        // ` LU`, ` IE`, ` MT`, …). Mijn ICS always renders the country in
-        // upper-case alpha-2 at the end of the description column.
-        $stripped = preg_replace('/\s+[A-Z]{2}$/', '', $trimmed);
-        if (! is_string($stripped)) {
-            return $trimmed;
-        }
+        // Strip the trailing upper-case alpha-2 country code Mijn ICS appends
+        // to every description, then compact internal multi-space runs so the
+        // FingerprintComposer's normalisation sees a stable shape. Each
+        // preg_replace falls back to its input on the unreachable null return.
+        $stripped = preg_replace('/\s+[A-Z]{2}$/', '', $trimmed) ?? $trimmed;
+        $compact = trim(preg_replace('/\s{2,}/', ' ', $stripped) ?? $stripped);
 
-        // Compact internal multi-space runs into a single space so the
-        // FingerprintComposer's normalisation pass sees a stable shape.
-        $compact = preg_replace('/\s{2,}/', ' ', $stripped);
-        if (! is_string($compact)) {
-            return $stripped;
-        }
-
-        return trim($compact) === '' ? null : trim($compact);
+        return $compact === '' ? null : $compact;
     }
 
     private function parseDisplayedFxRate(?string $fxLine): ?string
@@ -461,15 +457,16 @@ final class IcsPdfAdapter implements SourceAdapter
      */
     private function parseFourColumnSummary(string $text): array
     {
+        $cell = self::AMOUNT_AF_BIJ_FRAGMENT;
         $pattern = '/'.preg_quote(IcsPdfExtractionMap::SUMMARY_OPENING, '/')
             .'.+?'.preg_quote(IcsPdfExtractionMap::SUMMARY_RECEIVED, '/')
             .'.+?'.preg_quote(IcsPdfExtractionMap::SUMMARY_CHARGES, '/')
             .'.+?'.preg_quote(IcsPdfExtractionMap::SUMMARY_CLOSING, '/')
             .'[\s\S]*?'
-            .'€\s+([\d.,]+)\s+(?:Af|Bij)\s+'
-            .'€\s+([\d.,]+)\s+(?:Af|Bij)\s+'
-            .'€\s+([\d.,]+)\s+(?:Af|Bij)\s+'
-            .'€\s+([\d.,]+)\s+(?:Af|Bij)/u';
+            .$cell.'\s+'
+            .$cell.'\s+'
+            .$cell.'\s+'
+            .$cell.'/u';
 
         if (preg_match($pattern, $text, $m) !== 1) {
             return [];

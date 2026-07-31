@@ -262,3 +262,82 @@ it('emits monotonically increasing sourceRowIndex starting at zero', function ()
         $expectedIndex++;
     }
 })->group('phase-2');
+
+it('flushes a mid-stream :61: with no :86: when the next :61: arrives', function (): void {
+    // Two consecutive :61: lines with no :86: between them: the second one
+    // must flush the first as a narrative-less row before it becomes pending.
+    $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
+        .":61:2604010401C100,00NTRFA-1\n"
+        .":61:2604020402C200,00NTRFA-2\n"
+        .":62F:C260430EUR1300,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    $dtos = iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+
+    expect($dtos)->toHaveCount(2);
+    expect($dtos[0]->counterpartyName)->toBeNull();
+    expect($dtos[0]->sourceRef)->toBe('A-1');
+    expect($dtos[1]->sourceRef)->toBe('A-2');
+    expect($dtos[0]->sourceRowIndex)->toBe(0);
+    expect($dtos[1]->sourceRowIndex)->toBe(1);
+})->group('phase-2');
+
+it('ignores a :86: narrative that is not preceded by a :61: entry', function (): void {
+    // The leading :86: has no pending entry to attach to and must be dropped
+    // silently; only the genuine :61:/:86: pair yields a row.
+    $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
+        .":86:orphan narrative with no entry\n"
+        .":61:2604010401C100,00NTRFINV-001\n:86:100?32SPOTIFY AB\n"
+        .":62F:C260430EUR1100,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    $dtos = iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+
+    expect($dtos)->toHaveCount(1);
+    expect($dtos[0]->counterpartyName)->toBe('SPOTIFY AB');
+})->group('phase-2');
+
+it('ignores unrecognised MT940 tags without affecting the parsed rows', function (): void {
+    // :64: (available balance) is a real MT940 tag the ledger has no use for;
+    // it must fall through the header dispatch untouched.
+    $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
+        .":61:2604010401C100,00NTRFINV-001\n:86:100?32SPOTIFY AB\n"
+        .":64:C260430EUR1100,00\n"
+        .":62F:C260430EUR1100,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    $dtos = iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+
+    expect($dtos)->toHaveCount(1);
+    expect($dtos[0]->sourceRef)->toBe('INV-001');
+})->group('phase-2');
+
+it('leaves the closing balance null when its amount cell is malformed', function (): void {
+    // The :62F: amount carries a stray extra group so BankAmountParser rejects
+    // it; parseBalance must swallow that as a null closing balance rather than
+    // aborting the whole statement.
+    $body = ":20:S\n:25:NL57ASNB0123456789\n:60F:C260401EUR1000,00\n"
+        .":61:2604010401C100,00NTRFINV-001\n:86:100?32SPOTIFY AB\n"
+        .":62F:C260430EUR1100,00,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    $dtos = iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+    $meta = $this->adapter->statementMetadata();
+
+    expect($dtos)->toHaveCount(1);
+    expect($meta)->not->toBeNull();
+    expect($meta->closingBalanceMinor)->toBeNull();
+    expect($meta->openingBalanceMinor)->toBe(100000);
+})->group('phase-2');
+
+it('reports null statement metadata when the own IBAN tag is absent', function (): void {
+    // A file with :20: but no :25: and no entries produces no own IBAN, so the
+    // accumulator has nothing to anchor a StatementSummaryData on.
+    $body = ":20:STMT-ONLY\n:60F:C260401EUR1000,00\n:62F:C260430EUR1000,00\n-\n";
+    $tmp = writeMt940Temp($body);
+
+    $dtos = iterator_to_array($this->adapter->parse($tmp, $this->resolver), preserve_keys: false);
+
+    expect($dtos)->toBe([]);
+    expect($this->adapter->statementMetadata())->toBeNull();
+})->group('phase-2');

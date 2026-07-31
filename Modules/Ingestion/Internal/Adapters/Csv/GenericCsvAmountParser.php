@@ -38,7 +38,7 @@ final class GenericCsvAmountParser
         $raw = ltrim($raw, '+-');
         $raw = str_replace($decimalSeparator, '.', $raw);
 
-        if ($raw === '' || preg_match('/^[0-9]+(\.[0-9]*)?$/', $raw) !== 1) {
+        if ($raw === '' || preg_match('/^\d+(\.\d*)?$/', $raw) !== 1) {
             throw new InvalidAmountException(sprintf("Cannot parse amount '%s'.", $cell));
         }
 

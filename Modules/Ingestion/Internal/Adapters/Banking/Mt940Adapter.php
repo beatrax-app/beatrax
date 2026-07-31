@@ -48,123 +48,136 @@ final class Mt940Adapter implements SourceAdapter
         $this->sniffer->sniff($localPath, Mt940HeaderProfile::FORMAT);
         $this->lastStatementMetadata = null;
 
-        $statementId = null;
-        $ownIban = null;
-        $statementNumber = null;
-        $openingBalance = null;
-        $closingBalance = null;
-        $entryCount = 0;
-        $multiStatement = false;
-        $firstStatementFrozen = false;
-        $currency = null;
-
-        $pendingTag61 = null;
-        $rowIndex = 0;
+        $state = new Mt940StatementAccumulator;
 
         foreach ($this->lexer->tokenize($localPath) as [$tag, $content]) {
-            switch ($tag) {
-                case '20':
-                    if ($statementId !== null) {
-                        $multiStatement = true;
-                    }
-                    if (! $firstStatementFrozen) {
-                        $statementId = trim($content);
-                    }
-                    break;
+            // The :61:/:86: entry pair streams DTOs; every other tag only
+            // accumulates header/balance state into $state.
+            if ($tag === '61') {
+                yield from $this->handleEntryLine($state, $content);
 
-                case '25':
-                    if (! $firstStatementFrozen) {
-                        $ownIban = trim($content);
-                        $accounts->resolve($ownIban);
-                    }
-                    break;
-
-                case '28C':
-                    if (! $firstStatementFrozen) {
-                        $statementNumber = trim($content);
-                    }
-                    break;
-
-                case '60F':
-                case '60M':
-                    if (! $firstStatementFrozen) {
-                        $openingBalance = $this->parseBalance($content);
-                        if ($openingBalance !== null) {
-                            $currency = $openingBalance->currency;
-                        }
-                    }
-                    break;
-
-                case '62F':
-                case '62M':
-                    if (! $firstStatementFrozen) {
-                        $closingBalance = $this->parseBalance($content);
-                        $firstStatementFrozen = true;
-                    }
-                    break;
-
-                case '61':
-                    if ($ownIban === null) {
-                        throw new InvalidAmountException(
-                            'MT940 :61: encountered before :25:; file is malformed.',
-                        );
-                    }
-                    if ($currency === null) {
-                        throw new InvalidAmountException(
-                            'MT940 :61: encountered before any balance tag set a currency.',
-                        );
-                    }
-                    if ($pendingTag61 !== null) {
-                        yield $this->buildDto($pendingTag61, null, $ownIban, $currency, $rowIndex);
-                        $rowIndex++;
-                    }
-                    $pendingTag61 = $this->tag61->parse($content);
-                    if (! $firstStatementFrozen) {
-                        $entryCount++;
-                    }
-                    break;
-
-                case '86':
-                    if ($pendingTag61 !== null) {
-                        $narrative = $this->tag86->parse($content);
-                        // $ownIban + $currency are guaranteed non-null by the
-                        // :61: branch above, which is the only path that can
-                        // populate $pendingTag61.
-                        yield $this->buildDto($pendingTag61, $narrative, (string) $ownIban, (string) $currency, $rowIndex);
-                        $rowIndex++;
-                        $pendingTag61 = null;
-                    }
-                    break;
+                continue;
             }
-        }
+            if ($tag === '86') {
+                yield from $this->handleNarrative($state, $content);
 
-        if ($pendingTag61 !== null) {
-            yield $this->buildDto($pendingTag61, null, (string) $ownIban, (string) $currency, $rowIndex);
-        }
-
-        if ($statementId !== null && $ownIban !== null) {
-            $extras = ['statementId' => $statementId];
-            if ($multiStatement) {
-                $extras['multiStatement'] = true;
+                continue;
             }
 
-            $this->lastStatementMetadata = new StatementSummaryData(
-                importRunId: 0,
-                accountId: 0,
-                ibanOwner: $ownIban,
-                statementNumber: $statementNumber,
-                periodStart: $openingBalance?->date,
-                periodEnd: $closingBalance?->date,
-                openingBalanceMinor: $openingBalance?->minor,
-                openingBalanceCurrency: $openingBalance?->currency,
-                openingBalanceDate: $openingBalance?->date,
-                closingBalanceMinor: $closingBalance?->minor,
-                closingBalanceCurrency: $closingBalance?->currency,
-                closingBalanceDate: $closingBalance?->date,
-                entryCount: $entryCount,
-                extras: $extras,
+            $this->applyHeaderTag($state, $tag, $content, $accounts);
+        }
+
+        if ($state->pendingTag61 !== null) {
+            yield $this->buildDto($state->pendingTag61, null, (string) $state->ownIban, (string) $state->currency, $state->rowIndex);
+        }
+
+        $this->lastStatementMetadata = $state->toMetadata();
+    }
+
+    private function applyHeaderTag(Mt940StatementAccumulator $state, string $tag, string $content, AccountResolver $accounts): void
+    {
+        // Unknown tags are ignored on purpose — MT940 files carry vendor
+        // extensions the ledger has no use for, and dropping them keeps the
+        // adapter tolerant of ASN export revisions.
+        match ($tag) {
+            '20' => $this->applyStatementId($state, $content),
+            '25' => $this->applyOwnIban($state, $content, $accounts),
+            '28C' => $this->applyStatementNumber($state, $content),
+            '60F', '60M' => $this->applyOpeningBalance($state, $content),
+            '62F', '62M' => $this->applyClosingBalance($state, $content),
+            default => null,
+        };
+    }
+
+    private function applyStatementId(Mt940StatementAccumulator $state, string $content): void
+    {
+        if ($state->statementId !== null) {
+            $state->multiStatement = true;
+        }
+        if (! $state->firstStatementFrozen) {
+            $state->statementId = trim($content);
+        }
+    }
+
+    private function applyOwnIban(Mt940StatementAccumulator $state, string $content, AccountResolver $accounts): void
+    {
+        if ($state->firstStatementFrozen) {
+            return;
+        }
+
+        $state->ownIban = trim($content);
+        $accounts->resolve($state->ownIban);
+    }
+
+    private function applyStatementNumber(Mt940StatementAccumulator $state, string $content): void
+    {
+        if (! $state->firstStatementFrozen) {
+            $state->statementNumber = trim($content);
+        }
+    }
+
+    private function applyOpeningBalance(Mt940StatementAccumulator $state, string $content): void
+    {
+        if ($state->firstStatementFrozen) {
+            return;
+        }
+
+        $state->openingBalance = $this->parseBalance($content);
+        if ($state->openingBalance !== null) {
+            $state->currency = $state->openingBalance->currency;
+        }
+    }
+
+    private function applyClosingBalance(Mt940StatementAccumulator $state, string $content): void
+    {
+        if (! $state->firstStatementFrozen) {
+            $state->closingBalance = $this->parseBalance($content);
+            $state->firstStatementFrozen = true;
+        }
+    }
+
+    /**
+     * @return Generator<int, SourceTransactionDto>
+     */
+    private function handleEntryLine(Mt940StatementAccumulator $state, string $content): Generator
+    {
+        if ($state->ownIban === null) {
+            throw new InvalidAmountException(
+                'MT940 :61: encountered before :25:; file is malformed.',
             );
         }
+        if ($state->currency === null) {
+            throw new InvalidAmountException(
+                'MT940 :61: encountered before any balance tag set a currency.',
+            );
+        }
+
+        if ($state->pendingTag61 !== null) {
+            yield $this->buildDto($state->pendingTag61, null, $state->ownIban, $state->currency, $state->rowIndex);
+            $state->rowIndex++;
+        }
+
+        $state->pendingTag61 = $this->tag61->parse($content);
+        if (! $state->firstStatementFrozen) {
+            $state->entryCount++;
+        }
+    }
+
+    /**
+     * @return Generator<int, SourceTransactionDto>
+     */
+    private function handleNarrative(Mt940StatementAccumulator $state, string $content): Generator
+    {
+        if ($state->pendingTag61 === null) {
+            return;
+        }
+
+        $narrative = $this->tag86->parse($content);
+        // $ownIban + $currency are guaranteed non-null by the :61: branch,
+        // which is the only path that can populate $pendingTag61.
+        yield $this->buildDto($state->pendingTag61, $narrative, (string) $state->ownIban, (string) $state->currency, $state->rowIndex);
+        $state->rowIndex++;
+        $state->pendingTag61 = null;
     }
 
     private function buildDto(Mt940StatementLine $line, ?Mt940Narrative $narrative, string $ownIban, string $currency, int $rowIndex): SourceTransactionDto
@@ -221,24 +234,26 @@ final class Mt940Adapter implements SourceAdapter
             return null;
         }
 
-        $sign = $m[1] === 'D' ? -1 : 1;
-
         $date = CarbonImmutable::createFromFormat('!ymd', $m[2]);
-        if (! $date instanceof CarbonImmutable) {
-            return null;
-        }
-
-        try {
-            $magnitude = $this->parseBalanceAmount($m[4]);
-        } catch (InvalidAmountException) {
+        $magnitude = $this->tryParseBalanceAmount($m[4]);
+        if (! $date instanceof CarbonImmutable || $magnitude === null) {
             return null;
         }
 
         return new Mt940BalanceTuple(
-            minor: $sign * $magnitude,
+            minor: ($m[1] === 'D' ? -1 : 1) * $magnitude,
             currency: $m[3],
             date: $date,
         );
+    }
+
+    private function tryParseBalanceAmount(string $raw): ?int
+    {
+        try {
+            return $this->parseBalanceAmount($raw);
+        } catch (InvalidAmountException) {
+            return null;
+        }
     }
 
     // Normalises a comma-decimal cell ("1000,00" / "1000") to a
