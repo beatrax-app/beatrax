@@ -149,16 +149,12 @@ final class Dashboard extends Component
         }
 
         $parsed = CarbonImmutable::createFromFormat(self::PERIOD_DATE_FORMAT, $this->periodStartStr);
-        if ($parsed === null) {
-            $this->periodStartStr = null;
 
-            return $periods->current();
-        }
-
-        // Round-trip the formatted date to refuse strings that parse but
-        // do not stringify back to the original (e.g. "2026-02-30" which
-        // Carbon happily accepts as "2026-03-02").
-        if ($parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
+        // Refuse a null parse, and refuse a string that parses but does not
+        // stringify back to the original (e.g. "2026-02-30", which Carbon
+        // accepts as "2026-03-02") — either way clear the bad value so it
+        // cannot survive the round-trip, and fall back to the current period.
+        if ($parsed === null || $parsed->format(self::PERIOD_DATE_FORMAT) !== $this->periodStartStr) {
             $this->periodStartStr = null;
 
             return $periods->current();

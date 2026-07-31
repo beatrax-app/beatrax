@@ -13,8 +13,9 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Exceptions\StrandedEncryptionEpochException;
+use Modules\Core\Public\Services\Concerns\TakesPreMigrationSnapshot;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -22,6 +23,8 @@ use Throwable;
  */
 class EncryptionMigrationService
 {
+    use TakesPreMigrationSnapshot;
+
     // Mirrors the CHUNK_SIZE idiom already established by
     // RecordTransactions/ReapplyRulesJob.
     private const CHUNK_SIZE = 500;
@@ -75,7 +78,7 @@ class EncryptionMigrationService
                     /** @var EncryptionMigrationSupport $support */
                     $support = $this->container->make(EncryptionMigrationSupport::class);
                     if (! $support->hasUsableCurrentEpoch($userId, $session)) {
-                        throw new RuntimeException(
+                        throw new StrandedEncryptionEpochException(
                             "Encryption is recorded as enabled for user {$userId} "
                             ."(current_epoch={$currentEpochId}) but the GDK keyring holds no key "
                             .'for that epoch — a stranded post-commit finalize state. The '
@@ -183,7 +186,7 @@ class EncryptionMigrationService
         } catch (Throwable $e) {
             $this->cache->put(self::PROGRESS_CACHE_PREFIX.$userId, 0, self::PROGRESS_TTL_SECONDS);
 
-            throw new RuntimeException(
+            throw new StrandedEncryptionEpochException(
                 "Keyring finalize failed after commit for user {$userId}: `current_epoch` is "
                 .'committed but the keyring file is not yet in place. The staged key file was '
                 .'preserved for retry — re-run migrate() to reconcile. Plaintext was NOT restored '
@@ -277,25 +280,7 @@ class EncryptionMigrationService
             ->orderBy('id')
             ->chunkById(self::CHUNK_SIZE, function ($rows) use ($connection, $userId, $table, $columns, $support, $total, &$processed): void {
                 foreach ($rows as $row) {
-                    $updates = [];
-
-                    foreach ($columns as $column) {
-                        /** @var mixed $value */
-                        $value = $row->{$column} ?? null;
-                        if (! is_string($value) || $value === '') {
-                            continue;
-                        }
-
-                        // Row-level idempotency: a value that ALREADY
-                        // AEAD-verifies under the current epoch is already
-                        // ciphertext (a resumed/retried pass) — never
-                        // double-encrypt it.
-                        if ($support->alreadyEncryptedProjectionValue($table, $column, $value)) {
-                            continue;
-                        }
-
-                        $updates[$column] = $support->encryptProjectionValue($table, $column, $value);
-                    }
+                    $updates = $this->projectionUpdatesForRow($support, $table, $columns, $row);
 
                     if ($updates !== []) {
                         $connection->table($table)->where('id', $row->id)->update($updates);
@@ -307,6 +292,34 @@ class EncryptionMigrationService
 
                 $this->afterChunkProcessed($userId, $processed);
             }, 'id');
+    }
+
+    // Row-level idempotency: a value that ALREADY AEAD-verifies under the
+    // current epoch is ciphertext from a resumed/retried pass — skip it so a
+    // re-run never double-encrypts. Blank and non-string columns pass through.
+    /**
+     * @param  list<string>  $columns
+     * @return array<string, string>
+     */
+    private function projectionUpdatesForRow(EncryptionMigrationSupport $support, string $table, array $columns, \stdClass $row): array
+    {
+        $updates = [];
+
+        foreach ($columns as $column) {
+            /** @var mixed $value */
+            $value = $row->{$column} ?? null;
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+
+            if ($support->alreadyEncryptedProjectionValue($table, $column, $value)) {
+                continue;
+            }
+
+            $updates[$column] = $support->encryptProjectionValue($table, $column, $value);
+        }
+
+        return $updates;
     }
 
     private function estimateTotalRows(ConnectionInterface $connection, int $userId): int
@@ -414,131 +427,5 @@ class EncryptionMigrationService
         $value = $state->migration_in_progress ?? false;
 
         return (bool) $value;
-    }
-
-    // See architecture.md for why this is a targeted sensitive-column
-    // snapshot (mirrors GdkKeyringService's encrypted-file idiom) rather
-    // than a whole-file SQLite copy.
-    private function takeSnapshot(int $userId, ConnectionInterface $connection, string $kek): string
-    {
-        $payload = [
-            'op_log_entries' => $connection->table('op_log_entries')
-                ->where('user_id', $userId)
-                ->whereNull('gdk_epoch')
-                ->whereNotNull('value')
-                ->get(['id', 'value'])
-                ->map(static fn (object $row): array => ['id' => $row->id, 'value' => $row->value])
-                ->all(),
-            'transactions' => $this->captureRows($connection, 'transactions', $userId),
-            'counterparties' => $this->captureRows($connection, 'counterparties', $userId),
-            // These backfill-sweep tables must be in the pre-migration
-            // snapshot too so a restore after a forced failure covers them.
-            'tax_transaction_tags' => $this->captureRows($connection, 'tax_transaction_tags', $userId),
-            'transaction_splits' => $this->captureRows($connection, 'transaction_splits', $userId),
-        ];
-
-        $json = json_encode($payload, JSON_THROW_ON_ERROR);
-
-        $dir = UserDataPathService::appPath('sync/backups');
-        @mkdir($dir, 0700, true);
-
-        $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_premig_'.bin2hex(random_bytes(8)).'.tmp';
-        // Suppressed so the `=== false` check decides; unsuppressed the
-        // E_WARNING becomes an ErrorException first and the guard never ran.
-        if (@file_put_contents($tmpPlainPath, $json, LOCK_EX) === false) {
-            throw new RuntimeException('Failed to stage the pre-migration snapshot payload.');
-        }
-        if (! @chmod($tmpPlainPath, 0600)) {
-            @unlink($tmpPlainPath);
-            throw new RuntimeException('Cannot chmod the pre-migration snapshot payload to 0600.');
-        }
-
-        $encPath = UserDataPathService::appPath(
-            sprintf('sync/backups/pre-encryption-%d-%s.enc', $userId, $this->clock->now()->format('YmdHis_u')),
-        );
-
-        try {
-            $this->backupEncryptor->encrypt($tmpPlainPath, $encPath, $kek);
-        } finally {
-            @unlink($tmpPlainPath);
-        }
-
-        return $encPath;
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function captureRows(ConnectionInterface $connection, string $table, int $userId): array
-    {
-        $columns = self::PROJECTION_COLUMNS[$table] ?? [];
-        if ($columns === []) {
-            return [];
-        }
-
-        /** @var list<array<string, mixed>> $rows */
-        $rows = $connection->table($table)
-            ->where('user_id', $userId)
-            ->get(array_merge(['id'], $columns))
-            ->map(static fn (object $row): array => (array) $row)
-            ->all();
-
-        return $rows;
-    }
-
-    private function restoreFromSnapshot(string $snapshotPath, string $kek, ConnectionInterface $connection): void
-    {
-        $dir = dirname($snapshotPath);
-        $tmpPlainPath = $dir.DIRECTORY_SEPARATOR.'beatrax_premig_restore_'.bin2hex(random_bytes(8)).'.tmp';
-
-        try {
-            $this->backupEncryptor->decrypt($snapshotPath, $tmpPlainPath, $kek);
-            $contents = file_get_contents($tmpPlainPath);
-            $payload = $contents === false ? null : json_decode($contents, true, flags: JSON_THROW_ON_ERROR);
-        } finally {
-            @unlink($tmpPlainPath);
-        }
-
-        if (! is_array($payload)) {
-            // The snapshot itself could not be restored — the transaction
-            // rollback already reverted every DB write this pass made, so
-            // there is nothing left to repair. Do not throw: the ORIGINAL
-            // failure is what the caller must see (re-thrown by the caller).
-            return;
-        }
-
-        // Wrap every restore write in ONE transaction so the restore is
-        // all-or-nothing — without it, a throw partway (DB error / one bad
-        // row) would leave a partially-restored mixed state. This method is
-        // only invoked on a genuine rollback, so it never contradicts a committed epoch.
-        $connection->transaction(function () use ($connection, $payload): void {
-            /** @var list<array<string, mixed>> $opLogRows */
-            $opLogRows = is_array($payload['op_log_entries'] ?? null) ? $payload['op_log_entries'] : [];
-            foreach ($opLogRows as $row) {
-                if (! isset($row['id'])) {
-                    continue;
-                }
-                $connection->table('op_log_entries')->where('id', $row['id'])->update([
-                    'value' => $row['value'] ?? null,
-                    'gdk_epoch' => null,
-                ]);
-            }
-
-            foreach (['transactions', 'counterparties', 'tax_transaction_tags', 'transaction_splits'] as $table) {
-                /** @var list<array<string, mixed>> $rows */
-                $rows = is_array($payload[$table] ?? null) ? $payload[$table] : [];
-                foreach ($rows as $row) {
-                    if (! isset($row['id'])) {
-                        continue;
-                    }
-                    $id = $row['id'];
-                    unset($row['id']);
-                    if ($row === []) {
-                        continue;
-                    }
-                    $connection->table($table)->where('id', $id)->update($row);
-                }
-            }
-        });
     }
 }
