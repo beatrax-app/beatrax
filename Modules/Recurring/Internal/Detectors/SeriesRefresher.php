@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Recurring\Internal\StateMachines\RecurringSeriesStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Modules\Recurring\Public\Events\RecurringSeriesCadenceFlipped;
 use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 
@@ -75,17 +76,17 @@ final readonly class SeriesRefresher
     // approved, and the row may have moved since the caller read it.
     private function flipCadence(RecurringSeries $series, DetectedSeries $detected, User $user, string $previousCadence): void
     {
-        if (! in_array($series->state, ['approved', 'cadence_changed'], true)) {
+        if (! in_array($series->state, [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value], true)) {
             return;
         }
 
         /** @var RecurringSeries $fresh */
         $fresh = RecurringSeries::query()->findOrFail($series->id);
-        if ($fresh->state !== 'approved') {
+        if ($fresh->state !== RecurringSeriesState::Approved->value) {
             return;
         }
 
-        $this->stateMachine->transition($fresh, 'cadence_changed', 'detector_cadence_flip', 'detector');
+        $this->stateMachine->transition($fresh, RecurringSeriesState::CadenceChanged->value, 'detector_cadence_flip', 'detector');
 
         $this->events->dispatch(new RecurringSeriesCadenceFlipped(
             seriesId: $series->id,

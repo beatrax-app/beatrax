@@ -7,6 +7,7 @@ namespace Modules\Recurring\Internal\StateMachines;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\StateMachine\GuardedStateMachine;
 use Modules\Recurring\Models\RecurringSeries;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use Throwable;
 
 /**
@@ -33,18 +34,13 @@ final class RecurringSeriesStateMachine extends GuardedStateMachine
         $this->transitionRow(self::toInt($series->id), $toState, $reason, $actor, $notes, $extraColumns);
     }
 
-    // No "any -> any" escape hatch and no same-state re-entry (idempotent
-    // no-ops live in Public Actions, never here).
     /** @return array<string, list<string>> */
     protected function allowedTransitions(): array
     {
-        return [
-            'pending' => ['approved', 'rejected', 'snoozed'],
-            'approved' => ['cadence_changed', 'rejected'],
-            'cadence_changed' => ['approved', 'rejected'],
-            'snoozed' => ['pending', 'approved', 'rejected'],
-            'rejected' => ['pending'],
-        ];
+        return $this->transitionMap(
+            RecurringSeriesState::cases(),
+            static fn (RecurringSeriesState $state): array => $state->allowedNext(),
+        );
     }
 
     protected function table(): string

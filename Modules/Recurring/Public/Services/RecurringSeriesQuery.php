@@ -16,6 +16,7 @@ use Modules\Recurring\Internal\Support\SeriesIds;
 use Modules\Recurring\Public\Dto\RecurringOccurrenceDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use stdClass;
 
 /**
@@ -45,7 +46,7 @@ final readonly class RecurringSeriesQuery
      */
     public function pendingForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->scoped($user, ['pending'], $cursorId, $limit, 'id');
+        return $this->scoped($user, [RecurringSeriesState::Pending->value], $cursorId, $limit, 'id');
     }
 
     // Mirrors pendingForUser's strict scope: the cadence-changed tab has its
@@ -54,7 +55,7 @@ final readonly class RecurringSeriesQuery
     {
         return $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->where('state', 'pending')
+            ->where('state', RecurringSeriesState::Pending->value)
             ->count();
     }
 
@@ -63,7 +64,7 @@ final readonly class RecurringSeriesQuery
      */
     public function rejectedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->scoped($user, ['rejected'], $cursorId, $limit, 'id');
+        return $this->scoped($user, [RecurringSeriesState::Rejected->value], $cursorId, $limit, 'id');
     }
 
     /**
@@ -71,7 +72,7 @@ final readonly class RecurringSeriesQuery
      */
     public function approvedForUser(User $user, ?int $cursorId = null, int $limit = 26): array
     {
-        return $this->scoped($user, ['approved'], $cursorId, $limit, 'monthly_equivalent_minor');
+        return $this->scoped($user, [RecurringSeriesState::Approved->value], $cursorId, $limit, 'monthly_equivalent_minor');
     }
 
     /**
@@ -79,7 +80,7 @@ final readonly class RecurringSeriesQuery
      */
     public function cadenceChangedForUser(User $user): array
     {
-        return $this->scoped($user, ['cadence_changed'], null, 100, 'id');
+        return $this->scoped($user, [RecurringSeriesState::CadenceChanged->value], null, 100, 'id');
     }
 
     public function forSeries(int $seriesId, User $user): ?RecurringSeriesDto
@@ -370,7 +371,7 @@ final readonly class RecurringSeriesQuery
             ->join(self::TRANSACTIONS, 't.id', '=', 'o.transaction_id')
             ->where('s.user_id', $user->id)
             ->where('t.counterparty_id', $counterpartyId)
-            ->whereIn('s.state', ['approved', 'cadence_changed'])
+            ->whereIn('s.state', [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value])
             ->distinct()
             ->pluck('s.id')
             ->map(static fn (mixed $v): int => self::toInt($v))
@@ -532,7 +533,7 @@ final readonly class RecurringSeriesQuery
     {
         $rows = $this->db->connection()->table('recurring_series')
             ->where('user_id', $user->id)
-            ->whereIn('state', ['approved', 'cadence_changed'])
+            ->whereIn('state', [RecurringSeriesState::Approved->value, RecurringSeriesState::CadenceChanged->value])
             ->orderByDesc('monthly_equivalent_minor')
             ->orderByDesc('id')
             ->get();

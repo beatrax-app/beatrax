@@ -9,8 +9,10 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\Direction;
 use Modules\Recurring\Internal\Mapping\RecurringSeriesDtoMapper;
 use Modules\Recurring\Public\Dto\RecurringSeriesDto;
+use Modules\Recurring\Public\Enums\RecurringSeriesState;
 use stdClass;
 
 /**
@@ -49,7 +51,7 @@ final readonly class FixedPaymentsViewQuery
         $hasExpenseRow = false;
         foreach ($rows as $row) {
             /** @var stdClass $row */
-            if (self::toString($row->direction) === 'expense') {
+            if (self::toString($row->direction) === Direction::Expense->value) {
                 $hasExpenseRow = true;
 
                 break;
@@ -65,7 +67,7 @@ final readonly class FixedPaymentsViewQuery
             /** @var stdClass $row */
             $direction = self::toString($row->direction);
             $dto = $this->toDto($row, $fallbackMap);
-            if ($direction === 'income') {
+            if ($direction === Direction::Income->value) {
                 $income[] = $dto;
             } else {
                 $expenses[] = $dto;
@@ -129,7 +131,7 @@ final readonly class FixedPaymentsViewQuery
                 "COALESCE(SUM(CASE WHEN direction = 'income' THEN monthly_equivalent_minor ELSE 0 END), 0) AS income_eur_minor"
             )
             ->where('user_id', $user->id)
-            ->where('state', 'approved')
+            ->where('state', RecurringSeriesState::Approved->value)
             ->first();
 
         $expense = $row !== null ? self::toInt($row->expense_eur_minor) : 0;
@@ -151,7 +153,7 @@ final readonly class FixedPaymentsViewQuery
             ->table('recurring_series as rs')
             ->leftJoin('chain_links as cl', 'cl.id', '=', 'rs.latest_funding_chain_link_id')
             ->where('rs.user_id', $user->id)
-            ->where('rs.state', 'approved')
+            ->where('rs.state', RecurringSeriesState::Approved->value)
             ->orderByDesc('rs.monthly_equivalent_minor')
             ->orderByDesc('rs.id')
             ->get([
