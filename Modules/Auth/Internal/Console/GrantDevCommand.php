@@ -41,6 +41,11 @@ class GrantDevCommand extends Command
             return self::FAILURE;
         }
 
+        return $this->grant($user, $username);
+    }
+
+    private function grant(User $user, string $username): int
+    {
         if ($user->is_developer === true) {
             $this->info("Already a developer: {$username}");
 

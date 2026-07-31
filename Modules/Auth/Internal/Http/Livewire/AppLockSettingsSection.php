@@ -150,14 +150,9 @@ final class AppLockSettingsSection extends Component
             return;
         }
 
-        if (strlen($this->newPin) < 4) {
-            $this->flashMessage = self::PIN_TOO_SHORT;
-
-            return;
-        }
-
-        if ($this->newPin !== $this->confirmPin) {
-            $this->flashMessage = self::PIN_MISMATCH;
+        $error = $this->newPinValidationError();
+        if ($error !== null) {
+            $this->flashMessage = $error;
 
             return;
         }
@@ -255,14 +250,9 @@ final class AppLockSettingsSection extends Component
     // event, dispatched inside AppLockProvisioner::changePin().
     public function changePin(CurrentUser $currentUser, AppLockProvisioner $provisioner, EncryptionMigrationService $migrationService): void
     {
-        if (strlen($this->newPin) < 4) {
-            $this->flashMessage = self::PIN_TOO_SHORT;
-
-            return;
-        }
-
-        if ($this->newPin !== $this->confirmPin) {
-            $this->flashMessage = self::PIN_MISMATCH;
+        $error = $this->newPinValidationError();
+        if ($error !== null) {
+            $this->flashMessage = $error;
 
             return;
         }
@@ -303,14 +293,9 @@ final class AppLockSettingsSection extends Component
     // (which primes the session) -> Settings -> "Forgot PIN?".
     public function resetForgottenPin(CurrentUser $currentUser, AppLockProvisioner $provisioner, Hasher $hasher): void
     {
-        if (strlen($this->newPin) < 4) {
-            $this->flashMessage = self::PIN_TOO_SHORT;
-
-            return;
-        }
-
-        if ($this->newPin !== $this->confirmPin) {
-            $this->flashMessage = self::PIN_MISMATCH;
+        $error = $this->newPinValidationError();
+        if ($error !== null) {
+            $this->flashMessage = $error;
 
             return;
         }
@@ -392,6 +377,22 @@ final class AppLockSettingsSection extends Component
         $this->confirmingDeenroll = false;
         $this->deenrollPin = '';
         $this->flashMessage = '';
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    // Shared by every flow that sets a new PIN (set / change / forgot):
+    // returns the user-facing error string, or null when the entered PIN
+    // passes the minimum-length and confirmation-match checks.
+    private function newPinValidationError(): ?string
+    {
+        return match (true) {
+            strlen($this->newPin) < 4 => self::PIN_TOO_SHORT,
+            $this->newPin !== $this->confirmPin => self::PIN_MISMATCH,
+            default => null,
+        };
     }
 
     // -------------------------------------------------------------------------

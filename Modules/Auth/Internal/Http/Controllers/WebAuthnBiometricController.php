@@ -8,7 +8,6 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
@@ -76,7 +75,6 @@ final class WebAuthnBiometricController
         Request $request,
         CurrentUser $currentUser,
         WebAuthnBiometricService $service,
-        BiometricDeviceStore $store,
         PlatformDetector $detector,
         Session $session,
         LockStateManager $lockState,
