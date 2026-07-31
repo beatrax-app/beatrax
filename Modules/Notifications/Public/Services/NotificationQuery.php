@@ -129,11 +129,7 @@ final readonly class NotificationQuery
      */
     private static function decodeCursor(?string $cursor): ?array
     {
-        if ($cursor === null || $cursor === '') {
-            return null;
-        }
-
-        $decoded = base64_decode($cursor, true);
+        $decoded = ($cursor === null || $cursor === '') ? false : base64_decode($cursor, true);
         if ($decoded === false) {
             return null;
         }
@@ -141,7 +137,7 @@ final readonly class NotificationQuery
         try {
             $data = json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
-            return null;
+            $data = null;
         }
 
         if (

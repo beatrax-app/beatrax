@@ -143,40 +143,28 @@ final class NotificationsServiceProvider extends ServiceProvider
     // pair is checked with class_exists() before Dispatcher::listen() runs.
     private function registerTriggerListeners(Dispatcher $events): void
     {
-        if (class_exists(self::LISTENER_PERSIST_PAYMENT_REMINDER) && class_exists(self::EVENT_PAYMENT_REMINDER_DUE)) {
-            $events->listen(self::EVENT_PAYMENT_REMINDER_DUE, [self::LISTENER_PERSIST_PAYMENT_REMINDER, 'handle']);
+        foreach (self::triggerBindings() as [$event, $listener]) {
+            if (class_exists($listener) && class_exists($event)) {
+                $events->listen($event, [$listener, 'handle']);
+            }
         }
+    }
 
-        if (class_exists(self::LISTENER_RESOLVE_SETTLED_REMINDER) && class_exists(self::EVENT_PAYMENT_SETTLED)) {
-            $events->listen(self::EVENT_PAYMENT_SETTLED, [self::LISTENER_RESOLVE_SETTLED_REMINDER, 'handle']);
-        }
-
-        if (class_exists(self::LISTENER_PERSIST_BUDGET_NUDGE) && class_exists(self::EVENT_BUDGET_THRESHOLD_CROSSED)) {
-            $events->listen(self::EVENT_BUDGET_THRESHOLD_CROSSED, [self::LISTENER_PERSIST_BUDGET_NUDGE, 'handle']);
-        }
-
-        if (class_exists(self::LISTENER_PERSIST_SAVINGS_PROMPT) && class_exists(self::EVENT_SAVINGS_PROMPT_DUE)) {
-            $events->listen(self::EVENT_SAVINGS_PROMPT_DUE, [self::LISTENER_PERSIST_SAVINGS_PROMPT, 'handle']);
-        }
-
-        if (class_exists(self::LISTENER_PERSIST_POSITION_DIGEST) && class_exists(self::EVENT_POSITION_DIGEST_DUE)) {
-            $events->listen(self::EVENT_POSITION_DIGEST_DUE, [self::LISTENER_PERSIST_POSITION_DIGEST, 'handle']);
-        }
-
-        if (class_exists(self::LISTENER_PERSIST_COALESCED_IMPORT) && class_exists(self::EVENT_TRANSACTION_BATCH_IMPORTED)) {
-            $events->listen(self::EVENT_TRANSACTION_BATCH_IMPORTED, [self::LISTENER_PERSIST_COALESCED_IMPORT, 'handle']);
-        }
-
-        if (class_exists(self::LISTENER_PERSIST_DRIFT_ALERT) && class_exists(self::EVENT_DRIFT_ALERT_OPENED)) {
-            $events->listen(self::EVENT_DRIFT_ALERT_OPENED, [self::LISTENER_PERSIST_DRIFT_ALERT, 'handle']);
-        }
-
-        if (class_exists(self::LISTENER_PERSIST_FORECAST_SHORTFALL) && class_exists(self::EVENT_FORECAST_SHORTFALL_DETECTED)) {
-            $events->listen(self::EVENT_FORECAST_SHORTFALL_DETECTED, [self::LISTENER_PERSIST_FORECAST_SHORTFALL, 'handle']);
-        }
-
-        if (class_exists(self::LISTENER_PERSIST_ICS_STATEMENT_READY) && class_exists(self::EVENT_ICS_STATEMENT_READY)) {
-            $events->listen(self::EVENT_ICS_STATEMENT_READY, [self::LISTENER_PERSIST_ICS_STATEMENT_READY, 'handle']);
-        }
+    /**
+     * @return list<array{0: string, 1: string}>
+     */
+    private static function triggerBindings(): array
+    {
+        return [
+            [self::EVENT_PAYMENT_REMINDER_DUE, self::LISTENER_PERSIST_PAYMENT_REMINDER],
+            [self::EVENT_PAYMENT_SETTLED, self::LISTENER_RESOLVE_SETTLED_REMINDER],
+            [self::EVENT_BUDGET_THRESHOLD_CROSSED, self::LISTENER_PERSIST_BUDGET_NUDGE],
+            [self::EVENT_SAVINGS_PROMPT_DUE, self::LISTENER_PERSIST_SAVINGS_PROMPT],
+            [self::EVENT_POSITION_DIGEST_DUE, self::LISTENER_PERSIST_POSITION_DIGEST],
+            [self::EVENT_TRANSACTION_BATCH_IMPORTED, self::LISTENER_PERSIST_COALESCED_IMPORT],
+            [self::EVENT_DRIFT_ALERT_OPENED, self::LISTENER_PERSIST_DRIFT_ALERT],
+            [self::EVENT_FORECAST_SHORTFALL_DETECTED, self::LISTENER_PERSIST_FORECAST_SHORTFALL],
+            [self::EVENT_ICS_STATEMENT_READY, self::LISTENER_PERSIST_ICS_STATEMENT_READY],
+        ];
     }
 }

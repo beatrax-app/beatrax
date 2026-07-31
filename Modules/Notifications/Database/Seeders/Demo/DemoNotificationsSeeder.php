@@ -82,8 +82,20 @@ final class DemoNotificationsSeeder
 
     // The 13-row default set - one entry per demo scenario, covering all
     // 8 trigger types and five interesting states (unread, read,
-    // dismissed, resolved, dead-link).
+    // dismissed, resolved, dead-link). Delegates to three cohesive
+    // grouped seeders to stay well under the per-method length ceiling.
     private function seedCoreEntries(User $user, CarbonImmutable $realToday): void
+    {
+        $this->seedPaymentReminderEntries($user, $realToday);
+        $this->seedBudgetSavingsAndDigestEntries($user, $realToday);
+        $this->seedDriftForecastAndImportEntries($user, $realToday);
+    }
+
+    // The four payment-reminder scenarios: a confident upcoming reminder
+    // (marked read), the hedged variant (unread), a reminder that later
+    // settles into 'resolved', and a dead-link reminder for a series id
+    // that was never seeded.
+    private function seedPaymentReminderEntries(User $user, CarbonImmutable $realToday): void
     {
         // Payment reminders: r1 is a confident reminder, upcoming, on an
         // existing approved series - marked read below.
@@ -161,6 +173,14 @@ final class DemoNotificationsSeeder
                 displayName: 'Discontinued subscription',
             ));
         });
+    }
+
+    // The two budget-nudge crossings (both marked read), the dismissed
+    // savings prompt, and the weekly position digest (marked read). The
+    // envelope period key is resolved once here since only the budget
+    // nudges consume it.
+    private function seedBudgetSavingsAndDigestEntries(User $user, CarbonImmutable $realToday): void
+    {
         $period = $this->currentPeriodStart($realToday, (int) $user->period_start_day);
 
         $groceries = $this->category('groceries');
@@ -225,6 +245,16 @@ final class DemoNotificationsSeeder
             ));
         });
         $this->markRead($user, DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST, 'position', $weeklyOccurrence);
+    }
+
+    // The two drift alerts on already-seeded series (both marked read),
+    // the always-deliverable forecast shortfall, and the two coalesced
+    // imports (import-finished read, receipts-found dismissed). The
+    // series ids are re-resolved so each grouped seeder is self-contained.
+    private function seedDriftForecastAndImportEntries(User $user, CarbonImmutable $realToday): void
+    {
+        $spotifySeriesId = $this->seriesId($user, 'demo:spotify:monthly:1099');
+        $sportCitySeriesId = $this->seriesId($user, 'demo:sport-city:monthly:2500');
 
         if ($spotifySeriesId !== null) {
             $alert = $this->openDriftAlert($user, $spotifySeriesId);
