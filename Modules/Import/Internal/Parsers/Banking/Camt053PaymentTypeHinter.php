@@ -67,17 +67,26 @@ final class Camt053PaymentTypeHinter implements PaymentTypeHinter
 
     private function hintFromBtc(CanonicalTransaction $tx): ?PaymentTypeHint
     {
-        $rawPayload = $tx->rawPayload;
-        if (! is_array($rawPayload)) {
+        $key = self::btcKey($tx->rawPayload);
+        if ($key === null || ! isset(self::BTC_MAP[$key])) {
             return null;
         }
 
-        $sepa = $rawPayload['sepa'] ?? null;
-        if (! is_array($sepa)) {
-            return null;
-        }
+        $entry = self::BTC_MAP[$key];
 
-        $btc = $sepa['btc'] ?? null;
+        return new PaymentTypeHint(
+            type: $entry['type'],
+            confidence: $entry['confidence'],
+            sourceHint: $entry['sourceHint'],
+        );
+    }
+
+    // The BTC tuple key (domain|family|subFamily) or null when any level
+    // of the nested SEPA structure is missing or not a full string triple.
+    private static function btcKey(mixed $rawPayload): ?string
+    {
+        $sepa = is_array($rawPayload) ? ($rawPayload['sepa'] ?? null) : null;
+        $btc = is_array($sepa) ? ($sepa['btc'] ?? null) : null;
         if (! is_array($btc)) {
             return null;
         }
@@ -90,18 +99,7 @@ final class Camt053PaymentTypeHinter implements PaymentTypeHinter
             return null;
         }
 
-        $key = $domain.'|'.$family.'|'.$subFamily;
-        if (! isset(self::BTC_MAP[$key])) {
-            return null;
-        }
-
-        $entry = self::BTC_MAP[$key];
-
-        return new PaymentTypeHint(
-            type: $entry['type'],
-            confidence: $entry['confidence'],
-            sourceHint: $entry['sourceHint'],
-        );
+        return $domain.'|'.$family.'|'.$subFamily;
     }
 
     private function hintFromDescription(CanonicalTransaction $tx): ?PaymentTypeHint

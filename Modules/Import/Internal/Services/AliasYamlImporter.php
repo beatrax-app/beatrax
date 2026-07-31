@@ -32,6 +32,19 @@ final class AliasYamlImporter
      */
     public function parse(string $yamlContent): array
     {
+        $entries = [];
+        foreach ($this->decodeEntries($yamlContent) as $index => $raw) {
+            $entries[] = $this->mapEntry($raw, $index);
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @return array<array-key, mixed> the raw `entries` list
+     */
+    private function decodeEntries(string $yamlContent): array
+    {
         try {
             /** @var mixed $document */
             $document = Yaml::parse($yamlContent, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
@@ -40,59 +53,50 @@ final class AliasYamlImporter
                 'exception_message' => $e->getMessage(),
             ]);
 
-            throw new InvalidArgumentException(
-                'The file is not a valid YAML document.',
-                previous: $e,
-            );
+            throw new InvalidArgumentException('The file is not a valid YAML document.', previous: $e);
         } catch (Throwable $e) {
-            throw new InvalidArgumentException(
-                'The file could not be parsed.',
-                previous: $e,
-            );
+            throw new InvalidArgumentException('The file could not be parsed.', previous: $e);
         }
 
         if (! is_array($document) || ! isset($document['entries']) || ! is_array($document['entries'])) {
-            throw new InvalidArgumentException(
-                "The file is missing the top-level 'entries' list.",
-            );
+            throw new InvalidArgumentException("The file is missing the top-level 'entries' list.");
         }
 
-        /** @var list<CorpusEntryDto> $entries */
-        $entries = [];
-        foreach ($document['entries'] as $index => $raw) {
-            if (! is_array($raw)) {
-                throw new InvalidArgumentException(sprintf(
-                    'Entry #%d is not a mapping.',
-                    is_int($index) ? $index + 1 : 0,
-                ));
-            }
+        return $document['entries'];
+    }
 
-            $pattern = isset($raw['pattern']) && is_string($raw['pattern']) ? trim($raw['pattern']) : '';
-            $name = isset($raw['name']) && is_string($raw['name']) ? trim($raw['name']) : '';
-            $contributor = isset($raw['contributor']) && is_string($raw['contributor']) ? $raw['contributor'] : 'user';
-            $category = isset($raw['category']) && is_string($raw['category']) ? $raw['category'] : null;
-            $region = isset($raw['region']) && is_string($raw['region']) ? $raw['region'] : null;
-
-            if ($pattern === '' || $name === '') {
-                throw new InvalidArgumentException(sprintf(
-                    "Entry #%d is missing a required 'pattern' or 'name' field.",
-                    is_int($index) ? $index + 1 : 0,
-                ));
-            }
-
-            $generalized = $this->generalizer->generalize($pattern);
-
-            $entries[] = new CorpusEntryDto(
-                pattern: $pattern,
-                generalizedPattern: $generalized,
-                name: $name,
-                category: $category,
-                region: $region,
-                contributor: $contributor,
-            );
+    private function mapEntry(mixed $raw, int|string $index): CorpusEntryDto
+    {
+        $position = is_int($index) ? $index + 1 : 0;
+        if (! is_array($raw)) {
+            throw new InvalidArgumentException(sprintf('Entry #%d is not a mapping.', $position));
         }
 
-        return $entries;
+        $pattern = trim(self::stringField($raw, 'pattern') ?? '');
+        $name = trim(self::stringField($raw, 'name') ?? '');
+        if ($pattern === '' || $name === '') {
+            throw new InvalidArgumentException(sprintf(
+                "Entry #%d is missing a required 'pattern' or 'name' field.",
+                $position,
+            ));
+        }
+
+        return new CorpusEntryDto(
+            pattern: $pattern,
+            generalizedPattern: $this->generalizer->generalize($pattern),
+            name: $name,
+            category: self::stringField($raw, 'category'),
+            region: self::stringField($raw, 'region'),
+            contributor: self::stringField($raw, 'contributor') ?? 'user',
+        );
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $raw
+     */
+    private static function stringField(array $raw, string $key): ?string
+    {
+        return isset($raw[$key]) && is_string($raw[$key]) ? $raw[$key] : null;
     }
 
     /**

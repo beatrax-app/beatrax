@@ -27,33 +27,40 @@ final class LongestCommonPrefix
             );
         }
 
+        $prefix = trim(self::commonPrefixOf($patterns));
+
+        return mb_strlen($prefix) < self::MIN_PREFIX_LENGTH ? '' : $prefix;
+    }
+
+    // An empty member (or a first entry) collapses the shared length to
+    // zero, so the loop breaks early and yields an empty prefix without a
+    // dedicated return per bail-out.
+    /**
+     * @param  list<string>  $patterns
+     */
+    private static function commonPrefixOf(array $patterns): string
+    {
         $first = mb_strtolower($patterns[0]);
-        if ($first === '') {
-            return '';
-        }
-
         $minLen = mb_strlen($first);
+
         foreach ($patterns as $pattern) {
-            $other = mb_strtolower($pattern);
-            if ($other === '') {
-                return '';
-            }
-            $i = 0;
-            $bound = min($minLen, mb_strlen($other));
-            while ($i < $bound && mb_substr($first, $i, 1) === mb_substr($other, $i, 1)) {
-                $i++;
-            }
-            $minLen = $i;
+            $minLen = self::sharedLength($first, mb_strtolower($pattern), $minLen);
             if ($minLen === 0) {
-                return '';
+                break;
             }
         }
 
-        $prefix = trim(mb_substr($first, 0, $minLen));
-        if (mb_strlen($prefix) < self::MIN_PREFIX_LENGTH) {
-            return '';
+        return mb_substr($first, 0, $minLen);
+    }
+
+    private static function sharedLength(string $first, string $other, int $bound): int
+    {
+        $limit = min($bound, mb_strlen($other));
+        $i = 0;
+        while ($i < $limit && mb_substr($first, $i, 1) === mb_substr($other, $i, 1)) {
+            $i++;
         }
 
-        return $prefix;
+        return $i;
     }
 }

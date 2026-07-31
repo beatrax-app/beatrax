@@ -22,31 +22,35 @@ final class KnownCounterpartyIbanResolver implements ResolvesKnownCounterpartyIb
             return null;
         }
 
+        $kind = $this->aliasedAccountKind($iban, $userId);
+
+        return $kind === null ? null : $this->lowestIdAccountOfKind($kind, $userId);
+    }
+
+    private function aliasedAccountKind(string $iban, int $userId): ?string
+    {
         $alias = $this->db->connection()
             ->table('known_counterparty_ibans')
             ->where('user_id', $userId)
             ->where('real_iban', $iban)
             ->value('target_account_kind');
 
-        if (! is_string($alias) || $alias === '') {
-            return null;
-        }
+        return is_string($alias) && $alias !== '' ? $alias : null;
+    }
 
-        // Disambiguation: raw query builder returns the lowest-id
-        // matching account id; Eloquent's find($id) then hydrates
-        // the full model — sidesteps Larastan's staticMethod.dynamicCall
-        // lint while still returning the typed Account the contract promises.
+    // Disambiguation: raw query builder returns the lowest-id matching
+    // account id; Eloquent's find($id) then hydrates the full model —
+    // sidesteps Larastan's staticMethod.dynamicCall lint while still
+    // returning the typed Account the contract promises.
+    private function lowestIdAccountOfKind(string $kind, int $userId): ?Account
+    {
         $accountId = $this->db->connection()
             ->table('accounts')
             ->where('user_id', $userId)
-            ->where('kind', $alias)
+            ->where('kind', $kind)
             ->orderBy('id')
             ->value('id');
 
-        if (! is_numeric($accountId)) {
-            return null;
-        }
-
-        return Account::query()->find((int) $accountId);
+        return is_numeric($accountId) ? Account::query()->find((int) $accountId) : null;
     }
 }

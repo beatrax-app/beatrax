@@ -15,10 +15,11 @@ use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Dto\ImportConfirmResult;
 use Modules\Import\Public\Dto\ImportPreviewResult;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Import\Public\Exceptions\RacedImportRunVanishedException;
+use Modules\Import\Public\Exceptions\UploadStagingException;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ledger\Models\ImportRun;
-use RuntimeException;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#runimport-preview-idempotency--race-recovery
@@ -41,7 +42,7 @@ final class RunImport implements RunsImports
     {
         $sha = hash_file('sha256', $localPath);
         if (! is_string($sha)) {
-            throw new RuntimeException('Could not compute SHA256 of uploaded file.');
+            throw UploadStagingException::sha256Unavailable();
         }
 
         /** @var ImportRun|null $existing */
@@ -137,16 +138,16 @@ final class RunImport implements RunsImports
 
         $contents = @file_get_contents($sourcePath);
         if ($contents === false) {
-            throw new RuntimeException(sprintf('Could not read upload source file: %s', $sourcePath));
+            throw UploadStagingException::sourceUnreadable($sourcePath);
         }
 
         if (! $disk->put($relative, $contents)) {
-            throw new RuntimeException(sprintf('Could not persist upload to stable storage: %s', $relative));
+            throw UploadStagingException::persistFailed($relative);
         }
 
         $absolute = $disk->path($relative);
         if ($absolute === '') {
-            throw new RuntimeException('Stable storage disk does not expose absolute paths.');
+            throw UploadStagingException::absolutePathsUnsupported();
         }
 
         return $absolute;
@@ -281,9 +282,7 @@ final class RunImport implements RunsImports
             ->first();
 
         if ($raced === null) {
-            throw new RuntimeException(
-                'RunImport: import_runs row for the raced key vanished immediately after a unique-constraint violation.'
-            );
+            throw new RacedImportRunVanishedException($user->id, $sha256);
         }
 
         return $raced;
