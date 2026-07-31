@@ -9,7 +9,7 @@
       $resource  Modules\Community\Public\Dto\SupportResource
 --}}
 @php
-    $isGov = $resource->type === 'government';
+    $isGov = $resource->type === \Modules\Counterparties\Public\Enums\CounterpartyType::Government->value;
 
     $links = $isGov
         ? [

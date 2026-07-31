@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
 use Modules\Core\Public\Exceptions\RestoreFailedException;
 use Modules\Core\Public\Services\UserDataPathService;
@@ -265,7 +266,7 @@ final class RestoreDatabaseCommand extends Command
         SystemAlert::create([
             'user_id' => null,
             'kind' => 'backup_corrupt',
-            'severity' => 'critical',
+            'severity' => SystemAlertSeverity::Critical->value,
             'message' => sprintf(
                 'Restore from %s failed at %s. Pre-restore snapshot at %s.',
                 $sourcePath,

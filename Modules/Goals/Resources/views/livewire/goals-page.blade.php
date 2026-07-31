@@ -133,7 +133,7 @@
                     $barWidth = $pct === 0 ? 0 : max(2, $pct);
                     $isReached = $row->progressState === 'reached';
                     $isOverdue = $row->progressState === 'overdue';
-                    $isCompleted = $row->status === 'completed';
+                    $isCompleted = $row->status === \Modules\Goals\Public\Enums\GoalStatus::Completed->value;
                 @endphp
                 <li
                     class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700 {{ $isReached || $isCompleted ? 'border-l-[3px] border-l-emerald-500' : '' }}"

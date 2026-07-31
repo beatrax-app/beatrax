@@ -12,6 +12,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Support\BackupRetentionPolicy;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Exceptions\BackupCorruptException;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Exceptions\BackupNotSupportedException;
@@ -406,7 +407,7 @@ final class BackupDatabaseCommand extends Command
         SystemAlert::create([
             'user_id' => null,
             'kind' => 'backup_corrupt',
-            'severity' => 'critical',
+            'severity' => SystemAlertSeverity::Critical->value,
             'message' => $message,
             'metadata' => array_merge([
                 'suspect_path' => $suspectPath,

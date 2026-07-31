@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -52,7 +53,7 @@ final class GoalWriter
             'target_minor' => $minor,
             'target_currency' => $user->base_currency,
             'target_date' => $targetDate,
-            'status' => 'active',
+            'status' => GoalStatus::Active->value,
         ]);
     }
 
@@ -97,7 +98,7 @@ final class GoalWriter
             return;
         }
 
-        $goal->status = 'completed';
+        $goal->status = GoalStatus::Completed->value;
         $goal->save();
     }
 
@@ -108,7 +109,7 @@ final class GoalWriter
             return;
         }
 
-        $goal->status = 'archived';
+        $goal->status = GoalStatus::Archived->value;
         $goal->save();
     }
 
@@ -119,7 +120,7 @@ final class GoalWriter
             return;
         }
 
-        $goal->status = 'active';
+        $goal->status = GoalStatus::Active->value;
         $goal->save();
     }
 
