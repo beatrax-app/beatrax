@@ -63,7 +63,10 @@ function barInsertAccount(DatabaseManager $db, int $userId, string $kind, array 
     return $db->connection()->table('accounts')->insertGetId(array_merge($base, $overrides));
 }
 
-function barInsertStatementSummary(DatabaseManager $db, int $userId, int $accountId, int $closingMinor, string $periodEnd): void
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function barInsertStatementSummary(DatabaseManager $db, int $userId, int $accountId, int $closingMinor, string $periodEnd, array $overrides = []): void
 {
     $runId = $db->connection()->table('import_runs')->insertGetId([
         'user_id' => $userId,
@@ -75,7 +78,7 @@ function barInsertStatementSummary(DatabaseManager $db, int $userId, int $accoun
         'created_at' => '2026-05-01 00:00:00',
         'updated_at' => '2026-05-01 00:00:00',
     ]);
-    $db->connection()->table('statement_summaries')->insert([
+    $db->connection()->table('statement_summaries')->insert(array_merge([
         'user_id' => $userId,
         'import_run_id' => $runId,
         'account_id' => $accountId,
@@ -91,7 +94,7 @@ function barInsertStatementSummary(DatabaseManager $db, int $userId, int $accoun
         'entry_count' => 1,
         'created_at' => '2026-05-01 00:00:00',
         'updated_at' => '2026-05-01 00:00:00',
-    ]);
+    ], $overrides));
 }
 
 function barInsertTransaction(DatabaseManager $db, int $userId, int $accountId, int $amountMinor, string $postedAt): void
@@ -201,6 +204,39 @@ it('falls through to the transactions sum for a paypal account with no opening b
 
     expect($anchor->openingBalanceMinor)->toBe(8000);
     expect($anchor->source)->toBe('sum_of_transactions');
+});
+
+it('defaults to the base currency when the statement summary carries no closing currency', function (): void {
+    $accountId = barInsertAccount($this->db, $this->user->id, 'asn');
+    barInsertStatementSummary($this->db, $this->user->id, $accountId, 50000, '2026-04-30', ['closing_balance_currency' => '']);
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->source)->toBe('asn_statement_summary');
+    expect($anchor->currency)->toBe('EUR');
+});
+
+it('defaults to the base currency on the user-input path when the account has no default currency', function (): void {
+    $accountId = barInsertAccount($this->db, $this->user->id, 'paypal', [
+        'default_currency' => '',
+        'opening_balance_minor' => 25000,
+        'opening_balance_as_of_date' => '2026-05-01',
+    ]);
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->source)->toBe('user_input_opening_balance');
+    expect($anchor->currency)->toBe('EUR');
+});
+
+it('defaults to the base currency on the transactions-sum path when the account has no default currency', function (): void {
+    $accountId = barInsertAccount($this->db, $this->user->id, 'paypal', ['default_currency' => '']);
+    barInsertTransaction($this->db, $this->user->id, $accountId, 8000, '2026-05-12');
+
+    $anchor = $this->resolver->forAccount($accountId, $this->user);
+
+    expect($anchor->source)->toBe('sum_of_transactions');
+    expect($anchor->currency)->toBe('EUR');
 });
 
 it('raises ModelNotFoundException for a missing or cross-user account id', function (): void {

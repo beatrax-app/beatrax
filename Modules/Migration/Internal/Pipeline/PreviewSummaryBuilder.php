@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Migration\Internal\Exceptions\MigrationRunNotParsedException;
 use Modules\Migration\Models\MigrationRun;
@@ -30,6 +31,7 @@ final class PreviewSummaryBuilder
         private readonly DatabaseManager $db,
         private readonly SensitiveColumnCodec $codec,
         private readonly SessionFactory $session,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function forRun(int $migrationRunId, User $user): PreviewSummary
@@ -301,7 +303,7 @@ final class PreviewSummaryBuilder
         }
 
         if ($isMoney) {
-            return Money::ofMinor((int) $raw, $currency ?? 'EUR')->format('nl_NL');
+            return Money::ofMinor((int) $raw, $currency ?? $this->baseCurrency->code())->format('nl_NL');
         }
 
         return '"'.$raw.'"';
