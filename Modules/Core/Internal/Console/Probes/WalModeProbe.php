@@ -27,19 +27,17 @@ final class WalModeProbe implements Probe
             $value = $this->db->connection()->scalar('PRAGMA journal_mode');
             $current = is_string($value) ? $value : '';
         } catch (Throwable $e) {
-            return new ProbeResult(
-                'critical',
+            return new ProbeResult(ProbeSeverity::Critical->value,
                 'Failed to read PRAGMA journal_mode: '.$e->getMessage(),
                 ['exception' => $e::class],
             );
         }
 
         if (strtolower($current) === 'wal') {
-            return new ProbeResult('ok', 'WAL active.', ['current_mode' => $current]);
+            return new ProbeResult(ProbeSeverity::Ok->value, 'WAL active.', ['current_mode' => $current]);
         }
 
-        return new ProbeResult(
-            'warning',
+        return new ProbeResult(ProbeSeverity::Warning->value,
             sprintf("SQLite journal_mode is '%s' (expected 'wal').", $current),
             ['current_mode' => $current],
         );
