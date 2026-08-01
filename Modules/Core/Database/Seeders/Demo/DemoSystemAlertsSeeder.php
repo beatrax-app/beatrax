@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\UpdateAlertKind;
 
 // Materialises one row per `system_alerts.kind` (see ALERTS below) so the
 // banner-rotation logic exercises every branch on a fresh install.
@@ -36,7 +37,7 @@ final class DemoSystemAlertsSeeder
             'seedKey' => 'doctor-warning-current',
         ],
         [
-            'kind' => 'update_available',
+            'kind' => UpdateAlertKind::Available->value,
             'severity' => 'info',
             'message' => 'A new release of beatrax is available — see Settings → About for release notes.',
             'ageHours' => 12,
@@ -52,7 +53,7 @@ final class DemoSystemAlertsSeeder
             'seedKey' => 'force-password-change-current',
         ],
         [
-            'kind' => 'update_available',
+            'kind' => UpdateAlertKind::Available->value,
             'severity' => 'info',
             'message' => 'A prior release update notification — kept as an acknowledged audit row.',
             'ageHours' => 240,
