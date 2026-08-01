@@ -14,6 +14,10 @@ use Throwable;
  */
 final class Mt940Tag61Parser
 {
+    // Half-window (years) of the SWIFT two-digit-year sliding pivot: a `yy`
+    // more than this far from the current year rolls to the adjacent century.
+    private const int SWIFT_YEAR_WINDOW = 50;
+
     // Greedy regex over the extended :61: dialect: mandatory value date
     // (YYMMDD), optional entry date (MMDD), status, optional funds-code,
     // comma-decimal amount, optional transaction-type + 34-char customer
@@ -110,18 +114,18 @@ final class Mt940Tag61Parser
     }
 
     // SWIFT sliding-window convention: picks the closest four-digit year
-    // within +/-50 of "now" so the parser keeps working past 2100 without
-    // a code change.
+    // within +/-SWIFT_YEAR_WINDOW of "now" so the parser keeps working past
+    // 2100 without a code change.
     private function resolveSwiftYear(int $yy): int
     {
         $today = CarbonImmutable::now();
         $century = ((int) ($today->year / 100)) * 100;
         $candidate = $century + $yy;
 
-        if ($candidate - $today->year > 50) {
+        if ($candidate - $today->year > self::SWIFT_YEAR_WINDOW) {
             return $candidate - 100;
         }
-        if ($today->year - $candidate > 50) {
+        if ($today->year - $candidate > self::SWIFT_YEAR_WINDOW) {
             return $candidate + 100;
         }
 

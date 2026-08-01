@@ -12,6 +12,7 @@ use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Internal\Listeners\ProjectForecastOnScenarioChange;
 use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
 use Modules\Forecasting\Internal\Pipeline\ScenarioApplier;
+use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
 use Modules\Forecasting\Public\Actions\CreateScenario;
 use Modules\Forecasting\Public\Actions\DeleteScenario;
@@ -99,6 +100,27 @@ it('2. CreateScenario duplicate-name throws InvalidArgumentException with UI-SPE
 
     expect(fn () => ($action)($this->user, 'Tighten subscriptions'))
         ->toThrow(InvalidArgumentException::class, 'A scenario with that name already exists.');
+});
+
+it('CreateScenario rejects a name longer than the max length', function (): void {
+    /** @var CreateScenario $action */
+    $action = $this->app->make(CreateScenario::class);
+    $tooLong = str_repeat('a', ForecastScenario::MAX_NAME_LENGTH + 1);
+
+    expect(fn () => ($action)($this->user, $tooLong))
+        ->toThrow(InvalidArgumentException::class, 'Scenario name must be 120 characters or fewer.');
+});
+
+it('RenameScenario rejects a name longer than the max length', function (): void {
+    /** @var CreateScenario $create */
+    $create = $this->app->make(CreateScenario::class);
+    /** @var RenameScenario $rename */
+    $rename = $this->app->make(RenameScenario::class);
+    $id = ($create)($this->user, 'Fits fine');
+    $tooLong = str_repeat('a', ForecastScenario::MAX_NAME_LENGTH + 1);
+
+    expect(fn () => ($rename)($id, $this->user, $tooLong))
+        ->toThrow(InvalidArgumentException::class, 'Scenario name must be 120 characters or fewer.');
 });
 
 it('3. RenameScenario happy path: persists new name + dispatches ScenarioMutated', function (): void {
