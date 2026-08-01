@@ -148,6 +148,15 @@ it('amountTrendForSeries returns an empty currency + empty points when the serie
     expect($trend->points)->toBe([]);
 })->group('amount-trend-empty-currency-returns-empty-payload');
 
+it('amountTrendForSeries defaults to the base currency for a missing series', function (): void {
+    /** @var RecurringSeriesQuery $query */
+    $query = $this->app->make(RecurringSeriesQuery::class);
+    $trend = $query->amountTrendForSeries(999999, $this->user);
+
+    expect($trend->currency)->toBe('EUR');
+    expect($trend->points)->toBe([]);
+});
+
 it('paginates correctly when monthly_equivalent values tie — id-tiebreak descends within the tied band', function (): void {
     // Two rows tie on monthly_equivalent so the cursor must compose
     // both predicates: monthly_equivalent < cursorEq OR (equal AND id <

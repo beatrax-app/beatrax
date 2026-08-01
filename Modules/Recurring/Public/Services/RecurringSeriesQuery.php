@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Recurring\Internal\Queries\RecurringSeriesProjector;
 use Modules\Recurring\Internal\Queries\SeriesAccountResolver;
@@ -37,6 +38,7 @@ final readonly class RecurringSeriesQuery
         private DatabaseManager $db,
         private SeriesAccountResolver $accounts,
         private RecurringSeriesProjector $projector,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -400,7 +402,7 @@ final readonly class RecurringSeriesQuery
         if ($seriesRow === null) {
             return new RecurringSeriesAmountTrendDto(
                 seriesId: $seriesId,
-                currency: 'EUR',
+                currency: $this->baseCurrency->code(),
                 points: [],
                 maxPoints: $maxPoints,
             );
