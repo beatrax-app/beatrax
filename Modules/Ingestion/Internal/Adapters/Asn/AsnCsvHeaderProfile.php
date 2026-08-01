@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Asn;
 
+use Modules\Ingestion\Public\Enums\SourceFormat;
+
 /**
  * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class AsnCsvHeaderProfile
 {
-    public const FORMAT = 'asn-csv';
+    public const FORMAT = SourceFormat::AsnCsv->value;
 
     public const DELIMITER = ',';
 

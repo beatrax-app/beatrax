@@ -13,6 +13,7 @@ use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Csv\GenericCsvAmountParser;
 use Modules\Ingestion\Internal\Adapters\Ics\IcsPdfAdapter;
 use Modules\Ingestion\Internal\Adapters\Paypal\PaypalCsvAdapter;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\CsvPresetRegistry;
 use Modules\Ingestion\Public\Services\HeaderSniffer;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
@@ -31,9 +32,9 @@ final class IngestionServiceProvider extends ServiceProvider
             SourceAdapterRegistry::class,
             static function (Container $app): SourceAdapterRegistry {
                 $adapters = [
-                    'asn-csv' => $app->make(AsnCsvAdapter::class),
-                    'camt053' => $app->make(Camt053Adapter::class),
-                    'mt940' => $app->make(Mt940Adapter::class),
+                    SourceFormat::AsnCsv->value => $app->make(AsnCsvAdapter::class),
+                    SourceFormat::Camt053->value => $app->make(Camt053Adapter::class),
+                    SourceFormat::Mt940->value => $app->make(Mt940Adapter::class),
                     'ics-pdf' => $app->make(IcsPdfAdapter::class),
                     'paypal-csv' => $app->make(PaypalCsvAdapter::class),
                 ];

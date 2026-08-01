@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
@@ -17,7 +18,7 @@ final class Camt053StartingBalanceDetector implements DetectsStartingBalance
 {
     use CoercesScalars;
 
-    private const SOURCE_FORMAT = 'camt053';
+    private const SOURCE_FORMAT = SourceFormat::Camt053->value;
 
     public function __construct(private readonly DatabaseManager $db) {}
 

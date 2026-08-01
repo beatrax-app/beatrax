@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
+use Modules\Ingestion\Public\Enums\SourceFormat;
+
 /**
  * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Mt940HeaderProfile
 {
-    public const FORMAT = 'mt940';
+    public const FORMAT = SourceFormat::Mt940->value;
 
     /** @var list<string> */
     public const FILE_EXTENSIONS = ['sta', 'mt940', '940', 'txt'];

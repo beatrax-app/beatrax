@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Ingestion\Internal\Adapters\Banking;
 
+use Modules\Ingestion\Public\Enums\SourceFormat;
+
 /**
  * @link ../../../../../.docs/features/ingestion/architecture.md
  */
 final class Camt053HeaderProfile
 {
-    public const FORMAT = 'camt053';
+    public const FORMAT = SourceFormat::Camt053->value;
 
     /** @var list<string> */
     public const FILE_EXTENSIONS = ['xml'];
