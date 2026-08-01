@@ -55,7 +55,7 @@ final class PairingTokenService
             'initiator_device_id' => $initiatorDeviceId,
             'initiator_ed25519_pub_hex' => $ed25519PubHex,
             'initiator_x25519_pub_hex' => $x25519PubHex,
-            'state' => PairingStateMachine::PENDING,
+            'state' => PairingState::Pending->value,
             'expires_at' => $now->addMinutes(self::TTL_MINUTES)->toIso8601String(),
             'created_at' => $now->toIso8601String(),
         ]);
@@ -95,7 +95,7 @@ final class PairingTokenService
         $existing = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
-            ->where('state', PairingStateMachine::PENDING)
+            ->where('state', PairingState::Pending->value)
             ->first();
 
         if ($existing !== null) {
@@ -108,7 +108,7 @@ final class PairingTokenService
             'initiator_device_id' => $initiatorDeviceId,
             'initiator_ed25519_pub_hex' => $initiatorEd25519PubHex,
             'initiator_x25519_pub_hex' => $initiatorX25519PubHex,
-            'state' => PairingStateMachine::PENDING,
+            'state' => PairingState::Pending->value,
             'expires_at' => $now->addMinutes(self::TTL_MINUTES)->toIso8601String(),
             'initiator_seeded_at' => $now->toIso8601String(),
             'created_at' => $now->toIso8601String(),
@@ -151,7 +151,7 @@ final class PairingTokenService
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('token_hash', $tokenHash)
             ->where('user_id', $userId)
-            ->where('state', PairingStateMachine::PENDING)
+            ->where('state', PairingState::Pending->value)
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
@@ -177,7 +177,7 @@ final class PairingTokenService
                 'responder_device_id' => $responderDeviceId,
                 'responder_ed25519_pub_hex' => $responderEd25519PubHex,
                 'responder_x25519_pub_hex' => $responderX25519PubHex,
-                'state' => PairingStateMachine::AWAITING_CONFIRM,
+                'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $acceptedAt,
                 'expires_at' => $newExpiry->toIso8601String(),
             ]);
@@ -265,8 +265,8 @@ final class PairingTokenService
         return match ($state) {
             // Already advanced: only a redelivery of the SAME responder is
             // idempotent here. A different responder loses — first binding wins.
-            PairingStateMachine::AWAITING_CONFIRM => $this->rowIfResponderAlreadyBound($row, $responderDeviceId),
-            PairingStateMachine::PENDING => $this->bindResponderOntoRow(
+            PairingState::AwaitingConfirm->value => $this->rowIfResponderAlreadyBound($row, $responderDeviceId),
+            PairingState::Pending->value => $this->bindResponderOntoRow(
                 $row,
                 $userId,
                 $now,
@@ -328,7 +328,7 @@ final class PairingTokenService
                 'responder_device_id' => $responderDeviceId,
                 'responder_ed25519_pub_hex' => $responderEd25519Hex,
                 'responder_x25519_pub_hex' => $responderX25519Hex,
-                'state' => PairingStateMachine::AWAITING_CONFIRM,
+                'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $now->toIso8601String(),
                 'expires_at' => $newExpiry->toIso8601String(),
             ]);
@@ -423,7 +423,7 @@ final class PairingTokenService
         $responderConfirmedAt = is_string($row->responder_confirmed_at) ? $row->responder_confirmed_at : null;
 
         if (! $this->stateMachine->bothConfirmed($initiatorConfirmedAt, $responderConfirmedAt)) {
-            return is_string($row->state) ? $row->state : PairingStateMachine::AWAITING_CONFIRM;
+            return is_string($row->state) ? $row->state : PairingState::AwaitingConfirm->value;
         }
 
         $rowId = is_numeric($row->id) ? (int) $row->id : 0;
@@ -431,7 +431,7 @@ final class PairingTokenService
         $this->db->connection()->table('pairing_tokens')
             ->where('id', $rowId)
             ->where('user_id', $userId)
-            ->update(['state' => PairingStateMachine::CONFIRMED]);
+            ->update(['state' => PairingState::Confirmed->value]);
 
         $this->admitter->admitResponderDevice($row, $userId);
 
@@ -443,7 +443,7 @@ final class PairingTokenService
             $this->admitter->admitInitiatorDevice($row, $userId);
         }
 
-        return PairingStateMachine::CONFIRMED;
+        return PairingState::Confirmed->value;
     }
 
     public function expire(int $tokenId, int $userId): void
@@ -451,7 +451,7 @@ final class PairingTokenService
         $this->db->connection()->table('pairing_tokens')
             ->where('id', $tokenId)
             ->where('user_id', $userId)
-            ->update(['state' => PairingStateMachine::EXPIRED]);
+            ->update(['state' => PairingState::Expired->value]);
     }
 
     // Deletes stale pairing_tokens rows: past TTL or already terminal.
@@ -464,8 +464,8 @@ final class PairingTokenService
             ->where(function (QueryBuilder $query) use ($now): void {
                 $query->where('expires_at', '<', $now->toIso8601String())
                     ->orWhereIn('state', [
-                        PairingStateMachine::CONFIRMED,
-                        PairingStateMachine::EXPIRED,
+                        PairingState::Confirmed->value,
+                        PairingState::Expired->value,
                     ]);
             })
             ->delete();

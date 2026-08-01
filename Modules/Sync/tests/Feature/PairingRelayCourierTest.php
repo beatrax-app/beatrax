@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
@@ -102,7 +102,7 @@ it('sendResponderAccept() + drainPairingFrames() propagates the responder identi
 
     $this->asDevice('desktop', function () use ($tokenHash, $phoneIdentity): void {
         $row = prcTokenRow($tokenHash);
-        expect($row->state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($row->state)->toBe(PairingState::AwaitingConfirm->value);
         expect($row->responder_device_id)->toBe($phoneIdentity->deviceId);
     });
 });
@@ -141,7 +141,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity): void {
         $row = prcTokenRow($tokenHash);
         $state = app(PairingTokenService::class)->confirm((int) $row->id, PRC_PHONE_USER_ID, $phoneIdentity->deviceId);
-        expect($state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($state)->toBe(PairingState::AwaitingConfirm->value);
 
         /** @var Session $session */
         $session = app(Session::class);
@@ -181,7 +181,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
 
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = prcTokenRow($tokenHash);
-        expect($row->state)->toBe(PairingStateMachine::CONFIRMED);
+        expect($row->state)->toBe(PairingState::Confirmed->value);
     });
 
     // PHONE drains — applies the desktop's signed PAIR_CONFIRM.
@@ -193,7 +193,7 @@ it('the full both-confirm handshake propagates over the relay and admits the pee
 
     $this->asDevice('phone', function () use ($tokenHash): void {
         $row = prcTokenRow($tokenHash);
-        expect($row->state)->toBe(PairingStateMachine::CONFIRMED);
+        expect($row->state)->toBe(PairingState::Confirmed->value);
     });
 
     // Each device admits the PEER it does not own, on its OWN database.
@@ -236,7 +236,7 @@ it('an applied frame is DELETED from the relay mailbox — redraining returns no
         app(PairingGateway::class)->drainPairingFrames(PRC_DESKTOP_USER_ID);
     });
     $this->asDevice('desktop', function () use ($tokenHash): void {
-        expect(prcTokenRow($tokenHash)->state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect(prcTokenRow($tokenHash)->state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
     // Directly inspect the relay's own mailbox (drain via RelayClient) —
@@ -303,7 +303,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = prcTokenRow($tokenHash);
         expect($row->responder_confirmed_at)->toBeNull();
-        expect($row->state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($row->state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
     // NOW the desktop's local human confirms — the NEXT drain finally
@@ -320,7 +320,7 @@ it('a valid-but-deferred PAIR_CONFIRM stays in the relay mailbox across MULTIPLE
     });
 
     $this->asDevice('desktop', function () use ($tokenHash): void {
-        expect(prcTokenRow($tokenHash)->state)->toBe(PairingStateMachine::CONFIRMED);
+        expect(prcTokenRow($tokenHash)->state)->toBe(PairingState::Confirmed->value);
     });
 });
 

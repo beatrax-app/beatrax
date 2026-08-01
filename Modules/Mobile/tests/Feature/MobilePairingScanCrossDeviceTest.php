@@ -15,7 +15,7 @@ use Modules\Sync\Internal\Crypto\GdkEpochControlHandler;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Public\Services\DeviceRegistryService;
@@ -102,7 +102,7 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
         $row = app(DatabaseManager::class)->connection()->table('pairing_tokens')
             ->where('token_hash', hash('sha256', $issuedToken))
             ->first();
-        expect($row->state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($row->state)->toBe(PairingState::AwaitingConfirm->value);
     });
 });
 
@@ -168,7 +168,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
             ->where('token_hash', hash('sha256', $issuedToken))
             ->first();
         $state = app(PairingTokenService::class)->confirm((int) $row->id, MPS_DESKTOP_USER_ID, $desktopIdentity->deviceId);
-        expect($state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($state)->toBe(PairingState::AwaitingConfirm->value);
 
         app(PairingGateway::class)->sendConfirm(MPS_DESKTOP_USER_ID, (int) $row->id, $phoneIdentity->deviceId, $session);
     });
