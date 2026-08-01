@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Forecasting\Public\Dto\BalanceAnchorDto;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use stdClass;
 
 /**
@@ -24,6 +25,7 @@ final readonly class BalanceAnchorResolver
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function forAccount(int $accountId, User $user): BalanceAnchorDto
@@ -72,7 +74,7 @@ final readonly class BalanceAnchorResolver
         return new BalanceAnchorDto(
             accountId: $accountId,
             openingBalanceMinor: 0,
-            currency: $defaultCurrency !== '' ? $defaultCurrency : 'EUR',
+            currency: $defaultCurrency !== '' ? $defaultCurrency : $this->baseCurrency->code(),
             asOfDate: $this->clock->now()->startOfDay(),
             source: 'ics_card_zero_anchor',
         );
@@ -95,7 +97,7 @@ final readonly class BalanceAnchorResolver
         /** @var stdClass $row */
         $currency = self::toString($row->closing_balance_currency ?? null);
         if ($currency === '') {
-            $currency = 'EUR';
+            $currency = $this->baseCurrency->code();
         }
         $rawAsOf = self::toString($row->closing_balance_date ?? $row->period_end ?? null);
         $asOf = $rawAsOf !== ''
@@ -159,7 +161,7 @@ final readonly class BalanceAnchorResolver
 
         $defaultCurrency = self::toString($account->getAttribute('default_currency'));
         if ($defaultCurrency === '') {
-            $defaultCurrency = 'EUR';
+            $defaultCurrency = $this->baseCurrency->code();
         }
 
         return new BalanceAnchorDto(
@@ -179,7 +181,7 @@ final readonly class BalanceAnchorResolver
             ->sum('amount_minor');
 
         if ($defaultCurrency === '') {
-            $defaultCurrency = 'EUR';
+            $defaultCurrency = $this->baseCurrency->code();
         }
 
         return new BalanceAnchorDto(
