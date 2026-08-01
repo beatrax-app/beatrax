@@ -21,6 +21,7 @@ use Modules\Import\Public\Enums\BankCsvFormatHint;
 use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Import\Public\Exceptions\PreviewExpiredException;
 use Modules\Import\Public\Services\AccountNamer;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\AccountKind;
@@ -266,8 +267,8 @@ final class PreviewWizard extends Component
     private function formatHintForReRun(string $sourceFormat): ?BankCsvFormatHint
     {
         return match ($sourceFormat) {
-            'asn-csv' => BankCsvFormatHint::Asn,
-            'ing-csv' => BankCsvFormatHint::Ing,
+            SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
+            SourceFormat::IngCsv->value => BankCsvFormatHint::Ing,
             default => null,
         };
     }
