@@ -11,6 +11,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 
 /**
@@ -29,6 +30,7 @@ final readonly class DuplicateChargeDetector
         private DatabaseManager $db,
         private Clock $clock,
         private RecurringSeriesQuery $recurringQuery,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -44,7 +46,7 @@ final readonly class DuplicateChargeDetector
             return false;
         }
 
-        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : 'EUR';
+        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->code();
         $direction = Direction::fromTransactionType(is_string($txn['type'] ?? null) ? $txn['type'] : TransactionType::Expense->value)->value;
         $types = Direction::from($direction)->transactionTypes();
         $thisId = self::toInt($txn['id'] ?? 0);
