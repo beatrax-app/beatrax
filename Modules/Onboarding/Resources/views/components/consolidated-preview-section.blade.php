@@ -28,12 +28,13 @@
     Props:
       :section — the ConsolidatedPreviewSection DTO instance.
 --}}
+@use('Modules\Ingestion\Public\Enums\SourceFormat')
 @props(['section'])
 @php
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewSection $section */
 
     $eyebrowLabel = match ($section->sourceFormat) {
-        'camt053', 'mt940', 'asn-csv', 'ing-csv' => 'FROM YOUR BANK STATEMENT',
+        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => 'FROM YOUR BANK STATEMENT',
         'ics-pdf' => 'FROM YOUR ICS CARD STATEMENTS',
         'paypal-csv' => 'FROM PAYPAL',
         default => 'FROM '.strtoupper(str_replace('-', ' ', $section->sourceFormat)),

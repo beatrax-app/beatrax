@@ -14,6 +14,7 @@
     the parent component (`selectedBankFormatHint`); arrow-key
     navigation comes from the surrounding `role="radiogroup"`.
 --}}
+@use('Modules\Ingestion\Public\Enums\SourceFormat')
 @props([
     'selected' => null,
 ])
@@ -27,18 +28,18 @@
         type="button"
         class="format-chip-button"
         role="radio"
-        aria-checked="{{ $selected === 'asn-csv' ? 'true' : 'false' }}"
-        wire:click="$set('selectedBankFormatHint', 'asn-csv')"
+        aria-checked="{{ $selected === SourceFormat::AsnCsv->value ? 'true' : 'false' }}"
+        wire:click="$set('selectedBankFormatHint', '{{ SourceFormat::AsnCsv->value }}')"
     >
-        <x-onboarding::format-chip label="ASN" :recommended="$selected === 'asn-csv'" />
+        <x-onboarding::format-chip label="ASN" :recommended="$selected === SourceFormat::AsnCsv->value" />
     </button>
     <button
         type="button"
         class="format-chip-button"
         role="radio"
-        aria-checked="{{ $selected === 'ing-csv' ? 'true' : 'false' }}"
-        wire:click="$set('selectedBankFormatHint', 'ing-csv')"
+        aria-checked="{{ $selected === SourceFormat::IngCsv->value ? 'true' : 'false' }}"
+        wire:click="$set('selectedBankFormatHint', '{{ SourceFormat::IngCsv->value }}')"
     >
-        <x-onboarding::format-chip label="ING" :recommended="$selected === 'ing-csv'" />
+        <x-onboarding::format-chip label="ING" :recommended="$selected === SourceFormat::IngCsv->value" />
     </button>
 </div>

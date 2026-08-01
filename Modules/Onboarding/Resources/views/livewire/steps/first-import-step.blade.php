@@ -17,6 +17,7 @@
     for this step (UI-SPEC §"Density rules"). Every other wizard step
     is 620px; this one needs the room for the preview table.
 --}}
+@use('Modules\Ingestion\Public\Enums\SourceFormat')
 @php
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewBatch $preview */
     /** @var list<\Modules\Import\Public\Dto\StartingBalanceCandidate> $startingBalances */
@@ -110,10 +111,10 @@
                             $alternativeCandidates = [];
                             foreach ($candidates as $candidate) {
                                 $sourceLabel = match ($candidate->sourceFormat) {
-                                    'camt053' => 'CAMT.053',
-                                    'mt940' => 'MT940',
-                                    'asn-csv' => 'ASN CSV',
-                                    'ing-csv' => 'ING CSV',
+                                    SourceFormat::Camt053->value => 'CAMT.053',
+                                    SourceFormat::Mt940->value => 'MT940',
+                                    SourceFormat::AsnCsv->value => 'ASN CSV',
+                                    SourceFormat::IngCsv->value => 'ING CSV',
                                     'ics-pdf' => 'ICS PDF',
                                     'paypal-csv' => 'PayPal CSV',
                                     default => $candidate->sourceFormat,
