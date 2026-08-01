@@ -9,6 +9,7 @@ use Modules\Anomaly\Public\Dto\AnomalySuppressionRuleDto;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use stdClass;
 
@@ -22,6 +23,7 @@ final readonly class AnomalySuppressionRuleQuery
     public function __construct(
         private DatabaseManager $db,
         private CounterpartyProfileQuery $counterpartyQuery,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -62,7 +64,7 @@ final readonly class AnomalySuppressionRuleQuery
         foreach ($rows as $row) {
             /** @var stdClass $row */
             $counterpartyId = self::toIntOrNull($row->counterparty_id ?? null);
-            $currency = self::toCurrency($row->currency ?? null);
+            $currency = $this->toCurrency($row->currency ?? null);
 
             $result[] = new AnomalySuppressionRuleDto(
                 id: self::toInt($row->id ?? null),
@@ -79,9 +81,9 @@ final readonly class AnomalySuppressionRuleQuery
         return $result;
     }
 
-    private static function toCurrency(mixed $value): string
+    private function toCurrency(mixed $value): string
     {
-        return is_string($value) && $value !== '' ? $value : 'EUR';
+        return is_string($value) && $value !== '' ? $value : $this->baseCurrency->code();
     }
 
     private static function toIntOrNull(mixed $value): ?int
