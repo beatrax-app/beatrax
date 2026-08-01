@@ -159,3 +159,17 @@ it('Public Action raises NotFoundHttpException for a cross-user series id (cross
 
     expect(dteCurrentThreshold($seriesId))->toBe(5);
 });
+
+it('Public Action rejects a threshold outside the shared allow-list with InvalidArgumentException', function (): void {
+    $owner = dteUser('dte-invalid');
+    $seriesId = dteSeries($owner, ['drift_threshold_percent' => 5]);
+
+    /** @var SetDriftThresholdForSeries $action */
+    $action = $this->app->make(SetDriftThresholdForSeries::class);
+
+    // 7 is not one of DriftThresholdOptions::PERCENTS; the guard throws before any write.
+    expect(fn () => ($action)($seriesId, $owner, 7))
+        ->toThrow(InvalidArgumentException::class);
+
+    expect(dteCurrentThreshold($seriesId))->toBe(5);
+});
