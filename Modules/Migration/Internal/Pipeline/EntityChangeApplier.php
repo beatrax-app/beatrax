@@ -14,6 +14,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Migration\Internal\Services\SourceMapWriter;
 use Modules\Migration\Internal\ValueObjects\SourceMapKey;
+use Modules\Migration\Public\Enums\MigrationEntityType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -40,9 +41,9 @@ final class EntityChangeApplier
     public function apply(User $user, string $sourceProduct, string $entityType, string $sourceExternalId, array $fields): bool
     {
         $table = match ($entityType) {
-            'category' => 'categories',
-            'account' => 'accounts',
-            'transaction' => 'transactions',
+            MigrationEntityType::Category->value => 'categories',
+            MigrationEntityType::Account->value => 'accounts',
+            MigrationEntityType::Transaction->value => 'transactions',
             default => null,
         };
 
@@ -54,7 +55,7 @@ final class EntityChangeApplier
             return false;
         }
 
-        if ($entityType === 'transaction' && array_key_exists('amount_minor', $fields)) {
+        if ($entityType === MigrationEntityType::Transaction->value && array_key_exists('amount_minor', $fields)) {
             $newAmountMinor = $fields['amount_minor'];
             if (! (is_int($newAmountMinor) && $this->applyTransactionAmount($user, $beatraxId, $newAmountMinor))) {
                 return false;
@@ -202,7 +203,7 @@ final class EntityChangeApplier
     private static function beatraxEntityType(string $entityType): string
     {
         return match ($entityType) {
-            'budget_assignment' => 'envelope_assignment',
+            MigrationEntityType::BudgetAssignment->value => 'envelope_assignment',
             default => $entityType,
         };
     }

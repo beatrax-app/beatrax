@@ -15,6 +15,7 @@ use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
 use Modules\Migration\Internal\Pipeline\ThreeWayMergeResolver;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\ConflictDto;
+use Modules\Migration\Public\Enums\MigrationEntityType;
 use Modules\Migration\Public\Enums\MigrationRunStatus;
 
 /**
@@ -100,7 +101,7 @@ final class CheckForUpdates
     private function applyNonBudgetAssignmentChanges(int $runId, User $user, string $sourceProduct, MergeDecision $decision): void
     {
         foreach ($decision->applies as $apply) {
-            if ($apply['entityType'] === 'budget_assignment') {
+            if ($apply['entityType'] === MigrationEntityType::BudgetAssignment->value) {
                 // Already applied unconditionally inside promote()'s
                 // promoteBudgetAssignments() pass above.
                 continue;
@@ -108,7 +109,7 @@ final class CheckForUpdates
 
             $applied = $this->applier->apply($user, $sourceProduct, $apply['entityType'], $apply['sourceExternalId'], $apply['fields']);
 
-            if (! $applied && $apply['entityType'] === 'transaction' && array_key_exists('amount_minor', $apply['fields'])) {
+            if (! $applied && $apply['entityType'] === MigrationEntityType::Transaction->value && array_key_exists('amount_minor', $apply['fields'])) {
                 // Vanishingly rare: the new amount collides with another
                 // row's fingerprint tuple. Left byte-for-byte untouched
                 // rather than silently dropped or half-applied — surfaced

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Migration\Internal\Pipeline;
 
 use Modules\Migration\Public\Dto\ConflictDto;
+use Modules\Migration\Public\Enums\MigrationEntityType;
 
 /**
  * @link ../../../../.docs/features/migration/architecture.md
@@ -30,7 +31,7 @@ final class MergeDecision
         // in as an explicit skip-list to keep a conflicted row untouched.
         $keys = [];
         foreach ($this->conflicts as $conflict) {
-            if ($conflict->entityType === 'budget_assignment' && $conflict->sourceExternalId !== null) {
+            if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value && $conflict->sourceExternalId !== null) {
                 $keys[] = $conflict->sourceExternalId;
             }
         }

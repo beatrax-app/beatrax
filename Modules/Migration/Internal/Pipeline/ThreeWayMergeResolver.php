@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Migration\Public\Dto\ConflictDto;
+use Modules\Migration\Public\Enums\MigrationEntityType;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
@@ -95,7 +96,7 @@ final class ThreeWayMergeResolver
 
             if (self::moneyEquals($currentMinor, $currency, $baselineMinor, $currency)) {
                 $applies[] = [
-                    'entityType' => 'budget_assignment',
+                    'entityType' => MigrationEntityType::BudgetAssignment->value,
                     'sourceExternalId' => $sourceExternalId,
                     'fields' => ['budgeted_minor' => $sNewMinor],
                 ];
@@ -104,7 +105,7 @@ final class ThreeWayMergeResolver
             }
 
             $conflicts[] = new ConflictDto(
-                entityType: 'budget_assignment',
+                entityType: MigrationEntityType::BudgetAssignment->value,
                 sourceExternalId: $sourceExternalId,
                 fieldName: 'budgeted_minor',
                 localValue: $currentMinor,
@@ -153,7 +154,7 @@ final class ThreeWayMergeResolver
 
             if ($current === $baseline) {
                 $applies[] = [
-                    'entityType' => 'category',
+                    'entityType' => MigrationEntityType::Category->value,
                     'sourceExternalId' => $externalId,
                     'fields' => ['name' => $sNew],
                 ];
@@ -162,7 +163,7 @@ final class ThreeWayMergeResolver
             }
 
             $conflicts[] = new ConflictDto(
-                entityType: 'category',
+                entityType: MigrationEntityType::Category->value,
                 sourceExternalId: $externalId,
                 fieldName: 'name',
                 localValue: $current,
@@ -210,7 +211,7 @@ final class ThreeWayMergeResolver
 
             if ($current === $baseline) {
                 $applies[] = [
-                    'entityType' => 'account',
+                    'entityType' => MigrationEntityType::Account->value,
                     'sourceExternalId' => $externalId,
                     'fields' => ['name' => $sNew],
                 ];
@@ -219,7 +220,7 @@ final class ThreeWayMergeResolver
             }
 
             $conflicts[] = new ConflictDto(
-                entityType: 'account',
+                entityType: MigrationEntityType::Account->value,
                 sourceExternalId: $externalId,
                 fieldName: 'name',
                 localValue: $current,
@@ -272,7 +273,7 @@ final class ThreeWayMergeResolver
 
             if ($current === $baseline) {
                 $applies[] = [
-                    'entityType' => 'transaction',
+                    'entityType' => MigrationEntityType::Transaction->value,
                     'sourceExternalId' => $externalId,
                     'fields' => ['description' => $sNew],
                 ];
@@ -281,7 +282,7 @@ final class ThreeWayMergeResolver
             }
 
             $conflicts[] = new ConflictDto(
-                entityType: 'transaction',
+                entityType: MigrationEntityType::Transaction->value,
                 sourceExternalId: $externalId,
                 fieldName: 'description',
                 localValue: $current,
@@ -346,7 +347,7 @@ final class ThreeWayMergeResolver
             // otherwise made moneyEquals() spuriously flag a conflict.
             if (self::moneyEquals($currentMinor, $currentCurrency, $baselineMinor, $currentCurrency)) {
                 $applies[] = [
-                    'entityType' => 'transaction',
+                    'entityType' => MigrationEntityType::Transaction->value,
                     'sourceExternalId' => $externalId,
                     'fields' => ['amount_minor' => $sNewMinor],
                 ];
@@ -355,7 +356,7 @@ final class ThreeWayMergeResolver
             }
 
             $conflicts[] = new ConflictDto(
-                entityType: 'transaction',
+                entityType: MigrationEntityType::Transaction->value,
                 sourceExternalId: $externalId,
                 fieldName: 'amount_minor',
                 localValue: $currentMinor,
