@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Ics;
 
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
  * @link ../../../../../.docs/features/ingestion/architecture.md
@@ -56,6 +57,6 @@ final class IcsAmountParser
         $whole = (int) $parts[0];
         $fractional = (int) $parts[1];
 
-        return $sign * ($whole * 100 + $fractional);
+        return $sign * ($whole * Money::MINOR_UNITS_PER_MAJOR + $fractional);
     }
 }
