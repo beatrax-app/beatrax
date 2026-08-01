@@ -20,6 +20,12 @@ final readonly class LargeVsTypicalDetector
 {
     use CoercesScalars;
 
+    // The value-scaled MAD floor is this fraction of the sample median
+    // magnitude — the companion to RobustStatistics::MAD_FLOOR_MINOR, so a
+    // high-value merchant's near-constant history floors at 1% of its typical
+    // charge rather than the flat absolute minor-unit floor.
+    private const float MAD_FLOOR_MEDIAN_FRACTION = 0.01;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -146,7 +152,7 @@ final readonly class LargeVsTypicalDetector
     {
         $median = RobustStatistics::median(array_map('abs', $sample));
 
-        $floor = max((float) RobustStatistics::MAD_FLOOR_MINOR, $median * 0.01);
+        $floor = max((float) RobustStatistics::MAD_FLOOR_MINOR, $median * self::MAD_FLOOR_MEDIAN_FRACTION);
 
         return (int) $floor;
     }
