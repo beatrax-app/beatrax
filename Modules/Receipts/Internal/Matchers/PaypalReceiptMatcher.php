@@ -11,6 +11,7 @@ use Brick\Money\Exception\UnknownCurrencyException;
 use Brick\Money\Money;
 use Carbon\CarbonImmutable;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Public\Contracts\SenderMatcher;
 use Modules\Receipts\Public\Dto\MatchOutcomeDto;
 use Modules\Receipts\Public\Dto\ParsedReceiptDto;
@@ -45,7 +46,10 @@ final class PaypalReceiptMatcher implements SenderMatcher
 
     private const MERCHANT_REGEX = '/(?:Aan|Merchant|To|Paid to):\s*(.+)/i';
 
-    public function __construct(private readonly EmlMimeReader $reader) {}
+    public function __construct(
+        private readonly EmlMimeReader $reader,
+        private readonly BaseCurrency $baseCurrency,
+    ) {}
 
     public function key(): string
     {
@@ -211,7 +215,7 @@ final class PaypalReceiptMatcher implements SenderMatcher
         if (preg_match(self::LABELLED_AMOUNT_REGEX, $body, $m) !== 1) {
             return null;
         }
-        $currency = $m[1] !== '' ? strtoupper($m[1]) : 'EUR';
+        $currency = $m[1] !== '' ? strtoupper($m[1]) : $this->baseCurrency->code();
         $minor = $this->toMinorOrNull($m[2], $currency);
 
         return $minor === null ? null : [-$minor, $currency];

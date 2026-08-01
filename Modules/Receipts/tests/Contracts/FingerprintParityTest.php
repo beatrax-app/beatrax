@@ -10,6 +10,7 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\AccountResolution;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Receipts\Internal\Matchers\IcsReceiptMatcher;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
@@ -144,7 +145,7 @@ it('produces equivalent fingerprints from receipt and CSV for the same logical t
         $accounts = new FixedPaypalAccountResolver($accountId);
 
         // Receipt-side: matcher → adapter → SourceTransactionDto → normalize.
-        $matcher = new PaypalReceiptMatcher(new EmlMimeReader);
+        $matcher = new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class));
         $rawEml = (string) file_get_contents($emlPath);
         $matchOutcome = $matcher->match($rawEml);
         expect($matchOutcome->kind)->toBe('parsed');

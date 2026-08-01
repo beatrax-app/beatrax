@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Modules\EmailScan\Public\Dto\InboxMessageDto;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Receipts\Internal\MatcherRegistry;
 use Modules\Receipts\Internal\Matchers\PaypalReceiptMatcher;
 use Modules\Receipts\Public\Dto\MatcherInputDto;
@@ -13,7 +14,7 @@ use Modules\Receipts\Public\Pipeline\ReceiptSourceAdapter;
 
 function paypalMatcher(): PaypalReceiptMatcher
 {
-    return new PaypalReceiptMatcher(new EmlMimeReader);
+    return new PaypalReceiptMatcher(new EmlMimeReader, app(BaseCurrency::class));
 }
 
 function paypalInbox(string $senderEmail, ?string $subject = null): InboxMessageDto
