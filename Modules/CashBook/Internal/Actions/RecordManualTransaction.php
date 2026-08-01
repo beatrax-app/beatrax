@@ -13,6 +13,7 @@ use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Enums\AccountKind;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 // Records a hand-entered transaction through the same canonical pipeline
@@ -31,6 +32,7 @@ final class RecordManualTransaction
         private readonly RecordsTransactions $record,
         private readonly FingerprintComposer $fingerprints,
         private readonly Clock $clock,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function __invoke(
@@ -66,9 +68,9 @@ final class RecordManualTransaction
                 bookedAt: $now->addSeconds($attempt),
                 valueDate: $date,
                 amountMinor: $signed,
-                currency: 'EUR',
+                currency: $this->baseCurrency->code(),
                 settledAmountMinor: $signed,
-                settledCurrency: 'EUR',
+                settledCurrency: $this->baseCurrency->code(),
                 fxRateUsed: null,
                 counterpartyName: $counterpartyName,
                 counterpartyIban: null,
