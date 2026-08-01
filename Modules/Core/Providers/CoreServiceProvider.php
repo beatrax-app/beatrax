@@ -27,6 +27,7 @@ use Modules\Core\Internal\Providers\HealthCheckServiceProvider;
 use Modules\Core\Internal\Providers\SqliteOptimizationsProvider;
 use Modules\Core\Models\User as CoreUser;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\FileEncryptor;
@@ -73,6 +74,7 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(SecretShield::class, PassthroughSecretShield::class);
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(AcknowledgeSystemAlert::class);
+        $this->app->singleton(WriteUserPreference::class);
 
         // Single source of truth for every filesystem path the app reads or
         // writes. Dependency-free and stateless, so a plain singleton (no

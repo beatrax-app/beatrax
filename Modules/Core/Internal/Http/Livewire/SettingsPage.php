@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
-use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Support\DriftThresholdOptions;
@@ -93,32 +93,24 @@ final class SettingsPage extends Component
     }
 
     // Validates the chosen value against the light,dark,system allow-list
-    // before the raw query-builder write so an out-of-enum value can never
-    // reach the users row or the layout's class attribute.
-    public function setTheme(string $theme, CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    // before the preference write so an out-of-enum value can never reach
+    // the users row or the layout's class attribute.
+    public function setTheme(string $theme, CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
     {
         $this->theme = $theme;
         $this->validateOnly('theme');
 
-        $user = $currentUser->user();
-        $db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->update([
-                'theme' => $this->theme,
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
+        ($writeUserPreference)($currentUser->user()->id, ['theme' => $this->theme]);
     }
 
-    // Validates against the auto,en,nl allow-list before the raw write, so an
-    // out-of-enum value never reaches the users row. "auto" persists as NULL
+    // Validates against the auto,en,nl allow-list before the preference
+    // write, so an out-of-enum value never reaches the users row. "auto" persists as NULL
     // (no override → browser detection). The translator is retargeted in the
     // same request too, so the page re-renders in the new language at once.
     public function setLocale(
         string $locale,
         CurrentUser $currentUser,
-        DatabaseManager $db,
-        Clock $clock,
+        WriteUserPreference $writeUserPreference,
         Translator $translator,
     ): void {
         $this->locale = $locale;
@@ -126,14 +118,7 @@ final class SettingsPage extends Component
 
         $storedLocale = $this->locale === self::LOCALE_AUTO ? null : $this->locale;
 
-        $user = $currentUser->user();
-        $db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->update([
-                'locale' => $storedLocale,
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
+        ($writeUserPreference)($currentUser->user()->id, ['locale' => $storedLocale]);
 
         $translator->setLocale($storedLocale ?? Locale::DEFAULT);
     }
@@ -150,18 +135,11 @@ final class SettingsPage extends Component
     // The Blade view binds the checkbox via wire:change only (no
     // wire:model.live), so this single round-trip covers both the property
     // update and the DB write, avoiding a double round-trip.
-    public function toggleAutoImport(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    public function toggleAutoImport(CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
     {
         $this->autoImportFromDropFolder = ! $this->autoImportFromDropFolder;
 
-        $user = $currentUser->user();
-        $db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->update([
-                'auto_import_drop_folder' => $this->autoImportFromDropFolder,
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
+        ($writeUserPreference)($currentUser->user()->id, ['auto_import_drop_folder' => $this->autoImportFromDropFolder]);
     }
 
     // Fallback for users who want to grab an installer manually (first
@@ -171,18 +149,11 @@ final class SettingsPage extends Component
         $opener('https://github.com/beatrax-app/beatrax/releases/latest');
     }
 
-    public function toggleFxOnline(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    public function toggleFxOnline(CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
     {
         $this->fxOnlineEnabled = ! $this->fxOnlineEnabled;
 
-        $user = $currentUser->user();
-        $db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->update([
-                'fx_online_enabled' => $this->fxOnlineEnabled,
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
+        ($writeUserPreference)($currentUser->user()->id, ['fx_online_enabled' => $this->fxOnlineEnabled]);
     }
 
     public function refreshFxRates(DispatchFxRatesRefresh $dispatch, CurrentUser $currentUser): void

@@ -12,7 +12,7 @@ use Livewire\Component;
 use Modules\Anomaly\Internal\Jobs\BackfillAnomaliesJob;
 use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
-use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -52,7 +52,7 @@ final class AnomalySettingsSection extends Component
     public function save(
         CurrentUser $currentUser,
         DatabaseManager $db,
-        Clock $clock,
+        WriteUserPreference $writeUserPreference,
         BusDispatcher $bus,
     ): void {
         $this->saveError = '';
@@ -82,13 +82,10 @@ final class AnomalySettingsSection extends Component
             ->where('id', $user->id)
             ->value('anomaly_backfilled_at');
 
-        $db->connection()->table('users')
-            ->where('id', $user->id)
-            ->update([
-                'anomaly_sensitivity_percent' => $sensitivity,
-                'anomaly_min_amount_minor' => $floor,
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
+        ($writeUserPreference)($user->id, [
+            'anomaly_sensitivity_percent' => $sensitivity,
+            'anomaly_min_amount_minor' => $floor,
+        ]);
 
         // First activation: kick off the full-history backfill once. The
         // job stamps anomaly_backfilled_at on completion, so subsequent

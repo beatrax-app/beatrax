@@ -8,7 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
-use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
@@ -53,8 +53,7 @@ final class TaxSettingsSection extends Component
     public function setTaxCountry(
         string $code,
         CurrentUser $currentUser,
-        DatabaseManager $db,
-        Clock $clock,
+        WriteUserPreference $writeUserPreference,
         TaxCategoryWriter $writer,
     ): void {
         if (TaxCountry::tryFrom($code) === null) {
@@ -65,12 +64,7 @@ final class TaxSettingsSection extends Component
 
         $writer->seedFromCorpus($user, $code);
 
-        $db->connection()->table('users')
-            ->where('id', $user->id)
-            ->update([
-                'tax_country_code' => $code,
-                'updated_at' => $clock->now()->toDateTimeString(),
-            ]);
+        ($writeUserPreference)($user->id, ['tax_country_code' => $code]);
 
         $this->taxCountryCode = $code;
     }
