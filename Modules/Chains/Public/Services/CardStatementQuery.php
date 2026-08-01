@@ -89,7 +89,7 @@ final class CardStatementQuery
         if ($historicalFunder === null) {
             $historicalFunder = $this->db->connection()->table('accounts')
                 ->where('user_id', $user->id)
-                ->where('kind', AccountKind::Asn->value)
+                ->where('kind', AccountKind::Bank->value)
                 ->orderBy('id')
                 ->value('id');
         }

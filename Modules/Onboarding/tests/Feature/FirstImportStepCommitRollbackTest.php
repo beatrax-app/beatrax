@@ -72,7 +72,7 @@ it('rolls back all writes when ConfirmsImports throws mid-commit', function (): 
         'user_id' => $this->user->id,
         'name' => 'Bank',
         'slug' => 'bank',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL95BANK0000000000',
         'default_currency' => 'EUR',
     ]);

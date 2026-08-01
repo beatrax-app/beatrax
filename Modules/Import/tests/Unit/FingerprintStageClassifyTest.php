@@ -229,7 +229,7 @@ it('scopes the existing-row lookup by user_id', function (): void {
         'user_id' => $otherUser->id,
         'name' => 'Other ASN',
         'slug' => 'other-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL78ABNA0000000999',
         'default_currency' => 'EUR',
     ]);

@@ -41,7 +41,7 @@ function rbAccount(User $user, string $name = 'ASN'): Account
         'user_id' => $user->id,
         'name' => $name,
         'slug' => strtolower($name).'-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00RB'.strtoupper(bin2hex(random_bytes(6))),
         'default_currency' => 'EUR',
     ]);

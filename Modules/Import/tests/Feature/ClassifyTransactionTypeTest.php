@@ -43,7 +43,7 @@ beforeEach(function (): void {
         'user_id' => $this->primaryUser->id,
         'name' => 'ASN',
         'slug' => 'classify-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);

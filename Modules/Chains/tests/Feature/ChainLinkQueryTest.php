@@ -306,7 +306,7 @@ it('forTransaction handles NULL to_transaction_id gracefully (issue #10 — exce
 
 it('forTransaction raises NotFoundHttpException on cross-user access', function (): void {
     $other = clqUser('clq-other');
-    $otherAccount = clqAccount($other, 'clq-other-asn', 'asn', 'NL78OTHR1234567890');
+    $otherAccount = clqAccount($other, 'clq-other-asn', 'bank', 'NL78OTHR1234567890');
     $otherRun = clqImportRun($other, str_repeat('2', 64));
     $tx = clqTx($other, $otherAccount, $otherRun, 1000, 'expense', 'X', 'x', '2026-05-10', 'f1', 1);
 

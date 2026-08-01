@@ -40,7 +40,7 @@ function sfaAccount(User $user, string $name): Account
         'user_id' => $user->id,
         'name' => $name,
         'slug' => 'sfa-'.strtolower($name).'-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00SFA'.strtoupper(bin2hex(random_bytes(6))),
         'default_currency' => 'EUR',
     ]);

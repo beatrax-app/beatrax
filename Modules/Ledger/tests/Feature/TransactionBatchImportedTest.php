@@ -40,7 +40,7 @@ beforeEach(function () use (&$recordedBatches, &$recordedRows): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn-batch',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456780',
         'default_currency' => 'EUR',
     ]);

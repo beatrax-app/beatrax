@@ -30,7 +30,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN account',
         'slug' => 'asn-idem',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL08ASNB0123459999',
         'default_currency' => 'EUR',
     ]);

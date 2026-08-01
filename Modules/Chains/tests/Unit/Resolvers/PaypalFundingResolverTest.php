@@ -45,7 +45,7 @@ function seedAsnAccount(User $user, string $iban = 'NL57ASNB0123456789', string 
         'user_id' => $user->id,
         'name' => 'ASN fixture for PayPal funder',
         'slug' => $slug,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => $iban,
         'default_currency' => 'EUR',
     ]);

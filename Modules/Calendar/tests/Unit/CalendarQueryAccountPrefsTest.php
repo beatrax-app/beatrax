@@ -87,7 +87,7 @@ it('shows entries from all owned accounts when visibleAccountIds is null (never 
     $user = cqapUser('all-visible');
 
     // Create two accounts with different kinds
-    cqapAccount($db, $user->id, 'ASN Checking', 'asn');
+    cqapAccount($db, $user->id, 'ASN Checking', 'bank');
     cqapAccount($db, $user->id, 'ICS Card', 'ics_card');
 
     // Both accounts have a series (CalendarQuery resolves account via occurrences fallback)
@@ -116,7 +116,7 @@ it('defaults balance to spendable-kind accounts when balanceAccountIds is null (
     $user = cqapUser('spendable-default');
 
     // Create one spendable account (asn) and one non-spendable (ics_card)
-    $asnId = cqapAccount($db, $user->id, 'ASN Checking', 'asn');
+    $asnId = cqapAccount($db, $user->id, 'ASN Checking', 'bank');
     $icsId = cqapAccount($db, $user->id, 'ICS Card', 'ics_card');
 
     /** @var CalendarQuery $calendarQuery */
@@ -137,12 +137,11 @@ it('defaults balance to spendable-kind accounts when balanceAccountIds is null (
     // or similar Mon–Sun grid. Either way, should not throw.
     expect($days)->toBeArray()->not->toBeEmpty();
 
-    // Verify the spendable constant: asn is in the ON set
+    // Verify the spendable constant: bank accounts are in the ON set
     // We do this by checking that the spendable default would include $asnId
     // and exclude $icsId via a direct constant check.
     $spendableKinds = (new ReflectionClass(AccountResolver::class))
         ->getConstant('SPENDABLE_KINDS');
-    expect($spendableKinds)->toContain('asn');
     expect($spendableKinds)->toContain('bank');
     expect($spendableKinds)->toContain('cash');
     expect($spendableKinds)->toContain('paypal');
@@ -158,7 +157,7 @@ it('returns no entries for an explicit empty visibleAccountIds array (deselect-a
     $db = app(DatabaseManager::class);
     $user = cqapUser('deselect-all');
 
-    cqapAccount($db, $user->id, 'ASN Checking', 'asn');
+    cqapAccount($db, $user->id, 'ASN Checking', 'bank');
     cqapSeries($user, 'Series-Hidden');
 
     /** @var CalendarQuery $calendarQuery */
@@ -181,7 +180,7 @@ it('drops a foreign account id from visibleAccountIds (T-06-02)', function (): v
     $other = cqapUser('foreign-visible-other');
 
     // Other user has an account
-    $foreignAccountId = cqapAccount($db, $other->id, 'Other ASN', 'asn');
+    $foreignAccountId = cqapAccount($db, $other->id, 'Other ASN', 'bank');
 
     // Owner has one series visible on June 15
     cqapSeries($owner, 'Owner Series');
@@ -209,7 +208,7 @@ it('drops a foreign account id from balanceAccountIds (T-06-02)', function (): v
     $owner = cqapUser('foreign-balance-owner');
     $other = cqapUser('foreign-balance-other');
 
-    $foreignAccountId = cqapAccount($db, $other->id, 'Other ASN', 'asn');
+    $foreignAccountId = cqapAccount($db, $other->id, 'Other ASN', 'bank');
 
     /** @var CalendarQuery $calendarQuery */
     $calendarQuery = app(CalendarQuery::class);

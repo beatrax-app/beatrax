@@ -12,6 +12,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Import\Public\Enums\PaymentType;
 use Modules\Ledger\Public\Contracts\RecordsTransactions;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\FingerprintComposer;
 
 // Records a hand-entered transaction through the same canonical pipeline
@@ -94,11 +95,11 @@ final class RecordManualTransaction
     {
         $now = $this->clock->now()->toDateTimeString();
 
-        return $this->findOrCreate('accounts', ['user_id' => $user->id, 'kind' => 'cash'], [
+        return $this->findOrCreate('accounts', ['user_id' => $user->id, 'kind' => AccountKind::Cash->value], [
             'user_id' => $user->id,
             'name' => 'Cash',
             'slug' => 'cash-'.$user->id,
-            'kind' => 'cash',
+            'kind' => AccountKind::Cash->value,
             'iban' => 'CASH'.str_pad((string) $user->id, 12, '0', STR_PAD_LEFT),
             'default_currency' => 'EUR',
             'created_at' => $now,

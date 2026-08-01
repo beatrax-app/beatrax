@@ -35,7 +35,7 @@ function dabAlert(User $user, string $merchantSlug, array $reasons): AnomalyAler
     $suffix = bin2hex(random_bytes(4));
 
     $accountId = $db->connection()->table('accounts')->insertGetId([
-        'user_id' => $user->id, 'name' => 'ASN', 'slug' => 'dab-asn-'.$suffix, 'kind' => 'asn',
+        'user_id' => $user->id, 'name' => 'ASN', 'slug' => 'dab-asn-'.$suffix, 'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix), 'default_currency' => 'EUR',
         'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
     ]);

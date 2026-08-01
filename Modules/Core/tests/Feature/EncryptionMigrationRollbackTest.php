@@ -31,7 +31,7 @@ beforeEach(function (): void {
     ]);
     $this->account = Account::create([
         'user_id' => $this->user->id,
-        'name' => 'ASN', 'slug' => 'asn-migration-rollback', 'kind' => 'asn',
+        'name' => 'ASN', 'slug' => 'asn-migration-rollback', 'kind' => 'bank',
         'iban' => 'NL57ASNB0123456782', 'default_currency' => 'EUR',
     ]);
     $this->importRun = ImportRun::create([

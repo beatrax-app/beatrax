@@ -41,7 +41,7 @@ function anomQueryTxn(DatabaseManager $db, int $userId, string $merchantSlug): a
         'user_id' => $userId,
         'name' => 'ASN test',
         'slug' => 'anomq-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-06-01 00:00:00',

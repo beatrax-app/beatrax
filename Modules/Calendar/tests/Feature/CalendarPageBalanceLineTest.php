@@ -42,7 +42,7 @@ function cpblAccount(DatabaseManager $db, int $userId, string $name, string $cur
         'user_id' => $userId,
         'name' => $name,
         'slug' => 'cpbl-'.$hex,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00CPBL'.strtoupper($hex),
         'default_currency' => $currency,
         'opening_balance_minor' => 100000,

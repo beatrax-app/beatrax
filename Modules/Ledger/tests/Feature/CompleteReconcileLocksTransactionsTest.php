@@ -26,7 +26,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn-complete-reconcile-fixture',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000005',
         'default_currency' => 'EUR',
     ]);
@@ -51,7 +51,7 @@ it('is scoped by user_id — never transitions another user\'s transactions', fu
         'user_id' => $otherUser->id,
         'name' => 'ASN other',
         'slug' => 'asn-complete-reconcile-other',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000006',
         'default_currency' => 'EUR',
     ]);

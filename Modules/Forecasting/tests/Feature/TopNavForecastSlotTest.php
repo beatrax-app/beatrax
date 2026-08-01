@@ -37,7 +37,7 @@ function tnfsAsnAccount(User $user, string $slug): Account
         'user_id' => $user->id,
         'name' => 'tnfs '.$slug,
         'slug' => $slug,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00TNFS'.strtoupper($slug),
         'default_currency' => 'EUR',
     ]);

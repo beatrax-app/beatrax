@@ -39,7 +39,7 @@ function supScaffold(DatabaseManager $db, int $userId): array
 {
     $suffix = bin2hex(random_bytes(4));
     $accountId = $db->connection()->table('accounts')->insertGetId([
-        'user_id' => $userId, 'name' => 'ASN', 'slug' => 'sup-asn-'.$suffix, 'kind' => 'asn',
+        'user_id' => $userId, 'name' => 'ASN', 'slug' => 'sup-asn-'.$suffix, 'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix), 'default_currency' => 'EUR',
         'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
     ]);

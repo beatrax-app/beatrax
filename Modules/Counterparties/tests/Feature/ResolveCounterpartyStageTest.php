@@ -114,14 +114,14 @@ beforeEach(function (): void {
     $this->user = makeCpStageUser();
     $this->primaryAccount = makeCpStageAccount(
         $this->user,
-        kind: 'asn',
+        kind: 'bank',
         iban: 'NL57ASNB0123456789',
         slug: 'asn-primary-cpstage',
         name: 'ASN Primary',
     );
     $this->savingsAccount = makeCpStageAccount(
         $this->user,
-        kind: 'asn',
+        kind: 'bank',
         iban: 'NL09ASNB0987654321',
         slug: 'asn-savings-cpstage',
         name: 'ASN Savings',

@@ -41,7 +41,7 @@ function sbsAccount(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'ASN',
         'slug' => 'sbs-asn-'.$userId.'-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00SBS'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 100000,

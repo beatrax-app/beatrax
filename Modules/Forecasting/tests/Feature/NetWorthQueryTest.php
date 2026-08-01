@@ -24,7 +24,7 @@ beforeEach(function (): void {
 });
 
 it('sums EUR account balances into a single net-worth figure with a breakdown', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200000);   // +€2,000 asset
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200000);   // +€2,000 asset
     nwAccount($this->db, $this->user->id, 'PayPal', 'paypal', -30000);   // −€300 (negative balance)
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
@@ -36,7 +36,7 @@ it('sums EUR account balances into a single net-worth figure with a breakdown', 
 });
 
 it('excludes non-EUR accounts from the figure but keeps them in the breakdown', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200000, 'EUR');
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200000, 'EUR');
     nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 99999, 'USD');
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
@@ -47,7 +47,7 @@ it('excludes non-EUR accounts from the figure but keeps them in the breakdown', 
 });
 
 it('excludes the internal paypal_funding routing account', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200000);
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200000);
     nwAccount($this->db, $this->user->id, 'PP funding', 'paypal_funding', 500000);
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);

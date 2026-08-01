@@ -44,7 +44,7 @@ function cpcsAccount(DatabaseManager $db, int $userId, string $name): int
         'user_id' => $userId,
         'name' => $name,
         'slug' => 'cpcs-'.$hex,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00CPCS'.strtoupper($hex),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 100000,

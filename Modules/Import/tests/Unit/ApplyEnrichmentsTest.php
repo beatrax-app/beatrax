@@ -184,7 +184,7 @@ it('cross-user safety: a PendingEnrichment for another user\'s row returns 0', f
         'user_id' => $other->id,
         'name' => 'Other ASN',
         'slug' => 'other-asn-applier',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL78ABNA0000000999',
         'default_currency' => 'EUR',
     ]);

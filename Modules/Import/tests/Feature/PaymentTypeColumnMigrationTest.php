@@ -15,7 +15,7 @@ beforeEach(function (): void {
     $this->account = Account::create([
         'name' => 'ASN',
         'slug' => 'asn-ptype',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL56ASNB9999900001',
         'default_currency' => 'EUR',
     ]);

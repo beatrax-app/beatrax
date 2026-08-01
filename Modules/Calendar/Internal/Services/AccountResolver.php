@@ -7,6 +7,7 @@ namespace Modules\Calendar\Internal\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Ledger\Public\Enums\AccountKind;
 use stdClass;
 
 // Resolves which accounts drive the two calendar lanes: the visible-entries
@@ -22,7 +23,12 @@ final readonly class AccountResolver
     // ON kinds (checking/savings/cash/PayPal) are included in the spendable
     // balance default; OFF kinds (ICS credit-card family) are excluded since
     // their liability already shows up via the bulk-iDEAL settlement leg.
-    private const array SPENDABLE_KINDS = ['asn', 'bank', 'cash', 'paypal', 'paypal_funding'];
+    private const array SPENDABLE_KINDS = [
+        AccountKind::Bank->value,
+        AccountKind::Cash->value,
+        AccountKind::Paypal->value,
+        AccountKind::PaypalFunding->value,
+    ];
 
     public function __construct(private DatabaseManager $db) {}
 

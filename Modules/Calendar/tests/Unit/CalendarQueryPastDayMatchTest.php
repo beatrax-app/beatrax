@@ -63,7 +63,7 @@ function cqpdOccurrence(DatabaseManager $db, int $userId, int $seriesId, string 
         'user_id' => $userId,
         'name' => 'CQPD ASN',
         'slug' => 'cqpd-'.$hex,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00CQPD'.strtoupper($hex),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 0,

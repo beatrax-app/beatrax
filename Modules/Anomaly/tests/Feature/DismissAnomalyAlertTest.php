@@ -28,7 +28,7 @@ function dsmTxn(DatabaseManager $db, int $userId): int
 {
     $suffix = bin2hex(random_bytes(4));
     $accountId = $db->connection()->table('accounts')->insertGetId([
-        'user_id' => $userId, 'name' => 'ASN', 'slug' => 'dsm-asn-'.$suffix, 'kind' => 'asn',
+        'user_id' => $userId, 'name' => 'ASN', 'slug' => 'dsm-asn-'.$suffix, 'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix), 'default_currency' => 'EUR',
         'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
     ]);

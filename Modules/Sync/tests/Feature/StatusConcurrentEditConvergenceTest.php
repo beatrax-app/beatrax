@@ -56,7 +56,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'status-concurrent-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB'.bin2hex(random_bytes(6)),
         'default_currency' => 'EUR',
     ]);

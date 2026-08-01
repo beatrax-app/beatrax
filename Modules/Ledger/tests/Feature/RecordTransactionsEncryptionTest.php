@@ -35,7 +35,7 @@ beforeEach(function (): void {
     ]);
     $this->account = Account::create([
         'user_id' => $this->user->id,
-        'name' => 'ASN', 'slug' => 'asn-rt-enc', 'kind' => 'asn',
+        'name' => 'ASN', 'slug' => 'asn-rt-enc', 'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789', 'default_currency' => 'EUR',
     ]);
     $this->importRun = ImportRun::create([

@@ -92,7 +92,7 @@ afterEach(function (): void {
 
 it('renders NO fx-disclosure-trigger and NO rates line for a passthrough (all-EUR) card', function (): void {
     // Only EUR accounts — ratesSource stays null → zero-overhead passthrough
-    nwCardAccount($this->db, $this->user->id, 'Checking', 'asn', 150_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 150_000, 'EUR');
 
     Livewire::test(NetWorthCard::class)
         ->assertDontSee('fx-disclosure-trigger', escape: false)
@@ -100,7 +100,7 @@ it('renders NO fx-disclosure-trigger and NO rates line for a passthrough (all-EU
 })->group('phase-1');
 
 it('renders the fx-disclosure-trigger and global rates line when conversion is active', function (): void {
-    nwCardAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     // Fresh rate (within 3-day threshold from 2026-06-07 → rate at 2026-06-05 is 2 days ago)
     nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
@@ -111,7 +111,7 @@ it('renders the fx-disclosure-trigger and global rates line when conversion is a
 })->group('phase-1');
 
 it('adds fx-icon--stale modifier when rates are stale or bundled', function (): void {
-    nwCardAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     // Old rate (> 3 days from 2026-06-07 → stale)
     nwCardFxRate($this->db, 'USD', '1.08', '2026-05-01', 'bundled');
@@ -121,7 +121,7 @@ it('adds fx-icon--stale modifier when rates are stale or bundled', function (): 
 })->group('phase-1');
 
 it('does NOT add fx-icon--stale when rates are fresh', function (): void {
-    nwCardAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     // Fresh rate (2 days ago from 2026-06-07)
     nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
@@ -131,7 +131,7 @@ it('does NOT add fx-icon--stale when rates are fresh', function (): void {
 })->group('phase-1');
 
 it('renders the no-rate fallback copy when accountsWithoutRate > 0', function (): void {
-    nwCardAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate seeded
 
     Livewire::test(NetWorthCard::class)
@@ -139,7 +139,7 @@ it('renders the no-rate fallback copy when accountsWithoutRate > 0', function ()
 })->group('phase-1');
 
 it('does NOT render the old "excludes non-EUR balances" text', function (): void {
-    nwCardAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate
 
     Livewire::test(NetWorthCard::class)
@@ -147,7 +147,7 @@ it('does NOT render the old "excludes non-EUR balances" text', function (): void
 })->group('phase-1');
 
 it('renders the inline fx-disclosure-trigger--inline for non-base-currency accounts in the breakdown', function (): void {
-    nwCardAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwCardAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwCardAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     nwCardFxRate($this->db, 'USD', '1.08', '2026-06-05', 'ecb');
 

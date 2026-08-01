@@ -49,7 +49,7 @@ function taxTestTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'Tax ASN '.$suffix,
         'slug' => 'tax-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

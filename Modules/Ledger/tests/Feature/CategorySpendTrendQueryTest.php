@@ -21,7 +21,7 @@ function trendTx(DatabaseManager $db, int $userId, int $categoryId, int $minor, 
     $i++;
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId, 'name' => 'ASN', 'slug' => 'tr-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn', 'iban' => 'NL00TRND'.str_pad((string) $i, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'kind' => 'bank', 'iban' => 'NL00TRND'.str_pad((string) $i, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
         'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
     ]);
     $runId = $db->connection()->table('import_runs')->insertGetId([
@@ -96,7 +96,7 @@ it('counts a split transaction\'s legs individually, never the parent (Req 4)', 
         'user_id' => $this->user->id,
         'account_id' => $this->db->connection()->table('accounts')->insertGetId([
             'user_id' => $this->user->id, 'name' => 'ASN', 'slug' => 'tr-split-'.bin2hex(random_bytes(4)),
-            'kind' => 'asn', 'iban' => 'NL00SPLT'.bin2hex(random_bytes(4)), 'default_currency' => 'EUR',
+            'kind' => 'bank', 'iban' => 'NL00SPLT'.bin2hex(random_bytes(4)), 'default_currency' => 'EUR',
             'created_at' => '2026-01-01 00:00:00', 'updated_at' => '2026-01-01 00:00:00',
         ]),
         'import_run_id' => $this->db->connection()->table('import_runs')->insertGetId([

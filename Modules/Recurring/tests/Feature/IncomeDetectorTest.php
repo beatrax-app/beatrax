@@ -40,7 +40,7 @@ function idtAccount(User $user, string $slug): Account
         'user_id' => $user->id,
         'name' => 'idt '.$slug,
         'slug' => $slug,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00IDT0'.str_pad(substr($slug, 0, 8), 10, '0', STR_PAD_RIGHT),
         'default_currency' => 'EUR',
     ]);

@@ -37,7 +37,7 @@ function tylaTransaction(DatabaseManager $db, int $userId, int $settledAmountMin
         'user_id' => $userId,
         'name' => 'TYLA ASN '.$suffix,
         'slug' => 'tyla-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

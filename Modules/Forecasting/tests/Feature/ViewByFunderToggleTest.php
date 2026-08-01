@@ -67,7 +67,7 @@ beforeEach(function (): void {
 });
 
 it('returns per-series contributions unchanged when viewByFunder is false', function (): void {
-    $asn = vbftAccount($this->user, 'asn', 'asn');
+    $asn = vbftAccount($this->user, 'bank', 'asn');
 
     $a = new ForecastContribution(
         date: CarbonImmutable::parse('2026-05-15'),
@@ -100,7 +100,7 @@ it('returns per-series contributions unchanged when viewByFunder is false', func
 });
 
 it('aggregates per-day per-account contributions when viewByFunder is true', function (): void {
-    $asn = vbftAccount($this->user, 'asn', 'asn');
+    $asn = vbftAccount($this->user, 'bank', 'asn');
 
     $a = new ForecastContribution(
         date: CarbonImmutable::parse('2026-05-15'),
@@ -135,7 +135,7 @@ it('aggregates per-day per-account contributions when viewByFunder is true', fun
 });
 
 it('keeps contributions on distinct days as separate entries even when viewByFunder is true', function (): void {
-    $asn = vbftAccount($this->user, 'asn', 'asn');
+    $asn = vbftAccount($this->user, 'bank', 'asn');
 
     $a = new ForecastContribution(
         date: CarbonImmutable::parse('2026-05-15'),
@@ -164,7 +164,7 @@ it('keeps contributions on distinct days as separate entries even when viewByFun
 });
 
 it('collapses chain-resolved per-series contributions onto the funder ASN account when viewByFunder is true', function (): void {
-    $asn = vbftAccount($this->user, 'asn', 'asn');
+    $asn = vbftAccount($this->user, 'bank', 'asn');
     $paypal = vbftAccount($this->user, 'paypal', 'paypal');
 
     $run = ImportRun::query()->create([

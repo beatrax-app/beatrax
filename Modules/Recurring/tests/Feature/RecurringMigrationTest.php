@@ -155,7 +155,7 @@ it('hydrates RecurringSeries.latestFundingChainLink to the related ChainLink or 
         'user_id' => $this->user->id,
         'name' => 'ASN main',
         'slug' => 'rec-mig-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB',
         'default_currency' => 'EUR',
     ]);
@@ -272,7 +272,7 @@ it('allows inserting recurring_series_occurrences and recurring_series_transitio
         'user_id' => $this->user->id,
         'name' => 'ASN main',
         'slug' => 'rec-mig-occ-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB',
         'default_currency' => 'EUR',
     ]);

@@ -28,7 +28,7 @@ function siChain(DatabaseManager $db, int $userId, string $merchant, int $monthl
     ]);
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId, 'name' => 'ASN', 'slug' => 'si-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn', 'iban' => 'NL00SAVI'.str_pad((string) $cpId, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'kind' => 'bank', 'iban' => 'NL00SAVI'.str_pad((string) $cpId, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
         'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
     ]);
     $runId = $db->connection()->table('import_runs')->insertGetId([

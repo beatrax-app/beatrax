@@ -53,7 +53,7 @@ function uctddEncryptedTx(
         'user_id' => $user->id,
         'name' => 'UCTDD ASN '.$suffix,
         'slug' => 'uctdd-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
     ])->id;
