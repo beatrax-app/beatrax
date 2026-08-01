@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Import\Public\Services;
 
+use Modules\Ingestion\Public\Enums\SourceFormat;
+
 // Ranks a present reference by the format that produced it (CAMT.053 >
 // MT940 > CSV > anything else); NULL/empty ranks zero. Centralising
 // this lets FingerprintStage and ApplyEnrichments agree on the
@@ -27,8 +29,8 @@ final class SourceRefRanker
         }
 
         return match ($format) {
-            'camt053' => 4,
-            'mt940' => 2,
+            SourceFormat::Camt053->value => 4,
+            SourceFormat::Mt940->value => 2,
             // PayPal email receipts win on ENRICHED over their CSV
             // counterpart: the receipt carries the canonical PayPal
             // Transaction ID while the CSV renders the same identifier
@@ -45,7 +47,7 @@ final class SourceRefRanker
             // (account_id, currency, amount) tuple already keeps them
             // disjoint from ASN/ICS rows under the fingerprint.
             'google-play-receipt' => 1,
-            'asn-csv' => 1,
+            SourceFormat::AsnCsv->value => 1,
             // PayPal Activity Download CSV rides in the same band as
             // asn-csv — disjoint account_id values mean the two never
             // collide under the fingerprint tuple, so cross-format
