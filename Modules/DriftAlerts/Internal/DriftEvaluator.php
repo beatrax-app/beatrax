@@ -22,6 +22,11 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  */
 final readonly class DriftEvaluator
 {
+    // When a series carries no per-series threshold override and the user has
+    // set no positive global threshold, drift is measured against this
+    // fallback percent — the "hard default" the audit row records as 'default'.
+    private const int DEFAULT_THRESHOLD_PERCENT = 5;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -155,7 +160,7 @@ final readonly class DriftEvaluator
             return ['percent' => $userValue, 'source' => 'global'];
         }
 
-        return ['percent' => 5, 'source' => 'default'];
+        return ['percent' => self::DEFAULT_THRESHOLD_PERCENT, 'source' => 'default'];
     }
 
     // Irregular annualizes to 0 rather than to a guess: a series with no
