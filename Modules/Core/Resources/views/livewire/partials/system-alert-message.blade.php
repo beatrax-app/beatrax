@@ -13,6 +13,7 @@
     future modules can write rows of new kinds without an immediate
     Blade change.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @switch ($alert->kind)
     @case ('update.available')
         @php
@@ -22,7 +23,7 @@
                 : null;
         @endphp
         @if ($latestVersion !== null)
-            Update available — beatrax {{ $latestVersion }} is ready. It will install on next launch.
+            {{ Lang::get('core::alerts.messages.update_available', ['version' => $latestVersion]) }}
         @else
             {{ $alert->message }}
         @endif
@@ -38,7 +39,10 @@
                 : null;
         @endphp
         @if ($currentVersion !== null && $latestVersion !== null)
-            You're on version {{ $currentVersion }} — version {{ $latestVersion }} has been available for 30 days. Update now.
+            {{-- App-static copy carries an apostrophe that must reach the DOM
+                 unescaped; the dynamic version values are individually escaped
+                 with e() before substitution, so no untrusted markup leaks. --}}
+            {!! Lang::get('core::alerts.messages.update_stale', ['current' => e($currentVersion), 'latest' => e($latestVersion)]) !!}
         @else
             {{ $alert->message }}
         @endif
@@ -54,7 +58,7 @@
                 : null;
         @endphp
         @if ($newVersion !== null && $summary !== null)
-            Critical update available — version {{ $newVersion }} fixes {{ $summary }}. Install as soon as possible.
+            {{ Lang::get('core::alerts.messages.update_critical', ['version' => $newVersion, 'summary' => $summary]) }}
         @else
             {{ $alert->message }}
         @endif
@@ -71,9 +75,9 @@
         @endphp
         <span aria-hidden="true">⚠</span>
         @if ($suspectPath !== null)
-            The backup written at {{ $timestamp }} failed integrity check. Inspect {{ $suspectPath }}. Resolve before relying on backups.
+            {{ Lang::get('core::alerts.messages.backup_corrupt_with_path', ['timestamp' => $timestamp, 'path' => $suspectPath]) }}
         @else
-            The backup attempted at {{ $timestamp }} aborted before any file was produced — source DB failed integrity check. Resolve before relying on backups.
+            {{ Lang::get('core::alerts.messages.backup_corrupt_no_path', ['timestamp' => $timestamp]) }}
         @endif
         @break
     @case ('backup_overdue')
@@ -83,7 +87,8 @@
                 ? (int) $metadata['hours_old']
                 : 0;
         @endphp
-        The most recent verified backup is {{ $hoursOld }}h old. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> or wait for the 03:00 scheduled run.
+        {{-- App-static copy with an inline <code> span; :hours is an integer. --}}
+        {!! Lang::get('core::alerts.messages.backup_overdue', ['hours' => $hoursOld]) !!}
         @break
     @case ('wal_mode_missing')
         @php
@@ -92,7 +97,9 @@
                 ? $metadata['current_mode']
                 : 'unknown';
         @endphp
-        SQLite is not in WAL mode (currently {{ $currentMode }}). Concurrent writes may stall. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> for guidance.
+        {{-- App-static copy with an inline <code> span; the operator-controlled
+             :mode value is escaped with e() before substitution. --}}
+        {!! Lang::get('core::alerts.messages.wal_mode_missing', ['mode' => e($currentMode)]) !!}
         @break
     @case ('synchronous_misconfigured')
         @php
@@ -101,7 +108,8 @@
                 ? (int) $metadata['current_level']
                 : -1;
         @endphp
-        SQLite synchronous level is {{ $currentLevel }} (expected NORMAL/1). Durability semantics may differ from config. Run <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan beatrax:doctor</code> for guidance.
+        {{-- App-static copy with an inline <code> span; :level is an integer. --}}
+        {!! Lang::get('core::alerts.messages.synchronous_misconfigured', ['level' => $currentLevel]) !!}
         @break
     @case ('oauth_reconsent_required')
         {{--
@@ -124,7 +132,7 @@
         @endphp
         <span>{{ $alert->message }}</span>
         @if ($inboxId !== null)
-            <a href="/inboxes?reconnect={{ $inboxId }}" class="ml-2 inline-flex items-center font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700 dark:text-amber-200 dark:hover:text-amber-100">Reconnect →</a>
+            <a href="/inboxes?reconnect={{ $inboxId }}" class="ml-2 inline-flex items-center font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700 dark:text-amber-200 dark:hover:text-amber-100">{{ Lang::get('core::alerts.messages.reconnect_link') }}</a>
         @endif
         @break
     @default

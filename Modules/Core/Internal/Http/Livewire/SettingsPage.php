@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -13,6 +14,8 @@ use Livewire\Component;
 use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\Ledger\Public\Services\BaseCurrency;
 
@@ -21,16 +24,6 @@ use Modules\Ledger\Public\Services\BaseCurrency;
  */
 final class SettingsPage extends Component
 {
-    private const CURRENCY_REQUIRED = 'Please choose a currency.';
-
-    private const INVALID_WINDOW_MONTHS = 'Choose between 2 and 60 months.';
-
-    private const INVALID_THRESHOLD = 'Choose a threshold from 1%, 2%, 5%, 10%, 25%, or 50%.';
-
-    private const INVALID_AMOUNT = 'Enter an amount from €0 upward.';
-
-    private const INVALID_PERIOD_DAY = 'Choose a day from 1 to 28.';
-
     #[Validate('required|in:eur_only,original')]
     public string $defaultCurrencyView = 'eur_only';
 
@@ -50,6 +43,14 @@ final class SettingsPage extends Component
 
     #[Validate('required|in:light,dark,system')]
     public string $theme = 'system';
+
+    // The switcher's "follow the browser" option. A null `users.locale`
+    // stores as this sentinel in the form state so the radio group has a
+    // concrete value to bind; setLocale() maps it back to null on write.
+    private const string LOCALE_AUTO = 'auto';
+
+    #[Validate('required|in:auto,en,nl')]
+    public string $locale = self::LOCALE_AUTO;
 
     #[Validate('boolean')]
     public bool $isDeveloper = false;
@@ -75,6 +76,7 @@ final class SettingsPage extends Component
         $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
         $this->theme = $user->theme;
+        $this->locale = $user->locale ?? self::LOCALE_AUTO;
         $this->isDeveloper = $user->is_developer === true;
         $this->baseCurrency = $user->base_currency ?? $baseCurrency->code();
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
@@ -106,6 +108,34 @@ final class SettingsPage extends Component
                 'theme' => $this->theme,
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
+    }
+
+    // Validates against the auto,en,nl allow-list before the raw write, so an
+    // out-of-enum value never reaches the users row. "auto" persists as NULL
+    // (no override → browser detection). The translator is retargeted in the
+    // same request too, so the page re-renders in the new language at once.
+    public function setLocale(
+        string $locale,
+        CurrentUser $currentUser,
+        DatabaseManager $db,
+        Clock $clock,
+        Translator $translator,
+    ): void {
+        $this->locale = $locale;
+        $this->validateOnly('locale');
+
+        $storedLocale = $this->locale === self::LOCALE_AUTO ? null : $this->locale;
+
+        $user = $currentUser->user();
+        $db->connection()
+            ->table('users')
+            ->where('id', $user->id)
+            ->update([
+                'locale' => $storedLocale,
+                'updated_at' => $clock->now()->toDateTimeString(),
+            ]);
+
+        $translator->setLocale($storedLocale ?? Locale::DEFAULT);
     }
 
     public function setDevMode(bool $value, CurrentUser $currentUser): void
@@ -272,27 +302,37 @@ final class SettingsPage extends Component
      */
     public function messages(): array
     {
+        // Pulled through Lang::get so validation copy translates with the
+        // rest of the page; each rule variant maps to one core::settings.errors
+        // key. Resolved per call so a mid-session language switch is reflected.
+        $periodDay = Lang::get('core::settings.errors.period_day');
+        $windowMonths = Lang::get('core::settings.errors.window_months');
+        $amount = Lang::get('core::settings.errors.amount');
+        $threshold = Lang::get('core::settings.errors.threshold');
+        $currencyRequired = Lang::get('core::settings.errors.currency_required');
+        $currencyView = Lang::get('core::settings.errors.currency_view');
+
         return [
-            'periodStartDay.required' => self::INVALID_PERIOD_DAY,
-            'periodStartDay.integer' => self::INVALID_PERIOD_DAY,
-            'periodStartDay.min' => self::INVALID_PERIOD_DAY,
-            'periodStartDay.max' => self::INVALID_PERIOD_DAY,
-            'defaultCurrencyView.required' => 'Pick one of the available options.',
-            'defaultCurrencyView.in' => 'Pick one of the available options.',
-            'recurringDetectionWindowMonths.required' => self::INVALID_WINDOW_MONTHS,
-            'recurringDetectionWindowMonths.integer' => self::INVALID_WINDOW_MONTHS,
-            'recurringDetectionWindowMonths.min' => self::INVALID_WINDOW_MONTHS,
-            'recurringDetectionWindowMonths.max' => self::INVALID_WINDOW_MONTHS,
-            'recurringIncomeMinAmountMinor.required' => self::INVALID_AMOUNT,
-            'recurringIncomeMinAmountMinor.integer' => self::INVALID_AMOUNT,
-            'recurringIncomeMinAmountMinor.min' => self::INVALID_AMOUNT,
-            'recurringIncomeMinAmountMinor.max' => self::INVALID_AMOUNT,
-            'driftAlertThresholdPercent.required' => self::INVALID_THRESHOLD,
-            'driftAlertThresholdPercent.integer' => self::INVALID_THRESHOLD,
-            'driftAlertThresholdPercent.in' => self::INVALID_THRESHOLD,
-            'baseCurrency.size' => self::CURRENCY_REQUIRED,
-            'baseCurrency.exists' => self::CURRENCY_REQUIRED,
-            'baseCurrency.string' => self::CURRENCY_REQUIRED,
+            'periodStartDay.required' => $periodDay,
+            'periodStartDay.integer' => $periodDay,
+            'periodStartDay.min' => $periodDay,
+            'periodStartDay.max' => $periodDay,
+            'defaultCurrencyView.required' => $currencyView,
+            'defaultCurrencyView.in' => $currencyView,
+            'recurringDetectionWindowMonths.required' => $windowMonths,
+            'recurringDetectionWindowMonths.integer' => $windowMonths,
+            'recurringDetectionWindowMonths.min' => $windowMonths,
+            'recurringDetectionWindowMonths.max' => $windowMonths,
+            'recurringIncomeMinAmountMinor.required' => $amount,
+            'recurringIncomeMinAmountMinor.integer' => $amount,
+            'recurringIncomeMinAmountMinor.min' => $amount,
+            'recurringIncomeMinAmountMinor.max' => $amount,
+            'driftAlertThresholdPercent.required' => $threshold,
+            'driftAlertThresholdPercent.integer' => $threshold,
+            'driftAlertThresholdPercent.in' => $threshold,
+            'baseCurrency.size' => $currencyRequired,
+            'baseCurrency.exists' => $currencyRequired,
+            'baseCurrency.string' => $currencyRequired,
         ];
     }
 }

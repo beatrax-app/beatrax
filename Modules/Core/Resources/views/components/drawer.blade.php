@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Slide-over drawer (D-01/D-03, UI-SPEC §6.2, Pitfall 1).
 
@@ -43,7 +44,7 @@
     class="drawer-container"
     role="dialog"
     aria-modal="true"
-    aria-label="Navigation"
+    aria-label="{{ Lang::get('core::components.drawer_nav') }}"
     x-show="$store.mobileNav.drawerOpen"
     x-trap.inert.noscroll="$store.mobileNav.drawerOpen"
     x-transition:enter="transition ease-[var(--ease-smooth)] duration-[220ms]"

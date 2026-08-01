@@ -1,19 +1,17 @@
+@use('Modules\Core\Public\Support\Lang')
 <div>
     @if (! $sqliteOnly)
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            Encrypted backups are available on the desktop (SQLite) build. On a server
-            database, use your database's own backup tooling.
+            {{ Lang::get('core::backup.download.unavailable') }}
         </p>
     @else
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            Download a passphrase-encrypted copy of your whole database — safe to keep on
-            an external drive or in cloud storage, because it is unreadable without the
-            passphrase (quantum-safe XChaCha20-Poly1305 + Argon2id).
+            {{ Lang::get('core::backup.download.intro') }}
         </p>
 
         <form wire:submit="download" class="mt-3 space-y-3">
             <div class="space-y-1">
-                <label for="backup-passphrase" class="block text-sm text-slate-900 dark:text-slate-100">Passphrase</label>
+                <label for="backup-passphrase" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::backup.download.passphrase') }}</label>
                 <input
                     type="password"
                     id="backup-passphrase"
@@ -23,7 +21,7 @@
                 />
             </div>
             <div class="space-y-1">
-                <label for="backup-passphrase-confirm" class="block text-sm text-slate-900 dark:text-slate-100">Confirm passphrase</label>
+                <label for="backup-passphrase-confirm" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::backup.download.confirm_passphrase') }}</label>
                 <input
                     type="password"
                     id="backup-passphrase-confirm"
@@ -34,7 +32,7 @@
             </div>
 
             <p class="text-xs text-amber-700 dark:text-amber-400">
-                Keep the passphrase safe — there is no way to recover the backup without it.
+                {{ Lang::get('core::backup.download.keep_safe') }}
             </p>
 
             @if ($error !== '')
@@ -47,8 +45,8 @@
                 wire:target="download"
                 class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
             >
-                <span wire:loading.remove wire:target="download">Download encrypted backup</span>
-                <span wire:loading wire:target="download">Preparing…</span>
+                <span wire:loading.remove wire:target="download">{{ Lang::get('core::backup.download.submit') }}</span>
+                <span wire:loading wire:target="download">{{ Lang::get('core::backup.download.preparing') }}</span>
             </button>
         </form>
     @endif

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'title'   => null,       // null = use config app.name
     'backUrl' => null,       // null = show hamburger; non-null = show ← back (D-05)
@@ -14,13 +15,13 @@
     Detail: back affordance + page title + palette button (set :backUrl to parent URL).
     44×44 tap targets on all buttons (D-14 / WCAG 2.5.5).
 --}}
-<header {{ $attributes->merge(['class' => 'top-bar']) }} aria-label="Mobile navigation">
+<header {{ $attributes->merge(['class' => 'top-bar']) }} aria-label="{{ Lang::get('core::components.topbar.mobile_nav') }}">
     {{-- Hamburger or back affordance --}}
     @if ($showBack)
         <a
             href="{{ $backUrl }}"
             class="top-bar-btn"
-            aria-label="Back"
+            aria-label="{{ Lang::get('core::components.topbar.back') }}"
             wire:navigate
         >
             <span aria-hidden="true">←</span>
@@ -29,7 +30,7 @@
         <button
             type="button"
             class="top-bar-btn"
-            aria-label="Open navigation"
+            aria-label="{{ Lang::get('core::components.topbar.open_nav') }}"
             :aria-expanded="$store.mobileNav.drawerOpen.toString()"
             x-on:click="$store.mobileNav.toggle()"
         >
@@ -43,7 +44,7 @@
     <button
         type="button"
         class="top-bar-btn ml-auto"
-        aria-label="Open command palette"
+        aria-label="{{ Lang::get('core::components.topbar.open_palette') }}"
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
     >
         <span aria-hidden="true">⌕</span>
@@ -55,7 +56,7 @@
     <button
         type="button"
         class="top-bar-btn"
-        aria-label="Search transactions"
+        aria-label="{{ Lang::get('core::components.topbar.search_transactions') }}"
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
         style="width: 44px; height: var(--top-bar-h, 56px); display: grid; place-items: center; color: var(--color-text-muted, #64748b);"
     >

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Standing install-hint surface (D-22, UI-SPEC §14).
 
@@ -58,22 +59,22 @@
     <aside
         class="card"
         style="padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);"
-        aria-label="Install beatrax"
+        aria-label="{{ Lang::get('core::components.install.aria') }}"
     >
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3);">
             <div>
                 <p style="font-size: var(--text-base); font-weight: 500; color: var(--color-text); margin: 0 0 4px;">
-                    Also want to see your data on your phone?
+                    {{ Lang::get('core::components.install.headline') }}
                 </p>
                 <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-                    Install beatrax on your phone for quick access to your finances.
+                    {{ Lang::get('core::components.install.body') }}
                 </p>
             </div>
             <button
                 type="button"
                 x-on:click="dismiss()"
                 style="display: inline-flex; align-items: center; justify-content: center; min-width: 28px; min-height: 28px; border: 0; background: transparent; cursor: pointer; color: var(--color-text-faint); border-radius: var(--radius-sm); flex-shrink: 0;"
-                aria-label="Dismiss install hint"
+                aria-label="{{ Lang::get('core::components.install.dismiss_aria') }}"
             >
                 <span aria-hidden="true" style="font-size: 18px; line-height: 1;">×</span>
             </button>
@@ -87,16 +88,16 @@
                 x-on:click="install()"
                 style="display: inline-flex; align-items: center; padding: 8px 16px; background: var(--color-emerald); color: var(--color-text-inverse); border: 0; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: var(--tx-quick);"
             >
-                Install app
+                {{ Lang::get('core::components.install.install_app') }}
             </button>
 
-            {{-- Desktop CTA: open on phone --}}
+            {{-- Desktop CTA: open on phone. App-static copy with an inline
+                 <strong>⚡</strong> span, so render unescaped. --}}
             <span
                 x-show="!installable"
                 style="font-size: var(--text-sm); color: var(--color-text-muted);"
             >
-                Open beatrax in your phone's browser and tap "Add to Home Screen" — or tap the
-                <strong style="color: var(--color-text);">⚡</strong> icon in Safari's share sheet.
+                {!! Lang::get('core::components.install.desktop_html') !!}
             </span>
         </div>
     </aside>
