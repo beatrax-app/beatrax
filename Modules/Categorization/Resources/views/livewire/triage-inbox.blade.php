@@ -39,7 +39,7 @@
                 if ($event.key === 'ArrowDown') { $event.preventDefault(); cursor = Math.min(rowCount - 1, cursor + 1); }
                 if ($event.key === 'Enter')     { $event.preventDefault(); $wire.save(); }
                 if ($event.key === 'Escape')    { $event.preventDefault(); $wire.clearPending(); }
-                @foreach ($topNine as $i => $cat)
+                @foreach ($topCategories as $i => $cat)
                     if ($event.key === '{{ $i + 1 }}') {
                         $event.preventDefault();
                         const row = $refs['row-' + cursor];
