@@ -39,7 +39,7 @@ function sarTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'SAR ASN',
         'slug' => 'sar-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00SAR'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',

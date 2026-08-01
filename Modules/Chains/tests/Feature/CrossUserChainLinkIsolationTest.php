@@ -239,7 +239,7 @@ it('substring-attack guard — user_id="1" vs user_id="11" in chain_links lookup
     $bigId = cucUser('cuc-big');
 
     $bigPp = cucAccount($bigId, 'big-pp', 'paypal', 'BIG-PP');
-    $bigAsn = cucAccount($bigId, 'big-asn', 'asn', 'NL11BIG00000');
+    $bigAsn = cucAccount($bigId, 'big-asn', 'bank', 'NL11BIG00000');
     $bigRun = cucImportRun($bigId, str_repeat('q', 64));
     $bf = cucTx($bigId, $bigPp, $bigRun, -1234, 'expense', 'BigOnly', '2026-05-10', 'cuc-big-1a', 200);
     $bt = cucTx($bigId, $bigAsn, $bigRun, 1234, 'transfer_in', 'BigOnlyFn', '2026-05-10', 'cuc-big-1b', 201);

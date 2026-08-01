@@ -61,7 +61,7 @@ function bntAccount(User $user): Account
         'user_id' => $user->id,
         'name' => 'BNT ASN',
         'slug' => 'bnt-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00BNT'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
     ]);

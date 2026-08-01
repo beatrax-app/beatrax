@@ -28,7 +28,7 @@ it('adds starting_balance_minor and starting_balance_date nullable columns to ac
         'user_id' => $user->id,
         'name' => 'Schema check account',
         'slug' => 'schema-check',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL16ASNB0000000001',
         'default_currency' => 'EUR',
     ]);
@@ -48,7 +48,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'user_id' => $user->id,
         'name' => 'Backfill account A',
         'slug' => 'backfill-a',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL64ASNB0000000010',
         'default_currency' => 'EUR',
     ]);
@@ -57,7 +57,7 @@ it('backfills starting_balance_minor from the earliest statement_summaries.openi
         'user_id' => $user->id,
         'name' => 'Backfill account B',
         'slug' => 'backfill-b',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL85ASNB0000000020',
         'default_currency' => 'EUR',
     ]);
@@ -147,7 +147,7 @@ it('is idempotent — re-running the backfill does not overwrite a non-null star
         'user_id' => $user->id,
         'name' => 'Idempotent account',
         'slug' => 'idempotent',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL09ASNB0000000030',
         'default_currency' => 'EUR',
         'starting_balance_minor' => 77777,

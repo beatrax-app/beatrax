@@ -56,7 +56,7 @@ abstract class TestCase extends RootTestCase
             'user_id' => $userId,
             'name' => 'Search ASN '.$suffix,
             'slug' => 'search-asn-'.$suffix,
-            'kind' => 'asn',
+            'kind' => 'bank',
             'iban' => 'NL00ASNB'.strtoupper($suffix),
             'default_currency' => 'EUR',
             'created_at' => now(),

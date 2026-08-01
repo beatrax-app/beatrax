@@ -52,7 +52,7 @@ function pairLinkTxns(DatabaseManager $db, int $userId, string $suffix): array
         'user_id' => $userId,
         'name' => 'ASN pair link',
         'slug' => 'pair-link-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-06-15 00:00:00',

@@ -183,7 +183,7 @@ function seedAnomalyAlertTransaction(DatabaseManager $db, int $userId, string $s
         'user_id' => $userId,
         'name' => 'ASN test',
         'slug' => 'anomaly-mig-asn-'.$salt.'-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.substr(bin2hex(random_bytes(8)), 0, 10),
         'default_currency' => 'EUR',
         'created_at' => '2026-06-13 00:00:00',

@@ -32,7 +32,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn-note-backfill',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456799',
         'default_currency' => 'EUR',
     ]);

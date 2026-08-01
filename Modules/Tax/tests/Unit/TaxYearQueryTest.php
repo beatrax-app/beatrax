@@ -58,7 +58,7 @@ function taqTransaction(
         'user_id' => $userId,
         'name' => 'TAQ ASN '.$suffix,
         'slug' => 'taq-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

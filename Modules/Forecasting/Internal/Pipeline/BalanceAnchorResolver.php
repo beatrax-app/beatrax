@@ -56,13 +56,15 @@ final readonly class BalanceAnchorResolver
             : $this->fromTransactionsSum($accountId, $user->id, $defaultCurrency);
     }
 
+    // A card anchors from its card statements; any other account anchors from
+    // its imported statement summaries when it has them. A statement-less or
+    // API-connected account has none, so this returns null and the caller
+    // falls through to the opening-balance / transaction-sum anchors.
     private function fromStatementAnchor(string $kind, int $accountId, int $userId): ?BalanceAnchorDto
     {
-        return match ($kind) {
-            'asn' => $this->fromStatementSummaries($accountId, $userId),
-            'ics_card' => $this->fromCardStatements($accountId, $userId),
-            default => null,
-        };
+        return $kind === AccountKind::IcsCard->value
+            ? $this->fromCardStatements($accountId, $userId)
+            : $this->fromStatementSummaries($accountId, $userId);
     }
 
     private function icsCardZeroAnchor(int $accountId, string $defaultCurrency): BalanceAnchorDto

@@ -43,7 +43,7 @@ function nweAccount(User $user): Account
         'user_id' => $user->id,
         'name' => 'ASN nwe',
         'slug' => 'nwe-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
     ]);

@@ -57,7 +57,7 @@ function ttqddTransaction(DatabaseManager $db, int $userId, int $cpId): int
         'user_id' => $userId,
         'name' => 'TTQDD ASN '.$suffix,
         'slug' => 'ttqdd-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

@@ -35,7 +35,7 @@ function fc404Account(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'CrossUser Test',
         'slug' => 'fc404-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00FC4'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 100000,

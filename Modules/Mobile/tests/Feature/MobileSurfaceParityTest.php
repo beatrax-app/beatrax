@@ -80,7 +80,7 @@ function seedMobileSurfaceParityFixture(DatabaseManager $db, SensitiveColumnCode
         'user_id' => $userId,
         'name' => 'ASN Surface '.$suffix,
         'slug' => 'msp-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-06-01 00:00:00',

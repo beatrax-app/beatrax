@@ -29,7 +29,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn-toggle-fixture',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000003',
         'default_currency' => 'EUR',
     ]);

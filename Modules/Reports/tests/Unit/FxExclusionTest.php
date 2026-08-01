@@ -42,7 +42,7 @@ function fxeAccount(User $user, string $currency): Account
         'user_id' => $user->id,
         'name' => $currency.' account',
         'slug' => 'fxe-'.strtolower($currency).'-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00FXE'.strtoupper(bin2hex(random_bytes(6))),
         'default_currency' => $currency,
     ]);

@@ -40,7 +40,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn-reconciled-cat-lock-fixture',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000021',
         'default_currency' => 'EUR',
     ]);

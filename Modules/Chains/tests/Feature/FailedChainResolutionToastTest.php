@@ -48,7 +48,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'fcrt asn',
         'slug' => 'fcrt-asn-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57FCRT1234',
         'default_currency' => 'EUR',
     ]);

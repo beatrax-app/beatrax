@@ -33,7 +33,7 @@ it('leaves a split transaction leg count, amounts, and leg ids unchanged after r
         'user_id' => $user->id,
         'name' => 'ASN',
         'slug' => 'asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);

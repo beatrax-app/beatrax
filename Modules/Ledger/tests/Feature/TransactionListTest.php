@@ -103,7 +103,7 @@ it('scopes the list to the requested user only', function (): void {
         'user_id' => $other->id,
         'name' => 'Other',
         'slug' => 'other',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL08ASNB9999999999',
         'default_currency' => 'EUR',
     ]);

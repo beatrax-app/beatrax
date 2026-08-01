@@ -35,7 +35,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);
@@ -154,7 +154,7 @@ it('refuses an account belonging to someone else', function (): void {
         'user_id' => $other->id,
         'name' => 'Theirs',
         'slug' => 'theirs',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL01ASNB9999999999',
         'default_currency' => 'EUR',
     ]);
@@ -356,7 +356,7 @@ it('refuses a transfer across accounts, which would move money invisibly', funct
         'user_id' => $this->user->id,
         'name' => 'Other',
         'slug' => 'other',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL02ASNB1111111111',
         'default_currency' => 'EUR',
     ]);

@@ -42,7 +42,7 @@ function cqsbAccount(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'CQSB ASN',
         'slug' => 'cqsb-'.$hex,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00CQSB'.strtoupper($hex),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 0,

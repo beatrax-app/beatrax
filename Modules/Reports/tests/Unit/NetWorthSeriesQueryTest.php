@@ -33,7 +33,7 @@ function nwsUser(): User
     ]);
 }
 
-function nwsAccount(User $user, string $kind = 'asn', string $currency = 'EUR'): Account
+function nwsAccount(User $user, string $kind = 'bank', string $currency = 'EUR'): Account
 {
     /** @var Account */
     return Account::query()->create([
@@ -140,7 +140,7 @@ it('excludes paypal_funding accounts from every point, matching NetWorthQuery pa
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
     $user = nwsUser();
-    $account = nwsAccount($user, 'asn');
+    $account = nwsAccount($user, 'bank');
     $funding = nwsAccount($user, 'paypal_funding');
 
     nwsTransaction($db, $user, $account, ['amount_minor' => 20_000]);

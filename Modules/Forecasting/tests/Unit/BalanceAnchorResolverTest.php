@@ -132,7 +132,7 @@ function barInsertTransaction(DatabaseManager $db, int $userId, int $accountId, 
 }
 
 it('routes asn to the most recent statement_summaries.closing_balance_minor', function (): void {
-    $accountId = barInsertAccount($this->db, $this->user->id, 'asn');
+    $accountId = barInsertAccount($this->db, $this->user->id, 'bank');
     barInsertStatementSummary($this->db, $this->user->id, $accountId, 123456, '2026-04-30');
     barInsertStatementSummary($this->db, $this->user->id, $accountId, 145000, '2026-05-31');
 
@@ -146,7 +146,7 @@ it('routes asn to the most recent statement_summaries.closing_balance_minor', fu
 });
 
 it('falls through to the transactions sum for an asn account with no statement_summaries row', function (): void {
-    $accountId = barInsertAccount($this->db, $this->user->id, 'asn');
+    $accountId = barInsertAccount($this->db, $this->user->id, 'bank');
     barInsertTransaction($this->db, $this->user->id, $accountId, -1000, '2026-05-10');
     barInsertTransaction($this->db, $this->user->id, $accountId, 5000, '2026-05-11');
 
@@ -210,7 +210,7 @@ it('raises ModelNotFoundException for a missing or cross-user account id', funct
         'period_start_day' => 1,
         'default_currency_view' => 'eur_only',
     ]);
-    $otherAccountId = barInsertAccount($this->db, $otherUser->id, 'asn');
+    $otherAccountId = barInsertAccount($this->db, $otherUser->id, 'bank');
 
     $call = fn (): BalanceAnchorDto => $this->resolver->forAccount($otherAccountId, $this->user);
 

@@ -32,7 +32,7 @@ it('returns one candidate per account when only one detector fires for that acco
         'user_id' => $user->id,
         'name' => 'Single-source account',
         'slug' => 'agg-single',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL96ASNB0000000501',
         'default_currency' => 'EUR',
     ]);
@@ -79,7 +79,7 @@ it('prefers earliest opening_balance_date when two detectors fire for the same a
         'user_id' => $user->id,
         'name' => 'Earliest-wins account',
         'slug' => 'agg-earliest',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL15ASNB0000000601',
         'default_currency' => 'EUR',
     ]);
@@ -145,7 +145,7 @@ it('breaks ties on the same date in favour of CAMT.053 over MT940', function ():
         'user_id' => $user->id,
         'name' => 'CAMT-preferred account',
         'slug' => 'agg-camt-wins',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL31ASNB0000000701',
         'default_currency' => 'EUR',
     ]);
@@ -210,7 +210,7 @@ it('surfaces both candidates when two CAMT.053 imports disagree on the same date
         'user_id' => $user->id,
         'name' => 'Conflict account',
         'slug' => 'agg-both',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL47ASNB0000000801',
         'default_currency' => 'EUR',
     ]);

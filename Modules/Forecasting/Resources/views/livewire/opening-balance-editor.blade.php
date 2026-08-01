@@ -11,7 +11,7 @@
     Variables in scope:
       - $accountId : int
       - $accountName : string
-      - $accountKind : string  ('asn' | 'ics_card' | 'paypal' | other)
+      - $accountKind : string  ('bank' | 'ics_card' | 'paypal' | 'cash' | ...)
       - $currency : string
       - $openingInput : string  (user-typed)
       - $asOfInput : string     (ISO YYYY-MM-DD)
@@ -26,7 +26,6 @@
     $symbol = $currency === 'EUR' ? '€' : ($currency === 'USD' ? '$' : $currency);
     $helpText = match (true) {
         str_contains($accountKind, 'paypal') => "PayPal exports don't carry balance lines, so set this manually.",
-        str_contains($accountKind, 'asn') => 'Auto-anchored from your latest statement. Override only if you know the live balance differs.',
         default => 'Override only if you know the current live balance differs from what beatrax computes.',
     };
 @endphp

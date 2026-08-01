@@ -21,7 +21,7 @@ final class DemoAccountsSeeder
             [
                 'name' => 'ASN Bank',
                 'slug' => 'asn-demo-1',
-                'kind' => AccountKind::Asn->value,
+                'kind' => AccountKind::Bank->value,
                 'iban' => 'NL57ASNB0123456789',
                 'default_currency' => 'EUR',
                 'starting_balance_minor' => 285000,
@@ -51,7 +51,7 @@ final class DemoAccountsSeeder
             [
                 'name' => 'ASN Bank',
                 'slug' => 'asn-demo-2',
-                'kind' => AccountKind::Asn->value,
+                'kind' => AccountKind::Bank->value,
                 'iban' => 'NL09ASNB0987654321',
                 'default_currency' => 'EUR',
                 'starting_balance_minor' => 168000,

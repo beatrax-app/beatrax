@@ -38,7 +38,7 @@ function aatAccount(DatabaseManager $db, int $userId, string $name, ?int $buffer
         'user_id' => $userId,
         'name' => $name,
         'slug' => 'aat-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'AAT'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 100000,

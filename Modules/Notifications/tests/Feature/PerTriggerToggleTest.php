@@ -179,7 +179,7 @@ function pttRunBudgetNudge(User $user): bool
         'user_id' => $user->id,
         'name' => 'PTT ASN',
         'slug' => 'ptt-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00PTT'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
     ]);
@@ -263,7 +263,7 @@ function pttRunSavingsPrompt(User $user): bool
     ]);
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $user->id, 'name' => 'ASN', 'slug' => 'ptt-spt-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn', 'iban' => 'NL00SPT'.str_pad((string) $cpId, 9, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'kind' => 'bank', 'iban' => 'NL00SPT'.str_pad((string) $cpId, 9, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
         'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
     ]);
     $runId = $db->connection()->table('import_runs')->insertGetId([

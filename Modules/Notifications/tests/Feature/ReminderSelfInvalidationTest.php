@@ -75,7 +75,7 @@ function rsiSeedOccurrence(User $user, RecurringSeries $series, CarbonImmutable 
         'user_id' => $user->id,
         'name' => 'RSI ASN',
         'slug' => 'rsi-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00RSI'.strtoupper($suffix),
         'default_currency' => 'EUR',
     ]);

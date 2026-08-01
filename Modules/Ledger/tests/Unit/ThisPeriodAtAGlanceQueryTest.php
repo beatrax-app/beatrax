@@ -107,7 +107,7 @@ it('scopes totals to the queried user only (no cross-user leakage)', function ()
         'user_id' => $other->id,
         'name' => 'Other account',
         'slug' => 'other-account',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL08ASNB9999999999',
         'default_currency' => 'EUR',
     ]);

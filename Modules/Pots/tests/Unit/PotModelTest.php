@@ -28,7 +28,7 @@ it('creates and retrieves a pot via the factory', function (): void {
         'user_id' => $user->id,
         'name' => 'ASN',
         'slug' => 'asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);
@@ -64,7 +64,7 @@ it('hides another users pots via the BelongsToUser global scope', function (): v
         'user_id' => $alice->id,
         'name' => 'Alice ASN',
         'slug' => 'alice-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000001',
         'default_currency' => 'EUR',
     ]);
@@ -72,7 +72,7 @@ it('hides another users pots via the BelongsToUser global scope', function (): v
         'user_id' => $bob->id,
         'name' => 'Bob ASN',
         'slug' => 'bob-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000002',
         'default_currency' => 'EUR',
     ]);
@@ -98,7 +98,7 @@ it('stores nullable user_id when no user is set', function (): void {
         'user_id' => $user->id,
         'name' => 'ASN',
         'slug' => 'asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);

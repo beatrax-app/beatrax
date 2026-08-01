@@ -46,7 +46,7 @@ function xdcAccount(User $user, string $name): Account
         'user_id' => $user->id,
         'name' => $name,
         'slug' => 'xdc-'.strtolower($name).'-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00XDC'.strtoupper(bin2hex(random_bytes(6))),
         'default_currency' => 'EUR',
     ]);

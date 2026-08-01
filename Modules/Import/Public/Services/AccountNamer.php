@@ -53,7 +53,7 @@ final class AccountNamer implements NamesAccounts
             'user_id' => $user->id,
             'name' => $trimmed,
             'slug' => $slugBody.'-'.strtolower($tail),
-            'kind' => AccountKind::Asn->value,
+            'kind' => AccountKind::Bank->value,
             'iban' => $iban,
             'default_currency' => 'EUR',
         ]);

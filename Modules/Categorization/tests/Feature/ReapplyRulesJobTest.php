@@ -82,7 +82,7 @@ function seedReapplyFixtures(): array
         'user_id' => $user->id,
         'name' => 'ASN reapply-job',
         'slug' => 'reapply-job-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
     ]);

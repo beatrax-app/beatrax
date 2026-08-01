@@ -117,7 +117,7 @@ function devfxOccurrence(DatabaseManager $db, int $userId, int $seriesId, string
         'user_id' => $userId,
         'name' => 'ASN fx',
         'slug' => 'devfx-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00DEVFX'.str_pad((string) $txCounter, 8, '0', STR_PAD_LEFT),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',

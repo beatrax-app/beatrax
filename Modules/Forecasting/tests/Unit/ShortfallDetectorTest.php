@@ -45,7 +45,7 @@ function sdAccount(User $user, string $slug): Account
         'user_id' => $user->id,
         'name' => 'sd '.$slug,
         'slug' => $slug,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'SD-'.strtoupper($slug),
         'default_currency' => 'EUR',
     ]);
@@ -89,7 +89,7 @@ function sdPoints(array $balanceByDate): array
 
 beforeEach(function (): void {
     $this->user = sdUser('shortfall');
-    $this->account = sdAccount($this->user, 'asn');
+    $this->account = sdAccount($this->user, 'bank');
 });
 
 it('emits a window with buffer_used_minor=0 when no buffer is set and balance dips below zero', function (): void {

@@ -60,7 +60,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);
@@ -150,7 +150,7 @@ it('scopes results to the requested user only', function (): void {
         'user_id' => $other->id,
         'name' => 'Other',
         'slug' => 'other',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL08ASNB9999999999',
         'default_currency' => 'EUR',
     ]);

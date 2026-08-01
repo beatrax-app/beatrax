@@ -46,7 +46,7 @@ function ervtAccount(User $user, string $slug): Account
         'user_id' => $user->id,
         'name' => 'ervt '.$slug,
         'slug' => $slug,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ERVT'.str_pad(substr($slug, 0, 8), 10, '0', STR_PAD_RIGHT),
         'default_currency' => 'EUR',
     ]);

@@ -63,7 +63,7 @@ function rebuildSeedBase(DatabaseManager $db, string $suffix): array
         'user_id' => $userId,
         'name' => 'ASN rebuild '.$suffix,
         'slug' => 'rebuild-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper(substr(md5($suffix), 0, 8)),
         'default_currency' => 'EUR',
         'created_at' => '2026-06-15 00:00:00',

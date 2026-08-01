@@ -23,7 +23,7 @@ final class NetWorthQuery
 {
     use CoercesScalars;
 
-    private const EXCLUDED_KINDS = ['paypal_funding'];
+    private const EXCLUDED_KINDS = [AccountKind::PaypalFunding->value];
 
     public function __construct(
         private readonly BalanceAnchorResolver $anchor,

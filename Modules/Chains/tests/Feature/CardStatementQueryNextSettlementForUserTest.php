@@ -57,7 +57,7 @@ function nsmAsnAccount(User $user, string $slug, string $iban): Account
         'user_id' => $user->id,
         'name' => 'ASN '.$slug,
         'slug' => $slug,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => $iban,
         'default_currency' => 'EUR',
     ]);

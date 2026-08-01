@@ -213,7 +213,7 @@ it('cross-user T-07-09: pending_enrichment_conflicts for another user is NEVER t
         'user_id' => $other->id,
         'name' => 'ASN-other',
         'slug' => 'asn-other-conflict',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL43ASNB0000000000',
         'default_currency' => 'EUR',
     ]);
@@ -307,7 +307,7 @@ it('W6 no-instance-cache: two consecutive __invoke calls for different users hon
         'user_id' => $userB->id,
         'name' => 'ASN-B',
         'slug' => 'asn-b',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL08ASNB9999999999',
         'default_currency' => 'EUR',
     ]);

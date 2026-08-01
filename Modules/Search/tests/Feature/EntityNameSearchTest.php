@@ -37,7 +37,7 @@ function entityAccount(User $user): int
         'user_id' => $user->id,
         'name' => 'Entity ASN '.$suffix,
         'slug' => 'entity-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

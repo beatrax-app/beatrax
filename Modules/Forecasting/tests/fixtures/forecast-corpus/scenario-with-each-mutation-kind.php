@@ -16,7 +16,7 @@ return [
             'id' => 1,
             'user_id' => 1,
             'name' => 'ASN Betaalrekening',
-            'kind' => 'asn',
+            'kind' => 'bank',
             'default_currency' => 'EUR',
             'opening_balance_minor' => 200000,
             'opening_balance_as_of_date' => '2026-05-01',

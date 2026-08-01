@@ -15,6 +15,7 @@ use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
@@ -195,17 +196,18 @@ final class ReconcilePage extends Component
 
         $kind = is_string($account->kind ?? null) ? $account->kind : '';
 
-        // Any other kind (paypal, generic CSV, cash book) has no statement
-        // source — the default arm leaves statementBalance blank for manual
-        // entry.
-        match ($kind) {
-            'asn' => $this->prefillFromAsnStatement($connection, $user->id),
-            'ics_card' => $this->prefillFromCardStatement($connection, $user->id),
-            default => null,
-        };
+        // A card prefills from its card statements; any other account prefills
+        // from its imported statement summaries. An account with no statement
+        // source (paypal, cash book, API-connected) finds none, so
+        // statementBalance is left blank for manual entry.
+        if ($kind === AccountKind::IcsCard->value) {
+            $this->prefillFromCardStatement($connection, $user->id);
+        } else {
+            $this->prefillFromStatementSummary($connection, $user->id);
+        }
     }
 
-    private function prefillFromAsnStatement(ConnectionInterface $connection, int $userId): void
+    private function prefillFromStatementSummary(ConnectionInterface $connection, int $userId): void
     {
         $row = $connection->table('statement_summaries')
             ->where('user_id', $userId)

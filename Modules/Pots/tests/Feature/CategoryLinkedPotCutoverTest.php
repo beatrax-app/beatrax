@@ -33,7 +33,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN cutover',
         'slug' => 'cutover-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
     ]);
@@ -114,7 +114,7 @@ it('never archives pots via a single unscoped bulk UPDATE (per-user ownership ch
         'user_id' => $mallory->id,
         'name' => 'Mallory ASN cutover',
         'slug' => 'mallory-cutover-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
     ]);

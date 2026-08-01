@@ -95,7 +95,7 @@ it('stashes bank_import_run_id into wizard_progress.data after a successful subm
             'user_id' => $this->user->id,
             'name' => 'ASN',
             'slug' => 'asn-fixture',
-            'kind' => 'asn',
+            'kind' => 'bank',
             'default_currency' => 'EUR',
         ],
     );

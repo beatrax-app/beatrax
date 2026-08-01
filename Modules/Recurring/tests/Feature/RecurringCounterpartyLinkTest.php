@@ -24,7 +24,7 @@ function linkChain(DatabaseManager $db, int $userId, int $counterpartyId, string
 
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId, 'name' => 'ASN', 'slug' => 'lc-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn', 'iban' => 'NL00LINK'.str_pad((string) $counterpartyId, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'kind' => 'bank', 'iban' => 'NL00LINK'.str_pad((string) $counterpartyId, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
         'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
     ]);
     $runId = $db->connection()->table('import_runs')->insertGetId([
@@ -100,7 +100,7 @@ it('maps transaction ids to recurring-series membership (true/false per id)', fu
     // A second transaction NOT attached to any occurrence.
     $accountId = $this->db->connection()->table('accounts')->insertGetId([
         'user_id' => $this->user->id, 'name' => 'ASN2', 'slug' => 'mem-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn', 'iban' => 'NL00MEMB'.substr(bin2hex(random_bytes(8)), 0, 10), 'default_currency' => 'EUR',
+        'kind' => 'bank', 'iban' => 'NL00MEMB'.substr(bin2hex(random_bytes(8)), 0, 10), 'default_currency' => 'EUR',
         'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
     ]);
     $runId = $this->db->connection()->table('import_runs')->insertGetId([

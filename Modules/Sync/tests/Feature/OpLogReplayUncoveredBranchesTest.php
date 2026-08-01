@@ -92,7 +92,7 @@ function olrPairedTransfers(DatabaseManager $db, int $userId, string $suffix): a
         'user_id' => $userId,
         'name' => 'OLR account',
         'slug' => 'olr-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00OLR'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-06-15 00:00:00',

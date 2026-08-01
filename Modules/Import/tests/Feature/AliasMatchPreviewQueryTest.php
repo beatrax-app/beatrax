@@ -40,7 +40,7 @@ beforeEach(function (): void {
         'user_id' => $this->userA->id,
         'name' => 'ASN A',
         'slug' => 'asn-preview-a',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL16ASNB0000000001',
         'default_currency' => 'EUR',
     ]);
@@ -48,7 +48,7 @@ beforeEach(function (): void {
         'user_id' => $this->userB->id,
         'name' => 'ASN B',
         'slug' => 'asn-preview-b',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL86ASNB0000000002',
         'default_currency' => 'EUR',
     ]);

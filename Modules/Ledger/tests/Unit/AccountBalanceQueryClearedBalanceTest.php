@@ -25,7 +25,7 @@ it('sums only cleared and reconciled rows, excluding uncleared', function (): vo
         'user_id' => $user->id,
         'name' => 'ASN',
         'slug' => 'asn-balance-fixture',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000001',
         'default_currency' => 'EUR',
     ]);
@@ -48,7 +48,7 @@ it('scopes by user_id — a foreign user resolving another user\'s account gets 
         'user_id' => $userA->id,
         'name' => 'ASN A',
         'slug' => 'asn-balance-fixture-a',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000002',
         'default_currency' => 'EUR',
     ]);

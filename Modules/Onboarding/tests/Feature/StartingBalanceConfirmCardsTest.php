@@ -41,7 +41,7 @@ it('renders a starting-balance card in the detected state with the detector valu
         'user_id' => $this->user->id,
         'name' => 'ASN account',
         'slug' => 'asn-confirm',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL54ASNB0123454321',
         'default_currency' => 'EUR',
     ]);

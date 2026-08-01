@@ -48,7 +48,7 @@ function tstlTransaction(DatabaseManager $db, int $userId, int $settledAmountMin
         'user_id' => $userId,
         'name' => 'TSTL ASN '.$suffix,
         'slug' => 'tstl-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

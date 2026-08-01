@@ -42,7 +42,7 @@ function wtcTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'WTC ASN '.$suffix,
         'slug' => 'wtc-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

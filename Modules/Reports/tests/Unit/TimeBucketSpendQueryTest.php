@@ -38,7 +38,7 @@ function tbqAccount(User $user): Account
         'user_id' => $user->id,
         'name' => 'ASN',
         'slug' => 'tbq-asn-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00TBQ'.strtoupper(bin2hex(random_bytes(6))),
         'default_currency' => 'EUR',
     ]);

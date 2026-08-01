@@ -132,7 +132,7 @@ it('changing the global threshold without a per-series override changes subseque
         'user_id' => $user->id,
         'name' => 'ASN GDT',
         'slug' => 'gdt-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00GDTBANK'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',

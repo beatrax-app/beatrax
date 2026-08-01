@@ -61,7 +61,7 @@ beforeEach(function (): void {
         'user_id' => $userId,
         'name' => 'ASN dedup test',
         'slug' => 'sync-dedup-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNBDEDUP0001',
         'default_currency' => 'EUR',
         'created_at' => '2026-06-01 00:00:00',

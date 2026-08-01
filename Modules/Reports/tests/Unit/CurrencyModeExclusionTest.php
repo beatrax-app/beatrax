@@ -51,7 +51,7 @@ function cmeAccount(User $user, string $currency = 'EUR'): Account
         'user_id' => $user->id,
         'name' => $currency.' account',
         'slug' => strtolower($currency).'-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00CMEX'.strtoupper(bin2hex(random_bytes(6))),
         'default_currency' => $currency,
     ]);

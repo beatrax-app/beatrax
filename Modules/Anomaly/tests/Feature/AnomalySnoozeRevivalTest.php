@@ -40,7 +40,7 @@ function asrTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'ASR ASN',
         'slug' => 'asr-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASR'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',

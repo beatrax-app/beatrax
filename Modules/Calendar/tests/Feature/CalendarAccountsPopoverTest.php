@@ -35,7 +35,7 @@ function capUser(string $suffix = 'cap'): User
     ]);
 }
 
-function capAccount(DatabaseManager $db, int $userId, string $name, string $kind = 'asn'): int
+function capAccount(DatabaseManager $db, int $userId, string $name, string $kind = 'bank'): int
 {
     $hex = bin2hex(random_bytes(4));
 
@@ -64,7 +64,7 @@ afterEach(function (): void {
 it('materializes defaults on first load: entries all ON, balance = spendable set (CR-01)', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-defaults');
-    $asnId = capAccount($db, $user->id, 'ASN Checking', 'asn');
+    $asnId = capAccount($db, $user->id, 'ASN Checking', 'bank');
     $icsId = capAccount($db, $user->id, 'ICS Card', 'ics_card');
 
     // Fresh user, no persisted prefs: the component state must hold EXPLICIT
@@ -78,7 +78,7 @@ it('materializes defaults on first load: entries all ON, balance = spendable set
 it('unchecking one account from the default all-on state hides only that account (CR-01 inversion regression)', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-uncheck-one');
-    $asnId = capAccount($db, $user->id, 'ASN Checking', 'asn');
+    $asnId = capAccount($db, $user->id, 'ASN Checking', 'bank');
     $paypalId = capAccount($db, $user->id, 'PayPal', 'paypal');
 
     // From the materialized default (both ON), unchecking ASN must leave
@@ -93,7 +93,7 @@ it('unchecking one account from the default all-on state hides only that account
 it('persists the explicit everything-off state and a reload keeps every checkbox off (CR-01)', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-all-off');
-    $aid = capAccount($db, $user->id, 'ASN Checking', 'asn');
+    $aid = capAccount($db, $user->id, 'ASN Checking', 'bank');
 
     // Toggle the only account off in both sets, persist.
     Livewire::actingAs($user)
@@ -115,7 +115,7 @@ it('persists the explicit everything-off state and a reload keeps every checkbox
 it('toggleBalanceAccount removes an account from balanceAccountIds and does not touch visibleAccountIds', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-bal-off');
-    $aid = capAccount($db, $user->id, 'ASN Checking', 'asn');
+    $aid = capAccount($db, $user->id, 'ASN Checking', 'bank');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
@@ -129,7 +129,7 @@ it('toggleBalanceAccount removes an account from balanceAccountIds and does not 
 it('toggleBalanceAccount adds an account to balanceAccountIds when it is currently absent', function (): void {
     $db = app(DatabaseManager::class);
     $user = capUser('cap-bal-on');
-    $aid = capAccount($db, $user->id, 'ASN Checking 2', 'asn');
+    $aid = capAccount($db, $user->id, 'ASN Checking 2', 'bank');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])
@@ -173,8 +173,8 @@ it('persistAccountPrefs strips foreign account ids before writing to user_prefer
     $db = app(DatabaseManager::class);
     $user = capUser('cap-sanitize');
     $otherUser = capUser('cap-sanitize-owner');
-    $ownId = capAccount($db, $user->id, 'Own ASN', 'asn');
-    $foreignId = capAccount($db, $otherUser->id, 'Foreign ASN', 'asn');
+    $ownId = capAccount($db, $user->id, 'Own ASN', 'bank');
+    $foreignId = capAccount($db, $otherUser->id, 'Foreign ASN', 'bank');
 
     // Bypass the ownership-validated toggle actions by setting the public
     // properties directly (what a tampered Livewire payload would do).
@@ -199,7 +199,7 @@ it('toggleBalanceAccount silently ignores a foreign account ID', function (): vo
     $db = app(DatabaseManager::class);
     $user = capUser('cap-foreign');
     $otherUser = capUser('cap-foreign-owner');
-    $foreignId = capAccount($db, $otherUser->id, 'Foreign Account', 'asn');
+    $foreignId = capAccount($db, $otherUser->id, 'Foreign Account', 'bank');
 
     // foreign ID should be silently ignored; balanceAccountIds stays unchanged
     Livewire::actingAs($user)
@@ -213,7 +213,7 @@ it('toggleEntriesAccount silently ignores a foreign account ID', function (): vo
     $db = app(DatabaseManager::class);
     $user = capUser('cap-foreign-entries');
     $otherUser = capUser('cap-foreign-entries-owner');
-    $foreignId = capAccount($db, $otherUser->id, 'Foreign Account 2', 'asn');
+    $foreignId = capAccount($db, $otherUser->id, 'Foreign Account 2', 'bank');
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, ['month' => 6, 'year' => 2026])

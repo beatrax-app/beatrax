@@ -36,7 +36,7 @@ function fpgAccount(DatabaseManager $db, int $userId, string $name): int
         'user_id' => $userId,
         'name' => $name,
         'slug' => 'fpg-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00FPG'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 100000,

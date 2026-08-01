@@ -39,7 +39,7 @@ function aahTxn(DatabaseManager $db, int $userId, string $merchantSlug): array
 
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId, 'name' => 'ASN test', 'slug' => 'aah-asn-'.$suffix,
-        'kind' => 'asn', 'iban' => 'NL00ASNB'.strtoupper($suffix), 'default_currency' => 'EUR',
+        'kind' => 'bank', 'iban' => 'NL00ASNB'.strtoupper($suffix), 'default_currency' => 'EUR',
         'created_at' => '2026-06-01 00:00:00', 'updated_at' => '2026-06-01 00:00:00',
     ]);
 

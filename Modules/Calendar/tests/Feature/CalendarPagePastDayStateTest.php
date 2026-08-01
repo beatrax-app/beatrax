@@ -61,7 +61,7 @@ function cppdsOccurrence(DatabaseManager $db, int $userId, int $seriesId, string
         'user_id' => $userId,
         'name' => 'CPPDS ASN',
         'slug' => 'cppds-'.$hex,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00CPPDS'.strtoupper($hex),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 0,
