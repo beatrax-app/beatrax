@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Adds a nullable JSON `auto_category_provenance` column to
@@ -30,10 +27,8 @@ use Illuminate\Database\Schema\Builder;
  * re-derive run. The column is nullable so transactions categorised
  * before the column existed keep working unchanged.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->table('transactions', static function (Blueprint $table): void {
@@ -46,21 +41,5 @@ return new class extends Migration
         $this->schema()->table('transactions', static function (Blueprint $table): void {
             $table->dropColumn('auto_category_provenance');
         });
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

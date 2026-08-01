@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Supersedes 2026_07_17_000001: drops `category_budgets.threshold_percent`.
@@ -28,10 +26,8 @@ use Illuminate\Database\Schema\Builder;
  * `down()` re-adds the column symmetrically so a rollback of this migration
  * restores 000001's post-state.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->table('category_budgets', static function (Blueprint $table): void {
@@ -44,21 +40,5 @@ return new class extends Migration
         $this->schema()->table('category_budgets', static function (Blueprint $table): void {
             $table->unsignedTinyInteger('threshold_percent')->nullable();
         });
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

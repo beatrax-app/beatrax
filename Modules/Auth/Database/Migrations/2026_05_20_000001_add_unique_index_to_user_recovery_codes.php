@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Adds a unique index on user_recovery_codes.code_hash.
@@ -16,10 +13,8 @@ use Illuminate\Database\Schema\Builder;
  * to disambiguate between two rows carrying the same hash. It also makes
  * a duplicate-code insert fail deterministically at the database layer.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->table('user_recovery_codes', static function (Blueprint $table): void {
@@ -32,21 +27,5 @@ return new class extends Migration
         $this->schema()->table('user_recovery_codes', static function (Blueprint $table): void {
             $table->dropUnique('user_recovery_codes_code_hash_unique');
         });
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

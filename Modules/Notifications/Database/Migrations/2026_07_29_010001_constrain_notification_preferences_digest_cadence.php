@@ -2,9 +2,7 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
+use Modules\Core\Database\Support\ModuleMigration;
 use Modules\Notifications\Public\Enums\DigestCadence;
 
 /**
@@ -21,10 +19,8 @@ use Modules\Notifications\Public\Enums\DigestCadence;
  * The allowed list is read from DigestCadence rather than repeated, so the
  * enum stays the one place the vocabulary is written down.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());
@@ -59,16 +55,5 @@ return new class extends Migration
         $connection = $this->db()->connection($this->getConnection());
         $connection->statement('DROP TRIGGER IF EXISTS notification_preferences_digest_cadence_check_insert');
         $connection->statement('DROP TRIGGER IF EXISTS notification_preferences_digest_cadence_check_update');
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

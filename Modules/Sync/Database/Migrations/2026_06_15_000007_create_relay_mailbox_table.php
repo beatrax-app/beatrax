@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the relay_mailbox table — the zero-knowledge ciphertext mailbox
@@ -40,10 +37,8 @@ use Illuminate\Database\Schema\Builder;
  *     This index makes the "drain all pending messages for recipient_did" query
  *     efficient without scanning delivered rows.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('relay_mailbox', static function (Blueprint $table): void {
@@ -69,21 +64,5 @@ return new class extends Migration
     public function down(): void
     {
         $this->schema()->dropIfExists('relay_mailbox');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

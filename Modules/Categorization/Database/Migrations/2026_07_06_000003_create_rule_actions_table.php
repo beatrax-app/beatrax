@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the `rule_actions` child table (D-03) — one row per action a
@@ -30,10 +27,8 @@ use Illuminate\Database\Schema\Builder;
  * from 2026_05_17_010003_create_categorization_rules_table.php so a
  * typo in the action layer fails loud at the database boundary.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('rule_actions', static function (Blueprint $table): void {
@@ -72,21 +67,5 @@ return new class extends Migration
         $connection->statement('DROP TRIGGER IF EXISTS rule_actions_type_check_insert');
 
         $this->schema()->dropIfExists('rule_actions');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

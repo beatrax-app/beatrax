@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Re-establishes the two enum-check triggers on
@@ -26,10 +25,8 @@ use Illuminate\Database\Migrations\Migration;
  * rebuild (restores them). The trigger definitions are byte-identical
  * to the originals in `2026_05_17_010004_*`.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());
@@ -57,16 +54,5 @@ return new class extends Migration
         $connection = $this->db()->connection($this->getConnection());
         $connection->statement('DROP TRIGGER IF EXISTS users_receipt_conflict_resolution_check_update');
         $connection->statement('DROP TRIGGER IF EXISTS users_receipt_conflict_resolution_check_insert');
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

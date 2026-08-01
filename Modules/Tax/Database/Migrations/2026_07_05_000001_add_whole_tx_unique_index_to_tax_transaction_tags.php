@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
 use Illuminate\Database\Connection;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * DB-level backstop restoring whole-transaction-tag uniqueness (Phase 13.3
@@ -37,10 +36,8 @@ use Illuminate\Database\Migrations\Migration;
  * See Modules/Pots/Database/Migrations/2026_06_10_000003_add_active_goal_unique_index_to_pots.php
  * for the closest existing partial-unique-index precedent.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->connection()->statement(
@@ -56,16 +53,5 @@ return new class extends Migration
     private function connection(): Connection
     {
         return $this->db()->connection($this->getConnection());
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

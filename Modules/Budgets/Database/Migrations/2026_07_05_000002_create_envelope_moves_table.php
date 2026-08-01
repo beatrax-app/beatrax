@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the envelope_moves table — an append-only, paired-row ledger for
@@ -45,10 +42,8 @@ use Illuminate\Database\Schema\Builder;
  * `_create_required` reason as envelope_assignments (v1 is EUR-only, D-25;
  * EnvelopeWriter always supplies it explicitly).
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('envelope_moves', static function (Blueprint $table): void {
@@ -83,21 +78,5 @@ return new class extends Migration
     public function down(): void
     {
         $this->schema()->dropIfExists('envelope_moves');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * UAT gap-fix (13.5-HUMAN-UAT.md Test 3c): the "Keep local" / "Take source"
@@ -42,10 +39,8 @@ use Illuminate\Database\Schema\Builder;
  *                  — NULL and 'keep_local' are equivalent; NULL simply means
  *                  the user has not touched the toggle yet.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->table('migration_staging_unmapped_items', static function (Blueprint $table): void {
@@ -64,21 +59,5 @@ return new class extends Migration
         $this->schema()->table('migration_staging_unmapped_items', static function (Blueprint $table): void {
             $table->dropColumn(['entity_type', 'field_name', 'local_value', 'source_value', 'baseline_value', 'currency', 'resolution']);
         });
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

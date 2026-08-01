@@ -3,10 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Saved what-if scenarios. Each scenario is a named container for a
@@ -30,10 +28,8 @@ use Illuminate\Database\Schema\Builder;
  *     the rename action has a deterministic conflict surface.
  *   - INDEX(user_id, created_at) — scenario picker sorts by recency.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('forecast_scenarios', static function (Blueprint $table): void {
@@ -51,21 +47,5 @@ return new class extends Migration
     public function down(): void
     {
         $this->schema()->dropIfExists('forecast_scenarios');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };
