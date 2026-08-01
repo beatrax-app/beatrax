@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Desktop\Internal\Native;
 
-use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Actions\WriteUserPreference;
 
 // Decides what the window-close (X) button does based on the user's
 // close_behavior column: null shows the prompt, 'quit' quits, 'tray'
@@ -22,8 +21,7 @@ final class WindowCloseBehavior
     private const ALLOWED_CHOICES = [self::CHOICE_QUIT, self::CHOICE_TRAY];
 
     public function __construct(
-        private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private readonly WriteUserPreference $writeUserPreference,
     ) {}
 
     public function shouldPromptFor(User $user): bool
@@ -47,12 +45,6 @@ final class WindowCloseBehavior
             );
         }
 
-        $this->db->connection()
-            ->table('users')
-            ->where('id', $user->id)
-            ->update([
-                'close_behavior' => $choice,
-                'updated_at' => $this->clock->now()->toDateTimeString(),
-            ]);
+        ($this->writeUserPreference)($user->id, ['close_behavior' => $choice]);
     }
 }

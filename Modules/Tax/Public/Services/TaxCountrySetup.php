@@ -6,7 +6,7 @@ namespace Modules\Tax\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
-use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 
 /**
@@ -30,7 +30,7 @@ final class TaxCountrySetup
 
     public function __construct(
         private readonly DatabaseManager $db,
-        private readonly Clock $clock,
+        private readonly WriteUserPreference $writeUserPreference,
         private readonly TaxCategoryWriter $writer,
     ) {}
 
@@ -68,11 +68,6 @@ final class TaxCountrySetup
 
         $this->writer->seedFromCorpus($user, $countryCode);
 
-        $this->db->connection()->table('users')
-            ->where('id', $userId)
-            ->update([
-                'tax_country_code' => $countryCode,
-                'updated_at' => $this->clock->now()->toDateTimeString(),
-            ]);
+        ($this->writeUserPreference)($userId, ['tax_country_code' => $countryCode]);
     }
 }
