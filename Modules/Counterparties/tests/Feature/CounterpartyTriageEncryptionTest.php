@@ -48,7 +48,7 @@ function cpteAccount(User $user): Account
         'user_id' => $user->id,
         'name' => 'Triage-encryption fixture ASN',
         'slug' => 'cpte-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB'.strtoupper(bin2hex(random_bytes(5))),
         'default_currency' => 'EUR',
     ]);

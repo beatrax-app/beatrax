@@ -65,7 +65,7 @@ function mclTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'ASN mcl',
         'slug' => 'mcl-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00MCL'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-01 00:00:00',

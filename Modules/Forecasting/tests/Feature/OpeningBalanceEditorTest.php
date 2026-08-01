@@ -248,12 +248,12 @@ it('dispatches three ProjectForecastJob horizons after successful save', functio
     Bus::fake();
     CarbonImmutable::setTestNow('2026-05-01 12:00:00');
 
-    $account = obeAccount($this->user, 'asn', 'asn-1');
+    $account = obeAccount($this->user, 'bank', 'asn-1');
 
     Livewire::test(OpeningBalanceEditor::class, [
         'accountId' => $account->id,
         'accountName' => 'ASN',
-        'accountKind' => 'asn',
+        'accountKind' => 'bank',
         'currentOpeningMinor' => null,
         'currentAsOfDate' => null,
         'currency' => 'EUR',

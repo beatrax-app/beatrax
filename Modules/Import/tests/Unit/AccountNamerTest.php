@@ -32,7 +32,7 @@ it('creates an account scoped to the user with the supplied name + IBAN', functi
     expect($account->iban)->toBe($iban);
     expect($account->user_id)->toBe($this->user->id);
     expect($account->name)->toBe('My ASN Savings');
-    expect($account->kind)->toBe('asn');
+    expect($account->kind)->toBe('bank');
     expect($account->default_currency)->toBe('EUR');
 });
 

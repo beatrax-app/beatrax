@@ -43,7 +43,7 @@ it('returns one candidate per account with the earliest opening_balance_date win
         'user_id' => $user->id,
         'name' => 'MT940 account',
         'slug' => 'mt940-account',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL64ASNB0000000301',
         'default_currency' => 'EUR',
     ]);
@@ -112,7 +112,7 @@ it('skips import-runs of a non-mt940 source format', function (): void {
         'user_id' => $user->id,
         'name' => 'Mixed account',
         'slug' => 'mt940-mixed',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL80ASNB0000000401',
         'default_currency' => 'EUR',
     ]);

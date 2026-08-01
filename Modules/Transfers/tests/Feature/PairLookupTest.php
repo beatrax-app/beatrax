@@ -41,7 +41,7 @@ beforeEach(function (): void {
         'user_id' => $this->primaryUser->id,
         'name' => 'ASN primary',
         'slug' => 'pl-asn-primary',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);
@@ -50,7 +50,7 @@ beforeEach(function (): void {
         'user_id' => $this->otherUser->id,
         'name' => 'ASN other',
         'slug' => 'pl-asn-other',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL91ASNB9876543210',
         'default_currency' => 'EUR',
     ]);

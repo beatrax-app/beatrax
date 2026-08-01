@@ -49,7 +49,7 @@ final class AnomalyCorpusSeeder
             'user_id' => $user->id,
             'name' => 'ASN corpus',
             'slug' => 'anomaly-corpus-'.bin2hex(random_bytes(4)),
-            'kind' => 'asn',
+            'kind' => 'bank',
             'iban' => 'NL00ASNB'.substr(bin2hex(random_bytes(8)), 0, 10),
             'default_currency' => 'EUR',
             'created_at' => '2026-06-13 00:00:00',

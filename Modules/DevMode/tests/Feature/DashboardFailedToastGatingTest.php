@@ -52,7 +52,7 @@ function dashFailedToastUser(string $username, bool $isDeveloper): User
         'user_id' => $user->id,
         'name' => 'dft asn '.$username,
         'slug' => 'dft-asn-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57DFT'.substr(bin2hex(random_bytes(2)), 0, 4),
         'default_currency' => 'EUR',
     ]);

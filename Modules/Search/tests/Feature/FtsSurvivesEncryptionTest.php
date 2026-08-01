@@ -90,7 +90,7 @@ it('the real import path (RecordTransactions, genuinely encrypted) still indexes
 
     $account = Account::create([
         'user_id' => $userId,
-        'name' => 'ASN', 'slug' => 'fts-import-asn', 'kind' => 'asn',
+        'name' => 'ASN', 'slug' => 'fts-import-asn', 'kind' => 'bank',
         'iban' => 'NL57ASNB0123499999', 'default_currency' => 'EUR',
     ]);
     $importRun = ImportRun::create([

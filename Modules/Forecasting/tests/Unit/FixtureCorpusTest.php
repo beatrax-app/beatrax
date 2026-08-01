@@ -71,7 +71,7 @@ it('every forecast-corpus fixture returns the documented shape', function (strin
     assertIsList($accounts, "Fixture {$name}: 'accounts' must be a 0-indexed list.");
     assertGreaterThan(0, count($accounts), "Fixture {$name}: 'accounts' must be non-empty.");
 
-    $allowedKinds = ['asn', 'ics_card', 'paypal'];
+    $allowedKinds = ['bank', 'ics_card', 'paypal'];
     foreach ($accounts as $index => $account) {
         assertIsArray($account, "Fixture {$name}: account #{$index} must be an associative array.");
         foreach (['id', 'user_id', 'name', 'kind', 'default_currency'] as $required) {

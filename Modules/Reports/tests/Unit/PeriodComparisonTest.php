@@ -47,7 +47,7 @@ function pctAccount(User $user): Account
         'user_id' => $user->id,
         'name' => 'ASN',
         'slug' => 'asn-'.bin2hex(random_bytes(3)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00PCTX'.strtoupper(bin2hex(random_bytes(6))),
         'default_currency' => 'EUR',
     ]);

@@ -61,7 +61,7 @@ function cqplOccurrence(DatabaseManager $db, int $userId, int $seriesId, string 
         'user_id' => $userId,
         'name' => 'CQPL ASN',
         'slug' => 'cqpl-'.$hex,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00CQPL'.strtoupper($hex),
         'default_currency' => 'EUR',
         'opening_balance_minor' => 0,

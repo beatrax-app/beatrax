@@ -33,7 +33,7 @@ function driftWatchOccurrence(DatabaseManager $db, int $userId, int $seriesId, s
     $i++;
     $accountId = $db->connection()->table('accounts')->insertGetId([
         'user_id' => $userId, 'name' => 'ASN', 'slug' => 'dw-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn', 'iban' => 'NL00DRWT'.str_pad((string) $i, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
+        'kind' => 'bank', 'iban' => 'NL00DRWT'.str_pad((string) $i, 8, '0', STR_PAD_LEFT), 'default_currency' => 'EUR',
         'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
     ]);
     $runId = $db->connection()->table('import_runs')->insertGetId([

@@ -35,7 +35,7 @@ function ncstTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'NCST ASN '.$suffix,
         'slug' => 'ncst-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

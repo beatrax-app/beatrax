@@ -83,7 +83,7 @@ final class DemoPotsSeeder
     {
         $account = Account::query()
             ->where('user_id', $user->id)
-            ->where('kind', AccountKind::Asn->value)
+            ->where('kind', AccountKind::Bank->value)
             ->orderBy('id')
             ->first();
 

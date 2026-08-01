@@ -38,7 +38,7 @@ function pqAccount(DatabaseManager $db, int $userId, string $suffix): int
         'user_id' => $userId,
         'name' => 'PQ ASN',
         'slug' => 'pq-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00PQ'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-01 00:00:00',

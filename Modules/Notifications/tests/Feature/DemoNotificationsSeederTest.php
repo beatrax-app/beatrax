@@ -90,7 +90,7 @@ function dnsAccount(User $user): int
         'user_id' => $user->id,
         'name' => 'ASN Demo',
         'slug' => 'asn-demo-1',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00DNS0000000001',
         'default_currency' => 'EUR',
     ]);

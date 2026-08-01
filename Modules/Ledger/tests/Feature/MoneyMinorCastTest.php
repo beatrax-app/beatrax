@@ -10,7 +10,7 @@ use Modules\Ledger\Public\ValueObjects\Money;
 
 beforeEach(function (): void {
     $this->account = Account::create([
-        'name' => 'ASN', 'slug' => 'asn', 'kind' => 'asn',
+        'name' => 'ASN', 'slug' => 'asn', 'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789', 'default_currency' => 'EUR',
     ]);
     $this->importRun = ImportRun::create([

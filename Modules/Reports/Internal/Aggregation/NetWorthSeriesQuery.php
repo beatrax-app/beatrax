@@ -11,6 +11,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\FX\Public\Services\ExchangeRateService;
 use Modules\Ledger\Public\Dto\Period;
+use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Reports\Internal\Aggregation\Dto\NetWorthSeriesPoint;
@@ -26,7 +27,7 @@ final class NetWorthSeriesQuery
 
     // Must match Forecasting's NetWorthQuery::EXCLUDED_KINDS exactly, so
     // this series' account set stays consistent with the dashboard card.
-    private const EXCLUDED_KINDS = ['paypal_funding'];
+    private const EXCLUDED_KINDS = [AccountKind::PaypalFunding->value];
 
     public function __construct(
         private readonly AccountBalanceQuery $accountBalanceQuery,

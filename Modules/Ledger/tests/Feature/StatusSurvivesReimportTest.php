@@ -31,7 +31,7 @@ it('leaves a user-set status unchanged after re-import of the same source row', 
         'user_id' => $user->id,
         'name' => 'ASN',
         'slug' => 'asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);

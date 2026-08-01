@@ -77,7 +77,7 @@ function fhtAsnAccount(User $user, string $slug): Account
         'user_id' => $user->id,
         'name' => 'fht '.$slug,
         'slug' => $slug,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57FHT'.strtoupper($slug),
         'default_currency' => 'EUR',
     ]);
@@ -86,7 +86,7 @@ function fhtAsnAccount(User $user, string $slug): Account
 beforeEach(function (): void {
     $this->user = fhtUser('forecast-tile');
     $this->otherUser = fhtUser('forecast-tile-other');
-    $this->asn = fhtAsnAccount($this->user, 'asn');
+    $this->asn = fhtAsnAccount($this->user, 'bank');
     $this->ics = fhtIcsAccount($this->user, 'ics');
     $this->run = fhtImportRun($this->user, str_repeat('f', 64));
 

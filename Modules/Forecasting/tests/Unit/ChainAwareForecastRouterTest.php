@@ -127,7 +127,7 @@ beforeEach(function (): void {
 });
 
 it('passes contributions through unchanged when no chain links + no next settlement exist', function (): void {
-    $asn = carfAccount($this->user, 'asn', 'asn');
+    $asn = carfAccount($this->user, 'bank', 'asn');
     $contribution = new ForecastContribution(
         date: CarbonImmutable::parse('2026-05-10'),
         pointMinor: -12000,
@@ -147,7 +147,7 @@ it('passes contributions through unchanged when no chain links + no next settlem
 });
 
 it('rewrites a PayPal series contribution onto the ASN funder via confirmed chain link', function (): void {
-    $asn = carfAccount($this->user, 'asn', 'asn');
+    $asn = carfAccount($this->user, 'bank', 'asn');
     $paypal = carfAccount($this->user, 'paypal', 'paypal');
     $run = carfImportRun($this->user, str_repeat('a', 64));
 
@@ -249,7 +249,7 @@ it('leaves a PayPal series contribution unchanged when there is no chain link', 
 });
 
 it('synthesises a next ICS bulk-iDEAL settlement contribution onto the funder ASN account', function (): void {
-    $asn = carfAccount($this->user, 'asn', 'asn');
+    $asn = carfAccount($this->user, 'bank', 'asn');
     $ics = carfAccount($this->user, 'ics_card', 'ics');
     $run = carfImportRun($this->user, str_repeat('b', 64));
 
@@ -275,7 +275,7 @@ it('synthesises a next ICS bulk-iDEAL settlement contribution onto the funder AS
 });
 
 it('de-duplicates a synthesised settlement against a chain-routed ICS series contribution on the same (funder, date)', function (): void {
-    $asn = carfAccount($this->user, 'asn', 'asn');
+    $asn = carfAccount($this->user, 'bank', 'asn');
     $ics = carfAccount($this->user, 'ics_card', 'ics');
     $run = carfImportRun($this->user, str_repeat('c', 64));
 
@@ -362,7 +362,7 @@ it('de-duplicates a synthesised settlement against a chain-routed ICS series con
 });
 
 it('preserves an unrelated ASN recurring series whose occurrence lands on the ICS settlement date', function (): void {
-    $asn = carfAccount($this->user, 'asn', 'asn');
+    $asn = carfAccount($this->user, 'bank', 'asn');
     $ics = carfAccount($this->user, 'ics_card', 'ics');
     $run = carfImportRun($this->user, str_repeat('d', 64));
 

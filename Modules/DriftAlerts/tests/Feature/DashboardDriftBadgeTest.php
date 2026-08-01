@@ -36,7 +36,7 @@ function ddbTransaction(DatabaseManager $db, int $userId): int
         'user_id' => $userId,
         'name' => 'ASN test',
         'slug' => 'ddb-asn-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => '2026-05-19 00:00:00',

@@ -114,7 +114,7 @@ function cpTriageAccount(User $user): Account
         'user_id' => $user->id,
         'name' => 'Triage fixture ASN',
         'slug' => 'triage-asn-'.uniqid(),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB'.str_pad((string) random_int(1, 9999999999), 10, '0', STR_PAD_LEFT),
         'default_currency' => 'EUR',
     ]);

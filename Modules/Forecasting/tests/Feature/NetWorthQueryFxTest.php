@@ -57,7 +57,7 @@ beforeEach(function (): void {
 
 it('includes a non-EUR account in the total after FX conversion', function (): void {
     // EUR account: €2,000
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     // USD account: $100 — rate 1.08 USD/EUR → €92.59 ≈ 9259 minor (rounded)
     nwAccount($this->db, $this->user->id, 'USD wallet', 'paypal', 10_000, 'USD');
     fxRate($this->db, 'USD', '1.08');
@@ -84,7 +84,7 @@ it('preserves the original currency on each account balance line (D-02)', functi
 });
 
 it('sets hasExcludedAccounts=false and accountsWithoutRate=0 when all accounts have a rate', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwAccount($this->db, $this->user->id, 'GBP wallet', 'paypal', 50_000, 'GBP');
     fxRate($this->db, 'GBP', '0.86');
 
@@ -95,7 +95,7 @@ it('sets hasExcludedAccounts=false and accountsWithoutRate=0 when all accounts h
 });
 
 it('excludes an account and sets hasExcludedAccounts=true when no rate exists for the pair', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
     nwAccount($this->db, $this->user->id, 'JPY wallet', 'paypal', 5_000_000, 'JPY'); // no JPY rate seeded
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
@@ -118,7 +118,7 @@ it('populates ratesSource and ratesAsOf from the conversion used', function (): 
 });
 
 it('sets NetWorth.currency to the user base_currency', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 100_000, 'EUR');
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 100_000, 'EUR');
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 
@@ -126,7 +126,7 @@ it('sets NetWorth.currency to the user base_currency', function (): void {
 });
 
 it('EUR-only accounts with EUR base currency work without any rate rows (passthrough path)', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 150_000, 'EUR');
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 150_000, 'EUR');
     nwAccount($this->db, $this->user->id, 'PayPal', 'paypal', -10_000, 'EUR');
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
@@ -155,7 +155,7 @@ it('carries the converted base equivalent and per-pair rate metadata on a conver
 });
 
 it('leaves FX fields null on a base-currency (passthrough) line', function (): void {
-    nwAccount($this->db, $this->user->id, 'Checking', 'asn', 200_000, 'EUR');
+    nwAccount($this->db, $this->user->id, 'Checking', 'bank', 200_000, 'EUR');
 
     $netWorth = app(NetWorthQuery::class)->forUser($this->user);
 

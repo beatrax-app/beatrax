@@ -25,7 +25,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN',
         'slug' => 'asn-reconcile-flow-fixture',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0000000007',
         'default_currency' => 'EUR',
     ]);

@@ -57,7 +57,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN split-sync',
         'slug' => 'split-sync-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper(bin2hex(random_bytes(4))),
         'default_currency' => 'EUR',
     ]);

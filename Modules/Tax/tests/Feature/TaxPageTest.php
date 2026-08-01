@@ -59,7 +59,7 @@ function taxPageTaggedTransaction(
         'user_id' => $userId,
         'name' => 'Test Account '.$suffix,
         'slug' => 'test-acct-'.$suffix,
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL00ASNB'.strtoupper($suffix),
         'default_currency' => 'EUR',
         'created_at' => now(),

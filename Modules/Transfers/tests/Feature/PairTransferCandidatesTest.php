@@ -44,7 +44,7 @@ beforeEach(function (): void {
         'user_id' => $this->primaryUser->id,
         'name' => 'ASN',
         'slug' => 'pair-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);
@@ -307,7 +307,7 @@ it('never pairs across users (cross-user safety invariant)', function (): void {
         'user_id' => $userB->id,
         'name' => 'B-ASN',
         'slug' => 'b-asn',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789', // matches User-A's ASN IBAN but separate row
         'default_currency' => 'EUR',
     ]);

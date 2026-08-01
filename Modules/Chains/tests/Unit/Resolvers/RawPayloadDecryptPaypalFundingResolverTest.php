@@ -97,7 +97,7 @@ beforeEach(function (): void {
         'user_id' => $this->user->id,
         'name' => 'ASN rpd resolver',
         'slug' => 'rpd-resolver-asn-'.bin2hex(random_bytes(4)),
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL57ASNB0123456789',
         'default_currency' => 'EUR',
     ]);

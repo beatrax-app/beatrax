@@ -57,7 +57,7 @@ it('returns one candidate per account with the earliest opening_balance_date per
         'user_id' => $user->id,
         'name' => 'CAMT A',
         'slug' => 'camt-a',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL32ASNB0000000101',
         'default_currency' => 'EUR',
     ]);
@@ -66,7 +66,7 @@ it('returns one candidate per account with the earliest opening_balance_date per
         'user_id' => $user->id,
         'name' => 'CAMT B',
         'slug' => 'camt-b',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL05ASNB0000000102',
         'default_currency' => 'EUR',
     ]);
@@ -169,7 +169,7 @@ it('ignores import-runs that belong to a different user (user-scoping guard)', f
         'user_id' => $userB->id,
         'name' => 'User B account',
         'slug' => 'user-b',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL36ASNB0000000999',
         'default_currency' => 'EUR',
     ]);
@@ -212,7 +212,7 @@ it('ignores import-runs of a different source format (mt940 rows are skipped)', 
         'user_id' => $user->id,
         'name' => 'Mixed-source account',
         'slug' => 'mixed-source',
-        'kind' => 'asn',
+        'kind' => 'bank',
         'iban' => 'NL48ASNB0000000201',
         'default_currency' => 'EUR',
     ]);
