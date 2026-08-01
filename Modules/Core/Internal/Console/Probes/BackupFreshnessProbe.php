@@ -39,8 +39,7 @@ final class BackupFreshnessProbe implements Probe
         try {
             $newestCompletedAt = $this->findNewestSidecarCompletedAt();
         } catch (Throwable $e) {
-            return new ProbeResult(
-                'critical',
+            return new ProbeResult(ProbeSeverity::Critical->value,
                 'Failed to read backups directory: '.$e->getMessage(),
                 ['exception' => $e::class],
             );
@@ -58,8 +57,7 @@ final class BackupFreshnessProbe implements Probe
         if ($newestCompletedAt === null) {
             $this->recordOverdueAlert(null);
 
-            return new ProbeResult(
-                'warning',
+            return new ProbeResult(ProbeSeverity::Warning->value,
                 'No verified backups found under the backups directory.',
                 ['hours_old' => null],
             );
@@ -73,15 +71,13 @@ final class BackupFreshnessProbe implements Probe
         if ($hoursOld > self::STALE_AFTER_HOURS) {
             $this->recordOverdueAlert($hoursOld);
 
-            return new ProbeResult(
-                'warning',
+            return new ProbeResult(ProbeSeverity::Warning->value,
                 sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
                 ['hours_old' => $hoursOld],
             );
         }
 
-        return new ProbeResult(
-            'ok',
+        return new ProbeResult(ProbeSeverity::Ok->value,
             sprintf(self::BACKUP_AGE_MESSAGE, $hoursOld),
             ['hours_old' => $hoursOld],
         );
