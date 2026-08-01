@@ -7,6 +7,7 @@ namespace Modules\Import\Public\Services;
 use Modules\Core\Models\User;
 use Modules\Import\Public\Contracts\DetectsStartingBalance;
 use Modules\Import\Public\Dto\StartingBalanceCandidate;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 
 /**
  * @link ../../../../.docs/features/import/architecture.md#starting-balance-detection
@@ -15,7 +16,7 @@ final readonly class DetectStartingBalancesQuery
 {
     // CAMT.053 carries an explicit <OpngBal> element, so on a date tie it
     // is preferred over MT940's sometimes-recomputed running total.
-    private const CAMT_FORMAT = 'camt053';
+    private const CAMT_FORMAT = SourceFormat::Camt053->value;
 
     /**
      * @param  iterable<DetectsStartingBalance>  $detectors  Per-source detectors bound under the `starting-balance.detector` container tag, in registration order.

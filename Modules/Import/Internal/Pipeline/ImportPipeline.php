@@ -26,6 +26,7 @@ use Modules\Ingestion\Public\Contracts\AccountResolver;
 use Modules\Ingestion\Public\Dto\KnownAccount;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
 use Modules\Ingestion\Public\Dto\UnknownAccount;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
 use Modules\Ledger\Public\Contracts\RecordsStatementSummary;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
@@ -61,7 +62,7 @@ final class ImportPipeline
         // ambiguous bank-statement format and cannot self-disambiguate,
         // so any caller lacking a format hint is refused here even if
         // it bypassed the wizard's own server-side validation.
-        if ($formatHint === null && in_array($sourceFormat, ['asn-csv', 'ing-csv'], strict: true)) {
+        if ($formatHint === null && in_array($sourceFormat, [SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value], strict: true)) {
             throw new InvalidArgumentException('CSV imports require a format hint.');
         }
 

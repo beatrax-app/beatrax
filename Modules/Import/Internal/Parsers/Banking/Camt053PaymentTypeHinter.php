@@ -7,6 +7,7 @@ namespace Modules\Import\Internal\Parsers\Banking;
 use Modules\Import\Public\Contracts\PaymentTypeHinter;
 use Modules\Import\Public\Dto\PaymentTypeHint;
 use Modules\Import\Public\Enums\PaymentType;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
 
 /**
@@ -14,7 +15,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
  */
 final class Camt053PaymentTypeHinter implements PaymentTypeHinter
 {
-    private const SOURCE_FORMAT = 'camt053';
+    private const SOURCE_FORMAT = SourceFormat::Camt053->value;
 
     // Tuple key is domain|family|subFamily; matches are exact — partial
     // tuples aren't supported since ISO20022 defines meaning at the
