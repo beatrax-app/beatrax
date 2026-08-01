@@ -25,6 +25,13 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class ScenarioApplier
 {
+    // A one-off scenario amount has no variance-tolerance field on the
+    // add_recurring form, so its band is a fixed, deliberately calm ±5%
+    // around the entered magnitude rather than a series-derived width.
+    private const float ONE_OFF_ENVELOPE_LOW_MULTIPLIER = 0.95;
+
+    private const float ONE_OFF_ENVELOPE_HIGH_MULTIPLIER = 1.05;
+
     public function __construct(
         private ScenarioQuery $scenarioQuery,
         private RecurringSeriesQuery $seriesQuery,
@@ -256,9 +263,9 @@ final readonly class ScenarioApplier
         $point = $sign * $magnitude;
         // ±5% calmest-default envelope — the add_recurring form has no
         // variance-tolerance field, so a fixed conservative band is used.
-        $low5 = (int) round($magnitude * 0.95);
-        $high5 = (int) round($magnitude * 1.05);
-        [$lowMinor, $highMinor] = $sign < 0 ? [-$high5, -$low5] : [$low5, $high5];
+        $lowMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_LOW_MULTIPLIER);
+        $highMag = (int) round($magnitude * self::ONE_OFF_ENVELOPE_HIGH_MULTIPLIER);
+        [$lowMinor, $highMinor] = $sign < 0 ? [-$highMag, -$lowMag] : [$lowMag, $highMag];
 
         $cursor = $start;
         while ($cursor->lessThanOrEqualTo($horizonEnd)) {

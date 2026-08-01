@@ -24,6 +24,14 @@ final readonly class ForecastQuery
 {
     use CoercesScalars;
 
+    // A series' forecast confidence follows its band ratio — the full band
+    // width as a percentage of the point, i.e. twice the variance tolerance.
+    // A band no wider than this reads as high confidence; up to the medium
+    // bound, medium; anything wider, low.
+    private const int HIGH_CONFIDENCE_MAX_BAND_RATIO = 10;
+
+    private const int MEDIUM_CONFIDENCE_MAX_BAND_RATIO = 25;
+
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
@@ -137,8 +145,8 @@ final readonly class ForecastQuery
             $bandRatio = (2 * $tol);
 
             $confidence = match (true) {
-                $bandRatio <= 10 => 'high',
-                $bandRatio <= 25 => 'medium',
+                $bandRatio <= self::HIGH_CONFIDENCE_MAX_BAND_RATIO => 'high',
+                $bandRatio <= self::MEDIUM_CONFIDENCE_MAX_BAND_RATIO => 'medium',
                 default => 'low',
             };
 
