@@ -15,6 +15,7 @@ use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Enums\Theme;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
@@ -41,8 +42,7 @@ final class SettingsPage extends Component
 
     public int $driftAlertThresholdPercent = 5;
 
-    #[Validate('required|in:light,dark,system')]
-    public string $theme = 'system';
+    public string $theme = Theme::DEFAULT;
 
     // The switcher's "follow the browser" option. A null `users.locale`
     // stores as this sentinel in the form state so the radio group has a
@@ -268,16 +268,17 @@ final class SettingsPage extends Component
         return $currencyOptions;
     }
 
-    // The drift-threshold allow-list is built from the shared
-    // DriftThresholdOptions SSoT rather than an inline in: literal (a
-    // #[Validate] attribute cannot reference a runtime constant). Livewire
-    // composes this with the remaining attribute rules.
+    // The theme and drift-threshold allow-lists are built from their shared
+    // SSoT (the Theme enum, the DriftThresholdOptions constant) rather than
+    // inline in: literals — a #[Validate] attribute cannot reference a
+    // runtime value. Livewire composes this with the attribute rules.
     /**
      * @return array<string, string>
      */
     public function rules(): array
     {
         return [
+            'theme' => 'required|in:'.implode(',', Theme::values()),
             'driftAlertThresholdPercent' => 'required|integer|in:'.implode(',', DriftThresholdOptions::PERCENTS),
         ];
     }
