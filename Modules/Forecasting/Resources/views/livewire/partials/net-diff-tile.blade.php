@@ -17,9 +17,11 @@
         ProjectForecastJob::HORIZON_DAYS passed in from ForecastPage so
         the template stays in lock step with the canonical horizon set).
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     $fmt = static function (int $absMinor, string $currency = 'EUR'): string {
-        $value = $absMinor / 100;
+        $value = $absMinor / Money::MINOR_UNITS_PER_MAJOR;
         $formatter = new \NumberFormatter('nl_NL', \NumberFormatter::CURRENCY);
         $rendered = $formatter->formatCurrency($value, $currency);
 
@@ -38,7 +40,7 @@
                     ? 'text-emerald-700 dark:text-emerald-500'
                     : ($delta < 0 ? 'text-rose-700 dark:text-rose-500' : 'text-slate-900 dark:text-slate-100');
                 $aria = $delta > 0 ? 'better than baseline' : ($delta < 0 ? 'worse than baseline' : 'equal to baseline');
-                $formatted = $fmt(abs($delta), $netDiffCurrency ?? 'EUR');
+                $formatted = $fmt(abs($delta), $netDiffCurrency ?? BaseCurrency::value());
             @endphp
             <div>
                 <p

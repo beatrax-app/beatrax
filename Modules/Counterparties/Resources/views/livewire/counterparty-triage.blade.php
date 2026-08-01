@@ -18,6 +18,7 @@
       $recentTransactions  list<\stdClass>
       $queueEmpty          bool
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     use Illuminate\Support\Number;
 
@@ -142,7 +143,7 @@
                             <li style="display: flex; gap: var(--space-3); padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
                                 <span style="color: var(--color-text-muted); white-space: nowrap;">{{ $date }}</span>
                                 <span style="flex: 1 1 auto;">{{ $tx->description ?? '' }}</span>
-                                <span>{{ Number::currency(abs((int) ($tx->amount_minor ?? 0)) / 100, 'EUR', 'nl') }}</span>
+                                <span>{{ Number::currency(abs((int) ($tx->amount_minor ?? 0)) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
                             </li>
                         @endforeach
                     </ul>

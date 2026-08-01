@@ -19,11 +19,12 @@
       - When scenarioId === null: baseline-only single panel (Wave 2/3
         behaviour preserved).
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     use Modules\Forecasting\Public\Dto\ForecastDto;
 
     $eurFmt = static function (int $minor, string $currency = 'EUR'): string {
-        $value = $minor / 100;
+        $value = $minor / Money::MINOR_UNITS_PER_MAJOR;
         $formatter = new \NumberFormatter('nl_NL', \NumberFormatter::CURRENCY);
         $rendered = $formatter->formatCurrency($value, $currency);
 

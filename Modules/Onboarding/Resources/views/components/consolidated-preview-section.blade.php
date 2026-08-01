@@ -29,6 +29,8 @@
       :section — the ConsolidatedPreviewSection DTO instance.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @props(['section'])
 @php
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewSection $section */
@@ -109,9 +111,9 @@
                         }
                         $amountFormatted = '—';
                         if ($row->amountMinor !== null) {
-                            $major = abs($row->amountMinor) / 100;
+                            $major = abs($row->amountMinor) / Money::MINOR_UNITS_PER_MAJOR;
                             $sign = $row->amountMinor < 0 ? '-' : '';
-                            $currency = $row->currency ?? 'EUR';
+                            $currency = $row->currency ?? BaseCurrency::value();
                             $symbol = match ($currency) {
                                 'EUR' => '€',
                                 'USD' => '$',

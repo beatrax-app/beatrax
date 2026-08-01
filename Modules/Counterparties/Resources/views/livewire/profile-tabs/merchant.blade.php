@@ -11,6 +11,7 @@
       $categoryBreakdown Collection<\stdClass>
       $fundingChain      ChainSummary|null
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     use Illuminate\Support\Number;
 @endphp
@@ -32,7 +33,7 @@
                     @foreach ($categoryBreakdown as $cat)
                         <li style="display: flex; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
                             <span>{{ $cat->category_name ?? 'Uncategorized' }}</span>
-                            <span>{{ Number::currency(abs((int) $cat->total_minor) / 100, 'EUR', 'nl') }}</span>
+                            <span>{{ Number::currency(abs((int) $cat->total_minor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
                         </li>
                     @endforeach
                 </ul>

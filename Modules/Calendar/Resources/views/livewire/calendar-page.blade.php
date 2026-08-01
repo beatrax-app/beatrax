@@ -12,6 +12,7 @@
 
     See UI-SPEC.md §2–§12 for the full binding visual contract.
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="mx-auto max-w-7xl px-4 py-12" x-data="{ panelOpen: false }">
     <header class="mb-6">
         <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">Calendar</h1>
@@ -223,7 +224,7 @@
                             // (driven by the exact minor-unit sign, not this string) stays correct.
                             $balanceStr = $day->isComputing
                                 ? '—'
-                                : (($day->eodBalanceMinor < 0 ? '−' : '') . '€' . number_format(abs($day->eodBalanceMinor / 100), 0, ',', '.'));
+                                : (($day->eodBalanceMinor < 0 ? '−' : '') . '€' . number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.'));
                             $balanceColor = ($day->isComputing || $day->eodBalanceMinor >= 0)
                                 ? 'var(--color-text-muted)'
                                 : 'var(--color-rose)';
@@ -231,7 +232,7 @@
                             $ariaLabel = $day->date->format('F j, Y') . ': ' . $entryCount . ' ' . ($entryCount === 1 ? 'entry' : 'entries');
                             if (!$day->isComputing) {
                                 // WR-10: announce the sign — a screen reader on a −€450 risk day must not hear "€450"
-                                $ariaLabel .= ', projected balance ' . ($day->eodBalanceMinor < 0 ? 'minus ' : '') . '€' . number_format(abs($day->eodBalanceMinor / 100), 0, ',', '.');
+                                $ariaLabel .= ', projected balance ' . ($day->eodBalanceMinor < 0 ? 'minus ' : '') . '€' . number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
                             }
                         @endphp
                         <td
@@ -271,7 +272,7 @@
                                         if ($entry->isMissed)               $entryClass .= ' cal-entry--missed';
 
                                         $amountSign   = $entry->direction === 'income' ? '+' : '−';
-                                        $amountStr    = $amountSign . '€' . number_format(abs($entry->amountMinor / 100), 0, ',', '.');
+                                        $amountStr    = $amountSign . '€' . number_format(abs($entry->amountMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
                                     @endphp
                                     <div class="{{ $entryClass }}">
                                         <span class="min-w-0 flex-1 truncate">

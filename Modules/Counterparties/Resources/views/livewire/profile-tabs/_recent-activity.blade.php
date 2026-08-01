@@ -6,6 +6,8 @@
       $rows      iterable<\stdClass>  — { id, posted_at, description, amount_minor, currency }
       $taxState  array<int, array{taxTagged: bool, taxCategoryShortName: ?string}>  (optional)
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 @php
     use Illuminate\Support\Number;
 @endphp
@@ -21,7 +23,7 @@
                 $date = is_string($tx->posted_at ?? null) ? substr($tx->posted_at, 0, 10) : '';
                 $desc = $tx->description ?? '';
                 $amount = (int) ($tx->amount_minor ?? 0);
-                $currency = $tx->currency ?? 'EUR';
+                $currency = $tx->currency ?? BaseCurrency::value();
             @endphp
             @php
                 $txId = (int) ($tx->id ?? 0);
@@ -34,7 +36,7 @@
                 <span style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}</span>
                 {{-- Tax badge on counterparty transaction rows (D-19/D-20). --}}
                 <x-tax::tax-badge :transaction="$txRowArr" :showAlways="false" />
-                <span style="white-space: nowrap;">{{ Number::currency(abs($amount) / 100, $currency, 'nl') }}</span>
+                <span style="white-space: nowrap;">{{ Number::currency(abs($amount) / Money::MINOR_UNITS_PER_MAJOR, $currency, 'nl') }}</span>
             </li>
         @endforeach
     </ul>
