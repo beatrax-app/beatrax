@@ -14,6 +14,7 @@ use Modules\Forecasting\Models\ForecastShortfallWindow;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
 use Modules\Forecasting\Public\Enums\ScenarioMutationKind;
 use Modules\Ledger\Models\Account;
+use Modules\Ledger\Public\Enums\Currency;
 
 final class DemoForecastSeeder
 {
@@ -113,7 +114,7 @@ final class DemoForecastSeeder
         $payload = new AddOneOffPayload(
             date: $today->addDays(25)->toDateString(),
             amountMinor: -50000,
-            currency: 'EUR',
+            currency: Currency::Eur->value,
             direction: 'expense',
             note: 'Hypothetical summer holiday charge',
         );
@@ -158,7 +159,7 @@ final class DemoForecastSeeder
             'starts_at' => $startsAt,
             'ends_at' => $today->addDays(22),
             'lowest_balance_minor' => -8500,
-            'currency' => 'EUR',
+            'currency' => Currency::Eur->value,
             'buffer_used_minor' => 50000,
         ]);
     }

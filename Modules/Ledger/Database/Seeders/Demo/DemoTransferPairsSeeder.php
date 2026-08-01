@@ -11,6 +11,7 @@ use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -111,9 +112,9 @@ final class DemoTransferPairsSeeder
             bookedAt: $bookedAt,
             valueDate: $date,
             amountMinor: $leg->amountMinor,
-            currency: 'EUR',
+            currency: Currency::Eur->value,
             settledAmountMinor: $leg->amountMinor,
-            settledCurrency: 'EUR',
+            settledCurrency: Currency::Eur->value,
             fxRateUsed: null,
             counterpartyName: $isOut ? 'PayPal' : 'ASN Bank',
             counterpartyIban: $isOut ? 'PAYPAL-DEMO-1' : 'NL57ASNB0123456789',
