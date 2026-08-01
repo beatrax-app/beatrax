@@ -12,9 +12,12 @@ use Modules\Calendar\Internal\Services\CalendarQuery;
 use Modules\Calendar\Internal\Services\DailyBalanceAggregator;
 use Modules\Calendar\Internal\Services\OccurrenceMatcher;
 use Modules\Calendar\Internal\Services\SeriesEntryPlacer;
+use Modules\Core\Public\Support\LoadsModuleResources;
 
 final class CalendarServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(AccountResolver::class);
@@ -26,16 +29,7 @@ final class CalendarServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'calendar');
-        }
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'calendar');
+        $this->loadModuleResources('calendar');
 
         $livewire->component('calendar.calendar-page', CalendarPage::class);
     }

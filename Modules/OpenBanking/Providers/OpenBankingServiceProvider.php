@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher as EventsDispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingHttpClient;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingJwtSigner;
 use Modules\OpenBanking\Internal\Adapters\EnableBanking\EnableBankingSourceAdapter;
@@ -29,6 +30,8 @@ use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
  */
 final class OpenBankingServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(OpenBankingSecretsRepository::class);
@@ -49,16 +52,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
     {
         $events->listen(OpenBankingConsentFailed::class, RaiseOpenBankingReconsentAlert::class);
 
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'openbanking');
-        }
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'openbanking');
+        $this->loadModuleResources('openbanking');
 
         $livewire->component('openbanking.open-banking-wizard-modal', OpenBankingWizardModal::class);
         $livewire->component('openbanking.open-banking-settings-page', OpenBankingSettingsPage::class);

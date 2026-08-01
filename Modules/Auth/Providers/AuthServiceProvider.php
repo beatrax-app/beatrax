@@ -51,12 +51,15 @@ use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
+use Modules\Core\Public\Support\LoadsModuleResources;
 
 /**
  * @link ../../../.docs/features/auth/architecture.md
  */
 final class AuthServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->register(FortifyServiceProvider::class);
@@ -95,11 +98,8 @@ final class AuthServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events, LivewireManager $livewire, Router $router): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        $this->loadModuleResources('auth');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
-        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'auth');
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'auth');
 
         if ($this->app->runningInConsole()) {
             $this->commands([

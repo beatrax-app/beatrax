@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\EmailScan\Database\Seeders\IcsStatementSenderSeeder;
 use Modules\EmailScan\Internal\Clients\GmailApiClient;
 use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
@@ -47,6 +48,8 @@ use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
  */
 final class EmailScanServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(InboxMessageQuery::class);
@@ -98,18 +101,7 @@ final class EmailScanServiceProvider extends ServiceProvider
         // with a Reconnect link back through /inboxes?reconnect={id}.
         $events->listen(InboxTokenFailed::class, RaiseReconsentAlertOnTokenFailure::class);
 
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'email-scan');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'email-scan');
-        }
+        $this->loadModuleResources('email-scan');
 
         // /inboxes page Livewire SFC + the OAuth-client wizard modal
         // SFC (single component, branches on the $provider property
