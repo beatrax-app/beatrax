@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -328,7 +329,7 @@ final class DevicesAndSyncSettingsSection extends Component
     // The app-lock was just configured in the sibling AppLockSettingsSection.
     // Re-evaluate the enable-sync gate live so the "Set an app lock first"
     // notice clears and the toggle enables without a full page reload.
-    #[On('app-lock-configured')]
+    #[On(AppLockEvents::CONFIGURED)]
     public function onAppLockConfigured(CurrentUser $currentUser, AppLockClientConfig $lockConfig): void
     {
         $this->appLockConfigured = $lockConfig->idleTimeoutMs($currentUser->user()->id) !== null;

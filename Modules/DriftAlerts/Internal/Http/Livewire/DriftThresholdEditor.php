@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 
@@ -18,7 +19,7 @@ use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 final class DriftThresholdEditor extends Component
 {
     /** @var list<int> */
-    public const OPTIONS = [1, 2, 5, 10, 25, 50];
+    public const OPTIONS = DriftThresholdOptions::PERCENTS;
 
     public int $recurringSeriesId = 0;
 

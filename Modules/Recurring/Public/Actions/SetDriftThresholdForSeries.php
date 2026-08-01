@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\DriftThresholdOptions;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // null clears the override so the series falls back to the user-global
@@ -20,7 +21,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final class SetDriftThresholdForSeries
 {
     /** @var list<int> */
-    public const ALLOWED_THRESHOLD_PERCENTS = [1, 2, 5, 10, 25, 50];
+    public const ALLOWED_THRESHOLD_PERCENTS = DriftThresholdOptions::PERCENTS;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -30,9 +31,10 @@ final class SetDriftThresholdForSeries
     public function __invoke(int $seriesId, User $user, ?int $thresholdPercent): void
     {
         if ($thresholdPercent !== null && ! in_array($thresholdPercent, self::ALLOWED_THRESHOLD_PERCENTS, true)) {
-            throw new InvalidArgumentException(
-                'Drift threshold must be null (use global default) or one of: 1, 2, 5, 10, 25, 50.',
-            );
+            throw new InvalidArgumentException(sprintf(
+                'Drift threshold must be null (use global default) or one of: %s.',
+                implode(', ', self::ALLOWED_THRESHOLD_PERCENTS),
+            ));
         }
 
         $row = $this->db->connection()->table('recurring_series')
