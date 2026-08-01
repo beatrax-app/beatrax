@@ -7,6 +7,7 @@
     amber bars. The data feed here uses categoryBreakdown for the
     moment; a richer Bank-fee aggregation lands with Plan 17-06c.
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     use Illuminate\Support\Number;
     $maxFee = max(1, ...array_map(fn ($cat) => abs((int) $cat->total_minor), $categoryBreakdown->all() ?: [(object) ['total_minor' => 0]]));
@@ -32,7 +33,7 @@
                     <div class="fee-bar-track">
                         <div class="fee-bar-fill" style="width: {{ $pct }}%; background: var(--color-amber);"></div>
                     </div>
-                    <span class="fee-total">{{ Number::currency($absMinor / 100, 'EUR', 'nl') }}</span>
+                    <span class="fee-total">{{ Number::currency($absMinor / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
                 </div>
             @endforeach
         @endif

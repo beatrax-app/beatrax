@@ -15,6 +15,7 @@
 
     All copy is verbatim from 17-UI-SPEC.md.
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     use Illuminate\Support\Number;
     $isSelf = $profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::SelfAccount->value;
@@ -52,7 +53,7 @@
                     @if ($profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::Personal->value) Net received @else 12-month total @endif
                 </div>
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
-                    {{ Number::currency(abs($profile->total12mMinor) / 100, 'EUR', 'nl') }}
+                    {{ Number::currency(abs($profile->total12mMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}
                 </div>
             </div>
             <div class="frame frame-tight">

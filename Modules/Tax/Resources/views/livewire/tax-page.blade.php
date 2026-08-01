@@ -14,6 +14,8 @@
     Phone responsive: card-per-row inside sections; stacked export buttons (Section 17).
     Accessibility: aria-expanded, aria-busy, aria-label on all icon-only buttons (Section 16).
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
+@use('Modules\Ledger\Public\Services\BaseCurrency')
 
 @php
     /**
@@ -23,8 +25,8 @@
     $fmtEur = static function (int $minor): string {
         $negative = $minor < 0;
         $abs = abs($minor);
-        $euros = intdiv($abs, 100);
-        $cents = $abs % 100;
+        $euros = intdiv($abs, Money::MINOR_UNITS_PER_MAJOR);
+        $cents = $abs % Money::MINOR_UNITS_PER_MAJOR;
         $formatted = '€ ' . number_format($euros, 0, ',', '.') . ',' . str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
         return $negative ? '−' . $formatted : $formatted;
     };
@@ -248,8 +250,8 @@
                                                 $hasOverride = isset($row['taxYearOverride']) && $row['taxYearOverride'] !== null;
                                                 $settledMinor = is_int($row['settledAmountMinor']) ? $row['settledAmountMinor'] : 0;
                                                 $origMinor    = is_int($row['amountMinor']) ? $row['amountMinor'] : 0;
-                                                $origCurrency = is_string($row['currency']) ? $row['currency'] : 'EUR';
-                                                $showOrig     = $origCurrency !== 'EUR';
+                                                $origCurrency = is_string($row['currency']) ? $row['currency'] : BaseCurrency::value();
+                                                $showOrig     = $origCurrency !== BaseCurrency::value();
                                             @endphp
                                             <tr
                                                 class="triage-row border-b"
@@ -286,7 +288,7 @@
                                                 {{-- Original (if non-EUR) --}}
                                                 <td class="px-3 py-2 text-right" style="font-size: var(--text-xs); color: var(--color-text-faint);">
                                                     @if ($showOrig)
-                                                        {{ $origCurrency }} {{ number_format(abs($origMinor) / 100, 2) }}
+                                                        {{ $origCurrency }} {{ number_format(abs($origMinor) / Money::MINOR_UNITS_PER_MAJOR, 2) }}
                                                     @else
                                                         —
                                                     @endif

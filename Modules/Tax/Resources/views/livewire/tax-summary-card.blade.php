@@ -10,11 +10,12 @@
     Style: existing .card primitive — surface/border/radius-lg/shadow-xs.
     Hover: surface-2 background.
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 
 @php
     $fmtEur = static function (int $minor): string {
-        $euros = intdiv(abs($minor), 100);
-        $cents = abs($minor) % 100;
+        $euros = intdiv(abs($minor), Money::MINOR_UNITS_PER_MAJOR);
+        $cents = abs($minor) % Money::MINOR_UNITS_PER_MAJOR;
         return '€ ' . number_format($euros, 0, ',', '.') . ',' . str_pad((string) $cents, 2, '0', STR_PAD_LEFT);
     };
 @endphp

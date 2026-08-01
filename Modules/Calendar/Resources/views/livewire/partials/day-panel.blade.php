@@ -10,6 +10,7 @@
     Renders: SOD balance, entry rows with series + counterparty drill links (CAL-03),
     approximate note (D-15), paid/missed state, EOD balance.
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="cal-panel-header">
     <span class="font-semibold" style="font-size: var(--text-md, 1rem); color: var(--color-text);">
         {{ $dayDto->date->format('M j, Y') }}
@@ -32,7 +33,7 @@
         @if ($dayDto->isComputing || $dayDto->sodBalanceMinor === null)
             —
         @else
-            {{ $dayDto->sodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->sodBalanceMinor / 100), 2, ',', '.') }}
+            {{ $dayDto->sodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->sodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.') }}
         @endif
     </span>
 </div>
@@ -45,7 +46,7 @@
         @foreach ($dayDto->entries as $entry)
             @php
                 $amountSign = $entry->direction === 'income' ? '+' : '−';
-                $amountStr  = $amountSign . '€' . number_format(abs($entry->amountMinor / 100), 2, ',', '.');
+                $amountStr  = $amountSign . '€' . number_format(abs($entry->amountMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.');
                 $amountColor = $entry->direction === 'income' ? 'var(--color-emerald)' : 'var(--color-text)';
             @endphp
             <div class="cal-panel-entry">
@@ -106,7 +107,7 @@
         @if ($dayDto->isComputing)
             —
         @else
-            {{ $dayDto->eodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->eodBalanceMinor / 100), 2, ',', '.') }}
+            {{ $dayDto->eodBalanceMinor < 0 ? '−' : '' }}€{{ number_format(abs($dayDto->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 2, ',', '.') }}
         @endif
     </span>
 </div>

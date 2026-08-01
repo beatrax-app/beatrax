@@ -1,3 +1,4 @@
+@use('Modules\Ledger\Public\ValueObjects\Money')
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,9 +136,9 @@
         </tr>
         <tr>
             <th scope="row" class="summary-label">Total deductions:</th>
-            <td>&euro; {{ number_format($data->deductionsTotalMinor / 100, 2, '.', ',') }}</td>
+            <td>&euro; {{ number_format($data->deductionsTotalMinor / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',') }}</td>
             <th scope="row" class="summary-label">Total income:</th>
-            <td>&euro; {{ number_format($data->incomeTotalMinor / 100, 2, '.', ',') }}</td>
+            <td>&euro; {{ number_format($data->incomeTotalMinor / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',') }}</td>
         </tr>
     </table>
 </div>
@@ -178,7 +179,7 @@
                             $description = is_string($row['description'] ?? null) ? $row['description'] : '';
                             $note = is_string($row['note'] ?? null) ? $row['note'] : '';
                             $settledMinor = is_numeric($row['settledAmountMinor'] ?? 0) ? (int) $row['settledAmountMinor'] : 0;
-                            $amountStr = number_format(abs($settledMinor) / 100, 2, '.', ',');
+                            $amountStr = number_format(abs($settledMinor) / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',');
                         @endphp
                         <tr>
                             <td>{{ $bookedAt }}</td>
@@ -190,7 +191,7 @@
                     @endforeach
                     <tr class="subtotal-row">
                         <td colspan="4">Subtotal</td>
-                        <td class="amount">&euro; {{ number_format(abs($subtotalMinor) / 100, 2, '.', ',') }}</td>
+                        <td class="amount">&euro; {{ number_format(abs($subtotalMinor) / Money::MINOR_UNITS_PER_MAJOR, 2, '.', ',') }}</td>
                     </tr>
                 </tbody>
             </table>

@@ -16,6 +16,7 @@
       $activeType string                — currently selected filter chip
       $activeView string                — 'cards' | 'list'
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     use Illuminate\Support\Number;
     $totalEntities = $counts['all'] ?? 0;
@@ -134,8 +135,8 @@
              class="cp-cards-grid">
             @foreach ($rows as $row)
                 @php
-                    $totalFormatted = Number::currency(abs($row->total12mMinor) / 100, 'EUR', 'nl');
-                    $avgFormatted = Number::currency(abs($row->avgPerMonthMinor) / 100, 'EUR', 'nl');
+                    $totalFormatted = Number::currency(abs($row->total12mMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl');
+                    $avgFormatted = Number::currency(abs($row->avgPerMonthMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl');
                     $isUnknown = $row->type === 'unknown';
                     $isSelf = $row->type === 'self_account';
                 @endphp
@@ -219,8 +220,8 @@
         {{-- List view: desktop table + phone card-list-item degradation --}}
         @foreach ($rows as $row)
             @php
-                $totalFormatted = Number::currency(abs($row->total12mMinor) / 100, 'EUR', 'nl');
-                $avgFormatted = Number::currency(abs($row->avgPerMonthMinor) / 100, 'EUR', 'nl');
+                $totalFormatted = Number::currency(abs($row->total12mMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl');
+                $avgFormatted = Number::currency(abs($row->avgPerMonthMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl');
                 $href = match (true) {
                     $row->type === 'self_account' => '/accounts/'.$row->slug,
                     $row->type === 'unknown' => route('counterparties.triage', ['queue_first' => $row->id]),
@@ -259,8 +260,8 @@
                 <tbody>
                     @foreach ($rows as $row)
                         @php
-                            $totalFormatted = Number::currency(abs($row->total12mMinor) / 100, 'EUR', 'nl');
-                            $avgFormatted = Number::currency(abs($row->avgPerMonthMinor) / 100, 'EUR', 'nl');
+                            $totalFormatted = Number::currency(abs($row->total12mMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl');
+                            $avgFormatted = Number::currency(abs($row->avgPerMonthMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl');
                             $href = match (true) {
                                 $row->type === 'self_account' => '/accounts/'.$row->slug,
                                 $row->type === 'unknown' => route('counterparties.triage', ['queue_first' => $row->id]),
