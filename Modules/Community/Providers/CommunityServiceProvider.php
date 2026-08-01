@@ -22,6 +22,7 @@ use Modules\Community\Public\Services\CommunityCorpusQuery;
 use Modules\Community\Public\Services\CorpusPatternMatcher;
 use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Native\Desktop\Contracts\Shell as ShellContract;
 
 /**
@@ -29,6 +30,8 @@ use Native\Desktop\Contracts\Shell as ShellContract;
  */
 final class CommunityServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../../../config/community.php', 'community');
@@ -49,19 +52,7 @@ final class CommunityServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-
-        $routesPath = __DIR__.'/../Routes/web.php';
-        if (file_exists($routesPath)) {
-            $this->loadRoutesFrom($routesPath);
-        }
-
-        $viewsPath = __DIR__.'/../Resources/views';
-        if (is_dir($viewsPath)) {
-            $this->loadViewsFrom($viewsPath, 'community');
-        }
-
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'community');
+        $this->loadModuleResources('community');
 
         $events->listen(UserInstalled::class, SeedCommunityCorpus::class);
 

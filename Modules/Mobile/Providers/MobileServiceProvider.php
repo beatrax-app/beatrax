@@ -9,6 +9,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 
@@ -17,6 +18,8 @@ use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
  */
 final class MobileServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         // Stateless (wraps the console Kernel migrator), safe as a
@@ -69,21 +72,7 @@ final class MobileServiceProvider extends ServiceProvider
             $events->listen('Modules\Auth\Public\Events\AppLockPassphraseChanged', [$clearListener, 'handle']);
         }
 
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'mobile');
-        }
-
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'mobile');
-        }
-
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
+        $this->loadModuleResources('mobile');
 
         if (is_file(__DIR__.'/../Routes/console.php')) {
             $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');

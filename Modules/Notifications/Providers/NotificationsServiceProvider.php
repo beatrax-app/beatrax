@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsPage;
 use Modules\Notifications\Internal\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
@@ -28,6 +29,8 @@ use Modules\Notifications\Public\Services\SuppressionEvaluator;
  */
 final class NotificationsServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     private const LISTENER_PERSIST_PAYMENT_REMINDER = 'Modules\Notifications\Internal\Listeners\PersistPaymentReminder';
 
     private const EVENT_PAYMENT_REMINDER_DUE = 'Modules\Recurring\Public\Events\PaymentReminderDue';
@@ -83,18 +86,7 @@ final class NotificationsServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'notifications');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'notifications');
-        }
+        $this->loadModuleResources('notifications');
 
         $livewire->component('notifications.page', NotificationsPage::class);
         $livewire->component('notifications.settings-section', NotificationsSettingsSection::class);

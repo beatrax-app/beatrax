@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DriftAlerts\Public\Events\DriftAlertDismissedCancelled;
 use Modules\Forecasting\Internal\Http\Livewire\AccountBufferEditor;
 use Modules\Forecasting\Internal\Http\Livewire\ForecastHighlightsTile;
@@ -57,6 +58,8 @@ use Modules\Recurring\Public\Events\RecurringSeriesRejected;
  */
 final class ForecastingServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(ProjectForecastOnRecurringChange::class);
@@ -110,18 +113,7 @@ final class ForecastingServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'forecasting');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'forecasting');
-        }
+        $this->loadModuleResources('forecasting');
 
         $livewire->component('forecasting.forecast-page', ForecastPage::class);
         $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);

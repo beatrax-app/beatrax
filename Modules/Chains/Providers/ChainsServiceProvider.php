@@ -33,6 +33,7 @@ use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\JobRunStatus;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Receipts\Public\Events\ChainHintDetected;
 
 /**
@@ -40,6 +41,8 @@ use Modules\Receipts\Public\Events\ChainHintDetected;
  */
 final class ChainsServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(CardStatementStateMachine::class);
@@ -64,16 +67,8 @@ final class ChainsServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'chains');
-        }
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'chains');
+        $this->loadModuleResources('chains');
+
         $livewire->component('chains.chain-drawer', ChainDrawer::class);
         $livewire->component('chains.chain-review-queue', ChainReviewQueue::class);
         $livewire->component('chains.chain-hints-queue', ChainHintsQueue::class);

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Onboarding\Internal\Http\Livewire\SetupWizard;
 use Modules\Onboarding\Internal\Http\Livewire\StartingBalanceCard;
 use Modules\Onboarding\Internal\Http\Livewire\Steps\BudgetsStep;
@@ -30,6 +31,8 @@ use Modules\Onboarding\Public\Services\WizardProgressQuery;
  */
 final class OnboardingServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(WizardStepRegistry::class);
@@ -40,19 +43,7 @@ final class OnboardingServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-
-        $routesPath = __DIR__.'/../Routes/web.php';
-        if (file_exists($routesPath)) {
-            $this->loadRoutesFrom($routesPath);
-        }
-
-        $viewsPath = __DIR__.'/../Resources/views';
-        if (is_dir($viewsPath)) {
-            $this->loadViewsFrom($viewsPath, 'onboarding');
-        }
-
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'onboarding');
+        $this->loadModuleResources('onboarding');
 
         $events->listen(UserInstalled::class, InitializeWizardProgressOnInstall::class);
 

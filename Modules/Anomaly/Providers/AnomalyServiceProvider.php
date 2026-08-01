@@ -25,6 +25,7 @@ use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Import\Public\Events\TransactionImported;
 
 /**
@@ -32,6 +33,8 @@ use Modules\Import\Public\Events\TransactionImported;
  */
 final class AnomalyServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(AnomalyAlertStateMachine::class);
@@ -57,18 +60,7 @@ final class AnomalyServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'anomaly');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'anomaly');
-        }
+        $this->loadModuleResources('anomaly');
 
         $livewire->component('anomaly.dashboard-anomaly-badge', DashboardAnomalyBadge::class);
         $livewire->component('anomaly.settings-section', AnomalySettingsSection::class);

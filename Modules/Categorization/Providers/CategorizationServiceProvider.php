@@ -32,12 +32,15 @@ use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Categorization\Public\Services\MerchantMemoryQuery;
 use Modules\Categorization\Public\Services\UncategorizedTriageQuery;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Support\LoadsModuleResources;
 
 /**
  * @link ../../../.docs/features/categorization/architecture.md
  */
 final class CategorizationServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->bind(AssignsCategory::class, AssignCategory::class);
@@ -58,11 +61,8 @@ final class CategorizationServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events, LivewireManager $livewire): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        $this->loadModuleResources('categorization');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
-        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'categorization');
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'categorization');
 
         $events->listen(UserInstalled::class, SeedDefaultCategoryTree::class);
         $events->listen(UserInstalled::class, SeedDefaultCategorizationRules::class);

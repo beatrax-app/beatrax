@@ -9,6 +9,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Events\UserInstalled;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Database\Seeders\DefaultKnownCounterpartyIbansSeeder;
 use Modules\Import\Internal\Http\Livewire\AliasesSettingsPage;
@@ -49,6 +50,8 @@ use Modules\Import\Public\Services\PatternGeneralizer;
  */
 final class ImportServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     // Source-specific hinters lead so their higher-confidence verdicts
     // win; the fallback is LAST so the registry test's "fallback is
     // last" invariant holds. A missing class skips its binding via
@@ -155,11 +158,8 @@ final class ImportServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        $this->loadModuleResources('import');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
-        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'import');
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'import');
 
         $livewire->component('import.upload-wizard', UploadWizard::class);
         $livewire->component('import.preview-wizard', PreviewWizard::class);

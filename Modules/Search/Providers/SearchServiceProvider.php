@@ -7,6 +7,7 @@ namespace Modules\Search\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Search\Internal\Console\ReindexSearchCommand;
 use Modules\Search\Internal\Http\Livewire\PaletteSearchEndpoint;
@@ -31,6 +32,8 @@ use Modules\Search\Public\Services\SearchQuery;
  */
 final class SearchServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         if (class_exists(SearchIndexWriter::class)) {
@@ -78,19 +81,7 @@ final class SearchServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'search');
-        }
-
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'search');
-        }
+        $this->loadModuleResources('search');
 
         if (class_exists(IndexTransactionOnImport::class)) {
             $events->listen(

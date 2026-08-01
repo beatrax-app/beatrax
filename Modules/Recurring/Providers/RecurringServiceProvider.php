@@ -15,6 +15,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Recurring\Internal\CadenceInferrer;
 use Modules\Recurring\Internal\Detection\ClusterKeyComposer;
 use Modules\Recurring\Internal\Detectors\ExpenseSeriesDetector;
@@ -45,6 +46,8 @@ use Psr\Log\LoggerInterface;
 // view, so this provider registers no composer for it.
 final class RecurringServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(RecurringSeriesStateMachine::class);
@@ -98,16 +101,7 @@ final class RecurringServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'recurring');
-        }
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'recurring');
+        $this->loadModuleResources('recurring');
 
         $livewire->component('recurring.recurring-page', RecurringPage::class);
         $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);

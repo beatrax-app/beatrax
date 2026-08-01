@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DriftAlerts\Internal\DriftEvaluator;
 use Modules\DriftAlerts\Internal\Http\Livewire\DashboardDriftBadge;
 use Modules\DriftAlerts\Internal\Http\Livewire\DriftPage;
@@ -35,6 +36,8 @@ use Modules\Recurring\Public\Events\RecurringSeriesMetricsRefreshed;
 // provider registers no composer for it.
 final class DriftAlertsServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(DriftAlertStateMachine::class);
@@ -50,16 +53,7 @@ final class DriftAlertsServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'drift-alerts');
-        }
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'drift-alerts');
+        $this->loadModuleResources('drift-alerts');
 
         $livewire->component('drift-alerts.drift-page', DriftPage::class);
         $livewire->component('drift-alerts.subscription-drift-watch-page', SubscriptionDriftWatchPage::class);

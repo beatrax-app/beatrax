@@ -7,6 +7,7 @@ namespace Modules\Tax\Providers;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Modules\Tax\Internal\Http\Livewire\TaxPage;
@@ -28,6 +29,8 @@ use Modules\Tax\Public\Services\TaxYearQuery;
  */
 final class TaxServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(TagTransaction::class);
@@ -58,20 +61,7 @@ final class TaxServiceProvider extends ServiceProvider
         $events->listen(TransactionTagged::class, [InvalidateNavCounts::class, 'handle']);
         $events->listen(TransactionUntagged::class, [InvalidateNavCounts::class, 'handle']);
 
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-
-        $viewsPath = __DIR__.'/../Resources/views';
-        if (is_dir($viewsPath)) {
-            $this->loadViewsFrom($viewsPath, 'tax');
-        }
-
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'tax');
+        $this->loadModuleResources('tax');
 
         $livewire->component('tax.settings-section', TaxSettingsSection::class);
 

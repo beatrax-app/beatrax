@@ -20,6 +20,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Audit\RedactionExcerptCap;
 use Modules\DevMode\Internal\Audit\SpatieAuditWriter;
@@ -68,6 +69,8 @@ use Spatie\Activitylog\Support\ActivityLogger;
  */
 final class DevModeServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->registerCommandRegistry();
@@ -547,18 +550,7 @@ final class DevModeServiceProvider extends ServiceProvider
     {
         $router->aliasMiddleware('ensureDeveloperMode', EnsureDeveloperMode::class);
 
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'dev');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'dev');
-        }
+        $this->loadModuleResources('dev');
 
         // Registered only when BOTH the dev_mode env flag is true AND the
         // Horizon package (require-dev) is present; the dev-shell sidebar

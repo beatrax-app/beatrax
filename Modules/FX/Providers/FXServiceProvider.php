@@ -7,6 +7,7 @@ namespace Modules\FX\Providers;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\FX\Internal\Providers\BundledSnapshotProvider;
 use Modules\FX\Internal\Providers\EcbRateProvider;
 use Modules\FX\Internal\Providers\FrankfurterRateProvider;
@@ -19,6 +20,8 @@ use Modules\FX\Public\Services\ExchangeRateService;
  */
 final class FXServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     /** @var list<class-string<RateProvider>> */
     private const array PROVIDER_FQNS = [
         EcbRateProvider::class,
@@ -66,12 +69,6 @@ final class FXServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'fx');
-        }
+        $this->loadModuleResources('fx');
     }
 }

@@ -6,12 +6,15 @@ namespace Modules\Reports\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Support\LoadsModuleResources;
 
 /**
  * @link ../../../.docs/features/reports/architecture.md
  */
 final class ReportsServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     private const REPORT_AGGREGATOR_CLASS = 'Modules\Reports\Internal\Aggregation\ReportAggregator';
 
     private const TIME_BUCKET_GENERATOR_CLASS = 'Modules\Reports\Internal\Aggregation\TimeBucketGenerator';
@@ -55,18 +58,7 @@ final class ReportsServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'reports');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'reports');
-        }
+        $this->loadModuleResources('reports');
 
         // Builder/index/pinned-row Livewire components, each registered
         // only once its class exists on disk.
