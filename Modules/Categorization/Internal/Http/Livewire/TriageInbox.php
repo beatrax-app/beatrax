@@ -20,6 +20,10 @@ use Modules\Core\Public\Contracts\CurrentUser;
 // read directly from `transactions` rather than the on-page row count.
 final class TriageInbox extends Component
 {
+    // The quick-assign row shows at most this many categories as one-tap
+    // chips; the fixed cap keeps the row to a single line in the triage grid.
+    private const int QUICK_ASSIGN_CATEGORY_LIMIT = 9;
+
     /** @var array<int, ?int> map of transactionId => pending categoryId */
     public array $pending = [];
 
@@ -79,7 +83,7 @@ final class TriageInbox extends Component
             ->count();
 
         $categories = $options->for($user);
-        $topNine = array_slice($categories, 0, 9);
+        $topCategories = array_slice($categories, 0, self::QUICK_ASSIGN_CATEGORY_LIMIT);
 
         // Default is true so a user who never opens the Settings panel
         // still sees the per-row CTA.
@@ -91,7 +95,7 @@ final class TriageInbox extends Component
         return $views->make('categorization::livewire.triage-inbox', [
             'batch' => $batch,
             'categories' => $categories,
-            'topNine' => $topNine,
+            'topCategories' => $topCategories,
             'totalPending' => $totalPending,
             'offerToContribute' => $offerToContribute,
         ]);
