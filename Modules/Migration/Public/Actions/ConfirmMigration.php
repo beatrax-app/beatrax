@@ -14,6 +14,7 @@ use Modules\Migration\Internal\Pipeline\PromoteResult;
 use Modules\Migration\Internal\Pipeline\PromoteStagingToDomain;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Dto\MigrationConfirmResult;
+use Modules\Migration\Public\Enums\MigrationEntityType;
 use Modules\Migration\Public\Enums\MigrationRunStatus;
 use Modules\Migration\Public\Exceptions\MigrationAlreadyDiscardedException;
 use stdClass;
@@ -68,7 +69,7 @@ final class ConfirmMigration
 
         $skipBudgetAssignmentKeys = [];
         foreach ($conflicts as $conflict) {
-            if ($conflict->entityType === 'budget_assignment' && $conflict->resolution !== 'take_source' && $conflict->sourceExternalId !== null) {
+            if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value && $conflict->resolution !== 'take_source' && $conflict->sourceExternalId !== null) {
                 $skipBudgetAssignmentKeys[] = $conflict->sourceExternalId;
             }
         }
@@ -131,7 +132,7 @@ final class ConfirmMigration
         foreach ($conflicts as $conflict) {
             // budget_assignment is deliberately excluded: its take-source
             // application already happened inside promote() above.
-            if ($conflict->entityType === 'budget_assignment' || $conflict->resolution !== 'take_source') {
+            if ($conflict->entityType === MigrationEntityType::BudgetAssignment->value || $conflict->resolution !== 'take_source') {
                 continue;
             }
             if ($conflict->sourceExternalId === null) {
