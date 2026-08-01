@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the categorization_rules table — user-defined matchers
@@ -39,10 +36,8 @@ use Illuminate\Database\Schema\Builder;
  * BEFORE UPDATE triggers; a typo in the action layer fails loud at
  * the database boundary rather than landing a silently-broken rule.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('categorization_rules', static function (Blueprint $table): void {
@@ -101,21 +96,5 @@ return new class extends Migration
         $connection->statement('DROP TRIGGER IF EXISTS categorization_rules_field_check_insert');
 
         $this->schema()->dropIfExists('categorization_rules');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

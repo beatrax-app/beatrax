@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the system_alerts table — the persistent operational-failure
@@ -45,10 +43,8 @@ use Illuminate\Database\Schema\Builder;
  * blob, severity is one of three values. No JOINs to transactions /
  * domain tables are allowed; a BoundaryArchTest invariant locks this.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('system_alerts', static function (Blueprint $table): void {
@@ -89,21 +85,5 @@ return new class extends Migration
         $connection->statement('DROP TRIGGER IF EXISTS system_alerts_severity_check_update');
 
         $this->schema()->dropIfExists('system_alerts');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

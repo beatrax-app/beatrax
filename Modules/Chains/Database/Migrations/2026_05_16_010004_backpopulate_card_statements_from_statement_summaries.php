@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * One-shot back-population from existing Phase 3 `statement_summaries`
@@ -30,10 +29,8 @@ use Illuminate\Database\Migrations\Migration;
  * fully roll back, drop the card_statements table via the create
  * migration's `down()`.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());
@@ -90,16 +87,5 @@ return new class extends Migration
         // Forward-only — re-running up() is idempotent. To fully roll
         // back, drop the card_statements table via the create migration's
         // down().
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

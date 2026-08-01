@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the op_log_entries table — the append-only, per-device-signed,
@@ -33,10 +30,8 @@ use Illuminate\Database\Schema\Builder;
  *   - `op_log_entries_table_pk_idx` on (user_id, table_name, pk, hlc_l, hlc_c)
  *     — enables per-table-row incremental merge queries.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('op_log_entries', static function (Blueprint $table): void {
@@ -68,21 +63,5 @@ return new class extends Migration
     public function down(): void
     {
         $this->schema()->dropIfExists('op_log_entries');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

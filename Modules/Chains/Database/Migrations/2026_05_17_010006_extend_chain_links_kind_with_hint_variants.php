@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Container\Container;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Extends the `chain_links.kind` enum trigger pair to allow the two
@@ -36,10 +37,8 @@ use Illuminate\Database\Migrations\Migration;
  * existing trigger pairs and recreates them with the extended
  * allow-list. The down() path restores the original triggers exactly.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $connection = $this->db()->connection($this->getConnection());
@@ -143,14 +142,4 @@ return new class extends Migration
      * migration consistent with the parent migration's DI pattern and
      * avoids the DB facade.
      */
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
-    }
 };

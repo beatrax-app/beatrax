@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the oauth_secrets table — per-user OAuth client credentials
@@ -23,10 +20,8 @@ use Illuminate\Database\Schema\Builder;
  * trigger; SQLite cannot ALTER TABLE ADD CHECK after the fact, so the
  * trigger pair is the project-wide pattern for typed string columns.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('oauth_secrets', static function (Blueprint $table): void {
@@ -66,21 +61,5 @@ return new class extends Migration
         $connection->statement('DROP TRIGGER IF EXISTS oauth_secrets_provider_check_update');
 
         $this->schema()->dropIfExists('oauth_secrets');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

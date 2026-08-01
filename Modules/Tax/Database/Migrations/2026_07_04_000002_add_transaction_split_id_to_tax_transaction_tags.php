@@ -2,11 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Adds a nullable `transaction_split_id` FK to `tax_transaction_tags` so a
@@ -32,10 +30,8 @@ use Illuminate\Database\Schema\Builder;
  * 2026_05_15_010002_add_pair_transaction_id_to_transactions.php for the
  * closest existing "nullable FK add + constraint change" precedent.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->table('tax_transaction_tags', static function (Blueprint $table): void {
@@ -63,21 +59,5 @@ return new class extends Migration
             $table->dropForeign(['transaction_split_id']);
             $table->dropColumn('transaction_split_id');
         });
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };
