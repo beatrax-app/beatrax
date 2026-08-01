@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Forecasting\Internal\Pipeline\ForecastContribution;
@@ -27,6 +28,10 @@ beforeEach(function (): void {
     /** @var RangeProjector $projector */
     $projector = $this->app->make(RangeProjector::class);
     $this->projector = $projector;
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $this->db = $db;
 
     $this->user = User::query()->create([
         'username' => 'projector',
@@ -85,6 +90,82 @@ function rpDtoSeries(array $overrides = []): RecurringSeriesDto
         latestFxRateUsed: $merged['latestFxRateUsed'],
     );
 }
+
+/**
+ * Seeds a recurring_series plus $observedAmounts.count occurrence rows (each
+ * behind its own transaction, per the FK chain) so occurrencesForSeries can
+ * feed the percentile tier. Returns the series id.
+ *
+ * @param  list<int>  $observedAmounts
+ */
+function rpSeedPercentileSeries(DatabaseManager $db, int $userId, array $observedAmounts): int
+{
+    $seriesId = $db->connection()->table('recurring_series')->insertGetId([
+        'user_id' => $userId, 'direction' => 'expense', 'detected_name' => 'Groceries',
+        'state' => 'approved', 'cadence' => 'monthly', 'latest_amount_minor' => -9999, 'latest_currency' => 'EUR',
+        'monthly_equivalent_minor' => -9999, 'variance_tolerance_percent' => 50,
+        'cluster_key' => 'groceries|monthly|EUR|'.bin2hex(random_bytes(4)),
+        'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
+    ]);
+
+    $accountId = $db->connection()->table('accounts')->insertGetId([
+        'user_id' => $userId, 'name' => 'Bank', 'slug' => 'rp-'.bin2hex(random_bytes(4)),
+        'kind' => 'bank', 'iban' => 'NL00RP'.strtoupper(bin2hex(random_bytes(5))), 'default_currency' => 'EUR',
+        'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
+    ]);
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $userId, 'source_format' => 'asn-csv', 'raw_file_path' => '/tmp/rp.csv',
+        'sha256' => hash('sha256', 'rp-'.bin2hex(random_bytes(6))), 'uploaded_at' => '2026-05-01 00:00:00', 'status' => 'previewed',
+        'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
+    ]);
+
+    foreach ($observedAmounts as $i => $amountMinor) {
+        $day = str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT);
+        $txId = $db->connection()->table('transactions')->insertGetId([
+            'user_id' => $userId, 'account_id' => $accountId, 'import_run_id' => $runId,
+            'fingerprint' => hash('sha256', 'rp-tx-'.$i.'-'.bin2hex(random_bytes(6))),
+            'posted_at' => '2026-05-'.$day, 'booked_at' => '2026-05-'.$day.' 00:00:00', 'value_date' => '2026-05-'.$day,
+            'amount_minor' => $amountMinor, 'currency' => 'EUR', 'settled_amount_minor' => $amountMinor, 'settled_currency' => 'EUR',
+            'counterparty_normalized' => 'groceries', 'counterparty_name' => 'GROCERIES', 'normalization_version' => 1,
+            'type' => 'expense', 'source_format' => 'asn-csv', 'source_row_index' => $i,
+            'fingerprint_version' => 3, 'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
+        ]);
+        $db->connection()->table('recurring_series_occurrences')->insert([
+            'user_id' => $userId, 'recurring_series_id' => $seriesId, 'transaction_id' => $txId,
+            'observed_at' => '2026-05-'.$day, 'observed_amount_minor' => $amountMinor, 'observed_currency' => 'EUR',
+            'created_at' => '2026-05-01 00:00:00', 'updated_at' => '2026-05-01 00:00:00',
+        ]);
+    }
+
+    return $seriesId;
+}
+
+it('routes a wide-variance series with enough occurrences through the percentile tier and jitters the band', function (): void {
+    // varianceTolerancePercent 50 (>= the 40 threshold) AND six occurrences
+    // (>= the 6-sample minimum) escalate project() to the percentile tier,
+    // which the envelope-only tests never reach.
+    $seriesId = rpSeedPercentileSeries($this->db, $this->user->id, [-1000, -1100, -1200, -1300, -1400, -1500]);
+
+    $series = rpDtoSeries([
+        'seriesId' => $seriesId,
+        'cadence' => 'monthly',
+        'varianceTolerancePercent' => 50,
+        'latestAmount' => Money::ofMinor(-9999, 'EUR'),
+        'monthlyEquivalent' => Money::ofMinor(-9999, 'EUR'),
+        'nextExpectedAt' => CarbonImmutable::parse('2026-05-25'),
+    ]);
+    $asOf = CarbonImmutable::parse('2026-05-19');
+
+    $contribs = $this->projector->project($series, accountId: 7, asOf: $asOf, horizonDays: 30, user: $this->user);
+
+    // One in-horizon occurrence, jittered across the ±3-day window → 2*3+1 = 7
+    // replicas centred on 2026-05-25. The envelope tier would have returned a
+    // single un-jittered contribution.
+    expect($contribs)->toHaveCount(7);
+    $dates = array_map(static fn ($c): string => $c->date->toDateString(), $contribs);
+    expect(min($dates))->toBe('2026-05-22')
+        ->and(max($dates))->toBe('2026-05-28');
+});
 
 it('emits one monthly expense contribution inside a 30-day horizon with sign-aware low/high', function (): void {
     $series = rpDtoSeries([
