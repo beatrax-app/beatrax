@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Records which "You could save here" savings insights a user has dismissed, so
@@ -13,10 +11,8 @@ use Illuminate\Database\Schema\Builder;
  * the SavingsInsightsQuery composes (e.g. "cheaper:42" / "cancel:42"), so a
  * recomputed insight set is filtered against this table by key.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('savings_insight_dismissals', static function (Blueprint $table): void {
@@ -32,19 +28,5 @@ return new class extends Migration
     public function down(): void
     {
         $this->schema()->dropIfExists('savings_insight_dismissals');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            $this->resolvedDb = app(DatabaseManager::class);
-        }
-
-        return $this->resolvedDb;
     }
 };

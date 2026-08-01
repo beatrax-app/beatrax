@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Plan 06 Rule 2 fix: `MigrationBatch::$goals` (a `Collection<MigrationGoalDto>`,
@@ -32,10 +29,8 @@ use Illuminate\Database\Schema\Builder;
  * on the real domain table and `GoalWriter::save()` requires a non-null
  * string.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('migration_staging_goals', function (Blueprint $table): void {
@@ -64,21 +59,5 @@ return new class extends Migration
     {
         $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
         $table->foreignId('migration_run_id')->constrained('migration_runs')->cascadeOnDelete();
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

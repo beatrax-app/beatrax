@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the known_counterparty_ibans table — per-user alias from a
@@ -35,10 +32,8 @@ use Illuminate\Database\Schema\Builder;
  * the database boundary with RAISE(ABORT, ...) rather than landing
  * a silently-broken row.
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('known_counterparty_ibans', static function (Blueprint $table): void {
@@ -77,21 +72,5 @@ return new class extends Migration
         $connection->statement('DROP TRIGGER IF EXISTS known_counterparty_ibans_target_account_kind_check_insert');
 
         $this->schema()->dropIfExists('known_counterparty_ibans');
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };

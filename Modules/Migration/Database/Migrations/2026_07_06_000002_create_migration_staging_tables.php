@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Schema\Builder;
+use Modules\Core\Database\Support\ModuleMigration;
 
 /**
  * Creates the six `migration_staging_*` scratch tables (D-06/D-07): the
@@ -28,10 +25,8 @@ use Illuminate\Database\Schema\Builder;
  * denormalized nullable copy alongside `migration_run_id` per the
  * project-wide nullable-user_id convention (ADR-0008).
  */
-return new class extends Migration
+return new class extends ModuleMigration
 {
-    private ?DatabaseManager $resolvedDb = null;
-
     public function up(): void
     {
         $this->schema()->create('migration_staging_categories', function (Blueprint $table): void {
@@ -145,21 +140,5 @@ return new class extends Migration
     {
         $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
         $table->foreignId('migration_run_id')->constrained('migration_runs')->cascadeOnDelete();
-    }
-
-    private function schema(): Builder
-    {
-        return $this->db()->connection($this->getConnection())->getSchemaBuilder();
-    }
-
-    private function db(): DatabaseManager
-    {
-        if ($this->resolvedDb === null) {
-            /** @var DatabaseManager $db */
-            $db = Container::getInstance()->make(DatabaseManager::class);
-            $this->resolvedDb = $db;
-        }
-
-        return $this->resolvedDb;
     }
 };
