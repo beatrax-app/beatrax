@@ -8,6 +8,7 @@
       $taxYears  Collection<\stdClass{ year: int, total_minor: int }>
       $profile   CounterpartyProfileDto
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     use Illuminate\Support\Number;
     $currentYear = (int) now()->format('Y');
@@ -30,7 +31,7 @@
                         {{ (int) $year->year }}
                     </span>
                     <span style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
-                        {{ Number::currency(abs((int) $year->total_minor) / 100, 'EUR', 'nl') }}
+                        {{ Number::currency(abs((int) $year->total_minor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}
                     </span>
                 </article>
             @endforeach

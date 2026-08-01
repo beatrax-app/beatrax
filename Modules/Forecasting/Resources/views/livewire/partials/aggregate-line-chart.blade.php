@@ -14,15 +14,16 @@
       - $aggregateBufferFloor : int                (sum of per-account effective buffers, in minor)
       - $aggregateCurrency : string                ('EUR' for the rollup)
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 
 @php
     $aggData = array_map(
-        static fn (array $p): array => ['x' => $p['date'], 'y' => $p['point_minor'] / 100],
+        static fn (array $p): array => ['x' => $p['date'], 'y' => $p['point_minor'] / Money::MINOR_UNITS_PER_MAJOR],
         $aggregatePoints,
     );
     $yMin = $aggData === [] ? 0 : min(array_map(static fn ($p) => $p['y'], $aggData)) - 1;
     $yMax = $aggData === [] ? 0 : max(array_map(static fn ($p) => $p['y'], $aggData)) + 1;
-    $bufferValue = $aggregateBufferFloor / 100;
+    $bufferValue = $aggregateBufferFloor / Money::MINOR_UNITS_PER_MAJOR;
 
     $options = [
         'chart' => [

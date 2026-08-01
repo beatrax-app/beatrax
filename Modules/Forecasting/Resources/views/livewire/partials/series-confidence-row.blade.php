@@ -7,6 +7,7 @@
     Variables in scope:
       - $confidence : Modules\Forecasting\Public\Dto\SeriesConfidenceDto
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 
 @php
     $tint = match ($confidence->confidence) {
@@ -15,7 +16,7 @@
         default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     };
     $symbol = $confidence->currency === 'EUR' ? '€' : ($confidence->currency === 'USD' ? '$' : $confidence->currency.' ');
-    $point = abs($confidence->pointMinor) / 100;
+    $point = abs($confidence->pointMinor) / Money::MINOR_UNITS_PER_MAJOR;
     $formattedPoint = $symbol.number_format($point, 2, ',', '.');
     $rangeWidthPercent = $confidence->pointMinor !== 0
         ? round((float) $confidence->bandWidthMinor / abs($confidence->pointMinor) * 100, 0)

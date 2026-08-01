@@ -11,9 +11,10 @@
       $drilldownUrls  : list<string>  — parallel to $rows, one URL per bar (Req 12)
       $metricLabel    : string
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     $categories = array_map(static fn ($row) => $row->groupLabel, $rows);
-    $data = array_map(static fn ($row) => $row->amountMinor / 100, $rows);
+    $data = array_map(static fn ($row) => $row->amountMinor / Money::MINOR_UNITS_PER_MAJOR, $rows);
 
     $options = [
         'chart' => [

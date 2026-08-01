@@ -8,6 +8,7 @@
     inline amount input + Save / Cancel buttons; on Save, invokes
     the second launchpad + redirects).
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="relative inline-block">
     @if ($mode === 'closed')
         <button
@@ -49,7 +50,7 @@
         >
             <p class="text-xs text-slate-500 dark:text-slate-400">Current amount</p>
             <p class="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                {{ number_format(abs($currentAmountMinor) / 100, 2, ',', '.') }} {{ $currency }}
+                {{ number_format(abs($currentAmountMinor) / Money::MINOR_UNITS_PER_MAJOR, 2, ',', '.') }} {{ $currency }}
             </p>
             <label class="block text-xs text-slate-500 dark:text-slate-400">New amount
                 <input

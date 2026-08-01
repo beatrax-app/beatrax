@@ -20,6 +20,7 @@
     column of round euros and a column of €0.99-shaped amounts still
     line up.
 --}}
+@use('Modules\Ledger\Public\ValueObjects\Money')
 @php
     /** @var int $accountId */
     /** @var string $accountLabel */
@@ -42,7 +43,7 @@
     }
 
     $formatMinor = static function (int $minor, string $currency): string {
-        $absoluteMajor = abs($minor) / 100;
+        $absoluteMajor = abs($minor) / Money::MINOR_UNITS_PER_MAJOR;
         $sign = $minor < 0 ? '-' : '';
         $symbol = match ($currency) {
             'EUR' => '€',
