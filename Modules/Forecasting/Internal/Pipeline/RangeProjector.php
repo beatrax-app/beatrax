@@ -16,6 +16,18 @@ use Modules\Recurring\Public\Services\RecurringSeriesQuery;
  */
 final readonly class RangeProjector
 {
+    // A series only escalates to the empirical percentile tier once its
+    // stated tolerance is this wide AND it has at least this many observed
+    // charges to build a distribution from; below either bar the cheaper
+    // envelope tier carries the band.
+    private const int HIGH_VARIANCE_THRESHOLD_PERCENT = 40;
+
+    private const int MIN_OCCURRENCES_FOR_PERCENTILE = 6;
+
+    // Percentile-tier charge dates are uncertain, so the band is smeared
+    // across a ±this-many-day window around each projected date.
+    private const int JITTER_WINDOW_DAYS = 3;
+
     public function __construct(
         private Percentile $percentile,
         private CadenceJitter $jitter,
@@ -32,7 +44,7 @@ final readonly class RangeProjector
         int $horizonDays,
         User $user,
     ): array {
-        $isHighVariance = $series->varianceTolerancePercent >= 40;
+        $isHighVariance = $series->varianceTolerancePercent >= self::HIGH_VARIANCE_THRESHOLD_PERCENT;
 
         // Load observed occurrences only when the variance trigger fires;
         // envelope-only series do not need the DB read.
@@ -40,7 +52,7 @@ final readonly class RangeProjector
             ? $this->seriesQuery->occurrencesForSeries($series->seriesId, $user)
             : [];
 
-        $usePercentile = $isHighVariance && count($occurrences) >= 6;
+        $usePercentile = $isHighVariance && count($occurrences) >= self::MIN_OCCURRENCES_FOR_PERCENTILE;
 
         if ($usePercentile) {
             // Percentile-tier series carry both a wide empirical
@@ -48,7 +60,7 @@ final readonly class RangeProjector
             // widens the band across a ±3-day window around each date.
             $contributions = $this->percentileTier($series, $accountId, $asOf, $horizonDays, $occurrences);
 
-            return $this->jitter->apply($contributions, 3);
+            return $this->jitter->apply($contributions, self::JITTER_WINDOW_DAYS);
         }
 
         // Envelope-tier series have predictable charge dates, so the
