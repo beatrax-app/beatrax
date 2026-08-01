@@ -17,6 +17,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
@@ -35,6 +36,8 @@ use Throwable;
  */
 final class InboxesPage extends Component
 {
+    use DispatchesToast;
+
     private const INBOX_NOT_FOUND = 'Inbox not found.';
 
     // Populated from the single-use open_backfill_modal session flash
@@ -243,12 +246,12 @@ final class InboxesPage extends Component
             throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
         }
         if (in_array($health->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true)) {
-            $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.scan_in_progress'));
+            $this->toast(Lang::get('email-scan::inboxes.toast.scan_in_progress'));
 
             return;
         }
         $bus->dispatch(new IncrementalScanJob($inboxId));
-        $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.scan_started'));
+        $this->toast(Lang::get('email-scan::inboxes.toast.scan_started'));
     }
 
     // Kicks off the per-inbox OAuth consent re-grant flow for a row
@@ -287,7 +290,7 @@ final class InboxesPage extends Component
         PromoteDiscoveredSender $promote,
     ): void {
         ($promote)($discoveredSenderId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.sender_added'));
+        $this->toast(Lang::get('email-scan::inboxes.toast.sender_added'));
     }
 
     // Dismisses a discovered_senders candidate. Mirror of
@@ -298,7 +301,7 @@ final class InboxesPage extends Component
         DismissDiscoveredSender $dismiss,
     ): void {
         ($dismiss)($discoveredSenderId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.sender_dismissed'));
+        $this->toast(Lang::get('email-scan::inboxes.toast.sender_dismissed'));
     }
 
     public function openWizard(

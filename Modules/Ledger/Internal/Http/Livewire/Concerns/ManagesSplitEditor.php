@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
@@ -28,6 +29,8 @@ use Modules\Tax\Public\Services\TaxTagQuery;
  */
 trait ManagesSplitEditor
 {
+    use DispatchesToast;
+
     // True either because the transaction already carries persisted
     // legs, or because the user just clicked "Split into categories".
     public bool $editingSplit = false;
@@ -149,7 +152,7 @@ trait ManagesSplitEditor
         $this->resetSplitEditor();
         $this->confirmRemoveToOne = false;
         $this->pendingRemoveIndex = null;
-        $this->dispatch('toast', message: Lang::get('ledger::detail.toast.removed_one_remains'));
+        $this->toast(Lang::get('ledger::detail.toast.removed_one_remains'));
     }
 
     // Defaults the survivor radio to the larger-magnitude leg — a
@@ -194,7 +197,7 @@ trait ManagesSplitEditor
         $this->resetSplitEditor();
         $this->confirmUnsplit = false;
         $this->unsplitSurvivorIndex = null;
-        $this->dispatch('toast', message: Lang::get('ledger::detail.toast.unsplit_restored'));
+        $this->toast(Lang::get('ledger::detail.toast.unsplit_restored'));
     }
 
     // Drives the chosen survivor category through the unsplit mutator when
@@ -267,7 +270,7 @@ trait ManagesSplitEditor
             // Reload persisted legs (real DB ids) + tax state so subsequent
             // edits/removals correctly diff against the now-saved rows.
             $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
-            $this->dispatch('toast', message: Lang::get('ledger::detail.toast.split_saved'));
+            $this->toast(Lang::get('ledger::detail.toast.split_saved'));
         } catch (SplitSumMismatchException) {
             $this->splitError = Lang::get('ledger::detail.errors.totals_must_match');
         } catch (InvalidArgumentException $e) {
@@ -339,7 +342,7 @@ trait ManagesSplitEditor
             ->value('status');
 
         if ($status === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: Lang::get(self::RECONCILED_NOTICE_KEY));
+            $this->toast(Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }

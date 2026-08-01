@@ -13,6 +13,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Http\Livewire\Concerns\BuildsForecastCharts;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
@@ -33,6 +34,7 @@ final class ForecastPage extends Component
 {
     use BuildsForecastCharts;
     use CoercesScalars;
+    use DispatchesToast;
 
     // 'all' is a sentinel value: it selects the All-accounts aggregate
     // view rather than a specific account id.
@@ -126,7 +128,7 @@ final class ForecastPage extends Component
         $this->creatingScenario = false;
         $this->newScenarioName = '';
         $this->scenarioId = $newId;
-        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.created', ['name' => $name]));
+        $this->toast(Lang::get('forecasting::scenario.toast.created', ['name' => $name]));
         $this->dispatch('forecast-updated');
     }
 
@@ -170,7 +172,7 @@ final class ForecastPage extends Component
         if ($this->scenarioId === $scenarioId) {
             $this->scenarioId = null;
         }
-        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.deleted'));
+        $this->toast(Lang::get('forecasting::scenario.toast.deleted'));
         $this->dispatch('forecast-updated');
     }
 

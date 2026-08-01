@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
@@ -26,6 +27,8 @@ use Modules\Pots\Public\Services\PotWriter;
  */
 final class GoalsPage extends Component
 {
+    use DispatchesToast;
+
     public string $name = '';
 
     public string $targetAmount = '';
@@ -206,7 +209,7 @@ final class GoalsPage extends Component
 
         $writer->archive($currentUser->user(), $goalId);
         $this->archivingGoalId = 0;
-        $this->dispatch('toast', message: Lang::get('goals::messages.notices.goal_archived'), undoAction: 'restore', undoPayload: $goalId);
+        $this->toastWithUndo(Lang::get('goals::messages.notices.goal_archived'), undoAction: 'restore', undoPayload: $goalId);
     }
 
     public function restore(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
@@ -457,6 +460,6 @@ final class GoalsPage extends Component
 
     private function toast(string $message): void
     {
-        $this->dispatch('toast', message: $message, undoAction: '', undoPayload: null);
+        $this->toastWithUndo($message, undoAction: '', undoPayload: null);
     }
 }

@@ -18,6 +18,7 @@ use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
@@ -32,6 +33,8 @@ use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForAlert;
  */
 final class DriftPage extends Component
 {
+    use DispatchesToast;
+
     private const int MAX_UNTIL_MONTHS = 6;
 
     // open (default) / history / dismissed, persisted via #[Url] so
@@ -77,7 +80,7 @@ final class DriftPage extends Component
     public function dismissAnomaly(int $alertId, CurrentUser $currentUser, DismissAnomalyAlert $action): void
     {
         ($action)($alertId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.dismissed'));
+        $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed'));
     }
 
     public function markAnomalyExpected(int $alertId, CurrentUser $currentUser, DismissAnomalyAlertAsExpected $action): void
@@ -96,13 +99,13 @@ final class DriftPage extends Component
         // unresolvable, e.g. its transaction was deleted). The dismissal
         // still stands — surface that honestly rather than promising a
         // mute + an Undo that would delete nothing.
-        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.dismissed_expected'));
+        $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed_expected'));
     }
 
     public function undoAnomalySuppression(int $alertId, CurrentUser $currentUser, RemoveAnomalySuppressionRule $action): void
     {
         $action->undoSuppression($alertId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.reopened'));
+        $this->toast(Lang::get('drift-alerts::alerts.toasts.reopened'));
     }
 
     public function acknowledge(int $alertId, CurrentUser $currentUser, AcknowledgeDriftAlert $action): void
@@ -120,7 +123,7 @@ final class DriftPage extends Component
     private function acknowledgeAlert(int $alertId, CurrentUser $currentUser, callable $action): void
     {
         $action($alertId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.acknowledged'));
+        $this->toast(Lang::get('drift-alerts::alerts.toasts.acknowledged'));
     }
 
     // Bounds the accepted range here (see the class @link) so a tampered
@@ -141,13 +144,13 @@ final class DriftPage extends Component
         }
 
         $action($alertId, $currentUser->user(), $until);
-        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.snoozed'));
+        $this->toast(Lang::get('drift-alerts::alerts.toasts.snoozed'));
     }
 
     public function dismissAsCancelled(int $alertId, CurrentUser $currentUser, DismissDriftAlertAsCancelled $action): void
     {
         ($action)($alertId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.dismissed_cancelled'));
+        $this->toast(Lang::get('drift-alerts::alerts.toasts.dismissed_cancelled'));
     }
 
     public function modelCancelInForecast(

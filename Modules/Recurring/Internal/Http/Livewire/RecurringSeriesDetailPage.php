@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
@@ -21,6 +22,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // the series and throwing NotFoundHttpException when the lookup misses.
 final class RecurringSeriesDetailPage extends Component
 {
+    use DispatchesToast;
+
     public int $seriesId = 0;
 
     public bool $showAllPoints = false;
@@ -47,7 +50,7 @@ final class RecurringSeriesDetailPage extends Component
         EditRecurringSeriesVarianceTolerance $action,
     ): void {
         ($action)($this->seriesId, $currentUser->user(), $newTolerancePercent);
-        $this->dispatch('toast', message: Lang::get('recurring::detail.tolerance_toast', ['percent' => $newTolerancePercent]), undoAction: '', undoPayload: null);
+        $this->toastWithUndo(Lang::get('recurring::detail.tolerance_toast', ['percent' => $newTolerancePercent]), undoAction: '', undoPayload: null);
     }
 
     public function render(
