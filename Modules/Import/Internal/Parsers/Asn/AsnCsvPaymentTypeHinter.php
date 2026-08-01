@@ -6,13 +6,14 @@ namespace Modules\Import\Internal\Parsers\Asn;
 
 use Modules\Import\Internal\Parsers\DescriptionKeywordHinter;
 use Modules\Import\Public\Enums\PaymentType;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 
 /**
  * @link ../../../../../.docs/features/import/architecture.md#payment-type-hinters
  */
 final class AsnCsvPaymentTypeHinter extends DescriptionKeywordHinter
 {
-    protected const SOURCE_FORMAT = 'asn-csv';
+    protected const SOURCE_FORMAT = SourceFormat::AsnCsv->value;
 
     // Order is deliberate: more specific lexemes appear first so
     // `automatische incasso` wins over `incasso` when both match.
