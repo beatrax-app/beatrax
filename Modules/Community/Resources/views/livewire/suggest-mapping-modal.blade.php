@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- Suggest-mapping modal.
 
      Renders inside a Flux <flux:modal name="suggest-mapping" dismissible>
@@ -12,16 +13,16 @@
 <div>
     <flux:modal name="suggest-mapping" dismissible>
         <div class="space-y-6">
-            <flux:heading size="lg">Suggest a mapping</flux:heading>
+            <flux:heading size="lg">{{ Lang::get('community::suggest.heading') }}</flux:heading>
 
             <p class="text-sm text-slate-700 dark:text-slate-300">
-                Opens GitHub in your browser so you can submit the suggestion as a draft PR. Your name and email never leave this machine.
+                {{ Lang::get('community::suggest.intro') }}
             </p>
 
             <form wire:submit="submit" class="space-y-4">
                 <div class="space-y-1">
                     <label for="suggest-pattern" class="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Pattern
+                        {{ Lang::get('community::suggest.pattern') }}
                     </label>
                     <input
                         type="text"
@@ -34,13 +35,13 @@
 
                 <div class="space-y-1">
                     <label for="suggest-name" class="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        Friendly name
+                        {{ Lang::get('community::suggest.name') }}
                     </label>
                     <input
                         type="text"
                         id="suggest-name"
                         wire:model.live="name"
-                        placeholder="e.g. Albert Heijn"
+                        placeholder="{{ Lang::get('community::suggest.name_placeholder') }}"
                         class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                     />
                 </div>
@@ -48,38 +49,38 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
                         <label for="suggest-category" class="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Category (optional)
+                            {{ Lang::get('community::suggest.category') }}
                         </label>
                         <input
                             type="text"
                             id="suggest-category"
                             wire:model.live="category"
-                            placeholder="e.g. Groceries"
+                            placeholder="{{ Lang::get('community::suggest.category_placeholder') }}"
                             class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                         />
                     </div>
 
                     <div class="space-y-1">
                         <label for="suggest-region" class="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Region
+                            {{ Lang::get('community::suggest.region') }}
                         </label>
                         <select
                             id="suggest-region"
                             wire:model.live="region"
                             class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                         >
-                            <option value="NL">NL — Netherlands</option>
-                            <option value="BE">BE — Belgium</option>
-                            <option value="DE">DE — Germany</option>
-                            <option value="FR">FR — France</option>
-                            <option value="OTHER">Other</option>
+                            <option value="NL">{{ Lang::get('community::suggest.regions.nl') }}</option>
+                            <option value="BE">{{ Lang::get('community::suggest.regions.be') }}</option>
+                            <option value="DE">{{ Lang::get('community::suggest.regions.de') }}</option>
+                            <option value="FR">{{ Lang::get('community::suggest.regions.fr') }}</option>
+                            <option value="OTHER">{{ Lang::get('community::suggest.regions.other') }}</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="space-y-1">
                     <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        YAML preview
+                        {{ Lang::get('community::suggest.yaml_preview') }}
                     </p>
                     {{-- YAML preview: the template lives on a data attribute
                          so the Alpine x-data block can interpolate the four
@@ -117,11 +118,11 @@
                         type="button"
                         wire:click="cancel"
                         class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                    >Cancel</button>
+                    >{{ Lang::get('community::suggest.cancel') }}</button>
                     <button
                         type="submit"
                         class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                    >Submit as draft PR</button>
+                    >{{ Lang::get('community::suggest.submit') }}</button>
                 </div>
             </form>
         </div>

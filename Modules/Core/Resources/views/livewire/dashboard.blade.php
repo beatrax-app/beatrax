@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -51,24 +52,24 @@
     <header class="flex items-start justify-between gap-6 dashboard-phone-order-1">
         <div class="space-y-1">
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ $summary->period->label }}</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">This period at a glance.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.subtitle') }}</p>
         </div>
         <div class="flex items-center gap-1">
             <button
                 type="button"
                 wire:click="previousPeriod"
-                aria-label="Previous period"
+                aria-label="{{ Lang::get('core::dashboard.previous_period') }}"
                 class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
             >&lsaquo;</button>
             <button
                 type="button"
                 wire:click="today"
                 class="inline-flex h-10 items-center rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
-            >Today</button>
+            >{{ Lang::get('core::dashboard.today') }}</button>
             <button
                 type="button"
                 wire:click="nextPeriod"
-                aria-label="Next period"
+                aria-label="{{ Lang::get('core::dashboard.next_period') }}"
                 class="inline-flex h-10 w-10 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:text-slate-400"
             >&rsaquo;</button>
         </div>
@@ -105,21 +106,21 @@
          EUR-only layout. --}}
     <div class="dashboard-phone-order-3">
     @if ($tiles === null)
-        <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="This period totals">
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="{{ Lang::get('core::dashboard.totals_aria') }}">
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">In</p>
+                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.in') }}</p>
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->inflow) }}
                 </p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Out</p>
+                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.out') }}</p>
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                     {{ $fmt($summary->outflow) }}
                 </p>
             </div>
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Net</p>
+                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                 <p
                     class="mt-2 text-3xl font-semibold {{ $summary->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
                     style="font-variant-numeric: tabular-nums;"
@@ -131,23 +132,23 @@
     @else
         <div class="space-y-12">
             @foreach ($tiles as $tile)
-                <section aria-label="This period totals — {{ $tile->currency }}" class="space-y-2">
+                <section aria-label="{{ Lang::get('core::dashboard.totals_aria_currency', ['currency' => $tile->currency]) }}" class="space-y-2">
                     <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $tile->currency }}</h2>
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">In</p>
+                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.in') }}</p>
                             <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($tile->inflow) }}
                             </p>
                         </div>
                         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Out</p>
+                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.out') }}</p>
                             <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                 {{ $fmt($tile->outflow) }}
                             </p>
                         </div>
                         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Net</p>
+                            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.net') }}</p>
                             <p
                                 class="mt-2 text-3xl font-semibold {{ $tile->net->isNegative() ? 'text-slate-900 dark:text-slate-100' : 'text-emerald-600 dark:text-emerald-500' }}"
                                 style="font-variant-numeric: tabular-nums;"
@@ -214,14 +215,17 @@
              the next-settlement line is preserved). Either tile may be
              hidden when its source query returns no data. Side-by-side on
              desktop (md:grid-cols-2), stacked on mobile. --}}
-        <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="Status tiles">
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="{{ Lang::get('core::dashboard.status_tiles_aria') }}">
             @livewire('forecasting.forecast-highlights-tile')
 
             @if (isset($emailScanHealth) && $emailScanHealth !== null)
+                @php
+                    $emailScanCount = count($emailScanHealth->lines) + $emailScanHealth->overflowCount;
+                @endphp
                 <a
                     href="{{ route('inboxes.index') }}"
                     class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-                    aria-label="Email scan health — {{ count($emailScanHealth->lines) + $emailScanHealth->overflowCount }} connected {{ ($emailScanHealth->overflowCount + count($emailScanHealth->lines)) === 1 ? 'inbox' : 'inboxes' }}"
+                    aria-label="{{ Lang::get('core::dashboard.email_scan_health', ['count' => $emailScanCount]) }} {{ $emailScanCount === 1 ? Lang::get('core::dashboard.inbox_one') : Lang::get('core::dashboard.inbox_many') }}"
                 >
                     @include('email-scan::livewire.email-scan-health-tile', ['tile' => $emailScanHealth])
                 </a>
@@ -238,9 +242,9 @@
     <div class="dashboard-phone-order-7 space-y-12">
         {{-- Top spending categories --}}
         <section class="space-y-4">
-            <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Top spending</h2>
+            <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.top_spending') }}</h2>
             @if (count($summary->topCategories) === 0)
-                <p class="text-sm text-slate-500 dark:text-slate-400">No categorized expenses yet.</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.no_expenses') }}</p>
             @else
                 <ul class="space-y-3">
                     @foreach ($summary->topCategories as $cat)
@@ -270,24 +274,24 @@
         {{-- Recent transactions --}}
         <section class="space-y-4">
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Recent transactions</h2>
+                <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.recent_transactions') }}</h2>
                 <a
                     href="{{ route('transactions.index') }}"
                     class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
-                >View all</a>
+                >{{ Lang::get('core::dashboard.view_all') }}</a>
             </div>
 
             @if (count($summary->recentTransactions) === 0)
-                <p class="text-sm text-slate-500 dark:text-slate-400">Nothing here for this period.</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.nothing_period') }}</p>
             @else
                 <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
                     <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead class="bg-slate-50 dark:bg-slate-900">
                             <tr>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
-                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
-                                <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_date') }}</th>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_counterparty') }}</th>
+                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_category') }}</th>
+                                <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_amount') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
@@ -295,7 +299,7 @@
                                 <tr>
                                     <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $row->bookedAt }}</td>
                                     <td class="px-4 py-2 text-slate-900 dark:text-slate-100">{{ $row->counterpartyName ?? '—' }}</td>
-                                    <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? 'Uncategorized' }}</td>
+                                    <td class="px-4 py-2 text-slate-500 dark:text-slate-400">{{ $row->categoryName ?? Lang::get('core::dashboard.uncategorized') }}</td>
                                     <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                         {{ $fmt($row->amount) }}
                                     </td>
@@ -335,16 +339,19 @@
         >
             <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1">
-                    <p class="text-sm font-medium text-slate-900 dark:text-slate-100">An inbox needs reconnecting.</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">One or more inboxes were signed out — beatrax can't scan them until you reconnect.</p>
+                    <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.reauth.title') }}</p>
+                    {{-- {!! !!}: app-static copy whose apostrophe ("can't") is
+                         asserted raw by EmailScan's InvalidGrantToastTest;
+                         {{ }} would escape it to &#039;. No user data flows here. --}}
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{!! Lang::get('core::dashboard.reauth.body') !!}</p>
                     <a
                         href="{{ route('inboxes.index') }}"
                         class="text-xs text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
-                    >Go to Inboxes</a>
+                    >{{ Lang::get('core::dashboard.reauth.link') }}</a>
                 </div>
                 <button
                     type="button"
-                    aria-label="Dismiss"
+                    aria-label="{{ Lang::get('core::dashboard.reauth.dismiss') }}"
                     wire:click="dismissReauthToast"
                     class="rounded text-slate-500 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
                 >
@@ -375,14 +382,14 @@
             aria-live="polite"
             class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border-l-2 border-rose-600 bg-white p-4 shadow-md dark:bg-slate-950 dark:border-rose-500"
         >
-            <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Chain resolution failed.</p>
+            <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.failed_chain.title') }}</p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                One or more chain-resolution jobs hit an error.
+                {{ Lang::get('core::dashboard.failed_chain.body') }}
             </p>
             <a
                 href="{{ route('dev.queue.tab', ['tab' => 'failed']) }}"
                 class="mt-2 inline-block text-xs font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100"
-            >Open Queue Inspector</a>
+            >{{ Lang::get('core::dashboard.failed_chain.link') }}</a>
         </div>
     @endif
 </div>

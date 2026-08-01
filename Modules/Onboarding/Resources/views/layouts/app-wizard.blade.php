@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
 @php
@@ -27,10 +28,14 @@
 
     $isDark = $userTheme === 'dark' || ($userTheme === 'system' && $osTheme === 'dark');
     $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
+
+    // Matches <html lang> to the request's resolved UI language, same as
+    // the full app layout.
+    $currentLocale = $container->make(\Illuminate\Contracts\Translation\Translator::class)->getLocale();
 @endphp
 <!doctype html>
 <html
-    lang="en"
+    lang="{{ $currentLocale }}"
     class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $isDark ? 'dark' : '' }}"
     style="font-feature-settings: 'tnum';"
 >
@@ -38,7 +43,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <title>{{ $title ?? 'Setup · beatrax' }}</title>
+        <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').' · beatrax' }}</title>
         @if ($needsPrePaintScript)
             {{--
                 Pre-paint theme script — duplicated verbatim from the

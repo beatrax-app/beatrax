@@ -99,6 +99,7 @@ final class AuthServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'auth');
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'auth');
 
         if ($this->app->runningInConsole()) {
             $this->commands([

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Connect-email step — wizard step 4 (optional). Renders two provider
     CTAs ("Authorize with Gmail" / "Authorize with Outlook") that
@@ -12,20 +13,19 @@
     listener) once the modal saves credentials successfully.
 --}}
 <section class="wiz-step wiz-step-connect-email" aria-labelledby="wiz-connect-email-h1">
-    <x-onboarding::wiz-eyebrow step="connect-email" glyph="✉️">Receipts from email (optional)</x-onboarding::wiz-eyebrow>
+    <x-onboarding::wiz-eyebrow step="connect-email" glyph="✉️">{{ Lang::get('onboarding::connect_email.eyebrow') }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-email-h1" class="wiz-h1">
-        Let beatrax watch for purchase emails
+        {{ Lang::get('onboarding::connect_email.h1') }}
     </h1>
     <p class="wiz-lede">
-        Connect Gmail or Outlook so order confirmations and subscription receipts
-        auto-attach to your transactions. You can skip this and add it later.
+        {{ Lang::get('onboarding::connect_email.lede') }}
     </p>
 
     <div class="mini-steps">
-        <x-onboarding::mini-step glyph="🔐" label="Sign in" sub="Google or Microsoft" state="done" />
-        <x-onboarding::mini-step glyph="📑" label="Approve scope" sub="Read-only access" state="now" />
-        <x-onboarding::mini-step glyph="✉️" label="beatrax reads" sub="Receipts only" state="upcoming" />
-        <x-onboarding::mini-step glyph="🔒" label="Token stays local" sub="Encrypted file" state="upcoming" />
+        <x-onboarding::mini-step glyph="🔐" :label="Lang::get('onboarding::connect_email.mini.signin_label')" :sub="Lang::get('onboarding::connect_email.mini.signin_sub')" state="done" />
+        <x-onboarding::mini-step glyph="📑" :label="Lang::get('onboarding::connect_email.mini.scope_label')" :sub="Lang::get('onboarding::connect_email.mini.scope_sub')" state="now" />
+        <x-onboarding::mini-step glyph="✉️" :label="Lang::get('onboarding::connect_email.mini.reads_label')" :sub="Lang::get('onboarding::connect_email.mini.reads_sub')" state="upcoming" />
+        <x-onboarding::mini-step glyph="🔒" :label="Lang::get('onboarding::connect_email.mini.token_label')" :sub="Lang::get('onboarding::connect_email.mini.token_sub')" state="upcoming" />
     </div>
 
     <div class="wiz-email-auth">
@@ -34,14 +34,14 @@
             class="pill-btn-primary"
             wire:click="authorizeProvider('gmail')"
         >
-            Authorize with Gmail
+            {{ Lang::get('onboarding::connect_email.authorize_gmail') }}
         </button>
         <button
             type="button"
             class="pill-btn-primary"
             wire:click="authorizeProvider('microsoft')"
         >
-            Authorize with Outlook
+            {{ Lang::get('onboarding::connect_email.authorize_outlook') }}
         </button>
     </div>
 
@@ -51,7 +51,7 @@
             class="pill-btn-ghost"
             wire:click="skip"
         >
-            Skip — set up later in Settings
+            {{ Lang::get('onboarding::connect_email.skip') }}
         </button>
     </x-onboarding::wiz-actions>
 </section>

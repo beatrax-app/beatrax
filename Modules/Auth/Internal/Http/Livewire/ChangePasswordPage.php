@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 // ForcePasswordChangeMiddleware redirects a user carrying the
 // force_password_change_at_next_login flag here.
@@ -35,21 +36,21 @@ final class ChangePasswordPage extends Component
         $user = $currentUser->user();
 
         if (! $hasher->check($this->currentPassword, $user->password)) {
-            $this->flashMessage = 'Current password is incorrect.';
+            $this->flashMessage = Lang::get('auth::change_password.error_current_incorrect');
             $this->resetPasswordFields();
 
             return;
         }
 
         if ($this->newPassword !== $this->newPasswordConfirmation) {
-            $this->flashMessage = 'Passwords do not match.';
+            $this->flashMessage = Lang::get('auth::change_password.error_mismatch');
             $this->resetPasswordFields();
 
             return;
         }
 
         if (strlen($this->newPassword) < self::MINIMUM_PASSWORD_LENGTH) {
-            $this->flashMessage = 'Use at least 12 characters.';
+            $this->flashMessage = Lang::get('auth::change_password.error_min_length');
             $this->resetPasswordFields();
 
             return;
@@ -70,7 +71,7 @@ final class ChangePasswordPage extends Component
         $view = $views->make('auth::livewire.change-password-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Set a new password · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('auth::change_password.page_title')]);
 
         return $view;
     }

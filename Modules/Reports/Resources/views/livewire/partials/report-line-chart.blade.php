@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Report builder `line` viz partial (Req 8) — default for time-series
     reports (net_worth metric or time_bucket dimension). Clones the Alpine
@@ -104,6 +105,6 @@
         data-testid="report-chart"
         data-chart-variant="line"
         class="min-h-[320px] rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700"
-        title="Click a point to view its transactions"
+        title="{{ Lang::get('reports::builder.chart.line_title') }}"
     ></div>
 </div>

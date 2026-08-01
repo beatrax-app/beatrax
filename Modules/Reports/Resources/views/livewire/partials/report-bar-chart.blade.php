@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Report builder `bar` viz partial (Req 8). Clones the Alpine x-init +
     data-options ApexCharts mount block verbatim from
@@ -110,6 +111,6 @@
         data-testid="report-chart"
         data-chart-variant="bar"
         class="min-h-[320px] rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700"
-        title="Click a bar to view its transactions"
+        title="{{ Lang::get('reports::builder.chart.bar_title') }}"
     ></div>
 </div>

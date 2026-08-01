@@ -38,10 +38,16 @@
     // $osTheme — bundle says "no explicit preference" or local dev has no
     // binding — falls through to the script's matchMedia read.
     $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
+
+    // The active UI language the SetLocale middleware resolved onto the
+    // translator for this request. Read here so <html lang> matches the
+    // language the page is actually rendered in (a11y + correct
+    // hyphenation), rather than a hard-coded "en".
+    $currentLocale = $container->make(\Illuminate\Contracts\Translation\Translator::class)->getLocale();
 @endphp
 <!doctype html>
 <html
-    lang="en"
+    lang="{{ $currentLocale }}"
     class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $isDark ? 'dark' : '' }}"
     style="font-feature-settings: 'tnum';"
 >

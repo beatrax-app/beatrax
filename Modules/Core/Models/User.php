@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property int $anomaly_min_amount_minor
  * @property Carbon|null $anomaly_backfilled_at
  * @property string $theme
+ * @property string|null $locale
  * @property string|null $close_behavior
  * @property array<string, mixed>|null $community_settings
  * @property string|null $remember_token
@@ -63,6 +64,7 @@ final class User extends Authenticatable
         'anomaly_min_amount_minor',
         'anomaly_backfilled_at',
         'theme',
+        'locale',
         'close_behavior',
         'community_settings',
     ];
@@ -102,6 +104,7 @@ final class User extends Authenticatable
             'anomaly_min_amount_minor' => 'integer',
             'anomaly_backfilled_at' => 'immutable_datetime',
             'theme' => 'string',
+            'locale' => 'string',
             'close_behavior' => 'string',
             'community_settings' => 'array',
         ];

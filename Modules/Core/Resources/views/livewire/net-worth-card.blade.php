@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -20,9 +21,9 @@
     $sourceLabel = static fn (?string $source): string => match ($source) {
         'ecb' => 'ECB',
         'frankfurter' => 'Frankfurter',
-        'bundled' => 'Bundled snapshot',
-        'transaction' => 'Recorded rate',
-        null, '' => 'rates',
+        'bundled' => Lang::get('core::net_worth.source_bundled'),
+        'transaction' => Lang::get('core::net_worth.source_transaction'),
+        null, '' => Lang::get('core::net_worth.source_fallback'),
         default => ucfirst($source),
     };
 
@@ -30,8 +31,8 @@
     // snapshot tells the user to enable online refresh; a merely-old online rate
     // (staleness is age-based, independent of source) just notes its age.
     $staleNote = static fn (?string $source): string => $source === 'bundled'
-        ? 'Using a bundled snapshot rate. Enable online refresh in Settings for current rates.'
-        : 'This rate is more than 3 days old. The next online refresh will update it.';
+        ? Lang::get('core::net_worth.stale_bundled')
+        : Lang::get('core::net_worth.stale_old');
 
     // The stored rate is a DECIMAL(18,8) string or a "num/den" fraction
     // (brick/money cross-rate). Render it as a fixed 4-decimal value for the
@@ -58,10 +59,10 @@
 
 <div>
     @if ($netWorth->hasAccounts())
-        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="Net worth">
+        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="{{ Lang::get('core::net_worth.aria') }}">
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
-                    <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Net worth</p>
+                    <p class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{{ Lang::get('core::net_worth.heading') }}</p>
 
                     {{-- Total figure with FX disclosure affordance (D-11 / FX-04) --}}
                     <p class="mt-1 text-3xl font-semibold {{ $amountClass($netWorth->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
@@ -72,7 +73,7 @@
                             <button type="button"
                                     class="fx-disclosure-trigger"
                                     style="anchor-name: --fx-net;"
-                                    aria-label="Rate details"
+                                    aria-label="{{ Lang::get('core::net_worth.rate_details') }}"
                                     x-data
                                     x-on:click="$refs.fxPopNetworth.showPopover()">
                                 <span class="fx-icon {{ $netWorth->hasStaleRates ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
@@ -83,8 +84,8 @@
                                  breakdown rows below. --}}
                             <div popover id="fx-pop-networth" x-ref="fxPopNetworth" class="fx-popover" style="position-anchor: --fx-net; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
                                 @if ($netWorth->ratesAsOf !== null)
-                                    <p class="fx-rate">Converted to {{ $baseCurrency }}</p>
-                                    <p class="fx-source">{{ $sourceLabel($netWorth->ratesSource) }} · as of {{ $netWorth->ratesAsOf->format('d M Y') }}</p>
+                                    <p class="fx-rate">{{ Lang::get('core::net_worth.converted_to', ['currency' => $baseCurrency]) }}</p>
+                                    <p class="fx-source">{{ $sourceLabel($netWorth->ratesSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $netWorth->ratesAsOf->format('d M Y')]) }}</p>
                                     @if ($netWorth->hasStaleRates)
                                         <p class="fx-stale-note">{{ $staleNote($netWorth->ratesSource) }}</p>
                                     @endif
@@ -94,17 +95,21 @@
                     </p>
 
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        across {{ count($netWorth->accounts) }} {{ count($netWorth->accounts) === 1 ? 'account' : 'accounts' }}
+                        {{ count($netWorth->accounts) === 1
+                            ? Lang::get('core::net_worth.across_one', ['count' => count($netWorth->accounts)])
+                            : Lang::get('core::net_worth.across_many', ['count' => count($netWorth->accounts)]) }}
                         @if ($netWorth->accountsWithoutRate > 0)
                             {{-- No-rate fallback (§7.4 UI-SPEC) — replaces old "excludes non-EUR balances" span --}}
-                            <span style="color: var(--color-amber);">· {{ $netWorth->accountsWithoutRate }} {{ $netWorth->accountsWithoutRate === 1 ? 'account' : 'accounts' }} not converted — no rate available</span>
+                            <span style="color: var(--color-amber);">{{ $netWorth->accountsWithoutRate === 1
+                                ? Lang::get('core::net_worth.not_converted_one', ['count' => $netWorth->accountsWithoutRate])
+                                : Lang::get('core::net_worth.not_converted_many', ['count' => $netWorth->accountsWithoutRate]) }}</span>
                         @endif
                     </p>
 
                     @if ($conversionActive)
                         {{-- Global rates disclosure line — one per surface (D-11 / UI-SPEC §5.2/§7.3) --}}
                         <p class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
-                            rates as of {{ $netWorth->ratesAsOf?->format('d M Y') }} from {{ $sourceLabel($netWorth->ratesSource) }}
+                            {{ Lang::get('core::net_worth.global_rates', ['date' => $netWorth->ratesAsOf?->format('d M Y'), 'source' => $sourceLabel($netWorth->ratesSource)]) }}
                         </p>
                     @endif
                 </div>
@@ -112,7 +117,7 @@
                     type="button"
                     wire:click="toggle"
                     class="shrink-0 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                >{{ $expanded ? 'Hide' : 'Breakdown' }}</button>
+                >{{ $expanded ? Lang::get('core::net_worth.toggle_hide') : Lang::get('core::net_worth.toggle_breakdown') }}</button>
             </div>
 
             @if ($expanded)
@@ -122,7 +127,7 @@
                             <span class="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">
                                 {{ $account->name }}
                                 @if ($account->isLiability)
-                                    <span class="ml-1 text-xs text-slate-400 dark:text-slate-500">(card)</span>
+                                    <span class="ml-1 text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::net_worth.card_suffix') }}</span>
                                 @endif
                             </span>
                             <span class="shrink-0 font-medium {{ $amountClass($account->balanceMinor) }}" style="font-variant-numeric: tabular-nums;">
@@ -136,7 +141,7 @@
                                         <button type="button"
                                                 class="fx-disclosure-trigger fx-disclosure-trigger--inline"
                                                 style="anchor-name: --fx-a{{ $account->accountId }};"
-                                                aria-label="Rate details for {{ $account->name }}"
+                                                aria-label="{{ Lang::get('core::net_worth.rate_details_for', ['name' => $account->name]) }}"
                                                 x-data
                                                 x-on:click="$refs.{{ 'fxPop'.$account->accountId }}.showPopover()">
                                             <span class="fx-icon {{ $account->fxIsStale ? 'fx-icon--stale' : '' }}" aria-hidden="true"></span>
@@ -144,10 +149,10 @@
                                         <div popover id="fx-pop-{{ $account->accountId }}" x-ref="{{ 'fxPop'.$account->accountId }}" class="fx-popover" style="position-anchor: --fx-a{{ $account->accountId }}; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
                                             @php($accountRate = $fmtRate($account->fxRate))
                                             @if ($accountRate !== null)
-                                                <p class="fx-rate">1 {{ $account->currency }} = {{ $accountRate }} {{ $baseCurrency }}</p>
+                                                <p class="fx-rate">{{ Lang::get('core::net_worth.rate_line', ['from' => $account->currency, 'rate' => $accountRate, 'to' => $baseCurrency]) }}</p>
                                             @endif
                                             @if ($account->fxAsOf !== null)
-                                                <p class="fx-source">{{ $sourceLabel($account->fxSource) }} · as of {{ $account->fxAsOf->format('d M Y') }}</p>
+                                                <p class="fx-source">{{ $sourceLabel($account->fxSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $account->fxAsOf->format('d M Y')]) }}</p>
                                             @endif
                                             @if ($account->fxIsStale)
                                                 <p class="fx-stale-note">{{ $staleNote($account->fxSource) }}</p>
@@ -157,7 +162,7 @@
                                 @elseif ($account->hasNoRate($baseCurrency))
                                     {{-- No rate at all for this pair (D-07) — show the native amount
                                          only, with a calm amber note in the base-equivalent slot. --}}
-                                    <span class="ml-1 text-xs" style="color: var(--color-amber);">· no rate available</span>
+                                    <span class="ml-1 text-xs" style="color: var(--color-amber);">{{ Lang::get('core::net_worth.no_rate_available') }}</span>
                                 @endif
                             </span>
                         </li>

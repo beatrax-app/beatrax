@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /calendar page — Phase 6 Plan 03 full UI-SPEC implementation.
 
@@ -15,9 +16,9 @@
 @use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="mx-auto max-w-7xl px-4 py-12" x-data="{ panelOpen: false }">
     <header class="mb-6">
-        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">Calendar</h1>
+        <h1 class="text-2xl font-semibold tracking-tight" style="color: var(--color-text);">{{ Lang::get('calendar::messages.page.title') }}</h1>
         <p class="mt-1 max-w-prose text-sm" style="color: var(--color-text-muted);">
-            Upcoming payments and your projected daily balance.
+            {{ Lang::get('calendar::messages.page.subtitle') }}
         </p>
     </header>
 
@@ -38,15 +39,15 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    Projection updating…
+                    {{ Lang::get('calendar::messages.summary.computing') }}
                 </span>
             @elseif ($riskCount === 1)
                 <span style="color: var(--color-rose);">
-                    Balance dips below €0 on {{ $riskDayList[0]->date->format('M j') }}.
+                    {{ Lang::get('calendar::messages.summary.risk_one', ['date' => $riskDayList[0]->date->format('M j')]) }}
                 </span>
             @else
                 <span style="color: var(--color-rose);">
-                    Balance dips below €0 on {{ $riskCount }} days — first: {{ $riskDayList[0]->date->format('M j') }}.
+                    {{ Lang::get('calendar::messages.summary.risk_many', ['count' => $riskCount, 'date' => $riskDayList[0]->date->format('M j')]) }}
                 </span>
             @endif
         </div>
@@ -58,7 +59,7 @@
             <button
                 wire:click="prevMonth"
                 class="flex h-11 w-11 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-label="Previous month"
+                aria-label="{{ Lang::get('calendar::messages.toolbar.prev_month') }}"
                 style="min-width: 44px; min-height: 44px;"
             >←</button>
             <span class="text-base font-semibold" style="color: var(--color-text);">
@@ -67,7 +68,7 @@
             <button
                 wire:click="nextMonth"
                 class="flex h-11 w-11 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
-                aria-label="Next month"
+                aria-label="{{ Lang::get('calendar::messages.toolbar.next_month') }}"
                 style="min-width: 44px; min-height: 44px;"
                 @if ($atCeiling) disabled aria-disabled="true" @endif
             >→</button>
@@ -82,7 +83,7 @@
                 aria-haspopup="true"
                 :aria-expanded="popoverOpen"
             >
-                Accounts
+                {{ Lang::get('calendar::messages.toolbar.accounts') }}
                 <span class="ml-0.5 text-xs" aria-hidden="true">▾</span>
             </button>
             <div
@@ -94,16 +95,16 @@
                 class="absolute right-0 z-30 mt-1 rounded-lg border bg-white py-2 shadow-lg dark:bg-slate-900"
                 style="min-width: 260px; border-color: var(--color-border); top: 100%;"
                 role="dialog"
-                aria-label="Account display settings"
+                aria-label="{{ Lang::get('calendar::messages.toolbar.popover_aria') }}"
             >
                 @if (empty($accountRoster))
-                    <p class="px-4 py-2 text-sm" style="color: var(--color-text-faint);">No accounts found.</p>
+                    <p class="px-4 py-2 text-sm" style="color: var(--color-text-faint);">{{ Lang::get('calendar::messages.toolbar.no_accounts') }}</p>
                 @else
                     <div class="px-3 pb-1 pt-2">
                         <div class="mb-1 grid grid-cols-3 gap-1 text-xs font-semibold" style="color: var(--color-text-faint);">
-                            <span class="col-span-1">Account</span>
-                            <span class="text-center">Entries</span>
-                            <span class="text-center">Balance</span>
+                            <span class="col-span-1">{{ Lang::get('calendar::messages.toolbar.col_account') }}</span>
+                            <span class="text-center">{{ Lang::get('calendar::messages.toolbar.col_entries') }}</span>
+                            <span class="text-center">{{ Lang::get('calendar::messages.toolbar.col_balance') }}</span>
                         </div>
                         @foreach ($accountRoster as $acct)
                             <div class="grid grid-cols-3 gap-1 items-center py-1">
@@ -114,7 +115,7 @@
                                         wire:click="toggleEntriesAccount({{ $acct['id'] }})"
                                         @checked(in_array($acct['id'], $visibleAccountIds))
                                         class="h-4 w-4 rounded"
-                                        aria-label="Show entries for {{ $acct['name'] }}"
+                                        aria-label="{{ Lang::get('calendar::messages.toolbar.show_entries_aria', ['name' => $acct['name']]) }}"
                                     />
                                 </div>
                                 <div class="flex justify-center">
@@ -123,7 +124,7 @@
                                         wire:click="toggleBalanceAccount({{ $acct['id'] }})"
                                         @checked(in_array($acct['id'], $balanceAccountIds))
                                         class="h-4 w-4 rounded"
-                                        aria-label="Count {{ $acct['name'] }} in balance"
+                                        aria-label="{{ Lang::get('calendar::messages.toolbar.count_balance_aria', ['name' => $acct['name']]) }}"
                                     />
                                 </div>
                             </div>
@@ -137,16 +138,16 @@
     {{-- §7.1 Empty state --}}
     @if (!$hasEntries)
         <div class="mb-6 rounded-lg border p-8" style="border-color: var(--color-border); background: var(--color-surface);">
-            <p class="font-semibold" style="color: var(--color-text);">No upcoming payments</p>
+            <p class="font-semibold" style="color: var(--color-text);">{{ Lang::get('calendar::messages.empty.heading') }}</p>
             <p class="mt-1 text-sm" style="color: var(--color-text-muted);">
-                Connect an account or approve a recurring series to see your projected payments on the calendar.
+                {{ Lang::get('calendar::messages.empty.body') }}
             </p>
             <a
                 href="/recurring/review"
                 class="mt-3 inline-flex items-center text-sm underline hover:no-underline"
                 style="color: var(--color-text);"
             >
-                Review recurring →
+                {{ Lang::get('calendar::messages.empty.review') }}
             </a>
         </div>
     @endif
@@ -170,7 +171,7 @@
         <table
             role="grid"
             class="cal-grid"
-            aria-label="{{ \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->format('F Y') }} calendar"
+            aria-label="{{ Lang::get('calendar::messages.grid.aria', ['month' => \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->format('F Y')]) }}"
             @keydown.arrow-left.prevent="
                 let prev = document.activeElement.previousElementSibling;
                 if (prev && prev.tagName === 'TD') prev.focus();
@@ -183,7 +184,7 @@
             {{-- Day-of-week headers --}}
             <thead>
                 <tr>
-                    @foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $heading)
+                    @foreach ([Lang::get('calendar::messages.weekdays.mon'), Lang::get('calendar::messages.weekdays.tue'), Lang::get('calendar::messages.weekdays.wed'), Lang::get('calendar::messages.weekdays.thu'), Lang::get('calendar::messages.weekdays.fri'), Lang::get('calendar::messages.weekdays.sat'), Lang::get('calendar::messages.weekdays.sun')] as $heading)
                         <th
                             scope="col"
                             class="px-2 py-1 text-center text-xs font-semibold"
@@ -229,10 +230,20 @@
                                 ? 'var(--color-text-muted)'
                                 : 'var(--color-rose)';
 
-                            $ariaLabel = $day->date->format('F j, Y') . ': ' . $entryCount . ' ' . ($entryCount === 1 ? 'entry' : 'entries');
+                            $entriesWord = $entryCount === 1
+                                ? Lang::get('calendar::messages.cell.entry_one')
+                                : Lang::get('calendar::messages.cell.entry_many');
+                            $ariaLabel = Lang::get('calendar::messages.cell.aria', [
+                                'date' => $day->date->format('F j, Y'),
+                                'count' => $entryCount,
+                                'entries' => $entriesWord,
+                            ]);
                             if (!$day->isComputing) {
                                 // WR-10: announce the sign — a screen reader on a −€450 risk day must not hear "€450"
-                                $ariaLabel .= ', projected balance ' . ($day->eodBalanceMinor < 0 ? 'minus ' : '') . '€' . number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
+                                $balanceAmount = number_format(abs($day->eodBalanceMinor / Money::MINOR_UNITS_PER_MAJOR), 0, ',', '.');
+                                $ariaLabel .= $day->eodBalanceMinor < 0
+                                    ? Lang::get('calendar::messages.cell.aria_balance_negative', ['amount' => $balanceAmount])
+                                    : Lang::get('calendar::messages.cell.aria_balance_positive', ['amount' => $balanceAmount]);
                             }
                         @endphp
                         <td
@@ -280,14 +291,14 @@
                                         </span>
                                         <span class="flex-shrink-0 tabular-nums text-xs" aria-hidden="true">
                                             {{ $amountStr }}
-                                            @if ($entry->isPaid)<span class="ml-0.5" style="color: var(--color-emerald);" aria-label="Paid">✓</span>@endif
-                                            @if ($entry->isMissed)<span class="ml-0.5" style="color: var(--color-amber);" aria-label="Expected — not found">!</span>@endif
+                                            @if ($entry->isPaid)<span class="ml-0.5" style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>@endif
+                                            @if ($entry->isMissed)<span class="ml-0.5" style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>@endif
                                         </span>
                                     </div>
                                 @endforeach
 
                                 @if ($overflow > 0)
-                                    <div class="cal-overflow">+{{ $overflow }} more</div>
+                                    <div class="cal-overflow">{{ Lang::get('calendar::messages.cell.overflow', ['count' => $overflow]) }}</div>
                                 @endif
                             </div>
 
@@ -318,7 +329,7 @@
                 x-transition:leave="transition ease-[var(--ease-smooth,ease)] duration-150"
                 x-transition:leave-start="translate-x-0"
                 x-transition:leave-end="translate-x-full"
-                aria-label="Day detail panel"
+                aria-label="{{ Lang::get('calendar::messages.panel.aria') }}"
                 data-panel="day-panel"
             >
                 @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto])

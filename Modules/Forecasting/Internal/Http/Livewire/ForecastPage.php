@@ -13,6 +13,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Http\Livewire\Concerns\BuildsForecastCharts;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Internal\Mapping\ForecastDtoMapper;
@@ -111,7 +112,7 @@ final class ForecastPage extends Component
         $this->createScenarioError = null;
         $name = trim($this->newScenarioName);
         if ($name === '') {
-            $this->createScenarioError = 'Scenario name cannot be empty.';
+            $this->createScenarioError = Lang::get('forecasting::scenario.errors.name_empty');
 
             return;
         }
@@ -125,7 +126,7 @@ final class ForecastPage extends Component
         $this->creatingScenario = false;
         $this->newScenarioName = '';
         $this->scenarioId = $newId;
-        $this->dispatch('toast', message: 'Scenario "'.$name.'" created.');
+        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.created', ['name' => $name]));
         $this->dispatch('forecast-updated');
     }
 
@@ -169,7 +170,7 @@ final class ForecastPage extends Component
         if ($this->scenarioId === $scenarioId) {
             $this->scenarioId = null;
         }
-        $this->dispatch('toast', message: 'Scenario deleted.');
+        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.deleted'));
         $this->dispatch('forecast-updated');
     }
 
@@ -243,7 +244,7 @@ final class ForecastPage extends Component
         $view = $views->make('forecasting::livewire.forecast-page', $viewData);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Forecast · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('forecasting::forecast.page_title').' · beatrax']);
 
         return $view;
     }

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     LOCK-04 dev-console probe (D-19).
 
@@ -19,24 +20,24 @@
     wire:poll.5s
 >
     <div class="flex items-center justify-between gap-2">
-        <span class="text-[#94a3b8] uppercase tracking-wide text-[10px]">App-lock key:</span>
+        <span class="text-[#94a3b8] uppercase tracking-wide text-[10px]">{{ Lang::get('auth::key_probe.label') }}</span>
         @if ($status === 'released')
             <span
                 class="text-[#6ee7b7] font-semibold text-[11px] uppercase tracking-wide"
                 data-testid="probe-status-released"
-            >released</span>
+            >{{ Lang::get('auth::key_probe.released') }}</span>
         @else
             <span
                 class="text-[#fca5a5] font-semibold text-[11px] uppercase tracking-wide"
                 data-testid="probe-status-withheld"
-            >withheld</span>
+            >{{ Lang::get('auth::key_probe.withheld') }}</span>
         @endif
     </div>
 
     @if ($status === 'released' && $fingerprint !== null)
         {{-- Fingerprint: 8-char SHA-256 prefix. Proves key presence without disclosure. --}}
         <div class="text-[#94a3b8] text-[10px]">
-            fingerprint:
+            {{ Lang::get('auth::key_probe.fingerprint') }}
             <span
                 class="text-[#f1f5f9]"
                 style="font-variant-numeric: tabular-nums;"
@@ -47,7 +48,7 @@
 
     {{-- D-22 note for developers reading this panel --}}
     <div class="text-[#475569] text-[10px] leading-snug pt-1">
-        Lock gates UI release only — background workers retain the key.
+        {{ Lang::get('auth::key_probe.note') }}
     </div>
 
     <div class="flex items-center gap-2 pt-1">
@@ -56,12 +57,12 @@
                 wire:click="lock"
                 class="px-2 py-0.5 rounded text-[10px] text-[#fca5a5] border border-[#7f1d1d] hover:bg-[#7f1d1d]/20 transition"
                 data-testid="probe-lock-btn"
-            >Lock now</button>
+            >{{ Lang::get('auth::key_probe.lock_now') }}</button>
         @endif
         <button
             wire:click="refresh"
             class="px-2 py-0.5 rounded text-[10px] text-[#94a3b8] border border-[#1e293b] hover:bg-[#1e293b]/40 transition"
             data-testid="probe-refresh-btn"
-        >Refresh</button>
+        >{{ Lang::get('auth::key_probe.refresh') }}</button>
     </div>
 </div>

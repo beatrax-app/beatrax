@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Report builder filter chips (D-04 — reused Search filter language and
     `.srch-*` CSS verbatim from Modules/Ledger/Resources/views/livewire/
@@ -20,12 +21,12 @@
                     @php
                         $acctCount = count($filterAccounts);
                         $acctLabel = $acctCount === 1
-                            ? (collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? "{$acctCount} account")
-                            : "{$acctCount} accounts";
+                            ? (collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? Lang::get('reports::builder.filter.account_one', ['count' => $acctCount]))
+                            : Lang::get('reports::builder.filter.account_other', ['count' => $acctCount]);
                     @endphp
                     {{ $acctLabel }}
                 @else
-                    Account &#9662;
+                    {{ Lang::get('reports::builder.filter.account') }} &#9662;
                 @endif
             </button>
             @if (! empty($filterAccounts ?? []))
@@ -33,11 +34,11 @@
                     type="button"
                     wire:click.stop="$set('filterAccounts', [])"
                     class="srch-chip-close"
-                    aria-label="Remove account filter"
+                    aria-label="{{ Lang::get('reports::builder.filter.remove_account') }}"
                 >&times;</button>
             @endif
         </span>
-        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="Account filter">
+        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.account_dialog') }}">
             <div class="srch-popover-inner">
                 @foreach ($availableAccounts as $account)
                     <label class="srch-check-row">
@@ -60,12 +61,12 @@
                     @php
                         $catCount = count($filterCategories);
                         $catLabel = $catCount === 1
-                            ? (collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? "{$catCount} category")
-                            : "{$catCount} categories";
+                            ? (collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? Lang::get('reports::builder.filter.category_one', ['count' => $catCount]))
+                            : Lang::get('reports::builder.filter.category_other', ['count' => $catCount]);
                     @endphp
                     {{ $catLabel }}
                 @else
-                    Category &#9662;
+                    {{ Lang::get('reports::builder.filter.category') }} &#9662;
                 @endif
             </button>
             @if (! empty($filterCategories ?? []))
@@ -73,11 +74,11 @@
                     type="button"
                     wire:click.stop="$set('filterCategories', [])"
                     class="srch-chip-close"
-                    aria-label="Remove category filter"
+                    aria-label="{{ Lang::get('reports::builder.filter.remove_category') }}"
                 >&times;</button>
             @endif
         </span>
-        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="Category filter">
+        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.category_dialog') }}">
             <div class="srch-popover-inner">
                 @foreach ($availableCategories as $category)
                     <label class="srch-check-row">
@@ -99,12 +100,12 @@
                     @php
                         $cpCount = count($filterCounterparties);
                         $cpLabel = $cpCount === 1
-                            ? (collect($availableCounterparties)->firstWhere('id', (int) $filterCounterparties[0])['name'] ?? "{$cpCount} counterparty")
-                            : "{$cpCount} counterparties";
+                            ? (collect($availableCounterparties)->firstWhere('id', (int) $filterCounterparties[0])['name'] ?? Lang::get('reports::builder.filter.counterparty_one', ['count' => $cpCount]))
+                            : Lang::get('reports::builder.filter.counterparty_other', ['count' => $cpCount]);
                     @endphp
                     {{ $cpLabel }}
                 @else
-                    Counterparty &#9662;
+                    {{ Lang::get('reports::builder.filter.counterparty') }} &#9662;
                 @endif
             </button>
             @if (! empty($filterCounterparties ?? []))
@@ -112,11 +113,11 @@
                     type="button"
                     wire:click.stop="$set('filterCounterparties', [])"
                     class="srch-chip-close"
-                    aria-label="Remove counterparty filter"
+                    aria-label="{{ Lang::get('reports::builder.filter.remove_counterparty') }}"
                 >&times;</button>
             @endif
         </span>
-        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="Counterparty filter">
+        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.counterparty_dialog') }}">
             <div class="srch-popover-inner">
                 @foreach ($availableCounterparties as $counterparty)
                     <label class="srch-check-row">
@@ -133,12 +134,12 @@
 <div class="relative" x-data="{ open: false }" x-on:keydown.escape.window="open = false">
     @php
         $amountActive = ($filterAmountMin ?? '') !== '' || ($filterAmountMax ?? '') !== '' || ($filterAmountDir ?? 'both') !== 'both';
-        $amountLabel = 'Amount &#9662;';
+        $amountLabel = Lang::get('reports::builder.filter.amount').' &#9662;';
         if ($amountActive) {
             if (($filterAmountDir ?? 'both') === 'in') {
-                $amountLabel = 'In';
+                $amountLabel = Lang::get('reports::builder.filter.dir_in');
             } elseif (($filterAmountDir ?? 'both') === 'out') {
-                $amountLabel = 'Out';
+                $amountLabel = Lang::get('reports::builder.filter.dir_out');
             }
             if (($filterAmountMin ?? '') !== '') {
                 $amountLabel .= ' &gt; €'.number_format((float) ($filterAmountMin ?? 0), 2, ',', '.');
@@ -157,14 +158,14 @@
                 type="button"
                 wire:click.stop="$set('filterAmountMin', ''); $set('filterAmountMax', ''); $set('filterAmountDir', 'both')"
                 class="srch-chip-close"
-                aria-label="Remove amount filter"
+                aria-label="{{ Lang::get('reports::builder.filter.remove_amount') }}"
             >&times;</button>
         @endif
     </span>
-    <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="Amount filter">
+    <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.amount_dialog') }}">
         <div class="srch-popover-inner">
             <div class="srch-dir-group mb-3">
-                @foreach (['both' => 'Both', 'in' => 'In', 'out' => 'Out'] as $val => $lbl)
+                @foreach (['both' => Lang::get('reports::builder.filter.dir_both'), 'in' => Lang::get('reports::builder.filter.dir_in'), 'out' => Lang::get('reports::builder.filter.dir_out')] as $val => $lbl)
                     <label class="srch-radio-row">
                         <input type="radio" wire:model.live="filterAmountDir" value="{{ $val }}" class="srch-radio" />
                         <span>{{ $lbl }}</span>
@@ -173,9 +174,9 @@
             </div>
             <div class="srch-amount-range">
                 {{-- WR-01: debounced so rapid typing doesn't fire an overlapping Livewire round trip per keystroke (Livewire's own textbook race condition for un-debounced live text/number inputs). --}}
-                <input type="number" wire:model.live.debounce.500ms="filterAmountMin" min="0" step="0.01" placeholder="Min" class="srch-amount-input" aria-label="Minimum amount" />
+                <input type="number" wire:model.live.debounce.500ms="filterAmountMin" min="0" step="0.01" placeholder="{{ Lang::get('reports::builder.filter.min') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.min_aria') }}" />
                 <span class="srch-date-sep">–</span>
-                <input type="number" wire:model.live.debounce.500ms="filterAmountMax" min="0" step="0.01" placeholder="Max" class="srch-amount-input" aria-label="Maximum amount" />
+                <input type="number" wire:model.live.debounce.500ms="filterAmountMax" min="0" step="0.01" placeholder="{{ Lang::get('reports::builder.filter.max') }}" class="srch-amount-input" aria-label="{{ Lang::get('reports::builder.filter.max_aria') }}" />
             </div>
         </div>
     </div>

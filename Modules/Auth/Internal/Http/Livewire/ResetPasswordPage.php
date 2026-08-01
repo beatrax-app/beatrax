@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\ResetPasswordAction;
+use Modules\Core\Public\Support\Lang;
 
 final class ResetPasswordPage extends Component
 {
@@ -29,7 +30,7 @@ final class ResetPasswordPage extends Component
     public function submit(ResetPasswordAction $reset, UrlGenerator $urls, Session $session): void
     {
         if ($this->newPassword !== $this->newPasswordConfirmation) {
-            $this->flashMessage = 'Passwords do not match.';
+            $this->flashMessage = Lang::get('auth::reset_password.error_mismatch');
             $this->resetPasswordFields();
 
             return;
@@ -44,7 +45,7 @@ final class ResetPasswordPage extends Component
             return;
         }
 
-        $session->flash(self::FLASH_KEY, 'Password updated. Sign in with your new password.');
+        $session->flash(self::FLASH_KEY, Lang::get('auth::reset_password.success'));
 
         $this->redirect($urls->route('login'), navigate: false);
     }
@@ -54,7 +55,7 @@ final class ResetPasswordPage extends Component
         $view = $views->make('auth::livewire.reset-password-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Reset your password · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('auth::reset_password.page_title')]);
 
         return $view;
     }
@@ -84,6 +85,6 @@ final class ResetPasswordPage extends Component
             }
         }
 
-        return 'The password could not be reset.';
+        return Lang::get('auth::reset_password.error_generic');
     }
 }

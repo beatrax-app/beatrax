@@ -159,6 +159,7 @@ final class ImportServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'import');
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'import');
 
         $livewire->component('import.upload-wizard', UploadWizard::class);
         $livewire->component('import.preview-wizard', PreviewWizard::class);

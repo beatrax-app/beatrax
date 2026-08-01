@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'activeCount'  => 0,       // Number of active filter values (shows badge when > 0)
     'searchModel'  => null,    // wire:model target for the search input (optional)
@@ -17,8 +18,8 @@
         <span class="ic" aria-hidden="true">⌕</span>
         <input
             type="search"
-            placeholder="Search…"
-            aria-label="Search"
+            placeholder="{{ Lang::get('core::components.search_placeholder') }}"
+            aria-label="{{ Lang::get('core::components.search_aria') }}"
             @if ($searchModel) wire:model.live.debounce.300ms="{{ $searchModel }}" @endif
             style="font-size: 16px;"
         />
@@ -26,10 +27,10 @@
     <button
         type="button"
         class="filter-trigger-btn"
-        aria-label="Open filters{{ $activeCount > 0 ? ', ' . $activeCount . ' active' : '' }}"
+        aria-label="{{ Lang::get('core::components.open_filters') }}{{ $activeCount > 0 ? Lang::get('core::components.filters_active', ['count' => $activeCount]) : '' }}"
         {{ $attributes->only('wire:click') }}
     >
-        <span>Filters</span>
+        <span>{{ Lang::get('core::components.filters') }}</span>
         @if ($activeCount > 0)
             <span
                 class="side-badge"

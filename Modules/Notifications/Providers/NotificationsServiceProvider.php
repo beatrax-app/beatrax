@@ -92,6 +92,9 @@ final class NotificationsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'notifications');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'notifications');
+        }
 
         $livewire->component('notifications.page', NotificationsPage::class);
         $livewire->component('notifications.settings-section', NotificationsSettingsSection::class);

@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Logging\LogFileStats;
 
 /**
@@ -39,8 +40,8 @@ final class LogTailerPage extends Component
         $this->dispatch(
             'toast',
             message: $freed > 0
-                ? sprintf('Log truncated — freed %s.', self::humanBytes($freed))
-                : 'Nothing to truncate.',
+                ? Lang::get('dev::logs.toast.truncated', ['size' => self::humanBytes($freed)])
+                : Lang::get('dev::logs.toast.nothing'),
         );
         $this->dispatch('logs:truncated');
     }

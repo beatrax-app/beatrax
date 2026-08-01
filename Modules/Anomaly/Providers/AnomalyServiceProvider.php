@@ -66,6 +66,9 @@ final class AnomalyServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'anomaly');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'anomaly');
+        }
 
         $livewire->component('anomaly.dashboard-anomaly-badge', DashboardAnomalyBadge::class);
         $livewire->component('anomaly.settings-section', AnomalySettingsSection::class);

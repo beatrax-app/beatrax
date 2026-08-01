@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Connect-paypal step — wizard step 3. PayPal's per-event export is
     "Rapport Transactiegegevens" (Transaction Details Report), so the
@@ -20,40 +21,37 @@
     other parse-time failure.
 --}}
 <section class="wiz-step wiz-step-connect-paypal" aria-labelledby="wiz-connect-paypal-h1">
-    <x-onboarding::wiz-eyebrow step="connect-paypal" glyph="💸">Your PayPal account</x-onboarding::wiz-eyebrow>
+    <x-onboarding::wiz-eyebrow step="connect-paypal" glyph="💸">{{ Lang::get('onboarding::connect_paypal.eyebrow') }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-paypal-h1" class="wiz-h1">
-        Connect your PayPal account
+        {{ Lang::get('onboarding::connect_paypal.h1') }}
     </h1>
     <p class="wiz-lede">
-        Drop your PayPal transaction details export — listed as
-        <em lang="nl">Rapport Transactiegegevens</em> in a Dutch PayPal account. The
-        balance report (<span lang="nl">Saldorapport</span>) won't work — we need
-        per-event data.
+        {!! Lang::get('onboarding::connect_paypal.lede_html') !!}
     </p>
 
     <div class="mini-steps">
-        <x-onboarding::mini-step glyph="🔐" label="Log in" sub="paypal.com" state="done" />
-        <x-onboarding::mini-step glyph="📑" label="Custom statements" sub="Aangepast → Betalingen" subLang="nl" state="done" />
-        <x-onboarding::mini-step glyph="📅" label="Pick a range" sub="Last 12 months" state="now" />
-        <x-onboarding::mini-step glyph="⬇️" label="Download as CSV" sub="Rapport Transactiegegevens" subLang="nl" state="upcoming" />
+        <x-onboarding::mini-step glyph="🔐" :label="Lang::get('onboarding::connect_paypal.mini.login_label')" sub="paypal.com" state="done" />
+        <x-onboarding::mini-step glyph="📑" :label="Lang::get('onboarding::connect_paypal.mini.custom_label')" sub="Aangepast → Betalingen" subLang="nl" state="done" />
+        <x-onboarding::mini-step glyph="📅" :label="Lang::get('onboarding::connect_paypal.mini.range_label')" :sub="Lang::get('onboarding::connect_paypal.mini.range_sub')" state="now" />
+        <x-onboarding::mini-step glyph="⬇️" :label="Lang::get('onboarding::connect_paypal.mini.download_label')" sub="Rapport Transactiegegevens" subLang="nl" state="upcoming" />
     </div>
 
-    <div class="format-chips" aria-label="PayPal exports as CSV only">
-        <span class="format-chips-label">Got it as:</span>
-        <x-onboarding::format-chip label="PayPal CSV" badge="only format" />
+    <div class="format-chips" aria-label="{{ Lang::get('onboarding::connect_paypal.format_group_aria') }}">
+        <span class="format-chips-label">{{ Lang::get('onboarding::connect_paypal.got_it_as') }}</span>
+        <x-onboarding::format-chip label="PayPal CSV" :badge="Lang::get('onboarding::connect_paypal.badge_only_format')" />
     </div>
 
     <x-onboarding::drop-zone
         wire-model="activityCsv"
-        lead="Drop your transaction details CSV here"
-        sublink="or browse for a file"
+        :lead="Lang::get('onboarding::connect_paypal.drop_lead')"
+        :sublink="Lang::get('onboarding::connect_paypal.browse_file')"
         glyph="📥"
         accept=".csv"
     />
 
     @if ($activityCsv !== null)
         <p class="wiz-file-ready">
-            {{ $activityCsv->getClientOriginalName() }} · ✓ ready
+            {{ $activityCsv->getClientOriginalName() }} {{ Lang::get('onboarding::connect_paypal.file_ready') }}
         </p>
     @endif
 
@@ -71,7 +69,7 @@
             class="pill-btn-ghost"
             wire:click="skip"
         >
-            Skip this step
+            {{ Lang::get('onboarding::connect_paypal.skip') }}
         </button>
         <button
             type="button"
@@ -79,7 +77,7 @@
             wire:click="submit"
             wire:loading.attr="disabled"
         >
-            Continue →
+            {{ Lang::get('onboarding::connect_paypal.continue') }}
         </button>
     </x-onboarding::wiz-actions>
 </section>

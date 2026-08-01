@@ -1,12 +1,13 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="mx-auto max-w-md px-8 py-12 space-y-12">
     <header class="space-y-1">
-        <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Add a user</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Create an account for someone else on this machine. They will be asked to set their own password the first time they sign in.</p>
+        <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::add_user.title') }}</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::add_user.subtitle') }}</p>
     </header>
 
     <form wire:submit="submit" class="space-y-4">
         <div class="space-y-1">
-            <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">Username</label>
+            <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::add_user.username') }}</label>
             <input
                 type="text"
                 id="username"
@@ -18,7 +19,7 @@
         </div>
 
         <div class="space-y-1">
-            <label for="initial-password" class="block text-sm text-slate-900 dark:text-slate-100">Initial password</label>
+            <label for="initial-password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::add_user.initial_password') }}</label>
             <input
                 type="password"
                 id="initial-password"
@@ -26,11 +27,11 @@
                 autocomplete="new-password"
                 class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
             />
-            <p class="text-xs text-slate-500 dark:text-slate-400">Type a password they can read aloud or type once. They will replace it on first login.</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('auth::add_user.initial_password_hint') }}</p>
         </div>
 
         <div class="space-y-1">
-            <label for="initial-password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">Confirm initial password</label>
+            <label for="initial-password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::add_user.confirm_initial_password') }}</label>
             <input
                 type="password"
                 id="initial-password-confirmation"
@@ -48,7 +49,7 @@
             type="submit"
             class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
         >
-            Set initial password
+            {{ Lang::get('auth::add_user.submit') }}
         </button>
     </form>
 </div>

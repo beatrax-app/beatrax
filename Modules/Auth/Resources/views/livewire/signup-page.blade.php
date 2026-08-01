@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div
         class="w-full max-w-md mx-auto px-6 space-y-6"
@@ -9,13 +10,13 @@
         }"
     >
         <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Welcome to beatrax</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Create the first account on this device. The first account becomes the owner.</p>
+            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::signup.title') }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::signup.subtitle') }}</p>
         </header>
 
         <form wire:submit="submit" class="space-y-4">
             <div class="space-y-1">
-                <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">Username</label>
+                <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::signup.username') }}</label>
                 <input
                     type="text"
                     id="username"
@@ -25,11 +26,11 @@
                     aria-describedby="username-hint"
                     class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                 />
-                <p id="username-hint" class="text-xs text-slate-500 dark:text-slate-400">Saved in lowercase. This becomes the owner account.</p>
+                <p id="username-hint" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('auth::signup.username_hint') }}</p>
             </div>
 
             <div class="space-y-1">
-                <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">Password</label>
+                <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::signup.password') }}</label>
                 <input
                     type="password"
                     id="password"
@@ -39,11 +40,11 @@
                     aria-describedby="password-requirements"
                     class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                 />
-                <p class="text-xs text-slate-500 dark:text-slate-400">Use a passphrase you can remember — there is no password reset, only recovery codes.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('auth::signup.password_hint') }}</p>
             </div>
 
             <div class="space-y-1">
-                <label for="password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">Confirm password</label>
+                <label for="password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::signup.confirm_password') }}</label>
                 <input
                     type="password"
                     id="password-confirmation"
@@ -55,10 +56,10 @@
             </div>
 
             {{-- Live requirement checklist — each row ticks as the field is typed (client-side, no roundtrip). --}}
-            <ul id="password-requirements" class="space-y-1.5" aria-live="polite" aria-label="Password requirements">
+            <ul id="password-requirements" class="space-y-1.5" aria-live="polite" aria-label="{{ Lang::get('auth::signup.requirements_aria') }}">
                 <template x-for="req in [
-                    { label: 'At least 12 characters', ok: lengthOk },
-                    { label: 'Both passwords match', ok: matchOk },
+                    { label: '{{ Lang::get('auth::signup.req_length') }}', ok: lengthOk },
+                    { label: '{{ Lang::get('auth::signup.req_match') }}', ok: matchOk },
                 ]" :key="req.label">
                     <li class="flex items-center gap-2 text-xs transition-colors"
                         :class="req.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'">
@@ -74,7 +75,7 @@
                             </svg>
                         </span>
                         <span x-text="req.label"></span>
-                        <span class="sr-only" x-text="req.ok ? '(met)' : '(not met yet)'"></span>
+                        <span class="sr-only" x-text="req.ok ? '{{ Lang::get('auth::signup.req_met') }}' : '{{ Lang::get('auth::signup.req_unmet') }}'"></span>
                     </li>
                 </template>
             </ul>
@@ -87,7 +88,7 @@
                 type="submit"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
             >
-                Create the first account
+                {{ Lang::get('auth::signup.submit') }}
             </button>
         </form>
     </div>

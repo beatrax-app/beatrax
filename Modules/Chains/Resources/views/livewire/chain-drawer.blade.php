@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- Chain drill-down drawer (UI-02 / CHN-04, D-90 / D-91 / D-92 / D-93).
 
      Project's first Flux flyout. The Livewire SFC dispatches
@@ -32,26 +33,26 @@
     <flux:modal name="chain-drawer" flyout position="right" class="md:w-2xl">
         <flux:heading size="lg" class="sticky top-0 bg-white z-10 pb-3 -mx-6 px-6 dark:bg-slate-950">
             @if ($tree !== null && count($tree->nodes) > 0 && $tree->nodes[0]->counterpartyName !== '')
-                Chain for {{ $tree->nodes[0]->counterpartyName }}
+                {{ Lang::get('chains::drawer.heading_named', ['name' => $tree->nodes[0]->counterpartyName]) }}
             @elseif ($tree !== null && count($tree->nodes) > 0 && $tree->nodes[0]->accountName !== '')
-                Chain for {{ $tree->nodes[0]->accountName }}
+                {{ Lang::get('chains::drawer.heading_named', ['name' => $tree->nodes[0]->accountName]) }}
             @else
-                Chain
+                {{ Lang::get('chains::drawer.heading') }}
             @endif
         </flux:heading>
 
         @if ($tree === null)
             <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Chain not yet resolved</h3>
+                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::drawer.unresolved_heading') }}</h3>
                 <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    The chain resolver is still running. Open the review queue or refresh in a moment.
+                    {{ Lang::get('chains::drawer.unresolved_body') }}
                 </p>
             </div>
         @elseif (count($tree->nodes) === 0)
             <div class="px-6 pt-md">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">No funding chain found</h3>
+                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::drawer.none_heading') }}</h3>
                 <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    This transaction has no detected funding chain. If you expected one, file a candidate from the review queue.
+                    {{ Lang::get('chains::drawer.none_body') }}
                 </p>
             </div>
         @elseif (count($tree->nodes) === 1)
@@ -60,7 +61,7 @@
             <div class="overflow-x-scroll-wrapper px-6 py-md space-y-md" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 @include('chains::livewire.partials.chain-node', ['node' => $tree->nodes[0], 'fanoutPage' => $fanoutPage])
                 <div class="rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
-                    <p class="text-xs text-slate-500 dark:text-slate-400">No funding chain found beyond this leg.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('chains::drawer.none_beyond_leg') }}</p>
                 </div>
             </div>
         @else

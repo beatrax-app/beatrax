@@ -119,6 +119,9 @@ final class ForecastingServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'forecasting');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'forecasting');
+        }
 
         $livewire->component('forecasting.forecast-page', ForecastPage::class);
         $livewire->component('forecasting.account-buffer-editor', AccountBufferEditor::class);

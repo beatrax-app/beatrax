@@ -13,6 +13,7 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
@@ -30,7 +31,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
 {
     // A missing row and a cross-user row are deliberately the same
     // message: telling them apart would confirm the row exists.
-    private const NOT_FOUND_MESSAGE = 'Transaction not found or not owned by user.';
+    private const NOT_FOUND_KEY = 'ledger::detail.errors.not_found_or_unowned';
 
     use CoercesScalars;
 
@@ -88,7 +89,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             ->first($columns);
 
         if ($parent === null) {
-            throw new InvalidArgumentException(self::NOT_FOUND_MESSAGE);
+            throw new InvalidArgumentException(Lang::get(self::NOT_FOUND_KEY));
         }
 
         return $parent;
@@ -103,25 +104,25 @@ final class SaveTransactionSplit implements SavesTransactionSplit
         // above — no extra query. TransactionDetail's catch blocks
         // convert this into a warn toast, staying warn-first end-to-end.
         if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
-            throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
+            throw new InvalidArgumentException(Lang::get('ledger::detail.errors.reconciled_split'));
         }
 
         $parentType = self::toString($parent->type);
         if (TransactionType::tryFrom($parentType)?->isSplittable() !== true) {
-            throw new InvalidArgumentException("Transaction type '{$parentType}' is not splittable.");
+            throw new InvalidArgumentException(Lang::get('ledger::detail.errors.not_splittable', ['type' => $parentType]));
         }
 
         if (count($legs) < 2) {
-            throw new InvalidArgumentException('A split requires at least 2 legs.');
+            throw new InvalidArgumentException(Lang::get('ledger::detail.errors.min_two_legs'));
         }
 
         $parentMinorForSignCheck = self::toInt($parent->settled_amount_minor);
         foreach ($legs as $leg) {
             if ($leg['settled_amount_minor'] === 0) {
-                throw new InvalidArgumentException('Leg amounts must be non-zero.');
+                throw new InvalidArgumentException(Lang::get('ledger::detail.errors.legs_non_zero'));
             }
             if (($leg['settled_amount_minor'] < 0) !== ($parentMinorForSignCheck < 0)) {
-                throw new InvalidArgumentException('Leg amounts must share the parent\'s sign.');
+                throw new InvalidArgumentException(Lang::get('ledger::detail.errors.legs_parent_sign'));
             }
 
             $this->assertCategoryVisible($user, $leg['category_id']);
@@ -142,7 +143,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             ->exists();
 
         if (! $visible) {
-            throw new InvalidArgumentException('Leg category not found or not accessible by user.');
+            throw new InvalidArgumentException(Lang::get('ledger::detail.errors.leg_category_not_accessible'));
         }
     }
 
@@ -341,7 +342,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             ->exists();
 
         if (! $categoryVisible) {
-            throw new InvalidArgumentException('Surviving category not found or not accessible by user.');
+            throw new InvalidArgumentException(Lang::get('ledger::detail.errors.survivor_not_accessible'));
         }
 
         /** @var list<int> $removedIds */
@@ -355,13 +356,13 @@ final class SaveTransactionSplit implements SavesTransactionSplit
                 ->first(['id', 'status']);
 
             if ($parent === null) {
-                throw new InvalidArgumentException(self::NOT_FOUND_MESSAGE);
+                throw new InvalidArgumentException(Lang::get(self::NOT_FOUND_KEY));
             }
 
             // Reconciled lock: reuses the already user-scoped parent
             // load above — no extra query.
             if (self::toString($parent->status) === ClearedStatus::Reconciled->value) {
-                throw new InvalidArgumentException('This transaction is reconciled. Un-reconcile it to change its split.');
+                throw new InvalidArgumentException(Lang::get('ledger::detail.errors.reconciled_split'));
             }
 
             $legRows = $this->db->connection()
@@ -375,7 +376,7 @@ final class SaveTransactionSplit implements SavesTransactionSplit
             );
 
             if ($legRows->isNotEmpty() && ! $survivorIsCurrentLeg) {
-                throw new InvalidArgumentException('Surviving category must be one of the split\'s current leg categories.');
+                throw new InvalidArgumentException(Lang::get('ledger::detail.errors.survivor_must_be_current'));
             }
 
             $removedIds = $legRows->map(static fn (object $row): int => self::toInt($row->id))->all();

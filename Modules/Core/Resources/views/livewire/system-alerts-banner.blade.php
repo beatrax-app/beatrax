@@ -25,8 +25,9 @@
     system_alerts.message may carry operator-controlled text that we
     treat as untrusted.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 <section
-    aria-label="System alerts"
+    aria-label="{{ Lang::get('core::alerts.banner_aria') }}"
     {{--
         `px-6` matches the horizontal gutter the main content uses (so
         an alert card lines up with the dashboard's header). `space-y-2`

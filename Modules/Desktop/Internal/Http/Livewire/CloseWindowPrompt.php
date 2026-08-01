@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 
 // Keeping the app in the tray is the calmer default because it keeps
@@ -16,16 +17,6 @@ use Modules\Desktop\Internal\Native\WindowCloseBehavior;
 // "keep in tray" button (vs. the rose "quit") reinforces this.
 final class CloseWindowPrompt extends Component
 {
-    public const TITLE = 'Keep beatrax running?';
-
-    public const BODY = 'Closing the window can either quit beatrax completely or keep it running quietly in the menu bar so scheduled email scans continue.';
-
-    public const BUTTON_QUIT = 'Quit beatrax';
-
-    public const BUTTON_KEEP_IN_TRAY = 'Keep running in the tray';
-
-    public const CHECKBOX_REMEMBER = 'Remember my choice';
-
     public const MODAL_NAME = 'close-window-prompt';
 
     public bool $rememberChoice = true;
@@ -61,11 +52,11 @@ final class CloseWindowPrompt extends Component
     public function render(ViewFactory $views): View
     {
         return $views->make('desktop::close-window-prompt', [
-            'title' => self::TITLE,
-            'body' => self::BODY,
-            'buttonQuit' => self::BUTTON_QUIT,
-            'buttonKeepInTray' => self::BUTTON_KEEP_IN_TRAY,
-            'checkboxRemember' => self::CHECKBOX_REMEMBER,
+            'title' => Lang::get('desktop::screens.close.title'),
+            'body' => Lang::get('desktop::screens.close.body'),
+            'buttonQuit' => Lang::get('desktop::screens.close.button_quit'),
+            'buttonKeepInTray' => Lang::get('desktop::screens.close.button_keep_in_tray'),
+            'checkboxRemember' => Lang::get('desktop::screens.close.checkbox_remember'),
             'modalName' => self::MODAL_NAME,
         ]);
     }

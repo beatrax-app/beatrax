@@ -31,23 +31,24 @@
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Core\Public\Support\Lang')
 @props(['section'])
 @php
     /** @var \Modules\Import\Public\Dto\ConsolidatedPreviewSection $section */
 
     $eyebrowLabel = match ($section->sourceFormat) {
-        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => 'FROM YOUR BANK STATEMENT',
-        'ics-pdf' => 'FROM YOUR ICS CARD STATEMENTS',
-        'paypal-csv' => 'FROM PAYPAL',
-        default => 'FROM '.strtoupper(str_replace('-', ' ', $section->sourceFormat)),
+        SourceFormat::Camt053->value, SourceFormat::Mt940->value, SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => Lang::get('onboarding::first_import.section.from_bank'),
+        'ics-pdf' => Lang::get('onboarding::first_import.section.from_ics'),
+        'paypal-csv' => Lang::get('onboarding::first_import.section.from_paypal'),
+        default => Lang::get('onboarding::first_import.section.from_prefix').strtoupper(str_replace('-', ' ', $section->sourceFormat)),
     };
 
     $rowCount = $section->totalRows;
     $statusBadge = match ($section->status) {
-        'ready' => '✓ READY',
-        'empty' => 'EMPTY',
-        'error' => 'NEEDS RE-UPLOAD',
-        'filtered' => 'ALREADY IMPORTED',
+        'ready' => Lang::get('onboarding::first_import.section.badge_ready'),
+        'empty' => Lang::get('onboarding::first_import.section.badge_empty'),
+        'error' => Lang::get('onboarding::first_import.section.badge_error'),
+        'filtered' => Lang::get('onboarding::first_import.section.badge_filtered'),
         default => '',
     };
 
@@ -72,7 +73,7 @@
         class="{{ $eyebrowClass }}"
     >
         <span class="preview-section-label">{{ $eyebrowLabel }}</span>
-        <span class="preview-section-count">· {{ $rowCount }} {{ $rowCount === 1 ? 'ROW' : 'ROWS' }}</span>
+        <span class="preview-section-count">· {{ $rowCount }} {{ $rowCount === 1 ? Lang::get('onboarding::first_import.section.row_one') : Lang::get('onboarding::first_import.section.row_many') }}</span>
         @if ($statusBadge !== '')
             <span class="{{ $badgeClass }}">· {{ $statusBadge }}</span>
         @endif
@@ -80,22 +81,22 @@
 
     @if ($section->status === 'error')
         <p class="preview-section-error" role="alert">
-            We couldn't read all of the files for this source. Try a different file →
+            {{ Lang::get('onboarding::first_import.section.error_body') }}
         </p>
     @elseif ($section->status === 'empty')
-        <p class="preview-section-empty">This statement is empty.</p>
+        <p class="preview-section-empty">{{ Lang::get('onboarding::first_import.section.empty_body') }}</p>
     @elseif ($section->status === 'filtered')
         <p class="preview-section-filtered">
-            This statement was already imported elsewhere — we left it out.
+            {{ Lang::get('onboarding::first_import.section.filtered_body') }}
         </p>
     @else
         <table class="preview-section-table">
             <thead>
                 <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Counterparty</th>
-                    <th scope="col">Amount</th>
+                    <th scope="col">{{ Lang::get('onboarding::first_import.section.col_date') }}</th>
+                    <th scope="col">{{ Lang::get('onboarding::first_import.section.col_type') }}</th>
+                    <th scope="col">{{ Lang::get('onboarding::first_import.section.col_counterparty') }}</th>
+                    <th scope="col">{{ Lang::get('onboarding::first_import.section.col_amount') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -155,11 +156,11 @@
                     class="preview-section-load-more"
                     wire:click="loadMoreRows('{{ $section->sourceFormat }}')"
                 >
-                    Load more ({{ $remaining }} remaining)
+                    {{ Lang::get('onboarding::first_import.section.load_more', ['remaining' => $remaining]) }}
                 </button>
             </div>
         @elseif ($shownCount > 0 && $section->totalRows > 0)
-            <p class="preview-section-more">{{ $shownCount }} rows shown</p>
+            <p class="preview-section-more">{{ Lang::get('onboarding::first_import.section.rows_shown', ['count' => $shownCount]) }}</p>
         @endif
     @endif
 </section>

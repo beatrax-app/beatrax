@@ -15,6 +15,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\BiometricUnlockBridge;
 
@@ -75,7 +76,7 @@ final class MobileLockScreen extends Component
         Clock $clock,
     ): void {
         if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
-            $this->flashMessage = 'PIN must be at least 4 digits.';
+            $this->flashMessage = Lang::get('mobile::lock.errors.pin_length');
 
             return;
         }
@@ -87,15 +88,15 @@ final class MobileLockScreen extends Component
             $lockedUntil = $gateway->pinLockedUntil($user->id);
             if ($lockedUntil !== null) {
                 $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
-                $this->flashMessage = "Too many attempts — try again in {$seconds}s.";
+                $this->flashMessage = Lang::get('mobile::lock.errors.too_many_attempts', ['seconds' => $seconds]);
 
                 return;
             }
 
             $remaining = $gateway->remainingPinAttempts($user->id);
             $this->flashMessage = $remaining !== null
-                ? "Incorrect PIN. {$remaining} attempts remaining."
-                : 'Incorrect PIN.';
+                ? Lang::get('mobile::lock.errors.incorrect_pin_remaining', ['count' => $remaining])
+                : Lang::get('mobile::lock.errors.incorrect_pin');
 
             return;
         }
@@ -199,7 +200,7 @@ final class MobileLockScreen extends Component
         $view = $views->make('mobile::livewire.mobile-lock-screen');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.lock', ['title' => 'Unlock · beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::lock.page_title').' · beatrax']);
 
         return $view;
     }

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Model what-if ↗ dropdown — mounted next to the threshold editor
     on the `/recurring/series/{id}` page.
@@ -15,11 +16,11 @@
             type="button"
             wire:click="openMenu"
             class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
-        >Model what-if ↗</button>
+        >{{ Lang::get('forecasting::scenario.whatif.trigger') }} ↗</button>
     @elseif ($mode === 'menu')
         <div
             role="menu"
-            aria-label="Model what-if for {{ $seriesName }}"
+            aria-label="{{ Lang::get('forecasting::scenario.whatif.menu_aria', ['name' => $seriesName]) }}"
             class="absolute right-0 z-10 mt-1 w-56 rounded-md border border-slate-200 bg-white p-2 text-sm shadow-lg dark:bg-slate-950 dark:border-slate-700"
         >
             <button
@@ -27,32 +28,32 @@
                 role="menuitem"
                 wire:click="modelCancellation"
                 class="block w-full rounded-md px-2 py-1.5 text-left text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-slate-100"
-            >Model cancellation</button>
+            >{{ Lang::get('forecasting::scenario.whatif.model_cancellation') }}</button>
             <button
                 type="button"
                 role="menuitem"
                 wire:click="openAmountForm"
                 class="block w-full rounded-md px-2 py-1.5 text-left text-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-slate-100"
-            >Model amount change…</button>
+            >{{ Lang::get('forecasting::scenario.whatif.model_amount_change') }}</button>
             <div class="mt-1 border-t border-slate-100 pt-1">
                 <button
                     type="button"
                     wire:click="closeMenu"
                     class="block w-full rounded-md px-2 py-1.5 text-left text-xs text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 dark:text-slate-400"
-                >Cancel</button>
+                >{{ Lang::get('forecasting::scenario.cancel') }}</button>
             </div>
         </div>
     @elseif ($mode === 'amount-form')
         <div
             role="dialog"
-            aria-label="Model amount change for {{ $seriesName }}"
+            aria-label="{{ Lang::get('forecasting::scenario.whatif.amount_dialog_aria', ['name' => $seriesName]) }}"
             class="absolute right-0 z-10 mt-1 w-72 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-lg dark:bg-slate-950 dark:border-slate-700"
         >
-            <p class="text-xs text-slate-500 dark:text-slate-400">Current amount</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.whatif.current_amount') }}</p>
             <p class="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ number_format(abs($currentAmountMinor) / Money::MINOR_UNITS_PER_MAJOR, 2, ',', '.') }} {{ $currency }}
             </p>
-            <label class="block text-xs text-slate-500 dark:text-slate-400">New amount
+            <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.whatif.new_amount') }}
                 <input
                     type="text"
                     wire:model.live="newAmountInput"
@@ -69,12 +70,12 @@
                     type="button"
                     wire:click="saveAmountChange"
                     class="rounded-md bg-emerald-600 px-3 py-1 text-sm text-white hover:bg-emerald-700 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-                >Save</button>
+                >{{ Lang::get('forecasting::scenario.save') }}</button>
                 <button
                     type="button"
                     wire:click="closeMenu"
                     class="rounded-md bg-slate-100 px-3 py-1 text-sm text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >Cancel</button>
+                >{{ Lang::get('forecasting::scenario.cancel') }}</button>
             </div>
         </div>
     @endif

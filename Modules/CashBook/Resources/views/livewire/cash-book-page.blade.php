@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -12,16 +13,15 @@
     {{-- Tax tag picker — rendered once for the whole page (not per-row). --}}
     @include('tax::components.tax-tag-popover')
     <header class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Cash book</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.heading') }}</h1>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Record cash and other off-bank spending by hand. Manual entries flow into the same
-            ledger as your imports — they categorise, recur-detect, and count toward your month.
+            {{ Lang::get('cashbook::cash-book.intro') }}
         </p>
     </header>
 
     <form wire:submit="add" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-800 dark:bg-slate-950">
-        <div role="radiogroup" aria-label="Direction" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-            @foreach (['expense' => 'Expense', 'income' => 'Income'] as $value => $label)
+        <div role="radiogroup" aria-label="{{ Lang::get('cashbook::cash-book.direction') }}" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+            @foreach (['expense' => Lang::get('cashbook::cash-book.expense'), 'income' => Lang::get('cashbook::cash-book.income')] as $value => $label)
                 <button
                     type="button"
                     role="radio"
@@ -38,21 +38,21 @@
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="space-y-1">
-                <label for="cb-amount" class="block text-sm text-slate-900 dark:text-slate-100">Amount (€)</label>
+                <label for="cb-amount" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.amount') }}</label>
                 <input id="cb-amount" type="text" inputmode="decimal" wire:model="amount" placeholder="0.00" class="{{ $input }}" />
             </div>
             <div class="space-y-1">
-                <label for="cb-date" class="block text-sm text-slate-900 dark:text-slate-100">Date</label>
+                <label for="cb-date" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.date') }}</label>
                 <input id="cb-date" type="date" wire:model="date" class="{{ $input }}" />
             </div>
             <div class="space-y-1">
-                <label for="cb-counterparty" class="block text-sm text-slate-900 dark:text-slate-100">Counterparty</label>
-                <input id="cb-counterparty" type="text" wire:model="counterparty" placeholder="e.g. Bakery" class="{{ $input }}" />
+                <label for="cb-counterparty" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.counterparty') }}</label>
+                <input id="cb-counterparty" type="text" wire:model="counterparty" placeholder="{{ Lang::get('cashbook::cash-book.counterparty_placeholder') }}" class="{{ $input }}" />
             </div>
             <div class="space-y-1">
-                <label for="cb-category" class="block text-sm text-slate-900 dark:text-slate-100">Category <span class="text-slate-400">(optional)</span></label>
+                <label for="cb-category" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.category') }} <span class="text-slate-400">{{ Lang::get('cashbook::cash-book.optional') }}</span></label>
                 <select id="cb-category" wire:model="categoryId" class="{{ $input }}">
-                    <option value="">Uncategorized</option>
+                    <option value="">{{ Lang::get('cashbook::cash-book.uncategorized') }}</option>
                     @foreach ($categories as $category)
                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                     @endforeach
@@ -61,7 +61,7 @@
         </div>
 
         <div class="space-y-1">
-            <label for="cb-description" class="block text-sm text-slate-900 dark:text-slate-100">Note <span class="text-slate-400">(optional)</span></label>
+            <label for="cb-description" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.note') }} <span class="text-slate-400">{{ Lang::get('cashbook::cash-book.optional') }}</span></label>
             <input id="cb-description" type="text" wire:model="description" class="{{ $input }}" />
         </div>
 
@@ -70,14 +70,14 @@
         @endif
 
         <button type="submit" class="w-full rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400">
-            Add entry
+            {{ Lang::get('cashbook::cash-book.add_entry') }}
         </button>
     </form>
 
     <section class="mt-8">
-        <h2 class="mb-3 text-xs uppercase tracking-wide text-[var(--color-text-faint)]">Manual entries</h2>
+        <h2 class="mb-3 text-xs uppercase tracking-wide text-[var(--color-text-faint)]">{{ Lang::get('cashbook::cash-book.manual_entries') }}</h2>
         @if (count($entries) === 0)
-            <p class="text-sm text-slate-500 dark:text-slate-400">No manual entries yet.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('cashbook::cash-book.no_entries') }}</p>
         @else
             {{-- Phone (<768px): .card-list-item per entry (D-06 daily-driver) --}}
             <div class="phone-only">
@@ -107,7 +107,7 @@
                             <button
                                 type="button"
                                 wire:click="delete({{ (int) $entry->id }})"
-                                aria-label="Delete entry"
+                                aria-label="{{ Lang::get('cashbook::cash-book.delete_entry') }}"
                                 style="background: transparent; border: 0; color: var(--color-text-muted); font-size: var(--text-xs); cursor: pointer; padding: var(--space-2); min-width: 44px; min-height: 44px;"
                             >✕</button>
                         </div>
@@ -139,9 +139,9 @@
                         <button
                             type="button"
                             wire:click="delete({{ (int) $entry->id }})"
-                            aria-label="Delete entry"
+                            aria-label="{{ Lang::get('cashbook::cash-book.delete_entry') }}"
                             class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800 dark:hover:text-rose-400"
-                        >Delete</button>
+                        >{{ Lang::get('cashbook::cash-book.delete') }}</button>
                     </li>
                 @endforeach
             </ul>

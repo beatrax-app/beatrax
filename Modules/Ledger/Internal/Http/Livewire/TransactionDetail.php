@@ -19,6 +19,7 @@ use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Internal\Http\Livewire\Concerns\ManagesSplitEditor;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
@@ -46,9 +47,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class TransactionDetail extends Component
 {
-    // The one message every reconciled-row guard shows, so the four
-    // guards cannot drift apart in wording.
-    private const RECONCILED_NOTICE = 'This transaction is reconciled. Un-reconcile it to make changes.';
+    // The one translation key every reconciled-row guard shows, so the
+    // four guards cannot drift apart in wording.
+    private const RECONCILED_NOTICE_KEY = 'ledger::detail.toast.reconciled_locked';
 
     use HandlesClearedStatus;
     use HandlesTaxTagging;
@@ -128,7 +129,7 @@ final class TransactionDetail extends Component
         // Reconciled lock: warn-first, no write. Reads the already
         // user-scoped $tx just loaded above — no extra query needed.
         if ($tx->status === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
+            $this->dispatch('toast', message: Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
@@ -188,8 +189,8 @@ final class TransactionDetail extends Component
         ));
 
         $message = $breaksPair
-            ? sprintf('Reclassified to %s — pair removed', $newType)
-            : sprintf('Reclassified to %s', $newType);
+            ? Lang::get('ledger::detail.toast.reclassified_pair_removed', ['type' => $newType])
+            : Lang::get('ledger::detail.toast.reclassified', ['type' => $newType]);
 
         $this->dispatch('toast', message: $message);
 
@@ -229,7 +230,7 @@ final class TransactionDetail extends Component
             ->value('status');
 
         if ($status === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
+            $this->dispatch('toast', message: Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
@@ -289,7 +290,7 @@ final class TransactionDetail extends Component
             ->value('status');
 
         if ($status === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
+            $this->dispatch('toast', message: Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
@@ -313,7 +314,7 @@ final class TransactionDetail extends Component
         }
 
         $this->noteSaved = true;
-        $this->dispatch('toast', message: 'Note saved');
+        $this->dispatch('toast', message: Lang::get('ledger::detail.toast.note_saved'));
     }
 
     // Delegates to HandlesClearedStatus::toggleClearedStatus(), which
@@ -338,7 +339,7 @@ final class TransactionDetail extends Component
     ): void {
         $writer->unreconcile($currentUser->user(), $this->transactionId);
 
-        $this->dispatch('toast', message: 'Un-reconciled — you can edit this transaction again.');
+        $this->dispatch('toast', message: Lang::get('ledger::detail.toast.unreconciled'));
     }
 
     // Delegates the write to Ledger's ReassignsCounterparty Public
@@ -370,7 +371,7 @@ final class TransactionDetail extends Component
         }
 
         if ($status === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
+            $this->dispatch('toast', message: Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
@@ -394,7 +395,7 @@ final class TransactionDetail extends Component
         // it owns stamping manual provenance.
         $provenance->stamp($user->id, $this->transactionId, ['counterparty_id' => 'manual']);
 
-        $this->dispatch('toast', message: 'Counterparty updated');
+        $this->dispatch('toast', message: Lang::get('ledger::detail.toast.counterparty_updated'));
     }
 
     // Deletes this transaction and emits a tombstone op so the Sync
@@ -421,7 +422,7 @@ final class TransactionDetail extends Component
         }
 
         if ($status === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
+            $this->dispatch('toast', message: Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }
@@ -596,7 +597,7 @@ final class TransactionDetail extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Transaction · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('ledger::detail.page_title').' · beatrax']);
 
         return $view;
     }

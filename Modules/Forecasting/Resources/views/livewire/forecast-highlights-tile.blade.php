@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Dashboard "Forecast highlights" tile.
 
@@ -46,26 +47,26 @@
         <a
             href="{{ route('forecast.index') }}"
             class="block rounded-lg border border-slate-200 bg-white p-6 transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700"
-            aria-label="Forecast highlights{{ $dto->activeShortfallCount > 0 ? '; ' . $dto->activeShortfallCount . ' active shortfall windows in the next 30 days' : '' }}"
+            aria-label="{{ Lang::get('forecasting::forecast.highlights_title') }}{{ $dto->activeShortfallCount > 0 ? '; ' . Lang::get('forecasting::forecast.highlights_shortfall_aria', ['count' => $dto->activeShortfallCount]) : '' }}"
         >
-            <p class="text-base font-semibold text-slate-900 dark:text-slate-100">Forecast highlights</p>
+            <p class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::forecast.highlights_title') }}</p>
 
             @if ($dto->activeShortfallCount > 0 && $dto->lowestProjectedBalanceMinor !== null)
                 <p class="mt-2 text-3xl font-semibold text-rose-700 dark:text-rose-500" style="font-variant-numeric: tabular-nums;">
-                    {{ $dto->lowestProjectedAccountName }} dips to {{ $lowestFormatted }}{{ $lowestDate !== null ? ' on ' . $lowestDate->format('d M') : '' }}
+                    {{ Lang::get('forecasting::forecast.dips_to', ['name' => $dto->lowestProjectedAccountName, 'amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->format('d M')]) : '' }}
                 </p>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                    {{ $dto->activeShortfallCount === 1 ? '1 active shortfall window' : $dto->activeShortfallCount . ' active shortfall windows' }}
+                    {{ $dto->activeShortfallCount === 1 ? Lang::get('forecasting::forecast.shortfall_window_one') : Lang::get('forecasting::forecast.shortfall_window_many', ['count' => $dto->activeShortfallCount]) }}
                 </p>
             @elseif ($dto->lowestProjectedBalanceMinor !== null)
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                    Lowest in 30 days: {{ $lowestFormatted }}{{ $lowestDate !== null ? ' on ' . $lowestDate->format('d M') : '' }} &middot; {{ $dto->lowestProjectedAccountName }}
+                    {{ Lang::get('forecasting::forecast.lowest_in_30', ['amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->format('d M')]) : '' }} &middot; {{ $dto->lowestProjectedAccountName }}
                 </p>
             @endif
 
             @if ($dto->nextIcsSettlement !== null)
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                    Next ICS settlement: {{ $nextSettlementFormatted }} on {{ $dto->nextIcsSettlement->dueDate->format('d M') }}
+                    {{ Lang::get('forecasting::forecast.next_ics', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->format('d M')]) }}
                 </p>
             @endif
         </a>

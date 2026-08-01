@@ -61,6 +61,8 @@ final class CommunityServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'community');
         }
 
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'community');
+
         $events->listen(UserInstalled::class, SeedCommunityCorpus::class);
 
         // Force the NoOp fallback outside the live NativePHP runtime — see the

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     /**
      * @var array<string,mixed> $transaction  Row array with keys: id, status
@@ -22,9 +23,9 @@
 
     $variant = $status === \Modules\Ledger\Public\Enums\ClearedStatus::Uncleared->value ? 'muted' : 'ok';
     $label = match ($status) {
-        'reconciled' => 'Reconciled',
-        'uncleared' => 'Uncleared',
-        default => 'Cleared',
+        'reconciled' => Lang::get('ledger::common.status.reconciled'),
+        'uncleared' => Lang::get('ledger::common.status.uncleared'),
+        default => Lang::get('ledger::common.status.cleared'),
     };
 @endphp
 
@@ -33,7 +34,7 @@
          /reconcile workflow (13.3-04), never via this badge. --}}
     <span
         class="status-pill ok"
-        title="Reconciled — un-reconcile first to change status."
+        title="{{ Lang::get('ledger::common.badge.reconciled_hint') }}"
         data-testid="cleared-badge-reconciled-{{ $txId }}"
     >
         <span class="dot"></span>
@@ -47,7 +48,7 @@
         type="button"
         wire:click="$dispatch('cleared-toggle', { id: {{ $txId }} })"
         class="status-pill {{ $variant }} cleared-badge-toggle"
-        aria-label="{{ $label }} — click to toggle"
+        aria-label="{{ Lang::get('ledger::common.badge.toggle_aria', ['label' => $label]) }}"
         data-testid="cleared-badge-{{ $txId }}"
     >
         <span class="dot"></span>

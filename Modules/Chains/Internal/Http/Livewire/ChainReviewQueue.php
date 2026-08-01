@@ -12,6 +12,7 @@ use Modules\Chains\Public\Actions\RejectChainLink;
 use Modules\Chains\Public\Exceptions\ChainLinkRequiresConcretePartnerException;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../../.docs/features/chains/architecture.md
@@ -36,7 +37,7 @@ final class ChainReviewQueue extends Component
         try {
             ($confirm)($chainLinkId, $currentUser->user());
         } catch (ChainLinkRequiresConcretePartnerException) {
-            $this->actionError = 'This candidate is a hint — open it to attach the matching transaction before confirming.';
+            $this->actionError = Lang::get('chains::review.errors.confirm_hint');
         }
     }
 
@@ -46,7 +47,7 @@ final class ChainReviewQueue extends Component
         try {
             ($reject)($chainLinkId, $currentUser->user());
         } catch (ChainLinkRequiresConcretePartnerException) {
-            $this->actionError = 'This candidate is a hint — open it to attach the matching transaction before rejecting.';
+            $this->actionError = Lang::get('chains::review.errors.reject_hint');
         }
     }
 
@@ -79,7 +80,7 @@ final class ChainReviewQueue extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Review chains · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('chains::review.page_title').' · beatrax']);
 
         return $view;
     }

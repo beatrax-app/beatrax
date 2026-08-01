@@ -1,5 +1,6 @@
+@use('Modules\Core\Public\Support\Lang')
 <div>
-    <label for="inline-category-{{ $transactionId }}" class="sr-only">Category</label>
+    <label for="inline-category-{{ $transactionId }}" class="sr-only">{{ Lang::get('categorization::detail.picker_category') }}</label>
     <select
         id="inline-category-{{ $transactionId }}"
         wire:model.live="categoryId"

@@ -1,18 +1,19 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6">
 
         {{-- ===== Step: collect_pin ===== --}}
         @if ($step === 'collect_pin')
             <header class="space-y-1">
-                <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Import from another device</h1>
+                <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.heading') }}</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Set up this phone with its own account and lock, then pair it with your other device to pull in your history.
+                    {{ Lang::get('mobile::import.subtitle') }}
                 </p>
             </header>
 
             <form wire:submit="submit" class="space-y-4">
                 <div class="space-y-1">
-                    <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">Username</label>
+                    <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.username') }}</label>
                     <input
                         type="text"
                         id="username"
@@ -24,7 +25,7 @@
                 </div>
 
                 <div class="space-y-1">
-                    <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">Password</label>
+                    <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.password') }}</label>
                     <input
                         type="password"
                         id="password"
@@ -32,11 +33,11 @@
                         autocomplete="new-password"
                         class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                     />
-                    <p class="text-xs text-slate-500 dark:text-slate-400">At least 12 characters — there is no password reset, only recovery codes.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.password_help') }}</p>
                 </div>
 
                 <div class="space-y-1">
-                    <label for="password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">Confirm password</label>
+                    <label for="password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.confirm_password') }}</label>
                     <input
                         type="password"
                         id="password-confirmation"
@@ -47,7 +48,7 @@
                 </div>
 
                 <div class="space-y-1">
-                    <label for="pin" class="block text-sm text-slate-900 dark:text-slate-100">App-lock PIN</label>
+                    <label for="pin" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.pin') }}</label>
                     <input
                         type="password"
                         inputmode="numeric"
@@ -56,11 +57,11 @@
                         autocomplete="off"
                         class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                     />
-                    <p class="text-xs text-slate-500 dark:text-slate-400">4-10 digits — unlocks this device.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.pin_help') }}</p>
                 </div>
 
                 <div class="space-y-1">
-                    <label for="confirm-pin" class="block text-sm text-slate-900 dark:text-slate-100">Confirm PIN</label>
+                    <label for="confirm-pin" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.confirm_pin') }}</label>
                     <input
                         type="password"
                         inputmode="numeric"
@@ -79,7 +80,7 @@
                     type="submit"
                     class="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                 >
-                    Continue
+                    {{ Lang::get('mobile::import.continue') }}
                 </button>
             </form>
         @endif
@@ -87,9 +88,9 @@
         {{-- ===== Step: provisioning_failed ===== --}}
         @if ($step === 'provisioning_failed')
             <div class="space-y-3 text-center">
-                <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Setup didn't finish</h1>
+                <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::import.failed_heading') }}</h1>
                 <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
-                    Your account was created, but we couldn't finish setting up this device. You can safely try again.
+                    {{ Lang::get('mobile::import.failed_body') }}
                 </p>
 
                 @if ($flashMessage !== '')
@@ -103,7 +104,7 @@
                            hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                            dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 >
-                    Try again
+                    {{ Lang::get('mobile::import.try_again') }}
                 </button>
             </div>
         @endif
@@ -115,8 +116,8 @@
                 x-data="{ confirmed: false }"
             >
                 <header class="space-y-1">
-                    <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Save these recovery codes</h1>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Print these or save them somewhere safe. They will not be shown again.</p>
+                    <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.recovery_heading') }}</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.recovery_body') }}</p>
                 </header>
 
                 <div aria-live="polite" class="grid grid-cols-2 gap-3">
@@ -129,7 +130,7 @@
 
                 <label class="flex items-start gap-2">
                     <input type="checkbox" x-model="confirmed" class="mt-1 rounded border-slate-300 dark:border-slate-600">
-                    <span class="text-sm text-slate-700 dark:text-slate-300">I have saved these codes somewhere safe.</span>
+                    <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('mobile::import.recovery_confirm') }}</span>
                 </label>
 
                 <button
@@ -142,7 +143,7 @@
                         : 'bg-emerald-600/50 cursor-not-allowed dark:bg-emerald-500/40'"
                     class="w-full min-h-[44px] rounded-md py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-500"
                 >
-                    Continue to pairing
+                    {{ Lang::get('mobile::import.continue_to_pairing') }}
                 </button>
             </div>
         @endif

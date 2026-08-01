@@ -71,6 +71,8 @@ final class TaxServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'tax');
         }
 
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'tax');
+
         $livewire->component('tax.settings-section', TaxSettingsSection::class);
 
         $livewire->component('tax.tax-page', TaxPage::class);

@@ -1,23 +1,24 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the dense log pane
      scrolls horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-4 overflow-x-auto" data-testid="log-tailer-page">
     <header class="flex items-start justify-between gap-4">
         <div class="space-y-1">
-            <h1 class="text-xl font-semibold text-[var(--color-text)]">Logs</h1>
+            <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::logs.heading') }}</h1>
             <p class="text-sm text-[var(--color-text-muted)]">
-                Live tail of the current day's Laravel log file with belt-and-braces on-write + on-stream redaction.
+                {{ Lang::get('dev::logs.subtitle') }}
             </p>
         </div>
         <button
             type="button"
             wire:click="truncate"
-            wire:confirm="Truncate today's log file? This cannot be undone."
+            wire:confirm="{{ Lang::get('dev::logs.truncate_confirm') }}"
             class="shrink-0 inline-flex items-center gap-1.5 rounded border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950"
             data-testid="log-truncate-button"
-            title="Empty today's log file (preserves the inode so the tailer resumes cleanly)"
+            title="{{ Lang::get('dev::logs.truncate_title') }}"
         >
             <span aria-hidden="true">⌫</span>
-            <span>Truncate</span>
+            <span>{{ Lang::get('dev::logs.truncate') }}</span>
         </button>
     </header>
 
@@ -46,14 +47,20 @@
             initialContains: @js($contains),
             initialChannel: @js($channel),
             initialStats: @js($initialStats),
+            labels: {
+                pollInterrupted: @js(Lang::get('dev::logs.status.poll_interrupted')),
+                paused: @js(Lang::get('dev::logs.status.paused')),
+                copyFailedPrefix: @js(Lang::get('dev::logs.status.copy_failed_prefix')),
+                clipboardUnavailable: @js(Lang::get('dev::logs.status.clipboard_unavailable')),
+            },
         })"
         x-init="start()"
         x-on:logs-truncated.window="handleTruncated()"
         class="space-y-3"
     >
         {{-- Filter row --}}
-        <section class="flex flex-wrap items-center gap-3" aria-label="Log filters">
-            <div class="flex items-center gap-1" role="group" aria-label="Severity filter">
+        <section class="flex flex-wrap items-center gap-3" aria-label="{{ Lang::get('dev::logs.filters_aria') }}">
+            <div class="flex items-center gap-1" role="group" aria-label="{{ Lang::get('dev::logs.severity_aria') }}">
                 @foreach ($allSeverities as $sev)
                     <button
                         type="button"
@@ -76,8 +83,8 @@
             <input
                 type="text"
                 x-model.debounce.250ms="channelFilter"
-                placeholder="Channel filter…"
-                aria-label="Channel filter"
+                placeholder="{{ Lang::get('dev::logs.channel_placeholder') }}"
+                aria-label="{{ Lang::get('dev::logs.channel_aria') }}"
                 class="rounded border border-slate-200 bg-white px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700"
                 data-testid="log-channel-input"
             />
@@ -85,8 +92,8 @@
             <input
                 type="text"
                 x-model.debounce.250ms="contains"
-                placeholder="Search visible…"
-                aria-label="Contains filter"
+                placeholder="{{ Lang::get('dev::logs.contains_placeholder') }}"
+                aria-label="{{ Lang::get('dev::logs.contains_aria') }}"
                 class="flex-1 min-w-40 rounded border border-slate-200 bg-white px-2 py-1 text-xs dark:bg-slate-900 dark:border-slate-700"
                 data-testid="log-contains-input"
             />
@@ -98,7 +105,7 @@
                 class="inline-flex items-center rounded border px-3 py-1 text-xs font-medium"
                 data-testid="log-pause-button"
             >
-                <span x-text="paused ? 'Resume' : 'Pause'"></span>
+                <span x-text="paused ? @js(Lang::get('dev::logs.resume')) : @js(Lang::get('dev::logs.pause'))"></span>
             </button>
         </section>
 
@@ -120,7 +127,7 @@
             data-testid="log-scrollback"
         >
             <template x-if="visibleLines.length === 0 && !paused">
-                <div class="p-3 text-xs text-slate-500">Waiting for log lines… <span class="cursor-blink">▌</span></div>
+                <div class="p-3 text-xs text-slate-500">{{ Lang::get('dev::logs.waiting') }} <span class="cursor-blink">▌</span></div>
             </template>
             <template x-for="line in visibleLines" :key="line.id">
                 <div
@@ -156,22 +163,22 @@
                             <button
                                 type="button"
                                 x-on:click.stop.prevent="copyLine(line)"
-                                x-bind:title="line.copiedAt ? 'Copied' : 'Copy full entry'"
-                                x-bind:aria-label="line.copiedAt ? 'Copied to clipboard' : 'Copy log entry'"
+                                x-bind:title="line.copiedAt ? @js(Lang::get('dev::logs.copy_title_copied')) : @js(Lang::get('dev::logs.copy_title'))"
+                                x-bind:aria-label="line.copiedAt ? @js(Lang::get('dev::logs.copy_aria_copied')) : @js(Lang::get('dev::logs.copy_aria'))"
                                 class="rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-300 hover:bg-slate-700 hover:text-slate-100"
                                 data-testid="log-copy-button"
                             >
-                                <span x-text="line.copiedAt ? '✓' : 'Copy'"></span>
+                                <span x-text="line.copiedAt ? '✓' : @js(Lang::get('dev::logs.copy'))"></span>
                             </button>
                             <button
                                 type="button"
                                 x-on:click.stop.prevent="dismissLine(line)"
-                                title="Dismiss from view (does not modify the log file)"
-                                aria-label="Dismiss log entry from view"
+                                title="{{ Lang::get('dev::logs.dismiss_title') }}"
+                                aria-label="{{ Lang::get('dev::logs.dismiss_aria') }}"
                                 class="rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-400 hover:bg-rose-900/40 hover:text-rose-300"
                                 data-testid="log-dismiss-button"
                             >
-                                Dismiss
+                                {{ Lang::get('dev::logs.dismiss') }}
                             </button>
                         </div>
                     </div>
@@ -184,8 +191,8 @@
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]" data-testid="log-totals-strip">
             <span>
-                Showing <span class="tabular-nums" x-text="visibleLines.length"></span> of
-                <span class="tabular-nums" x-text="totalReceived"></span> received (buffer cap 10k)
+                {{ Lang::get('dev::logs.totals.showing') }} <span class="tabular-nums" x-text="visibleLines.length"></span> {{ Lang::get('dev::logs.totals.of') }}
+                <span class="tabular-nums" x-text="totalReceived"></span> {{ Lang::get('dev::logs.totals.received') }}
             </span>
             <span aria-hidden="true">·</span>
             <span data-testid="log-total-lines">
@@ -193,16 +200,16 @@
                 <template x-if="stats.today.capped">
                     <span class="text-amber-600 dark:text-amber-400">+</span>
                 </template>
-                lines today
+                {{ Lang::get('dev::logs.totals.lines_today') }}
             </span>
             <span aria-hidden="true">·</span>
             <span data-testid="log-today-size">
-                <span x-text="humanBytes(stats.today.sizeBytes)"></span> today
+                <span x-text="humanBytes(stats.today.sizeBytes)"></span> {{ Lang::get('dev::logs.totals.today') }}
             </span>
             <span aria-hidden="true">·</span>
             <span data-testid="log-all-size">
-                <span x-text="humanBytes(stats.allFiles.totalBytes)"></span> across
-                <span class="tabular-nums" x-text="stats.allFiles.count"></span> daily files
+                <span x-text="humanBytes(stats.allFiles.totalBytes)"></span> {{ Lang::get('dev::logs.totals.across') }}
+                <span class="tabular-nums" x-text="stats.allFiles.count"></span> {{ Lang::get('dev::logs.totals.daily_files') }}
             </span>
         </div>
     </div>
@@ -226,6 +233,9 @@
                 severities: new Set(opts.initialSeverities || []),
                 contains: opts.initialContains || '',
                 channelFilter: opts.initialChannel || '',
+                // Server-rendered status strings so the tailer's client-side
+                // notices honour the request's resolved UI language.
+                labels: opts.labels || {},
                 buffer: [],
                 paused: false,
                 statusMessage: '',
@@ -313,7 +323,7 @@
                         this.statusMessage = '';
                     } catch (e) {
                         if (e && e.name === 'AbortError') { return; }
-                        this.statusMessage = 'Log poll interrupted. Retrying…';
+                        this.statusMessage = this.labels.pollInterrupted;
                     } finally {
                         this.pollAbort = null;
                     }
@@ -426,7 +436,7 @@
                             try { this.pollAbort.abort(); } catch (e) {}
                             this.pollAbort = null;
                         }
-                        this.statusMessage = 'Paused.';
+                        this.statusMessage = this.labels.paused;
                     } else {
                         this.statusMessage = '';
                         this.pollNow();
@@ -509,7 +519,7 @@
                         // triggers a re-render.
                         setTimeout(() => { line.copiedAt = null; }, 1500);
                     } catch (e) {
-                        this.statusMessage = 'Copy failed: ' + (e && e.message ? e.message : 'clipboard unavailable');
+                        this.statusMessage = this.labels.copyFailedPrefix + (e && e.message ? e.message : this.labels.clipboardUnavailable);
                     }
                 },
 

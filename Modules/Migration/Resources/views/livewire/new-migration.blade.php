@@ -1,11 +1,12 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="space-y-6">
     <header class="space-y-1">
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400" data-testid="migration-eyebrow">Migrations</p>
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Import from YNAB / Actual</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Bring your category tree, budget history, and transactions over from YNAB4, new YNAB, or Actual Budget. Nothing is written to your ledger until you review and confirm.</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400" data-testid="migration-eyebrow">{{ Lang::get('migration::new.eyebrow') }}</p>
+        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('migration::new.heading') }}</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('migration::new.intro') }}</p>
         @if ($reconcileOf !== null)
             <p class="text-sm text-slate-500 dark:text-slate-400" data-testid="reconcile-context">
-                Checking for updates against your last {{ $this->formatLabel($sourceProduct) }} import.
+                {{ Lang::get('migration::new.reconcile_context', ['product' => $this->formatLabel($sourceProduct)]) }}
             </p>
         @endif
     </header>
@@ -28,7 +29,7 @@
 
     <form wire:submit="submit" class="space-y-4">
         <div class="space-y-1">
-            <label for="sourceProduct" class="block text-sm text-slate-900 dark:text-slate-100">Source</label>
+            <label for="sourceProduct" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('migration::new.source_label') }}</label>
             <select
                 id="sourceProduct"
                 name="sourceProduct"
@@ -47,7 +48,7 @@
         </div>
 
         <div class="space-y-1">
-            <label for="file" class="block text-sm text-slate-900 dark:text-slate-100">File</label>
+            <label for="file" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('migration::new.file_label') }}</label>
             <input
                 type="file"
                 id="file"
@@ -65,7 +66,7 @@
             type="submit"
             class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
         >
-            Parse export
+            {{ Lang::get('migration::new.parse_button') }}
         </button>
     </form>
 </div>

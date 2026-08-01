@@ -16,6 +16,7 @@
     This screen is genuinely blocking (D-03): it offers exactly one path
     forward — waiting for parity — and no other interactive control.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 <div
     class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
             px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
@@ -41,9 +42,9 @@
              fresh-start line once this render already reflects progress. --}}
         <p aria-live="polite" class="text-lg font-semibold text-slate-900 dark:text-slate-100">
             @if ($isResuming)
-                Resuming setup…
+                {{ Lang::get('mobile::setup.resuming') }}
             @else
-                Setting up this device…
+                {{ Lang::get('mobile::setup.setting_up') }}
             @endif
         </p>
 
@@ -54,13 +55,13 @@
             aria-valuenow="{{ $percent }}"
             aria-valuemin="0"
             aria-valuemax="100"
-            aria-label="Setup progress"
+            aria-label="{{ Lang::get('mobile::setup.progress_aria') }}"
         >
             <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $percent }}%"></div>
         </div>
 
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            {{ $recordsApplied }} of {{ $recordsExpected ?? $recordsApplied }} records
+            {{ Lang::get('mobile::setup.records', ['applied' => $recordsApplied, 'expected' => $recordsExpected ?? $recordsApplied]) }}
         </p>
 
     </div>

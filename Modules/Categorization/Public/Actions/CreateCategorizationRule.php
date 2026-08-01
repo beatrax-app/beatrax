@@ -78,7 +78,7 @@ final class CreateCategorizationRule
         } catch (QueryException $e) {
             if (self::isUniqueViolation($e)) {
                 throw ValidationException::withMessages([
-                    'value' => self::DUPLICATE_MESSAGE,
+                    'value' => self::duplicateMessage(),
                 ]);
             }
             throw $e;

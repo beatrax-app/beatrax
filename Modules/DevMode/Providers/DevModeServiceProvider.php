@@ -556,6 +556,9 @@ final class DevModeServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'dev');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'dev');
+        }
 
         // Registered only when BOTH the dev_mode env flag is true AND the
         // Horizon package (require-dev) is present; the dev-shell sidebar

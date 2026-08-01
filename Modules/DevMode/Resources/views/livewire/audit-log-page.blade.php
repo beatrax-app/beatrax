@@ -1,10 +1,11 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the dense audit log
      table scrolls horizontally at phone width without breaking the page layout. --}}
 <div class="p-8 space-y-6 overflow-x-auto" data-testid="audit-log-page">
     <header class="flex items-start justify-between gap-4">
         <div class="space-y-1">
-            <h1 class="text-xl font-semibold text-[var(--color-text)]">Audit log</h1>
-            <p class="text-sm text-[var(--color-text-muted)]">Every command, queue action, and SQL query run through the Dev Console.</p>
+            <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::audit.heading') }}</h1>
+            <p class="text-sm text-[var(--color-text-muted)]">{{ Lang::get('dev::audit.subtitle') }}</p>
         </div>
         {{--
             Page-level "Clear all" action.
@@ -24,43 +25,43 @@
         <button
             type="button"
             x-data
-            x-on:click="if (window.confirm('Clear every audit log entry? This cannot be undone.')) { $wire.truncateAll() }"
+            x-on:click="if (window.confirm(@js(Lang::get('dev::audit.clear_all_confirm')))) { $wire.truncateAll() }"
             class="inline-flex items-center rounded-md border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950"
             data-testid="audit-truncate-button"
-        >Clear all</button>
+        >{{ Lang::get('dev::audit.clear_all') }}</button>
     </header>
 
     {{-- Filter chips row --}}
     <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center gap-2">
-            <label for="audit-filter-tier" class="text-xs text-slate-500 dark:text-slate-400">Tier</label>
+            <label for="audit-filter-tier" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('dev::audit.filter_tier') }}</label>
             <select
                 id="audit-filter-tier"
                 wire:model.live="tierFilter"
                 class="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
             >
-                <option value="">All</option>
-                <option value="safe">SAFE</option>
-                <option value="destructive">DESTRUCTIVE</option>
+                <option value="">{{ Lang::get('dev::audit.filter_all') }}</option>
+                <option value="safe">{{ Lang::get('dev::common.tier.safe') }}</option>
+                <option value="destructive">{{ Lang::get('dev::common.tier.destructive') }}</option>
             </select>
         </div>
         <div class="flex items-center gap-2">
-            <label for="audit-filter-caller" class="text-xs text-slate-500 dark:text-slate-400">Caller</label>
+            <label for="audit-filter-caller" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('dev::audit.filter_caller') }}</label>
             <input
                 id="audit-filter-caller"
                 type="text"
                 wire:model.live.debounce.400ms="callerFilter"
-                placeholder="username"
+                placeholder="{{ Lang::get('dev::audit.caller_placeholder') }}"
                 class="w-40 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
             />
         </div>
         <div class="flex items-center gap-2">
-            <label for="audit-filter-command" class="text-xs text-slate-500 dark:text-slate-400">Command</label>
+            <label for="audit-filter-command" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('dev::audit.filter_command') }}</label>
             <input
                 id="audit-filter-command"
                 type="text"
                 wire:model.live.debounce.400ms="commandFilter"
-                placeholder="db:restore"
+                placeholder="{{ Lang::get('dev::audit.command_placeholder') }}"
                 class="w-48 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
             />
         </div>
@@ -68,24 +69,24 @@
             type="button"
             wire:click="clearFilters"
             class="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-        >Clear</button>
+        >{{ Lang::get('dev::audit.clear') }}</button>
     </div>
 
     <div class="card overflow-hidden">
         @if ($rows->isEmpty())
             <div class="p-4">
-                <p class="text-sm text-[var(--color-text-muted)]">No audit rows match the current filters.</p>
+                <p class="text-sm text-[var(--color-text-muted)]">{{ Lang::get('dev::audit.empty') }}</p>
             </div>
         @else
             <table class="w-full text-sm tabular-nums">
                 <thead class="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
                     <tr class="text-left text-xs uppercase text-slate-500 dark:text-slate-400">
-                        <th class="px-3 py-2">Command</th>
-                        <th class="px-3 py-2">Tier</th>
-                        <th class="px-3 py-2">Caller</th>
-                        <th class="px-3 py-2">Started</th>
-                        <th class="px-3 py-2">Exit</th>
-                        <th class="px-3 py-2"><span class="sr-only">Copy</span></th>
+                        <th class="px-3 py-2">{{ Lang::get('dev::audit.col_command') }}</th>
+                        <th class="px-3 py-2">{{ Lang::get('dev::audit.col_tier') }}</th>
+                        <th class="px-3 py-2">{{ Lang::get('dev::audit.col_caller') }}</th>
+                        <th class="px-3 py-2">{{ Lang::get('dev::audit.col_started') }}</th>
+                        <th class="px-3 py-2">{{ Lang::get('dev::audit.col_exit') }}</th>
+                        <th class="px-3 py-2"><span class="sr-only">{{ Lang::get('dev::audit.col_copy') }}</span></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -160,10 +161,10 @@
                                     "
                                     class="inline-flex items-center rounded border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                                     data-testid="audit-row-copy-button"
-                                    aria-label="Copy row {{ $row['id'] }} to clipboard"
+                                    aria-label="{{ Lang::get('dev::audit.copy_row_aria', ['id' => $row['id']]) }}"
                                 >
-                                    <span x-show="!copied">Copy</span>
-                                    <span x-show="copied" x-cloak>Copied</span>
+                                    <span x-show="!copied">{{ Lang::get('dev::audit.copy') }}</span>
+                                    <span x-show="copied" x-cloak>{{ Lang::get('dev::audit.copied') }}</span>
                                 </button>
                             </td>
                         </tr>
@@ -176,19 +177,19 @@
     {{-- Cursor pager: walks back through history by pinning the
          smallest rendered id as ?before=<id>. --}}
     @if ($hasMore || $isPaged)
-        <nav class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400" aria-label="Audit pagination">
+        <nav class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400" aria-label="{{ Lang::get('dev::audit.pagination_aria') }}">
             <button
                 type="button"
                 wire:click="newer"
                 @disabled(! $isPaged)
                 class="rounded border px-3 py-1 font-medium {{ $isPaged ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
-            >Newer</button>
+            >{{ Lang::get('dev::audit.newer') }}</button>
             <button
                 type="button"
                 wire:click="older({{ $oldestRenderedId }})"
                 @disabled(! $hasMore || $oldestRenderedId <= 0)
                 class="rounded border px-3 py-1 font-medium {{ $hasMore && $oldestRenderedId > 0 ? 'border-slate-200 bg-white hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:hover:bg-slate-800' : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-600' }}"
-            >Older</button>
+            >{{ Lang::get('dev::audit.older') }}</button>
         </nav>
     @endif
 </div>

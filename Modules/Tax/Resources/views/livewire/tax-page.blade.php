@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /tax year cockpit — TAX-02 / D-09.
 
@@ -41,13 +42,13 @@
 
         <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h1 style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text);">
-                Tax {{ $year }}
+                {{ Lang::get('tax::page.title', ['year' => $year]) }}
             </h1>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 {{-- Year switcher — wire:model.live updates results immediately --}}
                 @if (count($availableYears) > 0)
-                    <div class="flex flex-wrap gap-1" role="group" aria-label="Select tax year">
+                    <div class="flex flex-wrap gap-1" role="group" aria-label="{{ Lang::get('tax::page.select_year_aria') }}">
                         @php
                             // Render ALL available years — history is retained forever
                             // (project constraint); the container flex-wraps past one
@@ -60,7 +61,7 @@
                                 wire:click="$set('year', {{ $y }})"
                                 class="rounded-md px-3 py-1 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 {{ $y === $year ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800' }}"
                                 aria-pressed="{{ $y === $year ? 'true' : 'false' }}"
-                                aria-label="Show tax year {{ $y }}"
+                                aria-label="{{ Lang::get('tax::page.show_year_aria', ['year' => $y]) }}"
                             >{{ $y }}</button>
                         @endforeach
                     </div>
@@ -74,12 +75,12 @@
                         wire:loading.attr="disabled"
                         wire:target="exportCsv"
                         class="tax-export-btn"
-                        aria-label="Export CSV"
-                        title="Download beatrax-tax-{{ $year }}.csv"
+                        aria-label="{{ Lang::get('tax::page.export_csv_aria') }}"
+                        title="{{ Lang::get('tax::page.export_csv_title', ['year' => $year]) }}"
                     >
                         <span aria-hidden="true" wire:loading.remove wire:target="exportCsv">↓</span>
                         <span aria-hidden="true" wire:loading wire:target="exportCsv">…</span>
-                        Export CSV
+                        {{ Lang::get('tax::page.export_csv') }}
                     </button>
                     <button
                         wire:click="exportPdf"
@@ -87,12 +88,12 @@
                         wire:loading.attr="disabled"
                         wire:target="exportPdf"
                         class="tax-export-btn"
-                        aria-label="Export PDF"
-                        title="Download beatrax-tax-{{ $year }}.pdf"
+                        aria-label="{{ Lang::get('tax::page.export_pdf_aria') }}"
+                        title="{{ Lang::get('tax::page.export_pdf_title', ['year' => $year]) }}"
                     >
                         <span aria-hidden="true" wire:loading.remove wire:target="exportPdf">↓</span>
                         <span aria-hidden="true" wire:loading wire:target="exportPdf">…</span>
-                        Export PDF
+                        {{ Lang::get('tax::page.export_pdf') }}
                     </button>
                 </div>
             </div>
@@ -107,16 +108,16 @@
             <div class="mx-auto max-w-md">
                 <div class="card p-8 text-center" style="border-radius: var(--radius-xl); box-shadow: var(--shadow-md);">
                     <h2 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-4);">
-                        Which country do you file taxes in?
+                        {{ Lang::get('tax::page.country_prompt_heading') }}
                     </h2>
                     <p style="font-size: var(--text-base); color: var(--color-text-muted); margin-bottom: var(--space-6);">
-                        You can change this in Settings → Tax at any time.
+                        {{ Lang::get('tax::page.country_prompt_body') }}
                     </p>
                     <a
                         href="{{ route('settings') }}#tax"
                         class="pill-btn-primary"
                         style="display: inline-block; text-decoration: none;"
-                    >Set up tax categories</a>
+                    >{{ Lang::get('tax::page.country_prompt_cta') }}</a>
                 </div>
             </div>
         @elseif ($data !== null)
@@ -127,7 +128,7 @@
 
             <div class="tax-totals-strip mb-6">
                 <div class="flex flex-col">
-                    <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">Total deductions</span>
+                    <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.total_deductions') }}</span>
                     <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text);">
                         {{ $fmtEur($data->deductionsTotalMinor) }}
                     </span>
@@ -135,7 +136,7 @@
 
                 @if ($data->incomeTotalMinor > 0)
                     <div class="flex flex-col">
-                        <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">Tax-relevant income</span>
+                        <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.income') }}</span>
                         <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-emerald);">
                             {{ $fmtEur($data->incomeTotalMinor) }}
                         </span>
@@ -143,7 +144,7 @@
                 @endif
 
                 <div class="flex flex-col">
-                    <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">Tagged items</span>
+                    <span style="font-size: var(--text-xs); color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">{{ Lang::get('tax::page.tagged_items') }}</span>
                     <span class="kpi-number" style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text-muted);">
                         {{ $data->itemCount }}
                     </span>
@@ -157,7 +158,7 @@
             @if ($data->itemCount === 0)
                 <div class="py-12 text-center">
                     <p style="font-size: var(--text-base); color: var(--color-text-muted);">
-                        Nothing tagged for {{ $year }} yet.
+                        {{ Lang::get('tax::page.empty_year', ['year' => $year]) }}
                     </p>
                     @php
                         $otherYearsCount = array_sum(
@@ -169,17 +170,17 @@
                     @endphp
                     @if ($otherYearsCount > 0)
                         <p style="font-size: var(--text-base); color: var(--color-text-faint); margin-top: var(--space-2);">
-                            You have tagged items in other years.
+                            {{ Lang::get('tax::page.other_years') }}
                         </p>
                     @else
                         <p style="font-size: var(--text-base); color: var(--color-text-faint); margin-top: var(--space-2);">
-                            Look for the “Tag” button on any transaction row to start tagging.
+                            {{ Lang::get('tax::page.start_hint') }}
                         </p>
                     @endif
                     <a
                         href="{{ route('transactions.index') }}"
                         style="display: inline-block; margin-top: var(--space-4); font-size: var(--text-base); color: var(--color-blue); text-decoration: underline;"
-                    >Go to Transactions to start tagging →</a>
+                    >{{ Lang::get('tax::page.go_to_transactions') }}</a>
                 </div>
 
             @else
@@ -211,11 +212,11 @@
                             >
                                 <div class="flex min-w-0 flex-1 items-center gap-3">
                                     <span style="font-size: var(--text-base); font-weight: 600; color: {{ $isNoCategory ? 'var(--color-text-faint)' : 'var(--color-text)' }};">
-                                        {{ $isNoCategory ? 'No category' : $catName }}
+                                        {{ $isNoCategory ? Lang::get('tax::page.no_category') : $catName }}
                                     </span>
                                     <span
                                         style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: var(--radius-full); background: var(--color-surface); border: 1px solid var(--color-border); font-size: var(--text-xs); color: var(--color-text-muted);"
-                                        aria-label="{{ $count }} items"
+                                        aria-label="{{ Lang::get('tax::page.items_count_aria', ['count' => $count]) }}"
                                     >{{ $count }}</span>
                                 </div>
                                 <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin-right: var(--space-3);">
@@ -234,13 +235,13 @@
                                 >
                                     <thead>
                                         <tr style="background: var(--color-surface-2); border-bottom: 1px solid var(--color-border);">
-                                            <th class="date px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">Date</th>
-                                            <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 6rem;">Account</th>
-                                            <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">Counterparty</th>
-                                            <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">Note</th>
-                                            <th class="money px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">Settled EUR</th>
-                                            <th class="px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 5rem;">Original</th>
-                                            <th class="px-3 py-2 text-center" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 3rem;">Year</th>
+                                            <th class="date px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_date') }}</th>
+                                            <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 6rem;">{{ Lang::get('tax::page.col_account') }}</th>
+                                            <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_counterparty') }}</th>
+                                            <th class="px-3 py-2 text-left" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em;">{{ Lang::get('tax::page.col_note') }}</th>
+                                            <th class="money px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 7rem;">{{ Lang::get('tax::page.col_settled_eur') }}</th>
+                                            <th class="px-3 py-2 text-right" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 5rem;">{{ Lang::get('tax::page.col_original') }}</th>
+                                            <th class="px-3 py-2 text-center" style="font-size: var(--text-xs); font-weight: 600; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.04em; width: 3rem;">{{ Lang::get('tax::page.col_year') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -296,7 +297,7 @@
                                                 {{-- Year / override chip --}}
                                                 <td class="px-3 py-2 text-center">
                                                     @if ($hasOverride)
-                                                        <span class="tax-badge--amber" aria-label="Tax year overridden to {{ $row['taxYearOverride'] }}">
+                                                        <span class="tax-badge--amber" aria-label="{{ Lang::get('tax::page.override_aria', ['year' => $row['taxYearOverride']]) }}">
                                                             → {{ $row['taxYearOverride'] }}
                                                         </span>
                                                     @else

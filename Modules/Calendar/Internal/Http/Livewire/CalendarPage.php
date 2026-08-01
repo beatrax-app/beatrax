@@ -17,6 +17,7 @@ use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use stdClass;
 
 /**
@@ -222,7 +223,7 @@ final class CalendarPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound */
-        $view->extends('layouts.app', ['title' => 'Calendar · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').' · beatrax']);
 
         return $view;
     }

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     /**
      * D-01 / D-02 file-staging page. Shown after the OS hands beatrax
@@ -39,8 +40,8 @@
                 </h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ $pending['extension'] === 'csv'
-                        ? 'A bank or PayPal export — start the import to preview and confirm.'
-                        : 'An email receipt — start the import to attach it to its transaction.' }}
+                        ? Lang::get('desktop::screens.staging.csv_subtitle')
+                        : Lang::get('desktop::screens.staging.eml_subtitle') }}
                 </p>
             </header>
 
@@ -65,7 +66,7 @@
                 href="{{ route('imports.new') }}"
                 class="inline-block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
-                Open Imports
+                {{ Lang::get('desktop::screens.staging.open_imports') }}
             </a>
         @endif
     </div>

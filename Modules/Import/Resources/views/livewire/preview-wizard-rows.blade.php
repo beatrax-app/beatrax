@@ -21,6 +21,7 @@
     overflow-x-auto handles the horizontal scroll.
 --}}
 
+@use('Modules\Core\Public\Support\Lang')
 {{-- overflow-x-auto ensures phone-width horizontal scroll in standalone use --}}
 <div class="rename-counterparty-cells overflow-x-auto">
     @foreach ($rows as $row)
@@ -35,7 +36,7 @@
                 <button
                     type="button"
                     class="desc-fallback"
-                    aria-label="Rename this counterparty"
+                    aria-label="{{ Lang::get('import::preview.rename_aria') }}"
                     wire:click="$dispatch('rename-counterparty:open', { raw: @js($row->description), rowIndex: {{ $row->rowIndex }} })"
                 >{{ $row->description }}</button>
             @else
