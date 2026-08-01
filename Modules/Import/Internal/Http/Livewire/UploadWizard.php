@@ -15,6 +15,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -32,9 +33,9 @@ final class UploadWizard extends Component
      * @var list<string>
      */
     public const SUPPORTED_FORMATS = [
-        'asn-csv',
-        'camt053',
-        'mt940',
+        SourceFormat::AsnCsv->value,
+        SourceFormat::Camt053->value,
+        SourceFormat::Mt940->value,
         'ics-pdf',
         'paypal-csv',
         'eml',
@@ -52,7 +53,7 @@ final class UploadWizard extends Component
      * @var array<string, list<string>>
      */
     private const ISSUER_FORMAT_MAP = [
-        'asn' => ['asn-csv', 'camt053', 'mt940'],
+        'asn' => [SourceFormat::AsnCsv->value, SourceFormat::Camt053->value, SourceFormat::Mt940->value],
         'ics' => ['ics-pdf'],
         'paypal' => ['paypal-csv'],
         'email-file' => ['eml', 'mbox'],
@@ -72,7 +73,7 @@ final class UploadWizard extends Component
     #[Validate('required|in:asn,ics,paypal,email-file,other-bank')]
     public string $issuer = 'asn';
 
-    public string $sourceFormat = 'asn-csv';
+    public string $sourceFormat = SourceFormat::AsnCsv->value;
 
     /**
      * @return array<string, list<\Closure|string>>
@@ -134,9 +135,9 @@ final class UploadWizard extends Component
     {
         return match ($this->issuer) {
             'asn' => [
-                ['value' => 'asn-csv', 'label' => 'CSV'],
-                ['value' => 'camt053', 'label' => 'CAMT.053 (XML)'],
-                ['value' => 'mt940', 'label' => 'MT940'],
+                ['value' => SourceFormat::AsnCsv->value, 'label' => 'CSV'],
+                ['value' => SourceFormat::Camt053->value, 'label' => 'CAMT.053 (XML)'],
+                ['value' => SourceFormat::Mt940->value, 'label' => 'MT940'],
             ],
             'ics' => [
                 ['value' => 'ics-pdf', 'label' => 'PDF'],
@@ -191,8 +192,8 @@ final class UploadWizard extends Component
         // self-describing, so the hint is null. The picker already
         // commits the user to a specific bank format here.
         $formatHint = match ($this->sourceFormat) {
-            'asn-csv' => BankCsvFormatHint::Asn,
-            'ing-csv' => BankCsvFormatHint::Ing,
+            SourceFormat::AsnCsv->value => BankCsvFormatHint::Asn,
+            SourceFormat::IngCsv->value => BankCsvFormatHint::Ing,
             default => null,
         };
 
@@ -246,8 +247,8 @@ final class UploadWizard extends Component
         $stemPart = ($safe === null || $safe === '') ? 'upload' : $safe;
 
         $extension = match ($this->sourceFormat) {
-            'camt053' => '.xml',
-            'mt940' => '.sta',
+            SourceFormat::Camt053->value => '.xml',
+            SourceFormat::Mt940->value => '.sta',
             'ics-pdf' => '.pdf',
             'paypal-csv' => '.csv',
             'eml' => '.eml',

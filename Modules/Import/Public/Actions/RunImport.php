@@ -19,6 +19,7 @@ use Modules\Import\Public\Exceptions\RacedImportRunVanishedException;
 use Modules\Import\Public\Exceptions\UploadStagingException;
 use Modules\Import\Public\Services\EloquentAccountResolver;
 use Modules\Ingestion\Public\Dto\SourceTransactionDto;
+use Modules\Ingestion\Public\Enums\SourceFormat;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 
@@ -128,8 +129,8 @@ final class RunImport implements RunsImports
     {
         $disk = $this->storage->disk(self::STORAGE_DISK);
         $extension = match ($sourceFormat) {
-            'camt053' => 'xml',
-            'mt940' => 'sta',
+            SourceFormat::Camt053->value => 'xml',
+            SourceFormat::Mt940->value => 'sta',
             'ics-pdf' => 'pdf',
             'eml' => 'eml',
             'mbox' => 'mbox',
