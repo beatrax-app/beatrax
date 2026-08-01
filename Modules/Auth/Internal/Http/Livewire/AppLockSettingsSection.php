@@ -16,6 +16,7 @@ use Livewire\Component;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Auth\Public\AppLockEvents;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -175,7 +176,7 @@ final class AppLockSettingsSection extends Component
         // Plain browser-event name (no cross-module PHP dependency) so
         // sibling sections update their app-lock-gated UI live, without a
         // reload, the moment a lock now exists.
-        $this->dispatch('app-lock-configured');
+        $this->dispatch(AppLockEvents::CONFIGURED);
     }
 
     // -------------------------------------------------------------------------
