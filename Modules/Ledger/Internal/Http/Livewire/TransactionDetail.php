@@ -503,8 +503,8 @@ final class TransactionDetail extends Component
     // per the project's no-float-money rule.
     private static function formatAbsAmount(int $absMinor): string
     {
-        $whole = intdiv($absMinor, 100);
-        $frac = $absMinor % 100;
+        $whole = intdiv($absMinor, Money::MINOR_UNITS_PER_MAJOR);
+        $frac = $absMinor % Money::MINOR_UNITS_PER_MAJOR;
 
         return number_format($whole, 0, '', '.').','.str_pad((string) $frac, 2, '0', STR_PAD_LEFT);
     }

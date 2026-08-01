@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Csv;
 
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
  * @link ../../../../../.docs/features/ingestion/architecture.md
@@ -59,7 +60,7 @@ final class GenericCsvAmountParser
         if ((int) substr($frac3, 2, 1) >= 5) {
             $cents++;
         }
-        $minor = ((int) $intPart) * 100 + $cents;
+        $minor = ((int) $intPart) * Money::MINOR_UNITS_PER_MAJOR + $cents;
 
         return $negative ? -$minor : $minor;
     }

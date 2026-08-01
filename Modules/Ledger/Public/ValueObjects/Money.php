@@ -13,6 +13,12 @@ use Stringable;
 // parsing are the exact failure modes the integer-only rules prevent.
 final class Money implements Stringable
 {
+    // The app represents every amount as an integer count of 1/100 of a major
+    // unit — the 2-decimal minor unit shared by its currencies. Parse and
+    // format boundaries scale by this factor; a future non-2-decimal currency
+    // (e.g. JPY) would have to make it per-currency rather than a constant.
+    public const int MINOR_UNITS_PER_MAJOR = 100;
+
     private function __construct(private readonly BrickMoney $inner) {}
 
     // Negative values represent debits (money out); positive values
