@@ -17,7 +17,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingRelayCourier;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
@@ -245,14 +245,14 @@ final class PairingFlowModal extends Component
             return;
         }
 
-        if ($row->state === PairingStateMachine::AWAITING_CONFIRM && $this->step === 'show_code') {
+        if ($row->state === PairingState::AwaitingConfirm->value && $this->step === 'show_code') {
             $this->safetyWords = $this->deriveSafetyWords($db, $safetyDeriver, $userId);
             $this->step = 'confirm';
 
             return;
         }
 
-        if ($row->state === PairingStateMachine::CONFIRMED && $this->step !== 'success') {
+        if ($row->state === PairingState::Confirmed->value && $this->step !== 'success') {
             $this->step = 'success';
 
             try {
@@ -314,7 +314,7 @@ final class PairingFlowModal extends Component
         // No-op when no relay is configured — never dead-ends that path.
         $this->sendConfirmOverRelay($db, $relayCourier, $relayConfig, $identity, $logger);
 
-        if ($state === PairingStateMachine::CONFIRMED) {
+        if ($state === PairingState::Confirmed->value) {
             $this->awaitingPeer = false;
             $this->step = 'success';
 
@@ -440,8 +440,8 @@ final class PairingFlowModal extends Component
             // Only an unfinished handshake gets expired. A confirmed token is
             // a completed pairing — leave its terminal state intact.
             if ($row !== null && in_array($row->state, [
-                PairingStateMachine::PENDING,
-                PairingStateMachine::AWAITING_CONFIRM,
+                PairingState::Pending->value,
+                PairingState::AwaitingConfirm->value,
             ], true)) {
                 $tokenService->expire($tokenId, $userId);
             }

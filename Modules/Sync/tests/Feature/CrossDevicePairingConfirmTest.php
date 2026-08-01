@@ -6,7 +6,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Sync\Internal\Pairing\PairingFrame;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
@@ -129,7 +129,7 @@ it('propagates PAIR_RESPONDER_ACCEPT so the desktop row transitions PENDING -> A
 
     $desktopWords = $this->asDevice('desktop', function () use ($tokenHash): array {
         $row = cdpTokenRow($tokenHash);
-        expect($row->state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($row->state)->toBe(PairingState::AwaitingConfirm->value);
 
         return app(SafetyNumberDeriver::class)->deriveWords($row->initiator_ed25519_pub_hex, $row->responder_ed25519_pub_hex);
     });
@@ -174,7 +174,7 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     $this->asDevice('phone', function () use ($tokenHash, $phone): void {
         $row = cdpTokenRow($tokenHash);
         $state = app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $phone['deviceId']);
-        expect($state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
     // PHONE sends its signed PAIR_CONFIRM to the DESKTOP — the desktop has
@@ -188,20 +188,20 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     $this->asDevice('desktop', function () use ($tokenHash, $desktop): void {
         $row = cdpTokenRow($tokenHash);
         $state = app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
-        expect($state)->toBe(PairingStateMachine::AWAITING_CONFIRM, 'the peer column is still unset on this row — only the local side confirmed so far');
+        expect($state)->toBe(PairingState::AwaitingConfirm->value, 'the peer column is still unset on this row — only the local side confirmed so far');
     });
 
     // The relay redelivers the SAME (still-pending) PAIR_CONFIRM now that
     // the desktop's local side is confirmed — this is what completes it.
     $desktopFinal = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
-    expect($desktopFinal)->toBe(PairingStateMachine::CONFIRMED);
+    expect($desktopFinal)->toBe(PairingState::Confirmed->value);
 
     // DESKTOP sends its own signed PAIR_CONFIRM to the PHONE.
     $sigFromDesktop = cdpSign($desktop, PairingFrame::confirmSigningMessage($tokenHash, $desktop['deviceId'], $phone['deviceId']));
     $phoneFinal = $this->asDevice('phone', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $desktop['deviceId'], $phone['deviceId'], $sigFromDesktop));
-    expect($phoneFinal)->toBe(PairingStateMachine::CONFIRMED);
+    expect($phoneFinal)->toBe(PairingState::Confirmed->value);
 
     // Each device admits the PEER it does not own, on its OWN database.
     $this->asDevice('desktop', function () use ($phone): void {
@@ -272,7 +272,7 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     $sigFromAttacker = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $attacker['deviceId'], $desktop['deviceId']));
     $desktopState = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $attacker['deviceId'], $desktop['deviceId'], $sigFromAttacker));
-    expect($desktopState)->toBe(PairingStateMachine::CONFIRMED);
+    expect($desktopState)->toBe(PairingState::Confirmed->value);
 
     // The REAL phone's human also confirms (a real user tapping confirm).
     $this->asDevice('phone', function () use ($tokenHash, $phone): void {
@@ -342,7 +342,7 @@ it('rejects a PAIR_CONFIRM with correct device ids but a signature from a random
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = cdpTokenRow($tokenHash);
         expect($row->responder_confirmed_at)->toBeNull();
-        expect($row->state)->not->toBe(PairingStateMachine::CONFIRMED);
+        expect($row->state)->not->toBe(PairingState::Confirmed->value);
     });
 });
 
@@ -385,7 +385,7 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
     $this->asDevice('desktop', function () use ($tokenHash): void {
         $row = cdpTokenRow($tokenHash);
         expect($row->responder_confirmed_at)->toBeNull();
-        expect($row->state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($row->state)->toBe(PairingState::AwaitingConfirm->value);
     });
 
     // Once the desktop's local human confirms, the SAME frame (redelivered
@@ -397,7 +397,7 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
 
     $applied = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
-    expect($applied)->toBe(PairingStateMachine::CONFIRMED);
+    expect($applied)->toBe(PairingState::Confirmed->value);
 });
 
 // ---------------------------------------------------------------------
@@ -449,11 +449,11 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
     $this->asDevice('desktop', function () use ($tokenHash, $phone, $desktop, $sigFromPhone): void {
         $service = app(PairingTokenService::class);
         expect($service->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
-            ->toBe(PairingStateMachine::CONFIRMED);
+            ->toBe(PairingState::Confirmed->value);
         expect($service->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
-            ->toBe(PairingStateMachine::CONFIRMED);
+            ->toBe(PairingState::Confirmed->value);
         expect($service->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone))
-            ->toBe(PairingStateMachine::CONFIRMED);
+            ->toBe(PairingState::Confirmed->value);
     });
 
     // No duplicate device_registry row for the phone on the desktop's DB.

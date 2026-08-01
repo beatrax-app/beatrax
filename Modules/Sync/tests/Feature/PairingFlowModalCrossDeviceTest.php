@@ -9,7 +9,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Http\Livewire\PairingFlowModal;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
@@ -131,7 +131,7 @@ it('checkPairingState() drains the phone\'s frames and confirmMatch() sends this
     $this->asDevice('phone', function () use ($tokenHash, $phoneIdentity, $desktopIdentity, $session): void {
         $row = app(DatabaseManager::class)->connection()->table('pairing_tokens')->where('token_hash', $tokenHash)->first();
         $state = app(PairingTokenService::class)->confirm((int) $row->id, PFM_PHONE_USER_ID, $phoneIdentity->deviceId);
-        expect($state)->toBe(PairingStateMachine::AWAITING_CONFIRM);
+        expect($state)->toBe(PairingState::AwaitingConfirm->value);
 
         app(PairingGateway::class)->sendConfirm(PFM_PHONE_USER_ID, (int) $row->id, $desktopIdentity->deviceId, $session);
     });

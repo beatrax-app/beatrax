@@ -7,7 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Pairing\PairingFrame;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -94,7 +94,7 @@ function pafgArrangeAwaitingConfirm(mixed $app, int $userId, bool $withSelfRow =
             'responder_device_id' => PAFG_PHONE,
             'responder_ed25519_pub_hex' => $phone['edPub'],
             'responder_x25519_pub_hex' => str_repeat('c', 64),
-            'state' => PairingStateMachine::AWAITING_CONFIRM,
+            'state' => PairingState::AwaitingConfirm->value,
             'initiator_confirmed_at' => '2026-06-15T09:30:00Z',
         ]);
 
@@ -132,7 +132,7 @@ it('refuses a responder-accept frame whose key material is not valid hex', funct
     $row = $db->connection()->table('pairing_tokens')->where('token_hash', $tokenHash)->first();
 
     expect($row->responder_device_id)->toBeNull()
-        ->and($row->state)->toBe(PairingStateMachine::PENDING);
+        ->and($row->state)->toBe(PairingState::Pending->value);
 });
 
 it('refuses a responder-accept frame for a token hash this database does not hold', function (): void {
@@ -231,6 +231,6 @@ it('refuses a peer-confirm frame when the bound peer key on the row is malformed
     // Still not confirmed: an undecodable bound key can never be treated as a
     // satisfied signature check.
     $row = $db->connection()->table('pairing_tokens')->where('token_hash', $arranged['tokenHash'])->first();
-    expect($row->state)->toBe(PairingStateMachine::AWAITING_CONFIRM)
+    expect($row->state)->toBe(PairingState::AwaitingConfirm->value)
         ->and($row->responder_confirmed_at)->toBeNull();
 });
