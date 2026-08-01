@@ -1,68 +1,24 @@
 @use('Modules\Core\Public\Support\Lang')
-@inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
 @inject('router', \Illuminate\Routing\Router::class)
 @inject('devSidebarItems', \Modules\DevMode\Internal\Navigation\DevSidebarItems::class)
 @php
-    /*
-     * Dev Console layout shell.
-     *
-     * Mirrors resources/views/layouts/app.blade.php's head + theme
-     * resolution + Livewire wiring, then swaps the main app sidebar
-     * (.side, 248px) for the Dev Console sidebar (.dev-side, 220px)
-     * on every /dev/* page. The swap is a hard layout swap (not
-     * nesting).
-     *
-     * Theme resolution mirrors app.blade.php's intent — no flash of
-     * wrong theme on `system` users — but routes the user lookup
-     * through the CurrentUser contract via @inject (which resolves
-     * through the container) so the layout honours the project's
-     * DI-only rule (no auth() / Auth:: facade calls inside Modules/*).
-     * The OsThemeSignal optional binding is resolved through the
-     * injected container, never through the app() global.
-     *
-     * Sidebar nav items render `/dev/{slug}` URLs; entries whose
-     * matching route is not registered render with the
-     * `nav-disabled` class so the operator can see which panels are
-     * pending.
-     */
-    $userTheme = $currentUser->isAuthenticated() ? ($currentUser->user()->theme ?? 'system') : 'system';
+    // Dev Console shell — the same dark/lang chrome as the app layout,
+    // resolved once, then the main app sidebar is swapped for the Dev
+    // Console sidebar on every /dev/* page (a hard layout swap, not nesting).
+    $chrome = $container->make(\Modules\Core\Public\Support\AppChromeResolver::class)->resolve();
 
-    $osTheme = null;
-    if ($userTheme === 'system' && $container->bound(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)) {
-        $osTheme = $container->make(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)->currentOsTheme();
-    }
-
-    $isDark = $userTheme === 'dark' || ($userTheme === 'system' && $osTheme === 'dark');
-    $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
-
-    /*
-     * Dev sidebar nav items.
-     *
-     * Sourced from the canonical DevSidebarItems registry. The
-     * `enabled` field on each item is informational; the runtime
-     * truth that drives the `nav-disabled` class is
-     * Router::has('dev.{slug}'). The dual representation surfaces
-     * config drift rather than masking it.
-     *
-     * Horizon's `enabled` value is the string 'conditional': the
-     * matching route is only registered when both the dev_mode env
-     * flag is true AND the Horizon package's ServiceProvider class
-     * is present. The Router::has() guard below covers the
-     * conditional case — when the route is absent the entry is
-     * DOM-absent; non-developers see 404 via EnsureDeveloperMode
-     * regardless.
-     */
+    // Dev sidebar nav items from the canonical DevSidebarItems registry.
+    // `enabled` is informational; Router::has('dev.{slug}') is the runtime
+    // truth that drives the nav-disabled class, so the dual representation
+    // surfaces config drift rather than masking it. Horizon's 'conditional'
+    // entry is DOM-absent when its route is unregistered (guarded below).
     $devNavItems = $devSidebarItems->all();
-
-    // Matches <html lang> to the request's resolved UI language, same as
-    // the full app layout.
-    $currentLocale = $container->make(\Illuminate\Contracts\Translation\Translator::class)->getLocale();
 @endphp
 <!doctype html>
 <html
-    lang="{{ $currentLocale }}"
-    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $isDark ? 'dark' : '' }}"
+    lang="{{ $chrome->locale }}"
+    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
     style="font-feature-settings: 'tnum';"
 >
     <head>
@@ -70,22 +26,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <title>{{ $title ?? Lang::get('dev::shell.title_default') }}</title>
-        @if ($needsPrePaintScript)
-            <script>
-                (function () {
-                    try {
-                        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                            document.documentElement.classList.add('dark');
-                        } else {
-                            document.documentElement.classList.remove('dark');
-                        }
-                    } catch (e) {}
-                })();
-            </script>
-        @endif
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @livewireStyles
-        @fluxAppearance
+        <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
+        <x-core::head-assets />
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
@@ -202,44 +144,7 @@
              the spawn fires. --}}
         @livewire('dev.command-arg-prompt-modal')
 
-        {{-- Global toast stack.
-
-             Every $this->dispatch('toast', message: '...') in the
-             project fires a browser CustomEvent on the window with
-             the message in $event.detail.message; this Alpine
-             listener pushes it onto a 5-second auto-dismiss stack
-             rendered bottom-right. Without this host, the dispatch
-             reached no UI — user-visible symptom: "I clicked Run and
-             nothing happened" despite the spawn firing fine on disk.
-
-             Identical snippet lives in the main app layout so toasts
-             work uniformly inside and outside /dev/*. --}}
-        <div
-            x-data="{
-                toasts: [],
-                push(detail) {
-                    const id = Date.now() + Math.random();
-                    this.toasts.push({ id, message: (detail && detail.message) || '' });
-                    setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 5000);
-                },
-                dismiss(id) { this.toasts = this.toasts.filter(t => t.id !== id); },
-            }"
-            x-on:toast.window="push($event.detail)"
-            class="pointer-events-none fixed bottom-4 right-4 z-[10000] flex w-[min(380px,calc(100vw-2rem))] flex-col-reverse gap-2"
-            aria-atomic="true"
-            aria-live="polite"
-            data-testid="toast-host"
-        >
-            <template x-for="t in toasts" :key="t.id">
-                <div
-                    x-on:click="dismiss(t.id)"
-                    class="pointer-events-auto cursor-pointer rounded-md bg-slate-900 px-4 py-3 text-sm text-white shadow-lg ring-1 ring-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:ring-slate-300"
-                    role="alert"
-                    data-testid="toast"
-                    x-text="t.message"
-                ></div>
-            </template>
-        </div>
+        <x-core::toast-host />
 
         @livewireScripts
         @fluxScripts
