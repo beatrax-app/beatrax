@@ -31,11 +31,10 @@ abstract class ExternalToolVersionProbe implements Probe
         [$version, $available] = $this->runVersion($this->argv);
 
         if ($available) {
-            return new ProbeResult('ok', $version, ['version' => $version]);
+            return new ProbeResult(ProbeSeverity::Ok->value, $version, ['version' => $version]);
         }
 
-        return new ProbeResult(
-            'warning',
+        return new ProbeResult(ProbeSeverity::Warning->value,
             sprintf('%s (%s)', $version, $this->missingMessage),
             ['stderr' => $version],
         );

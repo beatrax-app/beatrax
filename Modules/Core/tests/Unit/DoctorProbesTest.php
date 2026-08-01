@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
 use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
+use Modules\Core\Internal\Console\Probes\ExternalToolVersionProbe;
 use Modules\Core\Internal\Console\Probes\NodeVersionProbe;
 use Modules\Core\Internal\Console\Probes\PhpVersionProbe;
 use Modules\Core\Internal\Console\Probes\Probe;
@@ -364,4 +365,76 @@ it('PhpVersionProbe reports the current interpreter version as ok when at the mi
     // message.
     expect($result->severity)->toBe('ok');
     expect($result->message)->toContain(phpversion());
+});
+
+it('PhpVersionProbe reports critical when the interpreter is below the minimum', function (): void {
+    // Drive the below-minimum path via the injectable floor — the runner is
+    // always at/above the shipped minimum, so this is the only deterministic
+    // way to exercise the critical branch.
+    $probe = new PhpVersionProbe(minPhp: '99.0');
+    $result = $probe->run();
+
+    expect($result->severity)->toBe('critical');
+    expect($result->message)->toContain('minimum 99.0');
+    expect($result->metadata)->toBe(['version' => phpversion(), 'min' => '99.0']);
+});
+
+it('SynchronousModeProbe never throws — IO failure is captured as a critical ProbeResult', function (): void {
+    /** @var Repository $config */
+    $config = $this->app->make(Repository::class);
+    $config->set('database.connections.sqlite.database', '/nonexistent/path/to/beatrax-missing.sqlite');
+
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    $db->purge('sqlite');
+
+    $probe = new SynchronousModeProbe($db);
+    $result = $probe->run();
+
+    expect($result->severity)->toBe('critical');
+    expect($result->message)->toContain('Failed to read PRAGMA synchronous');
+    expect($result->metadata)->toHaveKey('exception');
+});
+
+it('ExternalToolVersionProbe reports warning when the tool is not available', function (): void {
+    // A concrete probe pointed at a binary that cannot exist: runVersion()
+    // fails to launch, so the abstract base must fall to the warning arm and
+    // surface the missing-message hint.
+    $probe = new class('Ghost', ['/nonexistent/beatrax-ghost-tool', '--version'], 'install the ghost tool') extends ExternalToolVersionProbe {};
+
+    $result = $probe->run();
+
+    expect($result->severity)->toBe('warning');
+    expect($result->message)->toContain('install the ghost tool');
+    expect($result->metadata)->toHaveKey('stderr');
+});
+
+it('BackupFreshnessProbe returns critical when the backups directory cannot be read', function (): void {
+    /** @var DatabaseManager $db */
+    $db = $this->app->make(DatabaseManager::class);
+    /** @var Clock $clock */
+    $clock = $this->app->make(Clock::class);
+
+    // A Filesystem whose directory listing throws mid-probe: isDirectory()
+    // passes the guard, then files() blows up, so run()'s try/catch must
+    // surface a critical ProbeResult rather than propagate.
+    $files = new class extends Filesystem
+    {
+        public function isDirectory($directory): bool
+        {
+            return true;
+        }
+
+        public function files($directory, $hidden = false, $depth = 0): array
+        {
+            throw new RuntimeException('backups directory is unreadable');
+        }
+    };
+
+    $probe = new BackupFreshnessProbe($files, $clock, $db, new UserDataPathService);
+    $result = $probe->run();
+
+    expect($result->severity)->toBe('critical');
+    expect($result->message)->toContain('Failed to read backups directory');
+    expect($result->metadata)->toHaveKey('exception');
 });

@@ -11,6 +11,11 @@ final class PhpVersionProbe implements Probe
 {
     private const MIN_PHP = '8.5';
 
+    // The minimum is injectable (default = the shipped floor) purely so the
+    // below-minimum path can be driven under test; production resolves it
+    // from the container with no argument.
+    public function __construct(private readonly string $minPhp = self::MIN_PHP) {}
+
     public function label(): string
     {
         return 'PHP';
@@ -20,18 +25,18 @@ final class PhpVersionProbe implements Probe
     {
         $phpVersion = phpversion();
 
-        if (preg_match('/^(\d+\.\d+)/', $phpVersion, $m) === 1 && version_compare($m[1], self::MIN_PHP, '>=')) {
+        if (preg_match('/^(\d+\.\d+)/', $phpVersion, $m) === 1 && version_compare($m[1], $this->minPhp, '>=')) {
             return new ProbeResult(
-                'ok',
+                ProbeSeverity::Ok->value,
                 $phpVersion,
-                ['version' => $phpVersion, 'min' => self::MIN_PHP],
+                ['version' => $phpVersion, 'min' => $this->minPhp],
             );
         }
 
         return new ProbeResult(
-            'critical',
-            sprintf('%s (minimum %s required)', $phpVersion, self::MIN_PHP),
-            ['version' => $phpVersion, 'min' => self::MIN_PHP],
+            ProbeSeverity::Critical->value,
+            sprintf('%s (minimum %s required)', $phpVersion, $this->minPhp),
+            ['version' => $phpVersion, 'min' => $this->minPhp],
         );
     }
 }

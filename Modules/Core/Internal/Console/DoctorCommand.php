@@ -11,6 +11,7 @@ use Modules\Core\Internal\Console\Probes\NodeVersionProbe;
 use Modules\Core\Internal\Console\Probes\PhpVersionProbe;
 use Modules\Core\Internal\Console\Probes\Probe;
 use Modules\Core\Internal\Console\Probes\ProbeResult;
+use Modules\Core\Internal\Console\Probes\ProbeSeverity;
 use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
@@ -77,9 +78,9 @@ final class DoctorCommand extends Command
         if ($this->ftsHealth !== null) {
             $ftsResult = new ProbeResult($this->ftsHealth->severity(), $this->ftsHealth->message());
             $this->line(sprintf(self::ROW_FORMAT, $this->ftsHealth->label(), $ftsResult->severity, $ftsResult->message));
-            if ($ftsResult->severity === 'critical') {
+            if ($ftsResult->severity === ProbeSeverity::Critical->value) {
                 $blockers[] = $this->ftsHealth->label();
-            } elseif ($ftsResult->severity === 'warning') {
+            } elseif ($ftsResult->severity === ProbeSeverity::Warning->value) {
                 $warnings[] = $this->ftsHealth->label();
             }
         }
@@ -123,13 +124,13 @@ final class DoctorCommand extends Command
     {
         $this->line(sprintf(self::ROW_FORMAT, $probe->label(), $result->severity, $result->message));
 
-        if ($result->severity === 'critical') {
+        if ($result->severity === ProbeSeverity::Critical->value) {
             $blockers[] = $probe->label();
 
             return;
         }
 
-        if ($result->severity === 'warning') {
+        if ($result->severity === ProbeSeverity::Warning->value) {
             $warnings[] = $probe->label();
         }
     }
