@@ -13,6 +13,7 @@ use Modules\Core\Models\SystemAlert;
 use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Services\SystemAlertQuery;
 
 /**
@@ -109,7 +110,7 @@ final class SystemAlertsBanner extends Component
 
         /** @var Collection<int, SystemAlert> $filtered */
         $filtered = $alerts->reject(static function (SystemAlert $alert) use ($skippedVersions): bool {
-            if ($alert->kind !== 'update.available') {
+            if ($alert->kind !== UpdateAlertKind::Available->value) {
                 return false;
             }
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];

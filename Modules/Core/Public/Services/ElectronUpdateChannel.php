@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Dto\UpdateManifestDto;
+use Modules\Core\Public\Enums\UpdateAlertKind;
 use Psr\Log\LoggerInterface;
 use SodiumException;
 
@@ -191,7 +192,7 @@ final readonly class ElectronUpdateChannel
     private function hasUnacknowledgedAvailabilityRow(string $latestVersion): bool
     {
         return $this->db->connection()->table('system_alerts')
-            ->where('kind', 'update.available')
+            ->where('kind', UpdateAlertKind::Available->value)
             ->whereNull('acknowledged_at')
             ->where('metadata', 'like', '%"latestVersion":"'.$latestVersion.'"%')
             ->exists();

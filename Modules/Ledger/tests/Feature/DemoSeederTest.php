@@ -283,7 +283,7 @@ it('produces the documented dataset shape after a single seed run', function ():
         ->unique()
         ->values()
         ->all();
-    foreach (['backup_corrupt', 'doctor_warning', 'update_available', 'force_password_change'] as $kind) {
+    foreach (['backup_corrupt', 'doctor_warning', 'update.available', 'force_password_change'] as $kind) {
         expect($systemAlertKinds)->toContain($kind);
     }
 
