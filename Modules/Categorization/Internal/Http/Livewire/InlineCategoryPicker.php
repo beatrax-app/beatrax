@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 
@@ -19,6 +20,8 @@ use Modules\Ledger\Public\Services\TransactionStatusQuery;
 // public contract so Ledger remains the only mutator of category_id.
 final class InlineCategoryPicker extends Component
 {
+    use DispatchesToast;
+
     public int $transactionId = 0;
 
     public ?int $categoryId = null;
@@ -42,7 +45,7 @@ final class InlineCategoryPicker extends Component
         // $categoryId before this hook runs; revert to the persisted
         // value so the row doesn't show a phantom unsaved selection.
         if ($status->isReconciled($user->id, $this->transactionId)) {
-            $this->dispatch('toast', message: Lang::get('categorization::detail.reconciled_toast'));
+            $this->toast(Lang::get('categorization::detail.reconciled_toast'));
 
             $persisted = $db->connection()
                 ->table('transactions')

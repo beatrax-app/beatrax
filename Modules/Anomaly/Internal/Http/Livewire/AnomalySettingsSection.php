@@ -14,6 +14,7 @@ use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -23,6 +24,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // backfill exactly once; subsequent saves never re-dispatch.
 final class AnomalySettingsSection extends Component
 {
+    use DispatchesToast;
+
     public int $anomalySensitivityPercent = 50;
 
     public int $anomalyMinAmountMinor = 1000;
@@ -106,7 +109,7 @@ final class AnomalySettingsSection extends Component
     ): void {
         try {
             $action->removeRule($ruleId, $currentUser->user());
-            $this->dispatch('toast', message: Lang::get('anomaly::settings.suppression.removed_toast'));
+            $this->toast(Lang::get('anomaly::settings.suppression.removed_toast'));
         } catch (NotFoundHttpException) {
             // A rule that vanished between the list render and this click is
             // already in the desired state, so a missing row is a silent

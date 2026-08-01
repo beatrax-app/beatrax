@@ -16,6 +16,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
@@ -31,6 +32,8 @@ use Modules\DevMode\Public\Dto\ArgSpec;
 #[Layout('dev::layouts.dev-shell')]
 final class ArtisanRunnerPage extends Component
 {
+    use DispatchesToast;
+
     #[Url(as: 'filter', except: 'all')]
     public string $filter = 'all';
 
@@ -83,7 +86,7 @@ final class ArtisanRunnerPage extends Component
         try {
             $spec = $registry->find($command);
         } catch (\InvalidArgumentException) {
-            $this->dispatch('toast', message: Lang::get('dev::runner.toast.unknown_command', ['command' => $command]));
+            $this->toast(Lang::get('dev::runner.toast.unknown_command', ['command' => $command]));
 
             return;
         }
@@ -100,9 +103,8 @@ final class ArtisanRunnerPage extends Component
         // visible to the operator. Refuse + toast the missing key(s).
         $missing = $this->missingRequiredArgs($spec->argsSchema, $args);
         if ($missing !== []) {
-            $this->dispatch(
-                'toast',
-                message: Lang::get('dev::runner.toast.missing_args', [
+            $this->toast(
+                Lang::get('dev::runner.toast.missing_args', [
                     'command' => $command,
                     'noun' => count($missing) === 1
                         ? Lang::get('dev::runner.toast.arg_singular')
@@ -115,7 +117,7 @@ final class ArtisanRunnerPage extends Component
         }
 
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
-        $this->dispatch('toast', message: Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
+        $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
     }
 
     /**
@@ -176,7 +178,7 @@ final class ArtisanRunnerPage extends Component
     ): void {
         $record = $registry->find($runId);
         if ($record === null) {
-            $this->dispatch('toast', message: Lang::get('dev::runner.toast.run_expired'));
+            $this->toast(Lang::get('dev::runner.toast.run_expired'));
 
             return;
         }
@@ -192,7 +194,7 @@ final class ArtisanRunnerPage extends Component
         }
 
         $newRunId = $spawner->start($record->command, $record->args, $user->id(), 'safe');
-        $this->dispatch('toast', message: Lang::get('dev::runner.toast.reran', ['command' => $record->command, 'runId' => $newRunId]));
+        $this->toast(Lang::get('dev::runner.toast.reran', ['command' => $record->command, 'runId' => $newRunId]));
     }
 
     public function render(

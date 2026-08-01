@@ -15,6 +15,7 @@ use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
@@ -31,6 +32,7 @@ use Throwable;
 final class ReconcilePage extends Component
 {
     use CoercesScalars;
+    use DispatchesToast;
 
     #[Url(except: '')]
     public ?int $accountId = null;
@@ -121,7 +123,7 @@ final class ReconcilePage extends Component
             ? Lang::get('ledger::reconcile.toast.nothing_to_lock')
             : Lang::get('ledger::reconcile.toast.complete', ['count' => $lockedCount]);
 
-        $this->dispatch('toast', message: $message);
+        $this->toast($message);
     }
 
     public function render(CurrentUser $currentUser, DatabaseManager $db, ViewFactory $views, AccountBalanceQuery $balances): View

@@ -16,6 +16,7 @@ use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
@@ -25,6 +26,8 @@ use Modules\Ledger\Public\Services\PeriodQuery;
  */
 final class BudgetsPage extends Component
 {
+    use DispatchesToast;
+
     private const PERIOD_DATE_FORMAT = 'Y-m-d';
 
     // Mirrors CarryoverQuery::FUTURE_HORIZON_PERIODS -- the nav bound
@@ -511,6 +514,6 @@ final class BudgetsPage extends Component
 
     private function toast(string $message): void
     {
-        $this->dispatch('toast', message: $message, undoAction: '', undoPayload: null);
+        $this->toastWithUndo($message, undoAction: '', undoPayload: null);
     }
 }
