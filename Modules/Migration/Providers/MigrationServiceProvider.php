@@ -6,12 +6,15 @@ namespace Modules\Migration\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Support\LoadsModuleResources;
 
 /**
  * @link ../../../.docs/features/migration/architecture.md
  */
 final class MigrationServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     private const PREVIEW_SUMMARY_BUILDER_CLASS = 'Modules\Migration\Internal\Pipeline\PreviewSummaryBuilder';
 
     private const YNAB4_PARSER_CLASS = 'Modules\Migration\Internal\Parsers\Ynab4Parser';
@@ -64,18 +67,7 @@ final class MigrationServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'migration');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'migration');
-        }
+        $this->loadModuleResources('migration');
 
         if (class_exists(self::MIGRATIONS_INDEX_CLASS)) {
             $livewire->component('migration.migrations-index', self::MIGRATIONS_INDEX_CLASS);

@@ -11,6 +11,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Commands\RelayServeCommand;
@@ -57,6 +58,8 @@ use Psr\Log\LoggerInterface;
  */
 final class SyncServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->registerMergeAndSigning();
@@ -312,13 +315,7 @@ final class SyncServiceProvider extends ServiceProvider
 
     public function boot(Dispatcher $events): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'sync');
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'sync');
-
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
+        $this->loadModuleResources('sync');
 
         $this->registerCaptureListeners($events);
         $this->registerCryptoListeners($events);

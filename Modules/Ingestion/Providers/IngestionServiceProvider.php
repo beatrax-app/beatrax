@@ -6,6 +6,7 @@ namespace Modules\Ingestion\Providers;
 
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\ServiceProvider;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Ingestion\Internal\Adapters\Asn\AsnCsvAdapter;
 use Modules\Ingestion\Internal\Adapters\Banking\Camt053Adapter;
 use Modules\Ingestion\Internal\Adapters\Banking\Mt940Adapter;
@@ -23,6 +24,8 @@ use Modules\Ingestion\Public\Services\SourceAdapterRegistry;
  */
 final class IngestionServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(CsvPresetRegistry::class);
@@ -55,8 +58,7 @@ final class IngestionServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        $this->loadModuleResources('ingestion');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
     }
 }

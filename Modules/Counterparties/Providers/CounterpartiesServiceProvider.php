@@ -7,6 +7,7 @@ namespace Modules\Counterparties\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Compilers\BladeCompiler;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyIndex;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyProfile;
 use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
@@ -21,6 +22,8 @@ use Modules\Counterparties\Public\Pipeline\ResolvesCounterparties;
  */
 final class CounterpartiesServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(CounterpartySlugResolver::class);
@@ -30,19 +33,7 @@ final class CounterpartiesServiceProvider extends ServiceProvider
 
     public function boot(BladeCompiler $blade, LivewireManager $livewire): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-
-        $routesPath = __DIR__.'/../Routes/web.php';
-        if (file_exists($routesPath)) {
-            $this->loadRoutesFrom($routesPath);
-        }
-
-        $viewsPath = __DIR__.'/../Resources/views';
-        if (is_dir($viewsPath)) {
-            $this->loadViewsFrom($viewsPath, 'counterparties');
-        }
-
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'counterparties');
+        $this->loadModuleResources('counterparties');
 
         $blade->componentNamespace('Modules\\Counterparties\\Resources\\views\\components', 'counterparties');
 

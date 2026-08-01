@@ -41,12 +41,15 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\LoadsModuleResources;
 
 /**
  * @link ../../../.docs/features/core/architecture.md
  */
 final class CoreServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->register(SqliteOptimizationsProvider::class);
@@ -93,11 +96,8 @@ final class CoreServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        $this->loadModuleResources('core');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
-        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'core');
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'core');
 
         $livewire->component('core.dashboard', Dashboard::class);
         $livewire->component('core.settings-page', SettingsPage::class);

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Desktop\Public\Events\FileOpenedFromOs;
 use Modules\Import\Public\Events\TransactionImported;
 use Modules\Receipts\Internal\Http\Livewire\ReceiptConflictToast;
@@ -26,6 +27,8 @@ use Modules\Receipts\Public\Services\ReceiptConflictQuery;
  */
 final class ReceiptsServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     // Each entry is bound + tagged under receipts.matcher only when the
     // implementing class exists on disk, so a missing class never
     // aborts container resolution.
@@ -87,19 +90,10 @@ final class ReceiptsServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
+        $this->loadModuleResources('receipts');
         if (is_file(__DIR__.'/../Routes/console.php')) {
             $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'receipts');
-        }
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'receipts');
 
         $livewire->component('receipts.wizard-email-file-step', WizardEmailFileStep::class);
         $livewire->component('receipts.receipt-conflict-toast', ReceiptConflictToast::class);

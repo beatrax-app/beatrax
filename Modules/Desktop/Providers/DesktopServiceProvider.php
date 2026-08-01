@@ -12,6 +12,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
 use Modules\Desktop\Internal\Http\Livewire\SetupScreen;
@@ -47,6 +48,8 @@ use Native\Desktop\Events\Windows\WindowHidden;
  */
 final class DesktopServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->singleton(AppMenuBuilder::class);
@@ -116,18 +119,7 @@ final class DesktopServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire, Dispatcher $events): void
     {
-        if (is_dir(__DIR__.'/../Database/Migrations')) {
-            $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        }
-        if (is_file(__DIR__.'/../Routes/web.php')) {
-            $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
-        }
-        if (is_dir(__DIR__.'/../Resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../Resources/views', 'desktop');
-        }
-        if (is_dir(__DIR__.'/../Resources/lang')) {
-            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'desktop');
-        }
+        $this->loadModuleResources('desktop');
 
         $livewire->component('desktop.setup-screen', SetupScreen::class);
         $livewire->component('desktop.welcome-screen', WelcomeScreen::class);

@@ -6,6 +6,7 @@ namespace Modules\Ledger\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Ledger\Internal\Console\RederiveFingerprintsCommand;
 use Modules\Ledger\Internal\Http\Livewire\TransactionDetail;
 use Modules\Ledger\Internal\Http\Livewire\TransactionsList;
@@ -35,6 +36,8 @@ use Modules\Ledger\Public\Services\TransactionListQuery;
 // fingerprints command is registered behind a runningInConsole() guard.
 final class LedgerServiceProvider extends ServiceProvider
 {
+    use LoadsModuleResources;
+
     public function register(): void
     {
         $this->app->bind(RecordsTransactions::class, RecordTransactions::class);
@@ -59,11 +62,8 @@ final class LedgerServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
-        $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+        $this->loadModuleResources('ledger');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
-        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'ledger');
-        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'ledger');
 
         $livewire->component('ledger.transactions-list', TransactionsList::class);
         $livewire->component('ledger.transaction-detail', TransactionDetail::class);
