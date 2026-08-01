@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     A single drift alert row. Renders the direction-aware icon + delta
     + annualized impact + (Open-tab only) Acknowledge / Snooze / "I
@@ -50,26 +51,26 @@
                 <span class="font-medium text-slate-900 dark:text-slate-100">{{ $alert->displayName }}</span>
                 <span class="{{ $tint }}" style="font-variant-numeric: tabular-nums;">{{ $deltaText }}</span>
                 <span class="text-slate-500 dark:text-slate-400">→</span>
-                <span class="{{ $tint }}" style="font-variant-numeric: tabular-nums;">{{ $annualizedText }}/yr</span>
+                <span class="{{ $tint }}" style="font-variant-numeric: tabular-nums;">{{ $annualizedText }}{{ Lang::get('drift-alerts::alerts.row.per_year') }}</span>
             </p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                <span style="font-variant-numeric: tabular-nums;">prior {{ $fmt($alert->baselineAmount) }} → now {{ $fmt($alert->latestAmount) }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_prior_now', ['prior' => $fmt($alert->baselineAmount), 'now' => $fmt($alert->latestAmount)]) }}</span>
                 <span class="mx-1">·</span>
-                <span style="font-variant-numeric: tabular-nums;">detected {{ $alert->detectedAt->format('d M') }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_detected', ['date' => $alert->detectedAt->format('d M')]) }}</span>
                 <span class="mx-1">·</span>
-                <span style="font-variant-numeric: tabular-nums;">threshold ±{{ $alert->thresholdPercentUsed }}%</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_threshold', ['percent' => $alert->thresholdPercentUsed]) }}</span>
                 @if ($alert->eurEquivalent !== null)
                     <span class="mx-1">·</span>
-                    <span class="text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">(≈ {{ $fmt($alert->eurEquivalent) }}/yr)</span>
+                    <span class="text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.meta_eur_equiv', ['amount' => $fmt($alert->eurEquivalent)]) }}</span>
                 @endif
                 @if ($cancellationImpact !== null)
                     <span class="mx-1">·</span>
-                    <span style="font-variant-numeric: tabular-nums;">Cancel this → save {{ $fmt($cancellationImpact->annualSavings) }}/yr</span>
+                    <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.row.cancel_impact', ['amount' => $fmt($cancellationImpact->annualSavings)]) }}</span>
                 @endif
             </p>
             @if ($seriesState === 'cadence_changed')
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    Cadence flipped — also showing in
+                    {{ Lang::get('drift-alerts::alerts.row.cadence_flipped') }}
                     <a
                         href="{{ route('recurring.review') }}"
                         class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
@@ -85,19 +86,19 @@
                 <button
                     type="button"
                     wire:click="acknowledge({{ $alert->driftAlertId }})"
-                    aria-label="Acknowledge drift alert {{ $alert->driftAlertId }}"
+                    aria-label="{{ Lang::get('drift-alerts::alerts.row.acknowledge_aria', ['id' => $alert->driftAlertId]) }}"
                     @class([
                         'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                         'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600 dark:bg-emerald-500 dark:hover:bg-emerald-400' => $primaryAcknowledge,
                         'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700' => ! $primaryAcknowledge,
                     ])
-                >Acknowledge</button>
+                >{{ Lang::get('drift-alerts::alerts.row.acknowledge') }}</button>
                 <div x-data="{ open: false }" class="relative">
                     <button
                         type="button"
                         x-on:click="open = ! open"
                         class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                    >Snooze ▾</button>
+                    >{{ Lang::get('drift-alerts::alerts.row.snooze') }}</button>
                     <div
                         x-show="open"
                         x-cloak
@@ -109,34 +110,34 @@
                             wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets['1w'] }}')"
                             x-on:click="open = false"
                             class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                        >1 week</button>
+                        >{{ Lang::get('drift-alerts::alerts.row.snooze_1w') }}</button>
                         <button
                             type="button"
                             wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets['1m'] }}')"
                             x-on:click="open = false"
                             class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                        >1 month</button>
+                        >{{ Lang::get('drift-alerts::alerts.row.snooze_1m') }}</button>
                         <button
                             type="button"
                             wire:click="snooze({{ $alert->driftAlertId }}, '{{ $snoozeTargets['3m'] }}')"
                             x-on:click="open = false"
                             class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                        >3 months</button>
+                        >{{ Lang::get('drift-alerts::alerts.row.snooze_3m') }}</button>
                     </div>
                 </div>
                 <button
                     type="button"
                     wire:click="modelCancelInForecast({{ $alert->driftAlertId }})"
-                    aria-label="Model cancel — models the cancellation in the forecast for drift alert {{ $alert->driftAlertId }}"
+                    aria-label="{{ Lang::get('drift-alerts::alerts.row.model_cancel_aria', ['id' => $alert->driftAlertId]) }}"
                     class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-900 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                     style="font-variant-numeric: tabular-nums;"
-                >Model cancel ↗</button>
+                >{{ Lang::get('drift-alerts::alerts.row.model_cancel') }}</button>
                 <button
                     type="button"
                     wire:click="dismissAsCancelled({{ $alert->driftAlertId }})"
-                    aria-label="I cancelled this — dismisses drift alert {{ $alert->driftAlertId }} as cancelled"
+                    aria-label="{{ Lang::get('drift-alerts::alerts.row.cancelled_aria', ['id' => $alert->driftAlertId]) }}"
                     class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                >I cancelled this</button>
+                >{{ Lang::get('drift-alerts::alerts.row.cancelled') }}</button>
             </div>
         @endif
     </div>

@@ -7,6 +7,7 @@ namespace Modules\Desktop\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
 
 final class WelcomeScreen extends Component
@@ -27,7 +28,7 @@ final class WelcomeScreen extends Component
         $view = $views->make('desktop::welcome');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Welcome · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('desktop::screens.welcome.page_title').' · beatrax']);
 
         return $view;
     }

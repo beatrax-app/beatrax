@@ -52,6 +52,8 @@ final class OnboardingServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'onboarding');
         }
 
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'onboarding');
+
         $events->listen(UserInstalled::class, InitializeWizardProgressOnInstall::class);
 
         $livewire->component('onboarding.setup-wizard', SetupWizard::class);

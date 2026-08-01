@@ -1,12 +1,13 @@
+@use('Modules\Core\Public\Support\Lang')
 <div>
     @if (count($insights) > 0)
-        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="Ways to save">
+        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="{{ Lang::get('drift-alerts::savings.aria') }}">
             <div class="flex items-baseline justify-between gap-4">
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Ways to save</h2>
-                <a href="{{ route('drift.watch') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Subscriptions →</a>
+                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::savings.heading') }}</h2>
+                <a href="{{ route('drift.watch') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::savings.subscriptions_link') }}</a>
             </div>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Official links from the support corpus — beatrax never cancels or switches anything for you.
+                {{ Lang::get('drift-alerts::savings.disclaimer') }}
             </p>
 
             <ul class="mt-4 space-y-2">
@@ -32,7 +33,7 @@
                             <button
                                 type="button"
                                 wire:click="dismiss('{{ $insight->key }}')"
-                                aria-label="Dismiss suggestion"
+                                aria-label="{{ Lang::get('drift-alerts::savings.dismiss_aria') }}"
                                 class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                             >×</button>
                         </div>

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- /chains/hints — dedicated review surface for hint-shaped chain_links.
      Mirrors the calm aesthetic of /chains/review (Linear/Notion-ish);
      adds a per-kind label and an evidence summary list since hints
@@ -5,9 +6,9 @@
 @php
     $kindLabel = static function (string $kind): string {
         return match ($kind) {
-            'ics_bulk_settle' => 'Bulk iDEAL settlement (out of tolerance)',
-            'funded_by_card_hint' => 'Funded by card (hint)',
-            'refund_of_hint' => 'Refund (hint)',
+            'ics_bulk_settle' => Lang::get('chains::hints.kind.ics_bulk_settle'),
+            'funded_by_card_hint' => Lang::get('chains::hints.kind.funded_by_card_hint'),
+            'refund_of_hint' => Lang::get('chains::hints.kind.refund_of_hint'),
             default => $kind,
         };
     };
@@ -18,14 +19,14 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
         <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Hints</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::hints.heading') }}</h1>
             <a
                 href="{{ route('chains.review') }}"
                 class="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            >← Back to review queue</a>
+            >{{ Lang::get('chains::hints.back_to_review') }}</a>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Candidates a matcher emitted without a matching partner. Each hint either resolves itself on the next chain pass, or you can dismiss it here once you've decided it isn't going to.
+            {{ Lang::get('chains::hints.subtitle') }}
         </p>
     </header>
 
@@ -41,9 +42,9 @@
 
     @if (count($hints) === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" data-testid="chain-hints-empty">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No hints to triage</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::hints.empty_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                When a matcher surfaces a chain it couldn't auto-resolve, it'll show up here.
+                {{ Lang::get('chains::hints.empty_body') }}
             </p>
         </div>
     @else
@@ -72,9 +73,9 @@
                                         wire:navigate
                                         class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                         data-testid="chain-hint-from-counterparty-link-{{ $hint->chainLinkId }}"
-                                    >{{ $hint->fromCounterparty ?: '(no counterparty)' }}</a>
+                                    >{{ $hint->fromCounterparty ?: Lang::get('chains::hints.no_counterparty') }}</a>
                                 @else
-                                    <span data-testid="chain-hint-from-counterparty-text-{{ $hint->chainLinkId }}">{{ $hint->fromCounterparty ?: '(no counterparty)' }}</span>
+                                    <span data-testid="chain-hint-from-counterparty-text-{{ $hint->chainLinkId }}">{{ $hint->fromCounterparty ?: Lang::get('chains::hints.no_counterparty') }}</span>
                                 @endif
                                 <span
                                     class="ml-2 text-slate-500 dark:text-slate-400"
@@ -82,7 +83,7 @@
                                 >{{ $fmt($hint->fromAmount) }}</span>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {{ $hint->fromAccountName ?: '(unknown account)' }} ·
+                                {{ $hint->fromAccountName ?: Lang::get('chains::hints.unknown_account') }} ·
                                 {{ $hint->fromPostedAt->format('d M Y') }}
                             </p>
                             @if (count($hint->evidenceLines) > 0)
@@ -100,10 +101,10 @@
                             <button
                                 type="button"
                                 wire:click="dismiss({{ $hint->chainLinkId }})"
-                                aria-label="Dismiss hint {{ $hint->chainLinkId }}"
+                                aria-label="{{ Lang::get('chains::hints.dismiss_aria', ['id' => $hint->chainLinkId]) }}"
                                 class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
                                 data-testid="chain-hint-dismiss-{{ $hint->chainLinkId }}"
-                            >Dismiss</button>
+                            >{{ Lang::get('chains::hints.dismiss') }}</button>
                         </div>
                     </div>
                 </li>

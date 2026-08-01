@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /recurring page — grouped expense + income + transfers sections
     with the net-flow header at the top of the page.
@@ -39,44 +40,44 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
         <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Recurring</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.title') }}</h1>
             <button
                 type="button"
                 wire:click="reDetect"
                 class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
-            >Re-detect now</button>
+            >{{ Lang::get('recurring::index.re_detect') }}</button>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Approved subscriptions, fixed payments, and recurring income at a glance.
+            {{ Lang::get('recurring::index.subtitle') }}
         </p>
 
         @unless ($sectionEmpty)
             <div class="mt-6 flex flex-wrap items-baseline gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($expenseTotal) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">expenses</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.expenses') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">+</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $eurFmt($incomeTotal) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">income</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.income') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">=</span>
                 <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($netTotal) }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">net/month</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('recurring::index.net_flow.net_per_month') }}</span>
             </div>
         @endunless
     </header>
 
     @if ($sectionEmpty)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No recurring activity yet</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::index.empty.heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Approve detected suggestions on
+                {{ Lang::get('recurring::index.empty.before_link') }}
                 <a href="{{ route('recurring.review') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">/recurring/review</a>
-                to see them here.
+                {{ Lang::get('recurring::index.empty.after_link') }}
             </p>
         </div>
     @else
         @if (count($expenses) > 0)
             <section class="mb-8">
-                <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Recurring expenses</h2>
+                <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::index.expenses_heading') }}</h2>
 
                 {{-- ============================================================
                      PHONE card-list for expenses (visible only at <768px)
@@ -96,11 +97,11 @@
                                         · {{ $row->nextExpectedAt->format('d M Y') }}
                                     @endif
                                     @if ($row->latestFundingChainLinkId !== null)
-                                        · chain
+                                        · {{ Lang::get('recurring::index.chain') }}
                                     @endif
                                 </p>
                             </div>
-                            <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                            <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -130,7 +131,7 @@
                                     >
                                         {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
-                                            · Next {{ $row->nextExpectedAt->format('d M Y') }}
+                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->format('d M Y') }}
                                         @endif
                                     </p>
                                 </div>
@@ -139,10 +140,10 @@
                                         <span
                                             class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                             data-chain-badge="true"
-                                            aria-label="Funded via chain"
-                                        >chain</span>
+                                            aria-label="{{ Lang::get('recurring::index.chain_aria') }}"
+                                        >{{ Lang::get('recurring::index.chain') }}</span>
                                     @endif
-                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
                         </li>
@@ -153,7 +154,7 @@
 
         @if (count($income) > 0)
             <section class="mb-8">
-                <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Recurring income</h2>
+                <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::index.income_heading') }}</h2>
 
                 {{-- ============================================================
                      PHONE card-list for income (visible only at <768px)
@@ -174,7 +175,7 @@
                                     @endif
                                 </p>
                             </div>
-                            <span class="amount positive" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                            <span class="amount positive" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -204,7 +205,7 @@
                                     >
                                         {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
-                                            · Next {{ $row->nextExpectedAt->format('d M Y') }}
+                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->format('d M Y') }}
                                         @endif
                                     </p>
                                 </div>
@@ -213,10 +214,10 @@
                                         <span
                                             class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                             data-chain-badge="true"
-                                            aria-label="Funded via chain"
-                                        >chain</span>
+                                            aria-label="{{ Lang::get('recurring::index.chain_aria') }}"
+                                        >{{ Lang::get('recurring::index.chain') }}</span>
                                     @endif
-                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                                    <span class="text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::index.per_month_suffix') }}</span>
                                 </div>
                             </div>
                         </li>
@@ -234,10 +235,10 @@
             <summary
                 class="cursor-pointer px-4 py-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
                 wire:click.prevent="toggleTransfers"
-            >Recurring transfers</summary>
+            >{{ Lang::get('recurring::index.transfers.heading') }}</summary>
             <div class="border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 @if (count($transfers) === 0)
-                    No recurring transfers detected.
+                    {{ Lang::get('recurring::index.transfers.empty') }}
                 @else
                     <ul class="space-y-1">
                         @foreach ($transfers as $row)

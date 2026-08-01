@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Report builder `donut` viz partial (Req 8) — the only viz using the
     flat `series: [n1, n2, ...]` + top-level `labels: [...]` ApexCharts
@@ -112,6 +113,6 @@
         data-testid="report-chart"
         data-chart-variant="donut"
         class="min-h-[320px] rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700"
-        title="Click a segment to view its transactions"
+        title="{{ Lang::get('reports::builder.chart.donut_title') }}"
     ></div>
 </div>

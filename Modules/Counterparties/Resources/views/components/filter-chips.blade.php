@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Filter chips — the type filter row on `/counterparties` index and
     `/counterparties/triage`. Renders an `All` chip plus one chip per
@@ -22,19 +23,19 @@
 ])
 @php
     $chips = [
-        ['key' => 'all', 'label' => 'All', 'dot' => null],
-        ['key' => 'merchant', 'label' => 'Merchants', 'dot' => 'dot-merchant'],
-        ['key' => 'personal', 'label' => 'Personal', 'dot' => 'dot-personal'],
-        ['key' => 'bank', 'label' => 'Banks', 'dot' => 'dot-bank'],
-        ['key' => 'government', 'label' => 'Government', 'dot' => 'dot-gov'],
-        ['key' => 'self', 'label' => 'Self', 'dot' => 'dot-self'],
-        ['key' => 'unknown', 'label' => 'Unknown', 'dot' => 'dot-unknown'],
+        ['key' => 'all', 'label' => Lang::get('counterparties::components.filter_chips.all'), 'dot' => null],
+        ['key' => 'merchant', 'label' => Lang::get('counterparties::components.filter_chips.merchant'), 'dot' => 'dot-merchant'],
+        ['key' => 'personal', 'label' => Lang::get('counterparties::components.filter_chips.personal'), 'dot' => 'dot-personal'],
+        ['key' => 'bank', 'label' => Lang::get('counterparties::components.filter_chips.bank'), 'dot' => 'dot-bank'],
+        ['key' => 'government', 'label' => Lang::get('counterparties::components.filter_chips.government'), 'dot' => 'dot-gov'],
+        ['key' => 'self', 'label' => Lang::get('counterparties::components.filter_chips.self'), 'dot' => 'dot-self'],
+        ['key' => 'unknown', 'label' => Lang::get('counterparties::components.filter_chips.unknown'), 'dot' => 'dot-unknown'],
     ];
 @endphp
 <div
     {{ $attributes->merge(['class' => 'filter-chips']) }}
     role="group"
-    aria-label="Filter by type"
+    aria-label="{{ Lang::get('counterparties::components.filter_chips.aria') }}"
 >
     @foreach ($chips as $chip)
         @php

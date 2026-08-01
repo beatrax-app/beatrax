@@ -13,6 +13,7 @@
       :glyph  — leading emoji, decorative only.
       slot    — the step's own label ("Your credit card (ICS)").
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'step',
     'glyph' => '',
@@ -25,5 +26,5 @@
 
 <p {{ $attributes->class(['wiz-eyebrow']) }}>
     @if ($glyph !== '')<span aria-hidden="true">{{ $glyph }}</span> @endif
-    @if ($stepNumber !== null)Step {{ $stepNumber }} — @endif{{ $slot }}
+    @if ($stepNumber !== null){{ Lang::get('onboarding::components.eyebrow_step', ['number' => $stepNumber]) }}@endif{{ $slot }}
 </p>

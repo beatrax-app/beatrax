@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Parent view for the first-run setup wizard. Renders the wizard
     chrome (top brand row + progress dots + resume-later affordance),
@@ -21,7 +22,7 @@
     step must be done|skipped before a step is reachable.
 --}}
 <div class="wiz-page">
-    <header class="wiz-top" aria-label="Setup wizard header">
+    <header class="wiz-top" aria-label="{{ Lang::get('onboarding::wizard.header_aria') }}">
         <div class="wiz-brand">
             <img
                 src="{{ Vite::asset('resources/brand/logo.svg') }}"
@@ -33,7 +34,7 @@
             <span class="wiz-brand-name">beatrax</span>
         </div>
 
-        <nav class="wiz-dots" aria-label="Setup progress">
+        <nav class="wiz-dots" aria-label="{{ Lang::get('onboarding::wizard.progress_aria') }}">
             @php
                 $stepKeys = array_keys($progress);
                 $totalSteps = count($stepKeys);
@@ -52,12 +53,12 @@
                 @endphp
                 <span
                     class="{{ $dotClass }}"
-                    aria-label="Step {{ $index + 1 }} of {{ $totalSteps }}"
+                    aria-label="{{ Lang::get('onboarding::wizard.step_dot_aria', ['number' => $index + 1, 'total' => $totalSteps]) }}"
                     @if ($isCurrent) aria-current="step" @endif
                 ></span>
             @endforeach
             <span class="wiz-dots-label">
-                Step {{ $currentStepNumber }} of {{ $totalSteps }}
+                {{ Lang::get('onboarding::wizard.step_progress', ['current' => $currentStepNumber, 'total' => $totalSteps]) }}
             </span>
         </nav>
 
@@ -65,9 +66,9 @@
             type="button"
             class="wiz-resume-later"
             wire:click="skipRest"
-            aria-label="Resume later — saves your progress and closes the setup wizard"
+            aria-label="{{ Lang::get('onboarding::wizard.resume_later_aria') }}"
         >
-            Resume later <span aria-hidden="true">→</span>
+            {{ Lang::get('onboarding::wizard.resume_later') }} <span aria-hidden="true">→</span>
         </button>
     </header>
 
@@ -85,7 +86,7 @@
         @if ($selfWrapping)
             @if ($isResuming)
                 <div class="wiz-resume-banner-floating" aria-live="polite" aria-atomic="true">
-                    Welcome back — let's pick up where you left off.
+                    {{ Lang::get('onboarding::wizard.resume_banner') }}
                 </div>
             @endif
             <livewire:onboarding.steps.first-import-step :key="'first-import'" />
@@ -93,7 +94,7 @@
             <article class="wiz-card">
                 @if ($isResuming)
                     <div class="wiz-resume-banner" aria-live="polite" aria-atomic="true">
-                        Welcome back — let's pick up where you left off.
+                        {{ Lang::get('onboarding::wizard.resume_banner') }}
                     </div>
                 @endif
 
@@ -132,13 +133,12 @@
 
                     @default
                         <div class="wiz-step-pending">
-                            <p class="wiz-step-pending-eyebrow">Unknown step</p>
+                            <p class="wiz-step-pending-eyebrow">{{ Lang::get('onboarding::wizard.unknown_eyebrow') }}</p>
                             <h1 class="wiz-step-pending-h1">
-                                No step is currently active.
+                                {{ Lang::get('onboarding::wizard.unknown_h1') }}
                             </h1>
                             <p class="wiz-step-pending-lede">
-                                The wizard could not resolve the active step. Use Resume
-                                later → to exit and the next mount will recover.
+                                {{ Lang::get('onboarding::wizard.unknown_lede') }}
                             </p>
                         </div>
                 @endswitch
@@ -147,9 +147,9 @@
     </main>
 
     <footer class="wiz-footer">
-        <span class="privacy-pill" aria-label="Your data stays on this computer">
+        <span class="privacy-pill" aria-label="{{ Lang::get('onboarding::wizard.privacy') }}">
             <span class="privacy-pill-dot" aria-hidden="true"></span>
-            Your data stays on this computer
+            {{ Lang::get('onboarding::wizard.privacy') }}
         </span>
         <a
             class="wiz-help-link"
@@ -157,9 +157,9 @@
             wire:click.prevent="openHelp"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Need help? Opens the beatrax issues page on GitHub"
+            aria-label="{{ Lang::get('onboarding::wizard.need_help_aria') }}"
         >
-            Need help?
+            {{ Lang::get('onboarding::wizard.need_help') }}
         </a>
     </footer>
 </div>

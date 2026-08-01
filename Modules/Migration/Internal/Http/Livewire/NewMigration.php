@@ -13,6 +13,7 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Migration\Internal\Parsers\Support\ZipExtractor;
 use Modules\Migration\Models\MigrationRun;
 use Modules\Migration\Public\Actions\CheckForUpdates;
@@ -27,8 +28,6 @@ use Throwable;
  */
 final class NewMigration extends Component
 {
-    private const UNRECOGNISED_EXPORT_MESSAGE = 'This doesn\'t look like a YNAB4, nYNAB, or Actual export we can read. Check the file and try again.';
-
     use WithFileUploads;
 
     // Rejects an obviously-oversized upload before it ever reaches disk;
@@ -96,9 +95,9 @@ final class NewMigration extends Component
     public function messages(): array
     {
         return [
-            'file.max' => 'That file is too large for a migration export.',
-            'file.extensions' => self::UNRECOGNISED_EXPORT_MESSAGE,
-            'file.mimes' => self::UNRECOGNISED_EXPORT_MESSAGE,
+            'file.max' => Lang::get('migration::new.errors.file_too_large'),
+            'file.extensions' => $this->unrecognisedExportMessage(),
+            'file.mimes' => $this->unrecognisedExportMessage(),
         ];
     }
 
@@ -115,9 +114,9 @@ final class NewMigration extends Component
     public function formatHint(): string
     {
         return match ($this->sourceProduct) {
-            'ynab4' => "Export your full budget as a ZIP file from YNAB4's File → Export menu.",
-            'nynab' => 'Export your budget from nYNAB via File → Export Budget, then zip up the exported CSV files.',
-            'actual' => "Export your budget as a ZIP file from Actual Budget's Settings → Export data.",
+            'ynab4' => Lang::get('migration::new.hints.ynab4'),
+            'nynab' => Lang::get('migration::new.hints.nynab'),
+            'actual' => Lang::get('migration::new.hints.actual'),
             default => '',
         };
     }
@@ -163,7 +162,7 @@ final class NewMigration extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => $e->getTraceAsString(),
             ]);
-            $this->uploadError = self::UNRECOGNISED_EXPORT_MESSAGE;
+            $this->uploadError = $this->unrecognisedExportMessage();
 
             return;
         }
@@ -177,6 +176,14 @@ final class NewMigration extends Component
     public function render(ViewFactory $views): View
     {
         return $views->make('migration::livewire.new-migration');
+    }
+
+    private function unrecognisedExportMessage(): string
+    {
+        // The single user-facing "can't read this export" line, shared by the
+        // extensions/mimes validation messages and submit()'s inline banner —
+        // deliberately a fixed string, never the raw exception message.
+        return Lang::get('migration::new.errors.unrecognised');
     }
 
     private function sanitiseFilename(string $original): string

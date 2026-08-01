@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
+use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 
@@ -43,6 +44,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // redirect cannot loop. Once a user exists it is a pass-through.
         $middleware->web(append: [
             EnsureDatabaseReady::class,
+            // Appended to `web` (not global) so it runs after StartSession
+            // and the auth guard are available — both are signals it reads.
+            // Resolves the per-request UI language (user override → session
+            // → Accept-Language → English) onto the translator before any
+            // route renders.
+            SetLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

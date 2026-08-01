@@ -12,6 +12,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Raises a 404 -- never a 403 -- when the partner does not exist or the
@@ -50,7 +51,7 @@ final class ManageUserPage extends Component
     public function setPartnerPassword(Hasher $hasher, DatabaseManager $db): void
     {
         if (strlen($this->newPartnerPassword) < self::MINIMUM_PASSWORD_LENGTH) {
-            $this->flashMessage = 'Use at least 12 characters.';
+            $this->flashMessage = Lang::get('auth::manage_user.error_min_length');
             $this->newPartnerPassword = '';
 
             return;
@@ -64,13 +65,13 @@ final class ManageUserPage extends Component
             ]);
 
         $this->newPartnerPassword = '';
-        $this->flashMessage = "Password set for {$this->partnerUsername}. Their next sign-in will ask them to choose a password.";
+        $this->flashMessage = Lang::get('auth::manage_user.password_set', ['name' => $this->partnerUsername]);
     }
 
     public function regenerateCodes(RegenerateRecoveryCodesAction $regenerate, CurrentUser $currentUser): void
     {
         $this->regeneratedCodes = $regenerate($currentUser->user(), $this->partnerUsername);
-        $this->flashMessage = "Ten new recovery codes generated for {$this->partnerUsername}.";
+        $this->flashMessage = Lang::get('auth::manage_user.codes_regenerated', ['name' => $this->partnerUsername]);
     }
 
     public function render(ViewFactory $views): View
@@ -78,7 +79,7 @@ final class ManageUserPage extends Component
         $view = $views->make('auth::livewire.manage-user-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => "Manage {$this->partnerUsername} · beatrax"]);
+        $view->extends('layouts.app', ['title' => Lang::get('auth::manage_user.page_title', ['name' => $this->partnerUsername])]);
 
         return $view;
     }

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     A single anomaly alert row (D-16: one alert per transaction,
     multi-reason). Cloned from drift-alert-row but re-shaped for a
@@ -32,9 +33,9 @@
     // Canonical reason labels (D-16). Unknown reasons fall through with a
     // titleized fallback so a future detector still renders.
     $reasonLabels = [
-        'large' => 'Large charge',
-        'first_time' => 'First time',
-        'duplicate' => 'Duplicate',
+        'large' => Lang::get('anomaly::alerts.reasons.large'),
+        'first_time' => Lang::get('anomaly::alerts.reasons.first_time'),
+        'duplicate' => Lang::get('anomaly::alerts.reasons.duplicate'),
     ];
 @endphp
 
@@ -51,36 +52,36 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181" />
                     </svg>
                 @endif
-                <span class="font-medium text-slate-900 dark:text-slate-100">{{ $alert->displayName !== '' ? $alert->displayName : 'Unknown merchant' }}</span>
+                <span class="font-medium text-slate-900 dark:text-slate-100">{{ $alert->displayName !== '' ? $alert->displayName : Lang::get('anomaly::alerts.unknown_merchant') }}</span>
                 @foreach ($alert->reasons as $reason)
                     @php $label = $reasonLabels[$reason] ?? ucwords(str_replace('_', ' ', $reason)); @endphp
                     @if ($reason === 'first_time')
                         <span
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-blue-bg); color: var(--color-blue);"
-                            aria-label="Reason: first-time merchant"
+                            aria-label="{{ Lang::get('anomaly::alerts.reason_aria.first_time') }}"
                         >{{ $label }}</span>
                     @elseif ($reason === 'duplicate')
                         <span
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             style="background: var(--color-amber-bg); color: var(--color-amber);"
-                            aria-label="Reason: duplicate charge"
+                            aria-label="{{ Lang::get('anomaly::alerts.reason_aria.duplicate') }}"
                         >{{ $label }}</span>
                     @else
                         {{-- large (or any future detector): direction-aware tint --}}
                         <span
                             class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium {{ $tint }} dark:bg-slate-800"
-                            aria-label="Reason: {{ strtolower($label) }}"
+                            aria-label="{{ Lang::get('anomaly::alerts.reason_aria.generic', ['label' => strtolower($label)]) }}"
                         >{{ $label }}</span>
                     @endif
                 @endforeach
             </p>
             <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                <span style="font-variant-numeric: tabular-nums;">baseline {{ $fmt($alert->baselineAmount) }} → actual: {{ $fmt($alert->latestAmount) }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.baseline_to_actual', ['baseline' => $fmt($alert->baselineAmount), 'actual' => $fmt($alert->latestAmount)]) }}</span>
                 <span class="mx-1">·</span>
-                <span style="font-variant-numeric: tabular-nums;">detected {{ $alert->detectedAt->format('d M') }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.detected', ['date' => $alert->detectedAt->format('d M')]) }}</span>
                 <span class="mx-1">·</span>
-                <span style="font-variant-numeric: tabular-nums;">sensitivity ±{{ $alert->sensitivityPercentUsed }}%</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.sensitivity', ['percent' => $alert->sensitivityPercentUsed]) }}</span>
             </p>
         </div>
 
@@ -90,7 +91,7 @@
                  into a per-row <details> disclosure with full-width
                  ≥44px stacked chips. --}}
             <details class="shrink-0 sm:hidden">
-                <summary class="cursor-pointer list-none rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">Actions</summary>
+                <summary class="cursor-pointer list-none rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ Lang::get('anomaly::alerts.actions_summary') }}</summary>
                 <div class="mt-2 flex flex-col gap-2">
                     @include('anomaly::livewire.partials.anomaly-action-chips', [
                         'alert' => $alert,

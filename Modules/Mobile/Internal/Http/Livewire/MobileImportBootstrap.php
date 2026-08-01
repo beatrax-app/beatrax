@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\MobileProvisioningCredentials;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
@@ -110,8 +111,8 @@ final class MobileImportBootstrap extends Component
     private function passwordError(): ?string
     {
         return match (true) {
-            $this->password !== $this->passwordConfirmation => 'Passwords do not match.',
-            strlen($this->password) < self::MINIMUM_PASSWORD_LENGTH => 'Use at least 12 characters.',
+            $this->password !== $this->passwordConfirmation => Lang::get('mobile::import.errors.passwords_mismatch'),
+            strlen($this->password) < self::MINIMUM_PASSWORD_LENGTH => Lang::get('mobile::import.errors.password_length'),
             default => null,
         };
     }
@@ -119,8 +120,8 @@ final class MobileImportBootstrap extends Component
     private function pinError(): ?string
     {
         return match (true) {
-            strlen($this->pin) < 4 => 'PIN must be at least 4 digits.',
-            $this->pin !== $this->confirmPin => "PINs don't match. Try again.",
+            strlen($this->pin) < 4 => Lang::get('mobile::import.errors.pin_length'),
+            $this->pin !== $this->confirmPin => Lang::get('mobile::import.errors.pins_mismatch'),
             default => null,
         };
     }
@@ -147,7 +148,7 @@ final class MobileImportBootstrap extends Component
             // empty PIN/password; the only safe recovery is a full
             // re-entry through collect_pin so the user re-types real
             // credentials.
-            $this->flashMessage = 'Your session expired before setup finished. Please re-enter your PIN and password.';
+            $this->flashMessage = Lang::get('mobile::import.errors.session_expired');
             $this->step = 'collect_pin';
 
             return;
@@ -156,7 +157,7 @@ final class MobileImportBootstrap extends Component
         $credentials = new MobileProvisioningCredentials($userId, $pending['pin'], $pending['password']);
 
         if (! $this->provisionDeviceLocally($credentials, $session, $lockGateway, $pairingGateway, $db, $importIntent)) {
-            $this->flashMessage = 'Still could not finish setting up this device. Please try again.';
+            $this->flashMessage = Lang::get('mobile::import.errors.retry_failed');
 
             return;
         }
@@ -187,7 +188,7 @@ final class MobileImportBootstrap extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Import from another device · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('mobile::import.page_title').' · beatrax']);
 
         return $view;
     }
@@ -261,6 +262,6 @@ final class MobileImportBootstrap extends Component
             }
         }
 
-        return 'Could not create the account.';
+        return Lang::get('mobile::import.errors.account_failed');
     }
 }

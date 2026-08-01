@@ -10,6 +10,7 @@ use Illuminate\Routing\Redirector;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\CreateAmountChangeScenarioForSeries;
 use Modules\Forecasting\Public\Actions\CreateCancellationScenarioForSeries;
@@ -89,7 +90,7 @@ final class ModelWhatIfDropdown extends Component
         $this->errorMessage = null;
         $minor = $this->parseAmountToMinor($this->newAmountInput);
         if ($minor === null) {
-            $this->errorMessage = 'Amount must be a positive number.';
+            $this->errorMessage = Lang::get('forecasting::scenario.errors.amount_positive');
 
             return null;
         }

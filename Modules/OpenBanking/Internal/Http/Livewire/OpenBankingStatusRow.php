@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Public\Services\OpenBankingConnectionQuery;
 
 /**
@@ -24,21 +25,24 @@ final class OpenBankingStatusRow extends Component
         $view = $query->current($currentUser->user()->id);
 
         if ($view === null || ! $view->enabled) {
-            $this->statusText = 'Not connected. Import ICS/ASN statements manually, or connect a bank automatically.';
+            $this->statusText = Lang::get('openbanking::messages.status_row.not_connected');
             $this->expired = false;
 
             return;
         }
 
         if ($view->consentStatus === 'expired') {
-            $this->statusText = 'Consent expired — reconnect needed.';
+            $this->statusText = Lang::get('openbanking::messages.status_row.expired');
             $this->expired = true;
 
             return;
         }
 
-        $lastSynced = $view->lastSuccessfulSyncAt?->diffForHumans() ?? 'never';
-        $this->statusText = "Connected to {$view->bankDisplayName} via Enable Banking. Last synced {$lastSynced}.";
+        $lastSynced = $view->lastSuccessfulSyncAt?->diffForHumans() ?? Lang::get('openbanking::messages.status_row.never');
+        $this->statusText = Lang::get('openbanking::messages.status_row.connected', [
+            'bank' => $view->bankDisplayName,
+            'when' => $lastSynced,
+        ]);
         $this->expired = false;
     }
 

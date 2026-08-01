@@ -14,6 +14,7 @@ use Modules\Chains\Public\Contracts\DispatchesChainResolution;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\ConfirmsImports;
 use Modules\Import\Public\Dto\ConsolidatedPreviewBatch;
@@ -128,7 +129,7 @@ final class FirstImportStep extends Component
             $runIdsToCommit = $this->readyRunIds($buildPreview->build($stashedIds, $user));
 
             if ($runIdsToCommit === []) {
-                $this->commitError = 'Nothing to commit.';
+                $this->commitError = Lang::get('onboarding::first_import.errors.nothing_to_commit');
 
                 return;
             }
@@ -147,7 +148,7 @@ final class FirstImportStep extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
-            $this->commitError = "We couldn't commit your statements. Nothing was changed — try again.";
+            $this->commitError = Lang::get('onboarding::first_import.errors.commit_failed');
         } finally {
             $this->isCommitting = false;
         }

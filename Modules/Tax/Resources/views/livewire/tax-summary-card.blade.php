@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Dashboard tax summary card (D-18, UI-SPEC Section 10).
 
@@ -24,18 +25,18 @@
     href="{{ route('tax.index') }}"
     class="card block transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:hover:bg-slate-800"
     style="padding: var(--space-4) var(--space-6); text-decoration: none;"
-    aria-label="Tax summary — {{ $count }} items tagged for {{ $year }}"
+    aria-label="{{ Lang::get('tax::summary.card_aria', ['count' => $count, 'year' => $year]) }}"
 >
     <div class="flex items-center justify-between">
         <p style="font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-faint);">
-            Tax {{ $year > 0 ? $year : '' }}
+            {{ Lang::get('tax::summary.label', ['year' => $year > 0 ? $year : '']) }}
         </p>
         <span style="font-size: var(--text-xs); color: var(--color-text-faint);">→</span>
     </div>
 
     @if ($count === 0 || $year === 0)
         <p style="margin-top: var(--space-2); font-size: var(--text-base); color: var(--color-text-faint);">
-            No items tagged yet for {{ $year > 0 ? $year : 'this year' }}.
+            {{ Lang::get('tax::summary.empty', ['period' => $year > 0 ? $year : Lang::get('tax::summary.this_year')]) }}
         </p>
     @else
         <p
@@ -45,7 +46,7 @@
             {{ $fmtEur($total ?? 0) }}
         </p>
         <p style="margin-top: 2px; font-size: var(--text-xs); color: var(--color-text-muted);">
-            {{ $count }} {{ $count === 1 ? 'item' : 'items' }} tagged
+            {{ $count === 1 ? Lang::get('tax::summary.tagged_one', ['count' => $count]) : Lang::get('tax::summary.tagged_other', ['count' => $count]) }}
         </p>
     @endif
 </a>

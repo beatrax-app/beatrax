@@ -14,6 +14,7 @@ use Modules\Anomaly\Public\Actions\RemoveAnomalySuppressionRule;
 use Modules\Anomaly\Public\Services\AnomalySuppressionRuleQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Follows the SettingsPage pattern: NO constructor DI — collaborators
@@ -63,12 +64,12 @@ final class AnomalySettingsSection extends Component
         // Server-side bounds: a tampered payload is rejected before any
         // write reaches the database.
         if ($sensitivity < 1 || $sensitivity > 100) {
-            $this->saveError = 'Sensitivity must be between 1 and 100.';
+            $this->saveError = Lang::get('anomaly::settings.errors.sensitivity_range');
 
             return;
         }
         if ($floor < 0) {
-            $this->saveError = 'Minimum charge amount cannot be negative.';
+            $this->saveError = Lang::get('anomaly::settings.errors.min_amount_negative');
 
             return;
         }
@@ -108,7 +109,7 @@ final class AnomalySettingsSection extends Component
     ): void {
         try {
             $action->removeRule($ruleId, $currentUser->user());
-            $this->dispatch('toast', message: 'Rule removed');
+            $this->dispatch('toast', message: Lang::get('anomaly::settings.suppression.removed_toast'));
         } catch (NotFoundHttpException) {
             // A rule that vanished between the list render and this click is
             // already in the desired state, so a missing row is a silent

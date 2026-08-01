@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Public\Enums\TaxCountry;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -80,7 +81,7 @@ final class TaxSettingsSection extends Component
         $name = trim($this->newCategoryName);
 
         if ($name === '') {
-            $this->addError = 'Category name cannot be empty.';
+            $this->addError = Lang::get('tax::messages.errors.name_empty');
 
             return;
         }

@@ -35,6 +35,7 @@ final class CalendarServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'calendar');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'calendar');
 
         $livewire->component('calendar.calendar-page', CalendarPage::class);
     }

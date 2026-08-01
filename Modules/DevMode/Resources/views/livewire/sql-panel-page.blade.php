@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the SQL panel and
      schema viewer scroll horizontally at phone width without breaking the layout. --}}
 <div class="flex min-h-full overflow-x-auto" data-testid="sql-panel-page">
@@ -5,10 +6,10 @@
     <aside
         class="border-r border-[var(--color-border)] w-[220px] flex-shrink-0 overflow-auto"
         data-testid="schema-viewer"
-        aria-label="Schema viewer"
+        aria-label="{{ Lang::get('dev::sql.schema_viewer_aria') }}"
     >
         <div class="p-3 border-b border-[var(--color-border)]">
-            <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">Tables</h2>
+            <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-muted)]">{{ Lang::get('dev::sql.tables') }}</h2>
         </div>
         <ul class="text-sm" x-data="{ openTable: null }">
             @foreach ($tables as $table)
@@ -31,7 +32,7 @@
                         class="px-2 pb-2 space-y-1 text-[11px]"
                     >
                         <div>
-                            <span class="text-[var(--color-text-muted)] uppercase tracking-wide">columns</span>
+                            <span class="text-[var(--color-text-muted)] uppercase tracking-wide">{{ Lang::get('dev::sql.columns') }}</span>
                             <ul class="font-mono">
                                 @foreach ($table['columns'] as $col)
                                     @php
@@ -45,7 +46,7 @@
                         </div>
                         @if (count($table['indexes']) > 0)
                             <div>
-                                <span class="text-[var(--color-text-muted)] uppercase tracking-wide">indexes</span>
+                                <span class="text-[var(--color-text-muted)] uppercase tracking-wide">{{ Lang::get('dev::sql.indexes') }}</span>
                                 <ul class="font-mono">
                                     @foreach ($table['indexes'] as $idx)
                                         <li>{{ is_array($idx) && isset($idx['name']) ? $idx['name'] : '?' }}</li>
@@ -55,7 +56,7 @@
                         @endif
                         @if (count($table['foreign_keys']) > 0)
                             <div>
-                                <span class="text-[var(--color-text-muted)] uppercase tracking-wide">foreign keys</span>
+                                <span class="text-[var(--color-text-muted)] uppercase tracking-wide">{{ Lang::get('dev::sql.foreign_keys') }}</span>
                                 <ul class="font-mono">
                                     @foreach ($table['foreign_keys'] as $fk)
                                         <li>{{ is_array($fk) && isset($fk['name']) ? $fk['name'] : '?' }}</li>
@@ -68,7 +69,7 @@
                             class="pill-btn text-xs"
                             wire:click="browseTable('{{ $table['name'] }}')"
                             data-testid="schema-browse-{{ $table['name'] }}"
-                        >Browse</button>
+                        >{{ Lang::get('dev::sql.browse') }}</button>
                     </div>
                 </li>
             @endforeach
@@ -78,11 +79,9 @@
     {{-- Main pane: SQL input + results --}}
     <div class="flex-1 p-6 space-y-4 overflow-auto">
         <header class="space-y-1">
-            <h1 class="text-xl font-semibold text-[var(--color-text)]">SQL</h1>
+            <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::sql.heading') }}</h1>
             <p class="text-sm text-[var(--color-text-muted)]">
-                SELECT-only query panel. The validator (parse-time) and PRAGMA
-                <code class="font-mono text-xs">query_only = 1</code>
-                (engine-time) reject every non-SELECT. Hard 5-second wall-clock cap.
+                {!! Lang::get('dev::sql.subtitle_html') !!}
             </p>
         </header>
 
@@ -91,14 +90,14 @@
                 class="rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 p-3 text-sm"
                 data-testid="sql-advanced-banner"
             >
-                <strong>Advanced mode is OFF.</strong>
-                <span>Enable Advanced (Dev Mode → Advanced) to run queries.</span>
+                <strong>{{ Lang::get('dev::sql.advanced_off_strong') }}</strong>
+                <span>{{ Lang::get('dev::sql.advanced_off_hint') }}</span>
             </div>
         @endif
 
         <div class="{{ $advancedOn ? '' : 'opacity-50 pointer-events-none' }}">
             <label for="sql-textarea" class="block text-xs uppercase tracking-wide text-[var(--color-text-muted)] mb-1">
-                SELECT statement
+                {{ Lang::get('dev::sql.statement_label') }}
             </label>
             <textarea
                 id="sql-textarea"
@@ -115,10 +114,10 @@
                     class="pill-btn primary"
                     wire:click="run"
                     data-testid="sql-run-button"
-                >Run</button>
+                >{{ Lang::get('dev::sql.run') }}</button>
                 @if ($rowcount !== null)
                     <span class="text-xs text-[var(--color-text-muted)]" style="font-variant-numeric: tabular-nums;">
-                        {{ $rowcount }} rows · {{ $durationMs }}ms
+                        {{ Lang::get('dev::sql.rows_meta', ['rows' => $rowcount, 'duration' => $durationMs]) }}
                     </span>
                 @endif
             </div>
@@ -135,7 +134,7 @@
             <div
                 class="text-sm text-[var(--color-text-muted)]"
                 data-testid="sql-empty-result"
-            >Query returned no rows.</div>
+            >{{ Lang::get('dev::sql.no_rows') }}</div>
         @elseif ($rowcount !== null && count($resultRows) > 0)
             <table class="table text-sm w-full" style="font-variant-numeric: tabular-nums;" data-testid="sql-result-table">
                 <thead>

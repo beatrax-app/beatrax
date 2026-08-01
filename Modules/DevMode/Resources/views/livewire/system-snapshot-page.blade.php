@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the dense snapshot
      key-value tables scroll horizontally at phone width. --}}
 <div class="p-6 space-y-6 overflow-x-auto" data-testid="system-snapshot-page">
@@ -17,20 +18,15 @@
         $keyTh = 'text-left text-xs uppercase text-[var(--color-text-muted)] pr-4 w-40 align-top';
     @endphp
     <header class="space-y-1">
-        <h1 class="text-xl font-semibold text-[var(--color-text)]">System snapshot</h1>
+        <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::system.heading') }}</h1>
         <p class="text-sm text-[var(--color-text-muted)]">
-            Environment + runtime + effective configuration. Sensitive keys (suffixes
-            <code class="font-mono text-xs">*password*</code>,
-            <code class="font-mono text-xs">*secret*</code>,
-            <code class="font-mono text-xs">*key</code>,
-            <code class="font-mono text-xs">*token*</code>)
-            are masked.
+            {!! Lang::get('dev::system.subtitle_html') !!}
         </p>
     </header>
 
     {{-- PHP --}}
     <section class="card p-4" data-testid="snapshot-section-php">
-        <h2 class="text-sm font-semibold mb-3">PHP</h2>
+        <h2 class="text-sm font-semibold mb-3">{{ Lang::get('dev::system.php') }}</h2>
         <table class="table w-full text-sm" style="font-variant-numeric: tabular-nums;">
             <tbody>
                 <tr><th class="{{ $keyTh }}">version</th><td class="font-mono">{{ $php['version'] }}</td></tr>
@@ -46,7 +42,7 @@
 
     {{-- Laravel --}}
     <section class="card p-4" data-testid="snapshot-section-laravel">
-        <h2 class="text-sm font-semibold mb-3">Laravel</h2>
+        <h2 class="text-sm font-semibold mb-3">{{ Lang::get('dev::system.laravel') }}</h2>
         <table class="table w-full text-sm">
             <tbody>
                 @foreach ($laravel as $k => $v)
@@ -61,7 +57,7 @@
 
     {{-- SQLite --}}
     <section class="card p-4" data-testid="snapshot-section-sqlite">
-        <h2 class="text-sm font-semibold mb-3">SQLite</h2>
+        <h2 class="text-sm font-semibold mb-3">{{ Lang::get('dev::system.sqlite') }}</h2>
         <table class="table w-full text-sm">
             <tbody>
                 @foreach ($sqlite['pragmas'] as $k => $v)
@@ -70,15 +66,15 @@
                         <td class="font-mono">{{ $v }}</td>
                     </tr>
                 @endforeach
-                <tr><th class="{{ $keyTh }}">file</th><td class="font-mono text-xs">{{ $sqlite['file'] }}</td></tr>
-                <tr><th class="{{ $keyTh }}">file size</th><td class="font-mono">{{ $sqlite['file_size'] ?? '(missing)' }}</td></tr>
+                <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.sqlite_file') }}</th><td class="font-mono text-xs">{{ $sqlite['file'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.sqlite_file_size') }}</th><td class="font-mono">{{ $sqlite['file_size'] ?? Lang::get('dev::system.sqlite_missing') }}</td></tr>
             </tbody>
         </table>
     </section>
 
     {{-- Paths --}}
     <section class="card p-4" data-testid="snapshot-section-paths">
-        <h2 class="text-sm font-semibold mb-3">Paths</h2>
+        <h2 class="text-sm font-semibold mb-3">{{ Lang::get('dev::system.paths') }}</h2>
         <table class="table w-full text-xs">
             <tbody>
                 @foreach ($paths as $k => $v)
@@ -93,9 +89,9 @@
 
     {{-- Environment --}}
     <section class="card p-4" data-testid="snapshot-section-env">
-        <h2 class="text-sm font-semibold mb-3">Environment</h2>
+        <h2 class="text-sm font-semibold mb-3">{{ Lang::get('dev::system.environment') }}</h2>
         @if (count($env) === 0)
-            <p class="text-sm text-[var(--color-text-muted)]">(no BEATRAX_*, NATIVEPHP_*, or APP_KEY env vars set)</p>
+            <p class="text-sm text-[var(--color-text-muted)]">{{ Lang::get('dev::system.env_empty') }}</p>
         @else
             <table class="table w-full text-xs">
                 <tbody>
@@ -112,11 +108,11 @@
 
     {{-- Runtime --}}
     <section class="card p-4" data-testid="snapshot-section-runtime">
-        <h2 class="text-sm font-semibold mb-3">Runtime</h2>
+        <h2 class="text-sm font-semibold mb-3">{{ Lang::get('dev::system.runtime') }}</h2>
         <table class="table w-full text-xs">
             <tbody>
-                <tr><th class="{{ $keyTh }}">nativephp</th><td class="font-mono">{{ $runtime['nativephp'] }}</td></tr>
-                <tr><th class="{{ $keyTh }}">host os</th><td class="font-mono">{{ $runtime['host_os'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.runtime_nativephp') }}</th><td class="font-mono">{{ $runtime['nativephp'] }}</td></tr>
+                <tr><th class="{{ $keyTh }}">{{ Lang::get('dev::system.runtime_host_os') }}</th><td class="font-mono">{{ $runtime['host_os'] }}</td></tr>
             </tbody>
         </table>
     </section>
@@ -124,10 +120,10 @@
     {{-- Effective config (collapsed by default) --}}
     <section class="card p-4" data-testid="snapshot-section-config" x-data="{ open: false }">
         <h2 class="text-sm font-semibold mb-3 flex items-center justify-between">
-            Effective configuration
+            {{ Lang::get('dev::system.effective_config') }}
             <button type="button" class="text-xs text-[var(--color-text-muted)] underline" x-on:click="open = !open">
-                <span x-show="!open">Show {{ count($effectiveConfig) }} entries</span>
-                <span x-show="open" x-cloak>Hide</span>
+                <span x-show="!open">{{ Lang::get('dev::system.show_entries', ['count' => count($effectiveConfig)]) }}</span>
+                <span x-show="open" x-cloak>{{ Lang::get('dev::system.hide') }}</span>
             </button>
         </h2>
         <div x-show="open" x-cloak class="max-h-96 overflow-auto">

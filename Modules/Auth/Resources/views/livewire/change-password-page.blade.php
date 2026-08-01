@@ -1,13 +1,14 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-sm px-6 space-y-6">
         <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Set a new password</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Beatrax needs you to set your own password before you continue.</p>
+            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::change_password.title') }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::change_password.subtitle') }}</p>
         </header>
 
         <form wire:submit="submit" class="space-y-4">
             <div class="space-y-1">
-                <label for="current-password" class="block text-sm text-slate-900 dark:text-slate-100">Current password</label>
+                <label for="current-password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::change_password.current_password') }}</label>
                 <input
                     type="password"
                     id="current-password"
@@ -19,7 +20,7 @@
             </div>
 
             <div class="space-y-1">
-                <label for="new-password" class="block text-sm text-slate-900 dark:text-slate-100">New password</label>
+                <label for="new-password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::change_password.new_password') }}</label>
                 <input
                     type="password"
                     id="new-password"
@@ -30,7 +31,7 @@
             </div>
 
             <div class="space-y-1">
-                <label for="new-password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">Confirm new password</label>
+                <label for="new-password-confirmation" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::change_password.confirm_new_password') }}</label>
                 <input
                     type="password"
                     id="new-password-confirmation"
@@ -48,7 +49,7 @@
                 type="submit"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
             >
-                Save new password
+                {{ Lang::get('auth::change_password.submit') }}
             </button>
         </form>
     </div>

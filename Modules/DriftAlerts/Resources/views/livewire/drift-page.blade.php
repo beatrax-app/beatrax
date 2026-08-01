@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Drift alerts list. Three tabs (Open / History / Dismissed) over
     drift_alerts rows. The Open tab groups multiple alerts that share
@@ -23,9 +24,9 @@
         : $money->format('en_US');
 
     $tabs = [
-        'open' => 'Open',
-        'history' => 'History',
-        'dismissed' => 'Dismissed',
+        'open' => Lang::get('drift-alerts::alerts.tabs.open'),
+        'history' => Lang::get('drift-alerts::alerts.tabs.history'),
+        'dismissed' => Lang::get('drift-alerts::alerts.tabs.dismissed'),
     ];
 
     /**
@@ -70,12 +71,12 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-6 flex items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Alerts</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.heading') }}</h1>
             <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
                 @if ($type === 'anomaly')
-                    Individual charges that look out of the ordinary for you.
+                    {{ Lang::get('drift-alerts::alerts.intro_anomaly') }}
                 @else
-                    Approved recurring series whose latest charge moved outside your threshold.
+                    {{ Lang::get('drift-alerts::alerts.intro_drift') }}
                 @endif
             </p>
         </div>
@@ -83,19 +84,19 @@
             <a
                 href="{{ route('settings') }}#drift-threshold"
                 class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-            >Adjust threshold →</a>
+            >{{ Lang::get('drift-alerts::alerts.adjust_threshold') }}</a>
         @else
             <a
                 href="{{ route('settings') }}#anomaly-detection"
                 class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-            >Adjust sensitivity →</a>
+            >{{ Lang::get('drift-alerts::alerts.adjust_sensitivity') }}</a>
         @endif
     </header>
 
     {{-- Level 1 — type switch (D-02). Segmented button group; "type
          first, lifecycle second". Stacks full-width on phone. --}}
-    <div class="mb-6 flex w-full gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:w-auto sm:inline-flex" role="tablist" aria-label="Alert type">
-        @foreach (['drift' => 'Subscription drift', 'anomaly' => 'Unusual charges'] as $typeKey => $typeLabel)
+    <div class="mb-6 flex w-full gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800 sm:w-auto sm:inline-flex" role="tablist" aria-label="{{ Lang::get('drift-alerts::alerts.type_aria') }}">
+        @foreach (['drift' => Lang::get('drift-alerts::alerts.type.drift'), 'anomaly' => Lang::get('drift-alerts::alerts.type.anomaly')] as $typeKey => $typeLabel)
             <button
                 type="button"
                 role="tab"
@@ -111,7 +112,7 @@
     </div>
 
     {{-- Level 2 — lifecycle tabs (shared between types). --}}
-    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="Alert lifecycle">
+    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('drift-alerts::alerts.lifecycle_aria') }}">
         @foreach ($tabs as $key => $label)
             <button
                 type="button"
@@ -143,9 +144,9 @@
             };
 
             $anomalyEmpty = [
-                'open' => ['No unusual charges', "beatrax watches your spending and flags charges that look out of the ordinary. When something unusual lands, it shows up here."],
-                'history' => ['No acknowledged charges yet', "Charges you've acknowledged will appear here so you can see what you've already reviewed."],
-                'dismissed' => ['Nothing dismissed yet', 'When you mark a charge as expected, it lands here with its suppression rule.'],
+                'open' => [Lang::get('drift-alerts::alerts.anomaly_empty.open_heading'), Lang::get('drift-alerts::alerts.anomaly_empty.open_body')],
+                'history' => [Lang::get('drift-alerts::alerts.anomaly_empty.history_heading'), Lang::get('drift-alerts::alerts.anomaly_empty.history_body')],
+                'dismissed' => [Lang::get('drift-alerts::alerts.anomaly_empty.dismissed_heading'), Lang::get('drift-alerts::alerts.anomaly_empty.dismissed_body')],
             ];
         @endphp
 
@@ -175,21 +176,20 @@
                         type="button"
                         wire:click="$set('cursorId', {{ $anomalyRows[count($anomalyRows) - 1]->anomalyAlertId }})"
                         class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-                    >Load more</button>
+                    >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
                 </div>
             @endif
         @endif
     @elseif ($tab === 'open')
         @if (count($grouped) === 0)
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No open drift alerts</h2>
+                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_open.heading') }}</h2>
                 <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                    beatrax watches your approved recurring series and flags any whose latest charge differs from the prior amount by more than your threshold.
-                    Adjust threshold on
+                    {{ Lang::get('drift-alerts::alerts.empty_open.body') }}
                     <a
                         href="{{ route('settings') }}#drift-threshold"
                         class="text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:text-slate-100 dark:hover:text-slate-300"
-                    >Settings → Default drift alert</a>.
+                    >{{ Lang::get('drift-alerts::alerts.empty_open.link') }}</a>.
                 </p>
             </div>
         @else
@@ -217,7 +217,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                     </svg>
                                     <span class="truncate">{{ $firstAlert->displayName }}</span>
-                                    <flux:badge color="slate" size="sm" class="ml-2" style="font-variant-numeric: tabular-nums;">{{ $alertCount }} drifts open</flux:badge>
+                                    <flux:badge color="slate" size="sm" class="ml-2" style="font-variant-numeric: tabular-nums;">{{ Lang::get('drift-alerts::alerts.group_count', ['count' => $alertCount]) }}</flux:badge>
                                 </button>
                                 <div class="shrink-0">
                                     @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $seriesId], key('threshold-group-'.$seriesId))
@@ -267,14 +267,14 @@
         @if (count($rows) === 0)
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
                 @if ($tab === 'history')
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No acknowledged drifts yet</h2>
+                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_history.heading') }}</h2>
                     <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                        Acknowledged drift alerts will appear here so you can see what you've already reviewed.
+                        {{ Lang::get('drift-alerts::alerts.empty_history.body') }}
                     </p>
                 @else
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing dismissed yet</h2>
+                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::alerts.empty_dismissed.heading') }}</h2>
                     <p class="mt-2 max-w-prose text-sm text-slate-500 dark:text-slate-400">
-                        When you tell beatrax you've cancelled a series, that decision lands here with a timestamp.
+                        {{ Lang::get('drift-alerts::alerts.empty_dismissed.body') }}
                     </p>
                 @endif
             </div>
@@ -303,7 +303,7 @@
                         type="button"
                         wire:click="$set('cursorId', {{ $rows[count($rows) - 1]->driftAlertId }})"
                         class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-                    >Load more</button>
+                    >{{ Lang::get('drift-alerts::alerts.load_more') }}</button>
                 </div>
             @endif
         @endif

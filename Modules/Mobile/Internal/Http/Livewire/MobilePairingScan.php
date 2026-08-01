@@ -14,6 +14,7 @@ use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
 use Modules\Sync\Public\Services\PairingGateway;
@@ -156,7 +157,7 @@ final class MobilePairingScan extends Component
         // the QR path only. Never a dead end: the copy directs the user
         // back to the QR.
         if ($this->importMode && $scannedPayload === null) {
-            $this->flashMessage = 'Scan the QR code shown on the other device to import.';
+            $this->flashMessage = Lang::get('mobile::pairing.errors.import_needs_qr');
 
             return;
         }
@@ -171,7 +172,7 @@ final class MobilePairingScan extends Component
             $identity = $qrBridge->extractIdentity($scannedPayload);
 
             if ($identity === null) {
-                $this->flashMessage = 'This code is invalid or has expired. Ask the other device to generate a new one.';
+                $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
                 return;
             }
@@ -196,7 +197,7 @@ final class MobilePairingScan extends Component
             : $gateway->acceptWordCode($this->wordCode, $userId, $session);
 
         if ($result === null) {
-            $this->flashMessage = 'This code is invalid or has expired. Ask the other device to generate a new one.';
+            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
             return;
         }
@@ -336,7 +337,7 @@ final class MobilePairingScan extends Component
         // client state.
         $deviceId = $gateway->currentDeviceId($userId, $session);
         if ($deviceId === null) {
-            $this->flashMessage = 'Your device identity is locked. Unlock the app and try again.';
+            $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
 
             return;
         }
@@ -456,7 +457,7 @@ final class MobilePairingScan extends Component
         $view = $views->make('mobile::livewire.mobile-pairing-scan');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Pair a device · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('mobile::pairing.page_title').' · beatrax']);
 
         return $view;
     }

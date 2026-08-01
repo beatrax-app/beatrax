@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Type chip — categorical metadata badge for a counterparty's
     taxonomy. Renders the 5+1 type variants (merchant, personal, bank,
@@ -16,19 +17,19 @@
 ])
 @php
     $typeLabels = [
-        'merchant' => ['class' => 't-merchant', 'label' => 'Merchant'],
-        'personal' => ['class' => 't-personal', 'label' => 'Personal'],
-        'bank' => ['class' => 't-bank', 'label' => 'Bank'],
-        'government' => ['class' => 't-gov', 'label' => 'Government'],
-        'self_account' => ['class' => 't-self', 'label' => 'Self'],
-        'unknown' => ['class' => 't-unknown', 'label' => 'Unknown'],
+        'merchant' => ['class' => 't-merchant', 'label' => Lang::get('counterparties::components.type_chip.merchant')],
+        'personal' => ['class' => 't-personal', 'label' => Lang::get('counterparties::components.type_chip.personal')],
+        'bank' => ['class' => 't-bank', 'label' => Lang::get('counterparties::components.type_chip.bank')],
+        'government' => ['class' => 't-gov', 'label' => Lang::get('counterparties::components.type_chip.government')],
+        'self_account' => ['class' => 't-self', 'label' => Lang::get('counterparties::components.type_chip.self')],
+        'unknown' => ['class' => 't-unknown', 'label' => Lang::get('counterparties::components.type_chip.unknown')],
     ];
 
     $resolved = $typeLabels[$type] ?? $typeLabels['unknown'];
 @endphp
 <span
     {{ $attributes->merge(['class' => 'type-chip '.$resolved['class']]) }}
-    aria-label="Counterparty type: {{ $resolved['label'] }}"
+    aria-label="{{ Lang::get('counterparties::components.type_chip.aria', ['type' => $resolved['label']]) }}"
 >
     {{ $resolved['label'] }}
 </span>

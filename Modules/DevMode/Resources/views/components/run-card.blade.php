@@ -11,6 +11,7 @@
        cancelled — status-pill[variant=muted] + Re-run button
        failed    — status-pill[variant=fail] + Re-run button + show-output toggle
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @props(['run'])
 @php
     $runId = $run['runId'] ?? '';
@@ -30,10 +31,10 @@
         default => 'muted',
     };
     $statusLabel = match ($status) {
-        'running' => 'Running',
-        'done' => $exitCode === 0 ? 'Done' : 'Failed',
-        'cancelled' => 'Cancelled',
-        'failed' => 'Failed',
+        'running' => Lang::get('dev::runner.status.running'),
+        'done' => $exitCode === 0 ? Lang::get('dev::runner.status.done') : Lang::get('dev::runner.status.failed'),
+        'cancelled' => Lang::get('dev::runner.status.cancelled'),
+        'failed' => Lang::get('dev::runner.status.failed'),
         default => ucfirst($status),
     };
 @endphp
@@ -64,7 +65,7 @@
                     type="button"
                     wire:click="cancel('{{ $runId }}')"
                     class="pill-btn inline-flex items-center rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                >Cancel</button>
+                >{{ Lang::get('dev::runner.cancel') }}</button>
             @else
                 @if ($tier === 'destructive')
                     <button
@@ -72,13 +73,13 @@
                         x-data
                         x-on:click="$dispatch('triple-gate:open', { command: @js($command), args: @js($args) })"
                         class="pill-btn danger inline-flex items-center rounded border border-rose-300 bg-white px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-900/30"
-                    >Re-run</button>
+                    >{{ Lang::get('dev::runner.rerun') }}</button>
                 @else
                     <button
                         type="button"
                         wire:click="rerun('{{ $runId }}')"
                         class="pill-btn inline-flex items-center rounded border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >Re-run</button>
+                    >{{ Lang::get('dev::runner.rerun') }}</button>
                 @endif
             @endif
         </div>
@@ -87,12 +88,12 @@
     <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
         <div class="tabular-nums">
             @if ($startedAt)
-                Started {{ \Carbon\CarbonImmutable::parse($startedAt)->diffForHumans() }}
+                {{ Lang::get('dev::runner.started', ['when' => \Carbon\CarbonImmutable::parse($startedAt)->diffForHumans()]) }}
             @endif
         </div>
         <div class="tabular-nums">
             @if ($status === 'done' || $status === 'failed')
-                exit
+                {{ Lang::get('dev::runner.exit') }}
                 <span class="@if ($exitCode !== 0) text-rose-600 dark:text-rose-400 @endif">{{ $exitCode ?? '?' }}</span>
             @endif
         </div>

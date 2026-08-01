@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 /**
@@ -91,18 +92,18 @@ final class SyncStatusSection extends Component
     }
 
     // Ordered most specific first: a message naming both the relay and a
-    // timeout is reported as a relay problem, because that is the hop that
-    // failed. Each row carries a set of needles rather than one, since the
-    // same failure reaches us phrased several ways.
+    // timeout is reported as a relay problem. Each row carries a set of
+    // needles, since the same failure reaches us phrased several ways. The
+    // 'label' is a translation key resolved via Lang::get in deriveErrorLabel.
     /**
      * @var list<array{needles: list<string>, label: string}>
      */
     private const ERROR_LABELS = [
-        ['needles' => ['relay'], 'label' => 'Relay unreachable'],
+        ['needles' => ['relay'], 'label' => 'sync::status.labels.relay_unreachable'],
         // 'authentication' is deliberately absent: it contains 'auth', so a
         // needle for it could never match anything the shorter one missed.
-        ['needles' => ['handshake', 'verify', 'auth'], 'label' => 'Handshake / verify failed'],
-        ['needles' => ['connection', 'connect', 'reach', 'timeout'], 'label' => "Can't reach peer"],
+        ['needles' => ['handshake', 'verify', 'auth'], 'label' => 'sync::status.labels.handshake_failed'],
+        ['needles' => ['connection', 'connect', 'reach', 'timeout'], 'label' => 'sync::status.labels.cannot_reach_peer'],
     ];
 
     // Empty string when the row did not fail, so the view renders no label
@@ -118,11 +119,11 @@ final class SyncStatusSection extends Component
         foreach (self::ERROR_LABELS as $candidate) {
             foreach ($candidate['needles'] as $needle) {
                 if (str_contains($lower, $needle)) {
-                    return $candidate['label'];
+                    return Lang::get($candidate['label']);
                 }
             }
         }
 
-        return 'Connection failed';
+        return Lang::get('sync::status.labels.connection_failed');
     }
 }

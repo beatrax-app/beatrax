@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Http\Livewire\Concerns\BuildsMutationForms;
 use Modules\Forecasting\Internal\Http\Livewire\Concerns\SummarisesMutations;
 use Modules\Forecasting\Public\Actions\AddScenarioMutation;
@@ -116,7 +117,7 @@ final class ScenarioEditorSidebar extends Component
     ): void {
         $this->formError = null;
         if ($this->selectedKind === null) {
-            $this->formError = 'Pick a mutation kind first.';
+            $this->formError = Lang::get('forecasting::scenario.errors.pick_kind_first');
 
             return;
         }
@@ -135,7 +136,7 @@ final class ScenarioEditorSidebar extends Component
         $this->selectedKind = null;
         $this->form = [];
         $this->refreshMutations($scenarioQuery, $currentUser);
-        $this->dispatch('toast', message: 'Mutation added.');
+        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.mutation_added'));
         $this->dispatch('forecast-updated');
     }
 
@@ -189,7 +190,7 @@ final class ScenarioEditorSidebar extends Component
         $this->selectedKind = null;
         $this->form = [];
         $this->refreshMutations($scenarioQuery, $currentUser);
-        $this->dispatch('toast', message: 'Mutation updated.');
+        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.mutation_updated'));
         $this->dispatch('forecast-updated');
     }
 
@@ -207,7 +208,7 @@ final class ScenarioEditorSidebar extends Component
             // so the not-found is swallowed and the list still refreshes.
         }
         $this->refreshMutations($scenarioQuery, $currentUser);
-        $this->dispatch('toast', message: 'Mutation removed. Undo');
+        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.mutation_removed'));
         $this->dispatch('forecast-updated');
     }
 
@@ -233,7 +234,7 @@ final class ScenarioEditorSidebar extends Component
         $this->renameError = null;
         $name = trim($this->renameInput);
         if ($name === '') {
-            $this->renameError = 'Scenario name cannot be empty.';
+            $this->renameError = Lang::get('forecasting::scenario.errors.name_empty');
 
             return;
         }
@@ -247,7 +248,7 @@ final class ScenarioEditorSidebar extends Component
         $this->scenarioName = $name;
         $this->renamingScenario = false;
         $this->renameInput = '';
-        $this->dispatch('toast', message: 'Scenario renamed.');
+        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.renamed'));
         $this->dispatch('forecast-updated');
     }
 
@@ -273,7 +274,7 @@ final class ScenarioEditorSidebar extends Component
             // the stale-id case.
         }
         $this->confirmingDeleteScenario = null;
-        $this->dispatch('toast', message: 'Scenario deleted.');
+        $this->dispatch('toast', message: Lang::get('forecasting::scenario.toast.deleted'));
         $this->dispatch('scenario-deleted', scenarioId: $this->scenarioId);
         $this->dispatch('forecast-updated');
     }

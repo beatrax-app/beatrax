@@ -15,6 +15,7 @@ use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Community\Public\Dto\SuggestMappingDto;
 use Modules\Community\Public\Events\MysteryMerchantSubmitted;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../../.docs/features/community/architecture.md
@@ -52,12 +53,12 @@ final class SuggestMappingModal extends Component
         $pattern = trim($this->pattern);
         $name = trim($this->name);
         if ($pattern === '') {
-            $this->submitError = 'Pattern is required.';
+            $this->submitError = Lang::get('community::suggest.errors.pattern_required');
 
             return;
         }
         if ($name === '') {
-            $this->submitError = 'Name is required.';
+            $this->submitError = Lang::get('community::suggest.errors.name_required');
 
             return;
         }
@@ -92,7 +93,7 @@ final class SuggestMappingModal extends Component
             pattern: $pattern,
         ));
 
-        $this->dispatch('toast.show', message: 'Suggestion opened in your browser.');
+        $this->dispatch('toast.show', message: Lang::get('community::suggest.toast'));
         $this->dispatch('modal-close', name: 'suggest-mapping');
 
         $this->pattern = '';

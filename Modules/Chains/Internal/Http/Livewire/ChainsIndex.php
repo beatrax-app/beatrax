@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 // /chains lists every non-rejected chain_link ("which chains do I have?"),
 // unlike /chains/review (state='candidate' only) or /chains/hints
@@ -29,7 +30,7 @@ final class ChainsIndex extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Chains · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('chains::index.page_title').' · beatrax']);
 
         return $view;
     }

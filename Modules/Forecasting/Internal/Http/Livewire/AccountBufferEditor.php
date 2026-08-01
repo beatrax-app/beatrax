@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountForecastBuffer;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -63,7 +64,7 @@ final class AccountBufferEditor extends Component
 
         $minor = $this->parseInputToMinor($this->bufferInput);
         if ($minor === false) {
-            $this->errorMessage = 'Buffer must be zero or positive.';
+            $this->errorMessage = Lang::get('forecasting::buffer.errors.non_negative');
 
             return;
         }
@@ -78,7 +79,7 @@ final class AccountBufferEditor extends Component
 
         $this->currentBufferMinor = $minor;
         $this->dispatch('buffer-editor:saved');
-        $this->dispatch('toast', message: 'Buffer updated.');
+        $this->dispatch('toast', message: Lang::get('forecasting::buffer.toast.updated'));
     }
 
     public function clear(CurrentUser $currentUser, SetAccountForecastBuffer $action): void
@@ -88,7 +89,7 @@ final class AccountBufferEditor extends Component
         $this->currentBufferMinor = null;
         $this->bufferInput = '';
         $this->dispatch('buffer-editor:saved');
-        $this->dispatch('toast', message: 'Buffer updated.');
+        $this->dispatch('toast', message: Lang::get('forecasting::buffer.toast.updated'));
     }
 
     public function render(ViewFactory $views): View

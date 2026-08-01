@@ -11,6 +11,7 @@
       :optional     — when true, appends a faint "— optional" suffix to
                        the title (email row only).
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'glyph',
     'title',
@@ -24,7 +25,7 @@
         <span class="vd-glyph-title">
             {{ $title }}
             @if ($optional)
-                <span class="vd-glyph-optional"> — optional</span>
+                <span class="vd-glyph-optional">{{ Lang::get('onboarding::components.vd_optional') }}</span>
             @endif
         </span>
         <span class="vd-glyph-desc">{{ $description }}</span>

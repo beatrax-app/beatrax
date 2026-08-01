@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-md mx-auto px-6 space-y-6 text-center">
         <div class="flex justify-center">
@@ -10,9 +11,9 @@
         </div>
 
         <header class="space-y-2">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Welcome to beatrax</h1>
+            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('desktop::screens.welcome.heading') }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                Your local-only finance dashboard is ready. Create your first account to begin.
+                {{ Lang::get('desktop::screens.welcome.subtitle') }}
             </p>
         </header>
 
@@ -20,7 +21,7 @@
             href="{{ route('signup') }}"
             class="inline-block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
         >
-            Get started
+            {{ Lang::get('desktop::screens.welcome.get_started') }}
         </a>
     </div>
 </div>

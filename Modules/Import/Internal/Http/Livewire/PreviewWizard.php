@@ -11,6 +11,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Public\Actions\DiscardImport;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
@@ -141,7 +142,7 @@ final class PreviewWizard extends Component
             ? []
             : array_map(static fn ($unknown): string => $unknown->iban, $preview->accountsToName);
         if (! in_array($iban, $allowedIbans, true)) {
-            $this->addError('accountName', 'This IBAN is not part of the current preview.');
+            $this->addError('accountName', Lang::get('import::preview.errors.iban_not_in_preview'));
 
             return;
         }

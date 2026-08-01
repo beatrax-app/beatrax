@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -66,7 +67,7 @@ final class OAuthClientWizardModal extends Component
 
         $provider = $this->provider;
         if (! is_string($provider) || MailProvider::tryFrom($provider) === null) {
-            $this->errorMessage = 'Pick a provider before submitting.';
+            $this->errorMessage = Lang::get('email-scan::wizard.errors.pick_provider');
 
             return null;
         }
@@ -91,11 +92,11 @@ final class OAuthClientWizardModal extends Component
     private function validateMicrosoftCredentials(): ?string
     {
         if ($this->clientId === '' || preg_match(self::MICROSOFT_CLIENT_ID_PATTERN, $this->clientId) !== 1) {
-            return 'Enter the application (client) ID — a UUID like 12345678-1234-1234-1234-123456789abc.';
+            return Lang::get('email-scan::wizard.errors.microsoft_client_id');
         }
 
         if ($this->clientSecret === '') {
-            return 'Enter the client secret value Azure showed you when you created the secret.';
+            return Lang::get('email-scan::wizard.errors.microsoft_secret');
         }
 
         return null;
@@ -104,9 +105,9 @@ final class OAuthClientWizardModal extends Component
     private function validateGoogleCredentials(): ?string
     {
         return match (true) {
-            $this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com') => 'Enter a Google OAuth client ID ending in .apps.googleusercontent.com.',
-            $this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-') => 'Enter a Google OAuth client secret starting with GOCSPX-.',
-            ! $this->publishedConfirmed => "Confirm that you've pushed your OAuth consent screen to 'In production'.",
+            $this->clientId === '' || ! str_ends_with($this->clientId, '.apps.googleusercontent.com') => Lang::get('email-scan::wizard.errors.google_client_id'),
+            $this->clientSecret === '' || ! str_starts_with($this->clientSecret, 'GOCSPX-') => Lang::get('email-scan::wizard.errors.google_secret'),
+            ! $this->publishedConfirmed => Lang::get('email-scan::wizard.errors.google_published'),
             default => null,
         };
     }
@@ -130,7 +131,7 @@ final class OAuthClientWizardModal extends Component
         try {
             $secrets->saveProviderClient($provider, $clientId, $clientSecret, $redirectUri);
         } catch (SecretsWriteFailed) {
-            $this->errorMessage = 'Could not save your OAuth client to disk — check your secrets-directory permissions and try again.';
+            $this->errorMessage = Lang::get('email-scan::wizard.errors.write_failed');
 
             return null;
         }

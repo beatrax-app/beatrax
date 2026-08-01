@@ -13,6 +13,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
@@ -32,7 +33,9 @@ use Throwable;
  */
 final class PairingFlowModal extends Component
 {
-    private const IDENTITY_LOCKED_MESSAGE = 'Your device identity is locked. Unlock the app and try again.';
+    // Translation key (resolved via Lang::get at each use site) rather than
+    // literal copy, so the const stays free of the banned container call.
+    private const IDENTITY_LOCKED_MESSAGE = 'sync::pairing.identity_locked';
 
     public bool $open = false;
 
@@ -113,7 +116,7 @@ final class PairingFlowModal extends Component
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = self::IDENTITY_LOCKED_MESSAGE;
+            $this->flashMessage = Lang::get(self::IDENTITY_LOCKED_MESSAGE);
 
             return;
         }
@@ -169,7 +172,7 @@ final class PairingFlowModal extends Component
 
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = self::IDENTITY_LOCKED_MESSAGE;
+            $this->flashMessage = Lang::get(self::IDENTITY_LOCKED_MESSAGE);
 
             return;
         }
@@ -177,7 +180,7 @@ final class PairingFlowModal extends Component
         try {
             $tokenHex = $wordEncoder->decode($this->wordCode);
         } catch (\InvalidArgumentException) {
-            $this->flashMessage = 'This code is invalid or has expired. Ask the other device to generate a new one.';
+            $this->flashMessage = Lang::get('sync::pairing.invalid_code');
 
             return;
         }
@@ -191,7 +194,7 @@ final class PairingFlowModal extends Component
         );
 
         if ($accepted === false || ! $accepted instanceof \stdClass) {
-            $this->flashMessage = 'This code is invalid or has expired. Ask the other device to generate a new one.';
+            $this->flashMessage = Lang::get('sync::pairing.invalid_code');
 
             return;
         }
@@ -298,7 +301,7 @@ final class PairingFlowModal extends Component
         // service derives the side from this device id, never from client state.
         $identity = $identityLoader->load($userId, $session);
         if ($identity === null) {
-            $this->flashMessage = self::IDENTITY_LOCKED_MESSAGE;
+            $this->flashMessage = Lang::get(self::IDENTITY_LOCKED_MESSAGE);
 
             return;
         }
@@ -402,7 +405,7 @@ final class PairingFlowModal extends Component
             $tokenService->expire((int) $this->pairingTokenId, $currentUser->user()->id);
         }
 
-        $this->flashMessage = 'Code expired.';
+        $this->flashMessage = Lang::get('sync::pairing.code_expired');
         $this->expiresInSeconds = 0;
     }
 

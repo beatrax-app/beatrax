@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -36,7 +37,7 @@ final class SetAccountForecastBuffer
         }
 
         if ($bufferMinor !== null && $bufferMinor < 0) {
-            throw new InvalidArgumentException('Buffer must be zero or positive.');
+            throw new InvalidArgumentException(Lang::get('forecasting::buffer.errors.non_negative'));
         }
 
         $this->db->connection()->transaction(function () use ($accountId, $user, $bufferMinor): void {

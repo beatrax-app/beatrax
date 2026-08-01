@@ -7,6 +7,7 @@
     full goals-page card. Tabular numerics throughout.
 --}}
 
+@use('Modules\Core\Public\Support\Lang')
 @php
     $progressColor = [
         'in_progress' => 'bg-emerald-500 dark:bg-emerald-400',
@@ -18,21 +19,21 @@
 <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950">
     {{-- Card header --}}
     <div class="flex items-center justify-between">
-        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Goals</p>
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.title') }}</p>
         <a
             href="{{ route('goals.index') }}"
             class="text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
-        >See all →</a>
+        >{{ Lang::get('goals::messages.summary.see_all') }}</a>
     </div>
 
     @if (count($goals) === 0)
         {{-- Empty state --}}
         <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
-            No goals yet.
+            {{ Lang::get('goals::messages.summary.no_goals') }}
             <a
                 href="{{ route('goals.index') }}"
                 class="text-slate-900 underline underline-offset-2 hover:no-underline dark:text-slate-100"
-            >Add your first goal →</a>
+            >{{ Lang::get('goals::messages.summary.add_first') }}</a>
         </p>
     @else
         <ul class="mt-4 space-y-3">
@@ -53,14 +54,14 @@
                         aria-valuenow="{{ $pct }}"
                         aria-valuemin="0"
                         aria-valuemax="100"
-                        aria-label="{{ $row->name }}: {{ $pct }}% complete"
+                        aria-label="{{ Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct]) }}"
                     >
                         <div class="h-1 rounded-full {{ $color }}" style="width: {{ $barWidth }}%;"></div>
                     </div>
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $pct }}%</span>
                     <span class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                         @if ($row->progressState === 'overdue')
-                            <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Overdue</span>
+                            <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
                         @elseif ($row->projectedFinishDate !== null)
                             · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->format('d M \'y') }}
                         @endif

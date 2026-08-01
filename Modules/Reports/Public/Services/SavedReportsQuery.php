@@ -7,6 +7,7 @@ namespace Modules\Reports\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Internal\Support\DefinitionJsonDecoder;
 use Modules\Reports\Public\Dto\SavedReportIndexRow;
 use stdClass;
@@ -16,32 +17,14 @@ use stdClass;
  */
 final readonly class SavedReportsQuery
 {
-    /** @var array<string, string> */
-    private const METRIC_LABELS = [
-        'spend' => 'Spend',
-        'income' => 'Income',
-        'net' => 'Net',
-        'net_worth' => 'Net worth',
-    ];
+    /** @var list<string> */
+    private const METRIC_KEYS = ['spend', 'income', 'net', 'net_worth'];
 
-    /** @var array<string, string> */
-    private const DIMENSION_LABELS = [
-        'category' => 'category',
-        'time_bucket' => 'time bucket',
-        'counterparty' => 'counterparty',
-        'account' => 'account',
-    ];
+    /** @var list<string> */
+    private const DIMENSION_KEYS = ['category', 'time_bucket', 'counterparty', 'account'];
 
-    /** @var array<string, string> */
-    private const PERIOD_LABELS = [
-        'this_month' => 'This month',
-        'last_3_months' => 'Last 3 months',
-        'last_6_months' => 'Last 6 months',
-        'last_12_months' => 'Last 12 months',
-        'ytd' => 'Year to date',
-        'this_year' => 'This year',
-        'custom' => 'Custom range',
-    ];
+    /** @var list<string> */
+    private const PERIOD_KEYS = ['this_month', 'last_3_months', 'last_6_months', 'last_12_months', 'ytd', 'this_year', 'custom'];
 
     public function __construct(private DatabaseManager $db) {}
 
@@ -91,18 +74,29 @@ final readonly class SavedReportsQuery
         $dimension = is_string($definition['dimension'] ?? null) ? $definition['dimension'] : 'category';
         $period = is_string($definition['periodPreset'] ?? null) ? $definition['periodPreset'] : 'this_month';
 
-        $metricLabel = self::METRIC_LABELS[$metric] ?? 'Amount';
-        $periodLabel = self::PERIOD_LABELS[$period] ?? 'Custom range';
+        $metricKey = in_array($metric, self::METRIC_KEYS, true) ? $metric : 'fallback';
+        $periodKey = in_array($period, self::PERIOD_KEYS, true) ? $period : 'custom';
+
+        $metricLabel = Lang::get("reports::index.summary.metric.{$metricKey}");
+        $periodLabel = Lang::get("reports::index.summary.period.{$periodKey}");
 
         // Group-by is hidden entirely for net-worth reports — the summary
         // line omits the "by {dimension}" segment to match what the
         // builder actually showed.
         if ($metric === 'net_worth') {
-            return "{$metricLabel} · {$periodLabel}";
+            return Lang::get('reports::index.summary.without_dimension', [
+                'metric' => $metricLabel,
+                'period' => $periodLabel,
+            ]);
         }
 
-        $dimensionLabel = self::DIMENSION_LABELS[$dimension] ?? 'category';
+        $dimensionKey = in_array($dimension, self::DIMENSION_KEYS, true) ? $dimension : 'fallback';
+        $dimensionLabel = Lang::get("reports::index.summary.dimension.{$dimensionKey}");
 
-        return "{$metricLabel} · by {$dimensionLabel} · {$periodLabel}";
+        return Lang::get('reports::index.summary.with_dimension', [
+            'metric' => $metricLabel,
+            'dimension' => $dimensionLabel,
+            'period' => $periodLabel,
+        ]);
     }
 }

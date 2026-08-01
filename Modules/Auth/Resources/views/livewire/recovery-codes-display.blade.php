@@ -1,8 +1,9 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen bg-white py-12 dark:bg-slate-950">
     <div class="max-w-xl mx-auto px-6 space-y-6">
         <header class="space-y-1">
-            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Save these recovery codes</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Print these or save them somewhere safe. They will not be shown again.</p>
+            <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::recovery_codes.title') }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.subtitle') }}</p>
         </header>
 
         <div aria-live="polite" class="grid grid-cols-2 gap-3">
@@ -19,17 +20,17 @@
                 wire:click="download"
                 class="rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
-                Download as .txt
+                {{ Lang::get('auth::recovery_codes.download') }}
             </button>
 
             @if ($downloadShown)
-                <p class="text-sm text-slate-500 dark:text-slate-400">Saved as beatrax-recovery-codes-{{ $username }}.txt</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $username]) }}</p>
             @endif
         </div>
 
         <label class="flex items-start gap-2">
             <input type="checkbox" wire:model.live="confirmed" class="mt-1 rounded border-slate-300 dark:border-slate-600">
-            <span class="text-sm text-slate-700 dark:text-slate-300">I have saved these codes somewhere safe.</span>
+            <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::recovery_codes.confirm') }}</span>
         </label>
 
         <button
@@ -43,7 +44,7 @@
                 'bg-emerald-600/50 cursor-not-allowed dark:bg-emerald-500/40' => ! $confirmed,
             ])
         >
-            Continue to beatrax
+            {{ Lang::get('auth::recovery_codes.continue') }}
         </button>
     </div>
 </div>

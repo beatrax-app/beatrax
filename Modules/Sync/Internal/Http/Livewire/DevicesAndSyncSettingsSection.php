@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ManagesDeviceRenaming;
 use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
@@ -122,7 +123,7 @@ final class DevicesAndSyncSettingsSection extends Component
         // UI gate — defense-in-depth alongside the service-level
         // LogicException thrown when the KEK is unavailable.
         if (! $this->appLockConfigured) {
-            $this->flashMessage = 'Set an app lock first to enable sync.';
+            $this->flashMessage = Lang::get('sync::devices.flash.app_lock_first');
 
             return;
         }
@@ -134,7 +135,7 @@ final class DevicesAndSyncSettingsSection extends Component
         } catch (\LogicException) {
             // The KEK was unavailable despite the configured-lock check (the app
             // is locked, or the session is keyless) — surface the recovery copy.
-            $this->flashMessage = 'Failed to enable sync. Make sure your app lock is active and try again.';
+            $this->flashMessage = Lang::get('sync::devices.flash.enable_failed');
 
             return;
         }
@@ -270,7 +271,7 @@ final class DevicesAndSyncSettingsSection extends Component
             ->where('user_id', $userId)
             ->value('is_self');
         if (is_numeric($targetIsSelf) && (int) $targetIsSelf === 1) {
-            $this->flashMessage = 'You cannot remove this device — it is the one you are using.';
+            $this->flashMessage = Lang::get('sync::devices.flash.cannot_remove_self');
             $this->cancelRemove();
 
             return;
@@ -279,7 +280,7 @@ final class DevicesAndSyncSettingsSection extends Component
         try {
             $rotationService->rotateAndRevoke($userId, $targetId, $session);
         } catch (\Throwable) {
-            $this->flashMessage = 'Failed to remove device. Please try again.';
+            $this->flashMessage = Lang::get('sync::devices.flash.remove_failed');
             $this->cancelRemove();
 
             return;
@@ -343,7 +344,7 @@ final class DevicesAndSyncSettingsSection extends Component
     public function saveRelayEndpoint(RelayConfig $relayConfig): void
     {
         if (! $this->appLockConfigured) {
-            $this->relayFlashMessage = 'Set an app lock first to change sync settings.';
+            $this->relayFlashMessage = Lang::get('sync::devices.flash.app_lock_first_settings');
 
             return;
         }
@@ -354,9 +355,9 @@ final class DevicesAndSyncSettingsSection extends Component
             $relayConfig->setEndpointUrl($url === '' ? null : $url);
             $this->relayIsInsecure = $relayConfig->isInsecure();
             $this->relayEndpointUrl = $relayConfig->endpointUrl() ?? '';
-            $this->relayFlashMessage = $url === '' ? 'Relay endpoint cleared.' : 'Relay endpoint saved.';
+            $this->relayFlashMessage = $url === '' ? Lang::get('sync::devices.flash.relay_cleared') : Lang::get('sync::devices.flash.relay_saved');
         } catch (\RuntimeException $e) {
-            $this->relayFlashMessage = 'Failed to save relay endpoint: '.$e->getMessage();
+            $this->relayFlashMessage = Lang::get('sync::devices.flash.relay_save_failed', ['message' => $e->getMessage()]);
         }
     }
 

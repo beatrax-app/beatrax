@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     /** @var bool $isPending */
 @endphp
@@ -20,9 +21,9 @@
                 welcome screen on the next navigation.
             --}}
             <div wire:poll.2000ms class="space-y-2">
-                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Setting up…</h1>
+                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('desktop::screens.setup.pending_heading') }}</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    beatrax is preparing your data. This only takes a moment.
+                    {{ Lang::get('desktop::screens.setup.pending_body') }}
                 </p>
             </div>
         @else
@@ -33,9 +34,9 @@
                 while we wait for the redirect.
             --}}
             <div wire:poll.500ms class="space-y-2">
-                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Ready</h1>
+                <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('desktop::screens.setup.ready_heading') }}</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Setup complete. Continuing…
+                    {{ Lang::get('desktop::screens.setup.ready_body') }}
                 </p>
             </div>
         @endif

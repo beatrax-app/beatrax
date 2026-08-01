@@ -1,0 +1,119 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Http\Request;
+use Livewire\Livewire;
+use Modules\Core\Internal\Http\Livewire\SettingsPage;
+use Modules\Core\Internal\Http\Middleware\SetLocale;
+use Modules\Core\Models\User;
+use Symfony\Component\HttpFoundation\Response;
+
+/*
+ * Feature tests for language selection (G7): the SetLocale middleware's
+ * resolution of the active locale from user / session / browser signals,
+ * and the Settings switcher's persistence of the choice onto users.locale
+ * (including the "auto" → NULL mapping) plus Dutch rendering.
+ */
+
+// Runs SetLocale against a request and returns the locale it left on the
+// translator. The translator is reset to English first so each assertion
+// starts from a known state. Resolved via $this->app (no app() global,
+// per the project's DI-only rule).
+function localeAfterMiddleware(Request $request): string
+{
+    /** @var Translator $translator */
+    $translator = Container::getInstance()->make(Translator::class);
+    $translator->setLocale('en');
+
+    /** @var SetLocale $middleware */
+    $middleware = Container::getInstance()->make(SetLocale::class);
+    $middleware->handle($request, fn (): Response => new Response('ok'));
+
+    return $translator->getLocale();
+}
+
+function localeBrowserRequest(string $acceptLanguage): Request
+{
+    $request = Request::create('/', 'GET');
+    $request->headers->set('Accept-Language', $acceptLanguage);
+
+    return $request;
+}
+
+function makeLocaleUser(?string $locale): User
+{
+    return User::create([
+        'username' => 'wessel',
+        'password' => 'opensesame',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+        'locale' => $locale,
+    ]);
+}
+
+it('detects Dutch from a guest Accept-Language header', function (): void {
+    expect(localeAfterMiddleware(localeBrowserRequest('nl,en;q=0.8')))->toBe('nl');
+});
+
+it('defaults a guest to English when the browser prefers an unsupported language', function (): void {
+    expect(localeAfterMiddleware(localeBrowserRequest('de-DE,de;q=0.9')))->toBe('en');
+});
+
+it('honours a stored user override above the browser preference', function (): void {
+    $this->actingAs(makeLocaleUser('nl'));
+
+    // Browser says English, but the user pinned Dutch — the override wins.
+    expect(localeAfterMiddleware(localeBrowserRequest('en')))->toBe('nl');
+});
+
+it('falls back to browser detection when the user override is auto (null)', function (): void {
+    $this->actingAs(makeLocaleUser(null));
+
+    expect(localeAfterMiddleware(localeBrowserRequest('nl')))->toBe('nl');
+});
+
+it('persists an explicit language choice onto users.locale', function (): void {
+    $user = makeLocaleUser(null);
+    $this->actingAs($user);
+
+    Livewire::test(SettingsPage::class)
+        ->call('setLocale', 'nl')
+        ->assertSet('locale', 'nl');
+
+    expect($user->fresh()->locale)->toBe('nl');
+});
+
+it('stores the auto choice as NULL — the absence of an override', function (): void {
+    $user = makeLocaleUser('nl');
+    $this->actingAs($user);
+
+    Livewire::test(SettingsPage::class)
+        ->call('setLocale', 'auto')
+        ->assertSet('locale', 'auto');
+
+    expect($user->fresh()->locale)->toBeNull();
+});
+
+it('rejects an unsupported locale value', function (): void {
+    $user = makeLocaleUser(null);
+    $this->actingAs($user);
+
+    Livewire::test(SettingsPage::class)
+        ->call('setLocale', 'de')
+        ->assertHasErrors('locale');
+
+    expect($user->fresh()->locale)->toBeNull();
+});
+
+it('renders the settings page in Dutch when the active locale is nl', function (): void {
+    $this->actingAs(makeLocaleUser('nl'));
+    $this->app->make(Translator::class)->setLocale('nl');
+
+    Livewire::test(SettingsPage::class)
+        ->assertSee('Instellingen')
+        ->assertSee('Instellingen opslaan')
+        ->assertSee('Weergavetaal');
+});

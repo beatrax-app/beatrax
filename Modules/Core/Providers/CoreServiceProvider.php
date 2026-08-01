@@ -97,6 +97,7 @@ final class CoreServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'core');
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'core');
 
         $livewire->component('core.dashboard', Dashboard::class);
         $livewire->component('core.settings-page', SettingsPage::class);

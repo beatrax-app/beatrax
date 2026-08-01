@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Government-type Overview tab body — full-width 3-up tax-year cards
     with the current year emphasized. Tab bar above carries
@@ -16,12 +17,12 @@
 
 <div class="space-y-6" style="margin-top: var(--space-5);">
     <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-        Annual breakdown across all years with activity. Current year is emphasized.
+        {{ Lang::get('counterparties::profile.government.intro') }}
     </p>
 
     @if ($taxYears->isEmpty())
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-            No payments recorded yet for this counterparty.
+            {{ Lang::get('counterparties::profile.government.no_payments') }}
         </p>
     @else
         <div class="tax-year-row">
@@ -40,7 +41,7 @@
 
     <x-counterparties::frame>
         <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
-            Recent activity
+            {{ Lang::get('counterparties::profile.recent_activity') }}
         </h3>
         @include('counterparties::livewire.profile-tabs._recent-activity', ['rows' => $recentActivity, 'taxState' => $taxState ?? []])
     </x-counterparties::frame>

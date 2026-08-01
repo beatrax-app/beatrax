@@ -14,6 +14,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
@@ -70,7 +71,7 @@ final class EncryptedBackupDownload extends Component
         } catch (Throwable $e) {
             @unlink($plainPath);
             @unlink($encPath);
-            $this->error = 'Could not create the backup: '.$e->getMessage();
+            $this->error = Lang::get('core::backup.errors.create_failed', ['message' => $e->getMessage()]);
 
             return null;
         } finally {
@@ -101,9 +102,9 @@ final class EncryptedBackupDownload extends Component
     private function downloadValidationError(Repository $config): string
     {
         return match (true) {
-            strlen($this->passphrase) < self::MIN_PASSPHRASE_LENGTH => 'Use a passphrase of at least '.self::MIN_PASSPHRASE_LENGTH.' characters.',
-            $this->passphrase !== $this->confirmPassphrase => 'The two passphrases do not match.',
-            ! $this->isSqliteBuild($config) => 'Encrypted download is only available on the SQLite build.',
+            strlen($this->passphrase) < self::MIN_PASSPHRASE_LENGTH => Lang::get('core::backup.errors.passphrase_min', ['min' => self::MIN_PASSPHRASE_LENGTH]),
+            $this->passphrase !== $this->confirmPassphrase => Lang::get('core::backup.errors.passphrase_mismatch'),
+            ! $this->isSqliteBuild($config) => Lang::get('core::backup.errors.download_sqlite_only'),
             default => '',
         };
     }

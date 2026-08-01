@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Internal\Support\PinOrderCompactor;
 use Modules\Reports\Models\SavedReport;
 use Modules\Sync\Public\Events\SavedReportMutated;
@@ -87,7 +88,7 @@ final class TogglePin
                 ->count();
 
             if ($pinnedCount >= self::MAX_PINS) {
-                throw new InvalidArgumentException('You can pin up to 3 reports. Unpin one to add this.');
+                throw new InvalidArgumentException(Lang::get('reports::index.pin_cap'));
             }
 
             $maxOrder = $this->db->connection()

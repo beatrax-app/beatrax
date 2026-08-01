@@ -99,6 +99,7 @@ final class ReceiptsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'receipts');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'receipts');
 
         $livewire->component('receipts.wizard-email-file-step', WizardEmailFileStep::class);
         $livewire->component('receipts.receipt-conflict-toast', ReceiptConflictToast::class);

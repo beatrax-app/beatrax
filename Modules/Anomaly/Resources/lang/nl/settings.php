@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'sensitivity_label' => 'Waarschuwingsgevoeligheid',
+    'sensitivity_help' => 'Markeer afschrijvingen die meer dan :percent% boven je gebruikelijke uitgaven voor die winkelier of categorie liggen.',
+
+    'min_amount_label' => 'Minimaal afschrijvingsbedrag',
+    'min_amount_help' => 'Negeer anomalieën op afschrijvingen onder dit bedrag. Opgeslagen in centen (€) — 1000 betekent € 10,00.',
+
+    'save' => 'Anomalie-instellingen opslaan',
+    'saved' => 'Opgeslagen.',
+
+    'suppression' => [
+        'summary' => 'Onderdrukkingsregels',
+        'empty' => 'Nog geen onderdrukkingsregels. Zodra je een afschrijving als verwacht markeert, verschijnt hier een regel.',
+        'remove' => 'Verwijderen',
+        'remove_aria' => 'Onderdrukkingsregel verwijderen',
+        'removed_toast' => 'Regel verwijderd',
+    ],
+
+    'unknown_merchant' => 'Onbekende winkelier',
+
+    'detectors' => [
+        'large' => 'Grote afschrijving',
+        'first_time' => 'Eerste keer',
+        'duplicate' => 'Duplicaat',
+    ],
+
+    'errors' => [
+        'sensitivity_range' => 'Gevoeligheid moet tussen 1 en 100 liggen.',
+        'min_amount_negative' => 'Minimaal afschrijvingsbedrag kan niet negatief zijn.',
+    ],
+];

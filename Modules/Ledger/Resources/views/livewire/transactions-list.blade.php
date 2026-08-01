@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -60,27 +61,27 @@
 
     <header class="flex items-end justify-between gap-4">
         <div class="space-y-1">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transactions</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::list.heading') }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">
                 @if ($isSearchMode)
-                    Searching all history
+                    {{ Lang::get('ledger::list.subtitle_searching') }}
                 @else
-                    {{ $fullHistory ? 'Full history.' : 'Recent transactions (last 90 days).' }}
+                    {{ $fullHistory ? Lang::get('ledger::list.subtitle_full') : Lang::get('ledger::list.subtitle_recent') }}
                 @endif
             </p>
         </div>
         @if (! $isSearchMode)
             <div class="flex items-center gap-2">
-                <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="Currency view">
-                    <flux:radio value="eur" label="EUR only" />
-                    <flux:radio value="original" label="Original currency" />
+                <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="{{ Lang::get('ledger::list.currency_aria') }}">
+                    <flux:radio value="eur" label="{{ Lang::get('ledger::list.currency_eur') }}" />
+                    <flux:radio value="original" label="{{ Lang::get('ledger::list.currency_original') }}" />
                 </flux:radio.group>
                 <button
                     type="button"
                     wire:click="toggleFullHistory"
                     class="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
                 >
-                    {{ $fullHistory ? 'Show recent only' : 'Show full history' }}
+                    {{ $fullHistory ? Lang::get('ledger::list.show_recent') : Lang::get('ledger::list.show_full') }}
                 </button>
             </div>
         @endif
@@ -91,7 +92,7 @@
         @include('ledger::livewire.partials.search-no-results')
     @elseif (! $isSearchMode && count($page->rows) === 0)
         <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400 dark:border-slate-700">
-            Nothing here for this period.
+            {{ Lang::get('ledger::list.empty_period') }}
         </p>
     @else
         {{-- ============================================================
@@ -155,10 +156,10 @@
                                     @click="open = !open"
                                     :aria-expanded="open"
                                     aria-controls="split-legs-phone-{{ $row['id'] }}"
-                                    aria-label="Split across {{ count($rowLegs) }} categories — expand to view"
+                                    aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
                                     data-testid="split-badge-phone-{{ $row['id'] }}"
                                 >
-                                    Split · {{ count($rowLegs) }}
+                                    {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}
                                     <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                                     </svg>
@@ -243,7 +244,7 @@
 
                 {{-- Loading pulse shown while the loadMore request is in flight --}}
                 <div wire:loading wire:target="loadMore" class="flex justify-center py-2">
-                    <span class="dot-live" aria-label="Loading more transactions"></span>
+                    <span class="dot-live" aria-label="{{ Lang::get('ledger::list.loading_more') }}"></span>
                 </div>
             @endif
         </div>
@@ -260,12 +261,12 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Tax</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.date') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.counterparty') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.category') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.tax') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.status') }}</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::list.table.amount') }}</th>
                         </tr>
                     </thead>
                     <tbody
@@ -321,13 +322,13 @@
                                         @if (isset(($chainTxIds ?? [])[$row->id]))
                                             <span
                                                 class="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
-                                                title="Part of a chain — open this row to view"
+                                                title="{{ Lang::get('ledger::list.chain_title') }}"
                                                 data-testid="tx-row-chain-badge-{{ $row->id }}"
                                             >
                                                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 015.656 5.656l-3 3a4 4 0 01-5.656-5.656M10.172 13.828a4 4 0 01-5.656-5.656l3-3a4 4 0 015.656 5.656"/>
                                                 </svg>
-                                                chain
+                                                {{ Lang::get('ledger::list.chain_badge') }}
                                             </span>
                                         @endif
                                     @endif
@@ -344,10 +345,10 @@
                                             @click="splitOpen[{{ $row->id }}] = !splitOpen[{{ $row->id }}]"
                                             :aria-expanded="!!splitOpen[{{ $row->id }}]"
                                             aria-controls="split-legs-{{ $row->id }}"
-                                            aria-label="Split across {{ count($rowLegs) }} categories — expand to view"
+                                            aria-label="{{ Lang::get('ledger::list.split_expand_aria', ['count' => count($rowLegs)]) }}"
                                             data-testid="split-badge-{{ $row->id }}"
                                         >
-                                            Split · {{ count($rowLegs) }}
+                                            {{ Lang::get('ledger::list.split_badge', ['count' => count($rowLegs)]) }}
                                             <svg class="split-badge__chevron h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                                             </svg>
@@ -429,7 +430,7 @@
                         type="button"
                         wire:click="loadMore"
                         class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-                    >Load more</button>
+                    >{{ Lang::get('ledger::list.load_more') }}</button>
                 </div>
             @endif
         </div>

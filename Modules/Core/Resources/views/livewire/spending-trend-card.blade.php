@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -14,16 +15,16 @@
 
 <div>
     @if ($trend->hasComparison())
-        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="This month versus last">
+        <section class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-950" aria-label="{{ Lang::get('core::spending_trend.aria') }}">
             <div class="flex items-baseline justify-between gap-4">
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">This month vs last</h2>
-                <span class="text-xs text-slate-400 dark:text-slate-500">vs {{ $trend->previousLabel }}</span>
+                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::spending_trend.heading') }}</h2>
+                <span class="text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::spending_trend.vs', ['label' => $trend->previousLabel]) }}</span>
             </div>
 
             <div class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span class="text-2xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($trend->currentTotalMinor) }}</span>
                 <span class="text-sm font-medium {{ $deltaClass($totalDir) }}" style="font-variant-numeric: tabular-nums;">{{ $signed($trend->totalDeltaMinor) }}</span>
-                <span class="text-xs text-slate-400 dark:text-slate-500">spent this period</span>
+                <span class="text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('core::spending_trend.spent_this_period') }}</span>
             </div>
 
             @if (count($trend->movers) > 0)

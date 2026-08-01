@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Lock;
 
+use Modules\Core\Public\Support\Lang;
+
 final class PlatformDetector
 {
     // Known limitation, accepted: iPadOS 13+ Safari in desktop mode sends a
@@ -13,10 +15,10 @@ final class PlatformDetector
     public function detectLabel(string $userAgent): string
     {
         return match (true) {
-            $this->isIos($userAgent) => 'Use Face ID',
-            $this->isMacOs($userAgent) => 'Use Touch ID',
-            $this->isWindows($userAgent) => 'Use Windows Hello',
-            default => 'Use fingerprint',
+            $this->isIos($userAgent) => Lang::get('auth::biometric.face_id'),
+            $this->isMacOs($userAgent) => Lang::get('auth::biometric.touch_id'),
+            $this->isWindows($userAgent) => Lang::get('auth::biometric.windows_hello'),
+            default => Lang::get('auth::biometric.fingerprint'),
         };
     }
 

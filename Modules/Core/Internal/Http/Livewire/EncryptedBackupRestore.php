@@ -11,6 +11,7 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Services\RestoreEncryptedBackup;
+use Modules\Core\Public\Support\Lang;
 use RuntimeException;
 
 /**
@@ -62,10 +63,10 @@ final class EncryptedBackupRestore extends Component
         $path = $backup instanceof TemporaryUploadedFile ? $backup->getRealPath() : '';
 
         $this->error = match (true) {
-            $this->confirmation !== self::CONFIRM_PHRASE => 'Type '.self::CONFIRM_PHRASE.' to confirm — this replaces your current data.',
-            ! $backup instanceof TemporaryUploadedFile => 'Choose an encrypted backup file (.enc) to restore.',
-            $this->passphrase === '' => 'Enter the passphrase the backup was encrypted with.',
-            $path === '' || ! is_file($path) => 'The uploaded file could not be read. Try again.',
+            $this->confirmation !== self::CONFIRM_PHRASE => Lang::get('core::backup.errors.confirm_phrase', ['phrase' => self::CONFIRM_PHRASE]),
+            ! $backup instanceof TemporaryUploadedFile => Lang::get('core::backup.errors.choose_file'),
+            $this->passphrase === '' => Lang::get('core::backup.errors.enter_passphrase'),
+            $path === '' || ! is_file($path) => Lang::get('core::backup.errors.unreadable'),
             default => '',
         };
 

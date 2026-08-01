@@ -27,6 +27,9 @@ final class PotsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'pots');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'pots');
+        }
 
         $livewire->component('pots.pots-page', PotsPage::class);
     }

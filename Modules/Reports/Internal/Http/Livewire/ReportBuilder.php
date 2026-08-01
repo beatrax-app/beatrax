@@ -14,6 +14,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
@@ -152,12 +153,12 @@ final class ReportBuilder extends Component
         if ($this->loadedReportId !== null) {
             $updateAction->update($currentUser->user(), $this->loadedReportId, $this->currentDefinition(), $name);
             $this->loadedReportName = $name;
-            $this->flashMessage = 'Report updated.';
+            $this->flashMessage = Lang::get('reports::builder.flash.updated');
         } else {
             $saved = $action->save($currentUser->user(), $this->currentDefinition(), $name);
             $this->loadedReportId = $saved->id;
             $this->loadedReportName = $saved->name;
-            $this->flashMessage = 'Report saved.';
+            $this->flashMessage = Lang::get('reports::builder.flash.saved');
         }
 
         $this->showSaveForm = false;

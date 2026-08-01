@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Public\Dto\NotificationPreferencesDto;
 use Modules\Notifications\Public\Enums\DigestCadence;
 use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
@@ -17,8 +18,6 @@ use Modules\Notifications\Public\Services\NotificationPreferenceQuery;
  */
 final class NotificationsSettingsSection extends Component
 {
-    private const SAVE_FAILED_MESSAGE = 'Couldn\'t save your notification settings. Try again.';
-
     public bool $remindersEnabled = true;
 
     public int $reminderLeadDays = 3;
@@ -69,20 +68,20 @@ final class NotificationsSettingsSection extends Component
         // one. A value no case can represent means a tampered payload.
         $cadence = DigestCadence::tryFrom($this->digestCadence);
         if ($cadence === null) {
-            $this->saveError = self::SAVE_FAILED_MESSAGE;
+            $this->saveError = Lang::get('notifications::settings.errors.save_failed');
 
             return;
         }
 
         if ($this->reminderLeadDays < 1 || $this->reminderLeadDays > 30) {
-            $this->saveError = self::SAVE_FAILED_MESSAGE;
+            $this->saveError = Lang::get('notifications::settings.errors.save_failed');
 
             return;
         }
 
         foreach ([$this->quietHoursFrom, $this->quietHoursTo] as $time) {
             if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time) !== 1) {
-                $this->saveError = self::SAVE_FAILED_MESSAGE;
+                $this->saveError = Lang::get('notifications::settings.errors.save_failed');
 
                 return;
             }
@@ -107,7 +106,7 @@ final class NotificationsSettingsSection extends Component
     {
         $otherDevices = array_map(
             static fn (NotificationPreferencesDto $dto): array => [
-                'name' => $dto->deviceName !== '' ? $dto->deviceName : 'Unnamed device',
+                'name' => $dto->deviceName !== '' ? $dto->deviceName : Lang::get('notifications::settings.other_devices.unnamed'),
                 'summary' => self::summarize($dto),
             ],
             $prefs->forOtherDevices($currentUser->user()),
@@ -122,14 +121,15 @@ final class NotificationsSettingsSection extends Component
     // read-only panel - no inputs, no edit affordances.
     private static function summarize(NotificationPreferencesDto $dto): string
     {
-        $onOff = static fn (bool $value): string => $value ? 'on' : 'off';
+        $onOff = static fn (bool $value): string => $value
+            ? Lang::get('notifications::settings.other_devices.on')
+            : Lang::get('notifications::settings.other_devices.off');
 
-        return sprintf(
-            'reminders %s · nudges %s · digest %s · savings %s',
-            $onOff($dto->remindersEnabled),
-            $onOff($dto->budgetNudgesEnabled),
-            $dto->digestCadence->value,
-            $onOff($dto->savingsPromptsEnabled),
-        );
+        return Lang::get('notifications::settings.other_devices.summary_line', [
+            'reminders' => $onOff($dto->remindersEnabled),
+            'nudges' => $onOff($dto->budgetNudgesEnabled),
+            'digest' => $dto->digestCadence->value,
+            'savings' => $onOff($dto->savingsPromptsEnabled),
+        ]);
     }
 }

@@ -58,6 +58,7 @@ final class OpenBankingServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'openbanking');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'openbanking');
 
         $livewire->component('openbanking.open-banking-wizard-modal', OpenBankingWizardModal::class);
         $livewire->component('openbanking.open-banking-settings-page', OpenBankingSettingsPage::class);

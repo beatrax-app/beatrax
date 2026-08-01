@@ -13,6 +13,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\NavCountsService;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 
 /**
@@ -60,7 +61,7 @@ final class AppSidebar extends Component
             'username' => $user->username,
             'userInitial' => $this->initialFor($user->username),
             'isDeveloper' => $isDeveloper,
-            'accountCaption' => $isDeveloper ? 'developer · local' : 'local',
+            'accountCaption' => $isDeveloper ? Lang::get('core::sidebar.account.developer_local') : Lang::get('core::sidebar.account.local'),
             'queueCount' => $queueCount,
             'workerSecondsAgo' => $workerSecondsAgo,
             'unknownCount' => $triage->unknownCountForUser($user),

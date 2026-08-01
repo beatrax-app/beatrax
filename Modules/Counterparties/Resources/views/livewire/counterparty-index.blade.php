@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /counterparties index — cards-default grid with type-filter chip
     row and the Cards / List view toggle persisted in
@@ -27,17 +28,17 @@
     {{-- Page head ------------------------------------------------- --}}
     <header class="space-y-2">
         <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">
-            Counterparties
+            {{ Lang::get('counterparties::index.heading') }}
         </h1>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
             @if ($unknownCount > 0)
-                {{ $totalEntities }} entities ·
+                {{ Lang::get('counterparties::index.entities', ['count' => $totalEntities]) }} ·
                 <a
                     href="{{ route('counterparties.triage') }}"
                     style="color: var(--color-amber); text-decoration: underline;"
-                >{{ $unknownCount }} need identification</a>
+                >{{ Lang::get('counterparties::index.need_identification', ['count' => $unknownCount]) }}</a>
             @else
-                {{ $totalEntities }} entities
+                {{ Lang::get('counterparties::index.entities', ['count' => $totalEntities]) }}
             @endif
         </p>
     </header>
@@ -57,45 +58,45 @@
             <span class="ic" aria-hidden="true">⌕</span>
             <input
                 type="text"
-                placeholder="Search by name, alias, or IBAN…"
-                aria-label="Search counterparties"
+                placeholder="{{ Lang::get('counterparties::index.search_placeholder') }}"
+                aria-label="{{ Lang::get('counterparties::index.search_aria') }}"
                 disabled
             />
             <span class="kbd" aria-hidden="true">/</span>
         </div>
 
         <span style="font-size: var(--text-sm); color: var(--color-text-muted);">
-            Sort: Total 12mo ↓
+            {{ Lang::get('counterparties::index.sort') }}
         </span>
 
-        <div class="view-toggle" role="group" aria-label="View mode">
+        <div class="view-toggle" role="group" aria-label="{{ Lang::get('counterparties::index.view_mode') }}">
             <button
                 type="button"
                 class="{{ $activeView === 'cards' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                 aria-pressed="{{ $activeView === 'cards' ? 'true' : 'false' }}"
                 wire:click="setView('cards')"
-            >▦ Cards</button>
+            >▦ {{ Lang::get('counterparties::index.view_cards') }}</button>
             <button
                 type="button"
                 class="{{ $activeView === 'list' ? 'active' : '' }} focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                 aria-pressed="{{ $activeView === 'list' ? 'true' : 'false' }}"
                 wire:click="setView('list')"
-            >≡ List</button>
+            >≡ {{ Lang::get('counterparties::index.view_list') }}</button>
         </div>
         </div>
     </div>
 
     {{-- Type-filter chip row -------------------------------------- --}}
-    <div role="group" aria-label="Filter by type" class="filter-chips">
+    <div role="group" aria-label="{{ Lang::get('counterparties::index.filter_aria') }}" class="filter-chips">
         @php
             $chipDefs = [
-                ['key' => 'all', 'label' => 'All', 'dot' => null],
-                ['key' => 'merchant', 'label' => 'Merchants', 'dot' => 'dot-merchant'],
-                ['key' => 'personal', 'label' => 'Personal', 'dot' => 'dot-personal'],
-                ['key' => 'bank', 'label' => 'Banks', 'dot' => 'dot-bank'],
-                ['key' => 'government', 'label' => 'Government', 'dot' => 'dot-gov'],
-                ['key' => 'self', 'label' => 'Self', 'dot' => 'dot-self'],
-                ['key' => 'unknown', 'label' => 'Unknown', 'dot' => 'dot-unknown'],
+                ['key' => 'all', 'label' => Lang::get('counterparties::index.chips.all'), 'dot' => null],
+                ['key' => 'merchant', 'label' => Lang::get('counterparties::index.chips.merchant'), 'dot' => 'dot-merchant'],
+                ['key' => 'personal', 'label' => Lang::get('counterparties::index.chips.personal'), 'dot' => 'dot-personal'],
+                ['key' => 'bank', 'label' => Lang::get('counterparties::index.chips.bank'), 'dot' => 'dot-bank'],
+                ['key' => 'government', 'label' => Lang::get('counterparties::index.chips.government'), 'dot' => 'dot-gov'],
+                ['key' => 'self', 'label' => Lang::get('counterparties::index.chips.self'), 'dot' => 'dot-self'],
+                ['key' => 'unknown', 'label' => Lang::get('counterparties::index.chips.unknown'), 'dot' => 'dot-unknown'],
             ];
         @endphp
         @foreach ($chipDefs as $chip)
@@ -118,16 +119,16 @@
     @if ($rows->isEmpty())
         <section class="frame" style="text-align: center; padding: var(--space-10);">
             <h2 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0 0 var(--space-3);">
-                No counterparties yet
+                {{ Lang::get('counterparties::index.empty_heading') }}
             </h2>
             <p style="font-size: var(--text-base); color: var(--color-text-muted); margin: 0 0 var(--space-4); max-width: 480px; margin-left: auto; margin-right: auto;">
-                Counterparties appear here automatically as you import transactions. Import a statement to get started.
+                {{ Lang::get('counterparties::index.empty_body') }}
             </p>
             <a
                 href="/imports"
                 class="pill-btn-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900"
                 style="display: inline-block;"
-            >Import a statement →</a>
+            >{{ Lang::get('counterparties::index.empty_cta') }}</a>
         </section>
     @elseif ($activeView === 'cards')
         {{-- cards grid: single-column at phone width, auto-fill at >=768px --}}
@@ -151,11 +152,11 @@
                             <x-counterparties::type-chip :type="$row->type" />
                         </header>
                         <div class="cp-recent">
-                            <span>Routing only</span>
-                            <span>no spend / no income</span>
+                            <span>{{ Lang::get('counterparties::index.self_routing') }}</span>
+                            <span>{{ Lang::get('counterparties::index.self_no_flow') }}</span>
                         </div>
                         <div style="font-size: var(--text-xs); color: var(--color-text-muted); margin-top: auto;">
-                            Open account →
+                            {{ Lang::get('counterparties::index.self_open') }}
                         </div>
                     </a>
                 @elseif ($isUnknown)
@@ -169,13 +170,13 @@
                         </header>
                         <div class="cp-stats">
                             <span class="value">{{ $totalFormatted }}</span>
-                            <span class="label">12 mo</span>
+                            <span class="label">{{ Lang::get('counterparties::index.stat_12mo') }}</span>
                         </div>
                         @if ($row->recentLine !== null)
                             <div class="cp-recent"><span>{{ $row->recentLine }}</span></div>
                         @endif
                         <div style="font-size: var(--text-xs); color: var(--color-amber); margin-top: auto;">
-                            ❋ Label this counterparty
+                            ❋ {{ Lang::get('counterparties::index.label_this') }}
                         </div>
                     </a>
                 @else
@@ -190,12 +191,12 @@
                         <div class="cp-stats">
                             <span class="value">{{ $totalFormatted }}</span>
                             <span class="label">
-                                @if ($row->type === 'personal') Net received @else 12 mo @endif
+                                @if ($row->type === 'personal'){{ Lang::get('counterparties::index.stat_net_received') }}@else{{ Lang::get('counterparties::index.stat_12mo') }}@endif
                             </span>
                             <span class="value" style="font-size: var(--text-sm);">{{ $avgFormatted }}</span>
-                            <span class="label">Avg / mo</span>
+                            <span class="label">{{ Lang::get('counterparties::index.stat_avg_mo') }}</span>
                         </div>
-                        <div class="cp-spark" aria-label="12-month activity sparkline">
+                        <div class="cp-spark" aria-label="{{ Lang::get('counterparties::index.sparkline_aria') }}">
                             @foreach ($row->sparkline as $idx => $bar)
                                 @php
                                     $isLast = $idx === count($row->sparkline) - 1;
@@ -251,10 +252,10 @@
             <table style="width: 100%; border-collapse: collapse;">
                 <thead style="background: var(--color-surface-2); text-align: left;">
                     <tr style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted);">
-                        <th style="padding: var(--space-2) var(--space-3);">Name</th>
-                        <th style="padding: var(--space-2) var(--space-3);">Type</th>
-                        <th style="padding: var(--space-2) var(--space-3); text-align: right;">12 mo</th>
-                        <th style="padding: var(--space-2) var(--space-3); text-align: right;">Avg / mo</th>
+                        <th style="padding: var(--space-2) var(--space-3);">{{ Lang::get('counterparties::index.table_name') }}</th>
+                        <th style="padding: var(--space-2) var(--space-3);">{{ Lang::get('counterparties::index.table_type') }}</th>
+                        <th style="padding: var(--space-2) var(--space-3); text-align: right;">{{ Lang::get('counterparties::index.table_12mo') }}</th>
+                        <th style="padding: var(--space-2) var(--space-3); text-align: right;">{{ Lang::get('counterparties::index.table_avg') }}</th>
                     </tr>
                 </thead>
                 <tbody>

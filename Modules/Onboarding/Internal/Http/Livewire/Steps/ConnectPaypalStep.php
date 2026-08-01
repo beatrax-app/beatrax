@@ -11,6 +11,7 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Actions\EnsurePaypalAccountAction;
@@ -51,9 +52,9 @@ final class ConnectPaypalStep extends Component
     public function messages(): array
     {
         return [
-            'activityCsv.required' => 'Drop your PayPal Rapport Transactiegegevens CSV into the box first.',
-            'activityCsv.max' => 'That file is too large. PayPal Rapport Transactiegegevens exports are normally well under 10 MB.',
-            'activityCsv.extensions' => "That file doesn't look like a PayPal CSV. Download Rapport Transactiegegevens (not the Saldorapport balance report) as CSV from PayPal.",
+            'activityCsv.required' => Lang::get('onboarding::connect_paypal.errors.required'),
+            'activityCsv.max' => Lang::get('onboarding::connect_paypal.errors.max'),
+            'activityCsv.extensions' => Lang::get('onboarding::connect_paypal.errors.extensions'),
         ];
     }
 
@@ -90,7 +91,7 @@ final class ConnectPaypalStep extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
-            $this->uploadError = 'Could not read this file. The full error is in /dev/logs.';
+            $this->uploadError = Lang::get('onboarding::connect_paypal.errors.unreadable');
 
             return;
         }
@@ -152,7 +153,7 @@ final class ConnectPaypalStep extends Component
             }
         }
 
-        return $firstErrorMessage ?? 'Could not read this file. The full error is in /dev/logs.';
+        return $firstErrorMessage ?? Lang::get('onboarding::connect_paypal.errors.unreadable');
     }
 
     // Strips path-traversal characters and locks the extension to .csv,

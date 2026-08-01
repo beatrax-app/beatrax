@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\OpenBanking\Public\Exceptions;
 
+use Modules\Core\Public\Support\Lang;
 use RuntimeException;
 
 // A consent callback that reached a valid OAuth state but could not be turned
@@ -17,16 +18,16 @@ final class OpenBankingCallbackException extends RuntimeException
 {
     public static function noAuthorizationCode(): self
     {
-        return new self('Enable Banking callback returned no authorization code.');
+        return new self(Lang::get('openbanking::messages.errors.no_authorization_code'));
     }
 
     public static function wizardIncomplete(): self
     {
-        return new self('Finish the Open Banking setup wizard first.');
+        return new self(Lang::get('openbanking::messages.errors.wizard_incomplete'));
     }
 
     public static function noSessionId(): self
     {
-        return new self('Enable Banking did not return a session id.');
+        return new self(Lang::get('openbanking::messages.errors.no_session_id'));
     }
 }

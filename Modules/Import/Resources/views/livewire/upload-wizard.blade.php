@@ -1,10 +1,11 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-06 / UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
     <header class="space-y-1">
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Upload statement</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Drop in a bank, card, or PayPal export, or an email receipt file.</p>
-        <p class="sr-only" id="upload-statement-mime-hint">That file doesn't look like a supported statement export. Drop in a bank CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, a card-statement PDF, an email message (.eml), or a mailbox archive (.mbox).</p>
+        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('import::upload.heading') }}</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('import::upload.subtitle') }}</p>
+        <p class="sr-only" id="upload-statement-mime-hint">{{ Lang::get('import::upload.mime_hint') }}</p>
     </header>
 
     @if ($uploadError !== null)
@@ -29,7 +30,7 @@
 
     <form wire:submit="submit" class="space-y-4">
         <div class="space-y-1">
-            <label for="issuer" class="block text-sm text-slate-900 dark:text-slate-100">Source</label>
+            <label for="issuer" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.source_label') }}</label>
             <select
                 id="issuer"
                 name="issuer"
@@ -39,8 +40,8 @@
                 <option value="asn">ASN</option>
                 <option value="ics">ICS</option>
                 <option value="paypal">PayPal</option>
-                <option value="other-bank">Other bank (N26, Revolut, ING…)</option>
-                <option value="email-file">Email file (.eml, .mbox)</option>
+                <option value="other-bank">{{ Lang::get('import::upload.issuer_other_bank') }}</option>
+                <option value="email-file">{{ Lang::get('import::upload.issuer_email_file') }}</option>
             </select>
             @error('issuer')
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
@@ -48,7 +49,7 @@
         </div>
 
         <div class="space-y-1" aria-live="polite">
-            <label for="sourceFormat" class="block text-sm text-slate-900 dark:text-slate-100">Format</label>
+            <label for="sourceFormat" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.format_label') }}</label>
             <select
                 id="sourceFormat"
                 name="sourceFormat"
@@ -65,7 +66,7 @@
         </div>
 
         <div class="space-y-1">
-            <label for="file" class="block text-sm text-slate-900 dark:text-slate-100">File</label>
+            <label for="file" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.file_label') }}</label>
             <input
                 type="file"
                 id="file"
@@ -83,7 +84,7 @@
             type="submit"
             class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
         >
-            Upload statement
+            {{ Lang::get('import::upload.submit') }}
         </button>
     </form>
 

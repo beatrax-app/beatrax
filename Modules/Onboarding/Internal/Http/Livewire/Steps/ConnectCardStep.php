@@ -13,6 +13,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
@@ -60,11 +61,11 @@ final class ConnectCardStep extends Component
     public function messages(): array
     {
         return [
-            'statements.required' => 'Drop the monthly PDF statements you downloaded from Mijn ICS.',
-            'statements.min' => 'Drop at least one ICS PDF statement before continuing.',
-            'statements.*.required' => 'Drop the monthly PDF statement you downloaded from Mijn ICS.',
-            'statements.*.max' => 'One of your files is too large. ICS PDF statements are normally under 1 MB each.',
-            'statements.*.extensions' => "One of your files isn't a PDF. Mijn ICS only exports PDF — try the latest monthly statement.",
+            'statements.required' => Lang::get('onboarding::connect_card.errors.required'),
+            'statements.min' => Lang::get('onboarding::connect_card.errors.min'),
+            'statements.*.required' => Lang::get('onboarding::connect_card.errors.each_required'),
+            'statements.*.max' => Lang::get('onboarding::connect_card.errors.each_max'),
+            'statements.*.extensions' => Lang::get('onboarding::connect_card.errors.each_extensions'),
         ];
     }
 
@@ -100,10 +101,9 @@ final class ConnectCardStep extends Component
         $newRunIds = $preview['ids'];
 
         if ($newRunIds === []) {
-            $this->uploadError = sprintf(
-                "We couldn't read any of your ICS PDFs. %s",
-                $preview['firstError'] ?? 'The full error is in /dev/logs.',
-            );
+            $this->uploadError = Lang::get('onboarding::connect_card.errors.none_readable', [
+                'detail' => $preview['firstError'] ?? Lang::get('onboarding::connect_card.errors.full_error_in_logs'),
+            ]);
 
             return;
         }
@@ -135,7 +135,7 @@ final class ConnectCardStep extends Component
                     'exception_message' => $e->getMessage(),
                     'exception_trace' => SafeTrace::cap($e, $app->basePath()),
                 ]);
-                $firstError ??= sprintf('Could not read %s. The full error is in /dev/logs.', $originalFilename);
+                $firstError ??= Lang::get('onboarding::connect_card.errors.file_unreadable', ['filename' => $originalFilename]);
             }
         }
 

@@ -125,6 +125,9 @@ final class DesktopServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'desktop');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'desktop');
+        }
 
         $livewire->component('desktop.setup-screen', SetupScreen::class);
         $livewire->component('desktop.welcome-screen', WelcomeScreen::class);

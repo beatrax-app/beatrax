@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal\Native;
 
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Native\Desktop\Contracts\MenuItem;
 use Native\Desktop\Facades\Menu;
 
 // Composes the standard App/File/Edit/View/Window/Help menu plus the
-// beatrax-specific entries. The Developer submenu is appended only for
-// is_developer accounts and omitted from the tree entirely otherwise —
-// defence-in-depth on top of the route-level developer-mode gate.
+// beatrax entries; the Developer submenu is appended only for is_developer
+// accounts. Visible labels are the English canonical (mirrored in
+// desktop::native.menu.*); build() renders each through Lang::get.
 final class AppMenuBuilder
 {
     public const FILE_IMPORT = 'Import file…';
@@ -46,22 +47,22 @@ final class AppMenuBuilder
         $items = [
             Menu::app(),
             Menu::file()->submenu(
-                Menu::route('imports.new', self::FILE_IMPORT),
+                Menu::route('imports.new', Lang::get('desktop::native.menu.file_import')),
                 // "Scan email now" routes to the inboxes page, where
                 // the per-inbox "Scan now" button drives the actual
                 // sync.
-                Menu::route('inboxes.index', self::FILE_SCAN_EMAIL),
+                Menu::route('inboxes.index', Lang::get('desktop::native.menu.file_scan_email')),
             ),
             Menu::edit(),
             Menu::view(),
             Menu::window(),
             Menu::help()->submenu(
-                Menu::link(self::GITHUB_REPO_URL, self::HELP_GITHUB_REPO)->openInBrowser(),
-                Menu::link(self::REPORT_ISSUE_URL, self::HELP_REPORT_ISSUE)->openInBrowser(),
+                Menu::link(self::GITHUB_REPO_URL, Lang::get('desktop::native.menu.help_github_repo'))->openInBrowser(),
+                Menu::link(self::REPORT_ISSUE_URL, Lang::get('desktop::native.menu.help_report_issue'))->openInBrowser(),
                 // "About beatrax" routes to Settings, where app
                 // metadata + version already surface; no dedicated
                 // /about route exists.
-                Menu::route('settings', self::HELP_ABOUT),
+                Menu::route('settings', Lang::get('desktop::native.menu.help_about')),
             ),
         ];
 
@@ -70,9 +71,9 @@ final class AppMenuBuilder
             // but registers no OS-menu accelerator: an accelerator
             // here would let the OS menu intercept ⌘K before the
             // body-level keybind handler dispatches palette:open.
-            $items[] = Menu::label(self::DEVELOPER_SUBMENU)->submenu(
-                Menu::route('dev.overview', self::DEV_OPEN_CONSOLE)->accelerator('Cmd+.'),
-                Menu::route('dev.overview', self::DEV_RUN_COMMAND),
+            $items[] = Menu::label(Lang::get('desktop::native.menu.developer_submenu'))->submenu(
+                Menu::route('dev.overview', Lang::get('desktop::native.menu.dev_open_console'))->accelerator('Cmd+.'),
+                Menu::route('dev.overview', Lang::get('desktop::native.menu.dev_run_command')),
             );
         }
 

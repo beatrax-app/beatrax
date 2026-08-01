@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
 
 /**
@@ -69,7 +70,7 @@ final class SetupProgressScreen extends Component
         $view = $views->make('mobile::livewire.setup-progress-screen');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.lock', ['title' => 'Setting up… · beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::setup.page_title').' · beatrax']);
 
         return $view;
     }

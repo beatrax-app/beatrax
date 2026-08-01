@@ -10,6 +10,7 @@
      bottom-right, max-w-sm rounded-lg border bg-white shadow-lg
      p-md. --}}
 
+@use('Modules\Core\Public\Support\Lang')
 <div>
     @if ($visible)
         <div
@@ -22,7 +23,7 @@
             class="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-slate-200 bg-white shadow-lg p-4 dark:bg-slate-950 dark:border-slate-700"
         >
             <div class="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Update the rule?
+                {{ Lang::get('categorization::detail.update_the_rule') }}
             </div>
             @if ($ruleSummary !== '')
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -33,7 +34,7 @@
                 </p>
             @endif
             <p class="mt-2 text-sm text-slate-700 dark:text-slate-300">
-                You picked a different category. Update the rule to match, or keep the existing rule for future imports.
+                {{ Lang::get('categorization::detail.divergence_body') }}
             </p>
             <div class="mt-4 flex items-center gap-2">
                 <button
@@ -41,13 +42,13 @@
                     wire:click="update"
                     x-on:click="visible = false"
                     class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                >Update rule</button>
+                >{{ Lang::get('categorization::detail.update_rule') }}</button>
                 <button
                     type="button"
                     wire:click="dismiss"
                     x-on:click="visible = false"
                     class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:bg-slate-800"
-                >Keep current rule</button>
+                >{{ Lang::get('categorization::detail.keep_current') }}</button>
             </div>
         </div>
     @elseif ($flashMessage !== '')

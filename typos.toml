@@ -107,6 +107,9 @@ extend-exclude = [
   "*.min.css",
   "**/tests/fixtures/",
   "resources/corpus/",
+  # Dutch UI translations are legitimately Dutch; the English-only typo
+  # checker would flag every word. Non-English locale trees are excluded.
+  "**/Resources/lang/nl/",
   "database/seeders/data/",
   "scripts/anonymize_*.php",
   "scripts/synthesise_*.php",

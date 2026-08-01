@@ -37,8 +37,9 @@
     safety-number identifiers.
 --}}
 
+@use('Modules\Core\Public\Support\Lang')
 <div class="space-y-6">
-    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Devices &amp; Sync</h2>
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.heading') }}</h2>
 
     @if ($flashMessage !== '')
         <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
@@ -47,9 +48,9 @@
     {{-- ===== Enable-sync toggle row (D-02 gate) ===== --}}
     <div class="flex items-start justify-between gap-4">
         <div class="flex-1 min-w-0">
-            <p class="text-sm text-slate-900 dark:text-slate-100">Enable sync</p>
+            <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.enable_sync') }}</p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Share your data securely across trusted devices. Requires an app lock.
+                {{ Lang::get('sync::devices.enable_sync_help') }}
             </p>
         </div>
         <button
@@ -61,7 +62,7 @@
                 'opacity-50 cursor-not-allowed pointer-events-none' => ! $appLockConfigured && ! $syncEnabled,
             ])
             aria-pressed="{{ $syncEnabled ? 'true' : 'false' }}"
-            aria-label="Enable sync"
+            aria-label="{{ Lang::get('sync::devices.enable_sync') }}"
             @disabled(! $appLockConfigured && ! $syncEnabled)
         >
             <span class="switch__thumb"></span>
@@ -71,12 +72,12 @@
     {{-- App-lock gate notice (shown when sync is off and no app-lock is set) --}}
     @if (! $syncEnabled && ! $appLockConfigured)
         <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300" role="note">
-            <p>Set an app lock first to enable sync.</p>
+            <p>{{ Lang::get('sync::devices.app_lock_notice') }}</p>
             <a
                 href="#app-lock"
                 class="mt-1 inline-block text-sm font-semibold text-blue-700 underline-offset-2 hover:underline dark:text-blue-300"
             >
-                Go to App lock
+                {{ Lang::get('sync::devices.go_to_app_lock') }}
             </a>
         </div>
     @endif
@@ -92,13 +93,13 @@
             @if ($encryptionOn)
                 <div class="flex items-start justify-between gap-4">
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm text-slate-900 dark:text-slate-100">Data encrypted at rest</p>
+                        <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.encrypted_at_rest') }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            Your data is secured with your app-lock passphrase.
+                            {{ Lang::get('sync::devices.encrypted_at_rest_help') }}
                         </p>
                     </div>
                     <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                        On
+                        {{ Lang::get('sync::devices.on') }}
                     </span>
                 </div>
             @elseif ($syncEnabled)
@@ -107,7 +108,7 @@
                     class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
                     data-testid="encryption-securing-notice"
                 >
-                    <p aria-live="polite" class="font-semibold">Securing your data…</p>
+                    <p aria-live="polite" class="font-semibold">{{ Lang::get('sync::devices.securing') }}</p>
                     <div
                         class="mt-2 h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
                         role="progressbar"
@@ -118,7 +119,7 @@
                     >
                         <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $encryptionProgress }}%"></div>
                     </div>
-                    <p class="mt-1 text-xs">Do not close this window.</p>
+                    <p class="mt-1 text-xs">{{ Lang::get('sync::devices.do_not_close') }}</p>
                 </div>
             @else
                 {{-- Single-device (sync off) optional offer — D-07 second bullet. --}}
@@ -127,7 +128,7 @@
                     role="note"
                     data-testid="encryption-offer-notice"
                 >
-                    <p>Your data is not encrypted at rest. Set up encryption to protect it if this device is lost or stolen.</p>
+                    <p>{{ Lang::get('sync::devices.not_encrypted_offer') }}</p>
                     <button
                         type="button"
                         wire:click="showEnableEncryptionModal"
@@ -136,7 +137,7 @@
                                dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                         data-testid="enable-encryption-cta"
                     >
-                        Enable encryption
+                        {{ Lang::get('sync::devices.enable_encryption') }}
                     </button>
                 </div>
             @endif
@@ -146,7 +147,7 @@
     {{-- ===== Device list + Pair CTA (only when sync is ON) ===== --}}
     @if ($syncEnabled)
         <div class="space-y-4">
-            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Your devices</h3>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.your_devices') }}</h3>
 
             <ul class="divide-y divide-slate-200 dark:divide-slate-700">
                 @foreach ($devices as $device)
@@ -166,8 +167,8 @@
                                             wire:model="renameValue"
                                             wire:keydown.enter="renameDevice"
                                             wire:keydown.escape="cancelRename"
-                                            placeholder="Device name"
-                                            aria-label="Device name"
+                                            placeholder="{{ Lang::get('sync::devices.device_name') }}"
+                                            aria-label="{{ Lang::get('sync::devices.device_name') }}"
                                             class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
                                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                                    dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
@@ -179,7 +180,7 @@
                                                    hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                                    dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                                         >
-                                            Save
+                                            {{ Lang::get('sync::devices.save') }}
                                         </button>
                                     </div>
                                 @else
@@ -190,7 +191,7 @@
                                             <button
                                                 type="button"
                                                 wire:click="startRename({{ $device['id'] }})"
-                                                aria-label="Rename device"
+                                                aria-label="{{ Lang::get('sync::devices.rename_device') }}"
                                                 class="opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100
                                                        text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-1 rounded
                                                        dark:text-slate-500 dark:hover:text-slate-300 dark:focus-visible:ring-slate-100"
@@ -203,7 +204,7 @@
 
                                         @if ($device['is_self'])
                                             <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                                This device
+                                                {{ Lang::get('sync::devices.this_device') }}
                                             </span>
                                         @endif
 
@@ -213,15 +214,15 @@
                                                 class="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-xs text-rose-700 dark:bg-rose-950 dark:text-rose-300"
                                                 data-testid="removed-badge-{{ $device['id'] }}"
                                             >
-                                                Removed
+                                                {{ Lang::get('sync::devices.removed') }}
                                             </span>
                                         @elseif ($device['confirmed'])
                                             <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                                Confirmed
+                                                {{ Lang::get('sync::devices.confirmed') }}
                                             </span>
                                         @else
                                             <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                                Awaiting confirmation
+                                                {{ Lang::get('sync::devices.awaiting_confirmation') }}
                                             </span>
                                         @endif
                                     </div>
@@ -236,7 +237,7 @@
                                     @endphp
                                     <div
                                         class="space-y-2"
-                                        aria-label="Safety number words: {{ strtoupper(implode(' ', $words)) }}"
+                                        aria-label="{{ Lang::get('sync::devices.safety_number_words') }} {{ strtoupper(implode(' ', $words)) }}"
                                     >
                                         <div class="flex flex-wrap gap-2">
                                             @foreach ($rowOne as $word)
@@ -254,7 +255,7 @@
                                 {{-- Paired-at meta --}}
                                 @if ($device['paired_at'] !== '')
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                                        Paired {{ \Carbon\CarbonImmutable::parse($device['paired_at'])->format('j M Y') }}
+                                        {{ Lang::get('sync::devices.paired') }} {{ \Carbon\CarbonImmutable::parse($device['paired_at'])->format('j M Y') }}
                                     </p>
                                 @endif
                             </div>
@@ -265,13 +266,13 @@
                                 <button
                                     type="button"
                                     wire:click="startRemove({{ $device['id'] }})"
-                                    aria-label="Remove {{ $device['name'] }}"
+                                    aria-label="{{ Lang::get('sync::devices.remove_aria', ['name' => $device['name']]) }}"
                                     class="min-h-[44px] flex-shrink-0 py-3 text-sm font-medium text-rose-600
                                            hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 rounded
                                            dark:text-rose-400 dark:hover:text-rose-300"
                                     data-testid="remove-device-{{ $device['id'] }}"
                                 >
-                                    Remove
+                                    {{ Lang::get('sync::devices.remove') }}
                                 </button>
                             @endif
                         </div>
@@ -289,7 +290,7 @@
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
-                Pair a new device
+                {{ Lang::get('sync::devices.pair_new_device') }}
             </button>
 
             {{-- ===== D-06 (Phase 13): per-peer sync status surface ===== --}}
@@ -302,10 +303,10 @@
                         for="relay-endpoint-url"
                         class="block text-sm font-semibold text-slate-900 dark:text-slate-100"
                     >
-                        Relay endpoint
+                        {{ Lang::get('sync::devices.relay_endpoint') }}
                     </label>
                     <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                        Optional. When set, offline devices sync via this relay. Leave empty for LAN&#8209;direct only.
+                        {!! Lang::get('sync::devices.relay_endpoint_help') !!}
                     </p>
                 </div>
 
@@ -315,7 +316,7 @@
                         type="url"
                         wire:model="relayEndpointUrl"
                         placeholder="https://relay.example.com"
-                        aria-label="Relay endpoint URL"
+                        aria-label="{{ Lang::get('sync::devices.relay_endpoint_aria') }}"
                         class="block min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900
                                placeholder:text-slate-400
                                focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
@@ -331,7 +332,7 @@
                                dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                         data-testid="relay-endpoint-save"
                     >
-                        Save
+                        {{ Lang::get('sync::devices.save') }}
                     </button>
                 </div>
 
@@ -345,9 +346,7 @@
                     >
                         <span aria-hidden="true" class="mt-0.5 flex-shrink-0">⚠</span>
                         <span>
-                            This relay endpoint uses plain HTTP. While the relay never decrypts your data,
-                            an insecure connection exposes encrypted sizes and timing to network observers.
-                            Use an <strong>https://</strong> endpoint for best privacy.
+                            {!! Lang::get('sync::devices.relay_insecure_warning') !!}
                         </span>
                     </div>
                 @endif
@@ -372,25 +371,25 @@
             <div class="space-y-4 p-6">
                 @if ($encryptionStep === 'confirm')
                     <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                        Enable at-rest encryption
+                        {{ Lang::get('sync::devices.enable_at_rest') }}
                     </h3>
                     <p class="text-sm text-slate-700 dark:text-slate-300">
-                        Your data will be encrypted using your app-lock passphrase. A pre-migration backup will be created automatically.
+                        {{ Lang::get('sync::devices.enable_at_rest_body') }}
                     </p>
                     <div
                         class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
                         role="alert"
                     >
-                        If you lose your app-lock passphrase and have no backup or other trusted device, your data cannot be recovered.
+                        {{ Lang::get('sync::devices.no_recovery_warning') }}
                     </div>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                        To recover access, re-pair this device from another trusted device, or use your independent encrypted backup.
+                        {{ Lang::get('sync::devices.recover_help') }}
                     </p>
                     {{-- D-02a/D-02c honest disclosure (14-VALIDATION.md manual-only check pinned by
                          DevicesAndSyncEncryptionUiTest — do not remove/soften this copy). --}}
                     <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                        <p>Amounts are not encrypted at rest — balances and totals stay readable so your monthly totals keep adding up correctly.</p>
-                        <p class="mt-1">The search index keeps a plaintext copy of merchant and description text so full-text search keeps working.</p>
+                        <p>{{ Lang::get('sync::devices.amounts_plaintext') }}</p>
+                        <p class="mt-1">{{ Lang::get('sync::devices.search_plaintext') }}</p>
                     </div>
                     <div class="flex gap-3">
                         <button
@@ -403,7 +402,7 @@
                                    dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                             data-testid="confirm-enable-encryption"
                         >
-                            Enable encryption
+                            {{ Lang::get('sync::devices.enable_encryption') }}
                         </button>
                         <button
                             type="button"
@@ -413,13 +412,13 @@
                                    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                             data-testid="decline-encryption"
                         >
-                            Keep data unencrypted
+                            {{ Lang::get('sync::devices.keep_unencrypted') }}
                         </button>
                     </div>
                 @elseif ($encryptionStep === 'progress')
                     <div wire:poll.750ms="pollEncryptionProgress">
                         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite">
-                            Securing your data…
+                            {{ Lang::get('sync::devices.securing') }}
                         </h3>
                         <div
                             class="mt-4 h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
@@ -431,15 +430,15 @@
                         >
                             <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $encryptionProgress }}%"></div>
                         </div>
-                        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Do not close this window.</p>
+                        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.do_not_close') }}</p>
                     </div>
                 @elseif ($encryptionStep === 'done')
                     <div class="space-y-3 text-center">
                         <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
                         </svg>
-                        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">Encryption enabled</h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400">Your data is now encrypted at rest.</p>
+                        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">{{ Lang::get('sync::devices.encryption_enabled') }}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.encryption_enabled_body') }}</p>
                         <button
                             type="button"
                             wire:click="closeEncryptionModal"
@@ -448,7 +447,7 @@
                                    dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                             data-testid="encryption-done"
                         >
-                            Done — encryption enabled
+                            {{ Lang::get('sync::devices.done_encryption_enabled') }}
                         </button>
                     </div>
                 @else
@@ -456,8 +455,8 @@
                         <svg class="mx-auto h-6 w-6 text-rose-600 dark:text-rose-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
                         </svg>
-                        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">Encryption setup failed</h3>
-                        <p class="text-sm text-slate-500 dark:text-slate-400">Your data was not changed. Your backup was preserved.</p>
+                        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100" aria-live="polite" aria-atomic="true">{{ Lang::get('sync::devices.encryption_failed') }}</h3>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.encryption_failed_body') }}</p>
                         <button
                             type="button"
                             wire:click="closeEncryptionModal"
@@ -466,7 +465,7 @@
                                    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                             data-testid="encryption-error-close"
                         >
-                            Close — no changes made
+                            {{ Lang::get('sync::devices.close_no_changes') }}
                         </button>
                     </div>
                 @endif
@@ -481,16 +480,16 @@
         <flux:modal wire:model="showRemoveModal" class="md:max-w-sm" data-testid="revoke-device-modal">
             <div class="space-y-4 p-6">
                 <div>
-                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Remove this device</h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Removing: {{ $this->currentNameFor($removingDeviceId) }}</p>
+                    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::devices.remove_this_device') }}</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.removing') }} {{ $this->currentNameFor($removingDeviceId) }}</p>
                 </div>
 
                 <div
                     class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
                     role="note"
                 >
-                    <p>Removing this device rotates the encryption key so it receives no future updates.</p>
-                    <p class="mt-1">It cannot erase data already on that device. If this device was lost or stolen, treat any data it held as exposed.</p>
+                    <p>{{ Lang::get('sync::devices.remove_rotates_key') }}</p>
+                    <p class="mt-1">{{ Lang::get('sync::devices.remove_cannot_erase') }}</p>
                 </div>
 
                 <div class="flex gap-3" wire:loading.remove wire:target="removeDevice">
@@ -501,7 +500,7 @@
                                hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
                         data-testid="confirm-remove-device"
                     >
-                        Remove device
+                        {{ Lang::get('sync::devices.remove_device') }}
                     </button>
                     <button
                         type="button"
@@ -511,7 +510,7 @@
                                dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         data-testid="cancel-remove-device"
                     >
-                        Keep device
+                        {{ Lang::get('sync::devices.keep_device') }}
                     </button>
                 </div>
 
@@ -525,7 +524,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                     </svg>
-                    <span>Rotating encryption key…</span>
+                    <span>{{ Lang::get('sync::devices.rotating_key') }}</span>
                 </div>
             </div>
         </flux:modal>

@@ -1,25 +1,26 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-06 / UI-SPEC §19: overflow-x:auto on outer wrapper so this surface
      scrolls horizontally at phone width rather than forcing page overflow. --}}
 <div class="space-y-6 overflow-x-auto">
     <header class="space-y-1">
-        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Import complete</h1>
+        <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('import::results.heading') }}</h1>
     </header>
 
     <p class="text-sm text-slate-900 dark:text-slate-100">
-        Imported {{ $importRun->inserted_count }} transactions · skipped {{ $importRun->duplicate_count }} duplicates{{ $importRun->enriched_count > 0 ? ' · '.$importRun->enriched_count.' enriched' : '' }}{{ $importRun->error_count > 0 ? ' · '.$importRun->error_count.' errors' : '' }}.
+        {{ Lang::get('import::results.summary', ['inserted' => $importRun->inserted_count, 'duplicates' => $importRun->duplicate_count]) }}{{ $importRun->enriched_count > 0 ? Lang::get('import::results.summary_enriched', ['count' => $importRun->enriched_count]) : '' }}{{ $importRun->error_count > 0 ? Lang::get('import::results.summary_errors', ['count' => $importRun->error_count]) : '' }}.
     </p>
 
     @if ($importRun->duplicate_count > 0)
         <details class="text-sm text-slate-500 dark:text-slate-400">
-            <summary class="cursor-pointer">Show skipped duplicates ({{ $importRun->duplicate_count }})</summary>
-            <p class="mt-2 text-slate-500 dark:text-slate-400">Duplicates are rows already present in your ledger — they are silently skipped on re-import.</p>
+            <summary class="cursor-pointer">{{ Lang::get('import::results.show_duplicates', ['count' => $importRun->duplicate_count]) }}</summary>
+            <p class="mt-2 text-slate-500 dark:text-slate-400">{{ Lang::get('import::results.duplicates_help') }}</p>
         </details>
     @endif
 
     @if ($importRun->error_count > 0)
         <details class="text-sm text-slate-500 dark:text-slate-400" open>
-            <summary class="cursor-pointer">Show errors ({{ $importRun->error_count }})</summary>
-            <p class="mt-2 text-slate-500 dark:text-slate-400">Errors are rows that could not be parsed; they were not added to your ledger.</p>
+            <summary class="cursor-pointer">{{ Lang::get('import::results.show_errors', ['count' => $importRun->error_count]) }}</summary>
+            <p class="mt-2 text-slate-500 dark:text-slate-400">{{ Lang::get('import::results.errors_help') }}</p>
         </details>
     @endif
 
@@ -28,7 +29,7 @@
             href="/imports/new"
             class="inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
         >
-            Upload another statement
+            {{ Lang::get('import::results.upload_another') }}
         </a>
     </div>
 </div>

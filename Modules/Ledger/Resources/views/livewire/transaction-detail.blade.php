@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Brick\Math\BigDecimal;
     use Brick\Math\RoundingMode;
@@ -30,14 +31,14 @@
          The page title is "Transaction" + the posted date for context. --}}
     <x-core::mobile-top-bar
         :backUrl="route('transactions.index')"
-        title="Transaction"
+        :title="Lang::get('ledger::detail.heading')"
     />
 
     <main class="min-h-screen bg-white dark:bg-slate-950">
         <div class="mx-auto max-w-3xl px-8 py-12 space-y-6" data-testid="transaction-detail">
             <header class="space-y-1">
                 <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Transaction</h1>
+                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::detail.heading') }}</h1>
                     {{-- Cleared/uncleared/reconciled badge + toggle (SC-1, D-11). --}}
                     <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                 </div>
@@ -48,7 +49,7 @@
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <dl class="space-y-1">
-                    <dt class="text-sm text-slate-500 dark:text-slate-400">Counterparty</dt>
+                    <dt class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.counterparty') }}</dt>
                     <dd class="text-sm text-slate-900 dark:text-slate-100">
                         @if ($transaction->counterparty !== null && $transaction->counterparty->slug !== '')
                             <a
@@ -64,14 +65,14 @@
                 </dl>
 
                 <dl class="space-y-1">
-                    <dt class="text-sm text-slate-500 dark:text-slate-400">Amount (native)</dt>
+                    <dt class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.amount_native') }}</dt>
                     <dd class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt(Money::ofMinor($transaction->amount_minor, $transaction->currency)) }} {{ $transaction->currency }}
                     </dd>
                 </dl>
 
                 <dl class="space-y-1">
-                    <dt class="text-sm text-slate-500 dark:text-slate-400">Amount (settled EUR)</dt>
+                    <dt class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.amount_settled') }}</dt>
                     <dd class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                         {{ $fmt(Money::ofMinor($transaction->settled_amount_minor, $transaction->settled_currency)) }} {{ $transaction->settled_currency }}
                     </dd>
@@ -79,11 +80,11 @@
 
                 @if ($fxRateDisplay !== null)
                     <dl class="space-y-1" data-testid="fx-rate-row">
-                        <dt class="text-sm text-slate-500 dark:text-slate-400">Effective rate</dt>
+                        <dt class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.effective_rate') }}</dt>
                         <dd class="text-sm text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                             €{{ $fxRateDisplay }} / {{ $transaction->currency }}
                         </dd>
-                        <dd class="text-xs text-slate-500 dark:text-slate-400">Includes any ICS markup.</dd>
+                        <dd class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.ics_markup') }}</dd>
                     </dl>
                 @endif
             </div>
@@ -103,7 +104,7 @@
                         <div class="flex items-center justify-between gap-3">
                             <div class="space-y-1">
                                 <h2 id="split-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
-                                    Category
+                                    {{ Lang::get('ledger::detail.split.category') }}
                                 </h2>
                                 <p class="text-sm text-slate-900 dark:text-slate-100" data-testid="split-current-category">
                                     {{ $transaction->category?->name ?? '—' }}
@@ -115,22 +116,22 @@
                                 class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                                 data-testid="split-open-button"
                             >
-                                Split into categories
+                                {{ Lang::get('ledger::detail.split.open') }}
                             </button>
                         </div>
                     @else
                         {{-- §7.3 Editor — open state. --}}
                         <div class="space-y-1">
                             <h2 id="split-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
-                                Split across categories
+                                {{ Lang::get('ledger::detail.split.heading') }}
                             </h2>
                             <p class="text-sm text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                                Total {{ $fmt(Money::ofMinor($transaction->settled_amount_minor, $transaction->settled_currency)) }}
+                                {{ Lang::get('ledger::detail.split.total', ['amount' => $fmt(Money::ofMinor($transaction->settled_amount_minor, $transaction->settled_currency))]) }}
                             </p>
                             @if ($hasPersistedSplit)
                                 {{-- D-06: tax ownership moves to legs once a split is persisted. --}}
                                 <p class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-tax-ownership-note">
-                                    Tax tags are set per category below.
+                                    {{ Lang::get('ledger::detail.split.tax_per_category') }}
                                 </p>
                             @endif
                         </div>
@@ -145,14 +146,14 @@
                             @foreach ($legs as $index => $leg)
                                 <div class="split-leg-row" data-testid="split-leg-row-{{ $index }}">
                                     <div>
-                                        <label class="sr-only" for="split-leg-category-{{ $index }}">Category</label>
+                                        <label class="sr-only" for="split-leg-category-{{ $index }}">{{ Lang::get('ledger::detail.split.category') }}</label>
                                         <select
                                             wire:model.live="legs.{{ $index }}.categoryId"
                                             id="split-leg-category-{{ $index }}"
                                             class="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                             data-testid="split-leg-category-{{ $index }}"
                                         >
-                                            <option value="">Choose a category</option>
+                                            <option value="">{{ Lang::get('ledger::detail.split.choose_category') }}</option>
                                             @foreach ($splitCategories as $cat)
                                                 <option value="{{ $cat->id }}" @selected(($leg['categoryId'] ?? null) !== null && (int) $leg['categoryId'] === $cat->id)>{{ $cat->path }}</option>
                                             @endforeach
@@ -161,7 +162,7 @@
 
                                     <span class="budget-step-amount">
                                         <span aria-hidden="true">€</span>
-                                        <label class="sr-only" for="split-leg-amount-{{ $index }}">Amount</label>
+                                        <label class="sr-only" for="split-leg-amount-{{ $index }}">{{ Lang::get('ledger::list.table.amount') }}</label>
                                         <input
                                             type="text"
                                             inputmode="decimal"
@@ -173,11 +174,11 @@
                                     </span>
 
                                     <div class="flex flex-1 min-w-[10rem] flex-col gap-1">
-                                        <label class="sr-only" for="split-leg-note-{{ $index }}">Note</label>
+                                        <label class="sr-only" for="split-leg-note-{{ $index }}">{{ Lang::get('ledger::detail.split.note_label') }}</label>
                                         <input
                                             type="text"
                                             id="split-leg-note-{{ $index }}"
-                                            placeholder="Note (optional)"
+                                            placeholder="{{ Lang::get('ledger::detail.split.note_placeholder') }}"
                                             wire:model="legs.{{ $index }}.note"
                                             class="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                             data-testid="split-leg-note-{{ $index }}"
@@ -194,13 +195,13 @@
                                                 @disabled($leg['id'] === null)
                                                 role="switch"
                                                 aria-checked="{{ ($leg['tax'] ?? false) ? 'true' : 'false' }}"
-                                                aria-label="Tax-deductible"
+                                                aria-label="{{ Lang::get('ledger::detail.split.tax_deductible') }}"
                                                 class="switch {{ ($leg['tax'] ?? false) ? 'switch--on' : '' }}"
                                                 data-testid="split-leg-tax-toggle-{{ $index }}"
                                             >
                                                 <span class="switch__thumb"></span>
                                             </button>
-                                            Tax-deductible
+                                            {{ Lang::get('ledger::detail.split.tax_deductible') }}
                                         </span>
                                     </div>
 
@@ -208,7 +209,7 @@
                                         type="button"
                                         wire:click="removeLeg({{ $index }})"
                                         class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-                                        aria-label="Remove this category"
+                                        aria-label="{{ Lang::get('ledger::detail.split.remove_leg_aria') }}"
                                         data-testid="split-leg-remove-{{ $index }}"
                                     >
                                         &times;
@@ -224,12 +225,12 @@
                                 class="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                                 data-testid="split-add-leg"
                             >
-                                + Add category
+                                {{ Lang::get('ledger::detail.split.add_category') }}
                             </button>
 
                             @if (count($legs) >= 18)
                                 <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="split-soft-cap-advisory">
-                                    {{ count($legs) }} of ~20 categories — consider grouping small amounts.
+                                    {{ Lang::get('ledger::detail.split.soft_cap', ['count' => count($legs)]) }}
                                 </span>
                             @endif
                         </div>
@@ -244,11 +245,11 @@
                             data-testid="split-remaining-bar"
                         >
                             @if ($remainingMinor === 0)
-                                Remaining {{ $remainingAbsDisplay }} ✓
+                                {{ Lang::get('ledger::detail.split.remaining_zero', ['amount' => $remainingAbsDisplay]) }}
                             @elseif ($remainingMinor > 0)
-                                Remaining to assign: {{ $remainingAbsDisplay }}
+                                {{ Lang::get('ledger::detail.split.remaining_to_assign', ['amount' => $remainingAbsDisplay]) }}
                             @else
-                                Over-allocated by {{ $remainingAbsDisplay }} — reduce a leg.
+                                {{ Lang::get('ledger::detail.split.over_allocated', ['amount' => $remainingAbsDisplay]) }}
                             @endif
                         </div>
 
@@ -262,8 +263,8 @@
                                 class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
                                 data-testid="split-save-button"
                             >
-                                <span wire:loading.remove wire:target="saveSplit">Save split</span>
-                                <span wire:loading wire:target="saveSplit">Saving…</span>
+                                <span wire:loading.remove wire:target="saveSplit">{{ Lang::get('ledger::detail.split.save') }}</span>
+                                <span wire:loading wire:target="saveSplit">{{ Lang::get('ledger::detail.split.saving') }}</span>
                             </button>
 
                             <button
@@ -272,7 +273,7 @@
                                 class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline dark:text-slate-100"
                                 data-testid="split-unsplit-link"
                             >
-                                Unsplit transaction
+                                {{ Lang::get('ledger::detail.split.unsplit') }}
                             </button>
                         </div>
 
@@ -280,11 +281,11 @@
                             @php
                                 $survivorIdx = $pendingRemoveIndex === 0 ? 1 : 0;
                                 $survivorCat = collect($splitCategories)->firstWhere('id', (int) ($legs[$survivorIdx]['categoryId'] ?? 0));
-                                $survivorName = $survivorCat->path ?? 'this category';
+                                $survivorName = $survivorCat->path ?? Lang::get('ledger::detail.split.remove_to_one_fallback');
                             @endphp
                             <div class="flex flex-wrap items-center gap-3" aria-live="polite" aria-atomic="true" data-testid="split-remove-to-one-confirm">
                                 <span class="text-sm text-slate-700 dark:text-slate-300">
-                                    Removing this leaves one category — the transaction becomes {{ $survivorName }}.
+                                    {{ Lang::get('ledger::detail.split.remove_to_one', ['category' => $survivorName]) }}
                                 </span>
                                 <button
                                     type="button"
@@ -292,21 +293,21 @@
                                     class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
                                     data-testid="split-remove-to-one-confirm-button"
                                 >
-                                    Remove category
+                                    {{ Lang::get('ledger::detail.split.remove_category') }}
                                 </button>
                                 <button
                                     type="button"
                                     wire:click="cancelRemoveToOne"
                                     class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
                                 >
-                                    Keep this category
+                                    {{ Lang::get('ledger::detail.split.keep_category') }}
                                 </button>
                             </div>
                         @endif
 
                         @if ($confirmUnsplit)
                             <div class="space-y-2" aria-live="polite" aria-atomic="true" data-testid="split-unsplit-confirm">
-                                <p class="text-sm text-slate-700 dark:text-slate-300">Restore as a single category?</p>
+                                <p class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('ledger::detail.split.restore_single') }}</p>
                                 <div class="flex flex-wrap items-center gap-3">
                                     @foreach ($legs as $index => $leg)
                                         @php
@@ -330,14 +331,14 @@
                                         class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
                                         data-testid="split-unsplit-confirm-button"
                                     >
-                                        Yes, unsplit
+                                        {{ Lang::get('ledger::detail.split.confirm_unsplit') }}
                                     </button>
                                     <button
                                         type="button"
                                         wire:click="cancelUnsplit"
                                         class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
                                     >
-                                        Keep split
+                                        {{ Lang::get('ledger::detail.split.keep_split') }}
                                     </button>
                                 </div>
                             </div>
@@ -351,12 +352,12 @@
                  ownership moves to the legs (see the Split section above). --}}
             @if (isset($txTaxRow) && ! ($hasPersistedSplit ?? false))
                 <section
-                    aria-label="Tax tag"
+                    aria-label="{{ Lang::get('ledger::detail.tax.section_aria') }}"
                     class="border-t border-slate-200 pt-6 dark:border-slate-700"
                     data-testid="tax-tag-section"
                 >
                     <div class="flex items-center gap-3">
-                        <span class="text-sm text-slate-500 dark:text-slate-400">Tax deductible</span>
+                        <span class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('ledger::detail.tax.label') }}</span>
                         <x-tax::tax-badge :transaction="$txTaxRow" :showAlways="true" />
                     </div>
                 </section>
@@ -369,11 +370,10 @@
             >
                 <div class="space-y-1">
                     <h2 id="reclassify-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
-                        Reclassify
+                        {{ Lang::get('ledger::detail.reclassify.heading') }}
                     </h2>
                     <p class="text-sm text-slate-500 dark:text-slate-400">
-                        Override the detected type. If this transaction is paired with another,
-                        choosing a non-transfer type will unpair both sides.
+                        {{ Lang::get('ledger::detail.reclassify.help') }}
                     </p>
                 </div>
 
@@ -382,13 +382,13 @@
                     x-data="{ toast: null }"
                     x-on:toast.window="toast = $event.detail?.message ?? null; setTimeout(() => toast = null, 3000)"
                 >
-                    <label class="sr-only" for="reclassify-type">Choose new transaction type</label>
+                    <label class="sr-only" for="reclassify-type">{{ Lang::get('ledger::detail.reclassify.choose_aria') }}</label>
                     <select
                         wire:model.live="reclassifyType"
                         id="reclassify-type"
                         class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                     >
-                        <option value="">Choose a type…</option>
+                        <option value="">{{ Lang::get('ledger::detail.reclassify.choose_option') }}</option>
                         @foreach (\Modules\Ledger\Public\Enums\TransactionType::cases() as $type)
                             @if ($type->value !== $transaction->type)
                                 <option value="{{ $type->value }}">{{ $type->value }}</option>
@@ -402,7 +402,7 @@
                         @disabled($reclassifyType === '')
                         class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100"
                     >
-                        Save
+                        {{ Lang::get('ledger::detail.reclassify.save') }}
                     </button>
 
                     <span
@@ -438,20 +438,20 @@
             >
                 <div class="space-y-1">
                     <h2 id="note-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
-                        Note
+                        {{ Lang::get('ledger::detail.note.heading') }}
                     </h2>
                     <p class="text-sm text-slate-500 dark:text-slate-400">
-                        Personal note for this transaction. Visible only to you.
+                        {{ Lang::get('ledger::detail.note.help') }}
                     </p>
                 </div>
 
                 <div class="space-y-2">
-                    <label class="sr-only" for="transaction-note">Note</label>
+                    <label class="sr-only" for="transaction-note">{{ Lang::get('ledger::detail.note.label') }}</label>
                     <textarea
                         wire:model="note"
                         id="transaction-note"
                         rows="3"
-                        placeholder="Add a note…"
+                        placeholder="{{ Lang::get('ledger::detail.note.placeholder') }}"
                         class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                         data-testid="note-textarea"
                     ></textarea>
@@ -463,7 +463,7 @@
                             class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                             data-testid="note-save-button"
                         >
-                            Save note
+                            {{ Lang::get('ledger::detail.note.save') }}
                         </button>
 
                         @if ($noteSaved)
@@ -471,7 +471,7 @@
                                 class="text-sm text-emerald-600 dark:text-emerald-400"
                                 aria-live="polite" aria-atomic="true"
                                 data-testid="note-saved-indicator"
-                            >Saved</span>
+                            >{{ Lang::get('ledger::detail.note.saved') }}</span>
                         @endif
                     </div>
                 </div>
@@ -488,22 +488,22 @@
                 >
                     <div class="space-y-1">
                         <h2 id="counterparty-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
-                            Reassign counterparty
+                            {{ Lang::get('ledger::detail.reassign.heading') }}
                         </h2>
                         <p class="text-sm text-slate-500 dark:text-slate-400">
-                            Override the resolved counterparty for this transaction.
+                            {{ Lang::get('ledger::detail.reassign.help') }}
                         </p>
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <label class="sr-only" for="counterparty-select">Choose counterparty</label>
+                        <label class="sr-only" for="counterparty-select">{{ Lang::get('ledger::detail.reassign.choose_aria') }}</label>
                         <select
                             id="counterparty-select"
                             x-model="selectedCp"
                             class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                             data-testid="counterparty-select"
                         >
-                            <option value="">Choose a counterparty…</option>
+                            <option value="">{{ Lang::get('ledger::detail.reassign.choose_option') }}</option>
                             @foreach ($counterparties as $cp)
                                 <option value="{{ $cp->id }}"
                                     {{ $transaction->counterparty_id == $cp->id ? 'selected' : '' }}
@@ -518,7 +518,7 @@
                             class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
                             data-testid="counterparty-reassign-button"
                         >
-                            Reassign
+                            {{ Lang::get('ledger::detail.reassign.submit') }}
                         </button>
                     </div>
                 </section>
@@ -533,10 +533,10 @@
             >
                 <div class="space-y-1">
                     <h2 id="delete-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
-                        Delete transaction
+                        {{ Lang::get('ledger::detail.delete.heading') }}
                     </h2>
                     <p class="text-sm text-slate-500 dark:text-slate-400">
-                        Permanently removes this transaction. This action cannot be undone.
+                        {{ Lang::get('ledger::detail.delete.help') }}
                     </p>
                 </div>
 
@@ -548,26 +548,26 @@
                         class="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-50 dark:border-rose-800 dark:bg-slate-950 dark:text-rose-400"
                         data-testid="delete-button"
                     >
-                        Delete
+                        {{ Lang::get('ledger::detail.delete.button') }}
                     </button>
 
                     <template x-if="confirmDelete">
                         <div class="flex items-center gap-3">
-                            <span class="text-sm text-slate-700 dark:text-slate-300">Are you sure?</span>
+                            <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('ledger::detail.delete.confirm_prompt') }}</span>
                             <button
                                 type="button"
                                 wire:click="deleteTransaction"
                                 class="rounded-md bg-rose-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-rose-800"
                                 data-testid="delete-confirm-button"
                             >
-                                Yes, delete
+                                {{ Lang::get('ledger::detail.delete.confirm') }}
                             </button>
                             <button
                                 type="button"
                                 @click="confirmDelete = false"
                                 class="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
                             >
-                                Cancel
+                                {{ Lang::get('ledger::detail.delete.cancel') }}
                             </button>
                         </div>
                     </template>
@@ -595,7 +595,7 @@
                         wire:click="$dispatch('chain-drawer:open', { transactionId: {{ $transaction->id }} })"
                         class="text-sm font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100"
                     >
-                        View chain
+                        {{ Lang::get('ledger::detail.chain.view') }}
                     </button>
                 </section>
 

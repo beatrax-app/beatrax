@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Shared deduction-category picker. Rendered ONCE per surface component
     (not per row). Reads the host component's Livewire properties via $this:
@@ -43,7 +44,7 @@
         class="hidden md:block"
         role="dialog"
         aria-modal="true"
-        aria-label="Tag as tax-deductible"
+        aria-label="{{ Lang::get('tax::picker.dialog_aria') }}"
         style="
             position: fixed;
             top: 50%;
@@ -94,7 +95,7 @@
             x-transition:leave-end="transform translate-y-full"
             role="dialog"
             aria-modal="true"
-            aria-label="Tag as tax-deductible"
+            aria-label="{{ Lang::get('tax::picker.dialog_aria') }}"
             style="
                 position: fixed;
                 bottom: 0;
@@ -132,7 +133,7 @@
             style="margin-top: var(--space-3);"
         >
             <span>
-                Also tag {{ $batchSuggestion['untaggedCount'] }} more from <strong>{{ $batchSuggestion['counterpartyName'] }}</strong>?
+                {{ Lang::get('tax::picker.batch_before', ['count' => $batchSuggestion['untaggedCount']]) }} <strong>{{ $batchSuggestion['counterpartyName'] }}</strong>{{ Lang::get('tax::picker.batch_after') }}
             </span>
             <div style="display: flex; gap: var(--space-2); margin-left: auto;">
                 <button
@@ -140,13 +141,13 @@
                     wire:click="applyBatchTag"
                     style="background: var(--color-blue, #3b82f6); color: #fff; border: 0; border-radius: 9999px; padding: 4px 12px; font-size: var(--text-xs, 12px); font-weight: 600; cursor: pointer; min-height: 32px;"
                     data-testid="batch-tag-apply"
-                >Tag all</button>
+                >{{ Lang::get('tax::picker.batch_tag_all') }}</button>
                 <button
                     type="button"
                     wire:click="dismissBatch"
                     style="background: transparent; border: 0; color: var(--color-text-muted, #64748b); font-size: var(--text-xs, 12px); cursor: pointer; min-height: 32px;"
                     data-testid="batch-tag-dismiss"
-                >Dismiss</button>
+                >{{ Lang::get('tax::picker.batch_dismiss') }}</button>
             </div>
         </div>
     @endif

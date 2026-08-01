@@ -15,6 +15,7 @@ use Livewire\Component;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Enums\AccountKind;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
 use Modules\Ledger\Public\Services\ReconciliationWriter;
@@ -85,8 +86,8 @@ final class ReconcilePage extends Component
         // state this can act on, and the message says which part is missing.
         if ($this->accountId === null || $target === null || $date === null) {
             $this->error = $this->accountId === null
-                ? 'Choose an account first.'
-                : 'Enter a valid statement balance and date.';
+                ? Lang::get('ledger::reconcile.errors.choose_account')
+                : Lang::get('ledger::reconcile.errors.invalid_balance_date');
 
             return;
         }
@@ -101,7 +102,7 @@ final class ReconcilePage extends Component
         if ($target - $cleared !== 0) {
             // A discrepancy is flag-only — never auto-balanced, never
             // completed. No write happens below this line.
-            $this->error = 'The statement balance does not match the cleared balance yet — adjust cleared rows or the entered balance until the difference is zero.';
+            $this->error = Lang::get('ledger::reconcile.errors.mismatch');
 
             return;
         }
@@ -117,8 +118,8 @@ final class ReconcilePage extends Component
         // Report the truthful outcome. A matched target with no cleared
         // rows in the statement-date window locks nothing — don't claim it did.
         $message = $lockedCount === 0
-            ? 'Nothing to lock for this statement date.'
-            : sprintf('Reconcile complete — %d rows locked.', $lockedCount);
+            ? Lang::get('ledger::reconcile.toast.nothing_to_lock')
+            : Lang::get('ledger::reconcile.toast.complete', ['count' => $lockedCount]);
 
         $this->dispatch('toast', message: $message);
     }
@@ -162,7 +163,7 @@ final class ReconcilePage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Reconcile · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('ledger::reconcile.page_title').' · beatrax']);
 
         return $view;
     }

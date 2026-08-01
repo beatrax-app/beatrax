@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Connect-bank step — wizard step 2. Renders the format-first
     connector shape: three format chips (CAMT.053 recommended, MT940,
@@ -25,12 +26,12 @@
     };
 
     $dropZoneLead = match (true) {
-        $selectedFormat === SourceFormat::Camt053->value => 'Drop your CAMT.053 file here',
-        $selectedFormat === SourceFormat::Mt940->value => 'Drop your MT940 file here',
-        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => 'Drop your ASN CSV here',
-        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => 'Drop your ING CSV here',
-        $isCsv => 'Pick which bank exported your CSV — we need to know to read it correctly.',
-        default => 'Drop your statement file here',
+        $selectedFormat === SourceFormat::Camt053->value => Lang::get('onboarding::connect_bank.drop_lead_camt053'),
+        $selectedFormat === SourceFormat::Mt940->value => Lang::get('onboarding::connect_bank.drop_lead_mt940'),
+        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => Lang::get('onboarding::connect_bank.drop_lead_asn'),
+        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => Lang::get('onboarding::connect_bank.drop_lead_ing'),
+        $isCsv => Lang::get('onboarding::connect_bank.drop_lead_pick_bank'),
+        default => Lang::get('onboarding::connect_bank.drop_lead_default'),
     };
 
     $dropZoneAccept = match ($selectedFormat) {
@@ -40,9 +41,9 @@
     };
 
     $bankListLine = match ($selectedFormat) {
-        SourceFormat::Mt940->value => 'Supported: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => 'Supported: ASN, ING — more formats coming as users contribute samples.',
-        default => 'Supported: ASN, ING',
+        SourceFormat::Mt940->value => Lang::get('onboarding::connect_bank.banks_mt940'),
+        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => Lang::get('onboarding::connect_bank.banks_csv'),
+        default => Lang::get('onboarding::connect_bank.banks_default'),
     };
 
     $eyebrowSuffix = match (true) {
@@ -55,23 +56,23 @@
     };
 @endphp
 <section class="wiz-step wiz-step-connect-bank" aria-labelledby="wiz-connect-bank-h1">
-    <x-onboarding::wiz-eyebrow step="connect-bank" glyph="🏦">Your bank {{ $eyebrowSuffix }}</x-onboarding::wiz-eyebrow>
+    <x-onboarding::wiz-eyebrow step="connect-bank" glyph="🏦">{{ Lang::get('onboarding::connect_bank.eyebrow') }} {{ $eyebrowSuffix }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-bank-h1" class="wiz-h1">
-        Grab a statement, then drop it below
+        {{ Lang::get('onboarding::connect_bank.h1') }}
     </h1>
     <p class="wiz-lede">
-        Pick the format your bank gave you, then drop the file. We auto-detect CAMT.053 and MT940.
+        {{ Lang::get('onboarding::connect_bank.lede') }}
     </p>
 
     <div class="mini-steps">
-        <x-onboarding::mini-step glyph="🔐" label="Log in" sub="Your bank's website" state="done" />
-        <x-onboarding::mini-step glyph="📑" label="Open statements" sub="In your bank's menu" state="done" />
-        <x-onboarding::mini-step glyph="📅" label="Pick a range" sub="Last 90 days" state="now" />
-        <x-onboarding::mini-step glyph="⬇️" label="Download" :sub="$miniStepFourSub" state="upcoming" />
+        <x-onboarding::mini-step glyph="🔐" :label="Lang::get('onboarding::connect_bank.mini.login_label')" :sub="Lang::get('onboarding::connect_bank.mini.login_sub')" state="done" />
+        <x-onboarding::mini-step glyph="📑" :label="Lang::get('onboarding::connect_bank.mini.statements_label')" :sub="Lang::get('onboarding::connect_bank.mini.statements_sub')" state="done" />
+        <x-onboarding::mini-step glyph="📅" :label="Lang::get('onboarding::connect_bank.mini.range_label')" :sub="Lang::get('onboarding::connect_bank.mini.range_sub')" state="now" />
+        <x-onboarding::mini-step glyph="⬇️" :label="Lang::get('onboarding::connect_bank.mini.download_label')" :sub="$miniStepFourSub" state="upcoming" />
     </div>
 
-    <div class="format-chips" role="radiogroup" aria-label="Bank statement format">
-        <span class="format-chips-label">Got it as:</span>
+    <div class="format-chips" role="radiogroup" aria-label="{{ Lang::get('onboarding::connect_bank.format_group_aria') }}">
+        <span class="format-chips-label">{{ Lang::get('onboarding::connect_bank.got_it_as') }}</span>
         <button
             type="button"
             class="format-chip-button"
@@ -81,7 +82,7 @@
         >
             <x-onboarding::format-chip
                 label="CAMT.053"
-                badge="recommended"
+                :badge="Lang::get('onboarding::connect_bank.badge_recommended')"
                 :recommended="$selectedFormat === SourceFormat::Camt053->value"
             />
         </button>
@@ -115,7 +116,7 @@
         <x-onboarding::drop-zone
             wire-model="file"
             :lead="$dropZoneLead"
-            sublink="or browse for a file"
+            :sublink="Lang::get('onboarding::connect_bank.browse_file')"
             glyph="📥"
             :accept="$dropZoneAccept"
             aria-disabled="true"
@@ -125,7 +126,7 @@
         <x-onboarding::drop-zone
             wire-model="file"
             :lead="$dropZoneLead"
-            sublink="or browse for a file"
+            :sublink="Lang::get('onboarding::connect_bank.browse_file')"
             glyph="📥"
             :accept="$dropZoneAccept"
         />
@@ -133,7 +134,7 @@
 
     @if ($file !== null && ! $isGated)
         <p class="wiz-file-ready">
-            {{ $file->getClientOriginalName() }} · ✓ ready
+            {{ $file->getClientOriginalName() }} {{ Lang::get('onboarding::connect_bank.file_ready') }}
         </p>
     @endif
 
@@ -155,7 +156,7 @@
             class="pill-btn-ghost"
             wire:click="skip"
         >
-            Skip this step
+            {{ Lang::get('onboarding::connect_bank.skip') }}
         </button>
         <button
             type="button"
@@ -163,7 +164,7 @@
             wire:click="submit"
             wire:loading.attr="disabled"
         >
-            Continue →
+            {{ Lang::get('onboarding::connect_bank.continue') }}
         </button>
     </x-onboarding::wiz-actions>
 </section>

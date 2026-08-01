@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
 
 /**
@@ -63,7 +64,7 @@ final class DriftThresholdEditor extends Component
         ($action)($this->recurringSeriesId, $currentUser->user(), $effective);
 
         $this->currentValue = $effective;
-        $this->dispatch('toast', message: 'Threshold updated.');
+        $this->dispatch('toast', message: Lang::get('drift-alerts::threshold.toast_updated'));
     }
 
     public function render(ViewFactory $views): View

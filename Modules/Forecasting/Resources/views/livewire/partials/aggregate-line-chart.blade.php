@@ -16,6 +16,7 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
+@use('Modules\Core\Public\Support\Lang')
 @php
     $aggData = array_map(
         static fn (array $p): array => ['x' => $p['date'], 'y' => $p['point_minor'] / Money::MINOR_UNITS_PER_MAJOR],
@@ -35,7 +36,7 @@
             'fontFamily' => 'Inter, system-ui, sans-serif',
         ],
         'series' => [
-            ['name' => 'Total balance', 'type' => 'line', 'data' => $aggData],
+            ['name' => Lang::get('forecasting::forecast.total_balance'), 'type' => 'line', 'data' => $aggData],
         ],
         'stroke' => ['curve' => 'straight', 'width' => 2.5],
         'colors' => ['#0F172A'],

@@ -7,6 +7,7 @@ namespace Modules\OpenBanking\Internal\Http\Livewire\Concerns;
 use Illuminate\Contracts\Foundation\Application;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Import\Public\Contracts\RunsImports;
 use Psr\Log\LoggerInterface;
@@ -48,9 +49,9 @@ trait ManagesGuidedIcsImport
     public function messages(): array
     {
         return [
-            'icsStatement.required' => 'Drop the ICS statement you downloaded from Mijn ICS.',
-            'icsStatement.max' => 'That file is too large. ICS PDF statements are normally under 1 MB each.',
-            'icsStatement.extensions' => "That isn't a PDF. Mijn ICS only exports PDF statements.",
+            'icsStatement.required' => Lang::get('openbanking::messages.ics.validation.required'),
+            'icsStatement.max' => Lang::get('openbanking::messages.ics.validation.max'),
+            'icsStatement.extensions' => Lang::get('openbanking::messages.ics.validation.extensions'),
         ];
     }
 
@@ -84,7 +85,7 @@ trait ManagesGuidedIcsImport
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
-            $this->icsImportError = "Could not read {$originalFilename}. The full error is in /dev/logs.";
+            $this->icsImportError = Lang::get('openbanking::messages.ics.could_not_read', ['filename' => $originalFilename]);
 
             return;
         }

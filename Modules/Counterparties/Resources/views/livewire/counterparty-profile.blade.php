@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /counterparties/{slug} profile shell. Renders the type-aware tab
     bar + hero, then yields the body to the per-type partial selected
@@ -28,7 +29,7 @@
          Must live INSIDE the root div — Livewire allows only one root element. --}}
     <x-core::mobile-top-bar
         :backUrl="route('counterparties.index')"
-        :title="$isSelf ? ($profile->displayName ?? 'Account') : ($profile->displayName ?? 'Counterparty')"
+        :title="$isSelf ? ($profile->displayName ?? Lang::get('counterparties::profile.fallback_account')) : ($profile->displayName ?? Lang::get('counterparties::profile.fallback_counterparty'))"
     />
     @if ($isSelf)
         {{-- Self-account: stub redirect, no hero / no tabs --}}
@@ -41,7 +42,7 @@
             </h1>
             <x-counterparties::type-chip :type="$profile->type" />
             <span style="font-size: var(--text-xs); color: var(--color-text-muted); margin-left: auto;">
-                Edit display name
+                {{ Lang::get('counterparties::profile.edit_display_name') }}
             </span>
         </header>
 
@@ -50,7 +51,7 @@
                  class="cp-profile-hero-stats">
             <div class="frame frame-tight">
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-                    @if ($profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::Personal->value) Net received @else 12-month total @endif
+                    @if ($profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::Personal->value){{ Lang::get('counterparties::profile.hero_net_received') }}@else{{ Lang::get('counterparties::profile.hero_12mo_total') }}@endif
                 </div>
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                     {{ Number::currency(abs($profile->total12mMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}
@@ -58,7 +59,7 @@
             </div>
             <div class="frame frame-tight">
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-                    Transactions
+                    {{ Lang::get('counterparties::profile.hero_transactions') }}
                 </div>
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                     {{ $profile->transactionCount }}
@@ -67,7 +68,7 @@
             @if ($profile->firstSeenDate !== null)
                 <div class="frame frame-tight">
                     <div style="font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-                        First seen
+                        {{ Lang::get('counterparties::profile.hero_first_seen') }}
                     </div>
                     <div style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
                         {{ $profile->firstSeenDate }}
@@ -80,38 +81,38 @@
         @php
             $tabBars = [
                 'merchant' => [
-                    ['key' => 'overview', 'label' => 'Overview'],
-                    ['key' => 'transactions', 'label' => 'Transactions'],
-                    ['key' => 'chains', 'label' => 'Chains'],
-                    ['key' => 'aliases', 'label' => 'Aliases'],
+                    ['key' => 'overview', 'label' => Lang::get('counterparties::profile.tabs.overview')],
+                    ['key' => 'transactions', 'label' => Lang::get('counterparties::profile.tabs.transactions')],
+                    ['key' => 'chains', 'label' => Lang::get('counterparties::profile.tabs.chains')],
+                    ['key' => 'aliases', 'label' => Lang::get('counterparties::profile.tabs.aliases')],
                 ],
                 'personal' => [
-                    ['key' => 'overview', 'label' => 'Overview'],
-                    ['key' => 'transfers', 'label' => 'Transfers'],
-                    ['key' => 'aliases', 'label' => 'Aliases'],
+                    ['key' => 'overview', 'label' => Lang::get('counterparties::profile.tabs.overview')],
+                    ['key' => 'transfers', 'label' => Lang::get('counterparties::profile.tabs.transfers')],
+                    ['key' => 'aliases', 'label' => Lang::get('counterparties::profile.tabs.aliases')],
                 ],
                 'bank' => [
-                    ['key' => 'overview', 'label' => 'Overview'],
-                    ['key' => 'entries', 'label' => 'Entries'],
-                    ['key' => 'aliases', 'label' => 'Aliases'],
+                    ['key' => 'overview', 'label' => Lang::get('counterparties::profile.tabs.overview')],
+                    ['key' => 'entries', 'label' => Lang::get('counterparties::profile.tabs.entries')],
+                    ['key' => 'aliases', 'label' => Lang::get('counterparties::profile.tabs.aliases')],
                 ],
                 'government' => [
-                    ['key' => 'overview', 'label' => 'Overview'],
-                    ['key' => 'payments', 'label' => 'Payments'],
-                    ['key' => 'tax-years', 'label' => 'Tax years'],
-                    ['key' => 'aliases', 'label' => 'Aliases'],
+                    ['key' => 'overview', 'label' => Lang::get('counterparties::profile.tabs.overview')],
+                    ['key' => 'payments', 'label' => Lang::get('counterparties::profile.tabs.payments')],
+                    ['key' => 'tax-years', 'label' => Lang::get('counterparties::profile.tabs.tax_years')],
+                    ['key' => 'aliases', 'label' => Lang::get('counterparties::profile.tabs.aliases')],
                 ],
                 'unknown' => [
-                    ['key' => 'overview', 'label' => 'Overview'],
-                    ['key' => 'transactions', 'label' => 'Transactions'],
-                    ['key' => 'aliases', 'label' => 'Aliases'],
+                    ['key' => 'overview', 'label' => Lang::get('counterparties::profile.tabs.overview')],
+                    ['key' => 'transactions', 'label' => Lang::get('counterparties::profile.tabs.transactions')],
+                    ['key' => 'aliases', 'label' => Lang::get('counterparties::profile.tabs.aliases')],
                 ],
             ];
             $tabs = $tabBars[$profile->type] ?? $tabBars[\Modules\Counterparties\Public\Enums\CounterpartyType::Unknown->value];
             $tabNote = match ($profile->type) {
-                'personal' => '— no funding chains for personal contacts',
-                'bank' => "— bank-fee counterparty doesn't generate funding chains",
-                'government' => '— no funding chains for government counterparties',
+                'personal' => Lang::get('counterparties::profile.tab_note_personal'),
+                'bank' => Lang::get('counterparties::profile.tab_note_bank'),
+                'government' => Lang::get('counterparties::profile.tab_note_government'),
                 default => null,
             };
         @endphp

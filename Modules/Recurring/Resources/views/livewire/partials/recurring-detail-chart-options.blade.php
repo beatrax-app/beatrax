@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Recurring series detail chart options partial.
 
@@ -57,7 +58,7 @@
     <div id="{{ $chartElementId }}"></div>
     <noscript>
         <p class="text-xs text-slate-500 dark:text-slate-400">
-            Chart requires JavaScript.
+            {{ Lang::get('recurring::detail.chart_requires_js') }}
         </p>
     </noscript>
 </div>

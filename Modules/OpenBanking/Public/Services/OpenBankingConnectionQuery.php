@@ -7,6 +7,7 @@ namespace Modules\OpenBanking\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\OpenBanking\Public\Dto\OpenBankingConnectionView;
 
 /**
@@ -15,8 +16,6 @@ use Modules\OpenBanking\Public\Dto\OpenBankingConnectionView;
 final class OpenBankingConnectionQuery
 {
     private const AGGREGATOR = 'Enable Banking';
-
-    private const WHATS_FETCHED = 'Booked transactions + balances, last 90 days';
 
     // Consent status transitions to 'expiring' once fewer than this many
     // days remain until consent_expires_at.
@@ -65,7 +64,7 @@ final class OpenBankingConnectionQuery
             lastAttemptAt: $lastAttemptAt,
             lastAttemptStatus: $lastAttemptStatus,
             aggregator: self::AGGREGATOR,
-            whatsFetched: self::WHATS_FETCHED,
+            whatsFetched: Lang::get('openbanking::messages.transparency.whats_fetched'),
         );
     }
 

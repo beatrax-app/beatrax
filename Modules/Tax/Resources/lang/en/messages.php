@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+
+    'reconciled_lock' => 'This transaction is reconciled. Un-reconcile it to make changes.',
+    'tagged' => 'Tagged as tax-deductible.',
+    'untagged' => 'Tax tag removed.',
+    'batch_none_reconciled' => 'Nothing tagged — those transactions are reconciled. Un-reconcile them to make changes.',
+    'batch_tagged' => 'Tagged :count more transactions.',
+
+    'errors' => [
+        'name_empty' => 'Category name cannot be empty.',
+        'name_duplicate' => 'A category with this name already exists.',
+    ],
+];

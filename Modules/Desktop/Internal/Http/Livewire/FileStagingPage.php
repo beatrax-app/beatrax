@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\PendingFileIntent;
 
 // Both .csv and .eml intents navigate to the same imports.new route —
@@ -16,14 +17,6 @@ use Modules\Desktop\Internal\Native\PendingFileIntent;
 // never forks on extension.
 final class FileStagingPage extends Component
 {
-    public const HEADING_PREFIX = 'File received: ';
-
-    public const BUTTON_LABEL = 'Start import';
-
-    public const EMPTY_HEADING = "We couldn't open that file";
-
-    public const EMPTY_BODY = "beatrax couldn't read the file you opened. Try importing it from the Imports page instead.";
-
     // Captured at mount time so refreshing the page mid-flow doesn't
     // lose the file binding — the session-scoped store has already
     // been cleared by mount().
@@ -54,14 +47,14 @@ final class FileStagingPage extends Component
         $view = $views->make('desktop::staging', [
             'pending' => $this->pending,
             'filename' => $filename,
-            'headingPrefix' => self::HEADING_PREFIX,
-            'buttonLabel' => self::BUTTON_LABEL,
-            'emptyHeading' => self::EMPTY_HEADING,
-            'emptyBody' => self::EMPTY_BODY,
+            'headingPrefix' => Lang::get('desktop::screens.staging.heading_prefix'),
+            'buttonLabel' => Lang::get('desktop::screens.staging.button_label'),
+            'emptyHeading' => Lang::get('desktop::screens.staging.empty_heading'),
+            'emptyBody' => Lang::get('desktop::screens.staging.empty_body'),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'File received · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('desktop::screens.staging.page_title').' · beatrax']);
 
         return $view;
     }

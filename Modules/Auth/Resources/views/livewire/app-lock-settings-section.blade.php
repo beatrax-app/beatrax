@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     App Lock settings section — UI-SPEC §3.
     Mounted into the Core settings page via @livewire('auth.app-lock-settings-section').
@@ -19,7 +20,7 @@
 --}}
 
 <div class="space-y-6">
-    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">App lock</h2>
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.heading') }}</h2>
 
     @if ($flashMessage !== '')
         <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
@@ -28,9 +29,9 @@
     {{-- ===== 3a: Enable / disable toggle ===== --}}
     <div class="flex items-start justify-between gap-4">
         <div class="flex-1 min-w-0">
-            <p class="text-sm text-slate-900 dark:text-slate-100">Lock app with PIN</p>
+            <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.toggle_label') }}</p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Replaces daily sign-in with a PIN. Sessions stay active for 30 days.
+                {{ Lang::get('auth::app_lock.toggle_description') }}
             </p>
         </div>
         <button
@@ -38,7 +39,7 @@
             wire:click="{{ $lockEnabled ? 'confirmDisable' : '' }}"
             class="switch{{ $lockEnabled ? ' switch--on' : '' }}"
             aria-pressed="{{ $lockEnabled ? 'true' : 'false' }}"
-            aria-label="Lock app with PIN"
+            aria-label="{{ Lang::get('auth::app_lock.toggle_label') }}"
         >
             <span class="switch__thumb"></span>
         </button>
@@ -47,11 +48,11 @@
     {{-- ===== 3b: PIN setup (shown when lock is not yet enabled) ===== --}}
     @if (! $lockEnabled)
         <div class="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
-            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Set a PIN to enable lock</h3>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.setup_heading') }}</h3>
 
             <div class="space-y-3">
                 <div class="space-y-1">
-                    <label for="new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">New PIN (4–10 digits)</label>
+                    <label for="new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.new_pin_label') }}</label>
                     <input
                         id="new-pin-input"
                         type="password"
@@ -69,7 +70,7 @@
                 </div>
 
                 <div class="space-y-1">
-                    <label for="confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Confirm PIN</label>
+                    <label for="confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.confirm_pin_label') }}</label>
                     <input
                         id="confirm-pin-input"
                         type="password"
@@ -88,15 +89,15 @@
 
                 <div class="space-y-1">
                     <label for="account-password-input" class="block text-sm text-slate-700 dark:text-slate-300">
-                        Account password
-                        <span class="ml-1 text-xs text-slate-400">(required to create a recovery key)</span>
+                        {{ Lang::get('auth::app_lock.account_password_label') }}
+                        <span class="ml-1 text-xs text-slate-400">{{ Lang::get('auth::app_lock.account_password_note') }}</span>
                     </label>
                     <input
                         id="account-password-input"
                         type="password"
                         autocomplete="current-password"
                         wire:model="accountPassword"
-                        placeholder="Your account password"
+                        placeholder="{{ Lang::get('auth::app_lock.account_password_placeholder') }}"
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
                                focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
@@ -113,7 +114,7 @@
                            hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                            dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 >
-                    Set PIN
+                    {{ Lang::get('auth::app_lock.set_pin') }}
                 </button>
             </div>
         </div>
@@ -125,8 +126,8 @@
         {{-- 3b: Change PIN button --}}
         <div class="flex items-center justify-between gap-4 py-1">
             <div>
-                <p class="text-sm text-slate-900 dark:text-slate-100">PIN</p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Change your current PIN.</p>
+                <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::app_lock.pin_row_label') }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('auth::app_lock.pin_row_description') }}</p>
             </div>
             <button
                 type="button"
@@ -135,7 +136,7 @@
                        hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
             >
-                Change PIN
+                {{ Lang::get('auth::app_lock.change_pin') }}
             </button>
         </div>
 
@@ -157,7 +158,7 @@
                        focus:outline-none focus-visible:underline
                        dark:text-slate-400"
             >
-                Forgot your PIN? Reset it with your account password.
+                {{ Lang::get('auth::app_lock.forgot_pin_link') }}
             </button>
         </div>
 
@@ -179,9 +180,9 @@
                         <p class="text-sm text-slate-900 dark:text-slate-100">{{ $biometricLabel }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             @if ($biometricEnrolled)
-                                This device is enrolled for biometric unlock.
+                                {{ Lang::get('auth::app_lock.biometric_enrolled_description') }}
                             @else
-                                Enroll this device to unlock with biometrics.
+                                {{ Lang::get('auth::app_lock.biometric_enroll_description') }}
                             @endif
                         </p>
                     </div>
@@ -193,7 +194,7 @@
                                    hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2
                                    dark:border-slate-600 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-slate-700 dark:focus-visible:ring-rose-400"
                         >
-                            Remove
+                            {{ Lang::get('auth::app_lock.remove') }}
                         </button>
                     @else
                         <button
@@ -203,14 +204,14 @@
                                    hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         >
-                            Enroll
+                            {{ Lang::get('auth::app_lock.enroll') }}
                         </button>
                     @endif
                 </div>
             @else
                 {{-- Empty state: platform does not support WebAuthn --}}
                 <p class="text-sm text-slate-400 dark:text-slate-500">
-                    Biometric unlock is not available on this device.
+                    {{ Lang::get('auth::app_lock.biometric_unavailable') }}
                 </p>
             @endif
         </div>
@@ -220,10 +221,10 @@
             <flux:modal wire:model="confirmingDeenroll" class="md:max-w-sm">
                 <div class="space-y-4 p-6">
                     <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                        Remove biometric unlock — confirm with PIN
+                        {{ Lang::get('auth::app_lock.deenroll_modal_heading') }}
                     </h3>
                     <div class="space-y-1">
-                        <label for="deenroll-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Current PIN</label>
+                        <label for="deenroll-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.current_pin_label') }}</label>
                         <input
                             id="deenroll-pin-input"
                             type="password"
@@ -243,7 +244,7 @@
                             class="flex-1 min-h-[44px] rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white
                                    hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
                         >
-                            Remove biometric
+                            {{ Lang::get('auth::app_lock.remove_biometric') }}
                         </button>
                         <button
                             type="button"
@@ -252,7 +253,7 @@
                                    hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         >
-                            Keep biometric
+                            {{ Lang::get('auth::app_lock.keep_biometric') }}
                         </button>
                     </div>
                 </div>
@@ -264,7 +265,7 @@
     {{-- ===== 3d: Idle timeout — shown always ===== --}}
     <div class="flex items-center justify-between gap-4">
         <label for="idle-timeout-select" class="text-sm text-slate-900 dark:text-slate-100">
-            Auto-lock after
+            {{ Lang::get('auth::app_lock.auto_lock') }}
         </label>
         <select
             id="idle-timeout-select"
@@ -274,10 +275,10 @@
                    focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                    dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
         >
-            <option value="1">1 minute</option>
-            <option value="5">5 minutes</option>
-            <option value="15">15 minutes</option>
-            <option value="30">30 minutes</option>
+            <option value="1">{{ Lang::get('auth::app_lock.idle_1') }}</option>
+            <option value="5">{{ Lang::get('auth::app_lock.idle_5') }}</option>
+            <option value="15">{{ Lang::get('auth::app_lock.idle_15') }}</option>
+            <option value="30">{{ Lang::get('auth::app_lock.idle_30') }}</option>
         </select>
     </div>
 
@@ -286,10 +287,10 @@
         <flux:modal wire:model="confirmingDisable" class="md:max-w-sm">
             <div class="space-y-4 p-6">
                 <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    Disable app lock — confirm with PIN
+                    {{ Lang::get('auth::app_lock.disable_modal_heading') }}
                 </h3>
                 <div class="space-y-1">
-                    <label for="disable-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Current PIN</label>
+                    <label for="disable-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.current_pin_label') }}</label>
                     <input
                         id="disable-pin-input"
                         type="password"
@@ -310,7 +311,7 @@
                                hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     >
-                        Disable lock
+                        {{ Lang::get('auth::app_lock.disable_lock') }}
                     </button>
                     <button
                         type="button"
@@ -319,7 +320,7 @@
                                hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     >
-                        Keep app lock
+                        {{ Lang::get('auth::app_lock.keep_lock') }}
                     </button>
                 </div>
             </div>
@@ -331,27 +332,27 @@
         <flux:modal wire:model="confirmingForgotPin" class="md:max-w-sm">
             <div class="space-y-4 p-6">
                 <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    Reset PIN — confirm with account password
+                    {{ Lang::get('auth::app_lock.forgot_modal_heading') }}
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400">
-                    Your account password recovers the lock key, so resetting the PIN never loses data.
+                    {{ Lang::get('auth::app_lock.forgot_modal_body') }}
                 </p>
                 <div class="space-y-3">
                     <div class="space-y-1">
-                        <label for="forgot-account-password-input" class="block text-sm text-slate-700 dark:text-slate-300">Account password</label>
+                        <label for="forgot-account-password-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.account_password_label') }}</label>
                         <input
                             id="forgot-account-password-input"
                             type="password"
                             autocomplete="current-password"
                             wire:model="accountPassword"
-                            placeholder="Your account password"
+                            placeholder="{{ Lang::get('auth::app_lock.account_password_placeholder') }}"
                             class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base text-slate-900
                                    focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                    dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                         />
                     </div>
                     <div class="space-y-1">
-                        <label for="forgot-new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">New PIN (4–10 digits)</label>
+                        <label for="forgot-new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.new_pin_label') }}</label>
                         <input
                             id="forgot-new-pin-input"
                             type="password"
@@ -365,7 +366,7 @@
                         />
                     </div>
                     <div class="space-y-1">
-                        <label for="forgot-confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Confirm new PIN</label>
+                        <label for="forgot-confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.confirm_new_pin_label') }}</label>
                         <input
                             id="forgot-confirm-pin-input"
                             type="password"
@@ -387,7 +388,7 @@
                                hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     >
-                        Reset PIN
+                        {{ Lang::get('auth::app_lock.reset_pin') }}
                     </button>
                     <button
                         type="button"
@@ -396,7 +397,7 @@
                                hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     >
-                        Cancel
+                        {{ Lang::get('auth::app_lock.cancel') }}
                     </button>
                 </div>
             </div>
@@ -408,11 +409,11 @@
         <flux:modal wire:model="confirmingChangePin" class="md:max-w-sm">
             <div class="space-y-4 p-6">
                 <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    Change PIN — confirm with current PIN
+                    {{ Lang::get('auth::app_lock.change_modal_heading') }}
                 </h3>
                 <div class="space-y-3">
                     <div class="space-y-1">
-                        <label for="change-current-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Current PIN</label>
+                        <label for="change-current-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.current_pin_label') }}</label>
                         <input
                             id="change-current-pin-input"
                             type="password"
@@ -426,7 +427,7 @@
                         />
                     </div>
                     <div class="space-y-1">
-                        <label for="change-new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">New PIN (4–10 digits)</label>
+                        <label for="change-new-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.new_pin_label') }}</label>
                         <input
                             id="change-new-pin-input"
                             type="password"
@@ -440,7 +441,7 @@
                         />
                     </div>
                     <div class="space-y-1">
-                        <label for="change-confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">Confirm new PIN</label>
+                        <label for="change-confirm-pin-input" class="block text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::app_lock.confirm_new_pin_label') }}</label>
                         <input
                             id="change-confirm-pin-input"
                             type="password"
@@ -462,7 +463,7 @@
                                hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                     >
-                        Change PIN
+                        {{ Lang::get('auth::app_lock.change_pin') }}
                     </button>
                     <button
                         type="button"
@@ -471,7 +472,7 @@
                                hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                     >
-                        Keep PIN
+                        {{ Lang::get('auth::app_lock.keep_pin') }}
                     </button>
                 </div>
             </div>

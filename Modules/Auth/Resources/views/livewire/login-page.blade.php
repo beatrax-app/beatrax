@@ -1,13 +1,14 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
     <div class="w-full max-w-sm px-6 space-y-6">
         <header class="space-y-1">
-            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Sign in</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Sign in to continue.</p>
+            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::login.title') }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::login.subtitle') }}</p>
         </header>
 
         <form wire:submit="submit" class="space-y-4">
             <div class="space-y-1">
-                <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">Username</label>
+                <label for="username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::login.username') }}</label>
                 <input
                     type="text"
                     id="username"
@@ -19,7 +20,7 @@
             </div>
 
             <div class="space-y-1">
-                <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">Password</label>
+                <label for="password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::login.password') }}</label>
                 <input
                     type="password"
                     id="password"
@@ -36,7 +37,7 @@
                     wire:model="rememberMe"
                     class="rounded border-slate-300 dark:border-slate-600"
                 />
-                Stay signed in on this device
+                {{ Lang::get('auth::login.remember') }}
             </label>
 
             @if ($flashMessage !== '')
@@ -47,7 +48,7 @@
                 type="submit"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
             >
-                Sign in
+                {{ Lang::get('auth::login.submit') }}
             </button>
         </form>
 
@@ -56,7 +57,7 @@
                 href="/reset-password"
                 class="text-slate-500 underline underline-offset-2 hover:text-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
             >
-                Lost your password? Use a recovery code.
+                {{ Lang::get('auth::login.lost_password') }}
             </a>
         </p>
     </div>

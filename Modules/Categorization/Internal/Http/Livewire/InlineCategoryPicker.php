@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Categorization\Public\Contracts\AssignsCategory;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 
 // The Blade view renders a <select wire:model.live="categoryId">; the
@@ -41,7 +42,7 @@ final class InlineCategoryPicker extends Component
         // $categoryId before this hook runs; revert to the persisted
         // value so the row doesn't show a phantom unsaved selection.
         if ($status->isReconciled($user->id, $this->transactionId)) {
-            $this->dispatch('toast', message: 'This transaction is reconciled. Un-reconcile it to make changes.');
+            $this->dispatch('toast', message: Lang::get('categorization::detail.reconciled_toast'));
 
             $persisted = $db->connection()
                 ->table('transactions')

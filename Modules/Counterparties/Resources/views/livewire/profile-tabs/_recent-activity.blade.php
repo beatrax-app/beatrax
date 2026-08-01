@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Recent-activity partial reused by every profile-tab body to render
     a uniform list of the counterparty's most-recent transactions.
@@ -14,7 +15,7 @@
 
 @if (count($rows) === 0)
     <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-        No transactions on file for this counterparty yet.
+        {{ Lang::get('counterparties::profile.no_recent_transactions') }}
     </p>
 @else
     <ul style="margin: 0; padding: 0; list-style: none;">

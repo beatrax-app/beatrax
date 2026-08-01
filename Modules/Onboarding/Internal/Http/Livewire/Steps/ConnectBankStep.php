@@ -14,6 +14,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\SafeTrace;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
@@ -72,9 +73,9 @@ final class ConnectBankStep extends Component
     public function messages(): array
     {
         return [
-            'file.required' => 'Drop your statement file into the box first.',
-            'file.max' => 'That file is too large. Drop a statement under 10 MB.',
-            'file.extensions' => "That file doesn't look like a bank statement. Drop a CAMT.053 XML, CSV, or MT940 file.",
+            'file.required' => Lang::get('onboarding::connect_bank.errors.file_required'),
+            'file.max' => Lang::get('onboarding::connect_bank.errors.file_max'),
+            'file.extensions' => Lang::get('onboarding::connect_bank.errors.file_extensions'),
         ];
     }
 
@@ -119,7 +120,7 @@ final class ConnectBankStep extends Component
         // (CSV, null) combination, so this catches a tampered request
         // before any pipeline call.
         if ($this->isCsvFormat($this->selectedFormat) && $this->selectedBankFormatHint === null) {
-            $this->addError('selectedBankFormatHint', 'Pick which bank exported your CSV before continuing.');
+            $this->addError('selectedBankFormatHint', Lang::get('onboarding::connect_bank.errors.pick_bank'));
 
             return;
         }
@@ -157,7 +158,7 @@ final class ConnectBankStep extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => SafeTrace::cap($e, $app->basePath()),
             ]);
-            $this->uploadError = 'Could not read this file. The full error is in /dev/logs.';
+            $this->uploadError = Lang::get('onboarding::connect_bank.errors.unreadable');
 
             return null;
         }

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Connect-card step — wizard step 3. ICS Cards's consumer portal only
     exports monthly PDF statements, so the user typically downloads
@@ -13,30 +14,30 @@
     preview screen to read back.
 --}}
 <section class="wiz-step wiz-step-connect-card" aria-labelledby="wiz-connect-card-h1">
-    <x-onboarding::wiz-eyebrow step="connect-card" glyph="💳">Your credit card (ICS)</x-onboarding::wiz-eyebrow>
+    <x-onboarding::wiz-eyebrow step="connect-card" glyph="💳">{{ Lang::get('onboarding::connect_card.eyebrow') }}</x-onboarding::wiz-eyebrow>
     <h1 id="wiz-connect-card-h1" class="wiz-h1">
-        Grab your monthly statement PDFs
+        {{ Lang::get('onboarding::connect_card.h1') }}
     </h1>
     <p class="wiz-lede">
-        Drop all your monthly ICS PDF statements — we'll combine them into one preview.
+        {{ Lang::get('onboarding::connect_card.lede') }}
     </p>
 
     <div class="mini-steps">
-        <x-onboarding::mini-step glyph="🔐" label="Log in" sub="mijn.icscards.nl" state="done" />
-        <x-onboarding::mini-step glyph="📑" label="Open statements" sub="Afschriften" subLang="nl" state="done" />
-        <x-onboarding::mini-step glyph="📅" label="Pick months" sub="One PDF per month" state="now" />
-        <x-onboarding::mini-step glyph="⬇️" label="Download" sub="PDF" state="upcoming" />
+        <x-onboarding::mini-step glyph="🔐" :label="Lang::get('onboarding::connect_card.mini.login_label')" sub="mijn.icscards.nl" state="done" />
+        <x-onboarding::mini-step glyph="📑" :label="Lang::get('onboarding::connect_card.mini.statements_label')" sub="Afschriften" subLang="nl" state="done" />
+        <x-onboarding::mini-step glyph="📅" :label="Lang::get('onboarding::connect_card.mini.months_label')" :sub="Lang::get('onboarding::connect_card.mini.months_sub')" state="now" />
+        <x-onboarding::mini-step glyph="⬇️" :label="Lang::get('onboarding::connect_card.mini.download_label')" sub="PDF" state="upcoming" />
     </div>
 
-    <div class="format-chips" aria-label="ICS exports as PDF only">
-        <span class="format-chips-label">Got it as:</span>
-        <x-onboarding::format-chip label="PDF" badge="only format" />
+    <div class="format-chips" aria-label="{{ Lang::get('onboarding::connect_card.format_group_aria') }}">
+        <span class="format-chips-label">{{ Lang::get('onboarding::connect_card.got_it_as') }}</span>
+        <x-onboarding::format-chip label="PDF" :badge="Lang::get('onboarding::connect_card.badge_only_format')" />
     </div>
 
     <label class="drop-zone">
         <span class="drop-zone-glyph" aria-hidden="true">📥</span>
-        <span class="drop-zone-lead">Drop your ICS PDFs here</span>
-        <span class="drop-zone-sublink">or browse for files</span>
+        <span class="drop-zone-lead">{{ Lang::get('onboarding::connect_card.drop_lead') }}</span>
+        <span class="drop-zone-sublink">{{ Lang::get('onboarding::connect_card.browse_files') }}</span>
         <input
             type="file"
             class="drop-zone-input"
@@ -47,7 +48,7 @@
     </label>
 
     @if (count($statements) > 0)
-        <div class="per-file-chip-list" aria-label="Queued PDF statements">
+        <div class="per-file-chip-list" aria-label="{{ Lang::get('onboarding::connect_card.queue_aria') }}">
             @foreach ($statements as $index => $statement)
                 <x-onboarding::per-file-chip
                     :filename="$statement->getClientOriginalName()"
@@ -77,7 +78,7 @@
             class="pill-btn-ghost"
             wire:click="skip"
         >
-            Skip this step
+            {{ Lang::get('onboarding::connect_card.skip') }}
         </button>
         <button
             type="button"
@@ -85,7 +86,7 @@
             wire:click="submit"
             wire:loading.attr="disabled"
         >
-            Continue →
+            {{ Lang::get('onboarding::connect_card.continue') }}
         </button>
     </x-onboarding::wiz-actions>
 </section>

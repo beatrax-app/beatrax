@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     First-import step — wizard step 5. The consolidated commit
     surface. No file uploads happen here; this page is the closing
@@ -53,29 +54,29 @@
     $detectedCount = count($balancesByAccount);
 
     $commitButtonLabel = match (true) {
-        $isCommitting => 'Committing…',
-        $preview->dedupedTotalCount > 0 => sprintf('Commit everything (%d transactions) →', $preview->dedupedTotalCount),
-        default => 'Commit everything (—) →',
+        $isCommitting => Lang::get('onboarding::first_import.commit_committing'),
+        $preview->dedupedTotalCount > 0 => Lang::get('onboarding::first_import.commit_count', ['count' => $preview->dedupedTotalCount]),
+        default => Lang::get('onboarding::first_import.commit_empty'),
     };
 
     $commitDisabled = $isCommitting || ! $hasAnyReadySection;
 @endphp
 <section class="wiz-step wiz-step-first-import" aria-labelledby="wiz-first-import-h1">
     <x-onboarding::wiz-card :wide="true">
-        <x-onboarding::wiz-eyebrow step="first-import" glyph="📥">Review &amp; commit</x-onboarding::wiz-eyebrow>
+        <x-onboarding::wiz-eyebrow step="first-import" glyph="📥">{{ Lang::get('onboarding::first_import.eyebrow') }}</x-onboarding::wiz-eyebrow>
         <h1 id="wiz-first-import-h1" class="wiz-h1">
-            Review everything we found
+            {{ Lang::get('onboarding::first_import.h1') }}
         </h1>
         <p class="wiz-lede">
-            <span class="tabular-nums">{{ $preview->dedupedTotalCount }}</span> transactions across
+            <span class="tabular-nums">{{ $preview->dedupedTotalCount }}</span> {{ Lang::get('onboarding::first_import.lede_across') }}
             <span class="tabular-nums">{{ $sourceCount }}</span>
-            {{ $sourceCount === 1 ? 'source' : 'sources' }}.
-            Confirm your starting balances, then commit.
+            {{ $sourceCount === 1 ? Lang::get('onboarding::first_import.source_one') : Lang::get('onboarding::first_import.source_many') }}.
+            {{ Lang::get('onboarding::first_import.lede_confirm') }}
         </p>
 
         @if ($preview->sections === [])
             <p class="wiz-empty">
-                Nothing to review yet. Drop a statement on the earlier steps to see your transactions here.
+                {{ Lang::get('onboarding::first_import.empty') }}
             </p>
         @else
             @foreach ($preview->sections as $section)
@@ -88,12 +89,12 @@
         @if ($detectedCount > 0)
             <section class="balance-section-subcard">
                 <p class="preview-section-eyebrow">
-                    🧮 STARTING BALANCES ·
+                    {{ Lang::get('onboarding::first_import.sb_eyebrow_label') }}
                     <span class="tabular-nums">{{ $detectedCount }}</span>
-                    {{ $detectedCount === 1 ? 'ACCOUNT DETECTED' : 'ACCOUNTS DETECTED' }}
+                    {{ $detectedCount === 1 ? Lang::get('onboarding::first_import.account_detected_one') : Lang::get('onboarding::first_import.account_detected_many') }}
                 </p>
                 <p class="starting-balance-lede">
-                    We detected the starting balance for each account. Confirm or edit before we commit.
+                    {{ Lang::get('onboarding::first_import.sb_lede') }}
                 </p>
                 <div class="starting-balance-stack">
                     @foreach ($balancesByAccount as $accountId => $candidates)
@@ -149,10 +150,10 @@
         <div class="commit-footer">
             <p class="commit-counter" aria-atomic="true" aria-live="polite">
                 <strong class="tabular-nums">{{ $preview->dedupedTotalCount }}</strong>
-                {{ $preview->dedupedTotalCount === 1 ? 'transaction' : 'transactions' }}
-                to commit ·
+                {{ $preview->dedupedTotalCount === 1 ? Lang::get('onboarding::first_import.txn_one') : Lang::get('onboarding::first_import.txn_many') }}
+                {{ Lang::get('onboarding::first_import.to_commit') }}
                 <span class="tabular-nums">{{ $preview->alreadyImportedCount }}</span>
-                already imported
+                {{ Lang::get('onboarding::first_import.already_imported') }}
             </p>
             <button
                 type="button"

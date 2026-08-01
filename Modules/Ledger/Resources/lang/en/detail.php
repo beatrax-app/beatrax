@@ -1,0 +1,115 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Transaction',
+    'heading' => 'Transaction',
+
+    'counterparty' => 'Counterparty',
+    'amount_native' => 'Amount (native)',
+    'amount_settled' => 'Amount (settled EUR)',
+    'effective_rate' => 'Effective rate',
+    'ics_markup' => 'Includes any ICS markup.',
+
+    'split' => [
+        'category' => 'Category',
+        'open' => 'Split into categories',
+        'heading' => 'Split across categories',
+        'total' => 'Total :amount',
+        'tax_per_category' => 'Tax tags are set per category below.',
+        'choose_category' => 'Choose a category',
+        'note_label' => 'Note',
+        'note_placeholder' => 'Note (optional)',
+        'tax_deductible' => 'Tax-deductible',
+        'remove_leg_aria' => 'Remove this category',
+        'add_category' => '+ Add category',
+        'soft_cap' => ':count of ~20 categories — consider grouping small amounts.',
+        'remaining_zero' => 'Remaining :amount ✓',
+        'remaining_to_assign' => 'Remaining to assign: :amount',
+        'over_allocated' => 'Over-allocated by :amount — reduce a leg.',
+        'save' => 'Save split',
+        'saving' => 'Saving…',
+        'unsplit' => 'Unsplit transaction',
+        'remove_to_one' => 'Removing this leaves one category — the transaction becomes :category.',
+        'remove_to_one_fallback' => 'this category',
+        'remove_category' => 'Remove category',
+        'keep_category' => 'Keep this category',
+        'restore_single' => 'Restore as a single category?',
+        'confirm_unsplit' => 'Yes, unsplit',
+        'keep_split' => 'Keep split',
+    ],
+
+    'tax' => [
+        'section_aria' => 'Tax tag',
+        'label' => 'Tax deductible',
+    ],
+
+    'reclassify' => [
+        'heading' => 'Reclassify',
+        'help' => 'Override the detected type. If this transaction is paired with another, choosing a non-transfer type will unpair both sides.',
+        'choose_aria' => 'Choose new transaction type',
+        'choose_option' => 'Choose a type…',
+        'save' => 'Save',
+    ],
+
+    'note' => [
+        'heading' => 'Note',
+        'help' => 'Personal note for this transaction. Visible only to you.',
+        'label' => 'Note',
+        'placeholder' => 'Add a note…',
+        'save' => 'Save note',
+        'saved' => 'Saved',
+    ],
+
+    'reassign' => [
+        'heading' => 'Reassign counterparty',
+        'help' => 'Override the resolved counterparty for this transaction.',
+        'choose_aria' => 'Choose counterparty',
+        'choose_option' => 'Choose a counterparty…',
+        'submit' => 'Reassign',
+    ],
+
+    'delete' => [
+        'heading' => 'Delete transaction',
+        'help' => 'Permanently removes this transaction. This action cannot be undone.',
+        'button' => 'Delete',
+        'confirm_prompt' => 'Are you sure?',
+        'confirm' => 'Yes, delete',
+        'cancel' => 'Cancel',
+    ],
+
+    'chain' => [
+        'view' => 'View chain',
+    ],
+
+    'toast' => [
+        'reconciled_locked' => 'This transaction is reconciled. Un-reconcile it to make changes.',
+        'reclassified_pair_removed' => 'Reclassified to :type — pair removed',
+        'reclassified' => 'Reclassified to :type',
+        'note_saved' => 'Note saved',
+        'unreconciled' => 'Un-reconciled — you can edit this transaction again.',
+        'counterparty_updated' => 'Counterparty updated',
+        'split_saved' => 'Split saved',
+        'removed_one_remains' => 'Removed — one category remains',
+        'unsplit_restored' => 'Unsplit — restored to a single category',
+    ],
+
+    'errors' => [
+        'totals_must_match' => "Couldn't save — leg totals must match the transaction total exactly.",
+        'not_found' => 'Transaction not found.',
+        'amount_zero' => "Amount can't be €0,00",
+        'choose_category' => 'Choose a category.',
+        'choose_before_removing' => 'Choose a category before removing.',
+        'choose_before_unsplitting' => 'Choose a category before unsplitting.',
+        'not_found_or_unowned' => 'Transaction not found or not owned by user.',
+        'reconciled_split' => 'This transaction is reconciled. Un-reconcile it to change its split.',
+        'not_splittable' => "Transaction type ':type' is not splittable.",
+        'min_two_legs' => 'A split requires at least 2 legs.',
+        'legs_non_zero' => 'Leg amounts must be non-zero.',
+        'legs_parent_sign' => "Leg amounts must share the parent's sign.",
+        'leg_category_not_accessible' => 'Leg category not found or not accessible by user.',
+        'survivor_not_accessible' => 'Surviving category not found or not accessible by user.',
+        'survivor_must_be_current' => "Surviving category must be one of the split's current leg categories.",
+    ],
+];

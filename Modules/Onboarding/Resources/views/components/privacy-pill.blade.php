@@ -8,9 +8,13 @@
     inherits the theme's emerald token without a separate inline color
     declaration.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @props([
-    'label' => 'Your data stays on this computer',
+    'label' => null,
 ])
+@php
+    $label ??= Lang::get('onboarding::components.privacy');
+@endphp
 
 <span {{ $attributes->class(['privacy-pill']) }} aria-label="{{ $label }}">
     {{ $label }}

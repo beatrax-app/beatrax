@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
 use Modules\OpenBanking\Public\Services\OpenBankingSecretsRepository;
@@ -101,7 +102,7 @@ final class OpenBankingWizardModal extends Component
                 institutionId: null,
             ));
         } catch (SecretsWriteFailed) {
-            $this->errorMessage = 'Could not save your key pair to disk — check your secrets-directory permissions and try again.';
+            $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.save_keypair_failed');
 
             return;
         } finally {
@@ -126,12 +127,12 @@ final class OpenBankingWizardModal extends Component
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
         ]);
         if ($resource === false) {
-            return 'Could not generate a key pair on this machine — check your OpenSSL configuration.';
+            return Lang::get('openbanking::messages.wizard.errors.generate_failed');
         }
 
         $exported = openssl_pkey_export($resource, $privateKeyPem);
         if (! $exported || ! is_string($privateKeyPem) || $privateKeyPem === '') {
-            return 'Could not export the generated key pair.';
+            return Lang::get('openbanking::messages.wizard.errors.export_failed');
         }
 
         $details = openssl_pkey_get_details($resource);
@@ -139,13 +140,13 @@ final class OpenBankingWizardModal extends Component
 
         return is_string($publicKeyPem) && $publicKeyPem !== ''
             ? [$privateKeyPem, $publicKeyPem]
-            : 'Could not read the generated public key.';
+            : Lang::get('openbanking::messages.wizard.errors.read_public_failed');
     }
 
     public function continueToApplicationId(): void
     {
         if ($this->publicKeyPem === '') {
-            $this->errorMessage = 'Generate a key pair before continuing.';
+            $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.generate_first');
 
             return;
         }
@@ -162,14 +163,14 @@ final class OpenBankingWizardModal extends Component
 
         $applicationId = trim($this->applicationId);
         if ($applicationId === '') {
-            $this->errorMessage = 'Paste the application ID from the Enable Banking portal before continuing.';
+            $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.paste_application_id');
 
             return;
         }
 
         $existing = $secrets->load();
         if ($existing === null) {
-            $this->errorMessage = 'Generate a key pair before continuing.';
+            $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.generate_first');
             $this->step = self::STEP_KEYPAIR;
 
             return;
@@ -185,7 +186,7 @@ final class OpenBankingWizardModal extends Component
                 institutionId: $existing->institutionId,
             ));
         } catch (SecretsWriteFailed) {
-            $this->errorMessage = 'Could not save your application ID to disk — check your secrets-directory permissions and try again.';
+            $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.save_application_id_failed');
 
             return;
         }
@@ -204,7 +205,7 @@ final class OpenBankingWizardModal extends Component
         $this->errorMessage = '';
 
         if ($this->resolveInstitutionId() === null) {
-            $this->errorMessage = 'Choose a bank before continuing.';
+            $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.choose_bank');
 
             return;
         }
@@ -218,7 +219,7 @@ final class OpenBankingWizardModal extends Component
     {
         $institutionId = $this->resolveInstitutionId();
         if ($institutionId === null) {
-            $this->errorMessage = 'Choose a bank before continuing.';
+            $this->errorMessage = Lang::get('openbanking::messages.wizard.errors.choose_bank');
             $this->step = self::STEP_BANK;
 
             return null;
@@ -276,8 +277,8 @@ final class OpenBankingWizardModal extends Component
         return match ($this->bankChoice) {
             'asn' => self::INSTITUTION_ASN_NAME,
             'sns' => self::INSTITUTION_SNS_NAME,
-            'other' => $this->otherInstitutionIdOrNull() ?? 'your bank',
-            default => 'your bank',
+            'other' => $this->otherInstitutionIdOrNull() ?? Lang::get('openbanking::messages.wizard.your_bank'),
+            default => Lang::get('openbanking::messages.wizard.your_bank'),
         };
     }
 }

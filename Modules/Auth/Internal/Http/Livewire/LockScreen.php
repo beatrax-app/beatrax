@@ -17,6 +17,7 @@ use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../../.docs/features/auth/architecture.md
@@ -65,7 +66,7 @@ final class LockScreen extends Component
         Clock $clock,
     ): void {
         if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
-            $this->flashMessage = 'PIN must be at least 4 digits.';
+            $this->flashMessage = Lang::get('auth::lock_screen.error_too_short');
 
             return;
         }
@@ -80,15 +81,15 @@ final class LockScreen extends Component
             $lockedUntil = $verifier->lockedUntil($user->id);
             if ($lockedUntil !== null) {
                 $seconds = max(1, (int) ceil($clock->now()->diffInMilliseconds($lockedUntil, absolute: true) / 1000));
-                $this->flashMessage = "Too many attempts — try again in {$seconds}s.";
+                $this->flashMessage = Lang::get('auth::lock_screen.error_backoff', ['wait' => $seconds.'s']);
 
                 return;
             }
 
             $remaining = $this->remainingAttempts($user->id, $db);
             $this->flashMessage = $remaining !== null
-                ? "Incorrect PIN. {$remaining} attempts remaining."
-                : 'Incorrect PIN.';
+                ? Lang::get('auth::lock_screen.error_incorrect_remaining', ['remaining' => $remaining])
+                : Lang::get('auth::lock_screen.error_incorrect');
 
             return;
         }
@@ -123,7 +124,7 @@ final class LockScreen extends Component
         $view = $views->make('auth::livewire.lock-screen');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.lock', ['title' => 'Unlock · beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('auth::lock_screen.page_title')]);
 
         return $view;
     }

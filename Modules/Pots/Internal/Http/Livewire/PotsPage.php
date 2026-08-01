@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
@@ -68,8 +69,8 @@ final class PotsPage extends Component
 
         $accountId = $this->accountId !== '' ? (int) $this->accountId : 0;
         $error = match (true) {
-            trim($this->name) === '' => 'Enter a name for this pot.',
-            $accountId === 0 => 'Select an account for this pot.',
+            trim($this->name) === '' => Lang::get('pots::messages.errors.enter_name'),
+            $accountId === 0 => Lang::get('pots::messages.errors.select_account'),
             default => null,
         };
         if ($error !== null) {
@@ -94,7 +95,7 @@ final class PotsPage extends Component
             );
         } catch (InsufficientUnallocatedException|\InvalidArgumentException $e) {
             if ($e instanceof InsufficientUnallocatedException) {
-                $this->errorAmount = 'Amount exceeds unallocated balance.';
+                $this->errorAmount = Lang::get('pots::messages.errors.amount_exceeds_unallocated');
             } else {
                 $this->errorName = $e->getMessage();
             }
@@ -104,7 +105,7 @@ final class PotsPage extends Component
 
         $this->resetForm();
         $this->dispatch('modal-close', name: 'pot-form');
-        $this->toast('Pot created.');
+        $this->toast(Lang::get('pots::messages.toast.pot_created'));
     }
 
     // -----------------------------------------------------------------------
@@ -150,7 +151,7 @@ final class PotsPage extends Component
         }
 
         if (trim($this->name) === '') {
-            $this->errorName = 'Enter a name for this pot.';
+            $this->errorName = Lang::get('pots::messages.errors.enter_name');
 
             return;
         }
@@ -183,7 +184,7 @@ final class PotsPage extends Component
 
         $this->resetForm();
         $this->dispatch('modal-close', name: 'pot-form');
-        $this->toast('Pot updated.');
+        $this->toast(Lang::get('pots::messages.toast.pot_updated'));
     }
 
     // -----------------------------------------------------------------------
@@ -227,7 +228,10 @@ final class PotsPage extends Component
                 max(0, $unallocated),
                 $currency
             )->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
-            $this->errorAmount = "Amount exceeds unallocated balance ({$availableFormatted} available).";
+            $this->errorAmount = Lang::get(
+                'pots::messages.errors.amount_exceeds_unallocated_available',
+                ['amount' => $availableFormatted],
+            );
 
             return;
         } catch (\InvalidArgumentException $e) {
@@ -238,7 +242,7 @@ final class PotsPage extends Component
 
         $this->resetOperationModal();
         $this->dispatch('modal-close', name: 'pot-fund');
-        $this->toast('Pot funded.');
+        $this->toast(Lang::get('pots::messages.toast.pot_funded'));
     }
 
     // -----------------------------------------------------------------------
@@ -272,7 +276,7 @@ final class PotsPage extends Component
                 $memo,
             );
         } catch (InsufficientUnallocatedException) {
-            $potName = 'pot';
+            $potName = Lang::get('pots::messages.pot_fallback');
             $balance = 0;
             $currency = 'EUR';
             if ($pot !== null) {
@@ -284,7 +288,10 @@ final class PotsPage extends Component
                 max(0, $balance),
                 $currency
             )->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
-            $this->errorAmount = "Amount exceeds balance in {$potName} ({$availableFormatted} available).";
+            $this->errorAmount = Lang::get(
+                'pots::messages.errors.amount_exceeds_pot_balance',
+                ['name' => $potName, 'amount' => $availableFormatted],
+            );
 
             return;
         } catch (\InvalidArgumentException $e) {
@@ -295,7 +302,7 @@ final class PotsPage extends Component
 
         $this->resetOperationModal();
         $this->dispatch('modal-close', name: 'pot-withdraw');
-        $this->toast('Withdrawn from pot.');
+        $this->toast(Lang::get('pots::messages.toast.withdrawn'));
     }
 
     // -----------------------------------------------------------------------
@@ -332,7 +339,7 @@ final class PotsPage extends Component
                 $memo,
             );
         } catch (InsufficientUnallocatedException) {
-            $potName = 'pot';
+            $potName = Lang::get('pots::messages.pot_fallback');
             $balance = 0;
             $currency = 'EUR';
             if ($sourcePot !== null) {
@@ -344,7 +351,10 @@ final class PotsPage extends Component
                 max(0, $balance),
                 $currency
             )->format($currency === 'EUR' ? 'nl_NL' : 'en_US');
-            $this->errorAmount = "Amount exceeds balance in {$potName} ({$availableFormatted} available).";
+            $this->errorAmount = Lang::get(
+                'pots::messages.errors.amount_exceeds_pot_balance',
+                ['name' => $potName, 'amount' => $availableFormatted],
+            );
 
             return;
         } catch (\InvalidArgumentException $e) {
@@ -355,7 +365,7 @@ final class PotsPage extends Component
 
         $this->resetOperationModal();
         $this->dispatch('modal-close', name: 'pot-move');
-        $this->toast('Funds moved.');
+        $this->toast(Lang::get('pots::messages.toast.funds_moved'));
     }
 
     // -----------------------------------------------------------------------
@@ -388,7 +398,7 @@ final class PotsPage extends Component
 
         $writer->archive($currentUser->user(), $potId);
         $this->archivingPotId = 0;
-        $this->dispatch('toast', message: 'Pot archived.', undoAction: 'restore', undoPayload: $potId);
+        $this->dispatch('toast', message: Lang::get('pots::messages.toast.pot_archived'), undoAction: 'restore', undoPayload: $potId);
     }
 
     public function restorePot(CurrentUser $currentUser, PotWriter $writer, int $potId): void
@@ -398,7 +408,7 @@ final class PotsPage extends Component
         }
 
         $writer->restore($currentUser->user(), $potId);
-        $this->toast('Pot restored.');
+        $this->toast(Lang::get('pots::messages.toast.pot_restored'));
     }
 
     public function cancel(): void
@@ -430,7 +440,7 @@ final class PotsPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => 'Pots · beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('pots::messages.page_title')]);
 
             return $view;
         }

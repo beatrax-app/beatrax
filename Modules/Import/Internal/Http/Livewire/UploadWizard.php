@@ -12,6 +12,7 @@ use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Core\Public\Support\UploadLimits;
 use Modules\Import\Public\Contracts\RunsImports;
 use Modules\Import\Public\Enums\BankCsvFormatHint;
@@ -105,11 +106,10 @@ final class UploadWizard extends Component
         return function (string $attribute, mixed $value, \Closure $fail): void {
             $allowed = self::ISSUER_FORMAT_MAP[$this->issuer] ?? [];
             if (! in_array($value, $allowed, strict: true)) {
-                $fail(sprintf(
-                    'The %s value is not valid for the %s source.',
-                    $attribute,
-                    $this->issuer,
-                ));
+                $fail(Lang::get('import::upload.errors.issuer_format', [
+                    'attribute' => $attribute,
+                    'source' => $this->issuer,
+                ]));
             }
         };
     }
@@ -120,8 +120,8 @@ final class UploadWizard extends Component
     public function messages(): array
     {
         return [
-            'file.max' => 'That file is too large. Drop in a statement export under the size limit for the chosen format.',
-            'file.extensions' => "That file doesn't look like a supported statement export. Drop in a bank CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, a card-statement PDF, an email message (.eml), or a mailbox archive (.mbox).",
+            'file.max' => Lang::get('import::upload.errors.file_max'),
+            'file.extensions' => Lang::get('import::upload.errors.file_extensions'),
         ];
     }
 
@@ -143,16 +143,16 @@ final class UploadWizard extends Component
                 ['value' => 'ics-pdf', 'label' => 'PDF'],
             ],
             'paypal' => [
-                ['value' => 'paypal-csv', 'label' => 'Activity Download (CSV)'],
+                ['value' => 'paypal-csv', 'label' => Lang::get('import::upload.formats.activity_download')],
             ],
             'email-file' => [
-                ['value' => 'eml', 'label' => 'Email message (.eml)'],
-                ['value' => 'mbox', 'label' => 'Mailbox archive (.mbox)'],
+                ['value' => 'eml', 'label' => Lang::get('import::upload.formats.email_message')],
+                ['value' => 'mbox', 'label' => Lang::get('import::upload.formats.mailbox_archive')],
             ],
             'other-bank' => [
                 ['value' => 'n26-csv', 'label' => 'N26 (CSV)'],
                 ['value' => 'revolut-csv', 'label' => 'Revolut (CSV)'],
-                ['value' => 'ing-nl-csv', 'label' => 'ING Netherlands (CSV)'],
+                ['value' => 'ing-nl-csv', 'label' => Lang::get('import::upload.formats.ing_nl')],
             ],
             default => [],
         };
@@ -217,10 +217,9 @@ final class UploadWizard extends Component
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => $e->getTraceAsString(),
             ]);
-            $this->uploadError = sprintf(
-                'Could not process this file (%s). The full error is in /dev/logs.',
-                $e::class,
-            );
+            $this->uploadError = Lang::get('import::upload.errors.process_failed', [
+                'class' => $e::class,
+            ]);
 
             return;
         }

@@ -1,11 +1,12 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the doctor panel
      probe rows scroll horizontally at phone width. --}}
 <div class="p-6 space-y-6 overflow-x-auto" data-testid="doctor-panel-page">
     <header class="flex items-center justify-between gap-4">
         <div class="space-y-1">
-            <h1 class="text-xl font-semibold text-[var(--color-text)]">Doctor</h1>
+            <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::doctor.heading') }}</h1>
             <p class="text-sm text-[var(--color-text-muted)]">
-                Run the operational probe suite and review pass / warn / fail rows.
+                {{ Lang::get('dev::doctor.subtitle') }}
             </p>
         </div>
         <button
@@ -35,23 +36,23 @@
             "
             x-bind:disabled="running"
         >
-            <span x-show="!running">Re-run</span>
-            <span x-show="running" x-cloak>Running…</span>
+            <span x-show="!running">{{ Lang::get('dev::doctor.rerun') }}</span>
+            <span x-show="running" x-cloak>{{ Lang::get('dev::doctor.running') }}</span>
         </button>
     </header>
 
     @if ($probeRows === [])
         <div class="card p-6 text-center" data-testid="doctor-empty-state">
             <p class="text-sm text-[var(--color-text-muted)]">
-                No probe output captured yet. Press
-                <span class="font-semibold">Re-run</span>
-                to invoke <code class="font-mono">beatrax:doctor</code>.
+                {{ Lang::get('dev::doctor.empty_prefix') }}
+                <span class="font-semibold">{{ Lang::get('dev::doctor.empty_rerun') }}</span>
+                {{ Lang::get('dev::doctor.empty_suffix') }} <code class="font-mono">beatrax:doctor</code>.
             </p>
         </div>
     @else
         <div class="card p-4" data-testid="doctor-results-card">
             <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-semibold">Latest probe output</h2>
+                <h2 class="text-sm font-semibold">{{ Lang::get('dev::doctor.latest_output') }}</h2>
                 @if ($finishedAt !== null)
                     <span class="text-xs text-[var(--color-text-muted)]">{{ $finishedAt }}</span>
                 @endif
@@ -64,16 +65,16 @@
                     >
                         @switch($row['status'])
                             @case('pass')
-                                <span class="text-emerald-600" aria-label="pass">✓</span>
+                                <span class="text-emerald-600" aria-label="{{ Lang::get('dev::doctor.aria_pass') }}">✓</span>
                                 @break
                             @case('warn')
-                                <span class="text-amber-500" aria-label="warning">⚠</span>
+                                <span class="text-amber-500" aria-label="{{ Lang::get('dev::doctor.aria_warning') }}">⚠</span>
                                 @break
                             @case('fail')
-                                <span class="text-rose-600" aria-label="fail">✗</span>
+                                <span class="text-rose-600" aria-label="{{ Lang::get('dev::doctor.aria_fail') }}">✗</span>
                                 @break
                             @default
-                                <span class="text-slate-500" aria-label="info">ℹ</span>
+                                <span class="text-slate-500" aria-label="{{ Lang::get('dev::doctor.aria_info') }}">ℹ</span>
                         @endswitch
                         <span class="font-mono text-xs w-48 truncate">{{ $row['label'] }}</span>
                         <span class="text-[var(--color-text-muted)] flex-1">{{ $row['detail'] }}</span>
@@ -82,7 +83,7 @@
             </ul>
             @if ($exitCode !== null && $exitCode !== 0)
                 <p class="mt-4 text-xs text-rose-600">
-                    Exit code: {{ $exitCode }}
+                    {{ Lang::get('dev::doctor.exit_code', ['code' => $exitCode]) }}
                 </p>
             @endif
         </div>

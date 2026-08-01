@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\SavesTransactionSplit;
 use Modules\Ledger\Public\Enums\ClearedStatus;
@@ -137,7 +138,7 @@ trait ManagesSplitEditor
         }
 
         $survivorIndex = $this->pendingRemoveIndex === 0 ? 1 : 0;
-        $error = $this->persistUnsplit($splitter, $currentUser, $survivorIndex, 'Choose a category before removing.');
+        $error = $this->persistUnsplit($splitter, $currentUser, $survivorIndex, Lang::get('ledger::detail.errors.choose_before_removing'));
 
         if ($error !== null) {
             $this->splitError = $error;
@@ -148,7 +149,7 @@ trait ManagesSplitEditor
         $this->resetSplitEditor();
         $this->confirmRemoveToOne = false;
         $this->pendingRemoveIndex = null;
-        $this->dispatch('toast', message: 'Removed — one category remains');
+        $this->dispatch('toast', message: Lang::get('ledger::detail.toast.removed_one_remains'));
     }
 
     // Defaults the survivor radio to the larger-magnitude leg — a
@@ -182,7 +183,7 @@ trait ManagesSplitEditor
             return;
         }
 
-        $error = $this->persistUnsplit($splitter, $currentUser, $this->unsplitSurvivorIndex, 'Choose a category before unsplitting.');
+        $error = $this->persistUnsplit($splitter, $currentUser, $this->unsplitSurvivorIndex, Lang::get('ledger::detail.errors.choose_before_unsplitting'));
 
         if ($error !== null) {
             $this->splitError = $error;
@@ -193,7 +194,7 @@ trait ManagesSplitEditor
         $this->resetSplitEditor();
         $this->confirmUnsplit = false;
         $this->unsplitSurvivorIndex = null;
-        $this->dispatch('toast', message: 'Unsplit — restored to a single category');
+        $this->dispatch('toast', message: Lang::get('ledger::detail.toast.unsplit_restored'));
     }
 
     // Drives the chosen survivor category through the unsplit mutator when
@@ -235,7 +236,7 @@ trait ManagesSplitEditor
         $this->recomputeRemaining($currentUser, $db);
 
         if ($this->remainingMinor !== 0) {
-            $this->splitError = "Couldn't save — leg totals must match the transaction total exactly.";
+            $this->splitError = Lang::get('ledger::detail.errors.totals_must_match');
 
             return;
         }
@@ -247,7 +248,7 @@ trait ManagesSplitEditor
             ->first(['settled_amount_minor']);
 
         if ($parent === null) {
-            $this->splitError = 'Transaction not found.';
+            $this->splitError = Lang::get('ledger::detail.errors.not_found');
 
             return;
         }
@@ -266,9 +267,9 @@ trait ManagesSplitEditor
             // Reload persisted legs (real DB ids) + tax state so subsequent
             // edits/removals correctly diff against the now-saved rows.
             $this->loadSplitState($currentUser, $db, $taxTagQuery, $codec, $session);
-            $this->dispatch('toast', message: 'Split saved');
+            $this->dispatch('toast', message: Lang::get('ledger::detail.toast.split_saved'));
         } catch (SplitSumMismatchException) {
-            $this->splitError = "Couldn't save — leg totals must match the transaction total exactly.";
+            $this->splitError = Lang::get('ledger::detail.errors.totals_must_match');
         } catch (InvalidArgumentException $e) {
             $this->splitError = $e->getMessage();
         }
@@ -288,14 +289,14 @@ trait ManagesSplitEditor
         foreach ($this->legs as $leg) {
             $abs = self::parseAmount($leg['amount']);
             if ($abs === null) {
-                $this->splitError = "Amount can't be €0,00";
+                $this->splitError = Lang::get('ledger::detail.errors.amount_zero');
 
                 return null;
             }
 
             $categoryId = self::legCategoryId($leg);
             if ($categoryId === null) {
-                $this->splitError = 'Choose a category.';
+                $this->splitError = Lang::get('ledger::detail.errors.choose_category');
 
                 return null;
             }
@@ -338,7 +339,7 @@ trait ManagesSplitEditor
             ->value('status');
 
         if ($status === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: self::RECONCILED_NOTICE);
+            $this->dispatch('toast', message: Lang::get(self::RECONCILED_NOTICE_KEY));
 
             return;
         }

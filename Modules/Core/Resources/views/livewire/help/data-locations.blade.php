@@ -33,60 +33,61 @@
     activation, both of which the local dev environment + a button
     click satisfy).
 --}}
+@use('Modules\Core\Public\Support\Lang')
 <div class="help-locations" data-testid="help-data-locations">
     <header class="space-y-2">
-        <h1 class="text-2xl font-semibold text-[var(--color-text)]">Where is my data?</h1>
+        <h1 class="text-2xl font-semibold text-[var(--color-text)]">{{ Lang::get('core::help.page_title') }}</h1>
         <p class="text-[var(--color-text-muted)]">
-            beatrax stores everything on this device. Nothing is sent to a server, nothing syncs to the cloud, nothing leaves your machine without you exporting it.
+            {{ Lang::get('core::help.intro') }}
         </p>
     </header>
 
     {{-- ─── Section 1: Your data lives here ─────────────────────── --}}
     <section class="space-y-3" aria-labelledby="help-locations-paths-heading">
-        <h2 id="help-locations-paths-heading" class="text-lg font-semibold text-[var(--color-text)]">Your data lives here</h2>
+        <h2 id="help-locations-paths-heading" class="text-lg font-semibold text-[var(--color-text)]">{{ Lang::get('core::help.lives_here') }}</h2>
 
         <div class="path-row" x-data="{ copied: false }">
-            <span class="font-semibold pr-1">SQLite database:</span>
+            <span class="font-semibold pr-1">{{ Lang::get('core::help.sqlite_db') }}</span>
             <span class="path-mono">{{ $sqlitePath }}</span>
             <button
                 type="button"
-                aria-label="Copy SQLite database path to clipboard"
+                aria-label="{{ Lang::get('core::help.copy_sqlite_aria') }}"
                 class="copy-path-btn"
                 x-on:click="navigator.clipboard.writeText('{{ $sqlitePath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
-                x-text="copied ? 'Copied' : 'Copy'"
-            >Copy</button>
+                x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
+            >{{ Lang::get('core::help.copy') }}</button>
         </div>
 
         <div class="path-row" x-data="{ copied: false }">
-            <span class="font-semibold pr-1">OAuth secrets:</span>
+            <span class="font-semibold pr-1">{{ Lang::get('core::help.oauth_secrets') }}</span>
             <span class="path-mono">{{ $secretsPath }}</span>
             <button
                 type="button"
-                aria-label="Copy OAuth secrets path to clipboard"
+                aria-label="{{ Lang::get('core::help.copy_secrets_aria') }}"
                 class="copy-path-btn"
                 x-on:click="navigator.clipboard.writeText('{{ $secretsPath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
-                x-text="copied ? 'Copied' : 'Copy'"
-            >Copy</button>
+                x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
+            >{{ Lang::get('core::help.copy') }}</button>
         </div>
 
         <div class="path-row" x-data="{ copied: false }">
-            <span class="font-semibold pr-1">Brand assets + caches:</span>
+            <span class="font-semibold pr-1">{{ Lang::get('core::help.brand_caches') }}</span>
             <span class="path-mono">{{ $cachesPath }}</span>
             <button
                 type="button"
-                aria-label="Copy Brand assets + caches path to clipboard"
+                aria-label="{{ Lang::get('core::help.copy_caches_aria') }}"
                 class="copy-path-btn"
                 x-on:click="navigator.clipboard.writeText('{{ $cachesPath }}').then(() => { copied = true; setTimeout(() => copied = false, 1500); }).catch(() => {})"
-                x-text="copied ? 'Copied' : 'Copy'"
-            >Copy</button>
+                x-text="copied ? {{ Js::from(Lang::get('core::help.copied')) }} : {{ Js::from(Lang::get('core::help.copy')) }}"
+            >{{ Lang::get('core::help.copy') }}</button>
         </div>
     </section>
 
     {{-- ─── Section 2: Export everything ─────────────────────────── --}}
     <section class="space-y-3" aria-labelledby="help-locations-export-heading">
-        <h2 id="help-locations-export-heading" class="text-lg font-semibold text-[var(--color-text)]">Export everything</h2>
+        <h2 id="help-locations-export-heading" class="text-lg font-semibold text-[var(--color-text)]">{{ Lang::get('core::help.export_heading') }}</h2>
         <p class="text-[var(--color-text-muted)]">
-            Bundle every byte beatrax has stored about you into a single .zip you can back up, archive, or move to another machine.
+            {{ Lang::get('core::help.export_body') }}
         </p>
 
         @if ($devModeOn)
@@ -101,15 +102,15 @@
                 data-testid="export-everything-cta"
                 disabled
                 aria-disabled="true"
-                title="Export action will ship with the Dev Mode export-everything route."
-            >Export everything as ZIP</button>
+                title="{{ Lang::get('core::help.export_title_attr') }}"
+            >{{ Lang::get('core::help.export_cta') }}</button>
         @else
             <div class="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
-                <p class="font-medium">Dev Mode is off.</p>
-                <p class="mt-1">To export your data, either:</p>
+                <p class="font-medium">{{ Lang::get('core::help.dev_off') }}</p>
+                <p class="mt-1">{{ Lang::get('core::help.to_export') }}</p>
                 <ol class="mt-2 list-decimal pl-5 space-y-1">
-                    <li>Enable Dev Mode in Settings, then return here, <strong>or</strong></li>
-                    <li>Manually copy the folders above using your file manager.</li>
+                    <li>{!! Lang::get('core::help.enable_dev_html') !!}</li>
+                    <li>{{ Lang::get('core::help.manual_copy') }}</li>
                 </ol>
             </div>
         @endif
@@ -117,12 +118,14 @@
 
     {{-- ─── Section 3: Deleting your data ────────────────────────── --}}
     <section class="space-y-3" aria-labelledby="help-locations-delete-heading">
-        <h2 id="help-locations-delete-heading" class="text-lg font-semibold text-[var(--color-text)]">Deleting your data</h2>
-        <p class="text-[var(--color-text-muted)]">To remove beatrax and every trace of your data:</p>
+        <h2 id="help-locations-delete-heading" class="text-lg font-semibold text-[var(--color-text)]">{{ Lang::get('core::help.delete_heading') }}</h2>
+        <p class="text-[var(--color-text-muted)]">{{ Lang::get('core::help.delete_intro') }}</p>
         <ol class="list-decimal pl-5 space-y-1 text-[var(--color-text-muted)]">
-            <li>Drag beatrax to the Trash / uninstall via Add or Remove Programs.</li>
-            <li>Delete the folders listed above.</li>
+            <li>{{ Lang::get('core::help.delete_step1') }}</li>
+            <li>{{ Lang::get('core::help.delete_step2') }}</li>
         </ol>
-        <p class="text-[var(--color-text-muted)]">There's no telemetry to opt out of and no remote account to close.</p>
+        {{-- App-static copy carrying an apostrophe that must reach the DOM
+             unescaped (see HelpDataLocationsTest); no dynamic values here. --}}
+        <p class="text-[var(--color-text-muted)]">{!! Lang::get('core::help.no_telemetry') !!}</p>
     </section>
 </div>

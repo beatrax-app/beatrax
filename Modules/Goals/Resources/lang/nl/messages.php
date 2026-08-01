@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page' => [
+        'title' => 'Doelen',
+        'subtitle' => 'Volg de voortgang naar je spaardoelen.',
+        'add_goal' => 'Doel toevoegen',
+    ],
+
+    'empty' => [
+        'heading' => 'Nog geen doelen',
+        'body' => 'Stel een streefbedrag en -datum in om je spaarvoortgang te volgen.',
+        'add_first' => 'Voeg je eerste doel toe',
+    ],
+
+    'status' => [
+        'overdue' => 'Verlopen',
+        'reached' => 'Bereikt',
+        'completed' => 'Voltooid',
+        'archived' => 'Gearchiveerd',
+    ],
+
+    'row' => [
+        'edit' => 'Bewerken',
+    ],
+
+    'progress' => [
+        'aria' => ':name: :pct% voltooid',
+    ],
+
+    'projection' => [
+        'target_reached' => 'Doel bereikt',
+        'add_contributions' => 'Voeg bijdragen toe om een prognose te zien',
+        'building' => 'Prognose wordt opgebouwd…',
+        'est' => 'Ca. :date ·',
+        'projection_note' => '(prognose)',
+        'projected' => 'Verwacht: :date',
+    ],
+
+    'archive' => [
+        'confirm_question' => 'Dit doel archiveren?',
+        'close' => 'Sluiten',
+        'confirm_aria' => 'Archiveren van :name bevestigen',
+        'archive' => 'Archiveren',
+    ],
+
+    'actions' => [
+        'more_aria' => 'Meer acties voor :name',
+        'mark_complete' => 'Markeren als voltooid',
+        'archive' => 'Archiveren',
+        'restore' => 'Herstellen',
+    ],
+
+    'archived_disclosure' => 'Gearchiveerde doelen (:count)',
+
+    'form' => [
+        'title_edit' => 'Doel bewerken',
+        'title_create' => 'Een spaardoel maken',
+        'subtitle_edit' => 'Werk de naam, het streefbedrag, de datum of de gekoppelde rekening bij.',
+        'subtitle_create' => 'Stel een streefbedrag en -datum in om je spaarvoortgang te volgen.',
+        'name' => 'Naam',
+        'name_placeholder' => 'bijv. Noodfonds',
+        'target_amount' => 'Streefbedrag (:currency)',
+        'target_date' => 'Streefdatum',
+        'savings_account' => 'Spaarrekening (optioneel)',
+        'no_account' => 'Geen rekening — handmatig bijhouden',
+        'linked_pot' => 'Gekoppelde pot (optioneel)',
+        'select_account_first' => 'Selecteer eerst een rekening',
+        'no_pot' => 'Geen pot — gebruik overboekingsregistratie',
+        'linked_pot_help' => 'Bij koppeling bepaalt het saldo van de pot de voortgang van dit doel.',
+        'save_changes' => 'Wijzigingen opslaan',
+        'save_goal' => 'Doel opslaan',
+        'close' => 'Sluiten',
+    ],
+
+    'summary' => [
+        'see_all' => 'Alles bekijken →',
+        'no_goals' => 'Nog geen doelen.',
+        'add_first' => 'Voeg je eerste doel toe →',
+    ],
+
+    'notices' => [
+        'goal_created' => 'Doel aangemaakt.',
+        'goal_updated' => 'Doel bijgewerkt.',
+        'goal_marked_complete' => 'Doel gemarkeerd als voltooid.',
+        'goal_archived' => 'Doel gearchiveerd.',
+        'goal_restored' => 'Doel hersteld.',
+    ],
+
+    'errors' => [
+        'name' => 'Voer een naam voor je doel in.',
+        'date' => 'Kies een streefdatum.',
+        'amount' => 'Voer een geldig bedrag groter dan nul in.',
+        'pot_linked_category' => 'Deze pot is aan een categorie gekoppeld. Verwijder die koppeling eerst op de Potten-pagina.',
+        'account_not_owned' => 'Rekening is niet van de geverifieerde gebruiker.',
+    ],
+];

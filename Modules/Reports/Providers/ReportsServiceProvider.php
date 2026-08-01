@@ -64,6 +64,9 @@ final class ReportsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'reports');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'reports');
+        }
 
         // Builder/index/pinned-row Livewire components, each registered
         // only once its class exists on disk.

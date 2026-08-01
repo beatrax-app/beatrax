@@ -314,6 +314,7 @@ final class SyncServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'sync');
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'sync');
 
         if (is_file(__DIR__.'/../Routes/web.php')) {
             $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');

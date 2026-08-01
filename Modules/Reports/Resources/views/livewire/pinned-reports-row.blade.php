@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Dashboard "pinned reports" mini-card row (Req 10). Up to 3 chart-only
     mini cards, ADDITIVE among the dashboard's other fixed cards — same
@@ -14,7 +15,7 @@
 --}}
 <div>
     @if (count($cards) > 0)
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="Pinned reports">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="{{ Lang::get('reports::pinned.reports_aria') }}">
             @foreach ($cards as $card)
                 <a
                     href="{{ route('reports.index', ['report' => $card['id']]) }}"
@@ -22,7 +23,7 @@
                 >
                     <div class="flex items-center justify-between gap-2">
                         <p class="min-w-0 flex-1 truncate text-base font-semibold text-slate-900 dark:text-slate-100">{{ $card['name'] }}</p>
-                        <span class="shrink-0 text-sm text-slate-400 dark:text-slate-500" aria-label="Pinned report" title="Pinned report">📌</span>
+                        <span class="shrink-0 text-sm text-slate-400 dark:text-slate-500" aria-label="{{ Lang::get('reports::pinned.pinned_report') }}" title="{{ Lang::get('reports::pinned.pinned_report') }}">📌</span>
                     </div>
 
                     <div

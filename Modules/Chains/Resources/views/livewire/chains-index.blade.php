@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- /chains — overview of every non-rejected chain_link for the user.
      One card per chain showing both legs side-by-side, the chain kind,
      a confidence chip, and a drill-in link to the funded transaction's
@@ -6,10 +7,10 @@
 @php
     $kindLabel = static function (string $kind): string {
         return match ($kind) {
-            'paypal_funding' => 'PayPal funding',
-            'ics_bulk_settle' => 'Bulk iDEAL settlement',
-            'funded_by_card_hint' => 'Funded by card (hint)',
-            'refund_of_hint' => 'Refund (hint)',
+            'paypal_funding' => Lang::get('chains::index.kind.paypal_funding'),
+            'ics_bulk_settle' => Lang::get('chains::index.kind.ics_bulk_settle'),
+            'funded_by_card_hint' => Lang::get('chains::index.kind.funded_by_card_hint'),
+            'refund_of_hint' => Lang::get('chains::index.kind.refund_of_hint'),
             default => $kind,
         };
     };
@@ -19,30 +20,30 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
         <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Chains</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::index.heading') }}</h1>
             <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                 <a
                     href="{{ route('chains.review') }}"
                     class="hover:text-slate-700 dark:hover:text-slate-200"
                     data-testid="chains-index-review-link"
-                >Review queue →</a>
+                >{{ Lang::get('chains::index.review_link') }}</a>
                 <a
                     href="{{ route('chains.hints') }}"
                     class="hover:text-slate-700 dark:hover:text-slate-200"
                     data-testid="chains-index-hints-link"
-                >Hints →</a>
+                >{{ Lang::get('chains::index.hints_link') }}</a>
             </div>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Every chain the resolver has detected. Click a row's funded transaction to open the chain drawer for the full fan-out.
+            {{ Lang::get('chains::index.subtitle') }}
         </p>
     </header>
 
     @if (count($chains) === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" data-testid="chains-index-empty">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No chains yet</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::index.empty_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Import a few statements (bank, PayPal, card) and the resolver will surface cross-account chains here automatically.
+                {{ Lang::get('chains::index.empty_body') }}
             </p>
         </div>
     @else
@@ -82,9 +83,9 @@
                                         wire:navigate
                                         class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                         data-testid="chains-index-from-counterparty-link-{{ $chain->chainLinkId }}"
-                                    >{{ $chain->fromCounterparty ?: '(no counterparty)' }}</a>
+                                    >{{ $chain->fromCounterparty ?: Lang::get('chains::index.no_counterparty') }}</a>
                                 @else
-                                    <span data-testid="chains-index-from-counterparty-text-{{ $chain->chainLinkId }}">{{ $chain->fromCounterparty ?: '(no counterparty)' }}</span>
+                                    <span data-testid="chains-index-from-counterparty-text-{{ $chain->chainLinkId }}">{{ $chain->fromCounterparty ?: Lang::get('chains::index.no_counterparty') }}</span>
                                 @endif
                                 <span
                                     class="ml-2 text-slate-500 dark:text-slate-400"
@@ -97,9 +98,9 @@
                                         wire:navigate
                                         class="text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                                         data-testid="chains-index-to-counterparty-link-{{ $chain->chainLinkId }}"
-                                    >{{ $chain->toCounterparty ?: '(no counterparty)' }}</a>
+                                    >{{ $chain->toCounterparty ?: Lang::get('chains::index.no_counterparty') }}</a>
                                 @else
-                                    <span data-testid="chains-index-to-counterparty-text-{{ $chain->chainLinkId }}">{{ $chain->toCounterparty ?: '(no counterparty)' }}</span>
+                                    <span data-testid="chains-index-to-counterparty-text-{{ $chain->chainLinkId }}">{{ $chain->toCounterparty ?: Lang::get('chains::index.no_counterparty') }}</span>
                                 @endif
                                 <span
                                     class="ml-2 text-slate-500 dark:text-slate-400"
@@ -112,14 +113,14 @@
                                     wire:navigate
                                     class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                     data-testid="chains-index-from-tx-link-{{ $chain->chainLinkId }}"
-                                >Open from-row</a>
+                                >{{ Lang::get('chains::index.open_from_row') }}</a>
                                 <span aria-hidden="true" class="mx-1">·</span>
                                 <a
                                     href="{{ route('transactions.show', ['transactionId' => $chain->toTransactionId]) }}"
                                     wire:navigate
                                     class="underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100"
                                     data-testid="chains-index-to-tx-link-{{ $chain->chainLinkId }}"
-                                >Open to-row</a>
+                                >{{ Lang::get('chains::index.open_to_row') }}</a>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                 {{ $chain->fromPostedAt->format('d M Y') }} → {{ $chain->toPostedAt->format('d M Y') }}
@@ -127,7 +128,7 @@
                         </div>
                         <span
                             class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $tierClasses }}"
-                            aria-label="State: {{ $chain->state }}"
+                            aria-label="{{ Lang::get('chains::index.state_aria', ['state' => $chain->state]) }}"
                         >{{ ucfirst($chain->state) }}</span>
                     </div>
                 </li>

@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
 use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
@@ -91,7 +92,7 @@ final class OpeningBalanceEditor extends Component
 
         $minor = $this->parseInputToMinor($this->openingInput);
         if ($minor === false) {
-            $this->errorMessage = 'Opening balance must be a valid number.';
+            $this->errorMessage = Lang::get('forecasting::opening_balance.errors.invalid_number');
 
             return;
         }
@@ -116,7 +117,7 @@ final class OpeningBalanceEditor extends Component
         $this->currentAsOfDate = $asOf;
         $this->saved = true;
         $this->dispatch('forecast-settings:saved', accountId: $this->accountId);
-        $this->dispatch('toast', message: 'Opening balance updated.');
+        $this->dispatch('toast', message: Lang::get('forecasting::opening_balance.toast.updated'));
     }
 
     public function useMyNumber(CurrentUser $currentUser, SetAccountOpeningBalance $action): void
@@ -125,7 +126,7 @@ final class OpeningBalanceEditor extends Component
 
         $minor = $this->parseInputToMinor($this->openingInput);
         if ($minor === false) {
-            $this->errorMessage = 'Opening balance must be a valid number.';
+            $this->errorMessage = Lang::get('forecasting::opening_balance.errors.invalid_number');
 
             return;
         }
@@ -147,7 +148,7 @@ final class OpeningBalanceEditor extends Component
         $this->beatraxsNumberMinor = null;
         $this->saved = true;
         $this->dispatch('forecast-settings:saved', accountId: $this->accountId);
-        $this->dispatch('toast', message: 'Opening balance updated.');
+        $this->dispatch('toast', message: Lang::get('forecasting::opening_balance.toast.updated'));
     }
 
     public function useBeatraxsNumber(): void

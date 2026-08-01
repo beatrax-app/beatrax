@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ClearedStatus;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -90,7 +91,7 @@ trait HandlesClearedStatus
         }
 
         if ($current === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: 'Reconciled — un-reconcile first to change status.');
+            $this->dispatch('toast', message: Lang::get('ledger::common.badge.reconciled_hint'));
 
             return;
         }

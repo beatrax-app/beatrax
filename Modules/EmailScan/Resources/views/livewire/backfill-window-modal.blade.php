@@ -14,13 +14,14 @@
      Flux build does not ship a flux:input.range primitive yet, so the
      hand-rolled range input fills the gap with the same focus chrome. --}}
 
+@use('Modules\Core\Public\Support\Lang')
 <div>
     <flux:modal name="backfill-window-{{ $inboxId ?? 0 }}" class="md:max-w-lg" dismissible="true">
         <div class="space-y-6">
-            <flux:heading size="lg">How far back should we look?</flux:heading>
+            <flux:heading size="lg">{{ Lang::get('email-scan::backfill.heading') }}</flux:heading>
 
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                Importing further back fetches more receipts but uses more provider quota. Pick a window between 1 and 12 months. You can change this later.
+                {{ Lang::get('email-scan::backfill.body') }}
             </p>
 
             <div>
@@ -31,7 +32,7 @@
                     step="1"
                     wire:model.live="months"
                     class="w-full accent-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:accent-emerald-500"
-                    aria-label="Backfill window in months"
+                    aria-label="{{ Lang::get('email-scan::backfill.range_aria') }}"
                 />
                 <div class="flex justify-between text-xs text-slate-500 px-1 mt-2 dark:text-slate-400">
                     <span>1</span>
@@ -43,7 +44,7 @@
             </div>
 
             <div class="text-sm font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                {{ $months === 1 ? '1 month' : $months . ' months' }}
+                {{ $months === 1 ? Lang::get('email-scan::backfill.month') : Lang::get('email-scan::backfill.months', ['count' => $months]) }}
             </div>
 
             @if ($errorMessage !== '')
@@ -55,12 +56,12 @@
                     type="button"
                     wire:click="$dispatch('modal-close', { name: 'backfill-window-{{ $inboxId ?? 0 }}' })"
                     class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                >Cancel</button>
+                >{{ Lang::get('email-scan::backfill.cancel') }}</button>
                 <button
                     type="button"
                     wire:click="submit"
                     class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                >Start backfill</button>
+                >{{ Lang::get('email-scan::backfill.start') }}</button>
             </div>
         </div>
     </flux:modal>

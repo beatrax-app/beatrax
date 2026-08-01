@@ -1,10 +1,11 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- D-20 / UI-SPEC §19: overflow-x-auto wrapper ensures the artisan runner
      timeline and run cards scroll horizontally at phone width. --}}
 <div class="p-8 space-y-6 overflow-x-auto" data-testid="artisan-runner-page">
     <header class="flex items-center justify-between gap-4">
         <div class="space-y-1">
-            <h1 class="text-xl font-semibold text-[var(--color-text)]">Artisan runner</h1>
-            <p class="text-sm text-[var(--color-text-muted)]">Run SAFE commands one-click; DESTRUCTIVE commands behind the triple-gate.</p>
+            <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ Lang::get('dev::runner.heading') }}</h1>
+            <p class="text-sm text-[var(--color-text-muted)]">{{ Lang::get('dev::runner.subtitle') }}</p>
         </div>
         <flux:button
             type="button"
@@ -13,18 +14,18 @@
             class="inline-flex items-center"
         >
             <kbd class="mr-2 text-xs">⌘K</kbd>
-            Run a command
+            {{ Lang::get('dev::runner.run_a_command') }}
         </flux:button>
     </header>
 
     <div class="flex items-center gap-4">
         {{-- Filter chips --}}
-        <div class="flex items-center gap-1" role="tablist" aria-label="Run filter">
+        <div class="flex items-center gap-1" role="tablist" aria-label="{{ Lang::get('dev::runner.filter_aria') }}">
             @foreach ([
-                'all' => 'All',
-                'running' => 'Running',
-                'failed' => 'Failed',
-                'destructive' => 'Destructive',
+                'all' => Lang::get('dev::runner.filter.all'),
+                'running' => Lang::get('dev::runner.filter.running'),
+                'failed' => Lang::get('dev::runner.filter.failed'),
+                'destructive' => Lang::get('dev::runner.filter.destructive'),
             ] as $key => $label)
                 <button
                     type="button"
@@ -39,9 +40,9 @@
         {{-- Worker pre-flight pill --}}
         <div class="ml-auto">
             @if ($workerAlive)
-                <x-dev::status-pill variant="ok" label="Queue worker: RUNNING" />
+                <x-dev::status-pill variant="ok" :label="Lang::get('dev::runner.worker_running')" />
             @else
-                <x-dev::status-pill variant="muted" label="Queue worker: NOT RUNNING" />
+                <x-dev::status-pill variant="muted" :label="Lang::get('dev::runner.worker_not_running')" />
             @endif
         </div>
     </div>
@@ -53,11 +54,11 @@
     @if ($runs->isEmpty())
         <div class="card p-4">
             <p class="text-sm text-[var(--color-text-muted)]">
-                No runs yet. Click "Run a command" or use the command palette (⌘K).
+                {{ Lang::get('dev::runner.no_runs') }}
             </p>
         </div>
     @else
-        <section class="space-y-3" aria-label="Recent runs">
+        <section class="space-y-3" aria-label="{{ Lang::get('dev::runner.recent_runs_aria') }}">
             @foreach ($runs as $run)
                 <x-dev::run-card :run="$run" />
             @endforeach
@@ -79,9 +80,9 @@
     --}}
     <flux:modal name="run-command" :dismissible="true">
         <div class="space-y-4">
-            <flux:heading size="lg">Run a SAFE command</flux:heading>
+            <flux:heading size="lg">{{ Lang::get('dev::runner.modal_heading') }}</flux:heading>
             <p class="text-sm text-slate-700 dark:text-slate-300">
-                Pick a SAFE-tier command to run immediately. DESTRUCTIVE commands are not listed here — use the timeline's Re-run affordance or the ⌘K palette.
+                {{ Lang::get('dev::runner.modal_intro') }}
             </p>
             <div class="space-y-1">
                 @foreach ($safeCommands as $spec)
@@ -111,8 +112,8 @@
                                 @if ($hasArgs)
                                     <span
                                         class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                                        title="Opens an arg form"
-                                    >args</span>
+                                        title="{{ Lang::get('dev::runner.args_badge_title') }}"
+                                    >{{ Lang::get('dev::runner.args_badge') }}</span>
                                 @endif
                             </div>
                             <span class="text-xs text-slate-500 dark:text-slate-400">{{ $spec->label }}</span>

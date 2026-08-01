@@ -16,6 +16,7 @@ use Modules\Budgets\Public\Services\EnvelopeBalanceQuery;
 use Modules\Budgets\Public\Services\EnvelopeWriter;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Services\PeriodQuery;
 
@@ -109,7 +110,7 @@ final class BudgetsPage extends Component
         $minor = $this->parseAssignedAmount($writer, $raw);
 
         if ($minor === null) {
-            $this->toast('Enter a valid amount.');
+            $this->toast(Lang::get('budgets::messages.notices.invalid_amount'));
 
             return;
         }
@@ -152,7 +153,7 @@ final class BudgetsPage extends Component
             && (int) $raw <= EnvelopeWriter::MAX_NOTIFY_THRESHOLD_PERCENT) {
             $threshold = (int) $raw;
         } else {
-            $this->thresholdErrors[$categoryId] = 'Enter a whole number between 1 and 200.';
+            $this->thresholdErrors[$categoryId] = Lang::get('budgets::messages.notices.threshold_range');
 
             return;
         }
@@ -197,7 +198,7 @@ final class BudgetsPage extends Component
         $selected = $this->resolvePeriod($periods);
         $writer->copyFromPeriod($currentUser->user(), $periods->previous($selected), $selected);
         $this->assignedInputs = [];
-        $this->toast('Copied last month’s plan.');
+        $this->toast(Lang::get('budgets::messages.notices.copied_last_month'));
     }
 
     // -------------------------------------------------------------------
@@ -231,8 +232,8 @@ final class BudgetsPage extends Component
 
         if ($toCategoryId <= 0 || $minor === null) {
             $this->moveError = $toCategoryId <= 0
-                ? 'Choose an envelope to move money to.'
-                : 'Enter an amount greater than zero.';
+                ? Lang::get('budgets::messages.notices.choose_envelope')
+                : Lang::get('budgets::messages.notices.amount_positive');
 
             return;
         }
@@ -248,13 +249,13 @@ final class BudgetsPage extends Component
             $this->moveAmount = '';
             $this->moveMemo = '';
             $this->dispatch('modal-close', name: 'envelope-move');
-            $this->toast('Money moved.');
+            $this->toast(Lang::get('budgets::messages.notices.money_moved'));
         } catch (InvalidArgumentException $e) {
             $this->moveError = $e->getMessage();
         } catch (\RuntimeException) {
             // A non-validation writer failure must surface as a calm inline
             // error, never escape as an unhandled 500.
-            $this->moveError = 'Could not complete the move — please try again.';
+            $this->moveError = Lang::get('budgets::messages.notices.move_failed');
         }
     }
 
@@ -265,7 +266,7 @@ final class BudgetsPage extends Component
         }
 
         $writer->undoMove($currentUser->user(), $moveId);
-        $this->toast('Move undone.');
+        $this->toast(Lang::get('budgets::messages.notices.move_undone'));
     }
 
     // -------------------------------------------------------------------
@@ -296,7 +297,7 @@ final class BudgetsPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => 'Budgets · beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · beatrax']);
 
             return $view;
         }
@@ -358,7 +359,7 @@ final class BudgetsPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Budgets · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · beatrax']);
 
         return $view;
     }

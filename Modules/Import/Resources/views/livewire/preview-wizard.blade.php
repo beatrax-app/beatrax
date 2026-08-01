@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -16,7 +17,7 @@
 <div class="space-y-6">
     <header>
         <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Preview import</h1>
+            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('import::preview.heading') }}</h1>
             <div class="flex items-center gap-3">
                 <button
                     type="button"
@@ -24,7 +25,7 @@
                     @disabled(! $hasLivePreview)
                     class="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
                 >
-                    Discard import
+                    {{ Lang::get('import::preview.discard') }}
                 </button>
                 <button
                     type="button"
@@ -32,30 +33,32 @@
                     @disabled(! $canConfirmImport)
                     class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                 >
-                    Confirm import
+                    {{ Lang::get('import::preview.confirm') }}
                 </button>
             </div>
         </div>
-        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Review the parsed rows. Nothing is saved to your ledger until you confirm.</p>
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.subtitle') }}</p>
     </header>
 
     @if ($preview === null || $previewExpired)
         <div class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:bg-amber-950">
-            <p>The preview has expired. <a href="/imports/new" class="underline">Re-upload the file</a> to try again.</p>
+            <p>{!! Lang::get('import::preview.expired_html') !!}</p>
         </div>
     @elseif ($needsIcsAccountName)
         <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6 dark:bg-slate-900 dark:border-slate-700">
             <div class="space-y-3">
-                <p class="text-sm font-medium text-slate-900 dark:text-slate-100">Name your ICS card account.</p>
-                <p class="text-sm text-slate-500 dark:text-slate-400">This is the first time you've imported ICS data. Give this card a name so it shows up consistently across the app.</p>
+                <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('import::preview.ics.heading') }}</p>
+                {{-- {!! !!}: app-static copy whose apostrophe must reach the DOM
+                     literally (not as &#039;). No user data is interpolated. --}}
+                <p class="text-sm text-slate-500 dark:text-slate-400">{!! Lang::get('import::preview.ics.help') !!}</p>
                 <div class="flex items-end gap-2">
                     <div class="flex-1 space-y-1">
-                        <label class="block text-xs text-slate-500 dark:text-slate-400" for="icsAccountName">Account name</label>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400" for="icsAccountName">{{ Lang::get('import::preview.account_name_label') }}</label>
                         <input
                             type="text"
                             id="icsAccountName"
                             wire:model="icsAccountName"
-                            placeholder="e.g. ICS card"
+                            placeholder="{{ Lang::get('import::preview.ics.placeholder') }}"
                             required
                             maxlength="80"
                             class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
@@ -69,7 +72,7 @@
                         wire:click="saveIcsAccountName"
                         class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                     >
-                        Save name
+                        {{ Lang::get('import::preview.save_name') }}
                     </button>
                 </div>
             </div>
@@ -77,16 +80,18 @@
     @elseif ($needsPaypalAccountName)
         <section class="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-6 dark:bg-slate-900 dark:border-slate-700">
             <div class="space-y-3">
-                <p class="text-sm font-medium text-slate-900 dark:text-slate-100">Name your PayPal account.</p>
-                <p class="text-sm text-slate-500 dark:text-slate-400">This is the first time you've imported PayPal data. Give this wallet a name so it shows up consistently across the app.</p>
+                <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ Lang::get('import::preview.paypal.heading') }}</p>
+                {{-- {!! !!}: app-static copy whose apostrophe must reach the DOM
+                     literally (not as &#039;). No user data is interpolated. --}}
+                <p class="text-sm text-slate-500 dark:text-slate-400">{!! Lang::get('import::preview.paypal.help') !!}</p>
                 <div class="flex items-end gap-2">
                     <div class="flex-1 space-y-1">
-                        <label class="block text-xs text-slate-500 dark:text-slate-400" for="paypalAccountName">Account name</label>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400" for="paypalAccountName">{{ Lang::get('import::preview.account_name_label') }}</label>
                         <input
                             type="text"
                             id="paypalAccountName"
                             wire:model="paypalAccountName"
-                            placeholder="e.g. PayPal"
+                            placeholder="{{ Lang::get('import::preview.paypal.placeholder') }}"
                             required
                             maxlength="80"
                             class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
@@ -100,7 +105,7 @@
                         wire:click="savePaypalAccountName"
                         class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                     >
-                        Save name
+                        {{ Lang::get('import::preview.save_name') }}
                     </button>
                 </div>
             </div>
@@ -111,16 +116,16 @@
                 @foreach ($preview->accountsToName as $unknown)
                     <div class="space-y-3">
                         <p class="text-sm text-slate-900 dark:text-slate-100">
-                            We found an unfamiliar IBAN: <strong class="font-medium">{{ $unknown->iban }}</strong>. Name this account.
+                            {{ Lang::get('import::preview.unknown_iban_prefix') }} <strong class="font-medium">{{ $unknown->iban }}</strong>. {{ Lang::get('import::preview.unknown_iban_suffix') }}
                         </p>
                         <div class="flex items-end gap-2">
                             <div class="flex-1 space-y-1">
-                                <label class="block text-xs text-slate-500 dark:text-slate-400" for="accountName">Account name</label>
+                                <label class="block text-xs text-slate-500 dark:text-slate-400" for="accountName">{{ Lang::get('import::preview.account_name_label') }}</label>
                                 <input
                                     type="text"
                                     id="accountName"
                                     wire:model="accountName"
-                                    placeholder="e.g. Main savings account"
+                                    placeholder="{{ Lang::get('import::preview.account_placeholder') }}"
                                     required
                                     maxlength="80"
                                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
@@ -134,7 +139,7 @@
                                 wire:click="nameAccount(@js($unknown->iban), $wire.accountName)"
                                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                             >
-                                Save name
+                                {{ Lang::get('import::preview.save_name') }}
                             </button>
                         </div>
                     </div>
@@ -148,11 +153,11 @@
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700" style="font-feature-settings: 'tnum';">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Date</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Funding source</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Counterparty</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">Amount</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">Status</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_date') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_funding_source') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_counterparty') }}</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_amount') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400">{{ Lang::get('import::preview.col_status') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
@@ -187,7 +192,7 @@
                                         <button
                                             type="button"
                                             class="desc-fallback"
-                                            aria-label="Rename this counterparty"
+                                            aria-label="{{ Lang::get('import::preview.rename_aria') }}"
                                             wire:click="$dispatch('rename-counterparty:open', { raw: @js($row->description), rowIndex: {{ $row->rowIndex }} })"
                                         >{{ $row->description }}</button>
                                     @else
@@ -203,11 +208,11 @@
                                 </td>
                                 <td class="px-4 py-2 text-sm">
                                     @if ($row->status === 'new')
-                                        <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:text-emerald-400" title="Will be added to your ledger.">New</span>
+                                        <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:text-emerald-400" title="{{ Lang::get('import::preview.status.new_title') }}">{{ Lang::get('import::preview.status.new') }}</span>
                                     @elseif ($row->status === 'duplicate')
-                                        <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950" title="Already imported — will be skipped.">Duplicate</span>
+                                        <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950" title="{{ Lang::get('import::preview.status.duplicate_title') }}">{{ Lang::get('import::preview.status.duplicate') }}</span>
                                     @elseif ($row->status === 'enriched')
-                                        <span class="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20" title="Existing row will be updated with a stronger source reference.">Enriched</span>
+                                        <span class="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20" title="{{ Lang::get('import::preview.status.enriched_title') }}">{{ Lang::get('import::preview.status.enriched') }}</span>
                                         @if ($row->diff && isset($row->diff['source_ref']))
                                             <div class="mt-1 text-xs text-slate-500 font-mono dark:text-slate-400">
                                                 source_ref:
@@ -217,7 +222,7 @@
                                             </div>
                                         @endif
                                     @else
-                                        <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-950 dark:text-rose-500" title="{{ $row->error }}">Error</span>
+                                        <span class="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-950 dark:text-rose-500" title="{{ $row->error }}">{{ Lang::get('import::preview.status.error') }}</span>
                                     @endif
                                 </td>
                             </tr>
@@ -246,16 +251,16 @@
             class="rounded-md border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700"
             aria-live="polite"
         >
-            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Resolving chains…</h3>
+            <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('import::preview.chain.heading') }}</h3>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 @if ($chainResolutionStatus === 'pending')
-                    Queued. The chain resolver will start shortly.
+                    {{ Lang::get('import::preview.chain.pending') }}
                 @elseif ($chainResolutionStatus === 'running')
-                    Linking funding chains and decomposing statement settlements.
+                    {{ Lang::get('import::preview.chain.running') }}
                 @elseif ($chainResolutionStatus === 'failed')
-                    Chain resolution failed: {{ $chainResolutionError ?? 'an unknown error occurred' }}.
-                    <a href="/horizon/failed" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">Open Horizon</a>
-                    to retry or inspect.
+                    {{ Lang::get('import::preview.chain.failed_prefix') }} {{ $chainResolutionError ?? Lang::get('import::preview.chain.unknown_error') }}.
+                    <a href="/horizon/failed" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('import::preview.chain.open_horizon') }}</a>
+                    {{ Lang::get('import::preview.chain.failed_suffix') }}
                 @endif
             </p>
             @if ($chainResolutionStatus !== 'failed')

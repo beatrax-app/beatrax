@@ -10,6 +10,7 @@ use Modules\Community\Public\Dto\SupportResource;
 use Modules\Community\Public\Services\SupportResourceProvider;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\DriftAlerts\Public\Dto\SavingsInsight;
 use Modules\DriftAlerts\Public\Enums\DriftAlertState;
@@ -135,8 +136,8 @@ final class SavingsInsightsQuery
                 name: $name,
                 monthlyMinor: $monthlyMinor,
                 currency: $currency,
-                message: $name.' may have a cheaper plan — you pay '.$monthly.'/mo.',
-                actionLabel: 'See cheaper plans',
+                message: Lang::get('drift-alerts::savings.insight.cheaper_message', ['name' => $name, 'monthly' => $monthly]),
+                actionLabel: Lang::get('drift-alerts::savings.insight.cheaper_action'),
                 actionUrl: $resource->cheaperUrl,
                 counterpartySlug: $slug,
             ),
@@ -147,8 +148,8 @@ final class SavingsInsightsQuery
                 name: $name,
                 monthlyMinor: $monthlyMinor,
                 currency: $currency,
-                message: $name.'\'s price went up — cancel or switch ('.$monthly.'/mo).',
-                actionLabel: 'How to cancel',
+                message: Lang::get('drift-alerts::savings.insight.cancel_message', ['name' => $name, 'monthly' => $monthly]),
+                actionLabel: Lang::get('drift-alerts::savings.insight.cancel_action'),
                 actionUrl: $resource->cancelUrl,
                 counterpartySlug: $slug,
             ),
@@ -159,8 +160,8 @@ final class SavingsInsightsQuery
                 name: $name,
                 monthlyMinor: $monthlyMinor,
                 currency: $currency,
-                message: 'Still using '.$name.'? It costs '.$monthly.'/mo.',
-                actionLabel: 'How to cancel',
+                message: Lang::get('drift-alerts::savings.insight.review_message', ['name' => $name, 'monthly' => $monthly]),
+                actionLabel: Lang::get('drift-alerts::savings.insight.review_action'),
                 actionUrl: $resource->cancelUrl,
                 counterpartySlug: $slug,
             ),

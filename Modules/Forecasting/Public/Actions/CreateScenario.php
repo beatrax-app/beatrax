@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioCreated;
 
@@ -28,10 +29,10 @@ final class CreateScenario
     {
         $trimmed = trim($name);
         if ($trimmed === '') {
-            throw new InvalidArgumentException('Scenario name cannot be empty.');
+            throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_empty'));
         }
         if (mb_strlen($trimmed) > ForecastScenario::MAX_NAME_LENGTH) {
-            throw new InvalidArgumentException(sprintf('Scenario name must be %d characters or fewer.', ForecastScenario::MAX_NAME_LENGTH));
+            throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_too_long', ['max' => ForecastScenario::MAX_NAME_LENGTH]));
         }
 
         $now = $this->clock->now()->toDateTimeString();
@@ -48,7 +49,7 @@ final class CreateScenario
             });
         } catch (QueryException $e) {
             if (self::looksLikeUniqueViolation($e)) {
-                throw new InvalidArgumentException('A scenario with that name already exists.', 0, $e);
+                throw new InvalidArgumentException(Lang::get('forecasting::scenario.errors.name_taken'), 0, $e);
             }
             throw $e;
         }

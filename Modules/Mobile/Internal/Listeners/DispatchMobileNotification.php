@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Listeners;
 
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Notifications\Public\Services\SuppressionEvaluator;
 use NativePHP\LocalNotifications\Facades\LocalNotifications;
@@ -14,10 +15,6 @@ use NativePHP\LocalNotifications\Facades\LocalNotifications;
  */
 class DispatchMobileNotification
 {
-    // Detail-free fallback body used when the device's hide-details
-    // preference is on. Identical string to Desktop's.
-    private const HIDDEN_DETAILS_BODY = 'Open beatrax to see the details.';
-
     public function __construct(
         private readonly SuppressionEvaluator $suppression,
         private readonly Clock $clock,
@@ -33,7 +30,11 @@ class DispatchMobileNotification
             return;
         }
 
-        $body = $decision->hideDetails ? self::HIDDEN_DETAILS_BODY : $event->body;
+        // Detail-free fallback body used when the device's hide-details
+        // preference is on. Identical string to Desktop's.
+        $body = $decision->hideDetails
+            ? Lang::get('mobile::messages.notification_hidden_details')
+            : $event->body;
 
         $this->fire($event->notificationId, $event->title, $body, $event->deepLinkRoute);
     }

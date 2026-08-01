@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Counterparty card — the grid item on the `/counterparties` cards
     view. Surfaces the counterparty's name, type chip, headline stat
@@ -30,7 +31,7 @@
 @endphp
 <article
     {{ $attributes->merge(['class' => $cardClass]) }}
-    aria-label="Counterparty: {{ $cpName }}"
+    aria-label="{{ Lang::get('counterparties::components.cp_card.aria', ['name' => $cpName]) }}"
 >
     <header class="cp-head">
         <span class="cp-head-name">{{ $cpName }}</span>
@@ -40,7 +41,7 @@
     {{ $slot }}
 
     @if (! empty($recent))
-        <div class="cp-recent" aria-label="Recent activity">
+        <div class="cp-recent" aria-label="{{ Lang::get('counterparties::components.cp_card.recent_aria') }}">
             @foreach (array_slice($recent, 0, 2) as $line)
                 <span>{{ is_array($line) ? ($line['label'] ?? '') : $line }}</span>
             @endforeach

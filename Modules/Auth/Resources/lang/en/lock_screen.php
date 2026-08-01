@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Unlock · beatrax',
+    'sign_out' => 'Sign out',
+
+    'digits_suffix' => 'digits entered',
+    'pad_label' => 'PIN pad',
+    'digit_aria' => 'Digit :digit',
+    'backspace_aria' => 'Backspace',
+    'ok_aria' => 'OK — confirm PIN',
+    'ok' => 'OK',
+
+    'error_too_short' => 'PIN must be at least 4 digits.',
+
+    'error_backoff' => 'Too many attempts — try again in :wait.',
+
+    'error_incorrect_remaining' => 'Incorrect PIN. :remaining attempts remaining.',
+    'error_incorrect' => 'Incorrect PIN.',
+];

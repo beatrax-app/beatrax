@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Done step — the wizard's final page. Renders the UI-SPEC §"Wizard
     final step" copy verbatim (eyebrow + H1 + lede + three next-step
@@ -8,25 +9,25 @@
     the right-aligned spacing matches every other wizard step.
 --}}
 <section class="wiz-step wiz-step-done" aria-labelledby="wiz-done-h1">
-    <p class="wiz-eyebrow">Done</p>
+    <p class="wiz-eyebrow">{{ Lang::get('onboarding::done.eyebrow') }}</p>
     <h1 id="wiz-done-h1" class="wiz-h1">
-        beatrax knows your money.
+        {{ Lang::get('onboarding::done.h1') }}
     </h1>
     <p class="wiz-lede">
-        Your data is ready. Here's what to do next.
+        {{ Lang::get('onboarding::done.lede') }}
     </p>
 
     <ul class="wiz-next-steps" role="list">
         <li class="wiz-next-step">
-            <span class="wiz-next-step-label">Review your first month</span>
-            <span class="wiz-next-step-target">→ opens dashboard</span>
+            <span class="wiz-next-step-label">{{ Lang::get('onboarding::done.review_label') }}</span>
+            <span class="wiz-next-step-target">{{ Lang::get('onboarding::done.review_target') }}</span>
         </li>
         <li class="wiz-next-step">
-            <span class="wiz-next-step-label">Confirm auto-suggested categories</span>
-            <span class="wiz-next-step-target">→ opens triage</span>
+            <span class="wiz-next-step-label">{{ Lang::get('onboarding::done.confirm_label') }}</span>
+            <span class="wiz-next-step-target">{{ Lang::get('onboarding::done.confirm_target') }}</span>
         </li>
         <li class="wiz-next-step">
-            <span class="wiz-next-step-label">Recovery codes — print them now</span>
+            <span class="wiz-next-step-label">{{ Lang::get('onboarding::done.recovery_label') }}</span>
         </li>
     </ul>
 
@@ -36,7 +37,7 @@
             class="pill-btn-primary"
             wire:click="finish"
         >
-            Open dashboard →
+            {{ Lang::get('onboarding::done.open_dashboard') }}
         </button>
     </x-onboarding::wiz-actions>
 </section>

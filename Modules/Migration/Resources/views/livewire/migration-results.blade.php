@@ -1,22 +1,27 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     $stats = [
-        ['label' => 'Categories', 'value' => $run->categories_count],
-        ['label' => 'Accounts', 'value' => $run->accounts_count],
-        ['label' => 'Counterparties', 'value' => $run->counterparties_resolved_count],
-        ['label' => 'Transactions', 'value' => $run->transactions_inserted_count],
-        ['label' => 'Budget months', 'value' => $budgetMonthsCount],
+        ['label' => Lang::get('migration::results.stats.category'), 'value' => $run->categories_count],
+        ['label' => Lang::get('migration::results.stats.account'), 'value' => $run->accounts_count],
+        ['label' => Lang::get('migration::results.stats.payee'), 'value' => $run->counterparties_resolved_count],
+        ['label' => Lang::get('migration::results.stats.transaction'), 'value' => $run->transactions_inserted_count],
+        ['label' => Lang::get('migration::results.stats.budget'), 'value' => $budgetMonthsCount],
     ];
 
-    $summaryLine = "Imported {$run->categories_count} categories, {$budgetMonthsCount} budget months, and {$run->transactions_inserted_count} transactions.";
+    $summaryLine = Lang::get('migration::results.summary_line', [
+        'categories' => $run->categories_count,
+        'budget_months' => $budgetMonthsCount,
+        'transactions' => $run->transactions_inserted_count,
+    ]);
     if ($stillNeedsAttention > 0) {
-        $summaryLine .= " {$stillNeedsAttention} items still need attention — see below.";
+        $summaryLine .= ' '.Lang::get('migration::results.summary_attention', ['count' => $stillNeedsAttention]);
     }
 @endphp
 
 <div class="space-y-6">
     <header class="space-y-1">
         <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">
-            {{ $isReconciliation ? 'Update applied' : 'Import complete' }}
+            {{ $isReconciliation ? Lang::get('migration::results.heading_update') : Lang::get('migration::results.heading_complete') }}
         </h1>
     </header>
 
@@ -39,7 +44,7 @@
 
     @if ($unmapped !== null && $stillNeedsAttention > 0)
         <section class="space-y-3">
-            @foreach (['category' => 'Still not imported — categories', 'payee' => 'Still not imported — payees', 'extra' => 'Not imported', 'conflict' => 'Needs your decision'] as $groupKey => $groupLabel)
+            @foreach (['category' => Lang::get('migration::results.groups.category'), 'payee' => Lang::get('migration::results.groups.payee'), 'extra' => Lang::get('migration::results.groups.extra'), 'conflict' => Lang::get('migration::results.groups.conflict')] as $groupKey => $groupLabel)
                 @if ($unmapped[$groupKey]['count'] > 0)
                     <details class="rounded-md border border-slate-200 dark:border-slate-700">
                         <summary class="cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -58,10 +63,10 @@
 
     <div class="flex flex-wrap gap-4 text-sm">
         @if ($run->transactions_inserted_count > 0)
-            <a href="{{ route('transactions.index') }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">View transactions</a>
+            <a href="{{ route('transactions.index') }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_transactions') }}</a>
         @endif
         @if ($budgetMonthsCount > 0)
-            <a href="{{ route('budgets.index') }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">View budgets</a>
+            <a href="{{ route('budgets.index') }}" class="font-medium text-slate-900 underline underline-offset-2 hover:text-slate-700 dark:hover:text-slate-300 dark:text-slate-100">{{ Lang::get('migration::results.view_budgets') }}</a>
         @endif
     </div>
 
@@ -70,7 +75,7 @@
             href="{{ route('migrations.index') }}"
             class="inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
         >
-            Back to migrations
+            {{ Lang::get('migration::results.back') }}
         </a>
     </div>
 </div>

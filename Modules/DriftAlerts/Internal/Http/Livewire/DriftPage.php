@@ -18,6 +18,7 @@ use Modules\Anomaly\Public\Actions\SnoozeAnomalyAlert;
 use Modules\Anomaly\Public\Services\AnomalyAlertQuery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Actions\AcknowledgeDriftAlert;
 use Modules\DriftAlerts\Public\Actions\DismissDriftAlertAsCancelled;
 use Modules\DriftAlerts\Public\Actions\SnoozeDriftAlert;
@@ -76,7 +77,7 @@ final class DriftPage extends Component
     public function dismissAnomaly(int $alertId, CurrentUser $currentUser, DismissAnomalyAlert $action): void
     {
         ($action)($alertId, $currentUser->user());
-        $this->dispatch('toast', message: 'Dismissed');
+        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.dismissed'));
     }
 
     public function markAnomalyExpected(int $alertId, CurrentUser $currentUser, DismissAnomalyAlertAsExpected $action): void
@@ -86,7 +87,7 @@ final class DriftPage extends Component
         if ($ruleWritten) {
             // The "Undo" affordance re-opens the anomaly and deletes the
             // suppression rule the dismissal just created.
-            $this->dispatch('toast', message: 'Suppression rule added — Undo', undo: 'undoAnomalySuppression', undoArg: $alertId);
+            $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.suppression_added'), undo: 'undoAnomalySuppression', undoArg: $alertId);
 
             return;
         }
@@ -95,13 +96,13 @@ final class DriftPage extends Component
         // unresolvable, e.g. its transaction was deleted). The dismissal
         // still stands — surface that honestly rather than promising a
         // mute + an Undo that would delete nothing.
-        $this->dispatch('toast', message: 'Dismissed as expected');
+        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.dismissed_expected'));
     }
 
     public function undoAnomalySuppression(int $alertId, CurrentUser $currentUser, RemoveAnomalySuppressionRule $action): void
     {
         $action->undoSuppression($alertId, $currentUser->user());
-        $this->dispatch('toast', message: 'Reopened');
+        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.reopened'));
     }
 
     public function acknowledge(int $alertId, CurrentUser $currentUser, AcknowledgeDriftAlert $action): void
@@ -119,7 +120,7 @@ final class DriftPage extends Component
     private function acknowledgeAlert(int $alertId, CurrentUser $currentUser, callable $action): void
     {
         $action($alertId, $currentUser->user());
-        $this->dispatch('toast', message: 'Acknowledged');
+        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.acknowledged'));
     }
 
     // Bounds the accepted range here (see the class @link) so a tampered
@@ -140,13 +141,13 @@ final class DriftPage extends Component
         }
 
         $action($alertId, $currentUser->user(), $until);
-        $this->dispatch('toast', message: 'Snoozed');
+        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.snoozed'));
     }
 
     public function dismissAsCancelled(int $alertId, CurrentUser $currentUser, DismissDriftAlertAsCancelled $action): void
     {
         ($action)($alertId, $currentUser->user());
-        $this->dispatch('toast', message: 'Dismissed as cancelled');
+        $this->dispatch('toast', message: Lang::get('drift-alerts::alerts.toasts.dismissed_cancelled'));
     }
 
     public function modelCancelInForecast(
@@ -199,7 +200,7 @@ final class DriftPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => 'Alerts · beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::alerts.page_title').' · beatrax']);
 
             return $view;
         }
@@ -248,7 +249,7 @@ final class DriftPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Alerts · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::alerts.page_title').' · beatrax']);
 
         return $view;
     }

@@ -15,6 +15,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
@@ -49,7 +50,7 @@ final class EnvelopeWriter
         $this->assertCategoryAccessible($user, $categoryId);
 
         if ($minor < 0) {
-            throw new InvalidArgumentException('Assigned amount cannot be negative.');
+            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.assigned_negative'));
         }
 
         $periodDate = $periodStart->toDateString();
@@ -146,7 +147,7 @@ final class EnvelopeWriter
         $this->assertCategoryAccessible($user, $categoryId);
 
         if (! in_array($mode, [OverspendMode::ReduceToBudget->value, OverspendMode::CarryNegative->value], true)) {
-            throw new InvalidArgumentException('Invalid overspend mode.');
+            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.invalid_overspend_mode'));
         }
 
         /** @var EnvelopeSettingMutated|null $event */
@@ -215,7 +216,7 @@ final class EnvelopeWriter
 
         if ($thresholdPercent !== null
             && ($thresholdPercent < self::MIN_NOTIFY_THRESHOLD_PERCENT || $thresholdPercent > self::MAX_NOTIFY_THRESHOLD_PERCENT)) {
-            throw new InvalidArgumentException('Notify threshold must be between 1 and 200.');
+            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.threshold_range'));
         }
 
         /** @var EnvelopeSettingMutated|null $event */
@@ -318,11 +319,11 @@ final class EnvelopeWriter
     public function move(User $user, int $fromCategoryId, int $toCategoryId, CarbonImmutable $periodStart, int $minor, ?string $memo = null): int
     {
         if ($fromCategoryId === $toCategoryId) {
-            throw new InvalidArgumentException('Source and destination envelope must be different.');
+            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.same_envelope'));
         }
 
         if ($minor <= 0) {
-            throw new InvalidArgumentException('Invalid or non-positive amount.');
+            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.non_positive_amount'));
         }
 
         $this->assertCategoryAccessible($user, $fromCategoryId);
@@ -483,7 +484,7 @@ final class EnvelopeWriter
     private function assertCategoryAccessible(User $user, int $categoryId): void
     {
         if (! $this->query->canBudget($user, $categoryId)) {
-            throw new InvalidArgumentException('Category not found or not accessible by user.');
+            throw new InvalidArgumentException(Lang::get('budgets::messages.errors.category_not_found'));
         }
     }
 }

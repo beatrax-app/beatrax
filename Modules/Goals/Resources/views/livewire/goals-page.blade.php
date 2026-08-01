@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /goals page — list savings goals with 3-state progress bars and projected-
     date copy; Flux create/edit modal with inline field validation; Edit /
@@ -36,8 +37,8 @@
     {{-- Page header --}}
     <header class="mb-8 flex items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Goals</h1>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Track progress toward your savings targets.</p>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('goals::messages.page.title') }}</h1>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.subtitle') }}</p>
         </div>
         {{-- Trigger: phone → dispatch open-sheet; desktop → $flux.modal().show() --}}
         <button
@@ -51,15 +52,15 @@
                 }
             "
             class="inline-flex shrink-0 items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-        >Add goal</button>
+        >{{ Lang::get('goals::messages.page.add_goal') }}</button>
     </header>
 
     {{-- Active + completed goals list --}}
     @if (count($rows) === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">No goals yet</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('goals::messages.empty.heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Set a target amount and date to start tracking your savings progress.
+                {{ Lang::get('goals::messages.empty.body') }}
             </p>
             <button
                 type="button"
@@ -72,7 +73,7 @@
                     }
                 "
                 class="mt-4 inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-            >Add your first goal</button>
+            >{{ Lang::get('goals::messages.empty.add_first') }}</button>
         </div>
     @else
         {{-- Phone card list (hidden at >=768px via CSS .goals-phone-list display:none) --}}
@@ -99,9 +100,9 @@
                         <p class="secondary">
                             {{ $fmt($row->contributedMinor, $row->currency) }} / {{ $fmt($row->targetMinor, $row->currency) }}
                             @if ($row->progressState === 'overdue')
-                                · <span class="text-amber-600 dark:text-amber-400">Overdue</span>
+                                · <span class="text-amber-600 dark:text-amber-400">{{ Lang::get('goals::messages.status.overdue') }}</span>
                             @elseif ($row->progressState === 'reached')
-                                · <span class="text-emerald-600 dark:text-emerald-400">Reached</span>
+                                · <span class="text-emerald-600 dark:text-emerald-400">{{ Lang::get('goals::messages.status.reached') }}</span>
                             @endif
                         </p>
                     </div>
@@ -118,7 +119,7 @@
                             }
                         "
                         class="text-xs text-slate-400 hover:text-slate-900 focus:outline-none dark:hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                    >Edit</button>
+                    >{{ Lang::get('goals::messages.row.edit') }}</button>
                 </li>
             @endforeach
         </ul>
@@ -143,11 +144,11 @@
                         <p class="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $row->name }}</p>
                         <div class="flex shrink-0 items-center gap-2">
                             @if ($isReached)
-                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-[3px] text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Reached</span>
+                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-[3px] text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">{{ Lang::get('goals::messages.status.reached') }}</span>
                             @elseif ($isOverdue)
-                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-[3px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Overdue</span>
+                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-[3px] text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
                             @elseif ($isCompleted)
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">Completed</span>
+                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.completed') }}</span>
                             @endif
                         </div>
                     </div>
@@ -166,7 +167,7 @@
                                 aria-valuenow="{{ $pct }}"
                                 aria-valuemin="0"
                                 aria-valuemax="100"
-                                aria-label="{{ $row->name }}: {{ $pct }}% complete"
+                                aria-label="{{ Lang::get('goals::messages.progress.aria', ['name' => $row->name, 'pct' => $pct]) }}"
                             >
                                 <div
                                     class="h-1.5 rounded-full {{ $progressColor[$row->progressState] }}"
@@ -185,16 +186,16 @@
                         </p>
                         <p class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                             @if ($isCompleted || $isReached)
-                                Target reached
+                                {{ Lang::get('goals::messages.projection.target_reached') }}
                             @elseif ($row->projectedFinishDate === null && $row->contributedMinor <= 0)
-                                Add contributions to see a projection
+                                {{ Lang::get('goals::messages.projection.add_contributions') }}
                             @elseif ($row->projectedFinishDate === null)
-                                Building a projection&hellip;
+                                {{ Lang::get('goals::messages.projection.building') }}
                             @elseif ($row->projectionBeyondHorizon)
-                                Est. {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY') }} ·
-                                <span class="text-slate-400 dark:text-slate-500">(projection)</span>
+                                {{ Lang::get('goals::messages.projection.est', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
+                                <span class="text-slate-400 dark:text-slate-500">{{ Lang::get('goals::messages.projection.projection_note') }}</span>
                             @else
-                                Projected: {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY') }}
+                                {{ Lang::get('goals::messages.projection.projected', ['date' => \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->isoFormat('D MMM YYYY')]) }}
                             @endif
                         </p>
                     </div>
@@ -202,18 +203,18 @@
                     {{-- Archive micro-confirm or footer actions --}}
                     @if ($archivingGoalId === $row->id)
                         <div class="mt-3 flex items-center gap-3 rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900">
-                            <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">Archive this goal?</p>
+                            <p class="flex-1 text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('goals::messages.archive.confirm_question') }}</p>
                             <button
                                 type="button"
                                 wire:click="cancelArchive"
                                 class="text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
-                            >Close</button>
+                            >{{ Lang::get('goals::messages.archive.close') }}</button>
                             <button
                                 type="button"
                                 wire:click="archive({{ $row->id }})"
-                                aria-label="Confirm archive of {{ $row->name }}"
+                                aria-label="{{ Lang::get('goals::messages.archive.confirm_aria', ['name' => $row->name]) }}"
                                 class="text-sm font-medium text-rose-600 hover:text-rose-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:text-rose-400 dark:hover:text-rose-200"
-                            >Archive</button>
+                            >{{ Lang::get('goals::messages.archive.archive') }}</button>
                         </div>
                     @else
                         <div class="mt-3 flex items-center gap-2">
@@ -228,20 +229,20 @@
                                     }
                                 "
                                 class="text-sm text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100"
-                            >Edit</button>
+                            >{{ Lang::get('goals::messages.row.edit') }}</button>
 
                             <flux:dropdown>
                                 <flux:button
                                     variant="ghost"
                                     size="sm"
                                     icon="ellipsis-horizontal"
-                                    aria-label="More actions for {{ $row->name }}"
+                                    aria-label="{{ Lang::get('goals::messages.actions.more_aria', ['name' => $row->name]) }}"
                                 />
                                 <flux:menu>
                                     @if (! $isCompleted)
-                                        <flux:menu.item wire:click="markComplete({{ $row->id }})">Mark as complete</flux:menu.item>
+                                        <flux:menu.item wire:click="markComplete({{ $row->id }})">{{ Lang::get('goals::messages.actions.mark_complete') }}</flux:menu.item>
                                     @endif
-                                    <flux:menu.item wire:click="confirmArchive({{ $row->id }})">Archive</flux:menu.item>
+                                    <flux:menu.item wire:click="confirmArchive({{ $row->id }})">{{ Lang::get('goals::messages.actions.archive') }}</flux:menu.item>
                                 </flux:menu>
                             </flux:dropdown>
                         </div>
@@ -259,7 +260,7 @@
                 wire:click="$toggle('showArchived')"
                 class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
             >
-                <span>Archived goals ({{ count($archived) }})</span>
+                <span>{{ Lang::get('goals::messages.archived_disclosure', ['count' => count($archived)]) }}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4 transition-transform {{ $showArchived ? 'rotate-180' : '' }}" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
@@ -271,7 +272,7 @@
                         <li class="rounded-lg border border-slate-200 bg-white p-4 opacity-60 dark:bg-slate-950 dark:border-slate-700">
                             <div class="flex items-center justify-between gap-3">
                                 <p class="min-w-0 truncate text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $row->name }}</p>
-                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">Archived</span>
+                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.archived') }}</span>
                             </div>
                             @if ($row->accountName !== null)
                                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ $row->accountName }}</p>
@@ -289,10 +290,10 @@
                                         variant="ghost"
                                         size="sm"
                                         icon="ellipsis-horizontal"
-                                        aria-label="More actions for {{ $row->name }}"
+                                        aria-label="{{ Lang::get('goals::messages.actions.more_aria', ['name' => $row->name]) }}"
                                     />
                                     <flux:menu>
-                                        <flux:menu.item wire:click="restore({{ $row->id }})">Restore</flux:menu.item>
+                                        <flux:menu.item wire:click="restore({{ $row->id }})">{{ Lang::get('goals::messages.actions.restore') }}</flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </div>
@@ -308,18 +309,18 @@
     {{-- At <768px: slides up as a sheet. At >=768px: hidden (flux modal     --}}
     {{-- handles desktop). Same Livewire wire: bindings as the flux modal.   --}}
     {{-- ------------------------------------------------------------------- --}}
-    <x-core::bottom-sheet name="goal-form" title="{{ $editGoalId ? 'Edit goal' : 'Create a savings goal' }}">
+    <x-core::bottom-sheet name="goal-form" :title="$editGoalId ? Lang::get('goals::messages.form.title_edit') : Lang::get('goals::messages.form.title_create')">
         <form
             wire:submit="{{ $editGoalId ? 'updateGoal' : 'createGoal' }}"
             class="space-y-4"
         >
             <div>
-                <label for="goal-name-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Name</label>
+                <label for="goal-name-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.name') }}</label>
                 <input
                     type="text"
                     id="goal-name-sheet"
                     wire:model="name"
-                    placeholder="e.g. Emergency fund"
+                    placeholder="{{ Lang::get('goals::messages.form.name_placeholder') }}"
                     style="font-size: 16px;"
                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
@@ -340,7 +341,7 @@
                 }
             @endphp
             <div>
-                <label for="goal-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target amount ({{ $amountCurrencySheet }})</label>
+                <label for="goal-amount-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.target_amount', ['currency' => $amountCurrencySheet]) }}</label>
                 <input
                     type="text"
                     id="goal-amount-sheet"
@@ -356,7 +357,7 @@
             </div>
 
             <div>
-                <label for="goal-date-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target date</label>
+                <label for="goal-date-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.target_date') }}</label>
                 <input
                     type="date"
                     id="goal-date-sheet"
@@ -370,14 +371,14 @@
             </div>
 
             <div>
-                <label for="goal-account-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Savings account (optional)</label>
+                <label for="goal-account-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.savings_account') }}</label>
                 <select
                     id="goal-account-sheet"
                     wire:model.live="accountId"
                     style="font-size: 16px;"
                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 >
-                    <option value="">No account — track manually</option>
+                    <option value="">{{ Lang::get('goals::messages.form.no_account') }}</option>
                     @foreach ($accounts as $account)
                         <option value="{{ $account->id }}">{{ $account->name }}</option>
                     @endforeach
@@ -388,12 +389,12 @@
                 <button
                     type="submit"
                     class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                >{{ $editGoalId ? 'Save changes' : 'Save goal' }}</button>
+                >{{ $editGoalId ? Lang::get('goals::messages.form.save_changes') : Lang::get('goals::messages.form.save_goal') }}</button>
                 <button
                     type="button"
                     wire:click="cancel"
                     class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none dark:border-slate-700 dark:hover:text-slate-100"
-                >Close</button>
+                >{{ Lang::get('goals::messages.form.close') }}</button>
             </div>
         </form>
     </x-core::bottom-sheet>
@@ -404,10 +405,10 @@
     <flux:modal name="goal-form" dismissible>
         <div class="pt-[44px]" style="max-width: 520px;">
             <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {{ $editGoalId ? 'Edit goal' : 'Create a savings goal' }}
+                {{ $editGoalId ? Lang::get('goals::messages.form.title_edit') : Lang::get('goals::messages.form.title_create') }}
             </h2>
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {{ $editGoalId ? 'Update the name, target, date, or linked account.' : 'Set a target amount and date to track your savings progress.' }}
+                {{ $editGoalId ? Lang::get('goals::messages.form.subtitle_edit') : Lang::get('goals::messages.form.subtitle_create') }}
             </p>
 
             <form
@@ -416,12 +417,12 @@
             >
                 {{-- Name --}}
                 <div>
-                    <label for="goal-name" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Name</label>
+                    <label for="goal-name" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.name') }}</label>
                     <input
                         type="text"
                         id="goal-name"
                         wire:model="name"
-                        placeholder="e.g. Emergency fund"
+                        placeholder="{{ Lang::get('goals::messages.form.name_placeholder') }}"
                         @if ($errorName !== '') aria-invalid="true" aria-describedby="goal-name-error" @endif
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                     />
@@ -447,7 +448,7 @@
                     }
                 @endphp
                 <div>
-                    <label for="goal-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target amount ({{ $amountCurrency }})</label>
+                    <label for="goal-amount" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.target_amount', ['currency' => $amountCurrency]) }}</label>
                     <input
                         type="text"
                         id="goal-amount"
@@ -465,7 +466,7 @@
 
                 {{-- Target date --}}
                 <div>
-                    <label for="goal-date" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Target date</label>
+                    <label for="goal-date" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.target_date') }}</label>
                     <input
                         type="date"
                         id="goal-date"
@@ -480,13 +481,13 @@
 
                 {{-- Savings account (optional) --}}
                 <div>
-                    <label for="goal-account" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Savings account (optional)</label>
+                    <label for="goal-account" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.savings_account') }}</label>
                     <select
                         id="goal-account"
                         wire:model.live="accountId"
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                     >
-                        <option value="">No account — track manually</option>
+                        <option value="">{{ Lang::get('goals::messages.form.no_account') }}</option>
                         @foreach ($accounts as $account)
                             <option value="{{ $account->id }}">{{ $account->name }}</option>
                         @endforeach
@@ -495,7 +496,7 @@
 
                 {{-- Linked pot (optional) — D-11; settable from goal side --}}
                 <div>
-                    <label for="goal-pot" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Linked pot (optional)</label>
+                    <label for="goal-pot" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.linked_pot') }}</label>
                     <select
                         id="goal-pot"
                         wire:model="linkedPotId"
@@ -503,9 +504,9 @@
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 disabled:opacity-50 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                     >
                         @if ($accountId === '')
-                            <option value="" disabled>Select an account first</option>
+                            <option value="" disabled>{{ Lang::get('goals::messages.form.select_account_first') }}</option>
                         @else
-                            <option value="">No pot — use transfer tracking</option>
+                            <option value="">{{ Lang::get('goals::messages.form.no_pot') }}</option>
                             @foreach ($pots as $pot)
                                 <option value="{{ $pot->id }}">{{ $pot->name }}</option>
                             @endforeach
@@ -514,7 +515,7 @@
                     @if ($errorLinkedPot !== '')
                         <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorLinkedPot }}</p>
                     @endif
-                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">When linked, the pot's balance drives this goal's progress.</p>
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('goals::messages.form.linked_pot_help') }}</p>
                 </div>
 
                 {{-- Modal footer --}}
@@ -523,11 +524,11 @@
                         type="button"
                         wire:click="cancel"
                         class="rounded-md px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:text-slate-100 dark:text-slate-400"
-                    >Close</button>
+                    >{{ Lang::get('goals::messages.form.close') }}</button>
                     <button
                         type="submit"
                         class="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                    >{{ $editGoalId ? 'Save changes' : 'Save goal' }}</button>
+                    >{{ $editGoalId ? Lang::get('goals::messages.form.save_changes') : Lang::get('goals::messages.form.save_goal') }}</button>
                 </div>
             </form>
         </div>

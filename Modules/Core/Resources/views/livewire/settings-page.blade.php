@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     // Shared card chrome for the grouped settings sections. The redesign only
     // changes the visual container — every control, id, wire: binding, @error
@@ -16,18 +17,18 @@
 
 <div class="max-w-2xl mx-auto space-y-6" data-testid="settings-page">
     <header class="space-y-1">
-        <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Settings</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Preferences for how your finances appear in the app.</p>
+        <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.title') }}</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.subtitle') }}</p>
     </header>
 
     {{-- ===== Appearance ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2">
-            <h2 class="{{ $cardHead }}">Appearance</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.appearance.heading') }}</h2>
             <div class="space-y-1">
-                <span class="block text-sm text-slate-900 dark:text-slate-100">Theme</span>
-                <div role="radiogroup" aria-label="Theme" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    @foreach (['light' => 'Light', 'dark' => 'Dark', 'system' => 'System'] as $value => $label)
+                <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.appearance.theme') }}</span>
+                <div role="radiogroup" aria-label="{{ Lang::get('core::settings.appearance.theme') }}" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    @foreach (['light' => Lang::get('core::settings.appearance.theme_light'), 'dark' => Lang::get('core::settings.appearance.theme_dark'), 'system' => Lang::get('core::settings.appearance.theme_system')] as $value => $label)
                         <button
                             type="button"
                             role="radio"
@@ -43,8 +44,39 @@
                         </button>
                     @endforeach
                 </div>
-                <p class="text-xs text-slate-500 dark:text-slate-400">System follows your operating system's light or dark setting.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.appearance.theme_help') }}</p>
                 @error('theme')
+                    <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
+                @enderror
+            </div>
+        </section>
+    </div>
+
+    {{-- ===== Language ===== --}}
+    <div class="{{ $card }}">
+        <section class="space-y-2">
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.language.heading') }}</h2>
+            <div class="space-y-1">
+                <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.language.label') }}</span>
+                <div role="radiogroup" aria-label="{{ Lang::get('core::settings.language.heading') }}" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    @foreach (['auto' => Lang::get('core::settings.language.system'), 'en' => 'English', 'nl' => 'Nederlands'] as $value => $label)
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked="{{ $locale === $value ? 'true' : 'false' }}"
+                            wire:click="setLocale('{{ $value }}')"
+                            @class([
+                                'px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100',
+                                'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' => $locale === $value,
+                                'bg-white text-slate-900 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900' => $locale !== $value,
+                            ])
+                        >
+                            {{ $label }}
+                        </button>
+                    @endforeach
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
+                @error('locale')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
             </div>
@@ -54,19 +86,19 @@
     {{-- ===== Preferences (batch save) ===== --}}
     <form wire:submit="save" class="{{ $card }} space-y-8">
         <section class="space-y-2">
-            <h2 class="{{ $cardHead }}">Currency display</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.currency_display.heading') }}</h2>
             <div class="space-y-1">
-                <label for="defaultCurrencyView" class="block text-sm text-slate-900 dark:text-slate-100">Default view on the transactions list</label>
+                <label for="defaultCurrencyView" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.currency_display.label') }}</label>
                 <select
                     id="defaultCurrencyView"
                     name="defaultCurrencyView"
                     wire:model="defaultCurrencyView"
                     class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 >
-                    <option value="eur_only">EUR only</option>
-                    <option value="original">Original currency</option>
+                    <option value="eur_only">{{ Lang::get('core::settings.currency_display.eur_only') }}</option>
+                    <option value="original">{{ Lang::get('core::settings.currency_display.original') }}</option>
                 </select>
-                <p class="text-xs text-slate-500 dark:text-slate-400">You can still switch per page from the transactions list.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.currency_display.help') }}</p>
                 @error('defaultCurrencyView')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
@@ -77,9 +109,9 @@
         <section class="space-y-6">
             {{-- Sub-section A: Base reporting currency picker --}}
             <div class="space-y-2">
-                <h2 class="{{ $cardHead }}">Base reporting currency</h2>
+                <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.base_currency.heading') }}</h2>
                 <div class="space-y-1">
-                    <label for="baseCurrency" class="block text-sm text-slate-900 dark:text-slate-100">Reporting currency</label>
+                    <label for="baseCurrency" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.base_currency.label') }}</label>
                     <select
                         id="baseCurrency"
                         name="baseCurrency"
@@ -90,7 +122,7 @@
                             <option value="{{ $code }}">{{ $code }} — {{ $name }}</option>
                         @endforeach
                     </select>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">All totals and roll-ups convert to this currency. Each account still shows its own original currency alongside.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.base_currency.help') }}</p>
                     @error('baseCurrency')
                         <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                     @enderror
@@ -99,18 +131,18 @@
 
             {{-- Sub-section B: Online exchange-rate fetch toggle --}}
             <div class="space-y-3">
-                <h2 class="{{ $cardHead }}">Exchange rates</h2>
+                <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.exchange_rates.heading') }}</h2>
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex-1">
-                        <p class="text-sm text-[var(--color-text)]">Fetch current rates online</p>
+                        <p class="text-sm text-[var(--color-text)]">{{ Lang::get('core::settings.exchange_rates.fetch_online') }}</p>
                         <p class="mt-1 text-xs text-[var(--color-text-muted)]">
                             @if ($fxOnlineEnabled)
-                                Rates fetched from ECB daily. Only currency pair lookups — no personal data.
+                                {{ Lang::get('core::settings.exchange_rates.online_on') }}
                                 @if ($fxLastUpdated)
-                                    Last updated: {{ $fxLastUpdated }}.
+                                    {{ Lang::get('core::settings.exchange_rates.last_updated', ['date' => $fxLastUpdated]) }}
                                 @endif
                             @else
-                                Bundled rates are used. No data leaves your machine.
+                                {{ Lang::get('core::settings.exchange_rates.online_off') }}
                             @endif
                         </p>
                     </div>
@@ -118,7 +150,7 @@
                             class="switch{{ $fxOnlineEnabled ? ' switch--on' : '' }}"
                             wire:click="toggleFxOnline"
                             aria-pressed="{{ $fxOnlineEnabled ? 'true' : 'false' }}"
-                            aria-label="Fetch current exchange rates online">
+                            aria-label="{{ Lang::get('core::settings.exchange_rates.fetch_aria') }}">
                         <span class="switch__thumb"></span>
                     </button>
                 </div>
@@ -127,9 +159,9 @@
                     <div wire:transition class="flex items-center justify-between gap-3">
                         <p class="text-xs" style="color: var(--color-text-faint);">
                             @if ($fxRefreshing)
-                                Refreshing&hellip;
+                                {{ Lang::get('core::settings.exchange_rates.refreshing') }}
                             @else
-                                Next auto-refresh: daily at 09:00
+                                {{ Lang::get('core::settings.exchange_rates.next_refresh') }}
                             @endif
                         </p>
                         <button
@@ -137,16 +169,16 @@
                             wire:click="refreshFxRates"
                             wire:loading.attr="disabled"
                             class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
-                        >Refresh now</button>
+                        >{{ Lang::get('core::settings.exchange_rates.refresh_now') }}</button>
                     </div>
                 @endif
             </div>
         </section>
 
         <section class="space-y-2">
-            <h2 class="{{ $cardHead }}">Period</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.period.heading') }}</h2>
             <div class="space-y-1">
-                <label for="periodStartDay" class="block text-sm text-slate-900 dark:text-slate-100">Period starts on day</label>
+                <label for="periodStartDay" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.period.label') }}</label>
                 <input
                     type="number"
                     min="1"
@@ -156,7 +188,7 @@
                     wire:model="periodStartDay"
                     class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 />
-                <p class="text-xs text-slate-500 dark:text-slate-400">Numbered 1 to 28. Most users keep this on 1 (calendar month). Use 25 if your salary lands on the 25th and you think of "your month" as starting then.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.period.help') }}</p>
                 @error('periodStartDay')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
@@ -164,9 +196,9 @@
         </section>
 
         <section class="space-y-4">
-            <h2 class="{{ $cardHead }}">Recurring detection</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.recurring.heading') }}</h2>
             <div class="space-y-1">
-                <label for="recurringDetectionWindowMonths" class="block text-sm text-slate-900 dark:text-slate-100">Detection window (months)</label>
+                <label for="recurringDetectionWindowMonths" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.recurring.window_label') }}</label>
                 <input
                     type="number"
                     min="2"
@@ -176,13 +208,13 @@
                     wire:model="recurringDetectionWindowMonths"
                     class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 />
-                <p class="text-xs text-slate-500 dark:text-slate-400">How many months of history to scan when clustering transactions into recurring patterns.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.recurring.window_help') }}</p>
                 @error('recurringDetectionWindowMonths')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
             </div>
             <div class="space-y-1">
-                <label for="recurringIncomeMinAmountMinor" class="block text-sm text-slate-900 dark:text-slate-100">Income minimum (cents)</label>
+                <label for="recurringIncomeMinAmountMinor" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.recurring.income_label') }}</label>
                 <input
                     type="number"
                     min="0"
@@ -192,7 +224,7 @@
                     wire:model="recurringIncomeMinAmountMinor"
                     class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 />
-                <p class="text-xs text-slate-500 dark:text-slate-400">Incomes below this threshold are not auto-clustered. Stored in cents — 200000 means €2,000.00. Set to 0 to disable the threshold.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.recurring.income_help') }}</p>
                 @error('recurringIncomeMinAmountMinor')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
@@ -200,23 +232,23 @@
         </section>
 
         <section class="space-y-2">
-            <h2 class="{{ $cardHead }}">Drift alerts</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.drift.heading') }}</h2>
             <div class="space-y-1" id="drift-threshold">
-                <label for="driftAlertThresholdPercent" class="block text-sm text-slate-900 dark:text-slate-100">Default drift alert threshold</label>
+                <label for="driftAlertThresholdPercent" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.drift.label') }}</label>
                 <select
                     id="driftAlertThresholdPercent"
                     name="driftAlertThresholdPercent"
                     wire:model="driftAlertThresholdPercent"
                     class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                 >
-                    <option value="1">±1%</option>
-                    <option value="2">±2%</option>
-                    <option value="5">±5% (default)</option>
-                    <option value="10">±10%</option>
-                    <option value="25">±25%</option>
-                    <option value="50">±50%</option>
+                    <option value="1">{{ Lang::get('core::settings.drift.options.1') }}</option>
+                    <option value="2">{{ Lang::get('core::settings.drift.options.2') }}</option>
+                    <option value="5">{{ Lang::get('core::settings.drift.options.5') }}</option>
+                    <option value="10">{{ Lang::get('core::settings.drift.options.10') }}</option>
+                    <option value="25">{{ Lang::get('core::settings.drift.options.25') }}</option>
+                    <option value="50">{{ Lang::get('core::settings.drift.options.50') }}</option>
                 </select>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Alerts fire when a recurring charge's latest amount differs from the prior amount by more than this percentage. Per-series overrides take precedence.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.drift.help') }}</p>
                 @error('driftAlertThresholdPercent')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
@@ -228,10 +260,10 @@
                 type="submit"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus-visible:ring-emerald-500"
             >
-                Save settings
+                {{ Lang::get('core::settings.save') }}
             </button>
             @if ($saved)
-                <p wire:transition.duration.4000ms class="text-sm text-emerald-700 dark:text-emerald-400">Saved.</p>
+                <p wire:transition.duration.4000ms class="text-sm text-emerald-700 dark:text-emerald-400">{{ Lang::get('core::settings.saved') }}</p>
             @endif
         </div>
     </form>
@@ -239,7 +271,7 @@
     {{-- ===== Anomaly detection (sensitivity, floor, suppression rules) ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="anomaly-detection">
-            <h2 class="{{ $cardHead }}">Anomaly detection</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.anomaly_heading') }}</h2>
             @livewire('anomaly.settings-section')
         </section>
     </div>
@@ -247,7 +279,7 @@
     {{-- ===== Notifications (D-36) — anchored next to Anomaly detection ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="notifications-settings">
-            <h2 class="{{ $cardHead }}">Notifications</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.notifications_heading') }}</h2>
             @livewire('notifications.settings-section')
         </section>
     </div>
@@ -255,13 +287,13 @@
     {{-- ===== Forecasting ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-3" id="forecast-buffers">
-            <h2 class="{{ $cardHead }}">Forecasting</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.forecasting.heading') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                beatrax projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.
+                {{ Lang::get('core::settings.forecasting.intro') }}
             </p>
 
             @if (count($forecastingAccounts ?? []) === 0)
-                <p class="text-sm text-slate-500 dark:text-slate-400">No accounts yet — import a statement to add one.</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.forecasting.no_accounts') }}</p>
             @else
                 <div class="space-y-3">
                     @foreach ($forecastingAccounts as $account)
@@ -303,7 +335,7 @@
     {{-- ===== Importing (auto-import + aliases) ===== --}}
     <div class="{{ $card }} space-y-8">
         <section class="space-y-2">
-            <h2 class="{{ $cardHead }}">Auto-import</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.auto_import.heading') }}</h2>
             <div class="space-y-2">
                 <label for="auto-import-toggle" class="flex items-start gap-3 cursor-pointer">
                     <input
@@ -315,12 +347,12 @@
                         class="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-600 dark:text-emerald-500 dark:focus:ring-emerald-500"
                     />
                     <div class="flex-1">
-                        <span class="block text-sm text-slate-900 dark:text-slate-100">Auto-import from drop folder</span>
+                        <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.auto_import.label') }}</span>
                         <p id="auto-import-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             @if ($autoImportFromDropFolder)
-                                Drop folder is active. beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for new files.
+                                {!! Lang::get('core::settings.auto_import.active_html', ['userId' => $userId]) !!}
                             @else
-                                When on, beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/{{ $userId }}/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they're never imported twice.
+                                {!! Lang::get('core::settings.auto_import.inactive_html', ['userId' => $userId]) !!}
                             @endif
                         </p>
                     </div>
@@ -329,21 +361,21 @@
         </section>
 
         <section class="space-y-2" id="aliases">
-            <h2 class="{{ $cardHead }}">Aliases</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.aliases.heading') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                Review and edit the friendly names you've taught beatrax for cryptic statement descriptions.
+                {{ Lang::get('core::settings.aliases.intro') }}
             </p>
             <a
                 href="{{ route('settings.aliases') }}"
                 class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >Manage aliases →</a>
+            >{{ Lang::get('core::settings.aliases.manage') }}</a>
         </section>
     </div>
 
     {{-- ===== Tax — country + deduction categories ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="tax-settings">
-            <h2 class="{{ $cardHead }}">Tax</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.tax_heading') }}</h2>
             @livewire('tax.settings-section')
         </section>
     </div>
@@ -351,7 +383,7 @@
     {{-- ===== Shared merchant list ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="shared-merchant-list">
-            <h2 class="{{ $cardHead }}">Shared merchant list</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.shared_merchant_heading') }}</h2>
             @livewire('community.shared-list-settings-panel')
         </section>
     </div>
@@ -359,7 +391,7 @@
     {{-- ===== Data & backup ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="data-backup">
-            <h2 class="{{ $cardHead }}">Data &amp; backup</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.data_backup_heading') }}</h2>
             @livewire('core.encrypted-backup-download')
             @livewire('core.encrypted-backup-restore')
         </section>
@@ -370,7 +402,7 @@
          logic owned by the x-core::install-hint component. --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="install-app">
-            <h2 class="{{ $cardHead }}">Install</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.install_heading') }}</h2>
             <x-core::install-hint />
         </section>
     </div>
@@ -378,45 +410,45 @@
     {{-- ===== Help & about ===== --}}
     <div class="{{ $card }} space-y-8">
         <section class="space-y-2" id="about-updates">
-            <h2 class="{{ $cardHead }}">About updates</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.about_updates.heading') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.
+                {{ Lang::get('core::settings.about_updates.body') }}
             </p>
             <button
                 type="button"
                 wire:click="openReleasesPage"
                 class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >Open releases page →</button>
+            >{{ Lang::get('core::settings.about_updates.open_releases') }}</button>
         </section>
 
         <section class="space-y-2" id="first-run-tour">
-            <h2 class="{{ $cardHead }}">First-run tour</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.first_run_tour.heading') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                Re-launch the setup wizard if you want to walk back through the introductory flow.
+                {{ Lang::get('core::settings.first_run_tour.body') }}
             </p>
             <a
                 href="{{ route('setup', ['force' => 1]) }}"
                 class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >Run setup wizard again</a>
+            >{{ Lang::get('core::settings.first_run_tour.run_again') }}</a>
         </section>
     </div>
 
     {{-- ===== Advanced (developer) ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="developer-mode">
-            <h2 class="{{ $cardHead }}">Developer</h2>
+            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.developer.heading') }}</h2>
             <div class="flex items-start justify-between gap-3">
                 <div class="flex-1">
-                    <p class="text-sm text-[var(--color-text)]">In-app Dev Console</p>
+                    <p class="text-sm text-[var(--color-text)]">{{ Lang::get('core::settings.developer.label') }}</p>
                     <p class="mt-1 text-xs text-[var(--color-text-muted)]">
-                        Show the Dev Console at /dev. Resets the Advanced toggle on every login.
+                        {{ Lang::get('core::settings.developer.help') }}
                     </p>
                 </div>
                 <button type="button"
                         class="switch{{ $isDeveloper ? ' switch--on' : '' }}"
                         wire:click="setDevMode({{ $isDeveloper ? 'false' : 'true' }})"
                         aria-pressed="{{ $isDeveloper ? 'true' : 'false' }}"
-                        aria-label="Developer mode">
+                        aria-label="{{ Lang::get('core::settings.developer.aria') }}">
                     <span class="switch__thumb"></span>
                 </button>
             </div>

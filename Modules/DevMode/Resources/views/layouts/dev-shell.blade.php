@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
 @inject('router', \Illuminate\Routing\Router::class)
@@ -53,10 +54,14 @@
      * regardless.
      */
     $devNavItems = $devSidebarItems->all();
+
+    // Matches <html lang> to the request's resolved UI language, same as
+    // the full app layout.
+    $currentLocale = $container->make(\Illuminate\Contracts\Translation\Translator::class)->getLocale();
 @endphp
 <!doctype html>
 <html
-    lang="en"
+    lang="{{ $currentLocale }}"
     class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $isDark ? 'dark' : '' }}"
     style="font-feature-settings: 'tnum';"
 >
@@ -64,7 +69,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <title>{{ $title ?? 'Dev Console — beatrax' }}</title>
+        <title>{{ $title ?? Lang::get('dev::shell.title_default') }}</title>
         @if ($needsPrePaintScript)
             <script>
                 (function () {
@@ -119,10 +124,10 @@
         x-on:keydown.window="onKey($event)"
     >
         <div class="flex min-h-screen">
-            <aside class="dev-side" aria-label="Dev Console" style="--side-w-dev: 220px;">
+            <aside class="dev-side" aria-label="{{ Lang::get('dev::shell.sidebar_aria') }}" style="--side-w-dev: 220px;">
                 <div class="dev-side-head">
-                    <span>Dev Console</span>
-                    <span class="dev-on-chip" aria-label="Developer mode on">ON</span>
+                    <span>{{ Lang::get('dev::shell.heading') }}</span>
+                    <span class="dev-on-chip" aria-label="{{ Lang::get('dev::shell.on_chip_aria') }}">{{ Lang::get('dev::shell.on_chip') }}</span>
                 </div>
 
                 @foreach ($devNavItems as $item)
@@ -152,9 +157,9 @@
                 @endforeach
 
                 <div class="side-foot">
-                    <a href="/" class="dev-back-link" aria-label="Back to app">
+                    <a href="/" class="dev-back-link" aria-label="{{ Lang::get('dev::shell.back_to_app') }}">
                         <span aria-hidden="true">←</span>
-                        Back to app
+                        {{ Lang::get('dev::shell.back_to_app') }}
                     </a>
                 </div>
             </aside>

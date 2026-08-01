@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../../.docs/features/onboarding/architecture.md
@@ -132,7 +133,7 @@ final class StartingBalanceCard extends Component
         CurrentUser $currentUser,
     ): void {
         if ($this->accountId <= 0) {
-            $this->validationError = 'Account not set. Reload the wizard.';
+            $this->validationError = Lang::get('onboarding::starting_balance.errors.account_not_set');
 
             return;
         }
@@ -144,7 +145,7 @@ final class StartingBalanceCard extends Component
         $date = $this->editedDate;
         $error = $this->amountDateError($minor, $date);
         if ($error !== null || $minor === null || $date === null) {
-            $this->validationError = $error ?? 'Enter a valid amount.';
+            $this->validationError = $error ?? Lang::get('onboarding::starting_balance.errors.invalid_amount');
 
             return;
         }
@@ -160,11 +161,11 @@ final class StartingBalanceCard extends Component
         $timestamp = ($date === null || $date === '') ? false : strtotime($date);
 
         return match (true) {
-            $minor === null => 'Enter a valid amount.',
-            $minor < self::MIN_BALANCE_MINOR || $minor > self::MAX_BALANCE_MINOR => 'Enter an amount between -€10M and €10M.',
-            $date === null || $date === '' => 'Pick a date.',
-            $timestamp === false => 'Pick a valid date.',
-            $timestamp > time() => 'Starting balance date cannot be in the future.',
+            $minor === null => Lang::get('onboarding::starting_balance.errors.invalid_amount'),
+            $minor < self::MIN_BALANCE_MINOR || $minor > self::MAX_BALANCE_MINOR => Lang::get('onboarding::starting_balance.errors.amount_range'),
+            $date === null || $date === '' => Lang::get('onboarding::starting_balance.errors.pick_date'),
+            $timestamp === false => Lang::get('onboarding::starting_balance.errors.pick_valid_date'),
+            $timestamp > time() => Lang::get('onboarding::starting_balance.errors.future_date'),
             default => null,
         };
     }
@@ -181,10 +182,9 @@ final class StartingBalanceCard extends Component
             ->value('posted_at');
 
         if (is_string($earliest) && $earliest !== '' && $date > substr($earliest, 0, 10)) {
-            $this->dateWarning = sprintf(
-                'This is later than your first imported transaction (%s). Your dashboard may show transactions before this date.',
-                substr($earliest, 0, 10),
-            );
+            $this->dateWarning = Lang::get('onboarding::starting_balance.errors.date_warning', [
+                'date' => substr($earliest, 0, 10),
+            ]);
         }
 
         $this->state = 'confirmed';

@@ -11,6 +11,7 @@ use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Reports\Public\Actions\DeleteReport;
 use Modules\Reports\Public\Actions\TogglePin;
 use Modules\Reports\Public\Services\SavedReportsQuery;
@@ -78,13 +79,13 @@ final class ReportsIndex extends Component
             $delete->delete($currentUser->user(), $reportId);
         } catch (NotFoundHttpException) {
             $this->confirmingDeleteId = null;
-            $this->flashMessage = 'Report not found (it may have been deleted in another tab).';
+            $this->flashMessage = Lang::get('reports::index.flash.not_found');
 
             return;
         }
 
         $this->confirmingDeleteId = null;
-        $this->flashMessage = 'Report deleted.';
+        $this->flashMessage = Lang::get('reports::index.flash.deleted');
     }
 
     // TogglePin enforces the 3-pin cap in the write-service layer; a 4th
@@ -96,7 +97,7 @@ final class ReportsIndex extends Component
         try {
             $togglePin->toggle($currentUser->user(), $reportId);
         } catch (NotFoundHttpException) {
-            $this->flashMessage = 'Report not found (it may have been deleted in another tab).';
+            $this->flashMessage = Lang::get('reports::index.flash.not_found');
 
             return;
         } catch (InvalidArgumentException $e) {

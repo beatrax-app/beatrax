@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Belastingland',
+    'country_desc' => 'Bepaalt welke aftrekcategorieën beschikbaar zijn.',
+    'country_choose' => 'Kies een land…',
+    'country_switch_warning' => 'Wisselen voegt nieuwe categorieën toe — bestaande tags worden nooit gewijzigd.',
+
+    'countries' => [
+        'nl' => 'Nederland',
+        'de' => 'Duitsland',
+        'be' => 'België',
+        'fr' => 'Frankrijk',
+        'gb' => 'Verenigd Koninkrijk',
+        'us' => 'Verenigde Staten',
+    ],
+
+    'categories_label' => 'Aftrekcategorieën',
+    'categories_desc' => 'Pas de categorieën aan die je gebruikt om te taggen.',
+    'categories_empty' => 'Nog geen categorieën. Voeg je eerste categorie toe of wissel van land om standaardwaarden te laden.',
+
+    'from_corpus' => 'uit corpus',
+    'rename_input_aria' => 'Nieuwe naam voor :name',
+    'rename' => 'Hernoemen',
+    'rename_aria' => ':name hernoemen',
+    'rename_save_aria' => 'Nieuwe naam opslaan voor :name',
+    'save' => 'Opslaan',
+    'archive' => 'Archiveren',
+    'archive_aria' => ':name archiveren',
+
+    'new_category_label' => 'Naam nieuwe categorie',
+    'new_category_placeholder' => 'Naam nieuwe categorie…',
+    'add_category' => 'Categorie toevoegen',
+    'category_added' => 'Categorie toegevoegd.',
+
+    'archived_count' => 'Gearchiveerd (:count)',
+    'restore' => 'Herstellen',
+    'restore_aria' => ':name herstellen',
+];

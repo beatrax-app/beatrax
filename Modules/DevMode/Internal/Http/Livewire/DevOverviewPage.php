@@ -15,6 +15,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\SystemAlertQuery;
+use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 
@@ -24,10 +25,6 @@ use Modules\DevMode\Internal\Logging\RecentLogEntriesReader;
 #[Layout('dev::layouts.dev-shell')]
 final class DevOverviewPage extends Component
 {
-    private const string RECENT_RUNS_EMPTY = 'No runs yet. Press ⌘K to run a command.';
-
-    private const string OPEN_ALERTS_EMPTY = 'No open alerts.';
-
     private const int RECENT_LOG_ENTRIES_LIMIT = 5;
 
     private const int RECENT_RUNS_LIMIT = 5;
@@ -51,8 +48,8 @@ final class DevOverviewPage extends Component
             'recentRuns' => $this->resolveRecentRuns($db, $user),
             'openAlerts' => $alerts->active($user)->take(self::RECENT_RUNS_LIMIT),
             'recentLogEntries' => $logEntries->recent(self::RECENT_LOG_ENTRIES_LIMIT),
-            'recentRunsEmptyCopy' => self::RECENT_RUNS_EMPTY,
-            'openAlertsEmptyCopy' => self::OPEN_ALERTS_EMPTY,
+            'recentRunsEmptyCopy' => Lang::get('dev::overview.recent_runs_empty'),
+            'openAlertsEmptyCopy' => Lang::get('dev::overview.open_alerts_empty'),
         ]);
     }
 

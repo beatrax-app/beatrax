@@ -19,6 +19,7 @@ use Modules\Categorization\Public\Enums\ConditionOperator;
 use Modules\Categorization\Public\Enums\ConditionValueType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // The `/rules` CRUD page. Reads via CategorizationRuleQuery
@@ -65,18 +66,18 @@ final class RulesPage extends Component
             ($delete)($currentUser->user(), $ruleId);
         } catch (NotFoundHttpException) {
             $this->confirmingDeleteId = null;
-            $this->flashMessage = 'Rule not found (it may have been deleted in another tab).';
+            $this->flashMessage = Lang::get('categorization::rules.flash_not_found');
 
             return;
         }
         $this->confirmingDeleteId = null;
-        $this->flashMessage = 'Rule deleted.';
+        $this->flashMessage = Lang::get('categorization::rules.flash_deleted');
     }
 
     #[On('rule-form:saved')]
     public function handleSaved(): void
     {
-        $this->flashMessage = 'Rule saved.';
+        $this->flashMessage = Lang::get('categorization::rules.flash_saved');
     }
 
     public function clearFlash(): void
@@ -92,7 +93,7 @@ final class RulesPage extends Component
     {
         $bus->dispatchSync(new ReapplyRulesJob($currentUser->user()->id));
         $this->reapplyDispatched = true;
-        $this->flashMessage = 'Re-applying rules to your history…';
+        $this->flashMessage = Lang::get('categorization::rules.flash_reapplying');
     }
 
     // Intentionally a no-op — Livewire re-renders the component on every
@@ -125,7 +126,7 @@ final class RulesPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Rules · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('categorization::rules.page_title').' · beatrax']);
 
         return $view;
     }
@@ -149,10 +150,10 @@ final class RulesPage extends Component
     public static function actionChipLabel(RuleActionDto $action): string
     {
         return match ($action->type) {
-            ActionType::Category->value => 'Category: '.($action->categoryPath ?? '—'),
-            ActionType::Counterparty->value => 'Counterparty: '.($action->counterpartyName ?? '—'),
-            ActionType::Note->value => 'Note',
-            default => 'Tax tag',
+            ActionType::Category->value => Lang::get('categorization::rules.chip_category', ['path' => $action->categoryPath ?? '—']),
+            ActionType::Counterparty->value => Lang::get('categorization::rules.chip_counterparty', ['path' => $action->counterpartyName ?? '—']),
+            ActionType::Note->value => Lang::get('categorization::rules.chip_note'),
+            default => Lang::get('categorization::rules.chip_tax_tag'),
         };
     }
 
@@ -166,13 +167,16 @@ final class RulesPage extends Component
         $reconciledSkipped = is_numeric($progress['reconciled_skipped'] ?? null) ? (int) $progress['reconciled_skipped'] : 0;
 
         if ($fieldsUpdated === 0 && $transactionsUpdated === 0) {
-            return 'No changes — your history already matches your rules.';
+            return Lang::get('categorization::rules.summary_no_changes');
         }
 
-        $base = "Updated {$fieldsUpdated} fields across {$transactionsUpdated} transactions.";
+        $base = Lang::get('categorization::rules.summary_updated', [
+            'fields' => $fieldsUpdated,
+            'transactions' => $transactionsUpdated,
+        ]);
 
         if ($reconciledSkipped > 0) {
-            return $base." {$reconciledSkipped} reconciled transactions were skipped.";
+            return $base.' '.Lang::get('categorization::rules.summary_reconciled_skipped', ['count' => $reconciledSkipped]);
         }
 
         return $base;

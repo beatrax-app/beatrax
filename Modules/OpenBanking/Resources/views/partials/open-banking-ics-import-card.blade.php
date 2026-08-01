@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- Surface B7: Guided ICS file-import affordance (Req 13, UI-SPEC Surface
      B7, 19-15). Visually and functionally SEPARATE from the live OB cards
      above — this path stores NO credentials and routes a dropped statement
@@ -20,26 +21,26 @@
      the ASN bank-statement shape, not ICS). --}}
 <section id="ics-import" class="space-y-3" data-testid="open-banking-ics-import-card">
     <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-        File import — no credentials stored
+        {{ Lang::get('openbanking::messages.ics.section_label') }}
     </p>
 
     <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">ICS credit card statement</h2>
+        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.ics.heading') }}</h2>
 
         <ol class="mt-4 grid grid-cols-3 gap-3">
             <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
                 <span class="mb-2 block text-2xl leading-none" aria-hidden="true">&#128272;</span>
-                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">Log in</span>
+                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">{{ Lang::get('openbanking::messages.ics.step_login') }}</span>
                 <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">Mijn ICS</span>
             </li>
             <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
                 <span class="mb-2 block text-2xl leading-none" aria-hidden="true">&#128220;</span>
-                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">Download statement</span>
-                <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">PDF statement</span>
+                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">{{ Lang::get('openbanking::messages.ics.step_download') }}</span>
+                <span class="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.ics.pdf_statement') }}</span>
             </li>
             <li class="rounded-md bg-slate-50 p-3 text-center dark:bg-slate-900">
                 <span class="mb-2 block text-2xl leading-none" aria-hidden="true">&#128229;</span>
-                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">Drop it below</span>
+                <span class="block text-sm font-medium text-slate-700 dark:text-slate-200">{{ Lang::get('openbanking::messages.ics.step_drop') }}</span>
             </li>
         </ol>
 
@@ -47,7 +48,7 @@
             <span
                 class="inline-flex items-center rounded-md border border-slate-200 px-2.5 py-1 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400"
                 data-testid="ob-ics-format-chip"
-            >PDF statement</span>
+            >{{ Lang::get('openbanking::messages.ics.pdf_statement') }}</span>
         </div>
 
         @if ($icsImportError !== null)
@@ -74,16 +75,16 @@
                 @if ($icsStatement !== null)
                     <span class="font-medium text-slate-700 dark:text-slate-200" data-testid="ob-ics-selected-filename">{{ $icsStatement->getClientOriginalName() }}</span>
                 @else
-                    <span class="font-medium text-slate-700 dark:text-slate-200">Drop your statement file here</span>
+                    <span class="font-medium text-slate-700 dark:text-slate-200">{{ Lang::get('openbanking::messages.ics.drop_zone_label') }}</span>
                 @endif
-                <span class="text-xs text-slate-500 dark:text-slate-400">or browse for a file</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.ics.drop_zone_hint') }}</span>
                 <input
                     id="ob-ics-statement-input"
                     type="file"
                     accept="application/pdf"
                     wire:model="icsStatement"
                     class="sr-only"
-                    aria-label="Browse for an ICS statement file"
+                    aria-label="{{ Lang::get('openbanking::messages.ics.browse_aria') }}"
                     data-testid="ob-ics-file-input"
                 >
             </label>
@@ -107,7 +108,7 @@
                         wire:target="importIcsStatement"
                         class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-slate-900/40 dark:border-t-slate-900"
                     ></span>
-                    Import statement
+                    {{ Lang::get('openbanking::messages.ics.import_button') }}
                 </button>
             </div>
         @endif

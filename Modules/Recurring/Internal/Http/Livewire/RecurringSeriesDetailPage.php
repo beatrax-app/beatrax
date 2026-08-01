@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesVarianceTolerance;
 use Modules\Recurring\Public\Dto\RecurringSeriesAmountTrendDto;
@@ -46,7 +47,7 @@ final class RecurringSeriesDetailPage extends Component
         EditRecurringSeriesVarianceTolerance $action,
     ): void {
         ($action)($this->seriesId, $currentUser->user(), $newTolerancePercent);
-        $this->dispatch('toast', message: 'Tolerance: '.$newTolerancePercent.'%', undoAction: '', undoPayload: null);
+        $this->dispatch('toast', message: Lang::get('recurring::detail.tolerance_toast', ['percent' => $newTolerancePercent]), undoAction: '', undoPayload: null);
     }
 
     public function render(
@@ -119,7 +120,7 @@ final class RecurringSeriesDetailPage extends Component
         ]];
         if ($hasShadow) {
             $series[] = [
-                'name' => 'EUR equivalent',
+                'name' => Lang::get('recurring::detail.eur_equivalent'),
                 'data' => $shadowData,
             ];
         }

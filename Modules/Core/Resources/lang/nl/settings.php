@@ -1,0 +1,136 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'title' => 'Instellingen',
+    'subtitle' => 'Voorkeuren voor hoe je financiën in de app worden weergegeven.',
+
+    'appearance' => [
+        'heading' => 'Weergave',
+        'theme' => 'Thema',
+        'theme_light' => 'Licht',
+        'theme_dark' => 'Donker',
+        'theme_system' => 'Systeem',
+        'theme_help' => 'Systeem volgt de licht- of donkerinstelling van je besturingssysteem.',
+    ],
+
+    'language' => [
+        'heading' => 'Taal',
+        'label' => 'Weergavetaal',
+        'system' => 'Systeem',
+        'help' => 'Systeem volgt de taal van je browser of besturingssysteem, met Engels als standaard.',
+    ],
+
+    'currency_display' => [
+        'heading' => 'Valutaweergave',
+        'label' => 'Standaardweergave in de transactielijst',
+        'eur_only' => 'Alleen EUR',
+        'original' => 'Oorspronkelijke valuta',
+        'help' => 'Je kunt dit nog steeds per pagina wijzigen in de transactielijst.',
+    ],
+
+    'base_currency' => [
+        'heading' => 'Basisrapportagevaluta',
+        'label' => 'Rapportagevaluta',
+        'help' => 'Alle totalen en samenvattingen worden naar deze valuta omgerekend. Elke rekening toont daarnaast nog steeds zijn eigen oorspronkelijke valuta.',
+    ],
+
+    'exchange_rates' => [
+        'heading' => 'Wisselkoersen',
+        'fetch_online' => 'Actuele koersen online ophalen',
+        'online_on' => 'Koersen worden dagelijks bij de ECB opgehaald. Alleen valutaparen — geen persoonlijke gegevens.',
+        'last_updated' => 'Laatst bijgewerkt: :date.',
+        'online_off' => 'Er worden meegeleverde koersen gebruikt. Er verlaten geen gegevens je apparaat.',
+        'fetch_aria' => 'Actuele wisselkoersen online ophalen',
+        'refreshing' => 'Bezig met vernieuwen…',
+        'next_refresh' => 'Volgende automatische vernieuwing: dagelijks om 09:00',
+        'refresh_now' => 'Nu vernieuwen',
+    ],
+
+    'period' => [
+        'heading' => 'Periode',
+        'label' => 'Periode begint op dag',
+        'help' => 'Genummerd van 1 tot 28. De meeste gebruikers houden dit op 1 (kalendermaand). Gebruik 25 als je salaris op de 25e binnenkomt en je "jouw maand" dan laat beginnen.',
+    ],
+
+    'recurring' => [
+        'heading' => 'Detectie van terugkerende betalingen',
+        'window_label' => 'Detectievenster (maanden)',
+        'window_help' => 'Hoeveel maanden geschiedenis worden gescand bij het clusteren van transacties tot terugkerende patronen.',
+        'income_label' => 'Minimuminkomen (centen)',
+        'income_help' => 'Inkomsten onder deze drempel worden niet automatisch geclusterd. Opgeslagen in centen — 200000 betekent € 2.000,00. Zet op 0 om de drempel uit te schakelen.',
+    ],
+
+    'drift' => [
+        'heading' => 'Afwijkingswaarschuwingen',
+        'label' => 'Standaarddrempel voor afwijkingswaarschuwingen',
+        'help' => 'Waarschuwingen verschijnen wanneer het laatste bedrag van een terugkerende afschrijving meer dan dit percentage afwijkt van het vorige bedrag. Instellingen per reeks hebben voorrang.',
+        'options' => [
+            '1' => '±1%',
+            '2' => '±2%',
+            '5' => '±5% (standaard)',
+            '10' => '±10%',
+            '25' => '±25%',
+            '50' => '±50%',
+        ],
+    ],
+
+    'save' => 'Instellingen opslaan',
+    'saved' => 'Opgeslagen.',
+
+    'anomaly_heading' => 'Anomaliedetectie',
+    'notifications_heading' => 'Meldingen',
+
+    'forecasting' => [
+        'heading' => 'Prognoses',
+        'intro' => 'beatrax projecteert je saldo vooruit vanaf de huidige stand van je rekeningen. Voor rekeningen zonder afschriftsaldo (PayPal, oude CSV-imports) stel je hier het beginsaldo in, zodat prognoses vanaf een bekend punt starten.',
+        'no_accounts' => 'Nog geen rekeningen — importeer een afschrift om er een toe te voegen.',
+    ],
+
+    'auto_import' => [
+        'heading' => 'Automatisch importeren',
+        'label' => 'Automatisch importeren uit de neerzetmap',
+        'active_html' => 'De neerzetmap is actief. beatrax scant <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op nieuwe bestanden.',
+        'inactive_html' => 'Indien ingeschakeld scant beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- en <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-bestanden en importeert deze via dezelfde matcher-pijplijn als de wizard. Verwerkte bestanden worden verplaatst naar <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> zodat ze nooit dubbel worden geïmporteerd.',
+    ],
+
+    'aliases' => [
+        'heading' => 'Aliassen',
+        'intro' => 'Bekijk en bewerk de herkenbare namen die je beatrax hebt geleerd voor cryptische afschriftomschrijvingen.',
+        'manage' => 'Aliassen beheren →',
+    ],
+
+    'tax_heading' => 'Belasting',
+    'shared_merchant_heading' => 'Gedeelde winkelierslijst',
+    'data_backup_heading' => 'Gegevens & back-up',
+    'install_heading' => 'Installeren',
+
+    'about_updates' => [
+        'heading' => 'Over updates',
+        'body' => 'beatrax werkt zichzelf automatisch bij zodra het is geïnstalleerd. Na het installeren van de allereerste versie komen toekomstige versies binnen via een banner in de app — je hoeft GitHub niet opnieuw te bezoeken. Mocht een toekomstige update ooit niet lukken, dan kun je altijd handmatig de nieuwste installer downloaden van de releasespagina.',
+        'open_releases' => 'Releasespagina openen →',
+    ],
+
+    'first_run_tour' => [
+        'heading' => 'Rondleiding voor de eerste keer',
+        'body' => 'Start de installatiewizard opnieuw als je de introductie nog eens wilt doorlopen.',
+        'run_again' => 'Installatiewizard opnieuw uitvoeren',
+    ],
+
+    'developer' => [
+        'heading' => 'Ontwikkelaar',
+        'label' => 'Dev Console in de app',
+        'help' => 'Toon de Dev Console op /dev. Zet de geavanceerde schakelaar bij elke aanmelding terug.',
+        'aria' => 'Ontwikkelaarsmodus',
+    ],
+
+    'errors' => [
+        'currency_required' => 'Kies een valuta.',
+        'window_months' => 'Kies tussen 2 en 60 maanden.',
+        'threshold' => 'Kies een drempel van 1%, 2%, 5%, 10%, 25% of 50%.',
+        'amount' => 'Voer een bedrag in vanaf € 0.',
+        'period_day' => 'Kies een dag van 1 tot 28.',
+        'currency_view' => 'Kies een van de beschikbare opties.',
+    ],
+];

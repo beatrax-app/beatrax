@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     /**
      * @var array<string,mixed> $transaction  Row array with keys: id, taxTagged, taxCategoryShortName
@@ -13,7 +14,7 @@
     $tagged            = (bool) ($transaction['taxTagged'] ?? false);
     $categoryShortName = is_string($transaction['taxCategoryShortName'] ?? null) ? $transaction['taxCategoryShortName'] : null;
     $txId              = (int) ($transaction['id'] ?? 0);
-    $label             = $categoryShortName ?? 'Tax';
+    $label             = $categoryShortName ?? Lang::get('tax::badge.default_label');
     $readonly          ??= false;
 @endphp
 
@@ -27,7 +28,7 @@
         type="button"
         wire:click="$dispatch('tax-edit-tag', { id: {{ $txId }} })"
         class="tax-badge inline-flex items-center"
-        aria-label="Edit tax tag: {{ $label }}"
+        aria-label="{{ Lang::get('tax::badge.edit_aria', ['label' => $label]) }}"
         data-testid="tax-badge-tagged-{{ $txId }}"
     >{{ $label }}</button>
 @else
@@ -42,7 +43,7 @@
             'opacity-0 group-hover:opacity-100 focus:opacity-100' => ! $showAlways,
             'always-show-touch' => $showAlways,
         ])
-        aria-label="Tag as tax-relevant"
+        aria-label="{{ Lang::get('tax::badge.tag_aria') }}"
         data-testid="tax-badge-untagged-{{ $txId }}"
-    >Tag</button>
+    >{{ Lang::get('tax::badge.tag') }}</button>
 @endif

@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Edit rule',
+    'heading_new' => 'New rule',
+
+    'combinator_aria' => 'Condition combinator',
+    'match_all' => 'Match all conditions',
+    'match_any' => 'Match any condition',
+
+    'condition_label' => 'Condition :number',
+    'condition_field_aria' => 'Condition :number field',
+    'condition_operator_aria' => 'Condition :number operator',
+    'condition_value_aria' => 'Condition :number value',
+    'condition_value_from_aria' => 'Condition :number value (from)',
+    'condition_value_to_aria' => 'Condition :number value (to)',
+    'to' => 'to',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'e.g. SPOTIFY',
+    'remove_condition' => 'Remove condition',
+    'add_condition' => '+ Add condition',
+
+    'then' => 'Then',
+    'action_label' => 'Action :number',
+    'action_type_aria' => 'Action :number type',
+    'action_category' => 'Category',
+    'action_counterparty' => 'Counterparty',
+    'action_note' => 'Note',
+    'action_tax_tag' => 'Tax tag',
+    'assign_category_aria' => 'Assign category for action :number',
+    'reassign_counterparty_aria' => 'Reassign to counterparty for action :number',
+    'note_text_aria' => 'Note text for action :number',
+    'note_placeholder' => 'Note text…',
+    'note_mode_aria' => 'Note mode for action :number',
+    'note_set' => 'Set',
+    'note_append' => 'Append',
+    'deduction_category_aria' => 'Deduction category for action :number',
+    'remove_action' => 'Remove action',
+    'add_action' => '+ Add action',
+
+    'this_year_only' => 'This year only ▾',
+    'override_tax_year' => 'Override tax year',
+    'tax_year_override_aria' => 'Tax year override for action :number',
+    'tax_tag_note' => 'Tax tag actions apply on the next re-apply, not on the current import.',
+
+    'priority' => 'Priority',
+    'priority_help' => 'Lower numbers run first. Rules with no shared fields never conflict.',
+
+    'cancel' => 'Cancel',
+    'save_changes' => 'Save changes',
+    'save_rule' => 'Save rule',
+    'saving' => 'Saving…',
+
+    'error_rule_unavailable' => 'That rule is no longer available.',
+    'error_invalid_data' => 'Invalid rule data — pick from the dropdowns and try again.',
+    'error_duplicate' => 'A rule with this field, match, and value already exists. Edit the existing rule instead.',
+    'error_priority_whole' => 'Priority must be a whole number.',
+    'error_add_condition' => 'Add at least one condition.',
+    'error_add_action' => 'Add at least one action.',
+    'condition_value_required' => 'Enter a value for condition :position.',
+    'condition_bounds_required' => 'Pick a lower and upper bound for condition :position.',
+    'condition_amount_invalid' => 'Enter a valid amount for condition :position.',
+    'action_pick_category' => 'Pick a category for this action.',
+    'action_pick_counterparty' => 'Pick a counterparty to reassign to.',
+    'action_note_required' => 'Enter note text.',
+    'action_pick_deduction' => 'Pick a deduction category for the tax tag.',
+];

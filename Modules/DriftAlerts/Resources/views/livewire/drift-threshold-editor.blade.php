@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Per-series drift threshold popover. Mounted inline by both the
     /drift grouped-by-series header and the
@@ -19,13 +20,13 @@
         type="button"
         x-on:click="open = ! open"
         aria-haspopup="listbox"
-        aria-label="Drift threshold for series"
+        aria-label="{{ Lang::get('drift-alerts::threshold.series_aria') }}"
         class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
     >
-        <span class="text-slate-500 dark:text-slate-400">Threshold</span>
+        <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('drift-alerts::threshold.label') }}</span>
         <span style="font-variant-numeric: tabular-nums;">
             @if ($currentValue === null)
-                global
+                {{ Lang::get('drift-alerts::threshold.global') }}
             @else
                 ±{{ $currentValue }}%
             @endif
@@ -36,7 +37,7 @@
         x-cloak
         x-on:click.outside="open = false"
         role="listbox"
-        aria-label="Drift alert threshold"
+        aria-label="{{ Lang::get('drift-alerts::threshold.listbox_aria') }}"
         class="absolute right-0 z-10 mt-1 w-56 rounded-md border border-slate-200 bg-white p-2 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
     >
         @foreach ($options as $opt)
@@ -61,6 +62,6 @@
                 'font-medium text-slate-900 dark:text-slate-100' => $currentValue === null,
                 'text-slate-500 dark:text-slate-400' => $currentValue !== null,
             ])
-        >Use global default</button>
+        >{{ Lang::get('drift-alerts::threshold.use_global') }}</button>
     </div>
 </div>

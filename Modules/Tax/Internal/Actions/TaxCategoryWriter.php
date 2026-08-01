@@ -8,6 +8,7 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Carbon;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Corpus\TaxCorpusLoader;
 use Modules\Tax\Public\Exceptions\CategoryPersistenceException;
 use Modules\Tax\Public\Exceptions\DuplicateTaxCategoryNameException;
@@ -152,7 +153,7 @@ final class TaxCategoryWriter
     {
         $name = trim($name);
         if ($name === '') {
-            throw new \InvalidArgumentException('Category name cannot be empty.');
+            throw new \InvalidArgumentException(Lang::get('tax::messages.errors.name_empty'));
         }
 
         $connection = $this->db->connection();
@@ -166,7 +167,7 @@ final class TaxCategoryWriter
             ->exists();
 
         if ($exists) {
-            throw new DuplicateTaxCategoryNameException('A category with this name already exists.');
+            throw new DuplicateTaxCategoryNameException(Lang::get('tax::messages.errors.name_duplicate'));
         }
 
         $maxOrder = $connection->table('tax_deduction_categories')
@@ -212,7 +213,7 @@ final class TaxCategoryWriter
     {
         $name = trim($name);
         if ($name === '') {
-            throw new \InvalidArgumentException('Category name cannot be empty.');
+            throw new \InvalidArgumentException(Lang::get('tax::messages.errors.name_empty'));
         }
 
         $connection = $this->db->connection();
@@ -235,7 +236,7 @@ final class TaxCategoryWriter
             ->exists();
 
         if ($nameTaken) {
-            throw new DuplicateTaxCategoryNameException('A category with this name already exists.');
+            throw new DuplicateTaxCategoryNameException(Lang::get('tax::messages.errors.name_duplicate'));
         }
 
         $connection->table('tax_deduction_categories')

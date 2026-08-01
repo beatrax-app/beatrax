@@ -88,6 +88,10 @@ final class SearchServiceProvider extends ServiceProvider
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'search');
         }
 
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'search');
+        }
+
         if (class_exists(IndexTransactionOnImport::class)) {
             $events->listen(
                 TransactionImported::class,

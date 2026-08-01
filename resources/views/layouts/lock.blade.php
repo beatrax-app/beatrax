@@ -25,10 +25,14 @@
 
     $isDark = $userTheme === 'dark' || ($userTheme === 'system' && $osTheme === 'dark');
     $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
+
+    // Matches <html lang> to the language the SetLocale middleware resolved
+    // for this request, same as the full app layout.
+    $currentLocale = $container->make(\Illuminate\Contracts\Translation\Translator::class)->getLocale();
 @endphp
 <!doctype html>
 <html
-    lang="en"
+    lang="{{ $currentLocale }}"
     class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $isDark ? 'dark' : '' }}"
     style="font-feature-settings: 'tnum';"
 >

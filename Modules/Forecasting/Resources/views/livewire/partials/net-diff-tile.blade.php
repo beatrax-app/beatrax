@@ -19,6 +19,7 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
+@use('Modules\Core\Public\Support\Lang')
 @php
     $fmt = static function (int $absMinor, string $currency = 'EUR'): string {
         $value = $absMinor / Money::MINOR_UNITS_PER_MAJOR;
@@ -29,8 +30,8 @@
     };
 @endphp
 
-<section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700" aria-label="Net diff between baseline and scenario at horizon days 30 / 60 / 90">
-    <p class="text-sm text-slate-500 dark:text-slate-400">Net diff</p>
+<section class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700" aria-label="{{ Lang::get('forecasting::forecast.net_diff_section_aria') }}">
+    <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::forecast.net_diff') }}</p>
     <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-3">
         @foreach (($horizonDays ?? [30, 60, 90]) as $horizonKey)
             @php
@@ -39,16 +40,18 @@
                 $tint = $delta > 0
                     ? 'text-emerald-700 dark:text-emerald-500'
                     : ($delta < 0 ? 'text-rose-700 dark:text-rose-500' : 'text-slate-900 dark:text-slate-100');
-                $aria = $delta > 0 ? 'better than baseline' : ($delta < 0 ? 'worse than baseline' : 'equal to baseline');
+                $aria = $delta > 0
+                    ? Lang::get('forecasting::forecast.better_than_baseline')
+                    : ($delta < 0 ? Lang::get('forecasting::forecast.worse_than_baseline') : Lang::get('forecasting::forecast.equal_to_baseline'));
                 $formatted = $fmt(abs($delta), $netDiffCurrency ?? BaseCurrency::value());
             @endphp
             <div>
                 <p
                     class="text-3xl font-semibold {{ $tint }}"
                     style="font-variant-numeric: tabular-nums;"
-                    aria-label="Net difference at day {{ $horizonKey }}: {{ $sign }}{{ $formatted }}, scenario is {{ $aria }}"
+                    aria-label="{{ Lang::get('forecasting::forecast.net_diff_delta_aria', ['day' => $horizonKey, 'value' => $sign.$formatted, 'state' => $aria]) }}"
                 >{{ $sign }}{{ $formatted }}</p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">at day {{ $horizonKey }}</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.at_day', ['day' => $horizonKey]) }}</p>
             </div>
         @endforeach
     </div>

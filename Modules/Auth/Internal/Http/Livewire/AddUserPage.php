@@ -10,6 +10,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\AddUserAction;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 // The partner's recovery codes are never shown to the owner -- the
 // partner sees them after their own first sign-in.
@@ -26,7 +27,7 @@ final class AddUserPage extends Component
     public function submit(CurrentUser $currentUser, AddUserAction $addUser): void
     {
         if ($this->initialPassword !== $this->initialPasswordConfirmation) {
-            $this->flashMessage = 'Passwords do not match.';
+            $this->flashMessage = Lang::get('auth::add_user.error_mismatch');
             $this->resetPasswordFields();
 
             return;
@@ -41,7 +42,7 @@ final class AddUserPage extends Component
             return;
         }
 
-        $this->flashMessage = "User {$partner->username} created. They will set their own password the first time they sign in.";
+        $this->flashMessage = Lang::get('auth::add_user.created', ['name' => $partner->username]);
         $this->username = '';
         $this->resetPasswordFields();
     }
@@ -51,7 +52,7 @@ final class AddUserPage extends Component
         $view = $views->make('auth::livewire.add-user-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Add a user · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('auth::add_user.page_title')]);
 
         return $view;
     }
@@ -79,6 +80,6 @@ final class AddUserPage extends Component
             }
         }
 
-        return 'The user could not be created.';
+        return Lang::get('auth::add_user.error_generic');
     }
 }

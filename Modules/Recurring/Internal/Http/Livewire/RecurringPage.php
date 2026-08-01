@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
 
@@ -42,7 +43,7 @@ final class RecurringPage extends Component
             return;
         }
         $bus->dispatchSync(new DetectRecurringSeriesJob($currentUser->user()->id));
-        $this->dispatch('toast', message: 'Detecting recurring series…', undoAction: '', undoPayload: null);
+        $this->dispatch('toast', message: Lang::get('recurring::index.detecting_toast'), undoAction: '', undoPayload: null);
     }
 
     public function render(
@@ -61,7 +62,7 @@ final class RecurringPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Recurring · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('recurring::index.title').' · beatrax']);
 
         return $view;
     }

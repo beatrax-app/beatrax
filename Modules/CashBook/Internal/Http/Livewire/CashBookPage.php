@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
@@ -51,14 +52,14 @@ final class CashBookPage extends Component
 
         $amountMinor = self::parseAmount($this->amount);
         if ($amountMinor === null || $amountMinor <= 0) {
-            $this->error = 'Enter an amount greater than zero.';
+            $this->error = Lang::get('cashbook::cash-book.errors.amount_positive');
 
             return;
         }
 
         $date = self::parseDate($this->date);
         if ($date === null) {
-            $this->error = 'Enter a valid date.';
+            $this->error = Lang::get('cashbook::cash-book.errors.invalid_date');
 
             return;
         }
@@ -81,7 +82,7 @@ final class CashBookPage extends Component
 
         $this->reset(['amount', 'counterparty', 'description']);
         $this->categoryId = null;
-        $this->dispatch('toast', message: 'Cash entry added.');
+        $this->dispatch('toast', message: Lang::get('cashbook::cash-book.toast.added'));
     }
 
     public function delete(int $transactionId, CurrentUser $currentUser, DatabaseManager $db): void
@@ -92,7 +93,7 @@ final class CashBookPage extends Component
             ->where('source_format', 'manual')
             ->delete();
 
-        $this->dispatch('toast', message: 'Cash entry removed.');
+        $this->dispatch('toast', message: Lang::get('cashbook::cash-book.toast.removed'));
     }
 
     public function render(
@@ -149,7 +150,7 @@ final class CashBookPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Cash book · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('cashbook::cash-book.page_title').' · beatrax']);
 
         return $view;
     }

@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
@@ -27,6 +28,10 @@ final class SurfaceWorkerCrashAlert
 
     public const ALERT_KIND = 'worker.crashed';
 
+    // The English canonical for the crash-loop copy — the fallback-locale
+    // source of truth (mirrored in desktop::native.worker_alert.*).
+    // escalate() renders the copy through Lang::get so it localises; at the
+    // `en` default the two are identical.
     public const ALERT_BODY = "beatrax's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
 
     public const OS_NOTIFICATION_TITLE = 'Background work stopped';
@@ -95,7 +100,7 @@ final class SurfaceWorkerCrashAlert
                 'user_id' => null,
                 'kind' => self::ALERT_KIND,
                 'severity' => 'critical',
-                'message' => self::ALERT_BODY,
+                'message' => Lang::get('desktop::native.worker_alert.body'),
             ]);
         }
 
@@ -107,8 +112,8 @@ final class SurfaceWorkerCrashAlert
             return;
         }
 
-        Notification::title(self::OS_NOTIFICATION_TITLE)
-            ->message(self::ALERT_BODY)
+        Notification::title(Lang::get('desktop::native.worker_alert.os_title'))
+            ->message(Lang::get('desktop::native.worker_alert.body'))
             ->event(NotificationDeepLink::class)
             ->reference($this->urls->route('dashboard'))
             ->show();

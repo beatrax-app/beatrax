@@ -16,6 +16,7 @@ use Livewire\WithFileUploads;
 use Modules\Community\Public\Dto\CorpusEntryDto;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Import\Internal\Services\AliasYamlExporter;
 use Modules\Import\Internal\Services\AliasYamlImporter;
 use Modules\Import\Internal\Services\LongestCommonPrefix;
@@ -32,8 +33,6 @@ use Throwable;
 #[Layout('layouts.app')]
 final class AliasesSettingsPage extends Component
 {
-    private const ALIAS_NOT_FOUND = 'Alias not found (it may have been deleted in another tab).';
-
     use WithFileUploads;
 
     public int $perPage = 25;
@@ -108,7 +107,7 @@ final class AliasesSettingsPage extends Component
             ->first(['id', 'generalized_pattern']);
 
         if ($row === null) {
-            $this->flashMessage = self::ALIAS_NOT_FOUND;
+            $this->flashMessage = Lang::get('import::aliases.errors.not_found');
 
             return;
         }
@@ -138,7 +137,7 @@ final class AliasesSettingsPage extends Component
             $this->previewResult = [
                 'total' => 0,
                 'first5' => [],
-                'emptyMessage' => 'Pattern is too short to test.',
+                'emptyMessage' => Lang::get('import::aliases.errors.too_short'),
             ];
 
             return;
@@ -165,7 +164,7 @@ final class AliasesSettingsPage extends Component
     {
         $value = trim($this->editingPattern);
         if ($value === '') {
-            $this->flashMessage = 'Generalized pattern cannot be empty.';
+            $this->flashMessage = Lang::get('import::aliases.errors.pattern_empty');
 
             return;
         }
@@ -187,7 +186,7 @@ final class AliasesSettingsPage extends Component
             $this->editingId = 0;
             $this->editingPattern = '';
             $this->previewResult = [];
-            $this->flashMessage = self::ALIAS_NOT_FOUND;
+            $this->flashMessage = Lang::get('import::aliases.errors.not_found');
 
             return;
         }
@@ -195,7 +194,7 @@ final class AliasesSettingsPage extends Component
         $this->editingId = 0;
         $this->editingPattern = '';
         $this->previewResult = [];
-        $this->flashMessage = 'Alias updated.';
+        $this->flashMessage = Lang::get('import::aliases.flash.updated');
     }
 
     public function deleteAlias(int $aliasId, CurrentUser $currentUser, DatabaseManager $db): void
@@ -211,7 +210,7 @@ final class AliasesSettingsPage extends Component
             ->delete();
 
         if ($affected === 0) {
-            $this->flashMessage = self::ALIAS_NOT_FOUND;
+            $this->flashMessage = Lang::get('import::aliases.errors.not_found');
 
             return;
         }
@@ -220,14 +219,14 @@ final class AliasesSettingsPage extends Component
             $this->selectedIds,
             static fn (int $id): bool => $id !== $aliasId,
         ));
-        $this->flashMessage = 'Alias deleted.';
+        $this->flashMessage = Lang::get('import::aliases.flash.deleted');
     }
 
     public function openMergeModal(LongestCommonPrefix $lcp, CurrentUser $currentUser, DatabaseManager $db): void
     {
         $uniqueIds = array_values(array_unique(array_map('intval', $this->selectedIds)));
         if (count($uniqueIds) < 2) {
-            $this->flashMessage = 'Select at least two aliases to merge.';
+            $this->flashMessage = Lang::get('import::aliases.errors.select_two');
 
             return;
         }
@@ -245,7 +244,7 @@ final class AliasesSettingsPage extends Component
             // The structural guard is the user_id clause; the flash
             // is only the UI affordance.
             $this->selectedIds = [];
-            $this->flashMessage = 'One or more selected aliases were not found.';
+            $this->flashMessage = Lang::get('import::aliases.errors.some_not_found');
 
             return;
         }
@@ -287,7 +286,7 @@ final class AliasesSettingsPage extends Component
         $friendly = trim($this->mergeFriendlyName);
         $generalized = trim($this->mergeGeneralizedPattern);
         if ($friendly === '' || $generalized === '') {
-            $this->flashMessage = 'Friendly name and generalized pattern are both required.';
+            $this->flashMessage = Lang::get('import::aliases.errors.both_required');
 
             return;
         }
@@ -299,7 +298,7 @@ final class AliasesSettingsPage extends Component
         } catch (NotFoundHttpException) {
             $this->showMergeModal = false;
             $this->selectedIds = [];
-            $this->flashMessage = 'One or more aliases were not found (they may have been deleted in another tab).';
+            $this->flashMessage = Lang::get('import::aliases.errors.merge_not_found');
 
             return;
         } catch (Throwable $e) {
@@ -308,7 +307,7 @@ final class AliasesSettingsPage extends Component
                 'exception_message' => $e->getMessage(),
             ]);
             $this->showMergeModal = false;
-            $this->flashMessage = sprintf('Merge failed (%s).', $e::class);
+            $this->flashMessage = Lang::get('import::aliases.errors.merge_failed', ['class' => $e::class]);
 
             return;
         }
@@ -317,7 +316,7 @@ final class AliasesSettingsPage extends Component
         $this->selectedIds = [];
         $this->mergeFriendlyName = '';
         $this->mergeGeneralizedPattern = '';
-        $this->flashMessage = 'Aliases merged.';
+        $this->flashMessage = Lang::get('import::aliases.flash.merged');
     }
 
     // ResponseFactory is method-DI'd so the page never hits the global
@@ -347,7 +346,7 @@ final class AliasesSettingsPage extends Component
         $this->conflictResolutions = [];
 
         if ($this->importFile === null) {
-            $this->importError = 'No file uploaded.';
+            $this->importError = Lang::get('import::aliases.errors.no_file');
 
             return;
         }
@@ -355,7 +354,7 @@ final class AliasesSettingsPage extends Component
         $path = $this->importFile->getRealPath();
         $contents = file_get_contents($path);
         if ($contents === false) {
-            $this->importError = 'Could not read the uploaded file.';
+            $this->importError = Lang::get('import::aliases.errors.unreadable');
 
             return;
         }
@@ -418,7 +417,7 @@ final class AliasesSettingsPage extends Component
 
         $flatEntries = array_merge($newFlat, $conflictFlat);
         if ($flatEntries === []) {
-            $this->flashMessage = 'Nothing to import.';
+            $this->flashMessage = Lang::get('import::aliases.flash.nothing');
             $this->resetImportState();
 
             return;
@@ -437,7 +436,7 @@ final class AliasesSettingsPage extends Component
         );
 
         $changed = $importer->apply($currentUser->user(), $entries, $this->conflictResolutions);
-        $this->flashMessage = sprintf('Imported %d aliases.', $changed);
+        $this->flashMessage = Lang::get('import::aliases.flash.imported', ['count' => $changed]);
         $this->resetImportState();
     }
 
@@ -472,7 +471,7 @@ final class AliasesSettingsPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Aliases · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('import::aliases.page_title').' · beatrax']);
 
         return $view;
     }

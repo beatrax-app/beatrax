@@ -107,6 +107,7 @@ final class RecurringServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'recurring');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'recurring');
 
         $livewire->component('recurring.recurring-page', RecurringPage::class);
         $livewire->component('recurring.recurring-review-page', RecurringReviewPage::class);

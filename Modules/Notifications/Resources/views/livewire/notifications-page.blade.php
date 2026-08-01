@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /notifications — the unified inbox (Req 2, Req 3; D-01, D-02, D-04).
     Direct clone of DriftPage's outer shape (Modules/DriftAlerts/Resources/
@@ -12,25 +13,25 @@
     use Modules\Notifications\Public\Services\NotificationQuery;
 
     $tabs = [
-        'unread' => 'Unread',
-        'all' => 'All',
-        'dismissed' => 'Dismissed',
+        'unread' => Lang::get('notifications::inbox.tabs.unread'),
+        'all' => Lang::get('notifications::inbox.tabs.all'),
+        'dismissed' => Lang::get('notifications::inbox.tabs.dismissed'),
     ];
 
     // D-44 — [heading, body] tuple per tab, verbatim from the Copywriting
     // Contract.
     $emptyStates = [
         'unread' => [
-            "You're all caught up",
-            'New notifications land here — payment reminders, budget nudges, and your weekly position.',
+            Lang::get('notifications::inbox.empty.unread.heading'),
+            Lang::get('notifications::inbox.empty.unread.body'),
         ],
         'all' => [
-            'Nothing yet',
-            'beatrax will let you know about upcoming payments and anything that needs a look.',
+            Lang::get('notifications::inbox.empty.all.heading'),
+            Lang::get('notifications::inbox.empty.all.body'),
         ],
         'dismissed' => [
-            'Nothing dismissed',
-            'Notifications you dismiss are kept here for a while.',
+            Lang::get('notifications::inbox.empty.dismissed.heading'),
+            Lang::get('notifications::inbox.empty.dismissed.body'),
         ],
     ];
 @endphp
@@ -38,16 +39,16 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-6 flex items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Notifications</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::inbox.heading') }}</h1>
         </div>
         <a
             href="{{ route('settings') }}#notifications"
             class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-        >Notification settings →</a>
+        >{{ Lang::get('notifications::inbox.settings_link') }}</a>
     </header>
 
     {{-- Single-level lifecycle tabs, cloned verbatim from DriftPage's Level-2 tabs (D-04). --}}
-    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="Notification lifecycle">
+    <nav class="mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700" role="tablist" aria-label="{{ Lang::get('notifications::inbox.tablist_aria') }}">
         @foreach ($tabs as $key => $label)
             <button
                 type="button"
@@ -87,7 +88,7 @@
                     type="button"
                     wire:click="$set('cursor', '{{ $nextCursor }}')"
                     class="text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-                >Load more</button>
+                >{{ Lang::get('notifications::inbox.load_more') }}</button>
             </div>
         @endif
     @endif

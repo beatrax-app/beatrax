@@ -14,6 +14,7 @@
     No new design primitives — composes existing Flux / Tailwind tokens.
 --}}
 
+@use('Modules\Core\Public\Support\Lang')
 <div class="space-y-4" data-testid="sync-status-section">
 
     {{-- ===== Overall status line ===== --}}
@@ -21,7 +22,7 @@
         {{-- No sync sessions yet — calm empty state --}}
         <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400" data-testid="sync-status-overall">
             <span class="inline-block h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden="true"></span>
-            No devices synced yet
+            {{ Lang::get('sync::status.no_devices') }}
         </div>
 
     @elseif ($overallStatus === 'error')
@@ -32,7 +33,7 @@
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-rose-600 dark:bg-rose-500" aria-hidden="true"></span>
-            Sync error on one or more devices
+            {{ Lang::get('sync::status.error') }}
         </div>
 
     @elseif ($overallStatus === 'syncing')
@@ -42,7 +43,7 @@
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-blue-500 dark:bg-blue-400" aria-hidden="true"></span>
-            Syncing&hellip;
+            {{ Lang::get('sync::status.syncing') }}
         </div>
 
     @elseif ($overallStatus === 'offline')
@@ -52,7 +53,7 @@
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>
-            Devices offline
+            {{ Lang::get('sync::status.offline') }}
         </div>
 
     @else
@@ -63,9 +64,9 @@
             data-testid="sync-status-overall"
         >
             <span class="inline-block h-2 w-2 flex-shrink-0 rounded-full bg-emerald-500 dark:bg-emerald-400" aria-hidden="true"></span>
-            All devices up to date
+            {{ Lang::get('sync::status.all_synced') }}
             @if ($lastSyncedHuman !== null)
-                <span class="text-emerald-600 dark:text-emerald-400">&middot; synced {{ $lastSyncedHuman }}</span>
+                <span class="text-emerald-600 dark:text-emerald-400">&middot; {{ Lang::get('sync::status.synced') }} {{ $lastSyncedHuman }}</span>
             @endif
         </div>
     @endif
@@ -88,17 +89,17 @@
                         @if ($isFailed)
                             <span
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-rose-500 dark:bg-rose-400"
-                                aria-label="Error"
+                                aria-label="{{ Lang::get('sync::status.dot_error') }}"
                             ></span>
                         @elseif ($isActive)
                             <span
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-blue-500 dark:bg-blue-400"
-                                aria-label="Online"
+                                aria-label="{{ Lang::get('sync::status.dot_online') }}"
                             ></span>
                         @else
                             <span
                                 class="mt-0.5 inline-block h-2 w-2 flex-shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"
-                                aria-label="Offline"
+                                aria-label="{{ Lang::get('sync::status.dot_offline') }}"
                             ></span>
                         @endif
 
@@ -129,7 +130,7 @@
                                 data-testid="peer-last-seen"
                             >{{ $lastSeenHuman }}</span>
                         @else
-                            <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="peer-last-seen">never</span>
+                            <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="peer-last-seen">{{ Lang::get('sync::status.never') }}</span>
                         @endif
                     </div>
                 </li>

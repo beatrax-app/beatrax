@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Desktop\Internal\Listeners;
 
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Desktop\Internal\Native\WindowFocusState;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
@@ -20,8 +21,6 @@ use Native\Desktop\Facades\Notification;
  */
 final class DispatchOsNotification
 {
-    private const HIDDEN_DETAILS_BODY = 'Open beatrax to see the details.';
-
     public function __construct(
         private readonly WindowFocusState $focus,
         private readonly SuppressionEvaluator $suppression,
@@ -40,7 +39,7 @@ final class DispatchOsNotification
             return;
         }
 
-        $body = $decision->hideDetails ? self::HIDDEN_DETAILS_BODY : $event->body;
+        $body = $decision->hideDetails ? Lang::get('desktop::native.notification.hidden_details_body') : $event->body;
 
         $this->fire($event->title, $body, $event->deepLinkRoute);
     }

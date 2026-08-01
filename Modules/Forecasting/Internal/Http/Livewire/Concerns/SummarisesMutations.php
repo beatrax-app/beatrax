@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Forecasting\Internal\Http\Livewire\Concerns;
 
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddOneOffPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\AddRecurringPayload;
 use Modules\Forecasting\Public\Dto\ScenarioMutationPayload\CancelSeriesPayload;
@@ -23,7 +24,7 @@ trait SummarisesMutations
     private function summaryFor(string $kind, ScenarioMutationPayload $payload): string
     {
         return match (true) {
-            $payload instanceof CancelSeriesPayload => 'Cancel '.$this->resolveSeriesName($payload->seriesId),
+            $payload instanceof CancelSeriesPayload => Lang::get('forecasting::scenario.summary.cancel', ['name' => $this->resolveSeriesName($payload->seriesId)]),
             $payload instanceof AddOneOffPayload => $this->summariseOneOff($payload),
             $payload instanceof AddRecurringPayload => $this->summariseRecurring($payload),
             $payload instanceof ChangeSeriesAmountPayload => $this->summariseChangeAmount($payload),
@@ -43,7 +44,7 @@ trait SummarisesMutations
             }
         }
 
-        return 'series #'.$seriesId;
+        return Lang::get('forecasting::scenario.summary.series_fallback', ['id' => $seriesId]);
     }
 
     private function summariseOneOff(AddOneOffPayload $payload): string
@@ -51,7 +52,11 @@ trait SummarisesMutations
         $sign = $payload->direction === 'income' ? '+' : '−';
         $amount = number_format($payload->amountMinor / 100, 2, ',', '.');
 
-        return "{$sign}{$amount} {$payload->currency} on {$payload->date}";
+        return Lang::get('forecasting::scenario.summary.one_off', [
+            'amount' => $sign.$amount,
+            'currency' => $payload->currency,
+            'date' => $payload->date,
+        ]);
     }
 
     private function summariseRecurring(AddRecurringPayload $payload): string
@@ -59,20 +64,34 @@ trait SummarisesMutations
         $sign = $payload->direction === 'income' ? '+' : '−';
         $amount = number_format($payload->amountMinor / 100, 2, ',', '.');
 
-        return "{$sign}{$amount} {$payload->currency} {$payload->cadence} from {$payload->startDate}";
+        return Lang::get('forecasting::scenario.summary.recurring', [
+            'amount' => $sign.$amount,
+            'currency' => $payload->currency,
+            'cadence' => $payload->cadence,
+            'date' => $payload->startDate,
+        ]);
     }
 
     private function summariseChangeAmount(ChangeSeriesAmountPayload $payload): string
     {
         $amount = number_format($payload->newAmountMinor / 100, 2, ',', '.');
 
-        return $this->resolveSeriesName($payload->seriesId).": new amount {$amount}";
+        return Lang::get('forecasting::scenario.summary.change_amount', [
+            'name' => $this->resolveSeriesName($payload->seriesId),
+            'amount' => $amount,
+        ]);
     }
 
     private function summariseShiftDate(ShiftSeriesDatePayload $payload): string
     {
-        $scope = $payload->scope === ShiftScope::AllSubsequent->value ? 'all subsequent' : 'next';
+        $scope = $payload->scope === ShiftScope::AllSubsequent->value
+            ? Lang::get('forecasting::scenario.summary.scope_all')
+            : Lang::get('forecasting::scenario.summary.scope_next');
 
-        return $this->resolveSeriesName($payload->seriesId).": shift {$scope} to {$payload->newNextDate}";
+        return Lang::get('forecasting::scenario.summary.shift', [
+            'name' => $this->resolveSeriesName($payload->seriesId),
+            'scope' => $scope,
+            'date' => $payload->newNextDate,
+        ]);
     }
 }

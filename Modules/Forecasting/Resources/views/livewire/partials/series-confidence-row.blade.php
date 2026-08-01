@@ -9,6 +9,7 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
+@use('Modules\Core\Public\Support\Lang')
 @php
     $tint = match ($confidence->confidence) {
         'high' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400',
@@ -26,10 +27,10 @@
 <li class="flex items-center justify-between gap-3 py-1 text-sm">
     <div class="min-w-0 flex-1">
         <p class="truncate text-slate-900 dark:text-slate-100">{{ $confidence->seriesName }}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $formattedPoint }}/mo</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $formattedPoint }}{{ Lang::get('forecasting::forecast.per_month_suffix') }}</p>
     </div>
     <span
         class="rounded-full px-2 py-0.5 text-xs font-medium {{ $tint }}"
-        aria-label="{{ $confidence->seriesName }}, {{ $confidence->confidence }} confidence — projection range is {{ $rangeWidthPercent }} percent of the point estimate"
+        aria-label="{{ Lang::get('forecasting::forecast.confidence_chip_aria', ['name' => $confidence->seriesName, 'confidence' => $confidence->confidence, 'percent' => $rangeWidthPercent]) }}"
     >{{ $confidence->confidence }}</span>
 </li>

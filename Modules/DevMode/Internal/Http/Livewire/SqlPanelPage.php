@@ -11,6 +11,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Sql\ReadOnlySqliteConnection;
 use Modules\DevMode\Internal\Sql\SchemaSnapshot;
 use Modules\DevMode\Internal\Sql\SelectOnlyValidator;
@@ -80,8 +81,8 @@ final class SqlPanelPage extends Component
     private function preflightError(Session $session, string $sql): ?string
     {
         return match (true) {
-            $session->get('dev_mode.advanced') !== true => 'Enable Advanced (Dev Mode → Advanced) to run queries.',
-            $sql === '' => 'Only SELECT statements are allowed. Reject reason: empty_statement.',
+            $session->get('dev_mode.advanced') !== true => Lang::get('dev::sql.errors.advanced_off'),
+            $sql === '' => Lang::get('dev::sql.errors.only_select', ['reason' => 'empty_statement']),
             default => null,
         };
     }
@@ -91,7 +92,7 @@ final class SqlPanelPage extends Component
         try {
             $validator->validate($sql);
         } catch (ValidationException $e) {
-            return 'Only SELECT statements are allowed. Reject reason: '.$this->rejectReason($e).'.';
+            return Lang::get('dev::sql.errors.only_select', ['reason' => $this->rejectReason($e)]);
         }
 
         return null;
@@ -120,8 +121,8 @@ final class SqlPanelPage extends Component
             return $connection->execute($sql);
         } catch (Throwable $e) {
             $this->errorMessage = str_contains($e->getMessage(), 'maximum execution time')
-                ? 'Query exceeded the 5-second timeout. Refine your query and try again.'
-                : 'SQL error: '.$e->getMessage();
+                ? Lang::get('dev::sql.errors.timeout')
+                : Lang::get('dev::sql.errors.engine', ['message' => $e->getMessage()]);
 
             return null;
         }
@@ -179,7 +180,7 @@ final class SqlPanelPage extends Component
         $allowedNames = array_column($schema->all(), 'name');
         if (! in_array($table, $allowedNames, true)) {
             $this->resetResultState();
-            $this->errorMessage = 'Unknown table.';
+            $this->errorMessage = Lang::get('dev::sql.errors.unknown_table');
 
             return;
         }
