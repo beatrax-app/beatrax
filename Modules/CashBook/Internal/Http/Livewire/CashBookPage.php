@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
@@ -25,6 +26,7 @@ use Modules\Tax\Public\Services\TaxTagQuery;
  */
 final class CashBookPage extends Component
 {
+    use DispatchesToast;
     use HandlesTaxTagging;
 
     public string $direction = 'expense';
@@ -82,7 +84,7 @@ final class CashBookPage extends Component
 
         $this->reset(['amount', 'counterparty', 'description']);
         $this->categoryId = null;
-        $this->dispatch('toast', message: Lang::get('cashbook::cash-book.toast.added'));
+        $this->toast(Lang::get('cashbook::cash-book.toast.added'));
     }
 
     public function delete(int $transactionId, CurrentUser $currentUser, DatabaseManager $db): void
@@ -93,7 +95,7 @@ final class CashBookPage extends Component
             ->where('source_format', 'manual')
             ->delete();
 
-        $this->dispatch('toast', message: Lang::get('cashbook::cash-book.toast.removed'));
+        $this->toast(Lang::get('cashbook::cash-book.toast.removed'));
     }
 
     public function render(

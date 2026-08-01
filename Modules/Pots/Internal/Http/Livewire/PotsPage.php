@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Enums\PotStatus;
@@ -22,6 +23,8 @@ use Modules\Pots\Public\Services\PotWriter;
  */
 final class PotsPage extends Component
 {
+    use DispatchesToast;
+
     public string $name = '';
 
     public string $amount = '';
@@ -398,7 +401,7 @@ final class PotsPage extends Component
 
         $writer->archive($currentUser->user(), $potId);
         $this->archivingPotId = 0;
-        $this->dispatch('toast', message: Lang::get('pots::messages.toast.pot_archived'), undoAction: 'restore', undoPayload: $potId);
+        $this->toastWithUndo(Lang::get('pots::messages.toast.pot_archived'), undoAction: 'restore', undoPayload: $potId);
     }
 
     public function restorePot(CurrentUser $currentUser, PotWriter $writer, int $potId): void
@@ -555,6 +558,6 @@ final class PotsPage extends Component
 
     private function toast(string $message): void
     {
-        $this->dispatch('toast', message: $message, undoAction: '', undoPayload: null);
+        $this->toastWithUndo($message, undoAction: '', undoPayload: null);
     }
 }

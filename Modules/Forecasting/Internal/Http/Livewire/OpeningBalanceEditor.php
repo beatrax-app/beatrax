@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Support\AmountStringParser;
 use Modules\Forecasting\Public\Actions\SetAccountOpeningBalance;
@@ -21,6 +22,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class OpeningBalanceEditor extends Component
 {
+    use DispatchesToast;
+
     public int $accountId = 0;
 
     public string $accountName = '';
@@ -117,7 +120,7 @@ final class OpeningBalanceEditor extends Component
         $this->currentAsOfDate = $asOf;
         $this->saved = true;
         $this->dispatch('forecast-settings:saved', accountId: $this->accountId);
-        $this->dispatch('toast', message: Lang::get('forecasting::opening_balance.toast.updated'));
+        $this->toast(Lang::get('forecasting::opening_balance.toast.updated'));
     }
 
     public function useMyNumber(CurrentUser $currentUser, SetAccountOpeningBalance $action): void
@@ -148,7 +151,7 @@ final class OpeningBalanceEditor extends Component
         $this->beatraxsNumberMinor = null;
         $this->saved = true;
         $this->dispatch('forecast-settings:saved', accountId: $this->accountId);
-        $this->dispatch('toast', message: Lang::get('forecasting::opening_balance.toast.updated'));
+        $this->toast(Lang::get('forecasting::opening_balance.toast.updated'));
     }
 
     public function useBeatraxsNumber(): void

@@ -7,6 +7,7 @@ namespace Modules\Tax\Public\Http\Livewire\Concerns;
 use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Tax\Public\Actions\TagTransaction;
@@ -19,6 +20,8 @@ use Modules\Tax\Public\Services\TaxTagQuery;
  */
 trait HandlesTaxTagging
 {
+    use DispatchesToast;
+
     // Mirrors the Ledger-side guarded mutators (TransactionDetail) so the two
     // cross-module lock surfaces speak with one voice; read through Lang::get
     // (tax::messages.reconciled_lock) so it translates alongside the views.
@@ -74,7 +77,7 @@ trait HandlesTaxTagging
         // picker so a locked row stays untouched (see the reconciled-lock
         // note at the @link above).
         if ($status->isReconciled($user->id, $id)) {
-            $this->dispatch('toast', message: Lang::get('tax::messages.reconciled_lock'));
+            $this->toast(Lang::get('tax::messages.reconciled_lock'));
 
             return;
         }
@@ -139,7 +142,7 @@ trait HandlesTaxTagging
         }
 
         if ($status->isReconciled($u->user()->id, $this->taxPickerTxId)) {
-            $this->dispatch('toast', message: Lang::get('tax::messages.reconciled_lock'));
+            $this->toast(Lang::get('tax::messages.reconciled_lock'));
 
             return;
         }
@@ -160,7 +163,7 @@ trait HandlesTaxTagging
         }
 
         $this->closePicker();
-        $this->dispatch('toast', message: Lang::get('tax::messages.tagged'));
+        $this->toast(Lang::get('tax::messages.tagged'));
     }
 
     public function addInlineCategory(
@@ -194,14 +197,14 @@ trait HandlesTaxTagging
         }
 
         if ($status->isReconciled($u->user()->id, $this->taxPickerTxId)) {
-            $this->dispatch('toast', message: Lang::get('tax::messages.reconciled_lock'));
+            $this->toast(Lang::get('tax::messages.reconciled_lock'));
 
             return;
         }
 
         $untag->execute($u->user()->id, $this->taxPickerTxId);
         $this->closePicker();
-        $this->dispatch('toast', message: Lang::get('tax::messages.untagged'));
+        $this->toast(Lang::get('tax::messages.untagged'));
     }
 
     public function applyBatchTag(
@@ -261,12 +264,12 @@ trait HandlesTaxTagging
         // If every candidate was reconciled, nothing was tagged — say so
         // rather than claiming "Tagged 0 more transactions."
         if ($count === 0) {
-            $this->dispatch('toast', message: Lang::get('tax::messages.batch_none_reconciled'));
+            $this->toast(Lang::get('tax::messages.batch_none_reconciled'));
 
             return;
         }
 
-        $this->dispatch('toast', message: Lang::get('tax::messages.batch_tagged', ['count' => $count]));
+        $this->toast(Lang::get('tax::messages.batch_tagged', ['count' => $count]));
     }
 
     public function dismissBatch(): void

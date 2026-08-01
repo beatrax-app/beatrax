@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Public\Actions\ApproveRecurringSeries;
 use Modules\Recurring\Public\Actions\EditRecurringSeriesName;
@@ -25,6 +26,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // chains-side ChainReviewQueue shape.
 final class RecurringReviewPage extends Component
 {
+    use DispatchesToast;
+
     // Previous page's tail recurring_series.id, null on the first page.
     // Cursor pagination keyed on id matches the rest of the Public read API.
     public ?int $cursorId = null;
@@ -50,33 +53,33 @@ final class RecurringReviewPage extends Component
     public function approve(int $seriesId, CurrentUser $currentUser, ApproveRecurringSeries $action): void
     {
         ($action)($seriesId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('recurring::review.toast.approved'), undoAction: 'reject', undoPayload: $seriesId);
+        $this->toastWithUndo(Lang::get('recurring::review.toast.approved'), undoAction: 'reject', undoPayload: $seriesId);
     }
 
     public function reject(int $seriesId, CurrentUser $currentUser, RejectRecurringSeries $action): void
     {
         ($action)($seriesId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('recurring::review.toast.rejected'), undoAction: 'unReject', undoPayload: $seriesId);
+        $this->toastWithUndo(Lang::get('recurring::review.toast.rejected'), undoAction: 'unReject', undoPayload: $seriesId);
     }
 
     public function snooze(int $seriesId, string $untilIso, CurrentUser $currentUser, SnoozeRecurringSeries $action): void
     {
         $until = CarbonImmutable::parse($untilIso);
         ($action)($seriesId, $currentUser->user(), $until);
-        $this->dispatch('toast', message: Lang::get('recurring::review.toast.snoozed'), undoAction: 'approve', undoPayload: $seriesId);
+        $this->toastWithUndo(Lang::get('recurring::review.toast.snoozed'), undoAction: 'approve', undoPayload: $seriesId);
     }
 
     public function editName(int $seriesId, ?string $newName, CurrentUser $currentUser, EditRecurringSeriesName $action): void
     {
         $normalised = $newName !== null && trim($newName) === '' ? null : $newName;
         ($action)($seriesId, $currentUser->user(), $normalised);
-        $this->dispatch('toast', message: Lang::get('recurring::review.toast.renamed'), undoAction: 'editName', undoPayload: $seriesId);
+        $this->toastWithUndo(Lang::get('recurring::review.toast.renamed'), undoAction: 'editName', undoPayload: $seriesId);
     }
 
     public function unReject(int $seriesId, CurrentUser $currentUser, UnRejectRecurringSeries $action): void
     {
         ($action)($seriesId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('recurring::review.toast.un_rejected'), undoAction: 'reject', undoPayload: $seriesId);
+        $this->toastWithUndo(Lang::get('recurring::review.toast.un_rejected'), undoAction: 'reject', undoPayload: $seriesId);
     }
 
     // Foreign-user ids are skipped silently — the underlying Public Action
@@ -102,7 +105,7 @@ final class RecurringReviewPage extends Component
             }
         }
         $this->selectedIds = [];
-        $this->dispatch('toast', message: Lang::get('recurring::review.toast.bulk_approved', ['count' => $applied]), undoAction: 'bulkUndo', undoPayload: null);
+        $this->toastWithUndo(Lang::get('recurring::review.toast.bulk_approved', ['count' => $applied]), undoAction: 'bulkUndo', undoPayload: null);
     }
 
     // Same shape as bulkApprove() but calls RejectRecurringSeries;
@@ -126,7 +129,7 @@ final class RecurringReviewPage extends Component
             }
         }
         $this->selectedIds = [];
-        $this->dispatch('toast', message: Lang::get('recurring::review.toast.bulk_rejected', ['count' => $applied]), undoAction: 'bulkUndo', undoPayload: null);
+        $this->toastWithUndo(Lang::get('recurring::review.toast.bulk_rejected', ['count' => $applied]), undoAction: 'bulkUndo', undoPayload: null);
     }
 
     public function render(

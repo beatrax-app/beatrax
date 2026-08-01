@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
@@ -18,6 +19,8 @@ use Modules\Recurring\Public\Actions\SetDriftThresholdForSeries;
  */
 final class DriftThresholdEditor extends Component
 {
+    use DispatchesToast;
+
     /** @var list<int> */
     public const OPTIONS = DriftThresholdOptions::PERCENTS;
 
@@ -65,7 +68,7 @@ final class DriftThresholdEditor extends Component
         ($action)($this->recurringSeriesId, $currentUser->user(), $effective);
 
         $this->currentValue = $effective;
-        $this->dispatch('toast', message: Lang::get('drift-alerts::threshold.toast_updated'));
+        $this->toast(Lang::get('drift-alerts::threshold.toast_updated'));
     }
 
     public function render(ViewFactory $views): View

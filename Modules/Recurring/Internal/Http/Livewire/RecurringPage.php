@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Recurring\Internal\Jobs\DetectRecurringSeriesJob;
 use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
@@ -23,6 +24,8 @@ use Modules\Recurring\Public\Services\FixedPaymentsViewQuery;
  */
 final class RecurringPage extends Component
 {
+    use DispatchesToast;
+
     // Transfers-section disclosure state, default closed; the Blade view
     // renders the panel inside a <details> element whose open attribute
     // reflects this flag.
@@ -43,7 +46,7 @@ final class RecurringPage extends Component
             return;
         }
         $bus->dispatchSync(new DetectRecurringSeriesJob($currentUser->user()->id));
-        $this->dispatch('toast', message: Lang::get('recurring::index.detecting_toast'), undoAction: '', undoPayload: null);
+        $this->toastWithUndo(Lang::get('recurring::index.detecting_toast'), undoAction: '', undoPayload: null);
     }
 
     public function render(

@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
@@ -21,6 +22,8 @@ use Modules\DevMode\Public\Dto\CommandSpec;
  */
 final class CommandArgPromptModal extends Component
 {
+    use DispatchesToast;
+
     public string $command = '';
 
     public string $claimedTier = 'safe';
@@ -136,7 +139,7 @@ final class CommandArgPromptModal extends Component
         $command = $this->command;
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
 
-        $this->dispatch('toast', message: Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
+        $this->toast(Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
         $this->dispatch('modal-close', name: 'command-args');
 
         $this->values = [];

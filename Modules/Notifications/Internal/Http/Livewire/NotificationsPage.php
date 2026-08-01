@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
 use Modules\Notifications\Public\Actions\DismissNotification;
@@ -21,6 +22,8 @@ use Modules\Notifications\Public\Services\NotificationQuery;
  */
 final class NotificationsPage extends Component
 {
+    use DispatchesToast;
+
     private const TABS = ['unread', 'all', 'dismissed'];
 
     // Whitelist-validated - a tampered value falls back to 'unread'
@@ -59,7 +62,7 @@ final class NotificationsPage extends Component
     public function undoDismiss(string $notificationId, CurrentUser $currentUser, UndoDismissNotification $action): void
     {
         $action($notificationId, $currentUser->user());
-        $this->dispatch('toast', message: Lang::get('notifications::inbox.toast.restored'));
+        $this->toast(Lang::get('notifications::inbox.toast.restored'));
     }
 
     public function render(

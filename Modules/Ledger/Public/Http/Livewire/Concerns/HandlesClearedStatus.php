@@ -9,6 +9,7 @@ use Illuminate\Database\DatabaseManager;
 use Livewire\Attributes\On;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Enums\ClearedStatus;
@@ -21,6 +22,8 @@ use Modules\Sync\Public\Events\TransactionMutated;
  */
 trait HandlesClearedStatus
 {
+    use DispatchesToast;
+
     // Any id missing from the result set defaults to 'cleared' (the
     // column's DB default) — a missing row must render as the safe
     // default, never as falsy/uncleared.
@@ -91,7 +94,7 @@ trait HandlesClearedStatus
         }
 
         if ($current === ClearedStatus::Reconciled->value) {
-            $this->dispatch('toast', message: Lang::get('ledger::common.badge.reconciled_hint'));
+            $this->toast(Lang::get('ledger::common.badge.reconciled_hint'));
 
             return;
         }

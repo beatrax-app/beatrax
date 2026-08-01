@@ -12,6 +12,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Logging\RedactSecretsProcessor;
 use Modules\DevMode\Internal\Queue\QueueActions;
@@ -26,6 +27,8 @@ use Modules\DevMode\Internal\Services\DevModeFlag;
 #[Layout('dev::layouts.dev-shell')]
 final class QueueInspectorPage extends Component
 {
+    use DispatchesToast;
+
     public const TABS = ['pending', 'failed', 'batches'];
 
     public string $tab = 'pending';
@@ -56,37 +59,37 @@ final class QueueInspectorPage extends Component
     public function delete(int $id, QueueActions $actions): void
     {
         $actions->deletePending($id);
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.pending_deleted'));
+        $this->toast(Lang::get('dev::queue.toast.pending_deleted'));
     }
 
     public function retry(string $uuid, QueueActions $actions): void
     {
         $actions->retryFailed($uuid);
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.failed_requeued'));
+        $this->toast(Lang::get('dev::queue.toast.failed_requeued'));
     }
 
     public function forget(string $uuid, QueueActions $actions): void
     {
         $actions->forgetFailed($uuid);
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.failed_removed'));
+        $this->toast(Lang::get('dev::queue.toast.failed_removed'));
     }
 
     public function cancel(string $batchId, QueueActions $actions): void
     {
         $actions->cancelBatch($batchId);
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.batch_cancelled'));
+        $this->toast(Lang::get('dev::queue.toast.batch_cancelled'));
     }
 
     public function deleteBatch(string $batchId, QueueActions $actions): void
     {
         $actions->deleteBatch($batchId);
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.batch_deleted'));
+        $this->toast(Lang::get('dev::queue.toast.batch_deleted'));
     }
 
     public function retryFailures(string $batchId, QueueActions $actions): void
     {
         $actions->retryBatchFailures($batchId);
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.batch_failures_requeued'));
+        $this->toast(Lang::get('dev::queue.toast.batch_failures_requeued'));
     }
 
     // Non-destructive — Blade dispatches a single-confirm Flux modal;
@@ -103,7 +106,7 @@ final class QueueInspectorPage extends Component
         }
         $actions->bulkRetry($this->selected);
         $this->selected = [];
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.failed_jobs_requeued'));
+        $this->toast(Lang::get('dev::queue.toast.failed_jobs_requeued'));
     }
 
     // DESTRUCTIVE — Blade dispatches triple-gate:open with the current
@@ -143,7 +146,7 @@ final class QueueInspectorPage extends Component
 
         $refusal = $this->bulkDeleteRefusal($devMode, $session, $confirmed_typed);
         if ($refusal !== null) {
-            $this->dispatch('toast', message: Lang::get('dev::queue.toast.bulk_refused', ['reason' => $refusal]));
+            $this->toast(Lang::get('dev::queue.toast.bulk_refused', ['reason' => $refusal]));
 
             return;
         }
@@ -156,7 +159,7 @@ final class QueueInspectorPage extends Component
 
         $actions->bulkDelete($this->selected, $kind);
         $this->selected = [];
-        $this->dispatch('toast', message: Lang::get('dev::queue.toast.rows_deleted'));
+        $this->toast(Lang::get('dev::queue.toast.rows_deleted'));
     }
 
     // The triple gate re-validated server-side: Dev Mode env flag, session
