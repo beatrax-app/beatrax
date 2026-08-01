@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Ledger\Public\Services\AccountBalanceQuery;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\Services\PeriodQuery;
 use Modules\Pots\Public\Dto\PotMovementRow;
 use Modules\Pots\Public\Dto\PotRow;
@@ -27,6 +28,7 @@ final class PotBalanceQuery
         private readonly DatabaseManager $db,
         private readonly AccountBalanceQuery $accountBalance,
         private readonly PeriodQuery $periods,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function balanceForPot(int $potId, User $user): int
@@ -55,7 +57,7 @@ final class PotBalanceQuery
             : '';
         $currency = ($accountRow !== null && is_string($accountRow->default_currency))
             ? $accountRow->default_currency
-            : 'EUR';
+            : $this->baseCurrency->code();
 
         return new ReconciliationRow(
             accountId: $accountId,
