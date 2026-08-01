@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\DatabaseManager;
 use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Models\User;
@@ -21,6 +22,22 @@ beforeEach(function (): void {
         'default_currency_view' => 'eur_only',
     ]);
     $this->actingAs($this->user);
+});
+
+it('maps the user accounts into the forecasting list carrying each account currency', function (): void {
+    app(DatabaseManager::class)->connection()->table('accounts')->insert([
+        'user_id' => $this->user->id,
+        'name' => 'Main',
+        'slug' => 'main-'.bin2hex(random_bytes(3)),
+        'kind' => 'bank',
+        'iban' => 'NL00MAIN0000000000',
+        'default_currency' => 'USD',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    Livewire::test(SettingsPage::class)
+        ->assertViewHas('forecastingAccounts', fn (array $accts): bool => count($accts) === 1 && $accts[0]['default_currency'] === 'USD');
 });
 
 it('renders the Settings page with the user current preferences pre-filled', function (): void {

@@ -14,6 +14,7 @@ use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
  * @link ../../../../../.docs/features/core/architecture.md
@@ -64,7 +65,7 @@ final class SettingsPage extends Component
 
     public ?string $fxLastUpdated = null;
 
-    public function mount(CurrentUser $currentUser, DatabaseManager $db): void
+    public function mount(CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): void
     {
         $user = $currentUser->user();
         $this->defaultCurrencyView = $user->default_currency_view;
@@ -75,7 +76,7 @@ final class SettingsPage extends Component
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
         $this->theme = $user->theme;
         $this->isDeveloper = $user->is_developer === true;
-        $this->baseCurrency = $user->base_currency ?? 'EUR';
+        $this->baseCurrency = $user->base_currency ?? $baseCurrency->code();
         $this->fxOnlineEnabled = $user->fx_online_enabled ?? false;
 
         $latestRate = $db->connection()
@@ -177,7 +178,7 @@ final class SettingsPage extends Component
         $this->dispatch('settings-saved');
     }
 
-    public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db): View
+    public function render(ViewFactory $views, CurrentUser $currentUser, DatabaseManager $db, BaseCurrency $baseCurrency): View
     {
         // Load every account the user owns (one OpeningBalanceEditor per row)
         // and the seeded currencies for the picker, sorted alpha by code so
@@ -208,7 +209,7 @@ final class SettingsPage extends Component
             // (storage/app/inbox-drop/{userId}/) rather than the
             // root inbox-drop folder.
             'userId' => $currentUser->user()->id,
-            'forecastingAccounts' => $this->mapAccounts($accounts),
+            'forecastingAccounts' => $this->mapAccounts($accounts, $baseCurrency->code()),
             'currencyOptions' => $this->mapCurrencyOptions($currencyRows),
         ]);
     }
@@ -217,7 +218,7 @@ final class SettingsPage extends Component
      * @param  Collection<int, \stdClass>  $accounts
      * @return list<array<string, mixed>>
      */
-    private function mapAccounts(Collection $accounts): array
+    private function mapAccounts(Collection $accounts, string $baseCurrencyCode): array
     {
         $accountList = [];
         foreach ($accounts as $row) {
@@ -225,7 +226,7 @@ final class SettingsPage extends Component
                 'id' => is_numeric($row->id ?? null) ? (int) $row->id : 0,
                 'name' => is_string($row->name ?? null) ? $row->name : '',
                 'kind' => is_string($row->kind ?? null) ? $row->kind : '',
-                'default_currency' => is_string($row->default_currency ?? null) ? $row->default_currency : 'EUR',
+                'default_currency' => is_string($row->default_currency ?? null) ? $row->default_currency : $baseCurrencyCode,
                 'forecast_min_buffer_minor' => is_numeric($row->forecast_min_buffer_minor ?? null)
                     ? (int) $row->forecast_min_buffer_minor
                     : null,

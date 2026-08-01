@@ -14,6 +14,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Reports\Internal\Aggregation\PeriodPresetResolver;
 use Modules\Reports\Internal\Aggregation\ReportAggregator;
 use Modules\Reports\Internal\Http\DrilldownUrlBuilder;
@@ -214,6 +215,7 @@ final class ReportBuilder extends Component
         PeriodPresetResolver $periodPresetResolver,
         SensitiveColumnCodec $codec,
         Session $session,
+        BaseCurrency $baseCurrency,
     ): View {
         $user = $currentUser->user();
         $definition = $this->currentDefinition();
@@ -249,7 +251,7 @@ final class ReportBuilder extends Component
             'drilldownUrls' => $drilldownUrls,
             'showDimension' => $definition->metric !== 'net_worth',
             'showGranularity' => $definition->metric === 'net_worth' || $definition->dimension === 'time_bucket',
-            'availableAccounts' => $this->availableAccounts($db, $user->id),
+            'availableAccounts' => $this->availableAccounts($db, $user->id, $baseCurrency->code()),
             'availableCategories' => $this->availableCategories($db, $user->id),
             'availableCounterparties' => $this->availableCounterparties($db, $user->id, $codec, $session),
         ]);
@@ -303,7 +305,7 @@ final class ReportBuilder extends Component
     /**
      * @return list<array{id: int, name: string, currency: string}>
      */
-    private function availableAccounts(DatabaseManager $db, int $userId): array
+    private function availableAccounts(DatabaseManager $db, int $userId, string $baseCurrencyCode): array
     {
         $rows = $db->connection()
             ->table('accounts')
@@ -312,11 +314,11 @@ final class ReportBuilder extends Component
             ->get(['id', 'name', 'default_currency'])
             ->all();
 
-        return array_values(array_map(static function (object $row): array {
+        return array_values(array_map(static function (object $row) use ($baseCurrencyCode): array {
             return [
                 'id' => is_numeric($row->id) ? (int) $row->id : 0,
                 'name' => is_string($row->name) ? $row->name : '',
-                'currency' => is_string($row->default_currency) ? $row->default_currency : 'EUR',
+                'currency' => is_string($row->default_currency) ? $row->default_currency : $baseCurrencyCode,
             ];
         }, $rows));
     }
