@@ -38,7 +38,7 @@ final class MoneyInput
         }
 
         [$whole, $frac] = array_pad(explode('.', $unsigned, 2), 2, '');
-        $minor = (int) $whole * 100 + (int) str_pad($frac, 2, '0');
+        $minor = (int) $whole * Money::MINOR_UNITS_PER_MAJOR + (int) str_pad($frac, 2, '0');
 
         return $negative ? -$minor : $minor;
     }
@@ -67,6 +67,6 @@ final class MoneyInput
     {
         $abs = abs($minor);
 
-        return intdiv($abs, 100).','.str_pad((string) ($abs % 100), 2, '0', STR_PAD_LEFT);
+        return intdiv($abs, Money::MINOR_UNITS_PER_MAJOR).','.str_pad((string) ($abs % Money::MINOR_UNITS_PER_MAJOR), 2, '0', STR_PAD_LEFT);
     }
 }

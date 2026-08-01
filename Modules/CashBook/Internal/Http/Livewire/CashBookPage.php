@@ -14,6 +14,7 @@ use Livewire\Component;
 use Modules\CashBook\Internal\Actions\RecordManualTransaction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
 use Modules\Tax\Public\Services\TaxTagQuery;
@@ -198,7 +199,7 @@ final class CashBookPage extends Component
 
         $cents = substr(str_pad($fracRaw, 2, '0'), 0, 2);
 
-        return (int) $whole * 100 + (int) $cents;
+        return (int) $whole * Money::MINOR_UNITS_PER_MAJOR + (int) $cents;
     }
 
     private static function parseDate(string $raw): ?CarbonImmutable

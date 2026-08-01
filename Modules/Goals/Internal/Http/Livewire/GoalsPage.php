@@ -15,6 +15,7 @@ use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Goals\Public\Services\GoalWriter;
+use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
@@ -120,7 +121,7 @@ final class GoalsPage extends Component
                 $this->name = $row->name;
                 // Integer-only minor -> display formatting — no float
                 // division on a money amount.
-                $this->targetAmount = sprintf('%d.%02d', intdiv($row->targetMinor, 100), $row->targetMinor % 100);
+                $this->targetAmount = sprintf('%d.%02d', intdiv($row->targetMinor, Money::MINOR_UNITS_PER_MAJOR), $row->targetMinor % Money::MINOR_UNITS_PER_MAJOR);
                 $this->targetDate = $row->targetDate;
                 $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
                 $linkedPotId = $potBalance->linkedPotIdForGoal($goalId, $currentUser->user());

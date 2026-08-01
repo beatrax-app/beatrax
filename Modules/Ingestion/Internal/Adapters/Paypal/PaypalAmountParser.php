@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Ingestion\Internal\Adapters\Paypal;
 
 use Modules\Ingestion\Public\Exceptions\InvalidAmountException;
+use Modules\Ledger\Public\ValueObjects\Money;
 
 /**
  * @link ../../../../../.docs/features/ingestion/architecture.md
@@ -30,6 +31,6 @@ final class PaypalAmountParser
         $whole = (int) $m[2];
         $fractional = (int) $m[3];
 
-        return $sign * ($whole * 100 + $fractional);
+        return $sign * ($whole * Money::MINOR_UNITS_PER_MAJOR + $fractional);
     }
 }
