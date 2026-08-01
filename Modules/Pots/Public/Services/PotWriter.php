@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Enums\PotStatus;
@@ -26,6 +27,7 @@ final class PotWriter
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly PotBalanceQuery $balance,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -410,11 +412,9 @@ final class PotWriter
             ->where('id', $accountId)
             ->first(['default_currency']);
 
-        if ($row === null) {
-            return 'EUR';
-        }
-
-        return is_string($row->default_currency) ? $row->default_currency : 'EUR';
+        return ($row !== null && is_string($row->default_currency))
+            ? $row->default_currency
+            : $this->baseCurrency->code();
     }
 
     /**

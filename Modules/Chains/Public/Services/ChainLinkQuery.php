@@ -19,6 +19,7 @@ use Modules\Chains\Public\Enums\ChainLinkState;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
@@ -49,6 +50,7 @@ final class ChainLinkQuery
         private readonly SessionFactory $session,
         private readonly HintEvidenceSummary $hintEvidence,
         private readonly ChainTreeWalker $treeWalker,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     public function forTransaction(int $transactionId, User $user): ChainTree
@@ -307,7 +309,7 @@ final class ChainLinkQuery
      */
     private function transactionSummary(mixed $transactionId, User $user): array
     {
-        $default = ['counterparty' => '', 'amountMinor' => 0, 'currency' => 'EUR', 'postedAt' => self::EPOCH_DATE, 'slug' => null];
+        $default = ['counterparty' => '', 'amountMinor' => 0, 'currency' => $this->baseCurrency->code(), 'postedAt' => self::EPOCH_DATE, 'slug' => null];
         if ($transactionId === null) {
             return $default;
         }
@@ -334,7 +336,7 @@ final class ChainLinkQuery
         return [
             'counterparty' => $this->decryptCounterpartyName(self::toString($row->counterparty_name ?? null), $user->id),
             'amountMinor' => self::toInt($row->settled_amount_minor ?? null),
-            'currency' => $currency !== '' ? $currency : 'EUR',
+            'currency' => $currency !== '' ? $currency : $this->baseCurrency->code(),
             'postedAt' => $postedAt !== '' ? $postedAt : self::EPOCH_DATE,
             'slug' => self::extractCounterpartySlug($row),
         ];
@@ -362,7 +364,7 @@ final class ChainLinkQuery
         $fromTxId = self::toInt($row->from_transaction_id ?? null);
         $fromCounterparty = '';
         $fromAmountMinor = 0;
-        $fromCurrency = 'EUR';
+        $fromCurrency = $this->baseCurrency->code();
         $fromPostedAt = self::EPOCH_DATE;
         $fromAccountId = 0;
         $fromCounterpartySlug = null;
@@ -384,7 +386,7 @@ final class ChainLinkQuery
             $fromCounterparty = $this->decryptCounterpartyName(self::toString($fromRow->counterparty_name ?? null), $user->id);
             $fromAmountMinor = self::toInt($fromRow->settled_amount_minor ?? null);
             $cur = self::toString($fromRow->settled_currency ?? null);
-            $fromCurrency = $cur !== '' ? $cur : 'EUR';
+            $fromCurrency = $cur !== '' ? $cur : $this->baseCurrency->code();
             $fromPostedAt = self::toString($fromRow->posted_at ?? null);
             if ($fromPostedAt === '') {
                 $fromPostedAt = self::EPOCH_DATE;
