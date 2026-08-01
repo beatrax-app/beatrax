@@ -17,6 +17,7 @@ use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Ledger\Public\Dto\DashboardSummary;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Enums\CategoryKind;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
@@ -110,7 +111,7 @@ final class DemoNotificationsSeeder
                     seriesId: $kpnSeriesId,
                     dueDate: $due,
                     confidenceLow: false,
-                    expectedAmount: Money::ofMinor(4500, 'EUR'),
+                    expectedAmount: Money::ofMinor(4500, Currency::Eur->value),
                     displayName: 'KPN',
                 ));
             });
@@ -128,7 +129,7 @@ final class DemoNotificationsSeeder
                     seriesId: $sportCitySeriesId,
                     dueDate: $due,
                     confidenceLow: true,
-                    expectedAmount: Money::ofMinor(2500, 'EUR'),
+                    expectedAmount: Money::ofMinor(2500, Currency::Eur->value),
                     displayName: 'Sport City',
                 ));
             });
@@ -146,7 +147,7 @@ final class DemoNotificationsSeeder
                     seriesId: $spotifySeriesId,
                     dueDate: $due,
                     confidenceLow: false,
-                    expectedAmount: Money::ofMinor(1099, 'EUR'),
+                    expectedAmount: Money::ofMinor(1099, Currency::Eur->value),
                     displayName: 'Spotify Premium',
                 ));
             });
@@ -171,7 +172,7 @@ final class DemoNotificationsSeeder
                 seriesId: $deadSeriesId,
                 dueDate: $deadDue,
                 confidenceLow: false,
-                expectedAmount: Money::ofMinor(999, 'EUR'),
+                expectedAmount: Money::ofMinor(999, Currency::Eur->value),
                 displayName: 'Discontinued subscription',
             ));
         });
@@ -196,7 +197,7 @@ final class DemoNotificationsSeeder
                     thresholdPercent: 90,
                     spentMinor: 28700,
                     budgetMinor: 30000,
-                    currency: 'EUR',
+                    currency: Currency::Eur->value,
                 ));
             });
             $this->markRead($user, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, (string) $groceries['id'], $period);
@@ -213,7 +214,7 @@ final class DemoNotificationsSeeder
                     thresholdPercent: 90,
                     spentMinor: 11500,
                     budgetMinor: 12000,
-                    currency: 'EUR',
+                    currency: Currency::Eur->value,
                 ));
             });
             $this->markRead($user, DeterministicKeyDeriver::TRIGGER_BUDGET_NUDGE, (string) $eatingOut['id'], $period);
@@ -229,7 +230,7 @@ final class DemoNotificationsSeeder
                     seriesId: $netflixSeriesId,
                     name: 'Netflix',
                     monthlyMinor: 1499,
-                    currency: 'EUR',
+                    currency: Currency::Eur->value,
                     message: 'A cheaper Netflix plan could save you money.',
                     actionUrl: $this->urls->route('recurring.series.show', ['seriesId' => $netflixSeriesId]),
                 ));
@@ -310,7 +311,7 @@ final class DemoNotificationsSeeder
                     startsAt: $startsAt,
                     endsAt: $endsAt,
                     lowestBalanceMinor: -8500,
-                    currency: 'EUR',
+                    currency: Currency::Eur->value,
                     bufferUsedMinor: 50000,
                 ));
             });
@@ -412,9 +413,9 @@ final class DemoNotificationsSeeder
 
         $summary = new DashboardSummary(
             period: $period,
-            inflow: Money::ofMinor($inflowMinor, 'EUR'),
-            outflow: Money::ofMinor($outflowMinor, 'EUR'),
-            net: Money::ofMinor($netMinor, 'EUR'),
+            inflow: Money::ofMinor($inflowMinor, Currency::Eur->value),
+            outflow: Money::ofMinor($outflowMinor, Currency::Eur->value),
+            net: Money::ofMinor($netMinor, Currency::Eur->value),
             topCategories: [],
             recentTransactions: [],
             uncategorizedCount: 0,

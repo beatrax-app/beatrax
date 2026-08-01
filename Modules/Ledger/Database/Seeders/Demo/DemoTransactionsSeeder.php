@@ -12,6 +12,7 @@ use Modules\Ledger\Models\Category;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Dto\CanonicalTransaction;
+use Modules\Ledger\Public\Enums\Currency;
 use Modules\Ledger\Public\Enums\ImportRunStatus;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\FingerprintComposer;
@@ -296,7 +297,7 @@ final class DemoTransactionsSeeder
                 'amountMinor' => $amountUsd,
                 'currency' => 'USD',
                 'settledAmountMinor' => $settledEur,
-                'settledCurrency' => 'EUR',
+                'settledCurrency' => Currency::Eur->value,
                 'fxRateUsed' => self::EUR_PER_USD,
                 'description' => 'GOOGLE *Google Play',
                 'counterpartyName' => 'Google Play',
@@ -698,9 +699,9 @@ final class DemoTransactionsSeeder
         int $rowIndex,
         array $row,
     ): int {
-        $currency = $row['currency'] ?? 'EUR';
+        $currency = $row['currency'] ?? Currency::Eur->value;
         $settledAmountMinor = $row['settledAmountMinor'] ?? $row['amountMinor'];
-        $settledCurrency = $row['settledCurrency'] ?? 'EUR';
+        $settledCurrency = $row['settledCurrency'] ?? Currency::Eur->value;
         $fxRateUsed = $row['fxRateUsed'] ?? null;
 
         $normalized = $this->fingerprints->normalize(
