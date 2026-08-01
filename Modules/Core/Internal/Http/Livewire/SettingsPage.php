@@ -15,6 +15,7 @@ use Modules\Community\Public\Actions\OpenExternalUrlAction;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\DriftThresholdOptions;
 use Modules\Core\Public\Support\Lang;
 use Modules\FX\Public\Actions\DispatchFxRatesRefresh;
 use Modules\Ledger\Public\Services\BaseCurrency;
@@ -38,7 +39,6 @@ final class SettingsPage extends Component
     #[Validate('required|integer|min:0|max:100000000')]
     public int $recurringIncomeMinAmountMinor = 200000;
 
-    #[Validate('required|integer|in:1,2,5,10,25,50')]
     public int $driftAlertThresholdPercent = 5;
 
     #[Validate('required|in:light,dark,system')]
@@ -295,6 +295,20 @@ final class SettingsPage extends Component
         }
 
         return $currencyOptions;
+    }
+
+    // The drift-threshold allow-list is built from the shared
+    // DriftThresholdOptions SSoT rather than an inline in: literal (a
+    // #[Validate] attribute cannot reference a runtime constant). Livewire
+    // composes this with the remaining attribute rules.
+    /**
+     * @return array<string, string>
+     */
+    public function rules(): array
+    {
+        return [
+            'driftAlertThresholdPercent' => 'required|integer|in:'.implode(',', DriftThresholdOptions::PERCENTS),
+        ];
     }
 
     /**
