@@ -12,7 +12,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingRelayCourier;
-use Modules\Sync\Internal\Pairing\PairingStateMachine;
+use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
@@ -24,9 +24,9 @@ use stdClass;
  */
 final class PairingGateway
 {
-    public const string STATE_AWAITING_CONFIRM = PairingStateMachine::AWAITING_CONFIRM;
+    public const string STATE_AWAITING_CONFIRM = PairingState::AwaitingConfirm->value;
 
-    public const string STATE_CONFIRMED = PairingStateMachine::CONFIRMED;
+    public const string STATE_CONFIRMED = PairingState::Confirmed->value;
 
     public function __construct(
         private readonly DeviceIdentityLoader $identityLoader,

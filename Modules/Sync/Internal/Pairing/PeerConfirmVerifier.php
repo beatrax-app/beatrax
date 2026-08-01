@@ -35,7 +35,7 @@ final class PeerConfirmVerifier
         $row = $this->db->connection()->table('pairing_tokens')
             ->where('user_id', $userId)
             ->where('token_hash', $tokenHash)
-            ->whereIn('state', [PairingStateMachine::AWAITING_CONFIRM, PairingStateMachine::CONFIRMED])
+            ->whereIn('state', [PairingState::AwaitingConfirm->value, PairingState::Confirmed->value])
             ->where('expires_at', '>', $now->toIso8601String())
             ->first();
 
