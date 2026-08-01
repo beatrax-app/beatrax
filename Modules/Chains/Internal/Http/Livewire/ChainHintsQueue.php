@@ -10,6 +10,7 @@ use Livewire\Component;
 use Modules\Chains\Public\Actions\DismissChainLinkHint;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 
 // /chains/hints reviews hint-shaped chain_links (to_transaction_id IS
 // NULL) that /chains/review filters out, since Confirm/Reject there would
@@ -25,7 +26,7 @@ final class ChainHintsQueue extends Component
     {
         $this->statusMessage = null;
         ($dismiss)($chainLinkId, $currentUser->user());
-        $this->statusMessage = 'Hint dismissed.';
+        $this->statusMessage = Lang::get('chains::hints.dismissed');
     }
 
     public function render(
@@ -41,7 +42,7 @@ final class ChainHintsQueue extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Chain hints · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('chains::hints.page_title').' · beatrax']);
 
         return $view;
     }

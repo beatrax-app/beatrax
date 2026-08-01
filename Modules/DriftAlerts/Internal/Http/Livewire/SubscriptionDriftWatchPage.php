@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Services\SubscriptionDriftWatchQuery;
 
 /**
@@ -29,7 +30,7 @@ final class SubscriptionDriftWatchPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Subscription drift · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('drift-alerts::watch.page_title').' · beatrax']);
 
         return $view;
     }

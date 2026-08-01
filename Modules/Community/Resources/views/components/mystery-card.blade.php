@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     /**
      * @var array{description: string, count: int, lastSeen: ?string, paymentType: ?\Modules\Import\Public\Enums\PaymentType} $row
@@ -13,12 +14,12 @@
         <code class="code inline-block rounded-md bg-slate-100 px-2 py-1 text-xs font-mono text-slate-900 dark:bg-slate-900 dark:text-slate-100">
             {{ $description }}
         </code>
-        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Likely: an unnamed merchant.</p>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.card.likely') }}</p>
     </div>
     <div class="text-sm text-slate-700 dark:text-slate-300">
-        <p>Seen <span style="font-variant-numeric: tabular-nums;">{{ $count }}</span> {{ $count === 1 ? 'time' : 'times' }}</p>
+        <p>{{ Lang::get('community::mystery.card.seen') }} <span style="font-variant-numeric: tabular-nums;">{{ $count }}</span> {{ Lang::get('community::mystery.card.'.($count === 1 ? 'time_one' : 'time_other')) }}</p>
         @if ($lastSeen !== null)
-            <p class="text-xs text-slate-500 dark:text-slate-400">Last seen {{ \Illuminate\Support\Carbon::parse($lastSeen)->format('d-m-Y') }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.card.last_seen', ['date' => \Illuminate\Support\Carbon::parse($lastSeen)->format('d-m-Y')]) }}</p>
         @endif
     </div>
     <div class="text-sm text-slate-700 dark:text-slate-300">
@@ -33,6 +34,6 @@
             type="button"
             wire:click="$dispatch('suggest-mapping:open', { rawDescription: @js($description) })"
             class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-        >Suggest a name →</button>
+        >{{ Lang::get('community::mystery.card.suggest') }}</button>
     </div>
 </article>

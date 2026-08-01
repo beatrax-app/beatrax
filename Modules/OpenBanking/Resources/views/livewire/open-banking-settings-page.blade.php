@@ -1,12 +1,13 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- `/settings/open-banking` trust surface (19-11, UI-SPEC Surface B). --}}
 
 <div class="max-w-2xl mx-auto space-y-6" data-testid="open-banking-settings-page">
-    <a href="{{ route('settings') }}" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; Settings</a>
+    <a href="{{ route('settings') }}" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; {{ Lang::get('openbanking::messages.page.back_link') }}</a>
 
     <header class="space-y-1">
-        <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Open banking</h1>
+        <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.page.heading') }}</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            Automatically fetch transactions from ASN or SNS through Enable Banking, a third-party PSD2 aggregator. Off by default.
+            {{ Lang::get('openbanking::messages.page.subtitle') }}
         </p>
     </header>
 
@@ -25,12 +26,12 @@
     <div class="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
         <div class="flex items-start justify-between gap-3">
             <div class="flex-1">
-                <p class="text-sm text-slate-900 dark:text-slate-100">Enable open banking</p>
+                <p class="text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.page.toggle_label') }}</p>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     @if ($enabled)
-                        Connected to {{ $bankDisplayName }} via Enable Banking.
+                        {{ Lang::get('openbanking::messages.page.toggle_connected', ['bank' => $bankDisplayName]) }}
                     @else
-                        Off by default. Requires a one-time acknowledgement and guided setup.
+                        {{ Lang::get('openbanking::messages.page.toggle_off_help') }}
                     @endif
                 </p>
             </div>
@@ -39,7 +40,7 @@
                 class="switch{{ $enabled ? ' switch--on' : '' }}"
                 wire:click="toggleClicked"
                 aria-pressed="{{ $enabled ? 'true' : 'false' }}"
-                aria-label="Enable open banking"
+                aria-label="{{ Lang::get('openbanking::messages.page.toggle_label') }}"
                 data-testid="ob-toggle"
             >
                 <span class="switch__thumb"></span>
@@ -57,7 +58,7 @@
                    dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
             data-testid="ob-reconfirm-banner"
         >
-            <p>Your acknowledgement expired before we could finish connecting. Re-confirm to finish enabling open banking.</p>
+            <p>{{ Lang::get('openbanking::messages.page.reconfirm_body') }}</p>
             <button
                 type="button"
                 wire:click="reconfirmEnable"
@@ -67,7 +68,7 @@
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
                 data-testid="ob-reconfirm-button"
-            >Re-confirm to finish enabling</button>
+            >{{ Lang::get('openbanking::messages.page.reconfirm_button') }}</button>
         </div>
     @endif
 
@@ -102,16 +103,16 @@
                             href="{{ route('imports.preview', ['id' => $syncReviewImportRunId]) }}"
                             class="ml-1 font-medium underline"
                             data-testid="ob-review-import-link"
-                        >Review import &rarr;</a>
+                        >{{ Lang::get('openbanking::messages.sync.review_import') }} &rarr;</a>
                     @endif
                 </div>
             @endif
 
             <div class="flex items-center justify-between gap-3">
                 @if ($consentStatus === 'expired')
-                    <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="ob-sync-now-disabled-caption">Reconnect first</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="ob-sync-now-disabled-caption">{{ Lang::get('openbanking::messages.sync.reconnect_first') }}</p>
                 @else
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Syncs automatically once a day.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('openbanking::messages.sync.auto_caption') }}</p>
                 @endif
                 <button
                     type="button"
@@ -130,7 +131,7 @@
                         wire:target="syncNow"
                         class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white dark:border-slate-900/40 dark:border-t-slate-900"
                     ></span>
-                    Sync now
+                    {{ Lang::get('openbanking::messages.sync.sync_now') }}
                 </button>
             </div>
         </div>
@@ -148,9 +149,9 @@
     @if ($showDisconnectModal)
         <flux:modal wire:model="showDisconnectModal" class="md:max-w-sm" data-testid="open-banking-disconnect-modal">
             <div class="space-y-4 p-6">
-                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Disconnect open banking?</h3>
+                <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('openbanking::messages.disconnect.heading') }}</h3>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    This removes your stored Enable Banking credentials and consent. Automatic syncing stops immediately. Transactions already imported into beatrax are not affected.
+                    {{ Lang::get('openbanking::messages.disconnect.body') }}
                 </p>
                 <div class="flex gap-3">
                     <button
@@ -160,7 +161,7 @@
                         class="flex-1 min-h-[44px] rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white
                                hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2"
                         data-testid="ob-confirm-disconnect"
-                    >Disconnect</button>
+                    >{{ Lang::get('openbanking::messages.disconnect.confirm') }}</button>
                     <button
                         type="button"
                         wire:click="cancelDisconnect"
@@ -169,7 +170,7 @@
                                hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                                dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                         data-testid="ob-cancel-disconnect"
-                    >Keep connected</button>
+                    >{{ Lang::get('openbanking::messages.disconnect.cancel') }}</button>
                 </div>
             </div>
         </flux:modal>

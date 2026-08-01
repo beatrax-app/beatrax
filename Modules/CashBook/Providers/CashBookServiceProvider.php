@@ -20,6 +20,7 @@ final class CashBookServiceProvider extends ServiceProvider
     {
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'cashbook');
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'cashbook');
 
         $livewire->component('cashbook.cash-book-page', CashBookPage::class);
     }

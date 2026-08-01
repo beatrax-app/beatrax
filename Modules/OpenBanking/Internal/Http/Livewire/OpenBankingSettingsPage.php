@@ -14,6 +14,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Dto\PreviewRowDto;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\FormatsConnectionTimestamps;
 use Modules\OpenBanking\Internal\Http\Livewire\Concerns\ManagesGuidedIcsImport;
@@ -402,8 +403,8 @@ final class OpenBankingSettingsPage extends Component
             $this->refreshState($currentUser, $query);
             $this->syncFlashTone = 'error';
             $this->syncFlashMessage = $isConsentFailure
-                ? 'Consent expired — reconnect.'
-                : 'Enable Banking is temporarily unavailable. Try again shortly.';
+                ? Lang::get('openbanking::messages.sync.consent_expired')
+                : Lang::get('openbanking::messages.sync.unavailable');
 
             return;
         }
@@ -427,14 +428,14 @@ final class OpenBankingSettingsPage extends Component
 
         if ($newCount > 0) {
             $this->syncFlashTone = 'success';
-            $this->syncFlashMessage = "{$newCount} new transactions found.";
+            $this->syncFlashMessage = Lang::get('openbanking::messages.sync.new_found', ['count' => $newCount]);
             $this->syncReviewImportRunId = $preview->importRunId;
 
             return;
         }
 
         $this->syncFlashTone = 'zero';
-        $this->syncFlashMessage = 'No new transactions.';
+        $this->syncFlashMessage = Lang::get('openbanking::messages.sync.none');
     }
 
     public function render(ViewFactory $views): View

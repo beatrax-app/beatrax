@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Per-account buffer editor popover.
 
@@ -24,15 +25,15 @@
 
 <div role="dialog" aria-labelledby="buffer-editor-heading-{{ $accountId }}" aria-modal="false">
     <h4 id="buffer-editor-heading-{{ $accountId }}" class="text-sm font-medium text-slate-900 dark:text-slate-100">
-        Set minimum buffer for {{ $accountName }}
+        {{ Lang::get('forecasting::buffer.heading', ['name' => $accountName]) }}
     </h4>
     <p id="buffer-help-{{ $accountId }}" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Alert me when projected balance dips below this amount.
+        {{ Lang::get('forecasting::buffer.help') }}
     </p>
 
     <div class="mt-3 flex items-center gap-1">
         <span class="text-sm text-slate-500 dark:text-slate-400" aria-hidden="true">{{ $symbol }}</span>
-        <label for="buffer-input-{{ $accountId }}" class="sr-only">Minimum buffer for {{ $accountName }}</label>
+        <label for="buffer-input-{{ $accountId }}" class="sr-only">{{ Lang::get('forecasting::buffer.input_aria', ['name' => $accountName]) }}</label>
         <input
             id="buffer-input-{{ $accountId }}"
             type="text"
@@ -54,12 +55,12 @@
             type="button"
             wire:click="save"
             class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
-        >Save buffer</button>
+        >{{ Lang::get('forecasting::buffer.save') }}</button>
         <button
             type="button"
             x-on:click="open = false"
             class="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-900 dark:bg-slate-950 dark:text-slate-300 dark:border-slate-700"
-        >Cancel</button>
+        >{{ Lang::get('forecasting::buffer.cancel') }}</button>
     </div>
 
     <div class="mt-2 text-right">
@@ -67,6 +68,6 @@
             type="button"
             wire:click="clear"
             class="text-xs text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
-        >Clear buffer (use €0 floor)</button>
+        >{{ Lang::get('forecasting::buffer.clear') }}</button>
     </div>
 </div>

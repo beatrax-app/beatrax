@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Tax country',
+    'country_desc' => 'Sets which deduction categories are available.',
+    'country_choose' => 'Choose a country…',
+    'country_switch_warning' => 'Switching adds new categories — existing tags are never changed.',
+
+    'countries' => [
+        'nl' => 'Netherlands',
+        'de' => 'Germany',
+        'be' => 'Belgium',
+        'fr' => 'France',
+        'gb' => 'United Kingdom',
+        'us' => 'United States',
+    ],
+
+    'categories_label' => 'Deduction categories',
+    'categories_desc' => 'Customise the buckets you use for tagging.',
+    'categories_empty' => 'No categories yet. Add your first category or switch country to load defaults.',
+
+    'from_corpus' => 'from corpus',
+    'rename_input_aria' => 'New name for :name',
+    'rename' => 'Rename',
+    'rename_aria' => 'Rename :name',
+    'rename_save_aria' => 'Save new name for :name',
+    'save' => 'Save',
+    'archive' => 'Archive',
+    'archive_aria' => 'Archive :name',
+
+    'new_category_label' => 'New category name',
+    'new_category_placeholder' => 'New category name…',
+    'add_category' => 'Add category',
+    'category_added' => 'Category added.',
+
+    'archived_count' => 'Archived (:count)',
+    'restore' => 'Restore',
+    'restore_aria' => 'Restore :name',
+];

@@ -16,6 +16,7 @@ use Modules\Categorization\Public\Dto\RuleInput;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Mounted once in app.blade.php. TransactionDetail::reclassify() invokes
@@ -103,7 +104,7 @@ final class CorrectionDivergenceToast extends Component
         $user = $currentUser->user();
         $rule = $rules->findForUser($user, $this->ruleId);
         if ($rule === null) {
-            $this->dismissWith('Rule no longer exists.');
+            $this->dismissWith(Lang::get('categorization::detail.flash_rule_gone_short'));
 
             return;
         }
@@ -144,18 +145,18 @@ final class CorrectionDivergenceToast extends Component
                 conditions: $conditionsPayload,
                 actions: $actionsPayload,
             ));
-            $this->dismissWith('Rule updated.');
+            $this->dismissWith(Lang::get('categorization::detail.flash_rule_updated'));
         } catch (ValidationException|NotFoundHttpException|InvalidArgumentException $e) {
             // NotFoundHttpException dismisses the toast — the ruleId maps to no
             // visible row (deleted elsewhere, or tampered). ValidationException
             // (a future allowed-keys expansion) and InvalidArgumentException (a
             // tampered category id) are unreachable normally and leave it open.
             if ($e instanceof NotFoundHttpException) {
-                $this->dismissWith('Rule no longer exists.');
+                $this->dismissWith(Lang::get('categorization::detail.flash_rule_gone_short'));
             } else {
                 $this->flashMessage = $e instanceof ValidationException
-                    ? 'Could not update rule.'
-                    : 'Invalid category — please refresh the page.';
+                    ? Lang::get('categorization::detail.flash_could_not_update')
+                    : Lang::get('categorization::detail.flash_invalid_category');
             }
         }
     }

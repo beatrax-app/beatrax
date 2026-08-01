@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Internal\Jobs\ProjectForecastJob;
 use Modules\Forecasting\Public\Exceptions\OpeningBalanceDivergenceWarning;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -78,16 +79,16 @@ final class SetAccountOpeningBalance
         bool $allowDivergence,
     ): void {
         if ($openingBalanceAsOfDate === null || trim($openingBalanceAsOfDate) === '') {
-            throw new InvalidArgumentException('Pick the date this opening balance applies to.');
+            throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_required'));
         }
         $parsed = \DateTimeImmutable::createFromFormat('Y-m-d', $openingBalanceAsOfDate);
         if ($parsed === false || $parsed->format('Y-m-d') !== $openingBalanceAsOfDate) {
-            throw new InvalidArgumentException('Opening balance date must be a valid ISO date (YYYY-MM-DD).');
+            throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_invalid'));
         }
         $today = $this->clock->now()->startOfDay();
         $asOf = CarbonImmutable::parse($openingBalanceAsOfDate)->startOfDay();
         if ($asOf->greaterThan($today)) {
-            throw new InvalidArgumentException('Opening balance date cannot be in the future.');
+            throw new InvalidArgumentException(Lang::get('forecasting::opening_balance.errors.date_future'));
         }
 
         if ($allowDivergence) {

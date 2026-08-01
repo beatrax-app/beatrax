@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
+use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
@@ -160,7 +161,7 @@ final class GoalWriter
             ->exists();
 
         if (! $exists) {
-            throw new \InvalidArgumentException('Account not owned by the authenticated user.');
+            throw new \InvalidArgumentException(Lang::get('goals::messages.errors.account_not_owned'));
         }
     }
 }

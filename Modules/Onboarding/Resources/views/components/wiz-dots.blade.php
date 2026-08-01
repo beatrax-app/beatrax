@@ -17,6 +17,7 @@
     label cluster so it can be slotted into either the wiz-top header
     or any future progress preview.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'progress' => [],
     'current' => '',
@@ -29,7 +30,7 @@
     $currentStepNumber = $currentIndex === false ? 1 : ($currentIndex + 1);
 @endphp
 
-<nav {{ $attributes->class(['wiz-dots']) }} aria-label="Setup progress">
+<nav {{ $attributes->class(['wiz-dots']) }} aria-label="{{ Lang::get('onboarding::components.progress_aria') }}">
     @foreach ($stepKeys as $index => $stepKey)
         @php
             $status = $progress[$stepKey]['status'] ?? \Modules\Onboarding\Public\Enums\WizardStepStatus::Pending->value;
@@ -42,11 +43,11 @@
         @endphp
         <span
             class="{{ $dotClass }}"
-            aria-label="Step {{ $index + 1 }} of {{ $totalSteps }}"
+            aria-label="{{ Lang::get('onboarding::components.step_dot_aria', ['number' => $index + 1, 'total' => $totalSteps]) }}"
             @if ($isCurrent) aria-current="step" @endif
         ></span>
     @endforeach
     <span class="wiz-dots-label">
-        Step {{ $currentStepNumber }} of {{ $totalSteps }}
+        {{ Lang::get('onboarding::components.step_progress', ['current' => $currentStepNumber, 'total' => $totalSteps]) }}
     </span>
 </nav>

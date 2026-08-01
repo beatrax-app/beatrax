@@ -17,10 +17,11 @@
      overall status — the calm aesthetic forbids painting the tile
      title red (UI-SPEC § Typography / Email-scan-health tile). --}}
 
+@use('Modules\Core\Public\Support\Lang')
 @props(['tile'])
 
 <div class="space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">Email scan health</h3>
+    <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('email-scan::health.heading') }}</h3>
 
     @foreach ($tile->lines as $line)
         @php
@@ -35,11 +36,11 @@
             };
             $providerLabel = $line->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365';
             if ($line->status === 'reauth') {
-                $lineCopy = $providerLabel . ': needs reconnect';
+                $lineCopy = $providerLabel . ': ' . Lang::get('email-scan::health.needs_reconnect');
             } elseif ($line->lastScanAt === null) {
-                $lineCopy = $providerLabel . ': not scanned yet';
+                $lineCopy = $providerLabel . ': ' . Lang::get('email-scan::health.not_scanned_yet');
             } else {
-                $lineCopy = $providerLabel . ': last scanned '
+                $lineCopy = $providerLabel . ': ' . Lang::get('email-scan::health.last_scanned') . ' '
                     . \Carbon\CarbonImmutable::instance($line->lastScanAt)->diffForHumans();
             }
         @endphp
@@ -50,6 +51,6 @@
     @endforeach
 
     @if ($tile->overflowCount > 0)
-        <div class="text-xs text-slate-500 dark:text-slate-400">+{{ $tile->overflowCount }} more</div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('email-scan::health.more', ['count' => $tile->overflowCount]) }}</div>
     @endif
 </div>

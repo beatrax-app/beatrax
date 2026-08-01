@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Shared popover/sheet body.
     Referenced by both the desktop popover and the phone bottom-sheet inside
@@ -11,12 +12,12 @@
         <label
             for="tax-picker-note-{{ $taxPickerTxId ?? 'none' }}"
             style="display: block; font-size: var(--text-xs, 12px); color: var(--color-text-muted, #64748b); margin-bottom: 4px;"
-        >Note <span style="color: var(--color-text-faint, #94a3b8);">(optional)</span></label>
+        >{{ Lang::get('tax::picker.note_label') }} <span style="color: var(--color-text-faint, #94a3b8);">{{ Lang::get('tax::picker.note_optional') }}</span></label>
         <textarea
             id="tax-picker-note-{{ $taxPickerTxId ?? 'none' }}"
             wire:model="pickerNote"
             rows="1"
-            placeholder="Invoice #, date, or other reference…"
+            placeholder="{{ Lang::get('tax::picker.note_placeholder') }}"
             style="
                 width: 100%;
                 font-size: var(--text-base, 15px);
@@ -35,10 +36,10 @@
 
     {{-- Category list --}}
     <div>
-        <p style="font-size: var(--text-xs, 12px); color: var(--color-text-muted, #64748b); margin: 0 0 4px;">Category</p>
+        <p style="font-size: var(--text-xs, 12px); color: var(--color-text-muted, #64748b); margin: 0 0 4px;">{{ Lang::get('tax::picker.category_label') }}</p>
         <div
             role="listbox"
-            aria-label="Deduction category"
+            aria-label="{{ Lang::get('tax::picker.category_listbox_aria') }}"
             style="max-height: 200px; overflow-y: auto;"
         >
             {{-- "No category" first item (always present) --}}
@@ -63,7 +64,7 @@
                     min-height: 32px;
                 "
             >
-                <span>No category</span>
+                <span>{{ Lang::get('tax::picker.no_category') }}</span>
                 @if ($pickerCategoryId === null)
                     <span style="color: var(--color-emerald, #10b981); font-size: var(--text-xs, 12px);">✓</span>
                 @endif
@@ -117,7 +118,7 @@
                 <input
                     type="text"
                     wire:model="pickerInlineNewName"
-                    placeholder="New category name…"
+                    placeholder="{{ Lang::get('tax::picker.new_category_placeholder') }}"
                     style="
                         flex: 1 1 auto;
                         font-size: var(--text-base, 15px);
@@ -128,7 +129,7 @@
                         color: var(--color-text, #0f172a);
                         min-height: 44px;
                     "
-                    aria-label="New category name"
+                    aria-label="{{ Lang::get('tax::picker.new_category_aria') }}"
                 />
                 <button
                     type="button"
@@ -143,7 +144,7 @@
                         cursor: pointer;
                         min-height: 44px;
                     "
-                >Add</button>
+                >{{ Lang::get('tax::picker.add') }}</button>
                 <button
                     type="button"
                     wire:click="$set('pickerIsNewCatOpen', false)"
@@ -155,8 +156,8 @@
                         cursor: pointer;
                         min-height: 44px;
                     "
-                    aria-label="Cancel new category"
-                >Cancel</button>
+                    aria-label="{{ Lang::get('tax::picker.cancel_new_category_aria') }}"
+                >{{ Lang::get('tax::picker.cancel') }}</button>
             </div>
         @else
             <button
@@ -171,7 +172,7 @@
                     padding: 4px 0;
                     text-align: left;
                 "
-            >New category…</button>
+            >{{ Lang::get('tax::picker.new_category') }}</button>
         @endif
     </div>
 
@@ -179,7 +180,7 @@
     @if (isset($pickerBookedYear) && isset($pickerTaxYear) && $pickerBookedYear !== null && $pickerTaxYear !== null && $pickerBookedYear !== $pickerTaxYear)
         <div>
             <p style="font-size: var(--text-xs, 12px); color: var(--color-text-muted, #64748b); margin: 0 0 4px;">
-                Assign to tax year:
+                {{ Lang::get('tax::picker.assign_year') }}
             </p>
             <div style="display: flex; gap: var(--space-2);">
                 {{-- Booked-year button (override = null): never amber — amber marks the override (IN-01). --}}
@@ -215,7 +216,7 @@
                 min-height: 44px;
             "
             data-testid="picker-save"
-        >Save</button>
+        >{{ Lang::get('tax::picker.save') }}</button>
 
         <button
             type="button"
@@ -229,6 +230,6 @@
                 min-height: 44px;
             "
             data-testid="picker-untag"
-        >Remove tag</button>
+        >{{ Lang::get('tax::picker.remove_tag') }}</button>
     </div>
 </div>

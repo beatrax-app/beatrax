@@ -18,6 +18,7 @@
      Copy is locked verbatim against 05-UI-SPEC.md § Copywriting
      Contract → "/chains/review page (D-86 / D-87)". --}}
 
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -27,10 +28,10 @@
 
     $kindLabel = static function (string $kind): string {
         if ($kind === \Modules\Chains\Public\Enums\ChainLinkKind::PaypalFunding->value) {
-            return 'PayPal funding';
+            return Lang::get('chains::review.kind.paypal_funding');
         }
         if ($kind === \Modules\Chains\Public\Enums\ChainLinkKind::IcsBulkSettle->value) {
-            return 'Bulk iDEAL settlement';
+            return Lang::get('chains::review.kind.ics_bulk_settle');
         }
         return $kind;
     };
@@ -39,17 +40,17 @@
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-12">
         <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Review chains</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('chains::review.heading') }}</h1>
             @if (($hintCount ?? 0) > 0)
                 <a
                     href="{{ route('chains.hints') }}"
                     class="text-xs text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200"
                     data-testid="chain-hints-link"
-                >{{ $hintCount }} {{ $hintCount === 1 ? 'hint' : 'hints' }} →</a>
+                >{{ $hintCount }} {{ $hintCount === 1 ? Lang::get('chains::review.hint_singular') : Lang::get('chains::review.hint_plural') }} →</a>
             @endif
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Confirm or reject candidate links the chain resolver could not auto-confirm.
+            {{ Lang::get('chains::review.subtitle') }}
         </p>
     </header>
 
@@ -65,9 +66,9 @@
 
     @if (count($candidates) === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing to review</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('chains::review.empty_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Every chain link is either confirmed or rejected. New candidates will appear here as imports land.
+                {{ Lang::get('chains::review.empty_body') }}
             </p>
         </div>
     @else
@@ -115,7 +116,7 @@
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    One more confirm and similar links auto-confirm.
+                                    {{ Lang::get('chains::review.auto_confirm_nudge') }}
                                 </p>
                             @endif
                         </div>
@@ -123,15 +124,15 @@
                             <button
                                 type="button"
                                 wire:click="confirm({{ $row->chainLinkId }})"
-                                aria-label="Confirm chain link {{ $row->chainLinkId }}"
+                                aria-label="{{ Lang::get('chains::review.confirm_aria', ['id' => $row->chainLinkId]) }}"
                                 class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                            >Confirm</button>
+                            >{{ Lang::get('chains::review.confirm') }}</button>
                             <button
                                 type="button"
                                 wire:click="reject({{ $row->chainLinkId }})"
-                                aria-label="Reject chain link {{ $row->chainLinkId }}"
+                                aria-label="{{ Lang::get('chains::review.reject_aria', ['id' => $row->chainLinkId]) }}"
                                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
-                            >Reject</button>
+                            >{{ Lang::get('chains::review.reject') }}</button>
                         </div>
                     </div>
                 </li>
@@ -149,7 +150,7 @@
                         type="button"
                         wire:click="loadMore({{ $last->chainLinkId }}, '{{ number_format($last->confidence, 3, '.', '') }}')"
                         class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                    >Show more</button>
+                    >{{ Lang::get('chains::review.show_more') }}</button>
                 </div>
             @endif
         @endif

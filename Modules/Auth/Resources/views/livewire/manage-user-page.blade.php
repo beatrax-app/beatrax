@@ -1,7 +1,8 @@
+@use('Modules\Core\Public\Support\Lang')
 <div class="mx-auto max-w-md px-8 py-12 space-y-12">
     <header class="space-y-1">
-        <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">Manage {{ $partnerUsername }}</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">View, reset, or regenerate codes for this user.</p>
+        <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::manage_user.heading', ['name' => $partnerUsername]) }}</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::manage_user.subtitle') }}</p>
     </header>
 
     @if ($flashMessage !== '')
@@ -9,22 +10,22 @@
     @endif
 
     <section class="space-y-2" x-data="{ open: false }">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Set new password for this user</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Their next sign-in will ask them to choose a password.</p>
+        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('auth::manage_user.set_password.heading') }}</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::manage_user.set_password.description') }}</p>
 
         <button
             type="button"
             x-on:click="open = true"
             class="rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
         >
-            Set new password for this user
+            {{ Lang::get('auth::manage_user.set_password.open') }}
         </button>
 
         <div x-show="open" x-cloak class="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 dark:bg-slate-900 dark:border-slate-700">
-            <p id="set-password-body" class="text-sm text-slate-700 dark:text-slate-300">Set a new password for {{ $partnerUsername }}. Their next sign-in will ask them to choose a password.</p>
+            <p id="set-password-body" class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('auth::manage_user.set_password.body', ['name' => $partnerUsername]) }}</p>
 
             <div class="space-y-1">
-                <label for="new-partner-password" class="block text-sm text-slate-900 dark:text-slate-100">New password</label>
+                <label for="new-partner-password" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::manage_user.set_password.label') }}</label>
                 <input
                     type="password"
                     id="new-partner-password"
@@ -42,36 +43,36 @@
                     aria-describedby="set-password-body"
                     class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:hover:bg-emerald-400 dark:bg-emerald-500"
                 >
-                    Set password
+                    {{ Lang::get('auth::manage_user.set_password.submit') }}
                 </button>
                 <button
                     type="button"
                     x-on:click="open = false"
                     class="rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
                 >
-                    Cancel
+                    {{ Lang::get('auth::manage_user.set_password.cancel') }}
                 </button>
             </div>
         </div>
     </section>
 
     <section class="space-y-2" x-data="{ open: false, typed: '' }">
-        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Regenerate recovery codes for this user</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Old codes will be invalidated.</p>
+        <h2 class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('auth::manage_user.regenerate.heading') }}</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::manage_user.regenerate.description') }}</p>
 
         <button
             type="button"
             x-on:click="open = true"
             class="rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
         >
-            Regenerate recovery codes for this user
+            {{ Lang::get('auth::manage_user.regenerate.open') }}
         </button>
 
         <div x-show="open" x-cloak class="space-y-3 rounded-md border border-rose-200 bg-rose-50 p-4 dark:bg-rose-950">
-            <p id="regenerate-body" class="text-sm text-rose-900 dark:text-rose-200">Their existing unused codes will stop working. You will see the 10 new codes once and can hand them off.</p>
+            <p id="regenerate-body" class="text-sm text-rose-900 dark:text-rose-200">{{ Lang::get('auth::manage_user.regenerate.body') }}</p>
 
             <div class="space-y-1">
-                <label for="confirm-username" class="block text-sm text-slate-900 dark:text-slate-100">Type the username to continue</label>
+                <label for="confirm-username" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('auth::manage_user.regenerate.confirm_label') }}</label>
                 <input
                     type="text"
                     id="confirm-username"
@@ -90,14 +91,14 @@
                     aria-describedby="regenerate-body"
                     class="rounded-md bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-rose-600/50 dark:hover:bg-rose-400 dark:bg-rose-500"
                 >
-                    Regenerate codes
+                    {{ Lang::get('auth::manage_user.regenerate.submit') }}
                 </button>
                 <button
                     type="button"
                     x-on:click="open = false"
                     class="rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
                 >
-                    Keep current codes
+                    {{ Lang::get('auth::manage_user.regenerate.keep') }}
                 </button>
             </div>
         </div>
@@ -117,7 +118,7 @@
                     download="beatrax-recovery-codes-{{ $partnerUsername }}.txt"
                     class="inline-block rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
                 >
-                    Download as .txt
+                    {{ Lang::get('auth::manage_user.regenerate.download') }}
                 </a>
             </div>
         @endif

@@ -17,6 +17,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
 use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
@@ -242,12 +243,12 @@ final class InboxesPage extends Component
             throw new NotFoundHttpException(self::INBOX_NOT_FOUND);
         }
         if (in_array($health->status, [InboxScanStatus::Backfilling->value, InboxScanStatus::Scanning->value], strict: true)) {
-            $this->dispatch('toast', message: 'Scan already in progress.');
+            $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.scan_in_progress'));
 
             return;
         }
         $bus->dispatch(new IncrementalScanJob($inboxId));
-        $this->dispatch('toast', message: 'Scan started.');
+        $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.scan_started'));
     }
 
     // Kicks off the per-inbox OAuth consent re-grant flow for a row
@@ -286,7 +287,7 @@ final class InboxesPage extends Component
         PromoteDiscoveredSender $promote,
     ): void {
         ($promote)($discoveredSenderId, $currentUser->user());
-        $this->dispatch('toast', message: 'Sender added.');
+        $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.sender_added'));
     }
 
     // Dismisses a discovered_senders candidate. Mirror of
@@ -297,7 +298,7 @@ final class InboxesPage extends Component
         DismissDiscoveredSender $dismiss,
     ): void {
         ($dismiss)($discoveredSenderId, $currentUser->user());
-        $this->dispatch('toast', message: 'Sender dismissed.');
+        $this->dispatch('toast', message: Lang::get('email-scan::inboxes.toast.sender_dismissed'));
     }
 
     public function openWizard(
@@ -346,7 +347,7 @@ final class InboxesPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Inboxes · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('email-scan::inboxes.heading').' · beatrax']);
 
         return $view;
     }

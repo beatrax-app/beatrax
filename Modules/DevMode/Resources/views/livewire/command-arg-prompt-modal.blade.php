@@ -8,11 +8,12 @@
      Stable Flux modal name (`command-args`) — the component's open()
      listener dispatches `modal-show` with that literal name, mirroring
      the chain-drawer fix that removed the Alpine-vs-wire race. --}}
+@use('Modules\Core\Public\Support\Lang')
 <div>
     <flux:modal name="command-args" class="md:w-lg">
         <div class="space-y-5">
             <div>
-                <flux:heading size="lg">Run a command</flux:heading>
+                <flux:heading size="lg">{{ Lang::get('dev::arg_prompt.heading') }}</flux:heading>
                 @if ($spec !== null)
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         <span class="font-mono">{{ $spec->name }}</span>
@@ -35,11 +36,11 @@
 
             @if ($spec === null)
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Pick a command from the palette to see its arguments.
+                    {{ Lang::get('dev::arg_prompt.pick_command') }}
                 </p>
             @elseif (count($argSchema) === 0)
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    This command takes no arguments — submit to run it.
+                    {{ Lang::get('dev::arg_prompt.no_args') }}
                 </p>
             @else
                 @php
@@ -69,7 +70,7 @@
                             >
                                 {{ $arg->label !== '' ? $arg->label : $arg->name }}
                                 @if ($isRequired)
-                                    <span class="text-rose-600 dark:text-rose-400" aria-label="required">*</span>
+                                    <span class="text-rose-600 dark:text-rose-400" aria-label="{{ Lang::get('dev::arg_prompt.required_aria') }}">*</span>
                                 @endif
                             </label>
 
@@ -83,7 +84,7 @@
                                         class="rounded border-slate-300 text-slate-900 focus:ring-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                                         data-testid="arg-input-{{ $arg->name }}"
                                     />
-                                    <span>Enable</span>
+                                    <span>{{ Lang::get('dev::arg_prompt.enable') }}</span>
                                 </label>
                             @elseif ($arg->type === 'select' && is_array($arg->options))
                                 <select
@@ -93,7 +94,7 @@
                                     class="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:ring-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     data-testid="arg-input-{{ $arg->name }}"
                                 >
-                                    <option value="">— select —</option>
+                                    <option value="">{{ Lang::get('dev::arg_prompt.select_placeholder') }}</option>
                                     @foreach ($arg->options as $optValue => $optLabel)
                                         <option value="{{ $optValue }}">{{ $optLabel }}</option>
                                     @endforeach
@@ -124,14 +125,14 @@
                     wire:click="cancel"
                     class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     data-testid="command-arg-prompt-cancel"
-                >Cancel</button>
+                >{{ Lang::get('dev::arg_prompt.cancel') }}</button>
                 <button
                     type="button"
                     wire:click="submit"
                     @if (isset($missingRequired) && $missingRequired) disabled aria-disabled="true" @endif
                     class="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                     data-testid="command-arg-prompt-submit"
-                >Run command</button>
+                >{{ Lang::get('dev::arg_prompt.run_command') }}</button>
             </div>
         </div>
     </flux:modal>

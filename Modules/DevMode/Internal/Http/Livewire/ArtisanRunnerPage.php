@@ -16,6 +16,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Audit\FinalizeRunAudit;
 use Modules\DevMode\Internal\Listeners\WriteWorkerHeartbeat;
 use Modules\DevMode\Internal\Process\CommandSpawner;
@@ -82,7 +83,7 @@ final class ArtisanRunnerPage extends Component
         try {
             $spec = $registry->find($command);
         } catch (\InvalidArgumentException) {
-            $this->dispatch('toast', message: 'Unknown command: '.$command);
+            $this->dispatch('toast', message: Lang::get('dev::runner.toast.unknown_command', ['command' => $command]));
 
             return;
         }
@@ -101,19 +102,20 @@ final class ArtisanRunnerPage extends Component
         if ($missing !== []) {
             $this->dispatch(
                 'toast',
-                message: sprintf(
-                    "Can't run %s — needs %s: %s",
-                    $command,
-                    count($missing) === 1 ? 'argument' : 'arguments',
-                    implode(', ', $missing),
-                ),
+                message: Lang::get('dev::runner.toast.missing_args', [
+                    'command' => $command,
+                    'noun' => count($missing) === 1
+                        ? Lang::get('dev::runner.toast.arg_singular')
+                        : Lang::get('dev::runner.toast.arg_plural'),
+                    'list' => implode(', ', $missing),
+                ]),
             );
 
             return;
         }
 
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
-        $this->dispatch('toast', message: 'Started '.$command.' (run '.$runId.')');
+        $this->dispatch('toast', message: Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
     }
 
     /**
@@ -174,7 +176,7 @@ final class ArtisanRunnerPage extends Component
     ): void {
         $record = $registry->find($runId);
         if ($record === null) {
-            $this->dispatch('toast', message: 'Run record expired — cannot re-run.');
+            $this->dispatch('toast', message: Lang::get('dev::runner.toast.run_expired'));
 
             return;
         }
@@ -190,7 +192,7 @@ final class ArtisanRunnerPage extends Component
         }
 
         $newRunId = $spawner->start($record->command, $record->args, $user->id(), 'safe');
-        $this->dispatch('toast', message: 'Re-ran '.$record->command.' (run '.$newRunId.')');
+        $this->dispatch('toast', message: Lang::get('dev::runner.toast.reran', ['command' => $record->command, 'runId' => $newRunId]));
     }
 
     public function render(

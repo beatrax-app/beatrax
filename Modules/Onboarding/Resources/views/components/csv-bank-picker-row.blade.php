@@ -15,6 +15,7 @@
     navigation comes from the surrounding `role="radiogroup"`.
 --}}
 @use('Modules\Ingestion\Public\Enums\SourceFormat')
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'selected' => null,
 ])
@@ -22,8 +23,8 @@
     /** @var string|null $selected */
 @endphp
 
-<div class="format-chips csv-bank-picker-row" role="radiogroup" aria-label="Which bank exported your CSV?">
-    <span class="format-chips-label">From:</span>
+<div class="format-chips csv-bank-picker-row" role="radiogroup" aria-label="{{ Lang::get('onboarding::connect_bank.csv_picker_aria') }}">
+    <span class="format-chips-label">{{ Lang::get('onboarding::connect_bank.csv_picker_from') }}</span>
     <button
         type="button"
         class="format-chip-button"

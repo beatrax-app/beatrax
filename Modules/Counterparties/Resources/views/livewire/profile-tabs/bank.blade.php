@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Bank-type Overview tab body — fee-bar layout per UI-SPEC. Tab bar
     above carries Overview / Entries / Aliases plus the right-of-tab
@@ -16,11 +17,11 @@
 <div class="space-y-6" style="margin-top: var(--space-5);">
     <x-counterparties::frame>
         <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
-            Bank fees by category
+            {{ Lang::get('counterparties::profile.bank.fees_heading') }}
         </h3>
         @if ($categoryBreakdown->isEmpty())
             <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-                No fees recorded on this counterparty yet.
+                {{ Lang::get('counterparties::profile.bank.no_fees') }}
             </p>
         @else
             @foreach ($categoryBreakdown as $cat)
@@ -29,7 +30,7 @@
                     $pct = (int) round(($absMinor / $maxFee) * 100);
                 @endphp
                 <div class="fee-bar-row">
-                    <span class="fee-label">{{ $cat->category_name ?? 'Uncategorized' }}</span>
+                    <span class="fee-label">{{ $cat->category_name ?? Lang::get('counterparties::profile.uncategorized') }}</span>
                     <div class="fee-bar-track">
                         <div class="fee-bar-fill" style="width: {{ $pct }}%; background: var(--color-amber);"></div>
                     </div>
@@ -41,7 +42,7 @@
 
     <x-counterparties::frame>
         <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
-            Recent activity
+            {{ Lang::get('counterparties::profile.recent_activity') }}
         </h3>
         @include('counterparties::livewire.profile-tabs._recent-activity', ['rows' => $recentActivity, 'taxState' => $taxState ?? []])
     </x-counterparties::frame>

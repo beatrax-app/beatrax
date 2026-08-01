@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Identity\BiometricKeyVault;
 use Modules\Mobile\Internal\Identity\ColdStartEnrollmentService;
 
@@ -44,7 +45,7 @@ final class ColdStartBiometricSettingsSection extends Component
         $this->flashMessage = '';
 
         if (! $this->available) {
-            $this->flashMessage = 'Biometric unlock is not available on this device.';
+            $this->flashMessage = Lang::get('mobile::biometric.errors.unavailable');
 
             return;
         }
@@ -56,13 +57,13 @@ final class ColdStartBiometricSettingsSection extends Component
         $this->pin = '';
 
         if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
-            $this->flashMessage = 'Enter your PIN (4–10 digits) to enable biometric unlock.';
+            $this->flashMessage = Lang::get('mobile::biometric.errors.pin_required');
 
             return;
         }
 
         if (! $enrollment->enroll($currentUser->id(), $pin, $session)) {
-            $this->flashMessage = 'Could not enable biometric unlock — check your PIN and try again.';
+            $this->flashMessage = Lang::get('mobile::biometric.errors.enroll_failed');
 
             return;
         }

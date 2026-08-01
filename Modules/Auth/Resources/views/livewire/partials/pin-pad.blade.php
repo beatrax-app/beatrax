@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     PIN pad partial — calm-slate token classes, accessible targets.
 
@@ -31,7 +32,7 @@
 <div
     class="flex justify-center gap-2 py-3"
     aria-live="polite"
-    x-bind:aria-label="pin.length + ' digits entered'"
+    x-bind:aria-label="pin.length + ' {{ Lang::get('auth::lock_screen.digits_suffix') }}'"
 >
     <template x-for="i in 10" :key="i">
         <span
@@ -57,14 +58,14 @@
 @endif
 
 {{-- PIN pad grid --}}
-<div class="grid grid-cols-3 gap-2" role="group" aria-label="PIN pad">
+<div class="grid grid-cols-3 gap-2" role="group" aria-label="{{ Lang::get('auth::lock_screen.pad_label') }}">
 
     {{-- Digits 1–9 --}}
     @foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $digit)
         <button
             type="button"
             x-on:click="press('{{ $digit }}')"
-            aria-label="Digit {{ $digit }}"
+            aria-label="{{ Lang::get('auth::lock_screen.digit_aria', ['digit' => $digit]) }}"
             class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                    text-xl font-semibold text-slate-900 dark:text-slate-100
                    transition-colors duration-[80ms] motion-reduce:transition-none
@@ -80,7 +81,7 @@
     <button
         type="button"
         x-on:click="back()"
-        aria-label="Backspace"
+        aria-label="{{ Lang::get('auth::lock_screen.backspace_aria') }}"
         class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                text-slate-600 dark:text-slate-400
                transition-colors duration-[80ms] motion-reduce:transition-none
@@ -101,7 +102,7 @@
     <button
         type="button"
         x-on:click="press('0')"
-        aria-label="Digit 0"
+        aria-label="{{ Lang::get('auth::lock_screen.digit_aria', ['digit' => 0]) }}"
         class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                text-xl font-semibold text-slate-900 dark:text-slate-100
                transition-colors duration-[80ms] motion-reduce:transition-none
@@ -115,7 +116,7 @@
     <button
         type="button"
         x-on:click="submitPin()"
-        aria-label="OK — confirm PIN"
+        aria-label="{{ Lang::get('auth::lock_screen.ok_aria') }}"
         class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-100
                text-white dark:text-slate-900
                text-sm font-semibold
@@ -124,7 +125,7 @@
                active:bg-slate-600 dark:active:bg-slate-300
                focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 focus-visible:ring-offset-2"
     >
-        OK
+        {{ Lang::get('auth::lock_screen.ok') }}
     </button>
 
 </div>

@@ -73,6 +73,9 @@ final class MigrationServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'migration');
         }
+        if (is_dir(__DIR__.'/../Resources/lang')) {
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'migration');
+        }
 
         if (class_exists(self::MIGRATIONS_INDEX_CLASS)) {
             $livewire->component('migration.migrations-index', self::MIGRATIONS_INDEX_CLASS);

@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Core\Public\Support\Lang;
 
 // Only reachable while the device has no users; the route guard returns
 // a 404 once one exists.
@@ -26,7 +27,7 @@ final class SignupPage extends Component
     public function submit(SignupAction $signup, UrlGenerator $urls): void
     {
         if ($this->password !== $this->passwordConfirmation) {
-            $this->flashMessage = 'Passwords do not match.';
+            $this->flashMessage = Lang::get('auth::signup.error_mismatch');
             $this->password = '';
             $this->passwordConfirmation = '';
 
@@ -51,7 +52,7 @@ final class SignupPage extends Component
         $view = $views->make('auth::livewire.signup-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Welcome to beatrax · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('auth::signup.page_title')]);
 
         return $view;
     }
@@ -73,6 +74,6 @@ final class SignupPage extends Component
             }
         }
 
-        return 'Signup could not be completed.';
+        return Lang::get('auth::signup.error_generic');
     }
 }

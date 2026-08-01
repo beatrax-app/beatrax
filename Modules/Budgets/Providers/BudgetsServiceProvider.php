@@ -41,6 +41,7 @@ final class BudgetsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'budgets');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'budgets');
 
         $livewire->component('budgets.budgets-page', BudgetsPage::class);
 

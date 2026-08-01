@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
@@ -52,13 +53,13 @@ final class NotificationsPage extends Component
 
         // Reversible, no confirmation gate - mirrors the
         // DriftAlerts/Anomaly dismiss-with-undo convention.
-        $this->dispatch('toast', message: 'Dismissed — Undo', undo: 'undoDismiss', undoArg: $notificationId);
+        $this->dispatch('toast', message: Lang::get('notifications::inbox.toast.dismissed'), undo: 'undoDismiss', undoArg: $notificationId);
     }
 
     public function undoDismiss(string $notificationId, CurrentUser $currentUser, UndoDismissNotification $action): void
     {
         $action($notificationId, $currentUser->user());
-        $this->dispatch('toast', message: 'Restored');
+        $this->dispatch('toast', message: Lang::get('notifications::inbox.toast.restored'));
     }
 
     public function render(
@@ -90,7 +91,7 @@ final class NotificationsPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Notifications · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('notifications::inbox.page_title').' · beatrax']);
 
         return $view;
     }

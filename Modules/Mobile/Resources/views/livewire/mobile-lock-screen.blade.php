@@ -22,6 +22,7 @@
     means AUTO-INVOKED, not just visually-first) — no tap required. Tapping
     the biometric button retries the prompt manually.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 <div
     class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
             px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
@@ -80,7 +81,7 @@
         <div
             class="flex justify-center gap-2 py-3"
             aria-live="polite"
-            x-bind:aria-label="pin.length + ' digits entered'"
+            x-bind:aria-label="pin.length + ' {{ Lang::get('mobile::lock.digits_entered') }}'"
         >
             <template x-for="i in 10" :key="i">
                 <span
@@ -106,13 +107,13 @@
         @endif
 
         {{-- PIN pad grid --}}
-        <div class="grid grid-cols-3 gap-2" role="group" aria-label="PIN pad">
+        <div class="grid grid-cols-3 gap-2" role="group" aria-label="{{ Lang::get('mobile::lock.pin_pad') }}">
 
             @foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $digit)
                 <button
                     type="button"
                     x-on:click="press('{{ $digit }}')"
-                    aria-label="Digit {{ $digit }}"
+                    aria-label="{{ Lang::get('mobile::lock.digit', ['digit' => $digit]) }}"
                     class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                            text-xl font-semibold text-slate-900 dark:text-slate-100
                            transition-colors duration-[80ms] motion-reduce:transition-none
@@ -128,7 +129,7 @@
             <button
                 type="button"
                 x-on:click="back()"
-                aria-label="Backspace"
+                aria-label="{{ Lang::get('mobile::lock.backspace') }}"
                 class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                        text-slate-600 dark:text-slate-400
                        transition-colors duration-[80ms] motion-reduce:transition-none
@@ -148,7 +149,7 @@
             <button
                 type="button"
                 x-on:click="press('0')"
-                aria-label="Digit 0"
+                aria-label="{{ Lang::get('mobile::lock.digit', ['digit' => 0]) }}"
                 class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800
                        text-xl font-semibold text-slate-900 dark:text-slate-100
                        transition-colors duration-[80ms] motion-reduce:transition-none
@@ -162,7 +163,7 @@
             <button
                 type="button"
                 x-on:click="submitPin()"
-                aria-label="OK — confirm PIN"
+                aria-label="{{ Lang::get('mobile::lock.ok_aria') }}"
                 class="flex h-16 w-full sm:h-14 items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-100
                        text-white dark:text-slate-900
                        text-sm font-semibold
@@ -171,7 +172,7 @@
                        active:bg-slate-600 dark:active:bg-slate-300
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 focus-visible:ring-offset-2"
             >
-                OK
+                {{ Lang::get('mobile::lock.ok') }}
             </button>
 
         </div>
@@ -206,7 +207,7 @@
                        focus:outline-none focus-visible:underline
                        py-2"
             >
-                Sign out
+                {{ Lang::get('mobile::lock.sign_out') }}
             </button>
         </form>
 

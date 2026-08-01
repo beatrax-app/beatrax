@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Welcome step — the wizard's first page. Renders the UI-SPEC
     §"Wizard welcome step" copy verbatim (eyebrow + H1 + lede + three
@@ -11,32 +12,31 @@
     page that needs a 44×44 tile + title + description row pattern.
 --}}
 <section class="wiz-step wiz-step-welcome" aria-labelledby="wiz-welcome-h1">
-    <p class="wiz-eyebrow">Welcome</p>
+    <p class="wiz-eyebrow">{{ Lang::get('onboarding::welcome.eyebrow') }}</p>
     <h1 id="wiz-welcome-h1" class="wiz-h1">
-        Let's get beatrax to know your money.
+        {{ Lang::get('onboarding::welcome.h1') }}
     </h1>
     <p class="wiz-lede">
-        About 5 minutes. Nothing leaves this computer — everything you connect
-        stays in a file on your machine.
+        {{ Lang::get('onboarding::welcome.lede') }}
     </p>
 
-    <p class="wiz-tagline">Here's what we'll set up:</p>
+    <p class="wiz-tagline">{{ Lang::get('onboarding::welcome.tagline') }}</p>
 
     <ul class="vd-rows" role="list">
         <x-onboarding::vd-glyph
             glyph="🏦"
-            title="Your bank"
-            description="Drop a statement file. We read CSV, MT940, and CAMT.053 from most European banks."
+            :title="Lang::get('onboarding::welcome.bank_title')"
+            :description="Lang::get('onboarding::welcome.bank_desc')"
         />
         <x-onboarding::vd-glyph
             glyph="💳"
-            title="Your credit card (ICS)"
-            description="Drop the monthly PDF statement from Mijn ICS."
+            :title="Lang::get('onboarding::welcome.card_title')"
+            :description="Lang::get('onboarding::welcome.card_desc')"
         />
         <x-onboarding::vd-glyph
             glyph="✉️"
-            title="Receipts from email"
-            description="Connect Gmail or Outlook to capture purchase confirmations automatically."
+            :title="Lang::get('onboarding::welcome.email_title')"
+            :description="Lang::get('onboarding::welcome.email_desc')"
             :optional="true"
         />
     </ul>
@@ -47,7 +47,7 @@
             class="pill-btn-primary"
             wire:click="continue"
         >
-            Continue →
+            {{ Lang::get('onboarding::welcome.continue') }}
         </button>
     </x-onboarding::wiz-actions>
 </section>

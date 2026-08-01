@@ -19,19 +19,14 @@ use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../../.docs/features/auth/architecture.md
  */
 final class AppLockSettingsSection extends Component
 {
-    private const PIN_TOO_SHORT = 'PIN must be at least 4 digits.';
-
-    private const PIN_MISMATCH = 'PINs don\'t match. Try again.';
-
     private const PIN_RULES = 'nullable|regex:/^[0-9]{4,10}$/';
-
-    private const PIN_INCORRECT = 'Incorrect PIN.';
 
     public bool $lockEnabled = false;
 
@@ -160,7 +155,7 @@ final class AppLockSettingsSection extends Component
         $user = $currentUser->user();
 
         if (! $hasher->check($this->accountPassword, $user->password)) {
-            $this->flashMessage = 'Incorrect account password.';
+            $this->flashMessage = Lang::get('auth::app_lock.error_account_password');
 
             return;
         }
@@ -217,7 +212,7 @@ final class AppLockSettingsSection extends Component
         $result = $provisioner->disable($user->id, $this->currentPin);
 
         if ($result === false) {
-            $this->flashMessage = self::PIN_INCORRECT;
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
 
             return;
         }
@@ -261,7 +256,7 @@ final class AppLockSettingsSection extends Component
         $result = $provisioner->changePin($user->id, $this->currentPin, $this->newPin);
 
         if ($result === false) {
-            $this->flashMessage = self::PIN_INCORRECT;
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
 
             return;
         }
@@ -273,7 +268,7 @@ final class AppLockSettingsSection extends Component
         $this->flashMessage = '';
 
         $this->changePinSuccessMessage = $migrationService->isEnabled($user->id)
-            ? 'Your encryption key has been re-secured with your new PIN.'
+            ? Lang::get('auth::app_lock.change_pin_success')
             : '';
     }
 
@@ -303,7 +298,7 @@ final class AppLockSettingsSection extends Component
         $user = $currentUser->user();
 
         if (! $hasher->check($this->accountPassword, $user->password)) {
-            $this->flashMessage = 'Incorrect account password.';
+            $this->flashMessage = Lang::get('auth::app_lock.error_account_password');
 
             return;
         }
@@ -317,7 +312,7 @@ final class AppLockSettingsSection extends Component
         if ($result === false) {
             // The recovery wrap is missing or corrupted — recovery impossible
             // without the old PIN; the user must disable and re-enable the lock.
-            $this->flashMessage = 'PIN reset failed — the recovery key is unavailable.';
+            $this->flashMessage = Lang::get('auth::app_lock.error_forgot_failed');
 
             return;
         }
@@ -337,7 +332,7 @@ final class AppLockSettingsSection extends Component
     public function startEnroll(): void
     {
         if (! $this->lockEnabled) {
-            $this->flashMessage = 'Enable the PIN lock first before enrolling biometrics.';
+            $this->flashMessage = Lang::get('auth::app_lock.error_enable_first');
 
             return;
         }
@@ -366,7 +361,7 @@ final class AppLockSettingsSection extends Component
         $user = $currentUser->user();
 
         if (! $provisioner->verifyPin($user->id, $this->deenrollPin)) {
-            $this->flashMessage = self::PIN_INCORRECT;
+            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
 
             return;
         }
@@ -389,8 +384,8 @@ final class AppLockSettingsSection extends Component
     private function newPinValidationError(): ?string
     {
         return match (true) {
-            strlen($this->newPin) < 4 => self::PIN_TOO_SHORT,
-            $this->newPin !== $this->confirmPin => self::PIN_MISMATCH,
+            strlen($this->newPin) < 4 => Lang::get('auth::app_lock.error_pin_too_short'),
+            $this->newPin !== $this->confirmPin => Lang::get('auth::app_lock.error_pin_mismatch'),
             default => null,
         };
     }

@@ -21,6 +21,7 @@
                      `wire:click` so the parent can splice the right
                      entry out.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'filename',
     'sizeBytes' => 0,
@@ -55,7 +56,7 @@
         <button
             type="button"
             class="remove"
-            aria-label="Remove {{ $filename }} from upload queue"
+            aria-label="{{ Lang::get('onboarding::components.remove_file_aria', ['filename' => $filename]) }}"
             wire:click="removeStatement({{ (int) $index }})"
         >×</button>
     @endif

@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Migration\Public\Enums\MigrationRunStatus;
 
 /**
@@ -48,9 +49,9 @@ final class MigrationsIndex extends Component
     public function statusLabel(string $status): string
     {
         return match ($status) {
-            'parsed' => 'Parsed',
-            'confirmed' => 'Confirmed',
-            'needs_attention' => 'Needs attention',
+            'parsed' => Lang::get('migration::index.status.parsed'),
+            'confirmed' => Lang::get('migration::index.status.confirmed'),
+            'needs_attention' => Lang::get('migration::index.status.needs_attention'),
             default => $status,
         };
     }

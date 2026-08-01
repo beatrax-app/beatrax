@@ -19,19 +19,23 @@
     nested `input` is the upload pipeline; no JavaScript drag
     handlers live here.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @props([
     'wireModel' => 'file',
-    'lead' => 'Drop your statement file here',
-    'sublink' => 'or browse for a file',
+    'lead' => null,
+    'sublink' => null,
     'glyph' => '📥',
     'accept' => '',
 ])
 @php
     /** @var string $wireModel */
-    /** @var string $lead */
-    /** @var string $sublink */
+    /** @var ?string $lead */
+    /** @var ?string $sublink */
     /** @var string $glyph */
     /** @var string $accept */
+
+    $lead ??= Lang::get('onboarding::components.drop_zone_lead');
+    $sublink ??= Lang::get('onboarding::components.drop_zone_sublink');
 @endphp
 
 <label {{ $attributes->class(['drop-zone']) }}>

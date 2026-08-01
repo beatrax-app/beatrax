@@ -13,6 +13,7 @@ use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // The route that reaches this action is itself developer-gated; the
@@ -22,8 +23,6 @@ final class AddUserAction
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
     private const RECOVERY_CODE_COUNT = 10;
-
-    private const DUPLICATE_USERNAME_MESSAGE = 'That username is already in use on this device. Try another one.';
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -46,7 +45,7 @@ final class AddUserAction
 
         if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
             throw ValidationException::withMessages([
-                'password' => 'Use at least 12 characters.',
+                'password' => Lang::get('auth::add_user.error_min_length'),
             ]);
         }
 
@@ -62,7 +61,7 @@ final class AddUserAction
             } catch (QueryException $e) {
                 if (self::isUniqueViolation($e)) {
                     throw ValidationException::withMessages([
-                        'username' => self::DUPLICATE_USERNAME_MESSAGE,
+                        'username' => Lang::get('auth::add_user.error_duplicate'),
                     ]);
                 }
                 throw $e;

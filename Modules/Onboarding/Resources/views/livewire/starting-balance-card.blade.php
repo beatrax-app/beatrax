@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Starting-balance confirm card — one card per detected (or manual-
     entry) account, mounted by the first-import step inside the
@@ -61,44 +62,44 @@
 >
     <div class="balance-card-main">
         <p class="eyebrow">
-            🧮 STARTING BALANCE
+            {{ Lang::get('onboarding::starting_balance.eyebrow') }}
             <span class="funding-tag">{{ $accountShort }}</span>
             @if ($isConfirmed)
-                <span class="ready" aria-label="confirmed">✓</span>
+                <span class="ready" aria-label="{{ Lang::get('onboarding::starting_balance.confirmed_aria') }}">✓</span>
             @endif
         </p>
 
         @switch($state)
             @case('detected')
                 <h3 id="balance-card-{{ $accountId }}-h3" class="balance-card-h3">
-                    We detected your {{ $accountLabel }} started at
+                    {{ Lang::get('onboarding::starting_balance.detected_h3', ['label' => $accountLabel]) }}
                 </h3>
                 @if ($detectedMinor !== null)
                     <p class="value">{{ $formatMinor($detectedMinor, $currency) }}</p>
                 @endif
                 @if ($detectedDate !== null)
-                    <p class="date">on {{ $detectedDate }}</p>
+                    <p class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => $detectedDate]) }}</p>
                 @endif
                 <div class="balance-card-actions">
                     <button
                         type="button"
                         class="pill-btn-primary"
                         wire:click="confirm"
-                    >Confirm</button>
+                    >{{ Lang::get('onboarding::starting_balance.confirm') }}</button>
                     <button
                         type="button"
                         class="edit-link"
                         wire:click="startEdit"
-                    >Edit</button>
+                    >{{ Lang::get('onboarding::starting_balance.edit') }}</button>
                 </div>
                 @break
 
             @case('conflict')
                 <h3 id="balance-card-{{ $accountId }}-h3" class="balance-card-h3">
-                    We saw two values for this account — which is right?
+                    {{ Lang::get('onboarding::starting_balance.conflict_h3') }}
                 </h3>
                 <fieldset class="conflict-options">
-                    <legend class="sr-only">Pick a starting balance</legend>
+                    <legend class="sr-only">{{ Lang::get('onboarding::starting_balance.conflict_legend') }}</legend>
                     @foreach ($alternativeCandidates as $index => $candidate)
                         <label class="conflict-option">
                             <input
@@ -108,31 +109,31 @@
                                 @if ($index === $selectedConflictIndex) checked @endif
                                 wire:click="pickConflictCandidate({{ $index }})"
                             />
-                            <span class="conflict-source">From {{ $candidate['sourceLabel'] }}:</span>
+                            <span class="conflict-source">{{ Lang::get('onboarding::starting_balance.conflict_from', ['source' => $candidate['sourceLabel']]) }}</span>
                             <span class="value">{{ $formatMinor($candidate['minor'], $currency) }}</span>
-                            <span class="date">on {{ $candidate['date'] }}</span>
+                            <span class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => $candidate['date']]) }}</span>
                         </label>
                     @endforeach
                 </fieldset>
                 <p class="conflict-helper">
-                    We default to the earliest date. Pick the right one or edit manually.
+                    {{ Lang::get('onboarding::starting_balance.conflict_helper') }}
                 </p>
                 <div class="balance-card-actions">
                     <button
                         type="button"
                         class="edit-link"
                         wire:click="startEdit"
-                    >Edit manually</button>
+                    >{{ Lang::get('onboarding::starting_balance.edit_manually') }}</button>
                 </div>
                 @break
 
             @case('editing')
                 <h3 id="balance-card-{{ $accountId }}-h3" class="balance-card-h3">
-                    Edit your {{ $accountLabel }} starting balance
+                    {{ Lang::get('onboarding::starting_balance.editing_h3', ['label' => $accountLabel]) }}
                 </h3>
                 <div class="balance-card-editor">
                     <label class="balance-card-input">
-                        <span class="balance-card-input-label">STARTING BALANCE</span>
+                        <span class="balance-card-input-label">{{ Lang::get('onboarding::starting_balance.input_label') }}</span>
                         <input
                             type="number"
                             step="1"
@@ -141,10 +142,10 @@
                             class="balance-card-amount-input"
                             placeholder="{{ $detectedMinor }}"
                         />
-                        <span class="balance-card-currency-suffix">{{ $currency }} (minor units)</span>
+                        <span class="balance-card-currency-suffix">{{ $currency }} {{ Lang::get('onboarding::starting_balance.minor_units') }}</span>
                     </label>
                     <label class="balance-card-input">
-                        <span class="balance-card-input-label">ON DATE</span>
+                        <span class="balance-card-input-label">{{ Lang::get('onboarding::starting_balance.on_date_label') }}</span>
                         <input
                             type="date"
                             wire:model.live="editedDate"
@@ -163,12 +164,12 @@
                         type="button"
                         class="pill-btn-ghost"
                         wire:click="cancelEdit"
-                    >Cancel</button>
+                    >{{ Lang::get('onboarding::starting_balance.cancel') }}</button>
                     <button
                         type="button"
                         class="pill-btn-primary"
                         wire:click="save"
-                    >Save</button>
+                    >{{ Lang::get('onboarding::starting_balance.save') }}</button>
                 </div>
                 @break
 
@@ -180,7 +181,7 @@
                         <span class="value">{{ $formatMinor($editedMinor, $currency) }}</span>
                     @endif
                     @if ($editedDate !== null)
-                        <span class="date">on {{ $editedDate }}</span>
+                        <span class="date">{{ Lang::get('onboarding::starting_balance.on_date', ['date' => $editedDate]) }}</span>
                     @endif
                 </h3>
                 @if ($dateWarning !== '')
@@ -191,20 +192,20 @@
                         type="button"
                         class="edit-link"
                         wire:click="startEdit"
-                    >Change</button>
+                    >{{ Lang::get('onboarding::starting_balance.change') }}</button>
                 </div>
                 @break
 
             @case('manual-entry')
                 <h3 id="balance-card-{{ $accountId }}-h3" class="balance-card-h3">
-                    Enter your {{ $accountLabel }} starting balance manually
+                    {{ Lang::get('onboarding::starting_balance.manual_h3', ['label' => $accountLabel]) }}
                 </h3>
                 <p class="balance-card-lede">
-                    We couldn't auto-detect a starting balance for this account. Enter one manually or skip.
+                    {{ Lang::get('onboarding::starting_balance.manual_lede') }}
                 </p>
                 <div class="balance-card-editor">
                     <label class="balance-card-input">
-                        <span class="balance-card-input-label">STARTING BALANCE</span>
+                        <span class="balance-card-input-label">{{ Lang::get('onboarding::starting_balance.input_label') }}</span>
                         <input
                             type="number"
                             step="1"
@@ -213,10 +214,10 @@
                             class="balance-card-amount-input"
                             placeholder="0"
                         />
-                        <span class="balance-card-currency-suffix">{{ $currency }} (minor units)</span>
+                        <span class="balance-card-currency-suffix">{{ $currency }} {{ Lang::get('onboarding::starting_balance.minor_units') }}</span>
                     </label>
                     <label class="balance-card-input">
-                        <span class="balance-card-input-label">ON DATE</span>
+                        <span class="balance-card-input-label">{{ Lang::get('onboarding::starting_balance.on_date_label') }}</span>
                         <input
                             type="date"
                             wire:model.live="editedDate"
@@ -235,12 +236,12 @@
                         type="button"
                         class="pill-btn-primary"
                         wire:click="save"
-                    >Save</button>
+                    >{{ Lang::get('onboarding::starting_balance.save') }}</button>
                 </div>
                 @break
 
             @default
-                <p class="wiz-error" role="alert">Unknown card state. Reload the wizard.</p>
+                <p class="wiz-error" role="alert">{{ Lang::get('onboarding::starting_balance.unknown_state') }}</p>
         @endswitch
     </div>
 </section>

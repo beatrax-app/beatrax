@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Inline dashboard card — top six approved recurring series by
     monthly equivalent, with a filter toggle (`All series` /
@@ -18,18 +19,18 @@
     $netEur = (int) ($totals['net_eur_minor'] ?? 0);
 @endphp
 
-<section class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" aria-label="Fixed monthly payments">
+<section class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700" aria-label="{{ Lang::get('recurring::fixed_payments.heading') }}">
     <header class="mb-4 flex items-baseline justify-between gap-4">
         <div>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Fixed monthly payments</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::fixed_payments.heading') }}</h2>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                {{ $eurFmt($expenseEur) }} expenses · {{ $eurFmt($incomeEur) }} income · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $eurFmt($netEur) }} net</span>
+                {{ $eurFmt($expenseEur) }} {{ Lang::get('recurring::fixed_payments.summary.expenses') }} · {{ $eurFmt($incomeEur) }} {{ Lang::get('recurring::fixed_payments.summary.income') }} · <span class="font-medium text-slate-900 dark:text-slate-100">{{ $eurFmt($netEur) }} {{ Lang::get('recurring::fixed_payments.summary.net') }}</span>
             </p>
         </div>
         <div
             class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs dark:bg-slate-900 dark:border-slate-700"
             role="group"
-            aria-label="Filter fixed payments"
+            aria-label="{{ Lang::get('recurring::fixed_payments.filter_aria') }}"
         >
             <button
                 type="button"
@@ -39,7 +40,7 @@
                     'bg-white font-medium text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $filter === 'all',
                     'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $filter !== 'all',
                 ])
-            >All series</button>
+            >{{ Lang::get('recurring::fixed_payments.filter_all') }}</button>
             <button
                 type="button"
                 wire:click="setFilter('this-month')"
@@ -48,15 +49,15 @@
                     'bg-white font-medium text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100' => $filter === 'this-month',
                     'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100' => $filter !== 'this-month',
                 ])
-            >This month only</button>
+            >{{ Lang::get('recurring::fixed_payments.filter_this_month') }}</button>
         </div>
     </header>
 
     @if (count($rows) === 0)
         @if ($filter === 'this-month')
-            <p class="text-sm text-slate-500 dark:text-slate-400">No recurring series are due this month.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::fixed_payments.empty_this_month') }}</p>
         @else
-            <p class="text-sm text-slate-500 dark:text-slate-400">No approved recurring series yet.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::fixed_payments.empty_all') }}</p>
         @endif
     @else
         {{-- ============================================================
@@ -76,11 +77,11 @@
                             <span class="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $row->direction }}</span>
                             <span class="ml-1">{{ $row->cadence->label() }}</span>
                             @if ($row->latestFundingChainLinkId !== null)
-                                · chain
+                                · {{ Lang::get('recurring::fixed_payments.chain') }}
                             @endif
                         </p>
                     </div>
-                    <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                    <span class="amount" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::fixed_payments.per_month_suffix') }}</span>
                 </a>
             @endforeach
         </div>
@@ -104,12 +105,12 @@
                                 <span
                                     class="ml-2 inline-flex items-center rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
                                     data-chain-badge="true"
-                                    aria-label="Funded via chain"
-                                >chain</span>
+                                    aria-label="{{ Lang::get('recurring::fixed_payments.chain_aria') }}"
+                                >{{ Lang::get('recurring::fixed_payments.chain') }}</span>
                             @endif
                         </p>
                     </div>
-                    <span class="shrink-0 text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}/mo</span>
+                    <span class="shrink-0 text-sm text-slate-700 dark:text-slate-300" style="font-variant-numeric: tabular-nums;">{{ $eurFmt($row->monthlyEquivalent->toMinor()) }}{{ Lang::get('recurring::fixed_payments.per_month_suffix') }}</span>
                 </li>
             @endforeach
         </ul>
@@ -119,6 +120,6 @@
         <a
             href="{{ route('recurring.index') }}"
             class="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-        >View all →</a>
+        >{{ Lang::get('recurring::fixed_payments.view_all') }}</a>
     </footer>
 </section>

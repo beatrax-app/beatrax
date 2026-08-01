@@ -63,6 +63,7 @@ final class LedgerServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'ledger');
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'ledger');
 
         $livewire->component('ledger.transactions-list', TransactionsList::class);
         $livewire->component('ledger.transaction-detail', TransactionDetail::class);

@@ -9,6 +9,7 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\LoginAction;
+use Modules\Core\Public\Support\Lang;
 
 final class LoginPage extends Component
 {
@@ -29,7 +30,7 @@ final class LoginPage extends Component
         $this->password = '';
 
         if (! $succeeded) {
-            $this->flashMessage = 'Username or password is incorrect.';
+            $this->flashMessage = Lang::get('auth::login.error_invalid');
 
             return;
         }
@@ -42,7 +43,7 @@ final class LoginPage extends Component
         $view = $views->make('auth::livewire.login-page');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Sign in · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('auth::login.page_title')]);
 
         return $view;
     }

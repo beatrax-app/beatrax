@@ -13,6 +13,7 @@ use Modules\Categorization\Public\Actions\DeleteCategorizationRule;
 use Modules\Categorization\Public\Dto\RuleActionDto;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Three variants keyed on the prior auto-category provenance: `rule`
@@ -80,7 +81,7 @@ final class CategorizationProvenancePanel extends Component
         try {
             ($delete)($currentUser->user(), $this->ruleId);
         } catch (NotFoundHttpException) {
-            $this->flashMessage = 'Rule no longer exists (it may have been deleted in another tab).';
+            $this->flashMessage = Lang::get('categorization::detail.flash_rule_gone');
             $this->confirmingRemove = false;
             $this->hydrateFromProvenance($db, $currentUser, $rules);
 

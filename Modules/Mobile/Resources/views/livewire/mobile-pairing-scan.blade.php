@@ -20,12 +20,13 @@
     manual on-device UAT pass (15-11), mirroring BiometricUnlockBridge's
     identical "compile-correct, UAT-verified" precedent (15-06-SUMMARY.md).
 --}}
+@use('Modules\Core\Public\Support\Lang')
 <div class="max-w-lg mx-auto px-6 py-8 space-y-4" data-testid="mobile-pairing-scan" wire:key="pairing-step-{{ $step }}">
 
     {{-- ===== Step: camera scan (default landing, D-01) ===== --}}
     @if ($step === 'scan')
-        <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Pair this device</h1>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Point the camera at the code shown on the other device.</p>
+        <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.scan_heading') }}</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::pairing.scan_subtitle') }}</p>
 
         @if ($flashMessage !== '')
             <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
@@ -56,14 +57,14 @@
                 class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
                        focus:outline-none focus-visible:underline dark:text-slate-400"
             >
-                Enter code instead
+                {{ Lang::get('mobile::pairing.enter_code_instead') }}
             </button>
         </div>
     @endif
 
     {{-- ===== Step: enter a code (D-02 fallback — camera unavailable/denied or user choice) ===== --}}
     @if ($step === 'enter_code')
-        <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Enter the code</h1>
+        <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.enter_heading') }}</h1>
 
         @if ($cameraUnavailableNotice)
             <div
@@ -71,7 +72,7 @@
                 data-testid="camera-unavailable-notice"
                 aria-live="polite" aria-atomic="true"
             >
-                Camera access is off. Enter the code from the other device instead.
+                {{ Lang::get('mobile::pairing.camera_off') }}
             </div>
         @endif
 
@@ -93,7 +94,7 @@
                 wire:model="wordCode"
                 x-on:input="format($event.target)"
                 placeholder="XXXX-XXXX-XXXX-XXXX"
-                aria-label="Enter the word code from the other device"
+                aria-label="{{ Lang::get('mobile::pairing.word_code_aria') }}"
                 class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-base font-mono uppercase tracking-widest text-slate-900
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus-visible:ring-slate-100"
@@ -111,7 +112,7 @@
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
-                Submit code
+                {{ Lang::get('mobile::pairing.submit_code') }}
             </button>
             <button
                 type="button"
@@ -120,7 +121,7 @@
                        hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
             >
-                Cancel
+                {{ Lang::get('mobile::pairing.cancel') }}
             </button>
         </div>
     @endif
@@ -128,7 +129,7 @@
     {{-- ===== Step: confirm safety numbers (the trust gate, D-07/D-08) ===== --}}
     @if ($step === 'confirm')
         <div wire:poll.3s="checkPairingState">
-            <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Compare these words with the other device</h1>
+            <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.confirm_heading') }}</h1>
 
             @php
                 $rowOne = array_slice($safetyWords, 0, 3);
@@ -136,7 +137,7 @@
             @endphp
             <div
                 class="space-y-2"
-                aria-label="Safety number words: {{ strtoupper(implode(' ', $safetyWords)) }}"
+                aria-label="{{ Lang::get('mobile::pairing.safety_words_aria', ['words' => strtoupper(implode(' ', $safetyWords))]) }}"
             >
                 <div class="flex justify-center gap-2">
                     @foreach ($rowOne as $word)
@@ -151,7 +152,7 @@
             </div>
 
             <p class="mx-auto mt-4 max-w-sm text-center text-xs text-slate-500 dark:text-slate-400">
-                Both devices must show the exact same words. If they differ, tap Cancel — a man-in-the-middle attack may be in progress.
+                {{ Lang::get('mobile::pairing.confirm_body') }}
             </p>
 
             @if ($awaitingPeer)
@@ -159,7 +160,7 @@
                     <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
-                    Waiting for the other device to confirm...
+                    {{ Lang::get('mobile::pairing.awaiting_peer') }}
                 </p>
             @endif
 
@@ -175,7 +176,7 @@
                         'opacity-50 cursor-wait' => $awaitingPeer,
                     ])
                 >
-                    Confirm — they match
+                    {{ Lang::get('mobile::pairing.confirm_match') }}
                 </button>
                 <button
                     type="button"
@@ -184,7 +185,7 @@
                            hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                            dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
                 >
-                    Cancel
+                    {{ Lang::get('mobile::pairing.cancel') }}
                 </button>
             </div>
         </div>
@@ -196,9 +197,9 @@
             <svg class="mx-auto h-6 w-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Device paired</h1>
+            <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.success_heading') }}</h1>
             <p class="mx-auto max-w-xs text-sm text-slate-500 dark:text-slate-400">
-                This device is now trusted. Your data will sync once you connect.
+                {{ Lang::get('mobile::pairing.success_body') }}
             </p>
             <button
                 type="button"
@@ -207,7 +208,7 @@
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
             >
-                Done
+                {{ Lang::get('mobile::pairing.done') }}
             </button>
         </div>
     @endif

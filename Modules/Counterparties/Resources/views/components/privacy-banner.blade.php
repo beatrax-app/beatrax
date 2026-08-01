@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Privacy banner — load-bearing personal-contact notice rendered at
     the top of a personal-type profile. The pink colour signals "this
@@ -14,7 +15,7 @@
 <div
     {{ $attributes->merge(['class' => 'privacy-banner']) }}
     role="region"
-    aria-label="Privacy notice for personal contact"
+    aria-label="{{ Lang::get('counterparties::components.privacy_banner.aria') }}"
 >
-    🔒 This is a personal contact. IBAN and personal details are hidden by default and never shared in exports.
+    {{ Lang::get('counterparties::components.privacy_banner.body') }}
 </div>

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{-- Mystery merchants browse destination.
 
      Lists every description in the user's transaction history the
@@ -10,36 +11,36 @@
 
 <div class="space-y-6" data-testid="mystery-merchants-page">
     <header>
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Mystery merchants</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('community::mystery.heading') }}</h1>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Names beatrax could not identify yet — pick one, give it a friendly name, and submit it back to the shared list so everyone benefits.
+            {{ Lang::get('community::mystery.intro') }}
         </p>
     </header>
 
     <section
-        aria-label="Shared list stats"
+        aria-label="{{ Lang::get('community::mystery.stats.aria') }}"
         class="grid grid-cols-2 gap-3 md:grid-cols-4"
     >
         <div class="rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
-            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Mystery in your data</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.stats.mystery') }}</p>
             <p class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ $stats['mysteryCount'] }}
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
-            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Shared list</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.stats.shared_list') }}</p>
             <p class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ $stats['mappingsCount'] }}
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
-            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Auto-named</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.stats.auto_named') }}</p>
             <p class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ $stats['autoNamedPercent'] }}%
             </p>
         </div>
         <div class="rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
-            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Your contributions</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.stats.contributions') }}</p>
             <p class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                 {{ $stats['contributorCount'] }}
             </p>
@@ -48,7 +49,7 @@
 
     @if (count($rows) === 0)
         <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-400">
-            Nothing mysterious yet. Import some statements and beatrax will surface the rows it could not identify here.
+            {{ Lang::get('community::mystery.empty') }}
         </p>
     @else
         <ul class="space-y-3" role="list" data-testid="mystery-card-list">
@@ -62,7 +63,7 @@
 
     <footer class="border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
         <p>
-            The shared list is a bundled YAML file that ships with beatrax. Submitting a suggestion opens GitHub in your browser; nothing else leaves your machine.
+            {{ Lang::get('community::mystery.footer') }}
         </p>
     </footer>
 </div>

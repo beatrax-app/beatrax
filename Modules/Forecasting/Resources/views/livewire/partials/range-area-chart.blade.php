@@ -24,6 +24,7 @@
     disabled the partial renders a one-line explanation so the page
     is not silently empty.
 --}}
+@use('Modules\Core\Public\Support\Lang')
 @php
     $optionsJson = json_encode($apexOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if ($optionsJson === false) {
@@ -63,13 +64,13 @@
             polling halts automatically (RESEARCH Pitfall 3 mitigation).
         --}}
         <div wire:poll.2s="refreshProjectionStatus" class="absolute right-2 top-2 z-10">
-            <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">Updating&hellip;</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('forecasting::forecast.updating') }}&hellip;</p>
         </div>
     @endif
     <div id="{{ $chartElementId }}"></div>
     <noscript>
         <p class="text-xs text-slate-500 dark:text-slate-400">
-            Chart requires JavaScript. Range covers {{ $forecast->horizonDays }} days.
+            {{ Lang::get('forecasting::forecast.chart_noscript', ['days' => $forecast->horizonDays]) }}
         </p>
     </noscript>
 </div>

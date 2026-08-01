@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /recurring/review page — Pending / Rejected / Cadence-changed
     tabs over recurring_series rows. Each pending or cadence-changed
@@ -19,17 +20,17 @@
         : $money->format('en_US');
 
     $tabs = [
-        'pending' => 'Pending',
-        'rejected' => 'Rejected',
-        'cadence_changed' => 'Cadence changed',
+        'pending' => Lang::get('recurring::review.tabs.pending'),
+        'rejected' => Lang::get('recurring::review.tabs.rejected'),
+        'cadence_changed' => Lang::get('recurring::review.tabs.cadence_changed'),
     ];
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
     <header class="mb-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Review recurring</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::review.title') }}</h1>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Approve, snooze, or reject detected recurring suggestions.
+            {{ Lang::get('recurring::review.subtitle') }}
         </p>
     </header>
 
@@ -50,32 +51,32 @@
     @if (count($selectedIds) > 0)
         <section
             class="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
-            aria-label="Bulk actions"
+            aria-label="{{ Lang::get('recurring::review.bulk.aria') }}"
         >
-            <span class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ count($selectedIds) }} selected</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ Lang::get('recurring::review.bulk.selected', ['count' => count($selectedIds)]) }}</span>
             <button
                 type="button"
                 wire:click="bulkApprove"
                 class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-            >Approve {{ count($selectedIds) }}</button>
+            >{{ Lang::get('recurring::review.bulk.approve', ['count' => count($selectedIds)]) }}</button>
             <button
                 type="button"
                 wire:click="bulkReject"
                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
-            >Reject {{ count($selectedIds) }}</button>
+            >{{ Lang::get('recurring::review.bulk.reject', ['count' => count($selectedIds)]) }}</button>
         </section>
     @endif
 
     @if (count($rows) === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing to review</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::review.empty.heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 @if ($tab === 'pending')
-                    Recurring suggestions land here as the detector spots stable monthly clusters.
+                    {{ Lang::get('recurring::review.empty.pending') }}
                 @elseif ($tab === 'rejected')
-                    Rejected suggestions appear here so you can bring them back if your mind changes.
+                    {{ Lang::get('recurring::review.empty.rejected') }}
                 @else
-                    Approved series whose cadence has flipped show up here for re-review.
+                    {{ Lang::get('recurring::review.empty.cadence_changed') }}
                 @endif
             </p>
         </div>
@@ -95,7 +96,7 @@
                                     type="checkbox"
                                     wire:model.live="selectedIds"
                                     value="{{ $row->seriesId }}"
-                                    aria-label="Select recurring series {{ $row->seriesId }}"
+                                    aria-label="{{ Lang::get('recurring::review.select_aria', ['id' => $row->seriesId]) }}"
                                     class="mr-2 align-middle"
                                 />
                                 <span class="font-medium">{{ $row->displayName() }}</span>
@@ -104,10 +105,10 @@
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                 {{ $row->cadence->label() }}
                                 @if ($row->nextExpectedAt)
-                                    · Next {{ $row->nextExpectedAt->format('d M Y') }}
+                                    · {{ Lang::get('recurring::review.next') }} {{ $row->nextExpectedAt->format('d M Y') }}
                                 @endif
                                 @if ($row->state === \Modules\Recurring\Public\Enums\RecurringSeriesState::CadenceChanged->value)
-                                    · cadence changed
+                                    · {{ Lang::get('recurring::review.cadence_changed_note') }}
                                 @endif
                             </p>
                         </div>
@@ -117,26 +118,26 @@
                                     type="button"
                                     wire:click="unReject({{ $row->seriesId }})"
                                     class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                                >Un-reject</button>
+                                >{{ Lang::get('recurring::review.un_reject') }}</button>
                             @else
                                 <button
                                     type="button"
                                     wire:click="approve({{ $row->seriesId }})"
-                                    aria-label="Approve recurring series {{ $row->seriesId }}"
+                                    aria-label="{{ Lang::get('recurring::review.approve_aria', ['id' => $row->seriesId]) }}"
                                     class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                                >Approve</button>
+                                >{{ Lang::get('recurring::review.approve') }}</button>
                                 <button
                                     type="button"
                                     wire:click="reject({{ $row->seriesId }})"
-                                    aria-label="Reject recurring series {{ $row->seriesId }}"
+                                    aria-label="{{ Lang::get('recurring::review.reject_aria', ['id' => $row->seriesId]) }}"
                                     class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
-                                >Reject</button>
+                                >{{ Lang::get('recurring::review.reject') }}</button>
                                 <div x-data="{ open: false }" class="relative">
                                     <button
                                         type="button"
                                         x-on:click="open = ! open"
                                         class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                                    >Snooze</button>
+                                    >{{ Lang::get('recurring::review.snooze') }}</button>
                                     <div
                                         x-show="open"
                                         x-cloak
@@ -148,19 +149,19 @@
                                             wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets['1w'] }}')"
                                             x-on:click="open = false"
                                             class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                                        >1 week</button>
+                                        >{{ Lang::get('recurring::review.snooze_1w') }}</button>
                                         <button
                                             type="button"
                                             wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets['1m'] }}')"
                                             x-on:click="open = false"
                                             class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                                        >1 month</button>
+                                        >{{ Lang::get('recurring::review.snooze_1m') }}</button>
                                         <button
                                             type="button"
                                             wire:click="snooze({{ $row->seriesId }}, '{{ $snoozeTargets['3m'] }}')"
                                             x-on:click="open = false"
                                             class="block w-full px-2 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-900"
-                                        >3 months</button>
+                                        >{{ Lang::get('recurring::review.snooze_3m') }}</button>
                                     </div>
                                 </div>
                                 <div x-data="{ editing: false, newName: @js($row->displayName()) }" class="relative">
@@ -168,14 +169,14 @@
                                         type="button"
                                         x-on:click="editing = ! editing"
                                         class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                                    >Edit name</button>
+                                    >{{ Lang::get('recurring::review.edit_name') }}</button>
                                     <div
                                         x-show="editing"
                                         x-cloak
                                         x-on:click.outside="editing = false"
                                         class="absolute right-0 z-10 mt-1 w-64 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:bg-slate-950 dark:border-slate-700"
                                     >
-                                        <label for="series-name-{{ $row->seriesId }}" class="sr-only">New name for this series</label>
+                                        <label for="series-name-{{ $row->seriesId }}" class="sr-only">{{ Lang::get('recurring::review.new_name_label') }}</label>
                                         <input
                                             id="series-name-{{ $row->seriesId }}"
                                             type="text"
@@ -186,7 +187,7 @@
                                             type="button"
                                             x-on:click="$wire.editName({{ $row->seriesId }}, newName); editing = false"
                                             class="mt-2 inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300"
-                                        >Save</button>
+                                        >{{ Lang::get('recurring::review.save') }}</button>
                                     </div>
                                 </div>
                             @endif

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     The `/reports` live single-page builder (D-01, Req 1/8/12) — control
     rail (left) + result panel (right, chart above an always-on table).
@@ -34,28 +35,43 @@
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-slate-900 dark:text-slate-100';
 
-    $metricLabels = ['spend' => 'Spend', 'income' => 'Income', 'net' => 'Net', 'net_worth' => 'Net worth'];
-    $dimensionLabels = ['category' => 'Category', 'time_bucket' => 'Time bucket', 'counterparty' => 'Counterparty', 'account' => 'Account'];
-    $periodLabels = [
-        'this_month' => 'This month',
-        'last_3_months' => 'Last 3 months',
-        'last_6_months' => 'Last 6 months',
-        'last_12_months' => 'Last 12 months',
-        'ytd' => 'Year to date',
-        'this_year' => 'This year',
-        'custom' => 'Custom range',
+    $metricLabels = [
+        'spend' => Lang::get('reports::builder.metric.spend'),
+        'income' => Lang::get('reports::builder.metric.income'),
+        'net' => Lang::get('reports::builder.metric.net'),
+        'net_worth' => Lang::get('reports::builder.metric.net_worth'),
     ];
-    $vizLabels = ['table' => 'Table', 'bar' => 'Bar', 'line' => 'Line', 'donut' => 'Donut'];
+    $dimensionLabels = [
+        'category' => Lang::get('reports::builder.dimension.category'),
+        'time_bucket' => Lang::get('reports::builder.dimension.time_bucket'),
+        'counterparty' => Lang::get('reports::builder.dimension.counterparty'),
+        'account' => Lang::get('reports::builder.dimension.account'),
+    ];
+    $periodLabels = [
+        'this_month' => Lang::get('reports::builder.period.this_month'),
+        'last_3_months' => Lang::get('reports::builder.period.last_3_months'),
+        'last_6_months' => Lang::get('reports::builder.period.last_6_months'),
+        'last_12_months' => Lang::get('reports::builder.period.last_12_months'),
+        'ytd' => Lang::get('reports::builder.period.ytd'),
+        'this_year' => Lang::get('reports::builder.period.this_year'),
+        'custom' => Lang::get('reports::builder.period.custom'),
+    ];
+    $vizLabels = [
+        'table' => Lang::get('reports::builder.viz.table'),
+        'bar' => Lang::get('reports::builder.viz.bar'),
+        'line' => Lang::get('reports::builder.viz.line'),
+        'donut' => Lang::get('reports::builder.viz.donut'),
+    ];
 
     $groupHeader = match ($definition->dimension) {
-        'category' => 'Category',
-        'counterparty' => 'Counterparty',
-        'account' => 'Account',
-        'time_bucket' => 'Month',
-        default => 'Group',
+        'category' => Lang::get('reports::builder.group_header.category'),
+        'counterparty' => Lang::get('reports::builder.group_header.counterparty'),
+        'account' => Lang::get('reports::builder.group_header.account'),
+        'time_bucket' => Lang::get('reports::builder.group_header.month'),
+        default => Lang::get('reports::builder.group_header.default'),
     };
 
-    $metricLabel = $metricLabels[$definition->metric] ?? 'Amount';
+    $metricLabel = $metricLabels[$definition->metric] ?? Lang::get('reports::builder.metric.fallback');
 
     $hasResults = $displayRows !== [];
 
@@ -92,8 +108,8 @@
 
 <div class="space-y-8" style="padding: var(--space-6) var(--space-4); max-width: 1280px; margin: 0 auto;">
     <header class="space-y-2">
-        <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">Reports</h1>
-        <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">Compose a report from your ledger.</p>
+        <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">{{ Lang::get('reports::builder.title') }}</h1>
+        <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">{{ Lang::get('reports::builder.subtitle') }}</p>
     </header>
 
     @if ($flashMessage !== '')
@@ -104,7 +120,7 @@
             style="border-color: var(--color-emerald); background: var(--color-emerald-bg); color: var(--color-emerald);"
         >
             <span>{{ $flashMessage }}</span>
-            <button type="button" wire:click="clearFlash" aria-label="Dismiss" style="color: inherit;">&times;</button>
+            <button type="button" wire:click="clearFlash" aria-label="{{ Lang::get('reports::builder.dismiss') }}" style="color: inherit;">&times;</button>
         </div>
     @endif
 
@@ -113,12 +129,12 @@
         {{-- ─── Control rail ──────────────────────────────────────────── --}}
         <aside
             style="flex: 0 0 280px; min-width: 260px; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4);"
-            aria-label="Report controls"
+            aria-label="{{ Lang::get('reports::builder.controls_aria') }}"
         >
             {{-- Metric --}}
             <div>
-                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">Metric</p>
-                <div role="group" aria-label="Metric" class="filter-chips">
+                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.metric.heading') }}</p>
+                <div role="group" aria-label="{{ Lang::get('reports::builder.metric.heading') }}" class="filter-chips">
                     @foreach ($metricLabels as $key => $label)
                         <button
                             type="button"
@@ -133,8 +149,8 @@
             {{-- Group-by — hidden entirely when metric = net_worth --}}
             @if ($showDimension)
                 <div>
-                    <p class="srch-filter-label" style="margin-bottom: var(--space-2);">Group by</p>
-                    <div role="group" aria-label="Group by" class="filter-chips">
+                    <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.group_by') }}</p>
+                    <div role="group" aria-label="{{ Lang::get('reports::builder.group_by') }}" class="filter-chips">
                         @foreach ($dimensionLabels as $key => $label)
                             <button
                                 type="button"
@@ -149,8 +165,8 @@
 
             {{-- Period --}}
             <div>
-                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">Period</p>
-                <div role="group" aria-label="Period" class="filter-chips">
+                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.period.heading') }}</p>
+                <div role="group" aria-label="{{ Lang::get('reports::builder.period.heading') }}" class="filter-chips">
                     @foreach ($periodLabels as $key => $label)
                         <button
                             type="button"
@@ -162,9 +178,9 @@
                 </div>
                 @if ($periodPreset === 'custom')
                     <div class="srch-date-range mt-2">
-                        <label for="report-custom-from" class="srch-filter-label">From</label>
+                        <label for="report-custom-from" class="srch-filter-label">{{ Lang::get('reports::builder.period.from') }}</label>
                         <input id="report-custom-from" type="date" wire:model.live="customFrom" class="srch-date-input" />
-                        <label for="report-custom-to" class="srch-filter-label mt-1">To</label>
+                        <label for="report-custom-to" class="srch-filter-label mt-1">{{ Lang::get('reports::builder.period.to') }}</label>
                         <input id="report-custom-to" type="date" wire:model.live="customTo" class="srch-date-input" />
                     </div>
                 @endif
@@ -172,27 +188,27 @@
 
             {{-- Currency mode --}}
             <div>
-                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">Currency</p>
-                <div class="view-toggle" role="group" aria-label="Currency mode">
-                    <button type="button" wire:click="$set('currencyMode', 'base')" class="{{ $currencyMode === 'base' ? 'active' : '' }}" aria-pressed="{{ $currencyMode === 'base' ? 'true' : 'false' }}">Base</button>
-                    <button type="button" wire:click="$set('currencyMode', 'original')" class="{{ $currencyMode === 'original' ? 'active' : '' }}" aria-pressed="{{ $currencyMode === 'original' ? 'true' : 'false' }}">Original</button>
+                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.currency.heading') }}</p>
+                <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::builder.currency.aria') }}">
+                    <button type="button" wire:click="$set('currencyMode', 'base')" class="{{ $currencyMode === 'base' ? 'active' : '' }}" aria-pressed="{{ $currencyMode === 'base' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.base') }}</button>
+                    <button type="button" wire:click="$set('currencyMode', 'original')" class="{{ $currencyMode === 'original' ? 'active' : '' }}" aria-pressed="{{ $currencyMode === 'original' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.currency.original') }}</button>
                 </div>
             </div>
 
             {{-- Time-granularity (Req 7) — only for time-series reports --}}
             @if ($showGranularity)
                 <div>
-                    <p class="srch-filter-label" style="margin-bottom: var(--space-2);">Granularity</p>
-                    <div class="view-toggle" role="group" aria-label="Time granularity">
-                        <button type="button" wire:click="$set('granularity', 'monthly')" class="{{ $granularity === 'monthly' ? 'active' : '' }}" aria-pressed="{{ $granularity === 'monthly' ? 'true' : 'false' }}">Monthly</button>
-                        <button type="button" wire:click="$set('granularity', 'weekly')" class="{{ $granularity === 'weekly' ? 'active' : '' }}" aria-pressed="{{ $granularity === 'weekly' ? 'true' : 'false' }}">Weekly</button>
+                    <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.granularity.heading') }}</p>
+                    <div class="view-toggle" role="group" aria-label="{{ Lang::get('reports::builder.granularity.aria') }}">
+                        <button type="button" wire:click="$set('granularity', 'monthly')" class="{{ $granularity === 'monthly' ? 'active' : '' }}" aria-pressed="{{ $granularity === 'monthly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.monthly') }}</button>
+                        <button type="button" wire:click="$set('granularity', 'weekly')" class="{{ $granularity === 'weekly' ? 'active' : '' }}" aria-pressed="{{ $granularity === 'weekly' ? 'true' : 'false' }}">{{ Lang::get('reports::builder.granularity.weekly') }}</button>
                     </div>
                 </div>
             @endif
 
             {{-- Filters (D-04 — reused Search filter language) --}}
             <div>
-                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">Filters</p>
+                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.filters.heading') }}</p>
                 <div class="srch-chips" style="flex-wrap: wrap;">
                     @include('reports::livewire.partials.report-filter-popovers')
                 </div>
@@ -200,7 +216,7 @@
 
             {{-- Compare to previous period (Req 13) --}}
             <div class="flex items-center justify-between gap-2">
-                <label for="report-compare-switch" class="srch-filter-label" style="margin: 0;">Compare to previous period</label>
+                <label for="report-compare-switch" class="srch-filter-label" style="margin: 0;">{{ Lang::get('reports::builder.compare') }}</label>
                 <button
                     type="button"
                     id="report-compare-switch"
@@ -208,14 +224,14 @@
                     class="switch {{ $compare ? 'switch--on' : '' }}"
                     role="switch"
                     aria-checked="{{ $compare ? 'true' : 'false' }}"
-                    aria-label="Compare to previous period"
+                    aria-label="{{ Lang::get('reports::builder.compare') }}"
                 ><span class="switch__thumb"></span></button>
             </div>
 
             {{-- Visualization --}}
             <div>
-                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">Visualization</p>
-                <div role="group" aria-label="Visualization" class="filter-chips">
+                <p class="srch-filter-label" style="margin-bottom: var(--space-2);">{{ Lang::get('reports::builder.viz.heading') }}</p>
+                <div role="group" aria-label="{{ Lang::get('reports::builder.viz.heading') }}" class="filter-chips">
                     @foreach ($vizLabels as $key => $label)
                         <button
                             type="button"
@@ -229,18 +245,18 @@
         </aside>
 
         {{-- ─── Result panel ──────────────────────────────────────────── --}}
-        <section style="flex: 1 1 480px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4);" aria-label="Report result">
+        <section style="flex: 1 1 480px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-4);" aria-label="{{ Lang::get('reports::builder.result_aria') }}">
 
             {{-- Actions row --}}
             <div class="flex items-center gap-2 flex-wrap">
                 @if (! $showSaveForm)
                     {{-- CR-01: button copy distinguishes "editing a loaded report" from "saving a fresh one" so the user understands which action they're about to take. --}}
-                    <button type="button" wire:click="openSaveForm" @disabled(! $hasResults) class="pill-btn-primary">{{ $loadedReportId !== null ? 'Update report' : 'Save report' }}</button>
+                    <button type="button" wire:click="openSaveForm" @disabled(! $hasResults) class="pill-btn-primary">{{ $loadedReportId !== null ? Lang::get('reports::builder.actions.update_report') : Lang::get('reports::builder.actions.save_report') }}</button>
                 @else
                     <form wire:submit.prevent="save" class="flex items-center gap-2">
-                        <input type="text" wire:model="saveName" placeholder="Report name" class="srch-amount-input" style="min-width: 200px;" aria-label="Report name" autofocus />
-                        <button type="submit" class="pill-btn-primary">{{ $loadedReportId !== null ? 'Update' : 'Save' }}</button>
-                        <button type="button" wire:click="cancelSaveForm" class="pill-btn-ghost">Cancel</button>
+                        <input type="text" wire:model="saveName" placeholder="{{ Lang::get('reports::builder.actions.report_name') }}" class="srch-amount-input" style="min-width: 200px;" aria-label="{{ Lang::get('reports::builder.actions.report_name') }}" autofocus />
+                        <button type="submit" class="pill-btn-primary">{{ $loadedReportId !== null ? Lang::get('reports::builder.actions.update') : Lang::get('reports::builder.actions.save') }}</button>
+                        <button type="button" wire:click="cancelSaveForm" class="pill-btn-ghost">{{ Lang::get('reports::builder.actions.cancel') }}</button>
                     </form>
                 @endif
 
@@ -253,14 +269,14 @@
                         wire:loading.attr="disabled"
                         wire:target="export"
                         class="pill-btn-ghost"
-                        aria-label="Export CSV"
+                        aria-label="{{ Lang::get('reports::builder.actions.export_csv') }}"
                     >
                         <span aria-hidden="true" wire:loading.remove wire:target="export">↓</span>
                         <span aria-hidden="true" wire:loading wire:target="export">…</span>
-                        Export CSV
+                        {{ Lang::get('reports::builder.actions.export_csv') }}
                     </button>
                 @else
-                    <span class="pill-btn-ghost" style="opacity: .5; cursor: not-allowed;" aria-disabled="true">↓ Export CSV</span>
+                    <span class="pill-btn-ghost" style="opacity: .5; cursor: not-allowed;" aria-disabled="true">↓ {{ Lang::get('reports::builder.actions.export_csv') }}</span>
                 @endif
 
                 {{-- WR-02: report-recompute loading feedback — the existing inline "…" glyph pattern, keyed to every mutable control-rail property so any rail interaction (metric/dimension/period/currency/granularity/filters/compare/viz) shows it. --}}
@@ -270,14 +286,14 @@
                     style="font-size: var(--text-xs); color: var(--color-text-muted);"
                     aria-atomic="true"
                     aria-live="polite"
-                >… Updating</span>
+                >{{ Lang::get('reports::builder.updating') }}</span>
             </div>
 
             @if (! $hasResults)
                 {{-- Friendly empty state (Req: never an error) — rail stays interactive --}}
                 <div class="srch-no-results" aria-live="polite" aria-atomic="true">
-                    <p class="srch-no-results__heading">Nothing to show for this selection</p>
-                    <p class="srch-no-results__body">Try widening the date range or removing a filter.</p>
+                    <p class="srch-no-results__heading">{{ Lang::get('reports::builder.empty.heading') }}</p>
+                    <p class="srch-no-results__body">{{ Lang::get('reports::builder.empty.body') }}</p>
                 </div>
             @else
                 @php
@@ -307,14 +323,14 @@
                 {{-- Total + FX exclusion note + headline delta --}}
                 <div class="space-y-1">
                     <div class="flex items-baseline justify-between gap-4">
-                        <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Total {{ strtolower($metricLabel) }}</span>
+                        <span class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.total_prefix') }} {{ strtolower($metricLabel) }}</span>
                         <span class="{{ $amountClass($result->totalMinor) }}" style="font-size: var(--text-3xl); font-weight: 600; font-variant-numeric: tabular-nums;">
                             {{ $fmt($result->totalMinor, $result->currency) }}
                         </span>
                     </div>
                     @if ($definition->compare)
                         <div class="flex items-center justify-end gap-2">
-                            <span class="text-xs" style="color: var(--color-text-muted);">vs. previous period</span>
+                            <span class="text-xs" style="color: var(--color-text-muted);">{{ Lang::get('reports::builder.vs_previous') }}</span>
                             <span
                                 style="font-variant-numeric: tabular-nums; font-weight: 600;"
                                 class="{{ $headlineDelta >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400' }}"
@@ -323,7 +339,7 @@
                     @endif
                     @if ($result->hasExcludedAccounts)
                         <p class="text-xs" style="color: var(--color-amber);">
-                            {{ $result->accountsWithoutRate }} {{ $result->accountsWithoutRate === 1 ? 'account' : 'accounts' }} not converted — no rate available
+                            {{ $result->accountsWithoutRate === 1 ? Lang::get('reports::builder.fx_excluded_one', ['count' => $result->accountsWithoutRate]) : Lang::get('reports::builder.fx_excluded_other', ['count' => $result->accountsWithoutRate]) }}
                         </p>
                     @endif
                 </div>
@@ -336,7 +352,7 @@
                                 <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $groupHeader }}</th>
                                 <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ $metricLabel }}</th>
                                 @if ($definition->compare)
-                                    <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">vs. previous period</th>
+                                    <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('reports::builder.vs_previous') }}</th>
                                 @endif
                             </tr>
                         </thead>
@@ -347,7 +363,7 @@
                                         <a
                                             href="{{ $drilldownUrls[$rowIndex] ?? '#' }}"
                                             class="hover:underline"
-                                            title="View transactions"
+                                            title="{{ Lang::get('reports::builder.view_transactions') }}"
                                         >{{ $row->groupLabel }}</a>
                                     </td>
                                     <td class="px-4 py-2 text-right {{ $amountClass($row->amountMinor) }}" style="font-variant-numeric: tabular-nums;">
@@ -369,7 +385,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td class="px-4 py-2 font-semibold text-slate-900 dark:text-slate-100">Total</td>
+                                <td class="px-4 py-2 font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('reports::builder.total') }}</td>
                                 <td class="px-4 py-2 text-right font-semibold {{ $amountClass($result->totalMinor) }}" style="font-variant-numeric: tabular-nums;">
                                     {{ $fmt($result->totalMinor, $result->currency) }}
                                 </td>

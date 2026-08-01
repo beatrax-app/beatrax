@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
@@ -48,12 +49,6 @@ final class GoalsPage extends Component
     public int $archivingGoalId = 0;
 
     public bool $showArchived = false;
-
-    private const string ERROR_NAME_REQUIRED = 'Enter a name for your goal.';
-
-    private const string ERROR_DATE_REQUIRED = 'Choose a target date.';
-
-    private const string ERROR_AMOUNT_INVALID = 'Enter a valid amount greater than zero.';
 
     // The pot picker's option list is scoped to the selected account, but the
     // bound property survives a re-render — switching accounts would
@@ -98,7 +93,7 @@ final class GoalsPage extends Component
 
             $this->resetForm();
             $this->dispatch('modal-close', name: 'goal-form');
-            $this->toast('Goal created.');
+            $this->toast(Lang::get('goals::messages.notices.goal_created'));
         } catch (\InvalidArgumentException $e) {
             $this->applyWriteFailure($e);
         }
@@ -165,7 +160,7 @@ final class GoalsPage extends Component
 
             $this->resetForm();
             $this->dispatch('modal-close', name: 'goal-form');
-            $this->toast('Goal updated.');
+            $this->toast(Lang::get('goals::messages.notices.goal_updated'));
         } catch (\InvalidArgumentException $e) {
             $this->applyWriteFailure($e);
         }
@@ -182,7 +177,7 @@ final class GoalsPage extends Component
         }
 
         $writer->markComplete($currentUser->user(), $goalId);
-        $this->toast('Goal marked as complete.');
+        $this->toast(Lang::get('goals::messages.notices.goal_marked_complete'));
     }
 
     public function confirmArchive(CurrentUser $currentUser, int $goalId): void
@@ -211,7 +206,7 @@ final class GoalsPage extends Component
 
         $writer->archive($currentUser->user(), $goalId);
         $this->archivingGoalId = 0;
-        $this->dispatch('toast', message: 'Goal archived.', undoAction: 'restore', undoPayload: $goalId);
+        $this->dispatch('toast', message: Lang::get('goals::messages.notices.goal_archived'), undoAction: 'restore', undoPayload: $goalId);
     }
 
     public function restore(CurrentUser $currentUser, GoalWriter $writer, int $goalId): void
@@ -221,7 +216,7 @@ final class GoalsPage extends Component
         }
 
         $writer->restore($currentUser->user(), $goalId);
-        $this->toast('Goal restored.');
+        $this->toast(Lang::get('goals::messages.notices.goal_restored'));
     }
 
     public function cancel(): void
@@ -253,7 +248,7 @@ final class GoalsPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => 'Goals · beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('goals::messages.page.title').' · beatrax']);
 
             return $view;
         }
@@ -317,7 +312,7 @@ final class GoalsPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Goals · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('goals::messages.page.title').' · beatrax']);
 
         return $view;
     }
@@ -348,13 +343,13 @@ final class GoalsPage extends Component
     private function validateNameAndDate(): bool
     {
         if (trim($this->name) === '') {
-            $this->errorName = self::ERROR_NAME_REQUIRED;
+            $this->errorName = Lang::get('goals::messages.errors.name');
 
             return false;
         }
 
         if (trim($this->targetDate) === '') {
-            $this->errorDate = self::ERROR_DATE_REQUIRED;
+            $this->errorDate = Lang::get('goals::messages.errors.date');
 
             return false;
         }
@@ -374,7 +369,7 @@ final class GoalsPage extends Component
         }
 
         if ($e instanceof InvalidGoalAmountException) {
-            $this->errorAmount = self::ERROR_AMOUNT_INVALID;
+            $this->errorAmount = Lang::get('goals::messages.errors.amount');
 
             return;
         }
@@ -431,7 +426,7 @@ final class GoalsPage extends Component
         // excludes these, this guards against stale/tampered ids.
         if ($row !== null && $row->category_id !== null) {
             throw new \InvalidArgumentException(
-                'This pot is linked to a category. Remove that link on the Pots page first.'
+                Lang::get('goals::messages.errors.pot_linked_category')
             );
         }
 

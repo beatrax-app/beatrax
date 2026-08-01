@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /drift/watch — Subscription Drift Watch overview. Approved subscriptions
     ranked by how much their price has crept up since the first observed charge,
@@ -48,34 +49,33 @@
 <div class="mx-auto max-w-3xl px-4 py-12">
     <header class="mb-8">
         <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Subscription drift</h1>
-            <a href="{{ route('drift.index') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Drift alerts →</a>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.heading') }}</h1>
+            <a href="{{ route('drift.index') }}" class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">{{ Lang::get('drift-alerts::watch.drift_alerts_link') }}</a>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            How much each subscription's price has crept up since you started tracking it.
+            {{ Lang::get('drift-alerts::watch.intro') }}
         </p>
 
         @if ($trackedCount > 0)
             <div class="mt-6 flex flex-wrap items-baseline gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300">
                 <span class="font-medium text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $trackedCount }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">tracked</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.tracked') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span class="font-medium {{ $driftedUpCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100' }}" style="font-variant-numeric: tabular-nums;">{{ $driftedUpCount }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">crept up</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.crept_up') }}</span>
                 <span class="text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ $fmt($totalMonthlyMinor, 'EUR') }}</span>
-                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">/month total</span>
+                <span class="text-slate-400 dark:text-slate-500" aria-hidden="true">{{ Lang::get('drift-alerts::watch.per_month_total') }}</span>
             </div>
         @endif
     </header>
 
     @if ($trackedCount === 0)
         <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Nothing to watch yet</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_heading') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Once an approved subscription has been charged at least twice, its price
-                trend shows up here. Approve recurring series on
-                <a href="{{ route('recurring.index') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">Recurring</a>.
+                {{ Lang::get('drift-alerts::watch.empty_body') }}
+                <a href="{{ route('recurring.index') }}" class="text-slate-900 underline underline-offset-2 dark:text-slate-100">{{ Lang::get('drift-alerts::watch.empty_link') }}</a>.
             </p>
         </div>
     @else
@@ -91,7 +91,7 @@
                                     class="truncate font-medium text-slate-900 hover:underline underline-offset-2 dark:text-slate-100"
                                 >{{ $row->name }}</a>
                                 @if ($row->hasOpenAlert)
-                                    <a href="{{ route('drift.index') }}" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">open alert</a>
+                                    <a href="{{ route('drift.index') }}" class="shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300" style="background: color-mix(in srgb, currentColor 14%, transparent);">{{ Lang::get('drift-alerts::watch.open_alert') }}</a>
                                 @endif
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">

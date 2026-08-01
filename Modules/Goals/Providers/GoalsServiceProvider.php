@@ -28,6 +28,7 @@ final class GoalsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'goals');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'goals');
 
         $livewire->component('goals.goals-page', GoalsPage::class);
         $livewire->component('goals.summary-card', GoalsSummaryCard::class);

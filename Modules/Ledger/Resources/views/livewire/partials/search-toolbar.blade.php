@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Search toolbar — always visible on /transactions once Phase 8 ships.
 
@@ -20,18 +21,18 @@
         <input
             type="search"
             wire:model.live.debounce.250ms="searchQuery"
-            placeholder="Search merchant, description, notes…"
+            placeholder="{{ Lang::get('ledger::list.search.placeholder') }}"
             class="srch-input hidden md:block"
-            aria-label="Search transactions"
+            aria-label="{{ Lang::get('ledger::list.search.aria') }}"
             x-on:keydown.escape="$wire.clearSearch()"
         />
         {{-- Phone-specific shorter placeholder --}}
         <input
             type="search"
             wire:model.live.debounce.250ms="searchQuery"
-            placeholder="Search transactions…"
+            placeholder="{{ Lang::get('ledger::list.search.placeholder_short') }}"
             class="srch-input md:hidden"
-            aria-label="Search transactions"
+            aria-label="{{ Lang::get('ledger::list.search.aria') }}"
             x-on:keydown.escape="$wire.clearSearch()"
         />
         <span wire:loading wire:target="searchQuery" class="srch-spinner" aria-hidden="true">
@@ -51,20 +52,20 @@
                 type="button"
                 wire:click="clearSearch"
                 class="srch-clear-all ml-auto"
-            >Clear all</button>
+            >{{ Lang::get('ledger::list.search.clear_all') }}</button>
         @endif
     </div>
 
     {{-- ─── Phone "Filters {N}" button + bottom sheet (<768px) ────────────── --}}
     <div class="md:hidden flex items-center gap-2 mt-2">
-        <x-core::bottom-sheet name="search-filters" title="Filters">
+        <x-core::bottom-sheet name="search-filters" title="{{ Lang::get('ledger::list.search.filters') }}">
             <button
                 type="button"
                 x-on:click="$dispatch('open-sheet', { name: 'search-filters' })"
                 class="srch-filters-btn"
-                aria-label="Open filters"
+                aria-label="{{ Lang::get('ledger::list.search.open_filters_aria') }}"
             >
-                Filters
+                {{ Lang::get('ledger::list.search.filters') }}
                 @if (($activeFilterCount ?? 0) > 0)
                     <span class="srch-filter-badge">{{ $activeFilterCount }}</span>
                 @endif
@@ -74,27 +75,27 @@
             <div class="space-y-4">
                 {{-- Date filter --}}
                 <div>
-                    <p class="srch-sheet-section-label">Date range</p>
+                    <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.date_range') }}</p>
                     <div class="srch-sheet-section">
                         <div class="srch-date-presets">
                             @foreach ([
-                                'This month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
-                                'Last month' => [now()->subMonth()->startOfMonth()->toDateString(), now()->subMonth()->endOfMonth()->toDateString()],
-                                'This year'  => [now()->startOfYear()->toDateString(), now()->endOfYear()->toDateString()],
-                                'Last year'  => [now()->subYear()->startOfYear()->toDateString(), now()->subYear()->endOfYear()->toDateString()],
-                            ] as $label => [$start, $end])
+                                'this_month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()],
+                                'last_month' => [now()->subMonth()->startOfMonth()->toDateString(), now()->subMonth()->endOfMonth()->toDateString()],
+                                'this_year'  => [now()->startOfYear()->toDateString(), now()->endOfYear()->toDateString()],
+                                'last_year'  => [now()->subYear()->startOfYear()->toDateString(), now()->subYear()->endOfYear()->toDateString()],
+                            ] as $presetKey => [$start, $end])
                                 <button
                                     type="button"
                                     wire:click="$set('filterAfter', '{{ $start }}')"
                                     x-on:click="$wire.$set('filterBefore', '{{ $end }}')"
                                     class="srch-date-preset"
-                                >{{ $label }}</button>
+                                >{{ Lang::get('ledger::list.date_preset.'.$presetKey) }}</button>
                             @endforeach
                         </div>
                         <div class="srch-date-range">
-                            <input type="date" wire:model.live="filterAfter" class="srch-date-input" aria-label="After date" />
+                            <input type="date" wire:model.live="filterAfter" class="srch-date-input" aria-label="{{ Lang::get('ledger::list.filter.after_aria') }}" />
                             <span class="srch-date-sep">–</span>
-                            <input type="date" wire:model.live="filterBefore" class="srch-date-input" aria-label="Before date" />
+                            <input type="date" wire:model.live="filterBefore" class="srch-date-input" aria-label="{{ Lang::get('ledger::list.filter.before_aria') }}" />
                         </div>
                     </div>
                 </div>
@@ -102,7 +103,7 @@
                 {{-- Account filter --}}
                 @if (! empty($availableAccounts))
                     <div>
-                        <p class="srch-sheet-section-label">Account</p>
+                        <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.account') }}</p>
                         <div class="srch-sheet-section">
                             @foreach ($availableAccounts as $account)
                                 <label class="srch-check-row">
@@ -122,20 +123,20 @@
 
                 {{-- Amount filter --}}
                 <div>
-                    <p class="srch-sheet-section-label">Amount</p>
+                    <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.amount') }}</p>
                     <div class="srch-sheet-section">
                         <div class="srch-dir-group">
-                            @foreach (['both' => 'Both', 'in' => 'In', 'out' => 'Out'] as $val => $lbl)
+                            @foreach (['both' => 'dir_both', 'in' => 'dir_in', 'out' => 'dir_out'] as $val => $dirKey)
                                 <label class="srch-radio-row">
                                     <input type="radio" wire:model.live="filterAmountDir" value="{{ $val }}" class="srch-radio" />
-                                    <span>{{ $lbl }}</span>
+                                    <span>{{ Lang::get('ledger::list.filter.'.$dirKey) }}</span>
                                 </label>
                             @endforeach
                         </div>
                         <div class="srch-amount-range">
-                            <input type="number" wire:model.live="filterAmountMin" min="0" step="0.01" placeholder="Min" class="srch-amount-input" aria-label="Minimum amount" />
+                            <input type="number" wire:model.live="filterAmountMin" min="0" step="0.01" placeholder="{{ Lang::get('ledger::list.filter.min') }}" class="srch-amount-input" aria-label="{{ Lang::get('ledger::list.filter.min_aria') }}" />
                             <span class="srch-date-sep">–</span>
-                            <input type="number" wire:model.live="filterAmountMax" min="0" step="0.01" placeholder="Max" class="srch-amount-input" aria-label="Maximum amount" />
+                            <input type="number" wire:model.live="filterAmountMax" min="0" step="0.01" placeholder="{{ Lang::get('ledger::list.filter.max') }}" class="srch-amount-input" aria-label="{{ Lang::get('ledger::list.filter.max_aria') }}" />
                         </div>
                     </div>
                 </div>
@@ -143,7 +144,7 @@
                 {{-- Category filter --}}
                 @if (! empty($availableCategories))
                     <div>
-                        <p class="srch-sheet-section-label">Category</p>
+                        <p class="srch-sheet-section-label">{{ Lang::get('ledger::list.filter.category') }}</p>
                         <div class="srch-sheet-section">
                             @foreach ($availableCategories as $category)
                                 <label class="srch-check-row">
@@ -167,30 +168,40 @@
                     type="button"
                     x-on:click="open = false"
                     class="srch-sheet-apply"
-                >Apply</button>
+                >{{ Lang::get('ledger::list.search.apply') }}</button>
                 <button
                     type="button"
                     wire:click="clearSearch"
                     x-on:click="open = false"
                     class="srch-sheet-clear"
-                >Clear</button>
+                >{{ Lang::get('ledger::list.search.clear') }}</button>
             </div>
         </x-core::bottom-sheet>
 
         @if ($isSearchMode ?? false)
-            <button type="button" wire:click="clearSearch" class="srch-clear-all">Clear all</button>
+            <button type="button" wire:click="clearSearch" class="srch-clear-all">{{ Lang::get('ledger::list.search.clear_all') }}</button>
         @endif
     </div>
 
     {{-- ─── Summary strip (.srch-strip) — visible when search is active ── --}}
     @if ($isSearchMode ?? false)
+        @php
+            $countLabel = Lang::get(
+                $searchTotalCount === 1 ? 'ledger::list.search.count_one' : 'ledger::list.search.count_many',
+                ['count' => $searchTotalCount],
+            );
+            $flow = Lang::get('ledger::list.search.flow', [
+                'out' => $fmtMinor($searchTotalOut),
+                'in' => $fmtMinor($searchTotalIn),
+            ]);
+        @endphp
         <div class="srch-strip" aria-live="polite">
             @if ($searchQuery !== '')
-                {{ $searchTotalCount }} transaction{{ $searchTotalCount !== 1 ? 's' : '' }}
-                &middot; {{ $fmtMinor($searchTotalOut) }} out / {{ $fmtMinor($searchTotalIn) }} in
+                {{ $countLabel }}
+                &middot; {{ $flow }}
             @else
-                {{ $searchTotalCount }} transaction{{ $searchTotalCount !== 1 ? 's' : '' }} matching filters
-                &middot; {{ $fmtMinor($searchTotalOut) }} out / {{ $fmtMinor($searchTotalIn) }} in
+                {{ $countLabel }} {{ Lang::get('ledger::list.search.matching_suffix') }}
+                &middot; {{ $flow }}
             @endif
         </div>
     @endif

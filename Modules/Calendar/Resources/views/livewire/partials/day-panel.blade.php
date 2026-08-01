@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Day panel partial — §6.4 (desktop right-rail) and §6.5 (phone bottom sheet).
 
@@ -20,7 +21,7 @@
         @click="panelOpen = false"
         class="ml-auto flex h-8 w-8 items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
         style="color: var(--color-text-muted);"
-        aria-label="Close day panel"
+        aria-label="{{ Lang::get('calendar::messages.panel.close') }}"
     >×</button>
 </div>
 
@@ -28,7 +29,7 @@
      null sodBalanceMinor means the prior day carried no computed balance;
      rendering €0,00 there would state a fake figure) --}}
 <div class="cal-panel-bal-row">
-    <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">Start of day</span>
+    <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">{{ Lang::get('calendar::messages.panel.start_of_day') }}</span>
     <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: var(--color-text);">
         @if ($dayDto->isComputing || $dayDto->sodBalanceMinor === null)
             —
@@ -40,7 +41,7 @@
 
 {{-- Entry rows --}}
 @if ($dayDto->entries === [])
-    <p class="py-4 text-sm" style="color: var(--color-text-muted);">No payments on this day.</p>
+    <p class="py-4 text-sm" style="color: var(--color-text-muted);">{{ Lang::get('calendar::messages.panel.no_payments') }}</p>
 @else
     <div class="overflow-y-auto flex-1">
         @foreach ($dayDto->entries as $entry)
@@ -60,9 +61,9 @@
                                 {{ $entry->name }}
                             </span>
                             @if ($entry->isPaid)
-                                <span style="color: var(--color-emerald);" aria-label="Paid">✓</span>
+                                <span style="color: var(--color-emerald);" aria-label="{{ Lang::get('calendar::messages.cell.paid') }}">✓</span>
                             @elseif ($entry->isMissed)
-                                <span style="color: var(--color-amber);" aria-label="Expected — not found">!</span>
+                                <span style="color: var(--color-amber);" aria-label="{{ Lang::get('calendar::messages.cell.missed') }}">!</span>
                             @endif
                         </div>
                         <div class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
@@ -70,7 +71,7 @@
                         </div>
                         @if ($entry->isApproximate)
                             <div class="mt-0.5 text-xs italic" style="color: var(--color-text-faint);">
-                                ~ date approximate
+                                {{ Lang::get('calendar::messages.panel.date_approximate') }}
                             </div>
                         @endif
                         {{-- Drill-through links (CAL-03) --}}
@@ -80,14 +81,14 @@
                                 class="underline hover:no-underline"
                                 style="color: var(--color-text-muted);"
                                 wire:navigate
-                            >↗ series</a>
+                            >{{ Lang::get('calendar::messages.panel.series') }}</a>
                             @if ($entry->counterpartySlug !== null)
                                 <a
                                     href="/counterparties/{{ $entry->counterpartySlug }}"
                                     class="underline hover:no-underline"
                                     style="color: var(--color-text-muted);"
                                     wire:navigate
-                                >↗ counterparty</a>
+                                >{{ Lang::get('calendar::messages.panel.counterparty') }}</a>
                             @endif
                         </div>
                     </div>
@@ -102,7 +103,7 @@
 
 {{-- EOD balance --}}
 <div class="cal-panel-bal-row mt-auto">
-    <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">End of day</span>
+    <span style="color: var(--color-text-muted); font-size: var(--text-sm, 0.8125rem);">{{ Lang::get('calendar::messages.panel.end_of_day') }}</span>
     <span class="tabular-nums font-semibold" style="font-size: var(--text-sm, 0.8125rem); color: {{ !$dayDto->isComputing && $dayDto->eodBalanceMinor < 0 ? 'var(--color-rose)' : 'var(--color-text)' }};">
         @if ($dayDto->isComputing)
             —

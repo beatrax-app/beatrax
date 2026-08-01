@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Notification row (D-45/D-46, 18-UI-SPEC.md § 2). Markup is a verbatim
     clone of the UI-SPEC contract; the ONLY addition is the `x-on:click`
@@ -35,12 +36,12 @@
             <p class="text-sm {{ $notification->readAt ? 'font-normal text-slate-700 dark:text-slate-300' : 'font-semibold text-slate-900 dark:text-slate-100' }}">
                 {{ $notification->title }}
                 @if ($notification->resolved())
-                    <span class="status-pill muted ml-1">Resolved</span>
+                    <span class="status-pill muted ml-1">{{ Lang::get('notifications::row.resolved') }}</span>
                 @endif
             </p>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ $notification->body }}</p>
             @if ($notification->deepLinkDisabled)
-                <p class="mt-1 text-xs text-rose-700 dark:text-rose-400">This {{ $notification->targetKind }} no longer exists.</p>
+                <p class="mt-1 text-xs text-rose-700 dark:text-rose-400">{{ Lang::get('notifications::row.dead_link', ['kind' => $notification->targetKind]) }}</p>
             @endif
         </div>
         <span class="shrink-0 text-xs text-slate-400 dark:text-slate-500" style="font-variant-numeric: tabular-nums;">{{ $notification->relativeTime() }}</span>

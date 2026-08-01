@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Budgets step (optional, D-24) — assign this month's money per expense
     category before finishing setup. Reuses the wizard chrome (wiz-eyebrow /
@@ -8,21 +9,20 @@
     throughout.
 --}}
 <section class="wiz-step wiz-step-budgets" aria-labelledby="wiz-budgets-h1">
-    <p class="wiz-eyebrow">Optional</p>
-    <h1 id="wiz-budgets-h1" class="wiz-h1">Assign this month's money</h1>
+    <p class="wiz-eyebrow">{{ Lang::get('onboarding::budgets.eyebrow') }}</p>
+    {{-- {!! !!}: app-static heading; the straight apostrophe must render
+         literally (not &#039;) so the wizard copy stays verbatim. --}}
+    <h1 id="wiz-budgets-h1" class="wiz-h1">{!! Lang::get('onboarding::budgets.h1') !!}</h1>
     <p class="wiz-lede">
-        Put this month's money where it needs to go. Fill in the categories
-        you care about — leave the rest for later. You can change these
-        anytime on the Budgets page.
+        {{ Lang::get('onboarding::budgets.lede') }}
     </p>
 
     @if (count($categories) === 0)
         <p class="wiz-lede">
-            No expense categories yet — you can assign money later from the
-            Budgets page.
+            {{ Lang::get('onboarding::budgets.empty') }}
         </p>
     @else
-        <div class="budget-step-list" role="group" aria-label="Monthly category budgets">
+        <div class="budget-step-list" role="group" aria-label="{{ Lang::get('onboarding::budgets.list_aria') }}">
             <ul role="list">
                 @foreach ($categories as $id => $name)
                     <li>
@@ -35,7 +35,7 @@
                                 inputmode="decimal"
                                 placeholder="0.00"
                                 wire:model="amounts.{{ $id }}"
-                                aria-label="Monthly budget for {{ $name }}"
+                                aria-label="{{ Lang::get('onboarding::budgets.row_aria', ['name' => $name]) }}"
                             >
                         </span>
                     </li>
@@ -46,10 +46,10 @@
 
     <x-onboarding::wiz-actions>
         <button type="button" class="pill-btn-ghost" wire:click="skip">
-            Skip for now
+            {{ Lang::get('onboarding::budgets.skip') }}
         </button>
         <button type="button" class="pill-btn-primary" wire:click="continue">
-            Continue →
+            {{ Lang::get('onboarding::budgets.continue') }}
         </button>
     </x-onboarding::wiz-actions>
 </section>

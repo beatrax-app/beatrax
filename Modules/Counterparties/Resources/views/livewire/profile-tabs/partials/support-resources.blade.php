@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     Support-resource card (Overview tab) for merchant + government profiles.
     Renders only the links the bundled corpus actually has for this
@@ -13,14 +14,14 @@
 
     $links = $isGov
         ? [
-            ['label' => 'Contact & help', 'href' => $resource->helpUrl, 'primary' => true],
-            ['label' => 'Sign in · apply', 'href' => $resource->applyUrl],
-            ['label' => 'Your rights · object', 'href' => $resource->rightsUrl],
+            ['label' => Lang::get('counterparties::profile.support.contact_help'), 'href' => $resource->helpUrl, 'primary' => true],
+            ['label' => Lang::get('counterparties::profile.support.sign_in_apply'), 'href' => $resource->applyUrl],
+            ['label' => Lang::get('counterparties::profile.support.your_rights'), 'href' => $resource->rightsUrl],
         ]
         : [
-            ['label' => 'Cancel', 'href' => $resource->cancelUrl, 'primary' => true],
-            ['label' => 'Help & support', 'href' => $resource->supportUrl],
-            ['label' => 'Cheaper plan', 'href' => $resource->cheaperUrl],
+            ['label' => Lang::get('counterparties::profile.support.cancel'), 'href' => $resource->cancelUrl, 'primary' => true],
+            ['label' => Lang::get('counterparties::profile.support.help_support'), 'href' => $resource->supportUrl],
+            ['label' => Lang::get('counterparties::profile.support.cheaper_plan'), 'href' => $resource->cheaperUrl],
         ];
     // Only emit http(s) link chips — never a javascript:/data: scheme, even
     // from the bundled corpus. mailto: and tel: are built separately below.
@@ -38,11 +39,11 @@
 @endphp
 
 <section
-    aria-label="{{ $isGov ? 'Getting help' : 'Support and cancelling' }}"
+    aria-label="{{ $isGov ? Lang::get('counterparties::profile.support.aria_gov') : Lang::get('counterparties::profile.support.aria_merchant') }}"
     style="border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-5); margin-top:var(--space-6);"
 >
     <h3 style="font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.04em; color:var(--color-text-faint); margin:0 0 var(--space-3);">
-        {{ $isGov ? 'Getting help' : 'Support & cancelling' }}
+        {{ $isGov ? Lang::get('counterparties::profile.support.heading_gov') : Lang::get('counterparties::profile.support.heading_merchant') }}
     </h3>
 
     <div style="display:flex; flex-wrap:wrap; gap:var(--space-2);">
@@ -56,7 +57,7 @@
 
         @if ($mailto !== null)
             <a href="{{ $mailto }}" style="{{ $chip }}">
-                Cancel by email <span aria-hidden="true" style="opacity:.6;">✉</span>
+                {{ Lang::get('counterparties::profile.support.cancel_by_email') }} <span aria-hidden="true" style="opacity:.6;">✉</span>
             </a>
         @endif
 

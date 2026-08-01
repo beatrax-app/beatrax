@@ -17,6 +17,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\SessionFactory;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../.docs/features/auth/architecture.md
@@ -50,7 +51,7 @@ final class SignupAction
 
         if (strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
             throw ValidationException::withMessages([
-                'password' => 'Use at least 12 characters.',
+                'password' => Lang::get('auth::signup.error_min_length'),
             ]);
         }
 
@@ -66,7 +67,7 @@ final class SignupAction
             // read a stale value before a concurrent signup commits.
             if ($this->db->connection()->table('users')->count() > 0) {
                 throw ValidationException::withMessages([
-                    'signup' => 'Signup is closed on this device.',
+                    'signup' => Lang::get('auth::signup.error_closed'),
                 ]);
             }
 

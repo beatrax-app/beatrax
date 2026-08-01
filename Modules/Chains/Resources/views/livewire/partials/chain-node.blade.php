@@ -7,6 +7,7 @@
      ends of the call site and avoids the silent inheritance footgun
      where a child partial picks up a Livewire-component-scope
      property by accident. --}}
+@use('Modules\Core\Public\Support\Lang')
 @props(['node', 'fanoutPage'])
 
 @php
@@ -30,10 +31,10 @@
     };
 
     $tierAria = match ($node->confidenceTier) {
-        'Deterministic' => 'Confidence: deterministic match',
-        'Confirmed'     => 'Confidence: confirmed',
-        'Candidate'     => 'Confidence: candidate; needs review',
-        default         => 'Confidence: candidate; needs review',
+        'Deterministic' => Lang::get('chains::drawer.confidence_aria.deterministic'),
+        'Confirmed'     => Lang::get('chains::drawer.confidence_aria.confirmed'),
+        'Candidate'     => Lang::get('chains::drawer.confidence_aria.candidate'),
+        default         => Lang::get('chains::drawer.confidence_aria.candidate'),
     };
 
     $cardClasses = 'rounded-lg border border-slate-200 bg-white p-4 space-y-1 dark:bg-slate-950 dark:border-slate-700';
@@ -87,14 +88,14 @@
                 type="button"
                 wire:click="confirm({{ $node->chainLinkId }})"
                 class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                aria-label="Confirm chain link {{ $node->chainLinkId }}"
-            >Confirm</button>
+                aria-label="{{ Lang::get('chains::drawer.confirm_aria', ['id' => $node->chainLinkId]) }}"
+            >{{ Lang::get('chains::drawer.confirm') }}</button>
             <button
                 type="button"
                 wire:click="reject({{ $node->chainLinkId }})"
                 class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 dark:bg-rose-950 dark:text-rose-500 dark:hover:bg-rose-900"
-                aria-label="Reject chain link {{ $node->chainLinkId }}"
-            >Reject</button>
+                aria-label="{{ Lang::get('chains::drawer.reject_aria', ['id' => $node->chainLinkId]) }}"
+            >{{ Lang::get('chains::drawer.reject') }}</button>
         </div>
     @endif
 
@@ -104,7 +105,7 @@
              only — clicking the "Show 10 more · X of N" button
              increments the drawer's $fanoutPage cursor. --}}
         <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2 dark:bg-slate-900 dark:border-slate-700">
-            <p class="text-xs text-slate-500 dark:text-slate-400">Covers {{ $childTotal }} ICS charges</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('chains::drawer.covers_charges', ['count' => $childTotal]) }}</p>
             @foreach ($visibleChildren as $child)
                 <div class="flex items-center justify-between">
                     <p class="text-sm text-slate-900 dark:text-slate-100">
@@ -129,14 +130,14 @@
                     type="button"
                     wire:click="showMoreFanout"
                     class="mt-2 text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                >Show {{ $nextChunk }} more · {{ count($visibleChildren) }} of {{ $childTotal }}</button>
+                >{{ Lang::get('chains::drawer.show_more_fanout', ['count' => $nextChunk, 'shown' => count($visibleChildren), 'total' => $childTotal]) }}</button>
             @endif
         </div>
     @elseif ($node->kind === \Modules\Chains\Public\Enums\ChainLinkKind::IcsBulkSettle->value)
         {{-- Empty fan-out edge case (D-93 discretion) — a refund-only
              month leaves a bulk-settle node covering zero ICS charges. --}}
         <div class="mt-md rounded-md border border-slate-200 bg-slate-50 p-3 dark:bg-slate-900 dark:border-slate-700">
-            <p class="text-xs text-slate-500 dark:text-slate-400">No ICS charges in this settlement</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('chains::drawer.no_ics_charges') }}</p>
         </div>
     @endif
 </div>

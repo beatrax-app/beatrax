@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 <div
     class="p-6"
     style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
@@ -5,7 +6,7 @@
 >
     {{-- Page heading --}}
     <div class="mb-6 flex items-center justify-between">
-        <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Sync Health</h1>
+        <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::health.title') }}</h1>
     </div>
 
     {{-- Console pane — 7-day quarantine count (theme-locked dark) --}}
@@ -22,7 +23,7 @@
                 class="text-xs font-medium uppercase tracking-widest"
                 style="color: #94a3b8; letter-spacing: 0.08em; font-size: 11px;"
             >
-                Quarantined ops — last 7 days
+                {{ Lang::get('sync::health.quarantined_ops') }}
             </div>
             <div
                 class="mt-1 text-2xl font-bold tabular-nums"
@@ -34,7 +35,7 @@
                     class="text-sm font-normal ml-1"
                     style="color: #94a3b8;"
                 >
-                    {{ $recentCount === 1 ? 'skipped op' : 'skipped ops' }}
+                    {{ $recentCount === 1 ? Lang::get('sync::health.skipped_op') : Lang::get('sync::health.skipped_ops') }}
                 </span>
             </div>
         </div>
@@ -48,7 +49,7 @@
             data-testid="sync-health-empty-state"
         >
             <span aria-hidden="true" class="text-base">✓</span>
-            No skipped ops in the last 7 days.
+            {{ Lang::get('sync::health.empty') }}
         </div>
     @else
         <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
@@ -63,25 +64,25 @@
                             class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
-                            Reason
+                            {{ Lang::get('sync::health.col_reason') }}
                         </th>
                         <th
                             class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
-                            Table
+                            {{ Lang::get('sync::health.col_table') }}
                         </th>
                         <th
                             class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
-                            Device
+                            {{ Lang::get('sync::health.col_device') }}
                         </th>
                         <th
                             class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
                             style="letter-spacing: 0.06em; font-size: 11px;"
                         >
-                            When
+                            {{ Lang::get('sync::health.col_when') }}
                         </th>
                     </tr>
                 </thead>

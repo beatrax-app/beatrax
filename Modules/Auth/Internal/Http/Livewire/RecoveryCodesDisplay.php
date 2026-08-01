@@ -12,6 +12,7 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -68,7 +69,7 @@ final class RecoveryCodesDisplay extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Save these recovery codes · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('auth::recovery_codes.page_title')]);
 
         return $view;
     }

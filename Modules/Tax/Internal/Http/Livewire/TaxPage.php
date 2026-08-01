@@ -12,6 +12,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Public\Services\TaxCsvExporter;
 use Modules\Tax\Public\Services\TaxPdfRenderer;
 use Modules\Tax\Public\Services\TaxYearQuery;
@@ -108,7 +109,7 @@ final class TaxPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => 'Tax · beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').' · beatrax']);
 
             return $view;
         }
@@ -134,7 +135,7 @@ final class TaxPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => "Tax {$this->year} · beatrax"]);
+        $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title_year', ['year' => $this->year]).' · beatrax']);
 
         return $view;
     }

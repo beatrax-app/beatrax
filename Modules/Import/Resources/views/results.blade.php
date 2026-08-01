@@ -1,4 +1,5 @@
-@extends('layouts.app', ['title' => 'Import complete · beatrax'])
+@use('Modules\Core\Public\Support\Lang')
+@extends('layouts.app', ['title' => Lang::get('import::results.page_title').' · beatrax'])
 
 @section('content')
     <main class="min-h-screen bg-white dark:bg-slate-950">

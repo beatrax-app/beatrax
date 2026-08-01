@@ -21,6 +21,7 @@ use Modules\Categorization\Public\Enums\ActionType;
 use Modules\Categorization\Public\Services\CategorizationRuleQuery;
 use Modules\Categorization\Public\Services\CategoryOptionsQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Services\TaxCategoryWriter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -285,7 +286,7 @@ final class RuleFormModal extends Component
         if ($e instanceof NotFoundHttpException) {
             // $editingRuleId no longer maps to a row visible to the user
             // (deleted in another tab, or a tampered ruleId) — close the modal.
-            $this->errorGeneral = 'That rule is no longer available.';
+            $this->errorGeneral = Lang::get('categorization::rule_form.error_rule_unavailable');
             $this->dispatch('modal-close', name: 'rule-form');
 
             return;
@@ -293,7 +294,7 @@ final class RuleFormModal extends Component
 
         // InvalidArgumentException: every cause is tampered-payload-only — the
         // form's own dropdowns can only emit valid options.
-        $this->errorGeneral = 'Invalid rule data — pick from the dropdowns and try again.';
+        $this->errorGeneral = Lang::get('categorization::rule_form.error_invalid_data');
     }
 
     private function resetToBlankForm(): void

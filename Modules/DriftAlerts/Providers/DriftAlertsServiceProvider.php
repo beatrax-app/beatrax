@@ -59,6 +59,7 @@ final class DriftAlertsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'drift-alerts');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'drift-alerts');
 
         $livewire->component('drift-alerts.drift-page', DriftPage::class);
         $livewire->component('drift-alerts.subscription-drift-watch-page', SubscriptionDriftWatchPage::class);

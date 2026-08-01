@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 <div
     class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
             px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
@@ -81,7 +82,7 @@
                        focus:outline-none focus-visible:underline
                        py-2"
             >
-                Sign out
+                {{ Lang::get('auth::lock_screen.sign_out') }}
             </button>
         </form>
 

@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     /**
      * @var list<array{id: string, label: string, icon: string, hint: string, source: string, url: ?string, handler: ?string, name: ?string, tier: ?string, keywords: list<string>}> $registry
@@ -59,7 +60,7 @@
                        max-md:w-full max-md:h-full max-md:rounded-none max-md:ring-0 max-md:shadow-none phone-palette-sheet"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Command palette"
+                aria-label="{{ Lang::get('dev::palette.dialog_aria') }}"
             >
                 <div class="palette-input flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 relative">
                     {{-- Loading spinner or search icon --}}
@@ -81,8 +82,8 @@
                             x-model="query"
                             x-on:input="onQueryChange()"
                             type="text"
-                            placeholder="Type to search views, commands, and actions. Press Esc to close."
-                            aria-label="Type to search views, commands, and actions"
+                            placeholder="{{ Lang::get('dev::palette.search_placeholder') }}"
+                            aria-label="{{ Lang::get('dev::palette.search_aria') }}"
                             class="w-full bg-transparent border-0 outline-none text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                             autocomplete="off"
                         />
@@ -93,7 +94,7 @@
                                 class="srch-token-suggest"
                                 x-on:click.outside="tokenSuggestVisible = false"
                                 role="listbox"
-                                aria-label="Token suggestions"
+                                aria-label="{{ Lang::get('dev::palette.token_suggest_aria') }}"
                             >
                                 <template x-for="(suggestion, i) in tokenSuggestions" :key="suggestion">
                                     <div
@@ -114,11 +115,11 @@
 
                 <div class="palette-body flex min-h-[280px] max-h-[60vh] max-md:max-h-full max-md:flex-1">
                     <aside class="palette-rail w-[180px] p-3 border-r border-slate-200 dark:border-slate-700 text-sm overflow-y-auto max-md:hidden">
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">View</div>
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Dev</div>
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Action</div>
+                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_view') }}</div>
+                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_dev') }}</div>
+                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_action') }}</div>
                         <div class="palette-rail-divider h-px bg-slate-200 dark:bg-slate-700 my-3"></div>
-                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Recent</div>
+                        <div class="palette-rail-label text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">{{ Lang::get('dev::palette.rail_recent') }}</div>
                         <template x-for="r in recent.slice(0, 5)" :key="r.id">
                             <div
                                 class="palette-row palette-row--mini px-1 py-1.5 rounded text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
@@ -127,7 +128,7 @@
                             ></div>
                         </template>
                         <template x-if="recent.length === 0">
-                            <div class="px-1 py-1.5 text-xs text-slate-400 dark:text-slate-500">No recent picks yet.</div>
+                            <div class="px-1 py-1.5 text-xs text-slate-400 dark:text-slate-500">{{ Lang::get('dev::palette.no_recent') }}</div>
                         </template>
                     </aside>
 
@@ -138,7 +139,7 @@
                             <div>
                                 {{-- Section 1: Transactions (D-01, D-19, UI-SPEC #6) --}}
                                 <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
-                                    Transactions
+                                    {{ Lang::get('dev::palette.section_transactions') }}
                                 </div>
 
                                 <template x-if="serverTransactionHits.length > 0">
@@ -157,7 +158,7 @@
                                                              x-html would execute HTML in a merchant name (stored XSS). --}}
                                                         <span
                                                             class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate"
-                                                            x-text="hit.counterpartyName || '(no name)'"
+                                                            x-text="hit.counterpartyName || @js(Lang::get('dev::palette.no_name'))"
                                                         ></span>
                                                         <span
                                                             class="text-xs text-slate-500 dark:text-slate-400 shrink-0 font-variant-numeric tabular-nums ml-auto"
@@ -172,7 +173,7 @@
                                                         ></div>
                                                     </template>
                                                 </div>
-                                                <span class="palette-source palette-source--txn text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 shrink-0">txn</span>
+                                                <span class="palette-source palette-source--txn text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 shrink-0">{{ Lang::get('dev::palette.source_txn') }}</span>
                                             </div>
                                         </template>
 
@@ -182,14 +183,14 @@
                                             x-on:click="seeAllResults()"
                                         >
                                             <span class="w-5 text-center text-slate-400 dark:text-slate-500 shrink-0" aria-hidden="true">→</span>
-                                            <span class="text-sm" x-text="'See all ' + serverTotalCount + ' results →'"></span>
+                                            <span class="text-sm" x-text="@js(Lang::get('dev::palette.see_all_prefix')) + serverTotalCount + @js(Lang::get('dev::palette.see_all_suffix'))"></span>
                                         </div>
                                     </div>
                                 </template>
 
                                 <template x-if="serverTransactionHits.length === 0 && !serverLoading">
                                     <div class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
-                                         x-text="'No transactions match &quot;' + query + '&quot;'">
+                                         x-text="@js(Lang::get('dev::palette.no_transactions_prefix')) + query + @js(Lang::get('dev::palette.no_transactions_suffix'))">
                                     </div>
                                 </template>
 
@@ -197,7 +198,7 @@
                                 <template x-if="serverEntityHits.filter(e => e.type === 'counterparty').length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
-                                            Counterparties
+                                            {{ Lang::get('dev::palette.section_counterparties') }}
                                         </div>
                                         <template x-for="entity in serverEntityHits.filter(e => e.type === 'counterparty').slice(0, 3)" :key="entity.id + '-' + entity.type">
                                             <div
@@ -206,7 +207,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">◈</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">counterparty</span>
+                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_counterparty') }}</span>
                                             </div>
                                         </template>
                                     </div>
@@ -216,7 +217,7 @@
                                 <template x-if="serverEntityHits.filter(e => e.type === 'category').length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
-                                            Categories
+                                            {{ Lang::get('dev::palette.section_categories') }}
                                         </div>
                                         <template x-for="entity in serverEntityHits.filter(e => e.type === 'category').slice(0, 3)" :key="entity.id + '-' + entity.type">
                                             <div
@@ -225,7 +226,7 @@
                                             >
                                                 <span class="ic w-5 text-center text-slate-400 dark:text-slate-500" aria-hidden="true">⊞</span>
                                                 <span class="flex-1 text-sm" x-text="entity.label"></span>
-                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">category</span>
+                                                <span class="palette-source text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">{{ Lang::get('dev::palette.source_category') }}</span>
                                             </div>
                                         </template>
                                     </div>
@@ -235,7 +236,7 @@
                                 <template x-if="serverEntityHits.filter(e => ['goal','pot','recurring'].includes(e.type)).length > 0">
                                     <div>
                                         <div class="palette-section-label px-3 py-1 text-[10.5px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mt-2">
-                                            Goals &amp; Recurring
+                                            {{ Lang::get('dev::palette.section_goals_recurring') }}
                                         </div>
                                         <template x-for="entity in serverEntityHits.filter(e => ['goal','pot','recurring'].includes(e.type)).slice(0, 3)" :key="entity.id + '-' + entity.type">
                                             <div
@@ -280,19 +281,19 @@
                             </div>
                         </template>
                         <template x-if="results.length === 0 && serverTransactionHits.length === 0">
-                            <div class="p-4 text-center text-sm text-slate-500 dark:text-slate-400">No results.</div>
+                            <div class="p-4 text-center text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('dev::palette.no_results') }}</div>
                         </template>
                     </main>
                 </div>
 
                 <div class="palette-foot flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
-                    <span><span class="kbd">↑</span><span class="kbd">↓</span> navigate</span>
-                    <span><span class="kbd">↩</span> select</span>
-                    <span><span class="kbd">esc</span> close</span>
+                    <span><span class="kbd">↑</span><span class="kbd">↓</span> {{ Lang::get('dev::palette.foot_navigate') }}</span>
+                    <span><span class="kbd">↩</span> {{ Lang::get('dev::palette.foot_select') }}</span>
+                    <span><span class="kbd">esc</span> {{ Lang::get('dev::palette.foot_close') }}</span>
                     @if($searchAvailable)
-                    <span class="hidden sm:inline text-slate-400 dark:text-slate-500">Try <span class="font-mono text-[10px]">account:</span> · <span class="font-mono text-[10px]">after:</span> · <span class="font-mono text-[10px]">amount:&gt;50</span></span>
+                    <span class="hidden sm:inline text-slate-400 dark:text-slate-500">{{ Lang::get('dev::palette.foot_try') }} <span class="font-mono text-[10px]">account:</span> · <span class="font-mono text-[10px]">after:</span> · <span class="font-mono text-[10px]">amount:&gt;50</span></span>
                     @endif
-                    <span class="ml-auto" x-text="results.length + ' results'"></span>
+                    <span class="ml-auto" x-text="results.length + @js(Lang::get('dev::palette.results_suffix'))"></span>
                 </div>
             </div>
         </div>

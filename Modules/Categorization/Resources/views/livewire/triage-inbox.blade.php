@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 @php
     use Modules\Ledger\Public\ValueObjects\Money;
 
@@ -7,28 +8,28 @@
 <div class="space-y-6">
     <header>
         <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Uncategorized</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('categorization::triage.heading') }}</h1>
             <button
                 type="button"
                 wire:click="save"
                 @disabled(count($pending) === 0)
                 class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-            >Save categories</button>
+            >{{ Lang::get('categorization::triage.save_categories') }}</button>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             @if ($totalPending === 0)
-                Inbox zero.
+                {{ Lang::get('categorization::triage.inbox_zero') }}
             @elseif ($batch->hasMore || $totalPending > count($batch->rows))
-                Showing {{ count($batch->rows) }} of {{ $totalPending }} pending.
+                {{ Lang::get('categorization::triage.showing', ['shown' => count($batch->rows), 'total' => $totalPending]) }}
             @else
-                {{ $totalPending }} pending.
+                {{ Lang::get('categorization::triage.pending', ['total' => $totalPending]) }}
             @endif
         </p>
     </header>
 
     @if (count($batch->rows) === 0 && $totalPending === 0)
         <p class="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-400">
-            Every transaction has a category. Re-open this page after your next import.
+            {{ Lang::get('categorization::triage.empty') }}
         </p>
     @else
         <div
@@ -52,12 +53,12 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Counterparty</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Category</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_date') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_counterparty') }}</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_amount') }}</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_category') }}</th>
                             <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                <span class="sr-only">Row actions</span>
+                                <span class="sr-only">{{ Lang::get('categorization::triage.col_row_actions') }}</span>
                             </th>
                         </tr>
                     </thead>
@@ -89,13 +90,13 @@
                                 </td>
                                 <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->amountMinor, $row->currency) }}</td>
                                 <td class="px-4 py-2">
-                                    <label for="triage-category-{{ $row->transactionId }}" class="sr-only">Category for {{ $row->counterpartyName ?? 'this transaction' }}</label>
+                                    <label for="triage-category-{{ $row->transactionId }}" class="sr-only">{{ Lang::get('categorization::triage.category_for', ['name' => $row->counterpartyName ?? Lang::get('categorization::triage.this_transaction')]) }}</label>
                                     <select
                                         id="triage-category-{{ $row->transactionId }}"
                                         x-on:change="$wire.selectForRow({{ $row->transactionId }}, $event.target.value ? parseInt($event.target.value, 10) : null)"
                                         class="block w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                     >
-                                        <option value="">Select category</option>
+                                        <option value="">{{ Lang::get('categorization::triage.select_category') }}</option>
                                         @foreach ($categories as $cat)
                                             <option value="{{ $cat->id }}" @selected(($pending[$row->transactionId] ?? null) === $cat->id)>{{ $cat->path }}</option>
                                         @endforeach
@@ -109,7 +110,7 @@
                                                 wire:click="$dispatch('suggest-mapping:open', { rawDescription: @js($row->description ?? ($row->counterpartyName ?? '')) })"
                                                 class="help-others-link inline-flex items-center rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
                                                 data-testid="help-others-cta"
-                                            >❋ Help others identify this</button>
+                                            >{{ Lang::get('categorization::triage.help_others') }}</button>
                                         @endif
                                     </div>
                                 </td>
@@ -120,7 +121,7 @@
             </div>
 
             <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
-                1–9 assign top categories · ↑/↓ move · Enter save · / search · Esc clear
+                {{ Lang::get('categorization::triage.shortcuts') }}
             </p>
 
             @if ($batch->hasMore && $batch->nextCursorId !== null)
@@ -129,7 +130,7 @@
                         type="button"
                         wire:click="loadMore({{ $batch->nextCursorId }}, @js($batch->nextCursorPostedAt))"
                         class="inline-flex items-center rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900"
-                    >Load more</button>
+                    >{{ Lang::get('categorization::triage.load_more') }}</button>
                 </div>
             @endif
         </div>

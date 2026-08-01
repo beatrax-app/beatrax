@@ -6,6 +6,7 @@ namespace Modules\Import\Public\Services;
 
 use Illuminate\Support\Str;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Import\Public\Contracts\NamesAccounts;
 use Modules\Import\Public\Exceptions\InvalidAccountNameException;
 use Modules\Ledger\Models\Account;
@@ -40,11 +41,10 @@ final class AccountNamer implements NamesAccounts
             self::IBAN_MAX_LENGTH,
         );
         if (preg_match($pattern, $iban) !== 1) {
-            throw new InvalidAccountNameException(sprintf(
-                'IBAN must be %d..%d uppercase alphanumeric characters.',
-                self::IBAN_MIN_LENGTH,
-                self::IBAN_MAX_LENGTH,
-            ));
+            throw new InvalidAccountNameException(Lang::get('import::accounts.errors.iban_format', [
+                'min' => self::IBAN_MIN_LENGTH,
+                'max' => self::IBAN_MAX_LENGTH,
+            ]));
         }
 
         $tail = substr($iban, -8);
@@ -72,11 +72,10 @@ final class AccountNamer implements NamesAccounts
         $length = mb_strlen($trimmed);
 
         if ($length < self::NAME_MIN_LENGTH || $length > self::NAME_MAX_LENGTH) {
-            throw new InvalidAccountNameException(sprintf(
-                'Account name must be %d..%d characters.',
-                self::NAME_MIN_LENGTH,
-                self::NAME_MAX_LENGTH,
-            ));
+            throw new InvalidAccountNameException(Lang::get('import::accounts.errors.name_length', [
+                'min' => self::NAME_MIN_LENGTH,
+                'max' => self::NAME_MAX_LENGTH,
+            ]));
         }
 
         // Str::slug() strips characters it cannot transliterate (emoji,
@@ -86,7 +85,7 @@ final class AccountNamer implements NamesAccounts
         $slugBody = Str::slug($trimmed);
         if ($slugBody === '') {
             throw new InvalidAccountNameException(
-                'Account name must contain at least one letter or digit.'
+                Lang::get('import::accounts.errors.name_slug')
             );
         }
 

@@ -73,6 +73,7 @@ final class ChainsServiceProvider extends ServiceProvider
         if (is_dir(__DIR__.'/../Resources/views')) {
             $this->loadViewsFrom(__DIR__.'/../Resources/views', 'chains');
         }
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'chains');
         $livewire->component('chains.chain-drawer', ChainDrawer::class);
         $livewire->component('chains.chain-review-queue', ChainReviewQueue::class);
         $livewire->component('chains.chain-hints-queue', ChainHintsQueue::class);

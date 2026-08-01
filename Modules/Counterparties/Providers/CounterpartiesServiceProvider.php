@@ -42,6 +42,8 @@ final class CounterpartiesServiceProvider extends ServiceProvider
             $this->loadViewsFrom($viewsPath, 'counterparties');
         }
 
+        $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'counterparties');
+
         $blade->componentNamespace('Modules\\Counterparties\\Resources\\views\\components', 'counterparties');
 
         $livewire->component('counterparties.index', CounterpartyIndex::class);

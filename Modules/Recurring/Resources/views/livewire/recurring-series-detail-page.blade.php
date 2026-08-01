@@ -1,3 +1,4 @@
+@use('Modules\Core\Public\Support\Lang')
 {{--
     /recurring/series/{id} drill-in page — full amount-over-time chart
     (native-currency primary + EUR shadow when distinct) over the
@@ -53,7 +54,7 @@
                     <a
                         href="{{ route('counterparties.profile', ['slug' => $counterpartyLink['slug']]) }}"
                         class="text-slate-500 underline underline-offset-2 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                    >View {{ $counterpartyLink['displayName'] }} profile →</a>
+                    >{{ Lang::get('recurring::detail.view_profile', ['name' => $counterpartyLink['displayName']]) }}</a>
                 </p>
             @endif
         </div>
@@ -66,10 +67,10 @@
                     type="button"
                     x-on:click="open = ! open"
                     aria-haspopup="listbox"
-                    aria-label="Variance tolerance"
+                    aria-label="{{ Lang::get('recurring::detail.variance_tolerance_aria') }}"
                     class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
                 >
-                    <span class="text-slate-500 dark:text-slate-400">Tolerance</span>
+                    <span class="text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.tolerance') }}</span>
                     <span style="font-variant-numeric: tabular-nums;">{{ $series->varianceTolerancePercent }}%</span>
                 </button>
                 <div
@@ -77,7 +78,7 @@
                     x-cloak
                     x-on:click.outside="open = false"
                     role="listbox"
-                    aria-label="Variance tolerance"
+                    aria-label="{{ Lang::get('recurring::detail.variance_tolerance_aria') }}"
                     class="absolute right-0 z-10 mt-1 w-32 rounded-md border border-slate-200 bg-white p-1 text-xs shadow-lg dark:bg-slate-950 dark:border-slate-700"
                 >
                     @foreach ([10, 25, 50] as $percent)
@@ -98,18 +99,18 @@
             <a
                 href="{{ route('recurring.index') }}"
                 class="hidden md:inline text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-            >Back to Recurring</a>
+            >{{ Lang::get('recurring::detail.back') }}</a>
         </div>
     </header>
 
     <section class="mb-8 rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
         <div class="mb-4 flex items-baseline justify-between">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Amount over time</h2>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('recurring::detail.amount_over_time') }}</h2>
             <button
                 type="button"
                 wire:click="toggleAllPoints"
                 class="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:text-slate-400 dark:hover:text-slate-100"
-            >{{ $showAllPoints ? 'Show recent 24' : 'View all points' }}</button>
+            >{{ $showAllPoints ? Lang::get('recurring::detail.show_recent') : Lang::get('recurring::detail.view_all_points') }}</button>
         </div>
 
         @include('recurring::livewire.partials.recurring-detail-chart-options', [
@@ -119,10 +120,10 @@
     </section>
 
     <section>
-        <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Occurrences</h2>
+        <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.occurrences') }}</h2>
         @if ($occurrenceCount === 0)
             <div class="rounded-lg border border-slate-200 bg-white p-6 dark:bg-slate-950 dark:border-slate-700">
-                <p class="text-sm text-slate-500 dark:text-slate-400">No occurrences recorded for this series yet.</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.no_occurrences') }}</p>
             </div>
         @else
             {{-- overflow-x: auto wrapper ensures the occurrences table is scrollable
@@ -132,9 +133,9 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Date</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Amount</th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Transaction</th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.date') }}</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.amount') }}</th>
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('recurring::detail.table.transaction') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">

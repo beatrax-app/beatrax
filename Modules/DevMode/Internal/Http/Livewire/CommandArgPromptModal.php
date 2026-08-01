@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Support\Lang;
 use Modules\DevMode\Internal\Process\CommandSpawner;
 use Modules\DevMode\Public\Contracts\DevCommandRegistry;
 use Modules\DevMode\Public\Dto\ArgSpec;
@@ -48,7 +49,7 @@ final class CommandArgPromptModal extends Component
         try {
             $spec = $registry->find($name);
         } catch (InvalidArgumentException) {
-            $this->submitError = 'Unknown command: '.$name;
+            $this->submitError = Lang::get('dev::arg_prompt.errors.unknown_command', ['command' => $name]);
             $this->dispatch('modal-show', name: 'command-args');
 
             return;
@@ -78,7 +79,7 @@ final class CommandArgPromptModal extends Component
         try {
             $spec = $registry->find($this->command);
         } catch (InvalidArgumentException) {
-            $this->submitError = 'Unknown command: '.$this->command;
+            $this->submitError = Lang::get('dev::arg_prompt.errors.unknown_command', ['command' => $this->command]);
 
             return;
         }
@@ -99,11 +100,12 @@ final class CommandArgPromptModal extends Component
 
         $missing = $this->missingRequiredArgs($spec->argsSchema);
         if ($missing !== []) {
-            $this->submitError = sprintf(
-                'Missing %s: %s',
-                count($missing) === 1 ? 'argument' : 'arguments',
-                implode(', ', $missing),
-            );
+            $this->submitError = Lang::get('dev::arg_prompt.errors.missing', [
+                'noun' => count($missing) === 1
+                    ? Lang::get('dev::arg_prompt.errors.arg_singular')
+                    : Lang::get('dev::arg_prompt.errors.arg_plural'),
+                'list' => implode(', ', $missing),
+            ]);
 
             return;
         }
@@ -134,7 +136,7 @@ final class CommandArgPromptModal extends Component
         $command = $this->command;
         $runId = $spawner->start($command, $args, $user->id(), 'safe');
 
-        $this->dispatch('toast', message: 'Started '.$command.' (run '.$runId.')');
+        $this->dispatch('toast', message: Lang::get('dev::runner.toast.started', ['command' => $command, 'runId' => $runId]));
         $this->dispatch('modal-close', name: 'command-args');
 
         $this->values = [];
