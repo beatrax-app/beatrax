@@ -42,6 +42,7 @@ use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Services\SystemAlertQuery;
 use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Core\Public\Support\AppChromeResolver;
 use Modules\Core\Public\Support\LoadsModuleResources;
 
 /**
@@ -75,6 +76,7 @@ final class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(AcknowledgeSystemAlert::class);
         $this->app->singleton(WriteUserPreference::class);
+        $this->app->singleton(AppChromeResolver::class);
 
         // Single source of truth for every filesystem path the app reads or
         // writes. Dependency-free and stateless, so a plain singleton (no

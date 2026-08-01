@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Enums\Theme')
 @php
     // Shared card chrome for the grouped settings sections. The redesign only
     // changes the visual container — every control, id, wire: binding, @error
@@ -28,7 +29,8 @@
             <div class="space-y-1">
                 <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.appearance.theme') }}</span>
                 <div role="radiogroup" aria-label="{{ Lang::get('core::settings.appearance.theme') }}" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    @foreach (['light' => Lang::get('core::settings.appearance.theme_light'), 'dark' => Lang::get('core::settings.appearance.theme_dark'), 'system' => Lang::get('core::settings.appearance.theme_system')] as $value => $label)
+                    @foreach (Theme::cases() as $themeOption)
+                        @php($value = $themeOption->value)
                         <button
                             type="button"
                             role="radio"
@@ -40,7 +42,7 @@
                                 'bg-white text-slate-900 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900' => $theme !== $value,
                             ])
                         >
-                            {{ $label }}
+                            {{ Lang::get('core::settings.appearance.theme_'.$value) }}
                         </button>
                     @endforeach
                 </div>

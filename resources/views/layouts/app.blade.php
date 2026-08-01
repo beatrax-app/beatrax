@@ -1,107 +1,26 @@
 @inject('currentUser', \Modules\Core\Public\Contracts\CurrentUser::class)
 @inject('container', \Illuminate\Contracts\Container\Container::class)
 @php
-    /*
-     * Dark-theme resolution.
-     *
-     * `theme` is the authenticated user's appearance preference
-     * (light / dark / system); guests fall to `system`. For an explicit
-     * light/dark choice the `dark` class is decided here, server-side.
-     * For `system` the class is left to the pre-paint script below so
-     * there is no flash of the wrong theme — the script runs before
-     * first paint and reads `prefers-color-scheme`. When running inside
-     * the desktop bundle the OsThemeSignal binding lets `system` resolve
-     * server-side too; the script still corrects it if it disagrees.
-     *
-     * `$osTheme` is the resolved OsThemeSignal value: `'light'` /
-     * `'dark'` for an explicit OS preference, or `null` when the OS
-     * has no explicit choice (or the binding is absent). The pre-paint
-     * script below runs whenever the resolution is `null` so the
-     * client-side `prefers-color-scheme` read is the authoritative
-     * source in that branch.
-     *
-     * Authentication state and container lookups go through @inject'd
-     * contracts so the layout honours the project's DI-only rule (no
-     * auth() / app() / config() global helpers in non-test code). The
-     * dev-shell layout uses the same pattern.
-     */
-    $userTheme = $currentUser->isAuthenticated() ? ($currentUser->user()->theme ?? 'system') : 'system';
-
-    $osTheme = null;
-    if ($userTheme === 'system' && $container->bound(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)) {
-        $osTheme = $container->make(\Modules\Desktop\Public\Contracts\OsThemeSignal::class)->currentOsTheme();
-    }
-
-    $isDark = $userTheme === 'dark' || ($userTheme === 'system' && $osTheme === 'dark');
-    // The pre-paint script runs for every system-themed render unless
-    // the OS has already given us an explicit light/dark answer. A null
-    // $osTheme — bundle says "no explicit preference" or local dev has no
-    // binding — falls through to the script's matchMedia read.
-    $needsPrePaintScript = $userTheme === 'system' && $osTheme === null;
-
-    // The active UI language the SetLocale middleware resolved onto the
-    // translator for this request. Read here so <html lang> matches the
-    // language the page is actually rendered in (a11y + correct
-    // hyphenation), rather than a hard-coded "en".
-    $currentLocale = $container->make(\Illuminate\Contracts\Translation\Translator::class)->getLocale();
+    // The <html> dark class and lang attribute are resolved once in
+    // AppChromeResolver (dark from the user's theme + desktop OsThemeSignal,
+    // lang from the SetLocale-primed translator) so all four page shells
+    // derive them the same way rather than repeating the block inline.
+    $chrome = $container->make(\Modules\Core\Public\Support\AppChromeResolver::class)->resolve();
 @endphp
 <!doctype html>
 <html
-    lang="{{ $currentLocale }}"
-    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $isDark ? 'dark' : '' }}"
+    lang="{{ $chrome->locale }}"
+    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
     style="font-feature-settings: 'tnum';"
 >
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        {{--
-            PWA head block (D-14/D-18/D-21, PWA-01/02).
-            - Manifest link: tells browsers/OS install affordance where to find
-              the app name, icons, and display mode (standalone).
-            - Dual theme-color: light #f8fafc and dark #020617 so the browser
-              chrome (address bar, status bar) matches the app palette in both
-              colour schemes (UI-SPEC §13).
-            - apple-touch-icon: iOS Safari uses this for the home-screen icon
-              when the user chooses "Add to Home Screen". Must be opaque
-              (180×180 with #f8fafc background) — iOS ignores transparency.
-        --}}
-        <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <x-core::pwa-head />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <title>{{ $title ?? 'beatrax' }}</title>
-        @if ($needsPrePaintScript)
-            {{--
-                Pre-paint theme script. Runs synchronously in <head>
-                before the body renders, so a `system`-theme user never
-                sees a flash of the wrong theme. Reads the OS-level
-                `prefers-color-scheme` media query — a fixed, app-authored
-                snippet with no dynamic interpolation.
-
-                Emitted whenever the OsThemeSignal returned null (no
-                explicit OS preference, or the desktop binding is
-                absent in local dev) — the script's `matchMedia` read is
-                the authoritative source in that case. When the bundle
-                resolved an explicit `light` / `dark`, the server-side
-                `dark` class is already correct and the script would
-                only undo / re-do the same answer.
-            --}}
-            <script>
-                (function () {
-                    try {
-                        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                            document.documentElement.classList.add('dark');
-                        } else {
-                            document.documentElement.classList.remove('dark');
-                        }
-                    } catch (e) {}
-                })();
-            </script>
-        @endif
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @livewireStyles
-        @fluxAppearance
+        <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
+        <x-core::head-assets />
     </head>
     <body
         class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
@@ -203,37 +122,7 @@
                  spawn.  --}}
             @livewire('dev.command-arg-prompt-modal')
 
-            {{-- Global toast stack — see Modules/DevMode/Resources/views/layouts/dev-shell.blade.php
-                 for the full docblock. Mounted in both layouts so the
-                 same $this->dispatch('toast', message: '...') reaches
-                 a visible surface no matter which layout the current
-                 request resolved through. --}}
-            <div
-                x-data="{
-                    toasts: [],
-                    push(detail) {
-                        const id = Date.now() + Math.random();
-                        this.toasts.push({ id, message: (detail && detail.message) || '' });
-                        setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 5000);
-                    },
-                    dismiss(id) { this.toasts = this.toasts.filter(t => t.id !== id); },
-                }"
-                x-on:toast.window="push($event.detail)"
-                class="pointer-events-none fixed bottom-4 right-4 z-[10000] flex w-[min(380px,calc(100vw-2rem))] flex-col-reverse gap-2"
-                role="status"
-                aria-live="polite"
-                data-testid="toast-host"
-            >
-                <template x-for="t in toasts" :key="t.id">
-                    <div
-                        x-on:click="dismiss(t.id)"
-                        class="pointer-events-auto cursor-pointer rounded-md bg-slate-900 px-4 py-3 text-sm text-white shadow-lg ring-1 ring-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:ring-slate-300"
-                        role="alert"
-                        data-testid="toast"
-                        x-text="t.message"
-                    ></div>
-                </template>
-            </div>
+            <x-core::toast-host />
             {{--
                 Privacy veil (plan 05-03, D-07, T-05-11).
                 Drops synchronously on window background/blur (lock.js) to hide
