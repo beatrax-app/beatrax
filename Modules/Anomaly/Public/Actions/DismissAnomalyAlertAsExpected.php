@@ -13,6 +13,7 @@ use Modules\Anomaly\Public\Enums\AnomalyAlertState;
 use Modules\Anomaly\Public\Events\AnomalyAlertDismissed;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Ledger\Public\Services\BaseCurrency;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -29,6 +30,7 @@ final class DismissAnomalyAlertAsExpected
         private readonly Dispatcher $events,
         private readonly Clock $clock,
         private readonly DatabaseManager $db,
+        private readonly BaseCurrency $baseCurrency,
     ) {}
 
     // Returns TRUE when at least one suppression rule was written, FALSE
@@ -99,7 +101,7 @@ final class DismissAnomalyAlertAsExpected
             $currency ??= $settled['currency'];
         }
 
-        $currency ??= 'EUR';
+        $currency ??= $this->baseCurrency->code();
 
         $boundA = (int) round(self::BAND_LOW_MULTIPLIER * $latestMinor);
         $boundB = (int) round(self::BAND_HIGH_MULTIPLIER * $latestMinor);
@@ -178,7 +180,7 @@ final class DismissAnomalyAlertAsExpected
 
         $currency = is_string($row->settled_currency ?? null) && $row->settled_currency !== ''
             ? $row->settled_currency
-            : 'EUR';
+            : $this->baseCurrency->code();
 
         return ['amount_minor' => (int) $amount, 'currency' => $currency];
     }

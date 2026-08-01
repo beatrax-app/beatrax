@@ -96,3 +96,30 @@ it('suppresses the next identical duplicate after a duplicate-only dismissal (CR
 
     expect(AnomalyAlert::query()->where('transaction_id', $thirdId)->exists())->toBeFalse();
 });
+
+it('falls back to the base currency when the charge row carries no settled currency', function (): void {
+    $user = AnomalyCorpusSeeder::makeUser();
+    $fixture = AnomalyCorpusSeeder::load('duplicate-in-window');
+    $txnId = AnomalyCorpusSeeder::seed($this->db, $user, $fixture);
+
+    /** @var AnomalyEvaluator $evaluator */
+    $evaluator = $this->app->make(AnomalyEvaluator::class);
+    $evaluator->evaluate($txnId, $user);
+    $alert = AnomalyAlert::query()->where('transaction_id', $txnId)->firstOrFail();
+
+    // Blank the settled currency AFTER detection so the dismiss action's own
+    // charge lookup takes the base-currency fallback rather than the row value.
+    $this->db->connection()->table('transactions')->where('id', $txnId)->update(['settled_currency' => '']);
+
+    /** @var DismissAnomalyAlertAsExpected $dismiss */
+    $dismiss = $this->app->make(DismissAnomalyAlertAsExpected::class);
+    expect(($dismiss)($alert->id, $user))->toBeTrue();
+
+    $rule = $this->db->connection()->table('anomaly_suppression_rules')
+        ->where('user_id', $user->id)
+        ->where('detector', 'duplicate')
+        ->first();
+
+    expect($rule)->not->toBeNull()
+        ->and($rule->currency)->toBe('EUR');
+});
