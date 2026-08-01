@@ -13,42 +13,43 @@
     `wizard_progress.data['bank_import_run_id']` for the consolidated
     preview screen to read back.
 --}}
+@use('Modules\Ingestion\Public\Enums\SourceFormat')
 @php
-    $isCsv = in_array($selectedFormat, ['asn-csv', 'ing-csv'], strict: true);
+    $isCsv = in_array($selectedFormat, [SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value], strict: true);
     $isGated = $isCsv && $selectedBankFormatHint === null;
 
     $miniStepFourSub = match ($selectedFormat) {
-        'mt940' => 'MT940 (.sta / .940)',
-        'asn-csv', 'ing-csv' => 'CSV (.csv)',
+        SourceFormat::Mt940->value => 'MT940 (.sta / .940)',
+        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => 'CSV (.csv)',
         default => 'CAMT.053 (.xml)',
     };
 
     $dropZoneLead = match (true) {
-        $selectedFormat === 'camt053' => 'Drop your CAMT.053 file here',
-        $selectedFormat === 'mt940' => 'Drop your MT940 file here',
-        $isCsv && $selectedBankFormatHint === 'asn-csv' => 'Drop your ASN CSV here',
-        $isCsv && $selectedBankFormatHint === 'ing-csv' => 'Drop your ING CSV here',
+        $selectedFormat === SourceFormat::Camt053->value => 'Drop your CAMT.053 file here',
+        $selectedFormat === SourceFormat::Mt940->value => 'Drop your MT940 file here',
+        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => 'Drop your ASN CSV here',
+        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => 'Drop your ING CSV here',
         $isCsv => 'Pick which bank exported your CSV — we need to know to read it correctly.',
         default => 'Drop your statement file here',
     };
 
     $dropZoneAccept = match ($selectedFormat) {
-        'mt940' => '.sta,.940,.txt',
-        'asn-csv', 'ing-csv' => '.csv',
+        SourceFormat::Mt940->value => '.sta,.940,.txt',
+        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => '.csv',
         default => '.xml',
     };
 
     $bankListLine = match ($selectedFormat) {
-        'mt940' => 'Supported: ASN, ING, Rabobank, Triodos, SNS, Bunq',
-        'asn-csv', 'ing-csv' => 'Supported: ASN, ING — more formats coming as users contribute samples.',
+        SourceFormat::Mt940->value => 'Supported: ASN, ING, Rabobank, Triodos, SNS, Bunq',
+        SourceFormat::AsnCsv->value, SourceFormat::IngCsv->value => 'Supported: ASN, ING — more formats coming as users contribute samples.',
         default => 'Supported: ASN, ING',
     };
 
     $eyebrowSuffix = match (true) {
-        $selectedFormat === 'camt053' => '· CAMT.053',
-        $selectedFormat === 'mt940' => '· MT940',
-        $isCsv && $selectedBankFormatHint === 'asn-csv' => '· CSV — ASN',
-        $isCsv && $selectedBankFormatHint === 'ing-csv' => '· CSV — ING',
+        $selectedFormat === SourceFormat::Camt053->value => '· CAMT.053',
+        $selectedFormat === SourceFormat::Mt940->value => '· MT940',
+        $isCsv && $selectedBankFormatHint === SourceFormat::AsnCsv->value => '· CSV — ASN',
+        $isCsv && $selectedBankFormatHint === SourceFormat::IngCsv->value => '· CSV — ING',
         $isCsv => '· CSV',
         default => '',
     };
@@ -75,30 +76,30 @@
             type="button"
             class="format-chip-button"
             role="radio"
-            aria-checked="{{ $selectedFormat === 'camt053' ? 'true' : 'false' }}"
-            wire:click="setFormat('camt053')"
+            aria-checked="{{ $selectedFormat === SourceFormat::Camt053->value ? 'true' : 'false' }}"
+            wire:click="setFormat('{{ SourceFormat::Camt053->value }}')"
         >
             <x-onboarding::format-chip
                 label="CAMT.053"
                 badge="recommended"
-                :recommended="$selectedFormat === 'camt053'"
+                :recommended="$selectedFormat === SourceFormat::Camt053->value"
             />
         </button>
         <button
             type="button"
             class="format-chip-button"
             role="radio"
-            aria-checked="{{ $selectedFormat === 'mt940' ? 'true' : 'false' }}"
-            wire:click="setFormat('mt940')"
+            aria-checked="{{ $selectedFormat === SourceFormat::Mt940->value ? 'true' : 'false' }}"
+            wire:click="setFormat('{{ SourceFormat::Mt940->value }}')"
         >
-            <x-onboarding::format-chip label="MT940" :recommended="$selectedFormat === 'mt940'" />
+            <x-onboarding::format-chip label="MT940" :recommended="$selectedFormat === SourceFormat::Mt940->value" />
         </button>
         <button
             type="button"
             class="format-chip-button"
             role="radio"
             aria-checked="{{ $isCsv ? 'true' : 'false' }}"
-            wire:click="setFormat('asn-csv')"
+            wire:click="setFormat('{{ SourceFormat::AsnCsv->value }}')"
         >
             <x-onboarding::format-chip label="CSV" :recommended="$isCsv" />
         </button>
