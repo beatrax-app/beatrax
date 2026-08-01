@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Forecasting\Models\ForecastScenario;
 use Modules\Forecasting\Public\Events\ScenarioMutated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -30,8 +31,8 @@ final class RenameScenario
         if ($trimmed === '') {
             throw new InvalidArgumentException('Scenario name cannot be empty.');
         }
-        if (mb_strlen($trimmed) > 120) {
-            throw new InvalidArgumentException('Scenario name must be 120 characters or fewer.');
+        if (mb_strlen($trimmed) > ForecastScenario::MAX_NAME_LENGTH) {
+            throw new InvalidArgumentException(sprintf('Scenario name must be %d characters or fewer.', ForecastScenario::MAX_NAME_LENGTH));
         }
 
         $owns = $this->db->connection()->table('forecast_scenarios')
