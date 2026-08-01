@@ -11,6 +11,7 @@ use Modules\Core\Public\Concerns\CoercesScalars;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
  * @link ../../../../.docs/features/anomaly/architecture.md
@@ -22,6 +23,7 @@ final readonly class LargeVsTypicalDetector
     public function __construct(
         private DatabaseManager $db,
         private Clock $clock,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     /**
@@ -32,7 +34,7 @@ final readonly class LargeVsTypicalDetector
     public function fires(array $txn, User $user, int $sensitivityPercent, int $minFloorMinor): ?array
     {
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0);
-        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : 'EUR';
+        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->code();
         $absMinor = abs($settledMinor);
 
         if ($absMinor < $minFloorMinor) {

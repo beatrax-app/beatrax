@@ -17,6 +17,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Ledger\Public\Enums\Direction;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\BaseCurrency;
 
 /**
  * @link ../../../.docs/features/anomaly/architecture.md
@@ -30,6 +31,7 @@ final readonly class AnomalyEvaluator
         private LargeVsTypicalDetector $largeDetector,
         private FirstTimeMerchantDetector $firstTimeDetector,
         private DuplicateChargeDetector $duplicateDetector,
+        private BaseCurrency $baseCurrency,
     ) {}
 
     public function evaluate(int $transactionId, User $user): void
@@ -145,7 +147,7 @@ final readonly class AnomalyEvaluator
     {
         $counterpartyId = self::toIntOrNull($txn['counterparty_id'] ?? null);
         $settledMinor = self::toInt($txn['settled_amount_minor'] ?? 0, 0);
-        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : 'EUR';
+        $settledCurrency = is_string($txn['settled_currency'] ?? null) ? $txn['settled_currency'] : $this->baseCurrency->code();
 
         // The detector keys a `large` suppression rule may match against. A
         // synthetic (first-time-injected) `large` is NOT eligible for
