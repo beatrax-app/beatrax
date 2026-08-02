@@ -6,11 +6,12 @@ namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Events\TransactionBatchImported;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
-use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -28,6 +29,7 @@ final class PersistCoalescedImport
         private readonly UrlGenerator $urls,
         private readonly Clock $clock,
         private readonly LoggerInterface $log,
+        private readonly NotificationCopyRenderer $copyRenderer,
     ) {}
 
     public function handle(TransactionBatchImported $event): void
@@ -39,30 +41,36 @@ final class PersistCoalescedImport
             $occurrence = $this->clock->now()->format('Y-m-d H:i:s').':'.$event->insertedCount;
 
             if ($isReceipts) {
-                $this->writer->write(new NotificationDraft(
+                $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                     userId: $event->userId,
                     triggerType: DeterministicKeyDeriver::TRIGGER_RECEIPTS_FOUND,
                     subjectKey: 'import',
                     occurrence: $occurrence,
-                    title: NotificationCopy::TITLE_RECEIPTS,
-                    body: $this->pluralCount($event->insertedCount, 'receipt').' matched from your email.',
+                    title: Lang::get('notifications::copy.title.receipts'),
+                    body: $event->insertedCount === 1
+                        ? Lang::get('notifications::copy.body.receipts_matched_one', ['count' => $event->insertedCount])
+                        : Lang::get('notifications::copy.body.receipts_matched_other', ['count' => $event->insertedCount]),
                     params: ['target_kind' => 'inbox'],
                     deepLinkRoute: $this->urls->route('inboxes.index'),
                 ));
+                $this->writer->write($draft);
 
                 return;
             }
 
-            $this->writer->write(new NotificationDraft(
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_IMPORT_FINISHED,
                 subjectKey: 'import',
                 occurrence: $occurrence,
-                title: NotificationCopy::TITLE_IMPORT_FINISHED,
-                body: $this->pluralCount($event->insertedCount, 'transaction').' imported.',
+                title: Lang::get('notifications::copy.title.import_finished'),
+                body: $event->insertedCount === 1
+                    ? Lang::get('notifications::copy.body.import_finished_one', ['count' => $event->insertedCount])
+                    : Lang::get('notifications::copy.body.import_finished_other', ['count' => $event->insertedCount]),
                 params: ['target_kind' => 'import'],
                 deepLinkRoute: $this->urls->route('imports.new'),
             ));
+            $this->writer->write($draft);
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating import.
@@ -73,12 +81,5 @@ final class PersistCoalescedImport
                 'sourceFormats' => $event->sourceFormats,
             ]);
         }
-    }
-
-    // "1 transaction" / "37 transactions" - a simple regular-plural
-    // suffix, sufficient for the two nouns this listener ever formats.
-    private function pluralCount(int $count, string $noun): string
-    {
-        return $count === 1 ? "{$count} {$noun}" : "{$count} {$noun}s";
     }
 }

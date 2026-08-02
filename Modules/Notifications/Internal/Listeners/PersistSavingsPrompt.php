@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\DriftAlerts\Public\Events\SavingsPromptDue;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
-use Modules\Notifications\Public\NotificationCopy;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -24,6 +25,7 @@ final class PersistSavingsPrompt
         private readonly NotificationWriter $writer,
         private readonly RecurringSeriesQuery $recurring,
         private readonly LoggerInterface $log,
+        private readonly NotificationCopyRenderer $copyRenderer,
     ) {}
 
     public function handle(SavingsPromptDue $event): void
@@ -32,18 +34,17 @@ final class PersistSavingsPrompt
             $monthlyText = Money::ofMinor($event->monthlyMinor, $event->currency)
                 ->format($event->currency === 'EUR' ? 'nl_NL' : 'en_US');
 
-            $body = $event->message.' ('.$monthlyText.'/mo)';
-
-            $this->writer->write(new NotificationDraft(
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_SAVINGS_PROMPT,
                 subjectKey: (string) $event->seriesId,
                 occurrence: $event->insightKey,
-                title: NotificationCopy::TITLE_SAVINGS_PROMPT,
-                body: $body,
+                title: Lang::get('notifications::copy.title.savings_prompt'),
+                body: Lang::get('notifications::copy.body.savings_prompt', ['message' => $event->message, 'monthly' => $monthlyText]),
                 params: $this->targetParams($event),
                 deepLinkRoute: $event->actionUrl,
             ));
+            $this->writer->write($draft);
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating job run.

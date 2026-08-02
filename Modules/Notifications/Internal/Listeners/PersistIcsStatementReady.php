@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Public\Events\IcsStatementReady;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
-use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Throwable;
@@ -23,6 +24,7 @@ final class PersistIcsStatementReady
         private readonly NotificationWriter $writer,
         private readonly UrlGenerator $urls,
         private readonly LoggerInterface $log,
+        private readonly NotificationCopyRenderer $copyRenderer,
     ) {}
 
     public function handle(IcsStatementReady $event): void
@@ -34,16 +36,17 @@ final class PersistIcsStatementReady
         $deepLinkRoute = $this->resolveDeepLinkRoute();
 
         try {
-            $this->writer->write(new NotificationDraft(
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_ICS_STATEMENT_READY,
                 subjectKey: 'ics-card',
                 occurrence: $event->internalDate->format('Y-m-d'),
-                title: NotificationCopy::TITLE_ICS_STATEMENT_READY,
-                body: "Download it from the ICS portal and drop it into beatrax to keep this card's spending up to date.",
+                title: Lang::get('notifications::copy.title.ics_statement_ready'),
+                body: Lang::get('notifications::copy.body.ics_statement_ready'),
                 params: ['target_kind' => 'ics-import'],
                 deepLinkRoute: $deepLinkRoute,
             ));
+            $this->writer->write($draft);
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating detector job run.

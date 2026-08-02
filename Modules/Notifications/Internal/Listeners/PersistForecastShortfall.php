@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Support\Lang;
 use Modules\Forecasting\Public\Events\ForecastShortfallDetected;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
-use Modules\Notifications\Public\NotificationCopy;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -22,21 +23,23 @@ final class PersistForecastShortfall
         private readonly NotificationWriter $writer,
         private readonly UrlGenerator $urls,
         private readonly LoggerInterface $log,
+        private readonly NotificationCopyRenderer $copyRenderer,
     ) {}
 
     public function handle(ForecastShortfallDetected $event): void
     {
         try {
-            $this->writer->write(new NotificationDraft(
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_FORECAST_SHORTFALL,
                 subjectKey: 'forecast',
                 occurrence: $event->startsAt->toDateString(),
-                title: NotificationCopy::TITLE_FORECAST,
-                body: 'Your projected balance dips below zero within the next 30 days.',
+                title: Lang::get('notifications::copy.title.forecast'),
+                body: Lang::get('notifications::copy.body.forecast'),
                 params: ['target_kind' => 'forecast'],
                 deepLinkRoute: $this->urls->route('forecast.index'),
             ));
+            $this->writer->write($draft);
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating shortfall-detection run.
