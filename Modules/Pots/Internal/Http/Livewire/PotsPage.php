@@ -6,13 +6,11 @@ namespace Modules\Pots\Internal\Http\Livewire;
 
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\DatabaseManager;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\Money;
-use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
@@ -427,7 +425,6 @@ final class PotsPage extends Component
     public function render(
         CurrentUser $currentUser,
         PotBalanceQuery $query,
-        DatabaseManager $db,
         ViewFactory $views,
     ): View {
         // Defence-in-depth: the auth route middleware makes this unreachable,
@@ -464,48 +461,9 @@ final class PotsPage extends Component
 
         $archived = $query->archivedForUser($user);
 
-        $accounts = $db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->orderBy('name')
-            ->get(['id', 'name', 'default_currency'])
-            ->toArray();
+        $accounts = $query->accountsForUser($user);
 
-        $linkedGoalIds = $db->connection()
-            ->table('pots')
-            ->where('user_id', $user->id)
-            ->where('status', PotStatus::Active->value)
-            ->whereNotNull('goal_id')
-            ->pluck('goal_id')
-            ->toArray();
-
-        $goalsForPickerQuery = $db->connection()
-            ->table('goals')
-            ->where('user_id', $user->id)
-            ->where('status', PotStatus::Active->value)
-            ->orderBy('name');
-
-        if ($this->editPotId !== 0) {
-            // When editing, exclude goals linked to OTHER pots but allow the
-            // current pot's own goal. editPotId is client-controlled, so
-            // scope this lookup to the user like every other read here.
-            $currentPotGoalId = $db->connection()
-                ->table('pots')
-                ->where('user_id', $user->id)
-                ->where('id', $this->editPotId)
-                ->value('goal_id');
-            $goalsToExclude = array_filter(
-                $linkedGoalIds,
-                static fn (mixed $id): bool => $id !== $currentPotGoalId
-            );
-            if ($goalsToExclude !== []) {
-                $goalsForPickerQuery->whereNotIn('id', array_values($goalsToExclude));
-            }
-        } elseif ($linkedGoalIds !== []) {
-            $goalsForPickerQuery->whereNotIn('id', $linkedGoalIds);
-        }
-
-        $goalsForPicker = $goalsForPickerQuery->get(['id', 'name'])->toArray();
+        $goalsForPicker = $query->goalsForPicker($user, $this->editPotId);
 
         $view = $views->make('pots::livewire.pots-page', [
             'groups' => $groups,

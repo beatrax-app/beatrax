@@ -93,6 +93,71 @@ final class PotBalanceQuery
         return $this->loadPotRows($user, 'archived');
     }
 
+    // The account rows the pots page groups its cards under, name-ordered
+    // so the card columns render in a stable, alphabetical sequence.
+    /**
+     * @return array<int, stdClass>
+     */
+    public function accountsForUser(User $user): array
+    {
+        return $this->db->connection()
+            ->table('accounts')
+            ->where('user_id', $user->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'default_currency'])
+            ->all();
+    }
+
+    // The goals the pots picker may link to: active goals not already claimed
+    // by another pot. When editing a pot, that pot's own goal stays selectable
+    // (editPotId is client-controlled, so every read is user-scoped).
+    /**
+     * @return array<int, stdClass>
+     */
+    public function goalsForPicker(User $user, int $editPotId): array
+    {
+        $linkedGoalIds = $this->activeLinkedGoalIds($user);
+
+        $goalsQuery = $this->db->connection()
+            ->table('goals')
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->orderBy('name');
+
+        if ($editPotId !== 0) {
+            $currentPotGoalId = $this->db->connection()
+                ->table('pots')
+                ->where('user_id', $user->id)
+                ->where('id', $editPotId)
+                ->value('goal_id');
+            $goalsToExclude = array_filter(
+                $linkedGoalIds,
+                static fn (mixed $id): bool => $id !== $currentPotGoalId,
+            );
+            if ($goalsToExclude !== []) {
+                $goalsQuery->whereNotIn('id', array_values($goalsToExclude));
+            }
+        } elseif ($linkedGoalIds !== []) {
+            $goalsQuery->whereNotIn('id', $linkedGoalIds);
+        }
+
+        return $goalsQuery->get(['id', 'name'])->all();
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function activeLinkedGoalIds(User $user): array
+    {
+        return $this->db->connection()
+            ->table('pots')
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->whereNotNull('goal_id')
+            ->pluck('goal_id')
+            ->all();
+    }
+
     /**
      * @return array<int, array{balance: int, currency: string}> goal_id => pot balance + currency
      */
