@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Recurring\Public\Enums;
 
+use Modules\Core\Public\Support\Lang;
+
 // What the interval between a series' occurrences turned out to be.
 // Irregular is a real outcome rather than an absence: such a series is
 // detected and kept, then excluded from drift comparison and the calendar.
@@ -40,12 +42,11 @@ enum SeriesCadence: string
         return $this !== self::Irregular;
     }
 
-    // How the cadence is written in the interface. The templates used to
-    // call ucfirst() on the raw column value, which made every view a place
-    // the vocabulary could be spelled differently; naming it here keeps the
-    // presentation with the thing being presented.
+    // How the cadence is written in the interface. The copy lives in the
+    // cadence lang file, keyed by the backing value, so it localises with
+    // the rest of the UI instead of surfacing the raw English column value.
     public function label(): string
     {
-        return ucfirst($this->value);
+        return Lang::get('recurring::cadence.'.$this->value);
     }
 }
