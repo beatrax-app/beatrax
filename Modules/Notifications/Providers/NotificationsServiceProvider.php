@@ -16,6 +16,7 @@ use Modules\Notifications\Internal\Http\Livewire\NotificationsSettingsSection;
 use Modules\Notifications\Internal\StateMachines\NotificationStateMachine;
 use Modules\Notifications\Internal\Support\DeepLinkResolver;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationWriter;
 use Modules\Notifications\Public\Actions\DismissNotification;
 use Modules\Notifications\Public\Actions\MarkNotificationRead;
@@ -74,6 +75,7 @@ final class NotificationsServiceProvider extends ServiceProvider
         $this->app->singleton(NotificationPreferenceQuery::class);
         $this->app->singleton(SuppressionEvaluator::class);
         $this->app->singleton(NotificationWriter::class);
+        $this->app->singleton(NotificationCopyRenderer::class);
         $this->app->singleton(NotificationQuery::class);
         $this->app->singleton(MarkNotificationRead::class);
         $this->app->singleton(DismissNotification::class);
