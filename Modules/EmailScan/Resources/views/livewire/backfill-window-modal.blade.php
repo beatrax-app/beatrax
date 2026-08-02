@@ -44,7 +44,7 @@
             </div>
 
             <div class="text-sm font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                {{ $months === 1 ? Lang::get('email-scan::backfill.month') : Lang::get('email-scan::backfill.months', ['count' => $months]) }}
+                {{ Lang::choice('email-scan::backfill.months', $months, ['count' => $months]) }}
             </div>
 
             @if ($errorMessage !== '')

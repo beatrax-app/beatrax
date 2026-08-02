@@ -18,8 +18,7 @@ return [
 
     'status_tiles_aria' => 'Statustegels',
     'email_scan_health' => 'Status e-mailscan — :count gekoppeld',
-    'inbox_one' => 'postvak',
-    'inbox_many' => 'postvakken',
+    'inbox' => 'postvak|postvakken',
 
     'top_spending' => 'Grootste uitgaven',
     'no_expenses' => 'Nog geen gecategoriseerde uitgaven.',

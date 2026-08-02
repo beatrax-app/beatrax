@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Rapporten',
-    'saved_report_one' => 'opgeslagen rapport',
-    'saved_report_other' => 'opgeslagen rapporten',
+    'saved_report' => 'opgeslagen rapport|opgeslagen rapporten',
     'pinned_count' => 'vastgezet',
     'dismiss' => 'Sluiten',
 
