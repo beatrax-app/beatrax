@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\DevMode\Internal\Http\Livewire\CommandArgPromptModal;
@@ -35,6 +36,11 @@ use Modules\DevMode\Internal\Http\Livewire\CommandArgPromptModal;
  *      SAFE-only JSON filter.
  *   5. submit() drops empty optional values from the args map so
  *      the shell never sees `php artisan cmd ''`.
+ *   6. submit() enforces each ArgSpec's own rules — the third
+ *      guard alongside the registry whitelist and escapeshellarg,
+ *      which both spawn controllers apply and this path must too.
+ *   7. $command is #[Locked] so the client cannot retarget which
+ *      registry entry submit() resolves.
  */
 
 function promptUser(string $username): User
@@ -169,3 +175,51 @@ it('submit() works from any page — does not depend on a #[On(spawn-command)] l
                 && str_starts_with($params['message'], 'Started config:show'),
         );
 });
+
+it('submit() rejects an arg value that violates its ArgSpec rules instead of spawning', function (): void {
+    // beatrax:failed-jobs declares `action` as ['required', 'in:prune'].
+    // $values is client-supplied, so before the rules ran on this path a
+    // crafted payload put an arbitrary token where the enum was promised.
+    // escapeshellarg still held, but the enum guard held nowhere.
+    $user = promptUser('arg-prompt-rule-violation');
+
+    $component = Livewire::actingAs($user)
+        ->test(CommandArgPromptModal::class)
+        ->dispatch('command-args:prompt', name: 'beatrax:failed-jobs', tier: 'safe', prefill: [])
+        ->set('values.action', 'not-prune')
+        ->call('submit')
+        ->assertNotDispatched('spawn-command')
+        ->assertNotDispatched('toast');
+
+    expect($component->get('submitError'))->not->toBe('');
+});
+
+it('submit() still spawns when the arg value satisfies its ArgSpec rules', function (): void {
+    if (! extension_loaded('posix')) {
+        $this->markTestSkipped('posix extension required for spawn-then-tail');
+    }
+
+    $user = promptUser('arg-prompt-rule-ok');
+
+    Livewire::actingAs($user)
+        ->test(CommandArgPromptModal::class)
+        ->dispatch('command-args:prompt', name: 'beatrax:failed-jobs', tier: 'safe', prefill: [])
+        ->set('values.action', 'prune')
+        ->call('submit')
+        ->assertDispatched(
+            'toast',
+            fn (string $event, array $params) => is_string($params['message'] ?? null)
+                && str_starts_with($params['message'], 'Started beatrax:failed-jobs'),
+        );
+});
+
+it('refuses a client-side write to the #[Locked] $command property', function (): void {
+    // Without the lock a client could let open() populate the form for a
+    // SAFE entry, then swap $command before submit() resolves the spec.
+    $user = promptUser('arg-prompt-locked-command');
+
+    Livewire::actingAs($user)
+        ->test(CommandArgPromptModal::class)
+        ->dispatch('command-args:prompt', name: 'config:show', tier: 'safe', prefill: [])
+        ->set('command', 'db:restore');
+})->throws(CannotUpdateLockedPropertyException::class);
