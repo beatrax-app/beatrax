@@ -258,7 +258,7 @@ final class ReportBuilder extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Reports · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('reports::builder.page_title')]);
 
         return $view;
     }
