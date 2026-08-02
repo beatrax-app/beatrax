@@ -9,7 +9,8 @@
     preload (Modules/Reports/Routes/web.php resolves it from the query
     string before this view renders).
 --}}
-@extends('layouts.app', ['title' => 'Reports · beatrax'])
+@use('Modules\Core\Public\Support\Lang')
+@extends('layouts.app', ['title' => Lang::get('reports::builder.page_title')])
 
 @section('content')
     @livewire(\Modules\Reports\Internal\Http\Livewire\ReportBuilder::class, ['report' => $report])
