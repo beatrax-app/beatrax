@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'page_title' => ':name · beatrax',
     'variance_tolerance_aria' => 'Variance tolerance',
     'tolerance' => 'Tolerance',
     'view_profile' => 'View :name profile →',

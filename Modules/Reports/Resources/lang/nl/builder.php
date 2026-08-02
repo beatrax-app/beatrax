@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Rapporten',
+    'page_title' => 'Rapporten · beatrax',
     'subtitle' => 'Stel een rapport samen uit je grootboek.',
     'controls_aria' => 'Rapportinstellingen',
     'result_aria' => 'Rapportresultaat',
