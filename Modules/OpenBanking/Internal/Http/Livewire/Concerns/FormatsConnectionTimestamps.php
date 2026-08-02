@@ -50,6 +50,6 @@ trait FormatsConnectionTimestamps
 
         $dt = CarbonImmutable::parse($iso);
 
-        return $dt->diffForHumans().' · '.$dt->format('d M Y, H:i');
+        return $dt->diffForHumans().' · '.$dt->translatedFormat('d M Y, H:i');
     }
 }

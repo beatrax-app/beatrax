@@ -79,7 +79,7 @@
         </div>
     </div>
     <p class="text-xs text-slate-500 dark:text-slate-400">
-        {{ $node->bookedAt->format('d M Y') }} · {{ $node->accountName !== '' ? $node->accountName : '—' }}
+        {{ $node->bookedAt->translatedFormat('d M Y') }} · {{ $node->accountName !== '' ? $node->accountName : '—' }}
     </p>
 
     @if ($node->confidenceTier === 'Candidate' && $node->chainLinkId !== null)

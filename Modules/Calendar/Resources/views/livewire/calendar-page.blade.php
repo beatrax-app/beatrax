@@ -43,11 +43,11 @@
                 </span>
             @elseif ($riskCount === 1)
                 <span style="color: var(--color-rose);">
-                    {{ Lang::get('calendar::messages.summary.risk_one', ['date' => $riskDayList[0]->date->format('M j')]) }}
+                    {{ Lang::get('calendar::messages.summary.risk_one', ['date' => $riskDayList[0]->date->translatedFormat('M j')]) }}
                 </span>
             @else
                 <span style="color: var(--color-rose);">
-                    {{ Lang::get('calendar::messages.summary.risk_many', ['count' => $riskCount, 'date' => $riskDayList[0]->date->format('M j')]) }}
+                    {{ Lang::get('calendar::messages.summary.risk_many', ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('M j')]) }}
                 </span>
             @endif
         </div>
@@ -63,7 +63,7 @@
                 style="min-width: 44px; min-height: 44px;"
             >←</button>
             <span class="text-base font-semibold" style="color: var(--color-text);">
-                {{ \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->format('M Y') }}
+                {{ \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->translatedFormat('M Y') }}
             </span>
             <button
                 wire:click="nextMonth"
@@ -171,7 +171,7 @@
         <table
             role="grid"
             class="cal-grid"
-            aria-label="{{ Lang::get('calendar::messages.grid.aria', ['month' => \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->format('F Y')]) }}"
+            aria-label="{{ Lang::get('calendar::messages.grid.aria', ['month' => \Carbon\CarbonImmutable::create($displayYear, $displayMonth, 1)->translatedFormat('F Y')]) }}"
             @keydown.arrow-left.prevent="
                 let prev = document.activeElement.previousElementSibling;
                 if (prev && prev.tagName === 'TD') prev.focus();
@@ -234,7 +234,7 @@
                                 ? Lang::get('calendar::messages.cell.entry_one')
                                 : Lang::get('calendar::messages.cell.entry_many');
                             $ariaLabel = Lang::get('calendar::messages.cell.aria', [
-                                'date' => $day->date->format('F j, Y'),
+                                'date' => $day->date->translatedFormat('F j, Y'),
                                 'count' => $entryCount,
                                 'entries' => $entriesWord,
                             ]);
@@ -338,7 +338,7 @@
     </div>
 
     {{-- §6.5 Phone bottom sheet (open-sheet event dispatched from selectDay()) --}}
-    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->format('M j') : ''">
+    <x-core::bottom-sheet name="day-detail" :title="$selectedDayDto ? $selectedDayDto->date->translatedFormat('M j') : ''">
         @if ($selectedDayDto !== null)
             @include('calendar::livewire.partials.day-panel', ['dayDto' => $selectedDayDto])
         @endif

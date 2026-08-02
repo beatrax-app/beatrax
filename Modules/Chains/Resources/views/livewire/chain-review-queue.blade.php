@@ -109,7 +109,7 @@
                                 <span class="text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">{{ $fmt($row->toAmount) }}</span>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {{ $kindLabel($row->kind) }} · {{ $row->fromPostedAt->format('d M Y') }} → {{ $row->toPostedAt->format('d M Y') }}
+                                {{ $kindLabel($row->kind) }} · {{ $row->fromPostedAt->translatedFormat('d M Y') }} → {{ $row->toPostedAt->translatedFormat('d M Y') }}
                             </p>
                             @if ($row->confirmsRemaining === 1)
                                 <p class="mt-1 flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-200">

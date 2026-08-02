@@ -12,6 +12,7 @@
      beside "New rule" and drives a wire:poll.2s progress strip. --}}
 
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 <div class="space-y-6">
     <header class="mb-12 space-y-1">
         <div class="flex items-start justify-between gap-4">
@@ -61,7 +62,7 @@
             aria-live="polite"
         >
             <p class="text-xs text-slate-700 dark:text-slate-300">
-                {{ Lang::get('categorization::rules.reapply_progress_lead') }} <span style="font-variant-numeric: tabular-nums;">{{ number_format($reapplyProgress['checked'] ?? 0) }}</span> {{ Lang::get('categorization::rules.reapply_progress_of') }} <span style="font-variant-numeric: tabular-nums;">{{ number_format($reapplyProgress['total'] ?? 0) }}</span> {{ Lang::get('categorization::rules.reapply_progress_trail') }}
+                {{ Lang::get('categorization::rules.reapply_progress_lead') }} <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) ($reapplyProgress['checked'] ?? 0)) }}</span> {{ Lang::get('categorization::rules.reapply_progress_of') }} <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) ($reapplyProgress['total'] ?? 0)) }}</span> {{ Lang::get('categorization::rules.reapply_progress_trail') }}
             </p>
         </section>
     @endif
@@ -124,7 +125,7 @@
                                 {{ $rule->hitsCount }}
                             </td>
                             <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                                {{ $rule->createdAt->format('d M Y') }}
+                                {{ \Carbon\CarbonImmutable::instance($rule->createdAt)->translatedFormat('d M Y') }}
                             </td>
                             <td class="px-4 py-3 text-right text-sm">
                                 @if ($confirmingDeleteId === $rule->id)

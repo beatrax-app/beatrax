@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 {{--
     /drift/watch — Subscription Drift Watch overview. Approved subscriptions
     ranked by how much their price has crept up since the first observed charge,
@@ -117,7 +118,7 @@
                                 {{ $signed($row->deltaMinor, $row->currency) }}
                             </p>
                             <p class="text-xs {{ $deltaClass[$dir] }}" style="font-variant-numeric: tabular-nums;">
-                                {{ ($row->deltaPercent >= 0 ? '+' : '−').number_format(abs($row->deltaPercent), 1) }}%
+                                {{ ($row->deltaPercent >= 0 ? '+' : '−').Fmt::number(round(abs($row->deltaPercent), 1), 1) }}%
                             </p>
                         </div>
                     </div>

@@ -114,7 +114,7 @@ final class TimeBucketGenerator
             $buckets[] = new Period(
                 start: $cursor,
                 endExclusive: $endExclusive,
-                label: $cursor->format('M Y'),
+                label: $cursor->translatedFormat('M Y'),
             );
 
             $cursor = $endExclusive;

@@ -52,7 +52,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
                             <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
-                                {{ $alert->created_at->format('d M Y · H:i') }}
+                                {{ $alert->created_at->translatedFormat('d M Y · H:i') }}
                                 <span class="mx-1">·</span>
                                 #{{ $alert->id }}
                             </p>
@@ -69,7 +69,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
                             <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
-                                {{ $alert->created_at->format('d M Y · H:i') }}
+                                {{ $alert->created_at->translatedFormat('d M Y · H:i') }}
                                 <span class="mx-1">·</span>
                                 #{{ $alert->id }}
                             </p>
@@ -86,7 +86,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
                             <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
-                                {{ $alert->created_at->format('d M Y · H:i') }}
+                                {{ $alert->created_at->translatedFormat('d M Y · H:i') }}
                                 <span class="mx-1">·</span>
                                 #{{ $alert->id }}
                             </p>

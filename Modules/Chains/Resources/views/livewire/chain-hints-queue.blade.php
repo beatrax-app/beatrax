@@ -84,7 +84,7 @@
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                 {{ $hint->fromAccountName ?: Lang::get('chains::hints.unknown_account') }} ·
-                                {{ $hint->fromPostedAt->format('d M Y') }}
+                                {{ $hint->fromPostedAt->translatedFormat('d M Y') }}
                             </p>
                             @if (count($hint->evidenceLines) > 0)
                                 <ul class="mt-3 space-y-0.5 text-xs text-slate-600 dark:text-slate-400">

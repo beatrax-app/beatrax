@@ -202,7 +202,7 @@ final class PreviewSummaryBuilder
             ? $this->resolvedName($connection, $user, $sourceProduct, 'category', $categoryExternalId, 'categories')
             : null;
 
-        $monthYear = $periodStart !== null ? CarbonImmutable::parse($periodStart)->format('F Y') : null;
+        $monthYear = $periodStart !== null ? CarbonImmutable::parse($periodStart)->translatedFormat('F Y') : null;
 
         return match (true) {
             $categoryName !== null && $monthYear !== null => "{$categoryName} · {$monthYear} budget",
@@ -249,7 +249,7 @@ final class PreviewSummaryBuilder
             : $this->codec->decryptValue('transactions', 'description', self::toString($txn->description), $user->id, ($this->session)())['value'];
 
         $identifier = $counterpartyName ?? $description ?? 'Transaction';
-        $date = $txn->posted_at !== null ? CarbonImmutable::parse(self::toString($txn->posted_at))->format('j M Y') : null;
+        $date = $txn->posted_at !== null ? CarbonImmutable::parse(self::toString($txn->posted_at))->translatedFormat('j M Y') : null;
 
         return $date !== null ? "{$identifier} · {$date} {$fieldLabel}" : "{$identifier} {$fieldLabel}";
     }

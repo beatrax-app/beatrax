@@ -43,7 +43,7 @@
                     <x-ledger::cleared-badge :transaction="['id' => $transaction->id, 'status' => $clearedStatus ?? \Modules\Ledger\Public\Enums\ClearedStatus::Cleared->value]" />
                 </div>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    {{ CarbonImmutable::parse($transaction->posted_at)->format('j M Y') }}
+                    {{ CarbonImmutable::parse($transaction->posted_at)->translatedFormat('j M Y') }}
                 </p>
             </header>
 

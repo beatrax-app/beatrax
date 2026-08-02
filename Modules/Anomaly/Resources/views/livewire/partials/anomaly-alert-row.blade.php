@@ -79,7 +79,7 @@
             <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.baseline_to_actual', ['baseline' => $fmt($alert->baselineAmount), 'actual' => $fmt($alert->latestAmount)]) }}</span>
                 <span class="mx-1">·</span>
-                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.detected', ['date' => $alert->detectedAt->format('d M')]) }}</span>
+                <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.detected', ['date' => $alert->detectedAt->translatedFormat('d M')]) }}</span>
                 <span class="mx-1">·</span>
                 <span style="font-variant-numeric: tabular-nums;">{{ Lang::get('anomaly::alerts.sensitivity', ['percent' => $alert->sensitivityPercentUsed]) }}</span>
             </p>

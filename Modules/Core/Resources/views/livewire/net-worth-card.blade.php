@@ -85,7 +85,7 @@
                             <div popover id="fx-pop-networth" x-ref="fxPopNetworth" class="fx-popover" style="position-anchor: --fx-net; position-area: bottom span-right; position-try-fallbacks: flip-inline, flip-block, flip-inline flip-block; margin: 6px 0 0;">
                                 @if ($netWorth->ratesAsOf !== null)
                                     <p class="fx-rate">{{ Lang::get('core::net_worth.converted_to', ['currency' => $baseCurrency]) }}</p>
-                                    <p class="fx-source">{{ $sourceLabel($netWorth->ratesSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $netWorth->ratesAsOf->format('d M Y')]) }}</p>
+                                    <p class="fx-source">{{ $sourceLabel($netWorth->ratesSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $netWorth->ratesAsOf->translatedFormat('d M Y')]) }}</p>
                                     @if ($netWorth->hasStaleRates)
                                         <p class="fx-stale-note">{{ $staleNote($netWorth->ratesSource) }}</p>
                                     @endif
@@ -109,7 +109,7 @@
                     @if ($conversionActive)
                         {{-- Global rates disclosure line — one per surface (D-11 / UI-SPEC §5.2/§7.3) --}}
                         <p class="mt-0.5 text-xs" style="color: var(--color-text-faint);">
-                            {{ Lang::get('core::net_worth.global_rates', ['date' => $netWorth->ratesAsOf?->format('d M Y'), 'source' => $sourceLabel($netWorth->ratesSource)]) }}
+                            {{ Lang::get('core::net_worth.global_rates', ['date' => $netWorth->ratesAsOf?->translatedFormat('d M Y'), 'source' => $sourceLabel($netWorth->ratesSource)]) }}
                         </p>
                     @endif
                 </div>
@@ -152,7 +152,7 @@
                                                 <p class="fx-rate">{{ Lang::get('core::net_worth.rate_line', ['from' => $account->currency, 'rate' => $accountRate, 'to' => $baseCurrency]) }}</p>
                                             @endif
                                             @if ($account->fxAsOf !== null)
-                                                <p class="fx-source">{{ $sourceLabel($account->fxSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $account->fxAsOf->format('d M Y')]) }}</p>
+                                                <p class="fx-source">{{ $sourceLabel($account->fxSource) }} · {{ Lang::get('core::net_worth.as_of', ['date' => $account->fxAsOf->translatedFormat('d M Y')]) }}</p>
                                             @endif
                                             @if ($account->fxIsStale)
                                                 <p class="fx-stale-note">{{ $staleNote($account->fxSource) }}</p>

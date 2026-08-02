@@ -49,7 +49,7 @@ final class PersistPaymentReminder
                 // around {day}" rather than a hard date.
                 body: $event->confidenceLow
                     ? Lang::get('notifications::copy.body.payment_reminder_hedged', ['name' => $event->displayName, 'day' => $dayLabel, 'amount' => $amountText])
-                    : Lang::get('notifications::copy.body.payment_reminder_confident', ['name' => $event->displayName, 'day' => $dayLabel, 'date' => $event->dueDate->format('d M'), 'amount' => $amountText]),
+                    : Lang::get('notifications::copy.body.payment_reminder_confident', ['name' => $event->displayName, 'day' => $dayLabel, 'date' => $event->dueDate->translatedFormat('d M'), 'amount' => $amountText]),
                 params: ['target_kind' => 'series', 'target_id' => $event->seriesId],
                 deepLinkRoute: $this->urls->route('recurring.series.show', ['seriesId' => $event->seriesId]),
             ));

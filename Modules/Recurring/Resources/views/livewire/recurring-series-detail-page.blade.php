@@ -141,7 +141,7 @@
                     <tbody class="divide-y divide-slate-200 bg-white dark:bg-slate-950 dark:divide-slate-700">
                         @foreach ($occurrences as $occ)
                             <tr>
-                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $occ->observedAt->format('d M Y') }}</td>
+                                <td class="px-4 py-2 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $occ->observedAt->translatedFormat('d M Y') }}</td>
                                 <td class="px-4 py-2 text-right text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">{{ $fmt($occ->observedAmount) }}</td>
                                 <td class="px-4 py-2 text-right text-sm">
                                     <a

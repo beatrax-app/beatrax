@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Http\Middleware;
 
+use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Http\Request;
@@ -45,9 +46,13 @@ final class SetLocale
         // than the first-declared case).
         $browserLocale = $request->getPreferredLanguage(Locale::codes());
 
-        $this->translator->setLocale(
-            $this->negotiator->resolve($userLocale, $sessionLocale, $browserLocale),
-        );
+        $resolved = $this->negotiator->resolve($userLocale, $sessionLocale, $browserLocale);
+
+        $this->translator->setLocale($resolved);
+        // Carbon keeps its own locale, so dates rendered through isoFormat /
+        // translatedFormat / diffForHumans stay English unless it is told the
+        // active language too. Sync it here alongside the translator.
+        CarbonImmutable::setLocale($resolved);
 
         /** @var Response $response */
         $response = $next($request);
