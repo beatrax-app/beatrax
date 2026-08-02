@@ -78,6 +78,28 @@ rsync -a --copy-links --delete \
     --exclude='.git/' \
     "${SRC}/" "${OUT}/"
 
+# --- Ensure Laravel's writable runtime directories exist. --------------------
+# These dirs hold only machine-generated, gitignored content, so git never
+# tracks the empty dirs and they vanish from a clean checkout — which is what
+# the build repo is. Their ABSENCE is fatal: `composer install` runs
+# `artisan package:discover`, which aborts with "bootstrap/cache directory must
+# be present and writable"; rendering that error under --ansi then resolves the
+# unbound `request` binding and surfaces the misleading "Target class [request]
+# does not exist" instead. A tracked `.gitkeep` keeps each dir present (and
+# writable) in the build container.
+for d in \
+    bootstrap/cache \
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/testing \
+    storage/logs \
+    storage/app/public
+do
+    mkdir -p "${OUT}/${d}"
+    : > "${OUT}/${d}/.gitkeep"
+done
+
 # --- Guard: the output must be self-contained. -------------------------------
 # Any symlink surviving here, or any that escaped to an absolute/parent path,
 # means the copy is not buildable in isolation — fail loudly rather than let
