@@ -342,3 +342,50 @@ second proves the amphp/Revolt event loop can be driven to completion for
 a single bounded dial-out burst from within the mobile runtime, without
 attempting the real Noise handshake. Both are registered only from the
 mobile-app root's own bootstrap, never the shared `MobileServiceProvider`.
+
+## Build packaging: materializing the symlink shell for Bifrost
+
+The `mobile-app/` root is a thin NativePHP-for-Mobile shell. Its own real
+files are only the ones that must differ from the desktop root —
+`composer.json`/`composer.lock` (a separate `vendor/` tree, because
+`nativephp/mobile` and `nativephp/desktop` cannot co-exist in one
+autoload root), `config/nativephp.php`, `config/view.php`, `bootstrap/`,
+`storage/`, `artisan`, `Gemfile`, `nativephp-plugins/`, `scripts/`.
+Everything else is a git-tracked symlink up to the desktop root: the
+directories `app`, `Modules`, `resources`, `routes`, `public`, `tests`,
+`database/migrations`, `database/schema`, and the fifteen shared
+`config/*.php` files. Those links are the single-source-of-truth seam —
+shared business logic is edited once at the root and the mobile shell
+sees it with no duplication.
+
+Bifrost (the NativePHP cloud build) pulls only the specified directory
+and its children into the build container, so every one of those
+parent-pointing symlinks dangles and the build fails. Git submodules are
+not supported, and resolving symlinks in-container is fragile even when
+the target happens to be present. The shell is therefore not itself
+buildable in isolation — it must be *materialized* first.
+
+`mobile-app/scripts/materialize.sh <out>` produces a copy of `mobile-app/`
+with every symlink replaced by the real file/directory it targets
+(`rsync --copy-links`), excluding what the build container regenerates
+(`vendor/` — Bifrost runs `composer install`; native scaffolds under
+`ios/`, `android/`, `nativephp/`, `build/`; runtime `storage/` and
+bootstrap caches). It derives the symlink set by dereferencing rather than
+from a hardcoded list, so a newly shared directory is picked up
+automatically, and it hard-fails if any symlink survives the copy — a
+non-self-contained tree can never reach Bifrost.
+
+The materialized tree is published to a dedicated, fully-generated build
+repo that Bifrost is pointed at (at its root — no experimental monorepo /
+subfolder support required). That repo is derived output with a single
+writer, the `mobile-bifrost-publish` workflow, and is never hand-edited,
+so it cannot drift from the symlink SSoT. The workflow runs on `main`
+pushes touching shared source or the shell, builds the frontend assets
+(`public/build/` is served on-device), materializes, and mirrors the
+result into the build repo via `rsync --delete`. It reads two settings:
+the repo variable `BIFROST_BUILD_REPO` (target `owner/name`) and the
+secret `BIFROST_BUILD_TOKEN` (a fine-grained PAT scoped to
+`contents:write` on only the build repo). The build container additionally
+needs the private-registry credentials for the paid `nativephp/mobile-*`
+plugins (`COMPOSER_AUTH` / NativePHP licence), the same ones the
+`mobile-app quality` CI job consumes.
