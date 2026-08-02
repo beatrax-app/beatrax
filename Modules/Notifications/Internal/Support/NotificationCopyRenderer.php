@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Notifications\Internal\Support;
 
+use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
@@ -32,12 +33,18 @@ final class NotificationCopyRenderer
     public function forUser(int $userId, Closure $build): mixed
     {
         $previous = $this->translator->getLocale();
-        $this->translator->setLocale($this->localeFor($userId));
+        $locale = $this->localeFor($userId);
+        $this->translator->setLocale($locale);
+        // Dates in the copy (a reminder's day, a digest window) go through
+        // Carbon, which carries its own locale — scope it to the recipient too
+        // so a job-built notification's dates match its language.
+        CarbonImmutable::setLocale($locale);
 
         try {
             return $build();
         } finally {
             $this->translator->setLocale($previous);
+            CarbonImmutable::setLocale($previous);
         }
     }
 

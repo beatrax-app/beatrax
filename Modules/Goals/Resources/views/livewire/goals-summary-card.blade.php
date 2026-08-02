@@ -63,7 +63,7 @@
                         @if ($row->progressState === 'overdue')
                             <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ Lang::get('goals::messages.status.overdue') }}</span>
                         @elseif ($row->projectedFinishDate !== null)
-                            · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->format('d M \'y') }}
+                            · {{ \Carbon\CarbonImmutable::parse($row->projectedFinishDate)->translatedFormat('d M \'y') }}
                         @endif
                     </span>
                 </li>

@@ -277,7 +277,7 @@
                                 <span aria-hidden="true">↘</span>
                                 <span>
                                     {{ Lang::get('forecasting::forecast.shortfall', [
-                                        'date' => $window->startsAt->format('d M'),
+                                        'date' => $window->startsAt->translatedFormat('d M'),
                                         'amount' => $eurFmt(abs($window->lowestBalanceMinor - $window->bufferUsedMinor), $window->currency),
                                         'buffer' => $eurFmt($window->bufferUsedMinor, $window->currency),
                                     ]) }}

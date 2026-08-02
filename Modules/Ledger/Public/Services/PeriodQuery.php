@@ -36,8 +36,8 @@ final class PeriodQuery
         $endExclusive = $start->addMonthNoOverflow();
 
         $label = $startDay === 1
-            ? $start->format('F Y')
-            : $start->format('j M').' → '.$endExclusive->subDay()->format('j M Y');
+            ? $start->translatedFormat('F Y')
+            : $start->translatedFormat('j M').' → '.$endExclusive->subDay()->translatedFormat('j M Y');
 
         return new Period(start: $start, endExclusive: $endExclusive, label: $label);
     }

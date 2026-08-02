@@ -260,7 +260,7 @@
                                             >
                                                 {{-- Date --}}
                                                 <td class="date whitespace-nowrap px-3 py-2" style="color: var(--color-text-muted);">
-                                                    {{ $bookedAt ? $bookedAt->format('d M Y') : '—' }}
+                                                    {{ $bookedAt ? $bookedAt->translatedFormat('d M Y') : '—' }}
                                                 </td>
                                                 {{-- Account --}}
                                                 <td class="px-3 py-2 text-sm" style="color: var(--color-text-muted); max-width: 6rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -324,7 +324,7 @@
                                                         {{ $row['counterpartyName'] ?? '—' }}
                                                     </p>
                                                     <p style="font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;">
-                                                        {{ $bookedAt ? $bookedAt->format('d M Y') : '—' }}
+                                                        {{ $bookedAt ? $bookedAt->translatedFormat('d M Y') : '—' }}
                                                         @if (! empty($row['accountName']))
                                                             · {{ $row['accountName'] }}
                                                         @endif

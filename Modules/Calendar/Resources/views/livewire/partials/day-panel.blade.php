@@ -14,7 +14,7 @@
 @use('Modules\Ledger\Public\ValueObjects\Money')
 <div class="cal-panel-header">
     <span class="font-semibold" style="font-size: var(--text-md, 1rem); color: var(--color-text);">
-        {{ $dayDto->date->format('M j, Y') }}
+        {{ $dayDto->date->translatedFormat('M j, Y') }}
     </span>
     <button
         wire:click="$set('selectedDay', null)"

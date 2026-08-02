@@ -105,7 +105,7 @@
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                 {{ $row->cadence->label() }}
                                 @if ($row->nextExpectedAt)
-                                    · {{ Lang::get('recurring::review.next') }} {{ $row->nextExpectedAt->format('d M Y') }}
+                                    · {{ Lang::get('recurring::review.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                 @endif
                                 @if ($row->state === \Modules\Recurring\Public\Enums\RecurringSeriesState::CadenceChanged->value)
                                     · {{ Lang::get('recurring::review.cadence_changed_note') }}

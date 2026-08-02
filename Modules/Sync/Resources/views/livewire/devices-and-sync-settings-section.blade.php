@@ -255,7 +255,7 @@
                                 {{-- Paired-at meta --}}
                                 @if ($device['paired_at'] !== '')
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                                        {{ Lang::get('sync::devices.paired') }} {{ \Carbon\CarbonImmutable::parse($device['paired_at'])->format('j M Y') }}
+                                        {{ Lang::get('sync::devices.paired') }} {{ \Carbon\CarbonImmutable::parse($device['paired_at'])->translatedFormat('j M Y') }}
                                     </p>
                                 @endif
                             </div>

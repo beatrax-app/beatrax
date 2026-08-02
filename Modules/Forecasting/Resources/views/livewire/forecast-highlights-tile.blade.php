@@ -53,20 +53,20 @@
 
             @if ($dto->activeShortfallCount > 0 && $dto->lowestProjectedBalanceMinor !== null)
                 <p class="mt-2 text-3xl font-semibold text-rose-700 dark:text-rose-500" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::get('forecasting::forecast.dips_to', ['name' => $dto->lowestProjectedAccountName, 'amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->format('d M')]) : '' }}
+                    {{ Lang::get('forecasting::forecast.dips_to', ['name' => $dto->lowestProjectedAccountName, 'amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->translatedFormat('d M')]) : '' }}
                 </p>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
                     {{ Lang::choice('forecasting::forecast.shortfall_window', $dto->activeShortfallCount, ['count' => $dto->activeShortfallCount]) }}
                 </p>
             @elseif ($dto->lowestProjectedBalanceMinor !== null)
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::get('forecasting::forecast.lowest_in_30', ['amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->format('d M')]) : '' }} &middot; {{ $dto->lowestProjectedAccountName }}
+                    {{ Lang::get('forecasting::forecast.lowest_in_30', ['amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->translatedFormat('d M')]) : '' }} &middot; {{ $dto->lowestProjectedAccountName }}
                 </p>
             @endif
 
             @if ($dto->nextIcsSettlement !== null)
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                    {{ Lang::get('forecasting::forecast.next_ics', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->format('d M')]) }}
+                    {{ Lang::get('forecasting::forecast.next_ics', ['amount' => $nextSettlementFormatted, 'date' => $dto->nextIcsSettlement->dueDate->translatedFormat('d M')]) }}
                 </p>
             @endif
         </a>
