@@ -73,7 +73,7 @@
         class="{{ $eyebrowClass }}"
     >
         <span class="preview-section-label">{{ $eyebrowLabel }}</span>
-        <span class="preview-section-count">· {{ $rowCount }} {{ $rowCount === 1 ? Lang::get('onboarding::first_import.section.row_one') : Lang::get('onboarding::first_import.section.row_many') }}</span>
+        <span class="preview-section-count">· {{ $rowCount }} {{ Lang::choice('onboarding::first_import.section.row', $rowCount) }}</span>
         @if ($statusBadge !== '')
             <span class="{{ $badgeClass }}">· {{ $statusBadge }}</span>
         @endif

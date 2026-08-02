@@ -7,6 +7,5 @@ return [
     'label' => 'Belasting :year',
     'empty' => 'Nog geen items getagd voor :period.',
     'this_year' => 'dit jaar',
-    'tagged_one' => ':count item getagd',
-    'tagged_other' => ':count items getagd',
+    'tagged' => ':count item getagd|:count items getagd',
 ];

@@ -18,8 +18,7 @@ return [
 
     'status_tiles_aria' => 'Status tiles',
     'email_scan_health' => 'Email scan health — :count connected',
-    'inbox_one' => 'inbox',
-    'inbox_many' => 'inboxes',
+    'inbox' => 'inbox|inboxes',
 
     'top_spending' => 'Top spending',
     'no_expenses' => 'No categorized expenses yet.',

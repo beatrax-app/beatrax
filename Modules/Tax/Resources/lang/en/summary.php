@@ -7,6 +7,5 @@ return [
     'label' => 'Tax :year',
     'empty' => 'No items tagged yet for :period.',
     'this_year' => 'this year',
-    'tagged_one' => ':count item tagged',
-    'tagged_other' => ':count items tagged',
+    'tagged' => ':count item tagged|:count items tagged',
 ];

@@ -46,7 +46,7 @@
                     href="{{ route('chains.hints') }}"
                     class="text-xs text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200"
                     data-testid="chain-hints-link"
-                >{{ $hintCount }} {{ $hintCount === 1 ? Lang::get('chains::review.hint_singular') : Lang::get('chains::review.hint_plural') }} →</a>
+                >{{ $hintCount }} {{ Lang::choice('chains::review.hint', $hintCount) }} →</a>
             @endif
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">

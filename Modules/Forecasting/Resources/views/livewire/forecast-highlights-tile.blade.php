@@ -56,7 +56,7 @@
                     {{ Lang::get('forecasting::forecast.dips_to', ['name' => $dto->lowestProjectedAccountName, 'amount' => $lowestFormatted]) }}{{ $lowestDate !== null ? Lang::get('forecasting::forecast.on_date_suffix', ['date' => $lowestDate->format('d M')]) : '' }}
                 </p>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric: tabular-nums;">
-                    {{ $dto->activeShortfallCount === 1 ? Lang::get('forecasting::forecast.shortfall_window_one') : Lang::get('forecasting::forecast.shortfall_window_many', ['count' => $dto->activeShortfallCount]) }}
+                    {{ Lang::choice('forecasting::forecast.shortfall_window', $dto->activeShortfallCount, ['count' => $dto->activeShortfallCount]) }}
                 </p>
             @elseif ($dto->lowestProjectedBalanceMinor !== null)
                 <p class="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">

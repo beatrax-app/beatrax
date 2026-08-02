@@ -7,19 +7,16 @@ return [
     'h1' => 'Bekijk alles wat we vonden',
 
     'lede_across' => 'transacties over',
-    'source_one' => 'bron',
-    'source_many' => 'bronnen',
+    'source' => 'bron|bronnen',
     'lede_confirm' => 'Bevestig je beginsaldo’s en leg dan vast.',
 
     'empty' => 'Nog niets om te bekijken. Zet een afschrift neer bij de vorige stappen om je transacties hier te zien.',
 
     'sb_eyebrow_label' => '🧮 BEGINSALDO’S ·',
-    'account_detected_one' => 'REKENING GEDETECTEERD',
-    'account_detected_many' => 'REKENINGEN GEDETECTEERD',
+    'account_detected' => 'REKENING GEDETECTEERD|REKENINGEN GEDETECTEERD',
     'sb_lede' => 'We hebben het beginsaldo voor elke rekening gedetecteerd. Bevestig of bewerk het voordat we vastleggen.',
 
-    'txn_one' => 'transactie',
-    'txn_many' => 'transacties',
+    'txn' => 'transactie|transacties',
     'to_commit' => 'om vast te leggen ·',
     'already_imported' => 'al geïmporteerd',
     'commit_committing' => 'Bezig met vastleggen…',
@@ -36,8 +33,7 @@ return [
         'from_bank' => 'VAN JE BANKAFSCHRIFT',
         'from_ics' => 'VAN JE ICS-KAARTAFSCHRIFTEN',
         'from_paypal' => 'VAN PAYPAL',
-        'row_one' => 'RIJ',
-        'row_many' => 'RIJEN',
+        'row' => 'RIJ|RIJEN',
         'badge_ready' => '✓ KLAAR',
         'badge_empty' => 'LEEG',
         'badge_error' => 'OPNIEUW UPLOADEN NODIG',

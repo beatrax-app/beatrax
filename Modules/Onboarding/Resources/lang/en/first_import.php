@@ -7,19 +7,16 @@ return [
     'h1' => 'Review everything we found',
 
     'lede_across' => 'transactions across',
-    'source_one' => 'source',
-    'source_many' => 'sources',
+    'source' => 'source|sources',
     'lede_confirm' => 'Confirm your starting balances, then commit.',
 
     'empty' => 'Nothing to review yet. Drop a statement on the earlier steps to see your transactions here.',
 
     'sb_eyebrow_label' => '🧮 STARTING BALANCES ·',
-    'account_detected_one' => 'ACCOUNT DETECTED',
-    'account_detected_many' => 'ACCOUNTS DETECTED',
+    'account_detected' => 'ACCOUNT DETECTED|ACCOUNTS DETECTED',
     'sb_lede' => 'We detected the starting balance for each account. Confirm or edit before we commit.',
 
-    'txn_one' => 'transaction',
-    'txn_many' => 'transactions',
+    'txn' => 'transaction|transactions',
     'to_commit' => 'to commit ·',
     'already_imported' => 'already imported',
     'commit_committing' => 'Committing…',
@@ -36,8 +33,7 @@ return [
         'from_bank' => 'FROM YOUR BANK STATEMENT',
         'from_ics' => 'FROM YOUR ICS CARD STATEMENTS',
         'from_paypal' => 'FROM PAYPAL',
-        'row_one' => 'ROW',
-        'row_many' => 'ROWS',
+        'row' => 'ROW|ROWS',
         'badge_ready' => '✓ READY',
         'badge_empty' => 'EMPTY',
         'badge_error' => 'NEEDS RE-UPLOAD',

@@ -25,4 +25,16 @@ final class Lang
         // never renders "Array" and a typo stays visible in the UI.
         return is_string($line) ? $line : $key;
     }
+
+    // Picks the plural form for $number from a `singular|plural` line,
+    // applying the active locale's pluralisation rule. :count is filled with
+    // $number automatically; the manual `$n === 1 ? a : b` at the view goes
+    // away, and a locale with richer plural rules than en/nl still resolves.
+    /**
+     * @param  array<string, string|int|float>  $replace
+     */
+    public static function choice(string $key, int $number, array $replace = []): string
+    {
+        return Container::getInstance()->make(Translator::class)->choice($key, $number, $replace);
+    }
 }

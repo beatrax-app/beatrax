@@ -35,7 +35,7 @@
                     class="text-sm font-normal ml-1"
                     style="color: #94a3b8;"
                 >
-                    {{ $recentCount === 1 ? Lang::get('sync::health.skipped_op') : Lang::get('sync::health.skipped_ops') }}
+                    {{ Lang::choice('sync::health.skipped', $recentCount) }}
                 </span>
             </div>
         </div>

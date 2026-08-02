@@ -70,7 +70,7 @@
         <p class="wiz-lede">
             <span class="tabular-nums">{{ $preview->dedupedTotalCount }}</span> {{ Lang::get('onboarding::first_import.lede_across') }}
             <span class="tabular-nums">{{ $sourceCount }}</span>
-            {{ $sourceCount === 1 ? Lang::get('onboarding::first_import.source_one') : Lang::get('onboarding::first_import.source_many') }}.
+            {{ Lang::choice('onboarding::first_import.source', $sourceCount) }}.
             {{ Lang::get('onboarding::first_import.lede_confirm') }}
         </p>
 
@@ -91,7 +91,7 @@
                 <p class="preview-section-eyebrow">
                     {{ Lang::get('onboarding::first_import.sb_eyebrow_label') }}
                     <span class="tabular-nums">{{ $detectedCount }}</span>
-                    {{ $detectedCount === 1 ? Lang::get('onboarding::first_import.account_detected_one') : Lang::get('onboarding::first_import.account_detected_many') }}
+                    {{ Lang::choice('onboarding::first_import.account_detected', $detectedCount) }}
                 </p>
                 <p class="starting-balance-lede">
                     {{ Lang::get('onboarding::first_import.sb_lede') }}
@@ -150,7 +150,7 @@
         <div class="commit-footer">
             <p class="commit-counter" aria-atomic="true" aria-live="polite">
                 <strong class="tabular-nums">{{ $preview->dedupedTotalCount }}</strong>
-                {{ $preview->dedupedTotalCount === 1 ? Lang::get('onboarding::first_import.txn_one') : Lang::get('onboarding::first_import.txn_many') }}
+                {{ Lang::choice('onboarding::first_import.txn', $preview->dedupedTotalCount) }}
                 {{ Lang::get('onboarding::first_import.to_commit') }}
                 <span class="tabular-nums">{{ $preview->alreadyImportedCount }}</span>
                 {{ Lang::get('onboarding::first_import.already_imported') }}

@@ -5,8 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Review chains',
     'heading' => 'Review chains',
-    'hint_singular' => 'hint',
-    'hint_plural' => 'hints',
+    'hint' => 'hint|hints',
     'subtitle' => 'Confirm or reject candidate links the chain resolver could not auto-confirm.',
 
     'empty_heading' => 'Nothing to review',

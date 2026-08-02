@@ -225,7 +225,7 @@
                 <a
                     href="{{ route('inboxes.index') }}"
                     class="block rounded-lg transition hover:ring-2 hover:ring-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-                    aria-label="{{ Lang::get('core::dashboard.email_scan_health', ['count' => $emailScanCount]) }} {{ $emailScanCount === 1 ? Lang::get('core::dashboard.inbox_one') : Lang::get('core::dashboard.inbox_many') }}"
+                    aria-label="{{ Lang::get('core::dashboard.email_scan_health', ['count' => $emailScanCount]) }} {{ Lang::choice('core::dashboard.inbox', $emailScanCount) }}"
                 >
                     @include('email-scan::livewire.email-scan-health-tile', ['tile' => $emailScanHealth])
                 </a>

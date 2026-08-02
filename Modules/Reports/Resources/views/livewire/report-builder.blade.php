@@ -339,7 +339,7 @@
                     @endif
                     @if ($result->hasExcludedAccounts)
                         <p class="text-xs" style="color: var(--color-amber);">
-                            {{ $result->accountsWithoutRate === 1 ? Lang::get('reports::builder.fx_excluded_one', ['count' => $result->accountsWithoutRate]) : Lang::get('reports::builder.fx_excluded_other', ['count' => $result->accountsWithoutRate]) }}
+                            {{ Lang::choice('reports::builder.fx_excluded', $result->accountsWithoutRate, ['count' => $result->accountsWithoutRate]) }}
                         </p>
                     @endif
                 </div>
