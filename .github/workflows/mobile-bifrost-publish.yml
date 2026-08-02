@@ -1,0 +1,113 @@
+# mobile-bifrost-publish — materialize the mobile shell into the Bifrost build repo.
+#
+# The `mobile-app/` root is a thin NativePHP-for-Mobile shell whose shared
+# source is reached through git-tracked symlinks pointing up to the desktop
+# repo root (app/, Modules/, resources/, routes/, public/, config/*.php, the
+# database migration/schema dirs, tests/). Bifrost pulls only the specified
+# directory and its children, so those parent-pointing links dangle in the
+# build container and the build fails.
+#
+# This workflow runs `mobile-app/scripts/materialize.sh` to dereference every
+# symlink into real content, then pushes that self-contained tree to the
+# dedicated, fully-generated build repo Bifrost is pointed at. The build repo
+# is derived output — never hand-edited; this workflow is its only writer.
+#
+# One-time setup before enabling:
+#   - vars.BIFROST_BUILD_REPO      e.g. "beatrax-app/mobile-build"
+#   - secrets.BIFROST_BUILD_TOKEN  a fine-grained PAT (or deploy key) with
+#                                  contents:write on ONLY the build repo.
+# Every third-party action is pinned to a full 40-char SHA (tag in comment),
+# matching the rest of .github/workflows/.
+
+name: mobile-bifrost-publish
+
+on:
+    # Manual is the safe default while the pipeline is being proven out.
+    workflow_dispatch:
+    # Once trusted, publish on every landed change to shared source or the
+    # mobile shell. The symlinked dirs live at the repo root, so a shared-code
+    # change anywhere can move the mobile build — hence the broad path set.
+    push:
+        branches:
+            - main
+        paths:
+            - 'app/**'
+            - 'Modules/**'
+            - 'resources/**'
+            - 'routes/**'
+            - 'config/**'
+            - 'database/**'
+            - 'public/**'
+            - 'mobile-app/**'
+            - '.github/workflows/mobile-bifrost-publish.yml'
+
+# This job reads the monorepo; the push to the build repo authenticates with
+# BIFROST_BUILD_TOKEN, not the workflow token.
+permissions:
+    contents: read
+
+concurrency:
+    # A newer publish supersedes an in-flight one — the build repo only ever
+    # wants the latest materialized tree.
+    group: mobile-bifrost-publish
+    cancel-in-progress: true
+
+jobs:
+    publish:
+        name: materialize and publish
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        # Skip on forks: the token is not available and the push would fail.
+        if: github.repository == 'beatrax-app/beatrax' && vars.BIFROST_BUILD_REPO != ''
+        env:
+            TZ: Europe/Amsterdam
+        steps:
+            - name: Check out the monorepo
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            # Public assets are served on-device, so the materialized tree must
+            # carry a built public/build/. Drop this step only if Bifrost's
+            # container builds the frontend itself.
+            - name: Set up Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+
+            - name: Build frontend assets
+              run: |
+                  npm ci
+                  npm run build
+
+            - name: Materialize the mobile shell
+              run: mobile-app/scripts/materialize.sh "${RUNNER_TEMP}/mobile-build"
+
+            # Check out the build repo alongside, preserving its history, then
+            # mirror the materialized tree into it. --delete keeps the build
+            # repo an exact reflection (dropping files removed upstream) while
+            # leaving its .git intact.
+            - name: Check out the build repo
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: ${{ vars.BIFROST_BUILD_REPO }}
+                  token: ${{ secrets.BIFROST_BUILD_TOKEN }}
+                  path: build-repo
+
+            - name: Sync materialized tree into the build repo
+              run: |
+                  rsync -a --delete \
+                      --exclude='/.git/' \
+                      "${RUNNER_TEMP}/mobile-build/" build-repo/
+
+            - name: Commit and push if changed
+              working-directory: build-repo
+              run: |
+                  git config user.name  "beatrax-ci"
+                  git config user.email "ci@nightworks.io"
+                  if git diff --quiet && git diff --cached --quiet; then
+                      echo "No change in materialized tree — nothing to publish."
+                      exit 0
+                  fi
+                  git add -A
+                  git commit -m "chore(mobile): materialize ${GITHUB_SHA::12} from beatrax monorepo"
+                  git push
