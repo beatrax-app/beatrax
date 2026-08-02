@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Support\Fmt')
 {{-- /inboxes page (D-124 / D-127).
 
      Renders the empty-state hero when no inboxes are connected and
@@ -53,7 +54,7 @@
                 <div class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-300">
                     <span>
                         {{ Lang::get('email-scan::inboxes.backfilling') }} {{ $inbox->provider === \Modules\EmailScan\Public\Enums\MailProvider::Gmail->value ? 'Gmail' : 'Microsoft 365' }} ({{ $inbox->email }}):
-                        <span style="font-variant-numeric: tabular-nums;">{{ number_format($inbox->backfillFetchedCount) }} / ~{{ number_format($inbox->backfillTotalEstimated ?? 0) }}</span>
+                        <span style="font-variant-numeric: tabular-nums;">{{ Fmt::number((int) $inbox->backfillFetchedCount) }} / ~{{ Fmt::number((int) ($inbox->backfillTotalEstimated ?? 0)) }}</span>
                         {{ Lang::get('email-scan::inboxes.messages_suffix') }}
                     </span>
                 </div>

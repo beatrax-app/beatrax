@@ -123,7 +123,7 @@
                                 >{{ Lang::get('chains::index.open_to_row') }}</a>
                             </p>
                             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {{ $chain->fromPostedAt->format('d M Y') }} → {{ $chain->toPostedAt->format('d M Y') }}
+                                {{ $chain->fromPostedAt->translatedFormat('d M Y') }} → {{ $chain->toPostedAt->translatedFormat('d M Y') }}
                             </p>
                         </div>
                         <span

@@ -94,7 +94,7 @@
                                 <p class="secondary mt-0.5 truncate">
                                     {{ $row->cadence->label() }}
                                     @if ($row->nextExpectedAt)
-                                        · {{ $row->nextExpectedAt->format('d M Y') }}
+                                        · {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                     @endif
                                     @if ($row->latestFundingChainLinkId !== null)
                                         · {{ Lang::get('recurring::index.chain') }}
@@ -131,7 +131,7 @@
                                     >
                                         {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
-                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->format('d M Y') }}
+                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                         @endif
                                     </p>
                                 </div>
@@ -171,7 +171,7 @@
                                 <p class="secondary mt-0.5 truncate">
                                     {{ $row->cadence->label() }}
                                     @if ($row->nextExpectedAt)
-                                        · {{ $row->nextExpectedAt->format('d M Y') }}
+                                        · {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                     @endif
                                 </p>
                             </div>
@@ -205,7 +205,7 @@
                                     >
                                         {{ $row->cadence->label() }}
                                         @if ($row->nextExpectedAt)
-                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->format('d M Y') }}
+                                            · {{ Lang::get('recurring::index.next') }} {{ $row->nextExpectedAt->translatedFormat('d M Y') }}
                                         @endif
                                     </p>
                                 </div>

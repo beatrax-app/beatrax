@@ -68,7 +68,7 @@
             $metadata = is_array($alert->metadata) ? $alert->metadata : [];
             $timestamp = isset($metadata['timestamp']) && is_string($metadata['timestamp'])
                 ? $metadata['timestamp']
-                : $alert->created_at->format('d M Y · H:i');
+                : $alert->created_at->translatedFormat('d M Y · H:i');
             $suspectPath = isset($metadata['suspect_path']) && is_string($metadata['suspect_path']) && $metadata['suspect_path'] !== ''
                 ? basename($metadata['suspect_path'])
                 : null;
