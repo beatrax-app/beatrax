@@ -64,7 +64,11 @@ final class EcbRateProvider implements RateProvider
     private function parse(string $body): array
     {
         try {
-            $xml = new SimpleXMLElement($body);
+            // LIBXML_NONET | LIBXML_NOCDATA: the feed needs no external
+            // resource to parse, so any entity reaching out over the network
+            // is hostile. Matches the entity hardening Camt053Adapter applies
+            // to the other XML the app ingests.
+            $xml = new SimpleXMLElement($body, LIBXML_NONET | LIBXML_NOCDATA);
         } catch (\Throwable $e) {
             throw new RateFetchException('ECB XML parse failed: '.$e->getMessage(), 0, $e);
         }

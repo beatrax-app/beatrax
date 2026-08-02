@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -24,8 +27,17 @@ final class CommandArgPromptModal extends Component
 {
     use DispatchesToast;
 
+    // #[Locked] — $command selects which registry entry (and therefore which
+    // tier and arg rules) submit() resolves. Only the open() listener may set
+    // it; letting the client swap it after the modal is populated would
+    // decouple the spawn from the entry the user was shown.
+    #[Locked]
     public string $command = '';
 
+    // #[Locked] for the same reason, though nothing authorises on it —
+    // submit() re-derives the tier from the registry rather than trusting
+    // this. It exists to render the destructive-tier warning copy.
+    #[Locked]
     public string $claimedTier = 'safe';
 
     // Values arrive as strings (Livewire wire:model binds <input> here);
@@ -76,6 +88,7 @@ final class CommandArgPromptModal extends Component
         DevCommandRegistry $registry,
         CommandSpawner $spawner,
         CurrentUser $user,
+        ValidatorFactory $validator,
     ): void {
         $this->submitError = '';
 
@@ -132,6 +145,14 @@ final class CommandArgPromptModal extends Component
             $args[$arg->name] = $value;
         }
 
+        // The same per-arg rules guard both spawn controllers apply — the
+        // third check alongside the registry whitelist and escapeshellarg.
+        // $values is client-supplied, so without this an `in:`/`max:` rule
+        // is enforced nowhere on the Livewire path.
+        if (! $this->argsSatisfyRules($spec, $args, $validator)) {
+            return;
+        }
+
         // Spawn directly via CommandSpawner rather than dispatching a
         // `spawn-command` event: ArtisanRunnerPage is not always
         // mounted (e.g. on /dev/logs, /dev/queue), so an event-only
@@ -169,6 +190,38 @@ final class CommandArgPromptModal extends Component
             'spec' => $spec,
             'argSchema' => $spec instanceof CommandSpec ? $spec->argsSchema : [],
         ]);
+    }
+
+    // Mirrors the ArgSpec::$rules validation both spawn controllers run.
+    // A violation is surfaced as $submitError rather than rethrown: the
+    // modal has no field-level error slots, and an uncaught
+    // ValidationException here would blank the form the user is mid-edit on.
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    private function argsSatisfyRules(CommandSpec $spec, array $args, ValidatorFactory $validator): bool
+    {
+        if ($spec->argsSchema === []) {
+            return true;
+        }
+
+        $argRules = [];
+        foreach ($spec->argsSchema as $argSpec) {
+            $argRules['args.'.$argSpec->name] = $argSpec->rules;
+        }
+
+        try {
+            $validator->make(['args' => $args], $argRules)->validate();
+        } catch (ValidationException $e) {
+            $first = $e->validator->errors()->first();
+            $this->submitError = $first !== ''
+                ? $first
+                : Lang::get('dev::arg_prompt.errors.invalid_args');
+
+            return false;
+        }
+
+        return true;
     }
 
     /**

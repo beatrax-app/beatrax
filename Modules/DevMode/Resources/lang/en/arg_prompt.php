@@ -15,6 +15,7 @@ return [
     'errors' => [
         'unknown_command' => 'Unknown command: :command',
         'missing' => 'Missing :noun: :list',
+        'invalid_args' => 'One or more arguments are invalid.',
         'arg_singular' => 'argument',
         'arg_plural' => 'arguments',
     ],

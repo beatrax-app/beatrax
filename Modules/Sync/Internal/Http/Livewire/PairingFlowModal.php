@@ -50,6 +50,11 @@ final class PairingFlowModal extends Component
 
     public string $wordCode = '';
 
+    // #[Locked] — the pairing view raw-echoes this with {!! !!} because an
+    // inline SVG cannot be escaped. That is only safe while the markup is
+    // server-built: an unlocked public property is rehydrated from the
+    // client payload on every request, which would make it an XSS sink.
+    #[Locked]
     public string $qrSvg = '';
 
     public int $expiresInSeconds = 600;

@@ -11,8 +11,11 @@ use Modules\DevMode\Internal\System\ConfigFlattener;
  * Covers:
  *   - flatten() walks nested arrays into dot-keys.
  *   - redactSecretSuffixes() masks values for keys matching the
- *     denylist (*password*, *secret*, *key, *token*) with
- *     [REDACTED].
+ *     denylist (*password*, *passphrase*, *secret*, *token*,
+ *     *credential*, *key, *keys) with [REDACTED].
+ *   - The plural `keys` suffix specifically, so Laravel's
+ *     app.previous_keys retired-APP_KEY list cannot render in the
+ *     clear on /dev/system.
  *   - Non-matching keys keep their plain value (e.g.
  *     BEATRAX_DEV_MODE, BEATRAX_RUNTIME).
  *   - Empty / nested / scalar-leaf shapes handled.
@@ -94,6 +97,41 @@ it('returns empty array when given an empty config', function (): void {
 
     expect($flattener->flatten([]))->toBe([]);
     expect($flattener->redactSecretSuffixes([]))->toBe([]);
+});
+
+it('masks app.previous_keys — the retired APP_KEY list still decrypts data at rest', function (): void {
+    $flattener = new ConfigFlattener;
+
+    // The singular-suffix check alone cannot catch this: 'app.previous_keys'
+    // does not end in 'key'. Exercised through flatten() as well as
+    // redactSecretSuffixes() because a scalar list is json_encode'd into a
+    // single leaf, which is exactly the shape that leaked.
+    $flat = $flattener->flatten([
+        'app' => [
+            'key' => 'base64:current=',
+            'previous_keys' => ['base64:retired-one=', 'base64:retired-two='],
+        ],
+    ]);
+
+    $redacted = $flattener->redactSecretSuffixes($flat);
+
+    expect($redacted['app.previous_keys'])->toBe('[REDACTED]');
+    expect($redacted['app.key'])->toBe('[REDACTED]');
+});
+
+it('masks passphrase and credential keys the singular suffixes miss', function (): void {
+    $flattener = new ConfigFlattener;
+
+    $redacted = $flattener->redactSecretSuffixes([
+        'backup.passphrase' => 'correct horse battery staple',
+        'sync.relay_credentials' => 'user:pass',
+        'app.kind' => 'desktop',
+    ]);
+
+    expect($redacted['backup.passphrase'])->toBe('[REDACTED]');
+    expect($redacted['sync.relay_credentials'])->toBe('[REDACTED]');
+    // A benign key that merely looks close to the denylist stays readable.
+    expect($redacted['app.kind'])->toBe('desktop');
 });
 
 it('redacts case-insensitively (Auth APP_KEY masks just like app.key)', function (): void {

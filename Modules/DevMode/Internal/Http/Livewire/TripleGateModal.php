@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\DevMode\Internal\Services\DevModeFlag;
@@ -17,11 +18,17 @@ use Modules\DevMode\Internal\Services\DevModeFlag;
  */
 final class TripleGateModal extends Component
 {
+    // #[Locked] on both — the typed-name gate is a confirmation that THIS
+    // command runs with THESE args. Only the open() listener may set them;
+    // a client that could rewrite them between open() and confirm() would
+    // keep the ceremony while swapping what it authorises.
+    #[Locked]
     public string $command = '';
 
     /**
      * @var array<string, mixed>
      */
+    #[Locked]
     public array $resolvedArgs = [];
 
     public string $typed = '';
