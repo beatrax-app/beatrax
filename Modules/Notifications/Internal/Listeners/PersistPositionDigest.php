@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Notifications\Internal\Listeners;
 
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Notifications\Internal\Support\DeterministicKeyDeriver;
+use Modules\Notifications\Internal\Support\NotificationCopyRenderer;
 use Modules\Notifications\Internal\Support\NotificationDraft;
 use Modules\Notifications\Internal\Support\NotificationWriter;
-use Modules\Notifications\Public\NotificationCopy;
 use Modules\Position\Public\Dto\PositionSummaryDto;
 use Modules\Position\Public\Events\PositionDigestDue;
 use Psr\Log\LoggerInterface;
@@ -24,21 +25,25 @@ final class PersistPositionDigest
         private readonly NotificationWriter $writer,
         private readonly UrlGenerator $urls,
         private readonly LoggerInterface $log,
+        private readonly NotificationCopyRenderer $copyRenderer,
     ) {}
 
     public function handle(PositionDigestDue $event): void
     {
         try {
-            $this->writer->write(new NotificationDraft(
+            $draft = $this->copyRenderer->forUser($event->userId, fn (): NotificationDraft => new NotificationDraft(
                 userId: $event->userId,
                 triggerType: DeterministicKeyDeriver::TRIGGER_POSITION_DIGEST,
                 subjectKey: 'position',
                 occurrence: $event->occurrence,
-                title: NotificationCopy::positionDigestTitle($event->cadence),
+                title: $event->cadence === 'daily'
+                    ? Lang::get('notifications::copy.title.position_digest_daily')
+                    : Lang::get('notifications::copy.title.position_digest_weekly'),
                 body: $this->composeBody($event->position),
                 params: ['target_kind' => 'dashboard'],
                 deepLinkRoute: $this->urls->route('dashboard'),
             ));
+            $this->writer->write($draft);
         } catch (Throwable $e) {
             // Swallow - a failed persist must never break the
             // originating digest job run.
@@ -64,15 +69,14 @@ final class PersistPositionDigest
             && ! $position->shortfallAhead;
 
         if ($nothingNotable) {
-            return 'Nothing needs your attention.';
+            return Lang::get('notifications::copy.digest.nothing_notable');
         }
 
-        $parts = [sprintf(
-            'In %s, out %s, net %s.',
-            $summary->inflow->format(),
-            $summary->outflow->format(),
-            $summary->net->format(),
-        )];
+        $parts = [Lang::get('notifications::copy.digest.flow', [
+            'in' => $summary->inflow->format(),
+            'out' => $summary->outflow->format(),
+            'net' => $summary->net->format(),
+        ])];
 
         if ($position->budgets !== []) {
             $overBudgetMinor = 0;
@@ -84,17 +88,19 @@ final class PersistPositionDigest
                 }
             }
             if ($overBudgetMinor > 0) {
-                $parts[] = sprintf('%s over budget so far.', Money::ofMinor($overBudgetMinor, $currency)->format());
+                $parts[] = Lang::get('notifications::copy.digest.over_budget', ['amount' => Money::ofMinor($overBudgetMinor, $currency)->format()]);
             }
         }
 
         if ($position->upcoming !== []) {
             $count = count($position->upcoming);
-            $parts[] = $count === 1 ? '1 payment due this period.' : $count.' payments due this period.';
+            $parts[] = $count === 1
+                ? Lang::get('notifications::copy.digest.payments_due_one')
+                : Lang::get('notifications::copy.digest.payments_due_other', ['count' => $count]);
         }
 
         if ($position->shortfallAhead) {
-            $parts[] = 'A cash-flow shortfall is ahead.';
+            $parts[] = Lang::get('notifications::copy.digest.shortfall');
         }
 
         return implode(' ', $parts);
