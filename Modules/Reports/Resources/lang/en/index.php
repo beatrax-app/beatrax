@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Reports',
-    'saved_report_one' => 'saved report',
-    'saved_report_other' => 'saved reports',
+    'saved_report' => 'saved report|saved reports',
     'pinned_count' => 'pinned',
     'dismiss' => 'Dismiss',
 

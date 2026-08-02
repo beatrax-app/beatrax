@@ -17,7 +17,7 @@
             {{ Lang::get('reports::index.title') }}
         </h1>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
-            <span style="font-variant-numeric: tabular-nums;">{{ $rows->count() }}</span> {{ $rows->count() === 1 ? Lang::get('reports::index.saved_report_one') : Lang::get('reports::index.saved_report_other') }} · <span style="font-variant-numeric: tabular-nums;">{{ $pinnedCount }}/3</span> {{ Lang::get('reports::index.pinned_count') }}
+            <span style="font-variant-numeric: tabular-nums;">{{ $rows->count() }}</span> {{ Lang::choice('reports::index.saved_report', $rows->count()) }} · <span style="font-variant-numeric: tabular-nums;">{{ $pinnedCount }}/3</span> {{ Lang::get('reports::index.pinned_count') }}
         </p>
     </header>
 

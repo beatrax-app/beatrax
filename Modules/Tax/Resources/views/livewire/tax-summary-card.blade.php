@@ -46,7 +46,7 @@
             {{ $fmtEur($total ?? 0) }}
         </p>
         <p style="margin-top: 2px; font-size: var(--text-xs); color: var(--color-text-muted);">
-            {{ $count === 1 ? Lang::get('tax::summary.tagged_one', ['count' => $count]) : Lang::get('tax::summary.tagged_other', ['count' => $count]) }}
+            {{ Lang::choice('tax::summary.tagged', $count, ['count' => $count]) }}
         </p>
     @endif
 </a>
