@@ -32,96 +32,96 @@
 
     <div class="side-section-label">THIS MONTH</div>
     
-    <a href="https://beatrax.test" class="side-item ">
+    <a href="https://beatrax.test" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">◆</span>
         Dashboard
     </a>
-    <a href="https://beatrax.test/transactions" class="side-item ">
+    <a href="https://beatrax.test/transactions" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">≡</span>
         Transactions
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
-    <a href="https://beatrax.test/forecast" class="side-item ">
+    <a href="https://beatrax.test/forecast" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">↗</span>
         Forecasts
     </a>
-    <a href="https://beatrax.test/calendar" class="side-item ">
+    <a href="https://beatrax.test/calendar" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">▦</span>
         Calendar
     </a>
 
     <div class="side-section-label">MONEY</div>
-    <a href="https://beatrax.test/recurring" class="side-item ">
+    <a href="https://beatrax.test/recurring" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">↻</span>
         Recurring
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/counterparties" class="side-item ">
+    <a href="https://beatrax.test/counterparties" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">◉</span>
         Counterparties
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/counterparties/triage" class="side-item ">
+    <a href="https://beatrax.test/counterparties/triage" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">❋</span>
         Triage
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/chains" class="side-item ">
+    <a href="https://beatrax.test/chains" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⇉</span>
         Chains
     </a>
-    <a href="https://beatrax.test/drift" class="side-item ">
+    <a href="https://beatrax.test/drift" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⚠</span>
         Drift Alerts
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/drift?type=anomaly" class="side-item">
+    <a href="https://beatrax.test/drift?type=anomaly" wire:navigate class="side-item">
         <span class="ic" aria-hidden="true">◬</span>
         Unusual charges
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/notifications" class="side-item ">
+    <a href="https://beatrax.test/notifications" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">◈</span>
         Notifications
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
-    <a href="https://beatrax.test/budgets" class="side-item ">
+    <a href="https://beatrax.test/budgets" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/tax" class="side-item ">
+    <a href="https://beatrax.test/tax" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⊞</span>
         Tax
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
-    <a href="https://beatrax.test/goals" class="side-item ">
+    <a href="https://beatrax.test/goals" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">◎</span>
         Goals
     </a>
-    <a href="https://beatrax.test/pots" class="side-item ">
+    <a href="https://beatrax.test/pots" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">◫</span>
         Pots
     </a>
     
-    <a href="https://beatrax.test/reports" class="side-item ">
+    <a href="https://beatrax.test/reports" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">▤</span>
         Reports
     </a>
     
-    <a href="https://beatrax.test/reconcile" class="side-item ">
+    <a href="https://beatrax.test/reconcile" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">✓</span>
         Reconcile
     </a>
-    <a href="https://beatrax.test/drift/watch" class="side-item ">
+    <a href="https://beatrax.test/drift/watch" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">↗</span>
         Subscriptions
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
 
     <div class="side-section-label">INGESTION</div>
-    <a href="https://beatrax.test/imports/new" class="side-item ">
+    <a href="https://beatrax.test/imports/new" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⊕</span>
         Imports
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/migrations" class="side-item ">
+    <a href="https://beatrax.test/migrations" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⇄</span>
         Import from YNAB / Actual
     </a>
@@ -129,22 +129,22 @@
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
     </a>
-    <a href="https://beatrax.test/cash" class="side-item ">
+    <a href="https://beatrax.test/cash" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">€</span>
         Cash book
     </a>
-    <a href="https://beatrax.test/inboxes" class="side-item ">
+    <a href="https://beatrax.test/inboxes" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">✉</span>
         Email
     </a>
-    <a href="https://beatrax.test/uncategorized" class="side-item ">
+    <a href="https://beatrax.test/uncategorized" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⌕</span>
         Categorization
     </a>
 
     <div class="side-section-label">SETTINGS</div>
     
-    <a href="https://beatrax.test/sync" class="side-item ">
+    <a href="https://beatrax.test/sync" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -152,7 +152,7 @@
         </span>
         Sync
     </a>
-    <a href="https://beatrax.test/settings" class="side-item ">
+    <a href="https://beatrax.test/settings" wire:navigate class="side-item ">
         <span class="ic" aria-hidden="true">⚙</span>
         Settings
     </a>

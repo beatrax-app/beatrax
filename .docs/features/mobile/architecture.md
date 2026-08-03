@@ -51,16 +51,34 @@ scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
 stops when the page is backgrounded rather than holding the camera open
 behind a backgrounded finance app.
 
-**Known upstream behaviour — cold start signs the user out.** The generated
-Android shell's `MainActivity.initializeEnvironment()` calls `clearAllCookies()`
-(`CookieManager.removeAllCookies`) on every process start. The Laravel session
-cookie goes with it, so a cold launch always lands on `/login` even though the
-session row is still valid in the on-device database. A warm resume keeps the
-cookie and returns to wherever the user was. This lives in
-`nativephp/android/**/MainActivity.kt`, which `native:install` regenerates, so
-it is not patchable from this repository — it needs an upstream change or a
-scaffold-patch script of the kind `scripts/nativephp_*.php` already applies on
-the Electron side.
+**The generated shell needs two patches, applied from the mobile root's
+`post-update-cmd`.** `native:install` regenerates the Android tree, so neither
+is hand-edited; both are idempotent and fail loudly if their anchor moves.
+
+- `nativephp_grant_webview_camera.php` adds the missing `onPermissionRequest`
+  override so the in-page scanner can obtain a camera. Video capture only.
+- `nativephp_keep_webview_cookies.php` removes the `clearAllCookies()` call
+  from `MainActivity.initializeEnvironment()`. It ran on every process start
+  and took the Laravel session cookie with it, so each cold launch — and
+  Android kills a backgrounded process routinely — landed on `/login` despite
+  a valid session row on-device. The app-lock, not cookie lifetime, is the
+  security boundary here. `clearAllCookies()` itself is left in place for
+  callers that genuinely want a clean jar.
+
+`composer native:patch` runs both on demand.
+
+## Navigation
+
+Sidebar entries carry `wire:navigate`. Without it every tap was a full page
+load: a Laravel boot through the persistent runtime, the layout's nine
+Livewire mounts, and a re-parse of the whole asset bundle — which is what made
+the phone feel slow and made the hardware back button, which is wired
+correctly in the shell, feel broken. Measured on a device after the change, a
+drawer tap produces zero full document loads.
+
+Alpine stores survive a `wire:navigate` swap, so the drawer had to be closed
+explicitly on `livewire:navigated` — otherwise it stayed open over the page it
+had just navigated to.
 
 ## First launch and route gating
 

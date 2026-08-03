@@ -172,6 +172,14 @@ document.addEventListener('alpine:init', () => {
             toggle() { this.drawerOpen = !this.drawerOpen; },
         });
 
+        // Alpine stores survive a wire:navigate page swap, so a drawer opened
+        // to tap a nav link would still be open on the page it navigated to,
+        // covering it. Close on arrival — the destination is what the user
+        // asked for, not the menu they used to get there.
+        document.addEventListener('livewire:navigated', () => {
+            window.Alpine.store('mobileNav').close();
+        });
+
         // Platform detection for ⌘K vs Ctrl+K labels (Phase 4, D-04).
         // Uses the modern userAgentData API first (Chromium 90+), falls back
         // to the legacy navigator.platform string for Safari + Firefox.
