@@ -60,5 +60,7 @@
                 {{ Lang::get('auth::login.lost_password') }}
             </a>
         </p>
+
+        <x-core::locale-switcher />
     </div>
 </div>

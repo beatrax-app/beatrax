@@ -135,6 +135,14 @@
         "analyse": "phpstan analyse --memory-limit=1G",
         "format": "pint",
         "format:check": "pint --test",
+        "dev:seed": [
+            "@php artisan migrate --force",
+            "@php artisan demo:seed --reset"
+        ],
+        "dev:serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -k -c \"#93c5fd,#c4b5fd\" \"php artisan serve --host=127.0.0.1 --port=8000\" \"npm run dev\" --names=app,vite"
+        ],
         "check:paths": "bash bin/check-paths.sh",
         "native:dev": [
             "Composer\\Config::disableProcessTimeout",

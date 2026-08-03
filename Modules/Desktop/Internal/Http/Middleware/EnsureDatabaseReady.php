@@ -29,6 +29,9 @@ final class EnsureDatabaseReady
         'sw',
         'site.webmanifest',
         'pwa.icon',
+        // The guest language switch has to work on the very first screen a
+        // fresh install shows, which is the one this gate redirects to.
+        'locale.switch',
     ];
 
     /** @var array<int, string> */

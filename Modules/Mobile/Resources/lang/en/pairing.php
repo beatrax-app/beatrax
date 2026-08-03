@@ -7,6 +7,8 @@ return [
 
     'scan_heading' => 'Pair this device',
     'scan_subtitle' => 'Point the camera at the code shown on the other device.',
+    'open_camera' => 'Open the camera',
+    'scan_prompt' => 'Scan the code on your other device',
     'enter_code_instead' => 'Enter code instead',
 
     'enter_heading' => 'Enter the code',

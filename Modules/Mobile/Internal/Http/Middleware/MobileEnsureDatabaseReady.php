@@ -30,6 +30,7 @@ final class MobileEnsureDatabaseReady
         'setup',
         'site.webmanifest',
         'pwa.icon',
+        'locale.switch',
     ];
 
     // The Livewire AJAX update endpoint must reach the signup form's

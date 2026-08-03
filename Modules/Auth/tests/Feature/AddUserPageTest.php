@@ -117,7 +117,7 @@ it('renders the add-user page for a developer', function (): void {
     $this->actingAs(developerCaller())->get('/settings/users/new')
         ->assertOk()
         ->assertSeeText('Add a user')
-        ->assertSeeText('Create an account for someone else on this machine. They will be asked to set their own password the first time they sign in.')
+        ->assertSeeText('Create an account for someone else on this device. They will be asked to set their own password the first time they sign in.')
         ->assertSeeText('Set initial password');
 });
 

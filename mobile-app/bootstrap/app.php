@@ -13,6 +13,7 @@ use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
+use Modules\Mobile\Internal\Http\Middleware\MobileEnsureImportCompleted;
 use Modules\Mobile\Internal\Spike\SpikeStoragePathCommand;
 use Modules\Mobile\Internal\Spike\SpikeSyncDialCommand;
 use Psr\Log\LoggerInterface;
@@ -41,8 +42,9 @@ use Psr\Log\LoggerInterface;
  * `/login` (Sign in) screen instead of a mobile first-run welcome surface.
  * `MobileEnsureDatabaseReady` (mobile-module-owned, collaborating with the
  * mobile-only `MobileFirstLaunchBootstrap`) closes that gap the same way
- * the desktop gate's fresh-install branch does — appended to the `web`
- * group below, running BEFORE route `auth` middleware.
+ * the desktop gate's fresh-install branch does — prepended to the `web`
+ * group below so it genuinely runs before route `auth` middleware; see the
+ * note at that call site for why appending did not.
  *
  * MOBILE FIRST-LAUNCH RECONCILE + MIGRATE-ON-LAUNCH (15-04 Task 2):
  * per 15-SPIKE-FINDINGS.md (Spike B, real-device run) the live SQLite
@@ -51,8 +53,14 @@ use Psr\Log\LoggerInterface;
  * two divergent, both-unmigrated DB files, which is why the app 500s on
  * `no such table: sessions`. The `->booted()` hook is the PROVEN on-device
  * attach point (the entire Spike B run fired from it); it is guarded on
- * `getenv('NATIVEPHP_PLATFORM') !== false` so it is a no-op under the
- * desktop root / host dev environment. Provisioning goes through the
+ * `UserDataPathService::isMobileRuntime()` so it is a no-op under the
+ * desktop root / host dev environment.
+ *
+ * That guard used to be a bare `getenv('NATIVEPHP_PLATFORM')`, which is
+ * false on a real device — the runtime injects the value as a server/env
+ * const, not through putenv(). The whole hook silently no-opped on
+ * Android: `storage/framework` stayed empty and none of the session /
+ * cache / view reconciliation below ever ran. Provisioning goes through the
  * framework `Migrator` (via `MobileFirstLaunchBootstrap`) — NEVER a
  * shelled-out `sqlite3` binary, which Spike B confirmed is absent
  * on-device. A migrate failure is logged and swallowed — a boot-time
@@ -84,14 +92,31 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(LoopbackOnly::class);
         $middleware->append(NoStoreFinancialData::class);
-        // First-launch fresh-install gate (15-onboarding mobile mirror of
-        // the desktop EnsureDatabaseReady welcome branch). Appended to the
-        // `web` group so it runs BEFORE route `auth` middleware: a 0-user
-        // device is redirected to `mobile.welcome` instead of throwing
-        // AuthenticationException → `/login`. The middleware itself
-        // exempts welcome/signup/pair/setup so the redirect cannot loop.
+        // First-launch fresh-install gate (the mobile mirror of the desktop
+        // EnsureDatabaseReady welcome branch): a 0-user device is redirected
+        // to `mobile.welcome` instead of throwing AuthenticationException →
+        // `/login`. The middleware itself exempts welcome/signup/pair/setup
+        // so the redirect cannot loop.
+        //
+        // PREPENDED, not appended. Appending puts it last in the group, but
+        // list order is not run order: SortedMiddleware re-sorts against the
+        // framework priority list, and Authenticate implements
+        // AuthenticatesRequests, so it gets hoisted ahead of anything
+        // unlisted that sits after it — which left this gate running after
+        // the very middleware it exists to pre-empt. Prepending is stable
+        // because non-priority middleware are never moved by that sort, and
+        // the gate reads only the matched route name plus the database, so
+        // it needs nothing StartSession sets up.
+        $middleware->prependToGroup('web', MobileEnsureDatabaseReady::class);
+
+        // Unfinished-import gate. Appended, not prepended: unlike the gate
+        // above it needs an authenticated user, so it must run AFTER
+        // Authenticate rather than before it. A device that created its
+        // account through the import bootstrap and then quit had no route
+        // back into pairing - isFreshInstall() is false forever once a user
+        // exists, so it simply landed on an empty dashboard.
         $middleware->web(append: [
-            MobileEnsureDatabaseReady::class,
+            MobileEnsureImportCompleted::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -131,9 +156,9 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->booted(function (Application $app): void {
-        if (getenv('NATIVEPHP_PLATFORM') === false) {
+        if (! UserDataPathService::isMobileRuntime()) {
             // Not the mobile runtime (desktop root / host dev / test) —
-            // no-op. The single reliable on-device signal per Spike B.
+            // no-op.
             return;
         }
 

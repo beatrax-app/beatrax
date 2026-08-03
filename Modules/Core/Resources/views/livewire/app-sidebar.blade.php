@@ -301,9 +301,11 @@
                         Follows the same Js::from() pattern as the palette hint above
                         (CR-02) to keep raw Mac glyphs out of the server-rendered HTML.
                         Alpine evaluates x-text client-side; SSR fallback text is Ctrl+.
+                        .hidden-touch for the same reason the palette hint carries it:
+                        a phone has no Ctrl key, so advertising the chord is noise.
                     --}}
                     <span
-                        class="kbd"
+                        class="kbd hidden-touch"
                         aria-hidden="true"
                         x-text="$store.platform.isMac ? '\u2318.' : 'Ctrl+.'"
                     >Ctrl+.</span>

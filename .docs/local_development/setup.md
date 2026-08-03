@@ -206,3 +206,25 @@ vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only
 `repo-root-only` marks assertions that resolve paths relative to the repository root —
 run from here they would look for `mobile-app/mobile-app/…`. The repo-root suite runs
 them; this one skips them.
+
+## A seeded environment to click through
+
+`demo:seed` stands up a realistic dataset — two users, five accounts, ~165
+transactions, plus chains, recurring series, forecasts, drift alerts, receipts,
+goals, pots, saved reports, anomalies and notifications — so every surface has
+something in it. Two composer scripts wrap the usual pair of steps:
+
+```sh
+composer dev:seed     # migrate, then (re)seed the demo dataset
+composer dev:serve    # php artisan serve on 127.0.0.1:8000 + vite in watch mode
+```
+
+`dev:seed` passes `--reset`, whose teardown is scoped to demo rows only — it
+never touches a real user you created by hand, so it is safe to re-run.
+
+Sign in as `demo-1@beatrax.local` with the password `demo-only`.
+
+`dev:serve` binds loopback rather than the `.test` host on purpose: `LoopbackOnly`
+rejects any request whose `SERVER_ADDR` is not a loopback address, and serving on
+127.0.0.1 is also the closest match to how the mobile shell reaches the app
+on-device.

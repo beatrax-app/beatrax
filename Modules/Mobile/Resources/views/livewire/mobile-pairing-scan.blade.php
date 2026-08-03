@@ -9,16 +9,13 @@
     mobile-lock-screen.blade.php already duplicated lock-screen.blade.php's
     PIN-pad markup).
 
-    Camera view: full-bleed viewfinder inside a --color-surface-2 frame with
-    a corner-bracket overlay (1.5px stroke, currentColor). The REAL native
-    scan surface (`nativephp/mobile-scanner`'s camera view + its
-    `CodeScanned` event) is unreachable from the repo-root toolchain (only
-    mobile-app/vendor carries the plugin, 15-03-SUMMARY.md) — this markup
-    renders the viewfinder frame and wires the Livewire call sites
-    (`submitCode`, `cameraDenied`) the native runtime is expected to invoke;
-    the actual on-device camera-permission/decode wiring is verified by a
-    manual on-device UAT pass (15-11), mirroring BiometricUnlockBridge's
-    identical "compile-correct, UAT-verified" precedent (15-06-SUMMARY.md).
+    Camera view: the frame below is a placeholder, not a preview. The real
+    scan surface is `nativephp/mobile-scanner`'s own full-screen activity,
+    launched through QrScanBridge::open() and closing back into this component
+    via the CodeScanned / ScannerCancelled events MobilePairingScan listens
+    for. The plugin lives only in mobile-app/vendor, so the repo-root
+    toolchain cannot resolve it — hence the runtime FQCN strings there and the
+    reflection-only signatures in tools/phpstan-stubs.
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <div class="max-w-lg mx-auto px-6 py-8 space-y-4" data-testid="mobile-pairing-scan" wire:key="pairing-step-{{ $step }}">
@@ -32,12 +29,16 @@
             <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
         @endif
 
-        {{-- Full-bleed 1:1 viewfinder — --color-surface-2 frame, corner-bracket
-             overlay (1.5px stroke, currentColor, slate-700/slate-300). No JS
-             QR-decode library — the native mobile-scanner plugin decodes and
-             the runtime is expected to call $wire.submitCode(payload) on a
-             successful frame, or $wire.cameraDenied() when the OS permission
-             is refused. --}}
+        {{-- Framing placeholder, not a live preview: the scanner plugin
+             presents its own full-screen camera activity, decodes there, and
+             dispatches CodeScanned / ScannerCancelled back into this
+             component.
+
+             Opened from the button below, never automatically: firing
+             startScan() from wire:init, x-init or livewire:initialized lands
+             while the component is still hydrating and comes back 404, which
+             paints an error modal over the page. From the button it returns
+             200 and the OS scanner launches. --}}
         <div
             class="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800"
             data-testid="qr-viewfinder"
@@ -50,10 +51,20 @@
             </svg>
         </div>
 
+        <button
+            type="button"
+            wire:click="startScan"
+            class="w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
+                   hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                   dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
+        >
+            {{ Lang::get('mobile::pairing.open_camera') }}
+        </button>
+
         <div class="text-center">
             <button
                 type="button"
-                wire:click="enterACode"
+                wire:click="useWordCode"
                 class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
                        focus:outline-none focus-visible:underline dark:text-slate-400"
             >

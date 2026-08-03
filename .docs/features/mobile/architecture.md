@@ -7,6 +7,47 @@ initial-sync gate, and an outbound-only LAN/relay sync transport. The
 phone never runs a listener or daemon — every native crossing is a single
 bounded operation that opens, does one thing, and closes.
 
+## Detecting the on-device runtime
+
+Every native-capability gate in this module — `QrScanBridge::isAvailable()`,
+`BiometricUnlockBridge`, `BiometricKeyVault`, `SecureStorageKeyCustodian`, the
+`KeyCustodian` binding in `MobileServiceProvider`, and the mobile root's
+`->booted()` reconciliation hook — asks `UserDataPathService::isMobileRuntime()`.
+
+It must not be a bare `getenv('NATIVEPHP_PLATFORM')`. The runtime injects that
+value as a server/env const rather than through `putenv()`, so `getenv()`
+returns `false` on a real device and every gate above silently reports
+"not mobile": the camera step never renders, biometric unlock is never offered,
+the Keychain custodian is never bound, and the boot hook that recreates
+`storage/framework` and re-points the session/cache/view config never runs. The
+symptom is not an error — it is a device that quietly behaves like a desktop.
+`platform()` therefore reads `$_SERVER` and `$_ENV` as well, and
+`isMobileRuntime()` keeps the structural fallback (the sibling `persisted_data`
+directory, which only NativePHP mobile provisions) for the config-load window
+where even those are not yet populated.
+
+**The scan trigger is a button, not an on-load call.** Firing `startScan()`
+automatically — from `wire:init`, `x-init` or `livewire:initialized` — returns
+404 on-device and paints an error modal over the page, because the call lands
+while the component is still hydrating. The same call from the button returns
+200 and launches the OS scanner, confirmed on a device: `nativephp_call()
+called with method: Scanner.Scan` followed by `ScannerCoordinator:
+proceedWithScanner - launching ScannerActivity`, with the localised
+`mobile::pairing.scan_prompt` reaching the native prompt. Camera-first is
+therefore expressed as the camera step being the default landing with the open
+as its primary action, not as an automatic launch.
+
+**Known upstream behaviour — cold start signs the user out.** The generated
+Android shell's `MainActivity.initializeEnvironment()` calls `clearAllCookies()`
+(`CookieManager.removeAllCookies`) on every process start. The Laravel session
+cookie goes with it, so a cold launch always lands on `/login` even though the
+session row is still valid in the on-device database. A warm resume keeps the
+cookie and returns to wherever the user was. This lives in
+`nativephp/android/**/MainActivity.kt`, which `native:install` regenerates, so
+it is not patchable from this repository — it needs an upstream change or a
+scaffold-patch script of the kind `scripts/nativephp_*.php` already applies on
+the Electron side.
+
 ## First launch and route gating
 
 `MobileFirstLaunchBootstrap` is the mobile mirror of the desktop

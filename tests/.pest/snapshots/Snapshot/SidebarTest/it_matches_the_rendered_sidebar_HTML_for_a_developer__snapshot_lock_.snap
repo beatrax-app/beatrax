@@ -169,7 +169,7 @@
                     Open Dev Console
                     
                     <span
-                        class="kbd"
+                        class="kbd hidden-touch"
                         aria-hidden="true"
                         x-text="$store.platform.isMac ? '\u2318.' : 'Ctrl+.'"
                     >Ctrl+.</span>
