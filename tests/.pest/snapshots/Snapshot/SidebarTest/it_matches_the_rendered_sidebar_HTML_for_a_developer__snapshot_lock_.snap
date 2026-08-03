@@ -24,7 +24,7 @@
         />
         
         <span
-            class="kbd hidden-touch"
+            class="kbd hidden-touch max-lg:hidden"
             aria-hidden="true"
             x-text="$store.platform.isMac ? '\u2318K' : 'Ctrl+K'"
         >Ctrl+K</span>
@@ -169,7 +169,7 @@
                     Open Dev Console
                     
                     <span
-                        class="kbd hidden-touch"
+                        class="kbd hidden-touch max-lg:hidden"
                         aria-hidden="true"
                         x-text="$store.platform.isMac ? '\u2318.' : 'Ctrl+.'"
                     >Ctrl+.</span>

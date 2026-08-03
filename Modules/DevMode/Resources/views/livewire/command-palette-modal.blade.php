@@ -110,7 +110,7 @@
                         </template>
                     </div>
 
-                    <span class="kbd" aria-hidden="true">esc</span>
+                    <span class="kbd hidden-touch max-lg:hidden" aria-hidden="true">esc</span>
                 </div>
 
                 <div class="palette-body flex min-h-[280px] max-h-[60vh] max-md:max-h-full max-md:flex-1">
@@ -277,7 +277,7 @@
                                     :class="'palette-source--' + hit.item.source"
                                     x-text="hit.item.source"
                                 ></span>
-                                <span class="kbd" aria-hidden="true">↩</span>
+                                <span class="kbd hidden-touch max-lg:hidden" aria-hidden="true">↩</span>
                             </div>
                         </template>
                         <template x-if="results.length === 0 && serverTransactionHits.length === 0">
@@ -286,7 +286,7 @@
                     </main>
                 </div>
 
-                <div class="palette-foot flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+                <div class="palette-foot hidden-touch max-lg:hidden flex items-center gap-3 px-4 py-2 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
                     <span><span class="kbd">↑</span><span class="kbd">↓</span> {{ Lang::get('dev::palette.foot_navigate') }}</span>
                     <span><span class="kbd">↩</span> {{ Lang::get('dev::palette.foot_select') }}</span>
                     <span><span class="kbd">esc</span> {{ Lang::get('dev::palette.foot_close') }}</span>

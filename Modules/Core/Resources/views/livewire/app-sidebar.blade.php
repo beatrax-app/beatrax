@@ -65,7 +65,7 @@
             x-text expression client-side; SSR fallback text is Ctrl+K.
         --}}
         <span
-            class="kbd hidden-touch"
+            class="kbd hidden-touch max-lg:hidden"
             aria-hidden="true"
             x-text="$store.platform.isMac ? '\u2318K' : 'Ctrl+K'"
         >Ctrl+K</span>
@@ -305,7 +305,7 @@
                         a phone has no Ctrl key, so advertising the chord is noise.
                     --}}
                     <span
-                        class="kbd hidden-touch"
+                        class="kbd hidden-touch max-lg:hidden"
                         aria-hidden="true"
                         x-text="$store.platform.isMac ? '\u2318.' : 'Ctrl+.'"
                     >Ctrl+.</span>
