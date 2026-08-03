@@ -2716,8 +2716,20 @@ td.date,
         display: none;
     }
 
+    /* The drawer panel is a fixed 100dvh slide-in, so the sidebar inside it
+       must size to the PANEL, not to the viewport. The base rule's
+       `height: 100vh` measured the full screen including the strip behind
+       the Android system bars, which pushed the tail of the nav list —
+       Cash book, Sign out — underneath them where it could not be reached.
+       `height: 100%` plus the safe-area insets keeps the whole list inside
+       the usable area, and the inherited `overflow-y: auto` lets it scroll
+       when it is still taller than the phone. */
     .drawer-container .side {
         display: flex;
+        height: 100%;
+        padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+        padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
     }
 }
 
