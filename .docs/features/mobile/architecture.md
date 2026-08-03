@@ -26,16 +26,30 @@ symptom is not an error — it is a device that quietly behaves like a desktop.
 directory, which only NativePHP mobile provisions) for the config-load window
 where even those are not yet populated.
 
-**The scan trigger is a button, not an on-load call.** Firing `startScan()`
-automatically — from `wire:init`, `x-init` or `livewire:initialized` — returns
-404 on-device and paints an error modal over the page, because the call lands
-while the component is still hydrating. The same call from the button returns
-200 and launches the OS scanner, confirmed on a device: `nativephp_call()
-called with method: Scanner.Scan` followed by `ScannerCoordinator:
-proceedWithScanner - launching ScannerActivity`, with the localised
-`mobile::pairing.scan_prompt` reaching the native prompt. Camera-first is
-therefore expressed as the camera step being the default landing with the open
-as its primary action, not as an automatic launch.
+**The scan preview is in-page, not a separate activity.** The scanner
+plugin's own surface is a full-screen `ScannerActivity`, which over the
+pairing page reads as the app navigating somewhere else. The viewfinder frame
+therefore hosts the WebView's own camera (`getUserMedia`) and decodes with the
+platform `BarcodeDetector` — a browser API, never a bundled decode library —
+in the `beatraxInlineScanner` Alpine component. The plugin's activity remains
+the fallback via `QrScanBridge::open()` for any runtime offering neither, and
+both paths funnel into the same `submitCode()`.
+
+Android WebView refuses `getUserMedia` unless its `WebChromeClient` overrides
+`onPermissionRequest`, and the generated shell does not. It never denies
+either — the promise simply never settles — so the failure looks like a hang.
+`scripts/nativephp_grant_webview_camera.php` injects that override, admitting
+video capture only and denying every other resource. `native:install`
+regenerates the shell, so the patch runs from the mobile root's
+`post-update-cmd` (and `composer native:patch` on demand); it is idempotent
+and fails loudly if the anchor moves, because a silently unpatched shell
+degrades to exactly the behaviour it exists to fix.
+
+The camera is never opened on load — only from the button. A preview that
+starts on page render is a privacy surprise, and the user has not asked to
+scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
+stops when the page is backgrounded rather than holding the camera open
+behind a backgrounded finance app.
 
 **Known upstream behaviour — cold start signs the user out.** The generated
 Android shell's `MainActivity.initializeEnvironment()` calls `clearAllCookies()`

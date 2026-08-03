@@ -87,6 +87,13 @@
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "Google\\Task\\Composer::cleanup",
             "@php artisan package:discover --ansi"
+        ],
+        "post-update-cmd": [
+            "@php artisan native:install --force --quiet --publish",
+            "@php ../scripts/nativephp_grant_webview_camera.php"
+        ],
+        "native:patch": [
+            "@php ../scripts/nativephp_grant_webview_camera.php"
         ]
     },
     "extra": {
@@ -117,11 +124,13 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "repositories": [{
-        "name": "nativephp-plugins",
-        "type": "composer",
-        "url": "https://plugins.nativephp.com"
-    }],
+    "repositories": [
+        {
+            "name": "nativephp-plugins",
+            "type": "composer",
+            "url": "https://plugins.nativephp.com"
+        }
+    ],
     "require-dev": {
         "fakerphp/faker": "^1.23",
         "mockery/mockery": "^1.6",

@@ -55,9 +55,114 @@ window.beatraxApplyChartTheme = function (options) {
 // Phase 4 additions inside the same alpine:init handler:
 //   - mobileNav store: drawer open/close/toggle for the mobile shell (D-01)
 //   - platform store: detects macOS for ⌘K vs Ctrl+K kbd labels (D-04)
+/**
+ * In-page QR scanner for the mobile pairing screen.
+ *
+ * The scanner plugin's own surface is a separate full-screen activity, which
+ * over the pairing page reads as the app navigating away. This keeps the
+ * preview inside the viewfinder frame instead: the WebView's own camera via
+ * getUserMedia, decoded by the platform BarcodeDetector — a browser API, not
+ * a bundled decode library.
+ *
+ * Neither is guaranteed. When the WebView will not hand over a camera, or the
+ * runtime has no BarcodeDetector, probe() reports unsupported and toggle()
+ * defers to the plugin's full-screen scanner through $wire.startScan(), so
+ * the affordance never promises a preview it cannot deliver.
+ */
+function beatraxInlineScanner($wire) {
+    return {
+        live: false,
+        supported: false,
+        stream: null,
+        detector: null,
+        frame: null,
+
+        // Feature-detect only — deliberately does NOT open the camera. A
+        // preview that starts on page load is a privacy surprise, and on
+        // this screen the user has not asked to scan anything yet.
+        probe() {
+            this.supported = typeof window.BarcodeDetector === 'function'
+                && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        },
+
+        toggle() {
+            if (this.live) {
+                this.stop();
+                return;
+            }
+            if (!this.supported) {
+                // No in-page camera here — hand off to the native scanner.
+                $wire.startScan();
+                return;
+            }
+            this.start();
+        },
+
+        async start() {
+            try {
+                this.detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+                this.stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                });
+                this.$refs.preview.srcObject = this.stream;
+                await this.$refs.preview.play();
+                this.live = true;
+                this.tick();
+            } catch (e) {
+                // Permission refused, no camera, or the WebView never
+                // answered: fall back rather than strand the user staring at
+                // an empty frame.
+                this.stop();
+                this.supported = false;
+                $wire.startScan();
+            }
+        },
+
+        // requestAnimationFrame rather than setInterval so decoding stops
+        // when the page is backgrounded — a camera running behind a
+        // backgrounded finance app is exactly what the privacy veil exists
+        // to prevent.
+        tick() {
+            this.frame = requestAnimationFrame(async () => {
+                if (!this.live) return;
+                try {
+                    const codes = await this.detector.detect(this.$refs.preview);
+                    const hit = codes.find((c) => (c.rawValue || '').startsWith('beatrax://'));
+                    if (hit) {
+                        this.stop();
+                        $wire.submitCode(hit.rawValue);
+                        return;
+                    }
+                } catch (e) {
+                    // A single failed decode is normal (blurred frame);
+                    // keep looping rather than tearing the preview down.
+                }
+                this.tick();
+            });
+        },
+
+        stop() {
+            this.live = false;
+            if (this.frame) {
+                cancelAnimationFrame(this.frame);
+                this.frame = null;
+            }
+            if (this.stream) {
+                this.stream.getTracks().forEach((t) => t.stop());
+                this.stream = null;
+            }
+        },
+
+        destroy() {
+            this.stop();
+        },
+    };
+}
+
 document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);
+        window.Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
 
         // Mobile navigation drawer state (Phase 4, D-01)
         window.Alpine.store('mobileNav', {

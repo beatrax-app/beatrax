@@ -8,6 +8,9 @@ return [
     'scan_heading' => 'Koppel dit apparaat',
     'scan_subtitle' => 'Richt de camera op de code die op het andere apparaat wordt getoond.',
     'open_camera' => 'Camera openen',
+    'close_camera' => 'Camera sluiten',
+    'viewfinder_aria' => 'Camerabeeld — richt het op de code op je andere apparaat',
+    'viewfinder_idle' => 'De camera staat uit. Open hem om de code op je andere apparaat te scannen.',
     'scan_prompt' => 'Scan de code op je andere apparaat',
     'enter_code_instead' => 'Code invoeren in plaats daarvan',
 
