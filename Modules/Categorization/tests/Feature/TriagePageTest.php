@@ -11,6 +11,13 @@ use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
 
 beforeEach(function (): void {
+    // makeTriagePageTx() dates its rows in May 2026, and /transactions renders
+    // the `recent(daysBack: 90)` window rather than full history. With a live
+    // clock those rows leave the window on 2026-08-03 and the page assertion
+    // starts failing on a codebase nobody touched. Freeze the clock instead of
+    // relocating the fixtures, so the dates the other cases order on stay put.
+    $this->travelTo(CarbonImmutable::parse('2026-05-20 09:00:00'));
+
     $this->user = User::create([
         'username' => 'wessel',
         'password' => 'opensesame',
