@@ -14,6 +14,7 @@ use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureImportCompleted;
+use Modules\Mobile\Internal\NativeMobileAppServiceProvider;
 use Modules\Mobile\Internal\Spike\SpikeStoragePathCommand;
 use Modules\Mobile\Internal\Spike\SpikeSyncDialCommand;
 use Psr\Log\LoggerInterface;
@@ -208,6 +209,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $cfg->set('view.compiled', storage_path('framework/views'));
         $cfg->set('session.driver', 'database');
         $cfg->set('cache.default', 'database');
+
+        // (1c) Boot the mobile-native application provider. `config('nativephp.
+        // provider')` reads like the wiring for this, but that key belongs to
+        // nativephp/desktop — nativephp/mobile has never consulted it, in v3 or
+        // v4 — so the class it named booted nowhere and the mobile notification
+        // listener it subscribes was registered nowhere. Same proven on-device
+        // attach point as the reconciliation above; boot() try/catches its own
+        // steps, so a failure here cannot reach the shell.
+        if (class_exists(NativeMobileAppServiceProvider::class)) {
+            $app->make(NativeMobileAppServiceProvider::class)->boot();
+        }
 
         if (! class_exists(MobileFirstLaunchBootstrap::class)) {
             return;

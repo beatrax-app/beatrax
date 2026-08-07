@@ -381,8 +381,17 @@ around the `Route::get()` call itself. A Closure sidesteps both — the
 target FQCN is resolved via the container and invoked only when a real
 request reaches the route.
 
-`NativeMobileAppServiceProvider` is the NativePHP-mobile-booted
-application provider, an inverted skeleton of the desktop equivalent:
+`NativeMobileAppServiceProvider` is invoked from `mobile-app/bootstrap/app.php`'s
+`->booted()` hook, behind the same `isMobileRuntime()` guard as the storage
+reconciliation. It used to be named by a `provider` key in
+`mobile-app/config/nativephp.php`, which read like wiring but was not:
+`config('nativephp.provider')` is consulted by `nativephp/desktop` alone, and
+`nativephp/mobile` has never read it in either v3 or v4. So the provider booted
+nowhere, and `DispatchMobileNotification` — subscribed only from here, by design
+— was registered nowhere, which meant no mobile notification could ever be
+delivered on device. The dead key is gone; the `->booted()` call is the wiring.
+
+It is an inverted skeleton of the desktop equivalent:
 `boot()` must never keep a background listener alive across requests
 (neither iOS nor Android permit an always-on background process or
 inbound connections while backgrounded), so any dial-out trigger wired
