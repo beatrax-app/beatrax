@@ -26,6 +26,7 @@
         "amphp/socket": "*",
         "amphp/websocket-client": "*",
         "amphp/websocket-server": "*",
+        "beatrax/mobile-biometric-vault": "*",
         "brick/math": "^0.14",
         "brick/money": "^0.11",
         "doctrine/sql-formatter": "^1.5",
@@ -131,6 +132,13 @@
             "name": "nativephp-plugins",
             "type": "composer",
             "url": "https://plugins.nativephp.com"
+        },
+        {
+            "type": "path",
+            "url": "nativephp-plugins/biometric-vault",
+            "options": {
+                "symlink": true
+            }
         }
     ],
     "require-dev": {

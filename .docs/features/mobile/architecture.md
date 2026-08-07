@@ -192,7 +192,21 @@ either path — the PIN pad is always the fallback of last resort.
 `BiometricKeyVault` stores a biometric-wrapped copy of the data key in an
 enclave-gated entry (iOS `SecAccessControl(.biometryCurrentSet)`, Android
 Keystore `setUserAuthenticationRequired`) via the first-party
-`beatrax/mobile-biometric-vault` plugin. Enrollment is PIN-rooted:
+`beatrax/mobile-biometric-vault` plugin.
+
+That plugin lives in `mobile-app/nativephp-plugins/biometric-vault` and reaches
+the build through three separate steps, all of which are required and none of
+which implies the others: a Composer `path` repository plus a `require` entry
+(without it the `BiometricVault` facade is not autoloadable at all, and every
+`BiometricKeyVault` guard fails its `class_exists()` check and reports the
+vault as simply unavailable), an entry in `NativeServiceProvider::plugins()`
+(NativePHP treats that list as an opt-in security boundary — omitted, the
+Swift/Kotlin sources never compile in), and `native:plugin:register`. It
+carries an explicit `version` in its own `composer.json` because a path
+package otherwise takes the *current branch name* as its version, which pins
+the lockfile to whatever branch it was last resolved on.
+
+Enrollment is PIN-rooted:
 `ColdStartEnrollmentService::enroll()` re-verifies the PIN to obtain the
 live data key, wraps it into the enclave via the vault, and records the
 enrollment flag — every failure path (vault unavailable, wrong PIN,
