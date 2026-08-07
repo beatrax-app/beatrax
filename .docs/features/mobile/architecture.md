@@ -67,6 +67,15 @@ is hand-edited; both are idempotent and fail loudly if their anchor moves.
 
 `composer native:patch` runs both on demand.
 
+The `post-update-cmd` invocation is `native:install --with-icu --quiet`, and both
+flags are load-bearing. v4 inverted `--force`: overwriting the generated tree is
+now the default (`--no-force` opts out) and `--force` means "re-download the PHP
+binaries", which would add a ~45MB fetch to every `composer update`. v4 also
+dropped `--publish` outright — passing it aborts the command, and with it the two
+patches below. `--with-icu` is what keeps `ext-intl` in the bundled PHP
+binaries; the money formatting the whole ledger renders through needs it, and its
+absence shows up only on-device.
+
 ## Navigation
 
 Sidebar entries carry `wire:navigate`. Without it every tap was a full page

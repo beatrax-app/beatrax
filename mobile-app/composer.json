@@ -44,12 +44,12 @@
         "livewire/flux": "^2.0",
         "livewire/livewire": "^4.0",
         "monolog/monolog": "^3.0",
-        "nativephp/mobile": "^3.0",
-        "nativephp/mobile-background-tasks": "0.0.3",
-        "nativephp/mobile-biometrics": "1.0.2",
-        "nativephp/mobile-local-notifications": "0.0.2",
+        "nativephp/mobile": "^4.0",
+        "nativephp/mobile-background-tasks": "0.0.4",
+        "nativephp/mobile-biometrics": "1.0.3",
+        "nativephp/mobile-local-notifications": "0.0.3",
         "nativephp/mobile-network": "*",
-        "nativephp/mobile-scanner": "1.0.2",
+        "nativephp/mobile-scanner": "1.0.3",
         "nativephp/mobile-secure-storage": "*",
         "nwidart/laravel-modules": "^13.0",
         "psr/log": "^3.0",
@@ -89,7 +89,7 @@
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
-            "@php artisan native:install --force --quiet --publish",
+            "@php artisan native:install --with-icu --quiet",
             "@php ../scripts/nativephp_grant_webview_camera.php",
             "@php ../scripts/nativephp_keep_webview_cookies.php"
         ],
