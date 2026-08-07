@@ -20,7 +20,7 @@ return [
     'unknown_h1' => 'No step is currently active.',
     'unknown_lede' => 'The wizard could not resolve the active step. Use Resume later → to exit and the next mount will recover.',
 
-    'privacy' => 'Your data stays on this computer',
+    'privacy' => 'Your data stays on this device',
     'need_help' => 'Need help?',
     'need_help_aria' => 'Need help? Opens the beatrax issues page on GitHub',
 ];

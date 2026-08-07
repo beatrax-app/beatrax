@@ -59,7 +59,7 @@ it('renders the verbatim local-only intro paragraph', function (): void {
     $user = hdlUser(false, 'hdl-intro');
 
     Livewire::actingAs($user)->test(HelpDataLocations::class)
-        ->assertSeeText('beatrax stores everything on this device. Nothing is sent to a server, nothing syncs to the cloud, nothing leaves your machine without you exporting it.');
+        ->assertSeeText('beatrax stores everything on this device. Nothing is sent to a server, nothing syncs to the cloud, nothing leaves this device without you exporting it.');
 });
 
 it('renders all three resolved paths exactly as UserDataPathService reports them', function (): void {

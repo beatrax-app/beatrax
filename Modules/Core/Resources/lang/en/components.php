@@ -25,7 +25,6 @@ return [
         'mobile_nav' => 'Mobile navigation',
         'back' => 'Back',
         'open_nav' => 'Open navigation',
-        'open_palette' => 'Open command palette',
         'search_transactions' => 'Search transactions',
     ],
 ];

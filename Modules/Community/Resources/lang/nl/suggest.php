@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Stel een koppeling voor',
-    'intro' => 'Opent GitHub in je browser zodat je de suggestie als concept-PR kunt insturen. Je naam en e-mailadres verlaten deze machine nooit.',
+    'intro' => 'Opent GitHub in je browser zodat je de suggestie als concept-PR kunt insturen. Je naam en e-mailadres verlaten dit apparaat nooit.',
 
     'pattern' => 'Patroon',
     'name' => 'Herkenbare naam',

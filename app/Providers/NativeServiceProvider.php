@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use Beatrax\BiometricVault\BiometricVaultServiceProvider;
 use Illuminate\Support\ServiceProvider;
 use Native\Mobile\Providers\BiometricsServiceProvider;
 use Native\Mobile\Providers\NetworkServiceProvider;
@@ -48,6 +49,11 @@ class NativeServiceProvider extends ServiceProvider
             // Without this entry the plugin's native (Swift/Kotlin) code
             // never compiles into the device build.
             LocalNotificationsServiceProvider::class,
+            // BiometricVault (beatrax/mobile-biometric-vault, a first-party
+            // path-repo plugin) backs Modules\Mobile\Internal\Identity\
+            // BiometricKeyVault. Its guards resolve through the facade's
+            // class_exists(), so an unregistered plugin degrades silently.
+            BiometricVaultServiceProvider::class,
         ];
     }
 }

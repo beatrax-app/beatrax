@@ -24,7 +24,6 @@ return [
         'mobile_nav' => 'Mobiele navigatie',
         'back' => 'Terug',
         'open_nav' => 'Navigatie openen',
-        'open_palette' => 'Opdrachtenpalet openen',
         'search_transactions' => 'Transacties zoeken',
     ],
 ];

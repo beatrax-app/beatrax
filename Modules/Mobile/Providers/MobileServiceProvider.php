@@ -9,6 +9,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
@@ -53,7 +54,7 @@ final class MobileServiceProvider extends ServiceProvider
         // Keystore instead of the plaintext session copy, overriding the
         // Auth NullKeyCustodian default. The custodian itself re-checks
         // the same guard, so a mis-resolution degrades to pass-through.
-        if (class_exists('Native\Mobile\Facades\SecureStorage') && getenv('NATIVEPHP_PLATFORM') !== false) {
+        if (class_exists('Native\Mobile\Facades\SecureStorage') && UserDataPathService::isMobileRuntime()) {
             $this->app->singleton(
                 KeyCustodian::class,
                 SecureStorageKeyCustodian::class,

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Auth\Middleware\Authenticate;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
@@ -202,11 +203,46 @@ it('registers MobileEnsureDatabaseReady on the mobile-app root web middleware gr
 
     expect($source)->toContain('use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;');
     expect($source)->toContain(MobileEnsureDatabaseReady::class);
-    expect($source)->toContain('$middleware->web(append: [');
+    // PREPENDED, never appended: appending leaves the gate behind
+    // Authenticate once the framework sorts the stack by priority, which
+    // is the whole failure this middleware exists to prevent. The
+    // ordering itself is asserted for real below.
+    expect($source)->toContain("\$middleware->prependToGroup('web', MobileEnsureDatabaseReady::class);");
+    expect($source)->not->toContain("            MobileEnsureDatabaseReady::class,\n        ]);");
     // ->group('repo-root-only'): the path is resolved relative to the repo
     // root, so running from the mobile-app root looks for
     // mobile-app/mobile-app/bootstrap/app.php.
 })->group('repo-root-only');
+
+it('runs the fresh-install gate before the auth middleware it exists to pre-empt', function (): void {
+    // The bug this pins: registering the gate by appending it to the `web`
+    // group put it at index 7 while SortedMiddleware hoisted Authenticate
+    // (an AuthenticatesRequests implementor) to index 5, so a 0-user device
+    // threw AuthenticationException and landed on the desktop `/login`
+    // instead of the mobile welcome screen. List position is not run
+    // position — only the sorted stack proves the ordering.
+    $router = $this->app['router'];
+
+    // This root never boots mobile-app/bootstrap/app.php, so mirror the one
+    // line of production wiring under test and let the framework's own
+    // sorter decide the outcome.
+    $router->prependMiddlewareToGroup('web', MobileEnsureDatabaseReady::class);
+
+    $route = $router->middleware(['web', 'auth'])
+        ->get('/__test/mobile-ordering', static fn () => 'OK');
+
+    $sorted = array_values(array_filter(
+        $router->gatherRouteMiddleware($route),
+        'is_string',
+    ));
+
+    $gateIndex = array_search(MobileEnsureDatabaseReady::class, $sorted, true);
+    $authIndex = array_search(Authenticate::class, $sorted, true);
+
+    expect($gateIndex)->not->toBeFalse()
+        ->and($authIndex)->not->toBeFalse()
+        ->and($gateIndex)->toBeLessThan($authIndex);
+});
 
 // -----------------------------------------------------------------------
 // MobileWelcomeScreen

@@ -563,3 +563,81 @@ it('non-import mode (CREATE-ACCOUNT path) is UNCHANGED — both-confirm still se
     expect($state)->not->toBeNull('the non-import CREATE-ACCOUNT path must still self-mint on both-confirm — unchanged (D-07)');
     expect($state->current_epoch)->toBe(1);
 });
+
+/*
+ * The scanner entry points. Every one of these is reachable from the view
+ * or from a native event, so leaving them unexercised means the paths a
+ * user actually takes into the camera are only ever proven by hand on a
+ * device. The native facade stays absent here (see the file header), which
+ * is exactly the condition each of these has to survive.
+ */
+
+it('useWordCode() reaches enter_code WITHOUT the amber notice — a choice, not a failure', function (): void {
+    $user = pairingScanTestUser('mobile-pair-word-choice');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('cameraDenied')
+        ->assertSet('cameraUnavailableNotice', true)
+        ->call('useWordCode')
+        ->assertSet('step', 'enter_code')
+        // The distinction that makes this a separate method: nothing failed,
+        // so the camera-unavailable notice must be cleared rather than left
+        // accusing the device of a problem it does not have.
+        ->assertSet('cameraUnavailableNotice', false)
+        ->assertSet('flashMessage', '');
+});
+
+it('startScan() falls back to enter_code when the bridge cannot open a camera', function (): void {
+    $user = pairingScanTestUser('mobile-pair-startscan');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    // QrScanBridge::open() returns false in this toolchain (no native
+    // facade), which is the same answer a real device gives when the
+    // camera is refused — so the retry button can never dead-end.
+    Livewire::test(MobilePairingScan::class)
+        ->call('startScan', app(QrScanBridge::class))
+        ->assertSet('step', 'enter_code')
+        ->assertSet('cameraUnavailableNotice', true);
+});
+
+it('the native ScannerCancelled event lands on the typed-code fallback', function (): void {
+    $user = pairingScanTestUser('mobile-pair-cancelled');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    Livewire::test(MobilePairingScan::class)
+        ->call('onScannerCancelled', true, 'user-cancelled', null)
+        ->assertSet('step', 'enter_code')
+        ->assertSet('cameraUnavailableNotice', true);
+});
+
+it('an empty CodeScanned payload is ignored rather than treated as a bad code', function (): void {
+    $user = pairingScanTestUser('mobile-pair-empty-scan');
+    test()->actingAs($user);
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    // A native scanner that fires with no data must not be reported to the
+    // user as an invalid code — there is nothing to invalidate, and the
+    // scan step should stay put so the next frame can decode.
+    Livewire::test(MobilePairingScan::class)
+        ->call('cameraDenied')
+        ->set('step', 'scan')
+        ->call('onCodeScanned', data: '')
+        ->assertSet('step', 'scan')
+        ->assertSet('flashMessage', '');
+});

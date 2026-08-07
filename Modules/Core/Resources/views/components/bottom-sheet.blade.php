@@ -18,7 +18,13 @@
     CONTAINS the flux:modal trigger — not the <flux:modal> element itself —
     so Flux's teleport to the top layer is never disrupted.
 
-    x-trap.inert is bound to `open` — focus is trapped while the sheet is open
+    Alpine's x-trap is deliberately absent. `x-trap.inert` on this overlay
+    crashed the WebView renderer outright on Android: the tap registered, the
+    renderer died, and every subsequent interaction did nothing while the page
+    still looked normal. Verified by removing it — the same tap then opens the
+    panel correctly. Escape and the scrim still dismiss, so the overlay is not
+    a keyboard dead end, but focus is no longer trapped inside it; restoring a
+    trap needs one that does not walk the document marking siblings inert.
     and released on close. safe-area padding-bottom keeps content above the home
     indicator on iOS.
 --}}
@@ -39,7 +45,6 @@
     <div
         class="bottom-sheet"
         x-show="open"
-        x-trap.inert="open"
         x-transition:enter="transition ease-[var(--ease-smooth)] duration-[250ms]"
         x-transition:enter-start="translate-y-full"
         x-transition:enter-end="translate-y-0"

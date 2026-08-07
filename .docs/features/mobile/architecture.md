@@ -7,6 +7,102 @@ initial-sync gate, and an outbound-only LAN/relay sync transport. The
 phone never runs a listener or daemon — every native crossing is a single
 bounded operation that opens, does one thing, and closes.
 
+## Detecting the on-device runtime
+
+Every native-capability gate in this module — `QrScanBridge::isAvailable()`,
+`BiometricUnlockBridge`, `BiometricKeyVault`, `SecureStorageKeyCustodian`, the
+`KeyCustodian` binding in `MobileServiceProvider`, and the mobile root's
+`->booted()` reconciliation hook — asks `UserDataPathService::isMobileRuntime()`.
+
+It must not be a bare `getenv('NATIVEPHP_PLATFORM')`. The runtime injects that
+value as a server/env const rather than through `putenv()`, so `getenv()`
+returns `false` on a real device and every gate above silently reports
+"not mobile": the camera step never renders, biometric unlock is never offered,
+the Keychain custodian is never bound, and the boot hook that recreates
+`storage/framework` and re-points the session/cache/view config never runs. The
+symptom is not an error — it is a device that quietly behaves like a desktop.
+`platform()` therefore reads `$_SERVER` and `$_ENV` as well, and
+`isMobileRuntime()` keeps the structural fallback (the sibling `persisted_data`
+directory, which only NativePHP mobile provisions) for the config-load window
+where even those are not yet populated.
+
+**The scan preview is in-page, not a separate activity.** The scanner
+plugin's own surface is a full-screen `ScannerActivity`, which over the
+pairing page reads as the app navigating somewhere else. The viewfinder frame
+therefore hosts the WebView's own camera (`getUserMedia`) and decodes with the
+platform `BarcodeDetector` — a browser API, never a bundled decode library —
+in the `beatraxInlineScanner` Alpine component. The plugin's activity remains
+the fallback via `QrScanBridge::open()` for any runtime offering neither, and
+both paths funnel into the same `submitCode()`.
+
+Android WebView refuses `getUserMedia` unless its `WebChromeClient` overrides
+`onPermissionRequest`, and the generated shell does not. It never denies
+either — the promise simply never settles — so the failure looks like a hang.
+`scripts/nativephp_grant_webview_camera.php` injects that override, admitting
+video capture only and denying every other resource. `native:install`
+regenerates the shell, so the patch runs from the mobile root's
+`post-update-cmd` (and `composer native:patch` on demand); it is idempotent
+and fails loudly if the anchor moves, because a silently unpatched shell
+degrades to exactly the behaviour it exists to fix.
+
+The camera is never opened on load — only from the button. A preview that
+starts on page render is a privacy surprise, and the user has not asked to
+scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
+stops when the page is backgrounded rather than holding the camera open
+behind a backgrounded finance app.
+
+**The generated shell needs two patches, applied from the mobile root's
+`post-update-cmd`.** `native:install` regenerates the Android tree, so neither
+is hand-edited; both are idempotent and fail loudly if their anchor moves.
+
+- `nativephp_grant_webview_camera.php` adds the missing `onPermissionRequest`
+  override so the in-page scanner can obtain a camera. Video capture only.
+- `nativephp_keep_webview_cookies.php` removes the `clearAllCookies()` call
+  from `MainActivity.initializeEnvironment()`. It ran on every process start
+  and took the Laravel session cookie with it, so each cold launch — and
+  Android kills a backgrounded process routinely — landed on `/login` despite
+  a valid session row on-device. The app-lock, not cookie lifetime, is the
+  security boundary here. `clearAllCookies()` itself is left in place for
+  callers that genuinely want a clean jar.
+
+`composer native:patch` runs both on demand.
+
+The `post-update-cmd` invocation is `native:install --with-icu --quiet`, and both
+flags are load-bearing. v4 inverted `--force`: overwriting the generated tree is
+now the default (`--no-force` opts out) and `--force` means "re-download the PHP
+binaries", which would add a ~45MB fetch to every `composer update`. v4 also
+dropped `--publish` outright — passing it aborts the command, and with it the two
+patches below. `--with-icu` is what keeps `ext-intl` in the bundled PHP
+binaries; the money formatting the whole ledger renders through needs it, and its
+absence shows up only on-device.
+
+## Navigation
+
+**Sidebar entries no longer carry `wire:navigate`, and this is a mitigation
+rather than a fix.** After a handful of drawer navigations the app hung on
+device — stuck on the page it was leaving, with nothing recovering it short of
+a relaunch. Dropping the attribute from the sidebar stops the hang. The root
+cause is not yet understood, so nothing here explains *why* repeated
+`wire:navigate` swaps wedge the WebView; it only records that they do.
+
+That trade is real and was taken deliberately. Every sidebar tap is once again
+a full page load — a Laravel boot through the persistent runtime, the layout's
+nine Livewire mounts, and a re-parse of the whole asset bundle. That cost is
+what the attribute was added to avoid, and it is the reason the phone felt slow
+before. An app that is slow on every tap beats one that stops responding on the
+fifth.
+
+The mitigation is partial: eighteen `wire:navigate` attributes remain across
+nine views, including `mobile-top-bar.blade.php`, which is itself a mobile-only
+surface. If the hang is a property of the attribute rather than of the sidebar,
+it is still reachable from all of them. Anyone touching mobile navigation
+should treat that as the open question, not as settled ground.
+
+The drawer's explicit close on `livewire:navigated` (`resources/js/app.js`)
+stays. It is inert for sidebar taps now that those are full loads — which reset
+the Alpine store anyway — and still required for the surfaces that kept the
+attribute.
+
 ## First launch and route gating
 
 `MobileFirstLaunchBootstrap` is the mobile mirror of the desktop
@@ -96,7 +192,21 @@ either path — the PIN pad is always the fallback of last resort.
 `BiometricKeyVault` stores a biometric-wrapped copy of the data key in an
 enclave-gated entry (iOS `SecAccessControl(.biometryCurrentSet)`, Android
 Keystore `setUserAuthenticationRequired`) via the first-party
-`beatrax/mobile-biometric-vault` plugin. Enrollment is PIN-rooted:
+`beatrax/mobile-biometric-vault` plugin.
+
+That plugin lives in `mobile-app/nativephp-plugins/biometric-vault` and reaches
+the build through three separate steps, all of which are required and none of
+which implies the others: a Composer `path` repository plus a `require` entry
+(without it the `BiometricVault` facade is not autoloadable at all, and every
+`BiometricKeyVault` guard fails its `class_exists()` check and reports the
+vault as simply unavailable), an entry in `NativeServiceProvider::plugins()`
+(NativePHP treats that list as an opt-in security boundary — omitted, the
+Swift/Kotlin sources never compile in), and `native:plugin:register`. It
+carries an explicit `version` in its own `composer.json` because a path
+package otherwise takes the *current branch name* as its version, which pins
+the lockfile to whatever branch it was last resolved on.
+
+Enrollment is PIN-rooted:
 `ColdStartEnrollmentService::enroll()` re-verifies the PIN to obtain the
 live data key, wraps it into the enclave via the vault, and records the
 enrollment flag — every failure path (vault unavailable, wrong PIN,
@@ -285,8 +395,17 @@ around the `Route::get()` call itself. A Closure sidesteps both — the
 target FQCN is resolved via the container and invoked only when a real
 request reaches the route.
 
-`NativeMobileAppServiceProvider` is the NativePHP-mobile-booted
-application provider, an inverted skeleton of the desktop equivalent:
+`NativeMobileAppServiceProvider` is invoked from `mobile-app/bootstrap/app.php`'s
+`->booted()` hook, behind the same `isMobileRuntime()` guard as the storage
+reconciliation. It used to be named by a `provider` key in
+`mobile-app/config/nativephp.php`, which read like wiring but was not:
+`config('nativephp.provider')` is consulted by `nativephp/desktop` alone, and
+`nativephp/mobile` has never read it in either v3 or v4. So the provider booted
+nowhere, and `DispatchMobileNotification` — subscribed only from here, by design
+— was registered nowhere, which meant no mobile notification could ever be
+delivered on device. The dead key is gone; the `->booted()` call is the wiring.
+
+It is an inverted skeleton of the desktop equivalent:
 `boot()` must never keep a background listener alive across requests
 (neither iOS nor Android permit an always-on background process or
 inbound connections while backgrounded), so any dial-out trigger wired

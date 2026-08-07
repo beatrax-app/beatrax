@@ -18,7 +18,7 @@ return [
 
     'empty' => 'Nog niets mysterieus. Importeer wat afschriften en beatrax toont hier de regels die het niet kon herkennen.',
 
-    'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser; verder verlaat er niets je machine.',
+    'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser; verder verlaat er niets dit apparaat.',
 
     'card' => [
         'likely' => 'Waarschijnlijk: een naamloze winkelier.',

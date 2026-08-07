@@ -2,19 +2,23 @@
 
 declare(strict_types=1);
 
-use Modules\Mobile\Internal\NativeMobileAppServiceProvider;
-
 /*
  * Mobile-app-specific NativePHP config.
  *
- * This is the ONLY NativePHP config that MUST differ from the desktop root's
- * `config/nativephp.php`: the `provider` key points at the mobile-native boot
- * provider (`Modules\Mobile\Internal\NativeMobileAppServiceProvider`) instead
- * of the desktop `NativeAppServiceProvider`. Everything else that the desktop
- * config carries (Electron updater providers, prebuild hooks, queue workers,
- * NSIS installer options) is desktop-only and intentionally omitted here — the
- * mobile shell ships via `nativephp/mobile` (Xcode / Android Studio), not
- * electron-builder, so those keys have no mobile analog.
+ * Deliberately minimal. `nativephp/mobile` merges its own config shallowly, so
+ * every key absent here — runtime mode, the Android SDK/build block, the dev
+ * server, hot reload — resolves from the package default, and only the keys
+ * that genuinely differ are restated. Everything the desktop root's config
+ * carries (Electron updater providers, prebuild hooks, queue workers, NSIS
+ * installer options) is desktop-only: the mobile shell ships via
+ * `nativephp/mobile` (Xcode / Android Studio), not electron-builder.
+ *
+ * There is no `provider` key. One used to live here pointing at
+ * `Modules\Mobile\Internal\NativeMobileAppServiceProvider`, but
+ * `config('nativephp.provider')` is read by `nativephp/desktop` alone —
+ * `nativephp/mobile` has never consulted it, in v3 or v4 — so it booted
+ * nothing. That provider is now invoked from `bootstrap/app.php`'s `->booted()`
+ * hook, the same on-device attach point the storage reconciliation uses.
  *
  * Phase 15 topology note (15-02): desktop and mobile cannot share one Composer
  * `vendor/` tree because `nativephp/desktop` declares
@@ -38,14 +42,6 @@ return [
     'description' => env('NATIVEPHP_APP_DESCRIPTION', 'beatrax mobile peer'),
 
     'website' => env('NATIVEPHP_APP_WEBSITE', 'https://beatrax.test'),
-
-    /*
-     * The mobile-native boot provider. Unlike the desktop analog this is NOT a
-     * long-lived-listener host: iOS/Android forbid always-on background
-     * sockets, so the phone is an OUTBOUND CLIENT ONLY (bounded dial-out
-     * bursts). See the NativeMobileAppServiceProvider class docblock.
-     */
-    'provider' => NativeMobileAppServiceProvider::class,
 
     /*
      * Keys stripped from the bundled .env for a production mobile build.
