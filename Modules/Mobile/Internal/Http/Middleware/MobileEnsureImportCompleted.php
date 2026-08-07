@@ -55,34 +55,45 @@ final readonly class MobileEnsureImportCompleted
 
     public function handle(Request $request, Closure $next): Response
     {
+        $redirectTo = $this->unfinishedImportUrl($request);
+
+        return $redirectTo === null
+            ? $this->pass($request, $next)
+            : new RedirectResponse($redirectTo);
+    }
+
+    // The URL an unfinished import ceremony must be returned to, or null
+    // when the request may proceed. Kept apart from handle() so the
+    // decision reads as one expression rather than a chain of exits.
+    private function unfinishedImportUrl(Request $request): ?string
+    {
         if (! $this->currentUser->isAuthenticated() || $this->isExempt($request)) {
-            return $this->pass($request, $next);
+            return null;
         }
 
         $userId = $this->currentUser->user()->id;
 
         if (! $this->importIntent->isImporting($userId)) {
-            return $this->pass($request, $next);
+            return null;
         }
 
-        // An import device with no epoch has not been admitted as a peer
-        // yet, so the only thing it can usefully do is finish pairing.
-        if (! $this->hasEpoch($userId)) {
-            return new RedirectResponse($this->urls->route('mobile.pair', ['mode' => 'import']));
+        // No epoch means the device has not been admitted as a peer yet, so
+        // the only thing it can usefully do is finish pairing. Paired but
+        // still pulling goes to the blocking setup gate, because a
+        // half-populated balance is worse than a progress bar.
+        $url = match (true) {
+            ! $this->hasEpoch($userId) => $this->urls->route('mobile.pair', ['mode' => 'import']),
+            ! $this->hasCompletedInitialSync($userId) => $this->urls->route('mobile.setup'),
+            default => null,
+        };
+
+        if ($url === null) {
+            // Converged - retire the marker so this gate costs one boolean
+            // lookup and nothing more for the rest of the device's life.
+            $this->importIntent->clearImporting($userId);
         }
 
-        // Paired but still pulling: the setup gate is deliberately
-        // blocking, because a half-populated balance is worse than a
-        // progress bar.
-        if (! $this->hasCompletedInitialSync($userId)) {
-            return new RedirectResponse($this->urls->route('mobile.setup'));
-        }
-
-        // Converged - retire the marker so this gate costs one boolean
-        // lookup and nothing more for the rest of the device's life.
-        $this->importIntent->clearImporting($userId);
-
-        return $this->pass($request, $next);
+        return $url;
     }
 
     private function pass(Request $request, Closure $next): Response
@@ -113,22 +124,17 @@ final readonly class MobileEnsureImportCompleted
     private function isExempt(Request $request): bool
     {
         $name = $request->route()?->getName();
+
         if (! is_string($name)) {
             return false;
         }
 
-        foreach (self::EXEMPT_ROUTE_PREFIXES as $prefix) {
-            if (str_starts_with($name, $prefix)) {
-                return true;
-            }
-        }
-
-        foreach (self::EXEMPT_ROUTE_SUFFIXES as $suffix) {
-            if (str_ends_with($name, $suffix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(
+            self::EXEMPT_ROUTE_PREFIXES,
+            static fn (string $prefix): bool => str_starts_with($name, $prefix),
+        ) || array_any(
+            self::EXEMPT_ROUTE_SUFFIXES,
+            static fn (string $suffix): bool => str_ends_with($name, $suffix),
+        );
     }
 }
