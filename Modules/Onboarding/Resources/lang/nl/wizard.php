@@ -18,7 +18,7 @@ return [
     'unknown_h1' => 'Er is momenteel geen stap actief.',
     'unknown_lede' => 'De wizard kon de actieve stap niet bepalen. Gebruik Later verdergaan → om af te sluiten; bij het volgende laden wordt het hersteld.',
 
-    'privacy' => 'Je gegevens blijven op deze computer',
+    'privacy' => 'Je gegevens blijven op dit apparaat',
     'need_help' => 'Hulp nodig?',
     'need_help_aria' => 'Hulp nodig? Opent de beatrax issues-pagina op GitHub',
 ];

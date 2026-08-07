@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Add a user · beatrax',
     'title' => 'Add a user',
-    'subtitle' => 'Create an account for someone else on this machine. They will be asked to set their own password the first time they sign in.',
+    'subtitle' => 'Create an account for someone else on this device. They will be asked to set their own password the first time they sign in.',
     'username' => 'Username',
     'initial_password' => 'Initial password',
     'initial_password_hint' => 'Type a password they can read aloud or type once. They will replace it on first login.',

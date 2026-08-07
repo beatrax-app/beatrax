@@ -91,5 +91,7 @@
                 {{ Lang::get('auth::signup.submit') }}
             </button>
         </form>
+
+        <x-core::locale-switcher />
     </div>
 </div>

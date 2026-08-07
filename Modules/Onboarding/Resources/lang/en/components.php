@@ -11,7 +11,7 @@ return [
 
     'remove_file_aria' => 'Remove :filename from upload queue',
 
-    'privacy' => 'Your data stays on this computer',
+    'privacy' => 'Your data stays on this device',
 
     'progress_aria' => 'Setup progress',
     'step_progress' => 'Step :current of :total',

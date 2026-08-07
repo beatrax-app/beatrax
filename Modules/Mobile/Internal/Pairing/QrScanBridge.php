@@ -5,17 +5,23 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Pairing;
 
 use Illuminate\Contracts\Session\Session;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Public\Services\PairingGateway;
-use Native\Mobile\Facades\Scanner;
+use Native\Mobile\Scanner;
 
 /**
  * @link ../../../../.docs/features/mobile/architecture.md
  */
 final class QrScanBridge
 {
+    // The pairing envelope is only ever carried in a QR code, so the
+    // scanner is narrowed to that symbology rather than the plugin's
+    // default barcode set.
+    private const SCAN_FORMAT = 'qr';
+
     public function __construct(private readonly PairingGateway $gateway) {}
 
-    // Safe to call unconditionally; never touches the native facade when
+    // Safe to call unconditionally; never touches the native class when
     // either guard fails.
     public function isAvailable(): bool
     {
@@ -23,7 +29,32 @@ final class QrScanBridge
             return false;
         }
 
-        return getenv('NATIVEPHP_PLATFORM') !== false;
+        return UserDataPathService::isMobileRuntime();
+    }
+
+    // Presents the OS camera scanner. Returns false when the runtime cannot
+    // open it, which is the caller's signal to fall through to the typed
+    // word-code step rather than strand the user on a dead viewfinder. The
+    // decode comes back asynchronously as the CodeScanned event, not here.
+    public function open(string $prompt): bool
+    {
+        if (! $this->isAvailable()) {
+            return false;
+        }
+
+        // Re-checked (not just isAvailable()'s own guard) so PHPStan's
+        // class_exists() narrowing applies within THIS method's scope -
+        // the guard must sit in the same method as the call it guards.
+        if (! class_exists(Scanner::class)) {
+            return false;
+        }
+
+        Scanner::scan()
+            ->prompt($prompt)
+            ->formats([self::SCAN_FORMAT])
+            ->scan();
+
+        return true;
     }
 
     // Returns null on any failure (malformed envelope OR invalid/expired

@@ -7,6 +7,7 @@ namespace Modules\Mobile\Internal\Identity;
 use Beatrax\BiometricVault\Facades\BiometricVault;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserDataPathService;
 
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
@@ -124,7 +125,7 @@ class BiometricKeyVault
             return false;
         }
 
-        return getenv('NATIVEPHP_PLATFORM') !== false;
+        return UserDataPathService::isMobileRuntime();
     }
 
     protected function vaultSet(string $key, string $value): bool

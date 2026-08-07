@@ -877,6 +877,51 @@ td.date,
         margin-top: var(--space-6);
     }
 
+    /* Phone-class wizard chrome.
+       .wiz-top laid brand, the 9-step indicator and "Resume later" out on one
+       space-between row, which needs roughly 500px; below that the three
+       collided. The indicator moves to its own row, and the card gives back
+       the 96px of horizontal padding that left almost no line width at
+       390px. */
+    @media (max-width: 640px) {
+        .wiz-top {
+            flex-wrap: wrap;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-4);
+        }
+
+        .wiz-dots {
+            order: 3;
+            flex-basis: 100%;
+            justify-content: center;
+        }
+
+        .wiz-body {
+            padding: var(--space-4);
+        }
+
+        .wiz-card {
+            padding: var(--space-6) var(--space-4) var(--space-5);
+            border-radius: var(--radius-lg);
+        }
+
+        .wiz-h1 {
+            font-size: var(--text-2xl);
+        }
+
+        .wiz-lede {
+            font-size: var(--text-base);
+        }
+
+        /* The action row is the primary CTA plus at most one secondary; at
+           this width they read better stacked full-bleed than crowded onto
+           one line. */
+        .wiz-actions {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+    }
+
     .wiz-footer {
         display: flex;
         align-items: center;
@@ -2671,8 +2716,20 @@ td.date,
         display: none;
     }
 
+    /* The drawer panel is a fixed 100dvh slide-in, so the sidebar inside it
+       must size to the PANEL, not to the viewport. The base rule's
+       `height: 100vh` measured the full screen including the strip behind
+       the Android system bars, which pushed the tail of the nav list —
+       Cash book, Sign out — underneath them where it could not be reached.
+       `height: 100%` plus the safe-area insets keeps the whole list inside
+       the usable area, and the inherited `overflow-y: auto` lets it scroll
+       when it is still taller than the phone. */
     .drawer-container .side {
         display: flex;
+        height: 100%;
+        padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+        padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
     }
 }
 
@@ -2789,15 +2846,54 @@ td.date,
     .top-bar {
         display: flex;
         align-items: center;
-        height: var(--top-bar-h);
+        /* min-height, not height: box-sizing is border-box, so a fixed height
+           plus the safe-area top padding ate into the content box and squashed
+           the 44px controls on notched devices. */
+        min-height: var(--top-bar-h);
         padding: 0 var(--space-4);
         padding-top: env(safe-area-inset-top);
         border-bottom: 1px solid var(--color-border);
         background: var(--color-bg-subtle);
-        gap: var(--space-3);
+        gap: var(--space-2);
         position: sticky;
         top: 0;
         z-index: 30;
+    }
+
+    /* Pre-auth language switch (welcome / signup / login). Deliberately quiet
+       chrome: it must be findable without competing with the primary CTA. */
+    .locale-switcher {
+        display: flex;
+        justify-content: center;
+        gap: var(--space-2);
+    }
+
+    .locale-switcher-option {
+        min-height: 44px;
+        padding: 0 var(--space-3);
+        border: 0;
+        border-radius: var(--radius-md);
+        background: transparent;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        cursor: pointer;
+    }
+
+    .locale-switcher-option.is-active {
+        color: var(--color-text);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    .locale-switcher-option:focus-visible {
+        outline: 2px solid var(--color-emerald);
+        outline-offset: 2px;
+    }
+
+    .top-bar-logo {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
     }
 
     .top-bar-title {
@@ -2826,6 +2922,12 @@ td.date,
         cursor: pointer;
         transition: var(--tx-quick);
         text-decoration: none;
+        /* The hamburger and search affordances are text glyphs, so without an
+           explicit size they inherited the 16px body font and read as specks
+           inside a 44px target. The target stays 44px for WCAG 2.5.5; only the
+           glyph grows. */
+        font-size: 1.375rem;
+        line-height: 1;
         flex-shrink: 0;
     }
 

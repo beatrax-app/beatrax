@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'eyebrow' => 'Welkom',
     'h1' => 'Laat beatrax je geld leren kennen.',
-    'lede' => 'Ongeveer 5 minuten. Er verlaat niets deze computer — alles wat je koppelt blijft in een bestand op je machine.',
+    'lede' => 'Ongeveer 5 minuten. Er verlaat niets dit apparaat — alles wat je koppelt blijft in een bestand erop.',
     'tagline' => 'Dit gaan we instellen:',
 
     'bank_title' => 'Je bank',

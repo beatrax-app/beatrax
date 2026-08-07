@@ -43,4 +43,16 @@ final class MobileImportIntentGate
             ->where('user_id', $userId)
             ->exists();
     }
+
+    // Retires the marker once the imported device has genuinely converged.
+    // Idempotent, and deliberately the only way the flag ever clears: while
+    // it stands, MobileEnsureImportCompleted keeps routing the device back
+    // into the ceremony it abandoned.
+    public function clearImporting(int $userId): void
+    {
+        $this->db->connection()
+            ->table('mobile_import_intent')
+            ->where('user_id', $userId)
+            ->delete();
+    }
 }

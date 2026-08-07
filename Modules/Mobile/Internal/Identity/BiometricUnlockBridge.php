@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Internal\Identity;
 
+use Modules\Core\Public\Services\UserDataPathService;
 use Native\Mobile\Facades\Biometrics;
 
 /**
@@ -19,7 +20,7 @@ class BiometricUnlockBridge
             return false;
         }
 
-        return getenv('NATIVEPHP_PLATFORM') !== false;
+        return UserDataPathService::isMobileRuntime();
     }
 
     // Returns true if the user authenticated successfully; false if they

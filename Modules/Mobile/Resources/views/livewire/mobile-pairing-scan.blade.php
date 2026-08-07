@@ -9,16 +9,13 @@
     mobile-lock-screen.blade.php already duplicated lock-screen.blade.php's
     PIN-pad markup).
 
-    Camera view: full-bleed viewfinder inside a --color-surface-2 frame with
-    a corner-bracket overlay (1.5px stroke, currentColor). The REAL native
-    scan surface (`nativephp/mobile-scanner`'s camera view + its
-    `CodeScanned` event) is unreachable from the repo-root toolchain (only
-    mobile-app/vendor carries the plugin, 15-03-SUMMARY.md) — this markup
-    renders the viewfinder frame and wires the Livewire call sites
-    (`submitCode`, `cameraDenied`) the native runtime is expected to invoke;
-    the actual on-device camera-permission/decode wiring is verified by a
-    manual on-device UAT pass (15-11), mirroring BiometricUnlockBridge's
-    identical "compile-correct, UAT-verified" precedent (15-06-SUMMARY.md).
+    Camera view: the frame below is a placeholder, not a preview. The real
+    scan surface is `nativephp/mobile-scanner`'s own full-screen activity,
+    launched through QrScanBridge::open() and closing back into this component
+    via the CodeScanned / ScannerCancelled events MobilePairingScan listens
+    for. The plugin lives only in mobile-app/vendor, so the repo-root
+    toolchain cannot resolve it — hence the runtime FQCN strings there and the
+    reflection-only signatures in tools/phpstan-stubs.
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <div class="max-w-lg mx-auto px-6 py-8 space-y-4" data-testid="mobile-pairing-scan" wire:key="pairing-step-{{ $step }}">
@@ -32,28 +29,59 @@
             <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
         @endif
 
-        {{-- Full-bleed 1:1 viewfinder — --color-surface-2 frame, corner-bracket
-             overlay (1.5px stroke, currentColor, slate-700/slate-300). No JS
-             QR-decode library — the native mobile-scanner plugin decodes and
-             the runtime is expected to call $wire.submitCode(payload) on a
-             successful frame, or $wire.cameraDenied() when the OS permission
-             is refused. --}}
-        <div
-            class="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800"
-            data-testid="qr-viewfinder"
-        >
-            <svg class="absolute inset-6 h-[calc(100%-3rem)] w-[calc(100%-3rem)] text-slate-700 dark:text-slate-300" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <path stroke-linecap="round" d="M4 20V8a4 4 0 014-4h12" />
-                <path stroke-linecap="round" d="M96 20V8a4 4 0 00-4-4H80" />
-                <path stroke-linecap="round" d="M4 80v12a4 4 0 004 4h12" />
-                <path stroke-linecap="round" d="M96 80v12a4 4 0 01-4 4H80" />
-            </svg>
+        {{-- The preview runs inside this frame rather than taking over the
+             screen: a full-screen activity appearing over the pairing page
+             reads as the app navigating somewhere else. The camera is the
+             WebView's own (getUserMedia), decoded in-page by the platform
+             BarcodeDetector — no JS decode library — and the scanner plugin's
+             full-screen activity is the fallback where neither is offered.
+             Both funnel into the same submitCode(). --}}
+        <div x-data="beatraxInlineScanner($wire)" x-init="probe()" x-on:beatrax-step-left.window="stop()">
+            <div
+                class="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800"
+                data-testid="qr-viewfinder"
+            >
+                <video
+                    x-ref="preview"
+                    x-show="live"
+                    class="absolute inset-0 h-full w-full object-cover"
+                    playsinline
+                    muted
+                    aria-label="{{ Lang::get('mobile::pairing.viewfinder_aria') }}"
+                ></video>
+
+                <svg class="absolute inset-6 h-[calc(100%-3rem)] w-[calc(100%-3rem)] text-slate-700 dark:text-slate-300" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <path stroke-linecap="round" d="M4 20V8a4 4 0 014-4h12" />
+                    <path stroke-linecap="round" d="M96 20V8a4 4 0 00-4-4H80" />
+                    <path stroke-linecap="round" d="M4 80v12a4 4 0 004 4h12" />
+                    <path stroke-linecap="round" d="M96 80v12a4 4 0 01-4 4H80" />
+                </svg>
+
+                {{-- Centred in the frame, not pinned to its bottom edge: with
+                     the camera off the frame is empty, so the copy explaining
+                     why is the only thing in it and belongs in the middle. --}}
+                <p
+                    x-show="! live"
+                    class="absolute inset-0 flex items-center justify-center px-8 text-center text-xs text-slate-500 dark:text-slate-400"
+                >{{ Lang::get('mobile::pairing.viewfinder_idle') }}</p>
+            </div>
+
+            <button
+                type="button"
+                x-on:click="toggle()"
+                x-text="live
+                    ? @js(Lang::get('mobile::pairing.close_camera'))
+                    : @js(Lang::get('mobile::pairing.open_camera'))"
+                class="mt-4 w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
+                       hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
+                       dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
+            >{{ Lang::get('mobile::pairing.open_camera') }}</button>
         </div>
 
         <div class="text-center">
             <button
                 type="button"
-                wire:click="enterACode"
+                wire:click="useWordCode"
                 class="min-h-[44px] px-2 text-sm text-slate-500 underline-offset-2 hover:underline
                        focus:outline-none focus-visible:underline dark:text-slate-400"
             >

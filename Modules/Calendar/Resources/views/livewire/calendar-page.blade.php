@@ -321,7 +321,6 @@
                 x-show="panelOpen"
                 x-data
                 x-init="panelOpen = true"
-                x-trap.inert="panelOpen"
                 @keydown.escape.window="panelOpen = false; $wire.set('selectedDay', null)"
                 x-transition:enter="transition ease-[var(--ease-smooth,ease)] duration-200"
                 x-transition:enter-start="translate-x-full"

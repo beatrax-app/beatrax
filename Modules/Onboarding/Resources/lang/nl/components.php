@@ -10,7 +10,7 @@ return [
 
     'remove_file_aria' => ':filename uit de uploadwachtrij verwijderen',
 
-    'privacy' => 'Je gegevens blijven op deze computer',
+    'privacy' => 'Je gegevens blijven op dit apparaat',
 
     'progress_aria' => 'Voortgang van het instellen',
     'step_progress' => 'Stap :current van :total',

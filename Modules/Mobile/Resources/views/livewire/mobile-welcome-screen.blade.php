@@ -32,5 +32,7 @@
                 {{ Lang::get('mobile::welcome.import') }}
             </a>
         </div>
+
+        <x-core::locale-switcher />
     </div>
 </div>

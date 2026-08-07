@@ -42,7 +42,7 @@ return [
         'fetch_online' => 'Fetch current rates online',
         'online_on' => 'Rates fetched from ECB daily. Only currency pair lookups — no personal data.',
         'last_updated' => 'Last updated: :date.',
-        'online_off' => 'Bundled rates are used. No data leaves your machine.',
+        'online_off' => 'Bundled rates are used. No data leaves this device.',
         'fetch_aria' => 'Fetch current exchange rates online',
         'refreshing' => 'Refreshing…',
         'next_refresh' => 'Next auto-refresh: daily at 09:00',

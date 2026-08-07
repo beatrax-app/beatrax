@@ -38,27 +38,30 @@
         </button>
     @endif
 
+    {{-- Brand mark, matching the sidebar's own `.side-brand` logo so the two
+         nav surfaces present the same identity rather than the drawer having
+         a logo and the bar only a word. --}}
+    <img
+        src="{{ Vite::asset('resources/brand/logo.svg') }}"
+        alt=""
+        width="20"
+        height="20"
+        class="top-bar-logo"
+        aria-hidden="true"
+    />
+
     <span class="top-bar-title">{{ $resolvedTitle }}</span>
 
-    {{-- Palette button (D-02/D-13) — ⌕ glyph only; kbd hint hidden on touch per CSS --}}
+    {{-- One palette/search affordance, not two: this bar used to render a
+         separate "palette" and "search" button that carried the same ⌕ glyph
+         and dispatched the same event, which read as a duplicated icon. The
+         palette IS the transaction search on phone (D-25/D-29), so the two
+         collapse into this single control. --}}
     <button
         type="button"
         class="top-bar-btn ml-auto"
-        aria-label="{{ Lang::get('core::components.topbar.open_palette') }}"
-        x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
-    >
-        <span aria-hidden="true">⌕</span>
-    </button>
-
-    {{-- Search magnifier button (D-25, UI-SPEC #9, Phase 8 Plan 05).
-         Opens the palette in its full-screen phone mode (D-29).
-         44px tap target (D-08 / WCAG 2.5.5). aria-label required for icon-only button. --}}
-    <button
-        type="button"
-        class="top-bar-btn"
         aria-label="{{ Lang::get('core::components.topbar.search_transactions') }}"
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
-        style="width: 44px; height: var(--top-bar-h, 56px); display: grid; place-items: center; color: var(--color-text-muted, #64748b);"
     >
         <span aria-hidden="true">⌕</span>
     </button>

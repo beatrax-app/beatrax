@@ -92,64 +92,15 @@ final class CommandArgPromptModal extends Component
     ): void {
         $this->submitError = '';
 
-        try {
-            $spec = $registry->find($this->command);
-        } catch (InvalidArgumentException) {
-            $this->submitError = Lang::get('dev::arg_prompt.errors.unknown_command', ['command' => $this->command]);
-
+        $spec = $this->spawnableSpec($registry);
+        if ($spec === null) {
             return;
         }
 
-        if ($spec->tier !== 'safe') {
-            // A hostile dispatch shipping a destructive name routes
-            // through the triple-gate instead of spawning — same
-            // defense-in-depth posture spawn() takes on the runner page.
-            $this->dispatch(
-                'triple-gate:open',
-                command: $this->command,
-                args: $this->values,
-            );
-            $this->dispatch('modal-close', name: 'command-args');
-
-            return;
-        }
-
-        $missing = $this->missingRequiredArgs($spec->argsSchema);
-        if ($missing !== []) {
-            $this->submitError = Lang::get('dev::arg_prompt.errors.missing', [
-                'noun' => count($missing) === 1
-                    ? Lang::get('dev::arg_prompt.errors.arg_singular')
-                    : Lang::get('dev::arg_prompt.errors.arg_plural'),
-                'list' => implode(', ', $missing),
-            ]);
-
-            return;
-        }
-
-        // Drop blank optional values: renderArg() already skips null
-        // and missing keys, but an empty string renders as
-        // `php artisan cmd ''`, which Laravel sometimes rejects.
-        $args = [];
-        foreach ($spec->argsSchema as $arg) {
-            $value = $this->values[$arg->name] ?? null;
-            if ($arg->type === 'boolean') {
-                if ($value === true) {
-                    $args[$arg->name] = true;
-                }
-
-                continue;
-            }
-            if ($value === null || $value === '') {
-                continue;
-            }
-            $args[$arg->name] = $value;
-        }
-
-        // The same per-arg rules guard both spawn controllers apply — the
-        // third check alongside the registry whitelist and escapeshellarg.
-        // $values is client-supplied, so without this an `in:`/`max:` rule
-        // is enforced nowhere on the Livewire path.
-        if (! $this->argsSatisfyRules($spec, $args, $validator)) {
+        // Null means a preflight refused the submission and has already put
+        // its own message on $submitError.
+        $args = $this->acceptedArgs($spec, $validator);
+        if ($args === null) {
             return;
         }
 
@@ -192,10 +143,91 @@ final class CommandArgPromptModal extends Component
         ]);
     }
 
-    // Mirrors the ArgSpec::$rules validation both spawn controllers run.
-    // A violation is surfaced as $submitError rather than rethrown: the
-    // modal has no field-level error slots, and an uncaught
-    // ValidationException here would blank the form the user is mid-edit on.
+    // The registry entry this submission may spawn, or null when it may not.
+    // A destructive name reaching here is a hostile dispatch that bypassed the
+    // palette's safe-only filter, so it is rerouted to the triple gate rather
+    // than refused outright — the same posture the runner page takes.
+    private function spawnableSpec(DevCommandRegistry $registry): ?CommandSpec
+    {
+        try {
+            $spec = $registry->find($this->command);
+        } catch (InvalidArgumentException) {
+            $this->submitError = Lang::get('dev::arg_prompt.errors.unknown_command', ['command' => $this->command]);
+
+            return null;
+        }
+
+        if ($spec->tier === 'safe') {
+            return $spec;
+        }
+
+        $this->dispatch(
+            'triple-gate:open',
+            command: $this->command,
+            args: $this->values,
+        );
+        $this->dispatch('modal-close', name: 'command-args');
+
+        return null;
+    }
+
+    // The args map to hand the spawner, or null when a preflight refused it.
+    // Both gates live here so submit() reads as resolve-then-spawn: required
+    // args are checked against the raw form values, and the declared rules
+    // against the normalised map the spawner will actually receive.
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function acceptedArgs(CommandSpec $spec, ValidatorFactory $validator): ?array
+    {
+        $missing = $this->missingRequiredArgs($spec->argsSchema);
+        if ($missing !== []) {
+            $this->submitError = Lang::get('dev::arg_prompt.errors.missing', [
+                'noun' => count($missing) === 1
+                    ? Lang::get('dev::arg_prompt.errors.arg_singular')
+                    : Lang::get('dev::arg_prompt.errors.arg_plural'),
+                'list' => implode(', ', $missing),
+            ]);
+
+            return null;
+        }
+
+        $args = $this->normalisedArgs($spec);
+
+        return $this->argsSatisfyRules($spec, $args, $validator) ? $args : null;
+    }
+
+    // Drops blank optional values: renderArg() already skips null and missing
+    // keys, but an empty string renders as `php artisan cmd ''`, which Laravel
+    // sometimes rejects.
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalisedArgs(CommandSpec $spec): array
+    {
+        $args = [];
+        foreach ($spec->argsSchema as $arg) {
+            $value = $this->values[$arg->name] ?? null;
+            if ($arg->type === 'boolean') {
+                if ($value === true) {
+                    $args[$arg->name] = true;
+                }
+
+                continue;
+            }
+            if ($value === null || $value === '') {
+                continue;
+            }
+            $args[$arg->name] = $value;
+        }
+
+        return $args;
+    }
+
+    // Mirrors the ArgSpec::$rules validation both spawn controllers run — the
+    // third guard alongside the registry allow-list and escapeshellarg. The
+    // violation surfaces as $submitError rather than rethrown, because an
+    // uncaught one would blank a form the operator is mid-edit on.
     /**
      * @param  array<string, mixed>  $args
      */

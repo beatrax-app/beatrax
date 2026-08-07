@@ -11,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -26,6 +27,14 @@ use Throwable;
  */
 final class MobilePairingScan extends Component
 {
+    // The scanner plugin reaches the WebView by dispatching a Livewire
+    // event named `native:` plus the PHP event class it fired. Spelled as
+    // plain strings because the plugin lives only in mobile-app/vendor and
+    // is unresolvable from the repo-root toolchain.
+    private const EVENT_CODE_SCANNED = 'native:Native\Mobile\Events\Scanner\CodeScanned';
+
+    private const EVENT_SCANNER_CANCELLED = 'native:Native\Mobile\Events\Scanner\ScannerCancelled';
+
     public string $step = 'scan';
 
     // The trust gate must not let the client retarget which token is
@@ -117,6 +126,59 @@ final class MobilePairingScan extends Component
 
         $this->step = 'enter_code';
         $this->cameraUnavailableNotice = true;
+    }
+
+    // The deliberate "I'd rather type the code" choice, as opposed to
+    // cameraDenied()'s forced fallback: same destination, but no amber
+    // camera-unavailable notice, because nothing failed here.
+    public function useWordCode(): void
+    {
+        $this->flashMessage = '';
+        $this->cameraUnavailableNotice = false;
+        $this->step = 'enter_code';
+    }
+
+    // Presents the OS scanner. Driven from the view rather than mount() so
+    // the component is already live when the camera opens - a scan that
+    // completes before Livewire is listening would drop its CodeScanned
+    // event. Re-callable, so it serves the first open and every retry.
+    public function startScan(QrScanBridge $qrBridge): void
+    {
+        $this->flashMessage = '';
+
+        if (! $qrBridge->open(Lang::get('mobile::pairing.scan_prompt'))) {
+            $this->cameraDenied();
+        }
+    }
+
+    // The decoded payload arrives here from the native scanner after its
+    // activity closes. Dependencies lead so the optional payload fields can
+    // carry defaults; Livewire binds the payload by name, not position.
+    #[On(self::EVENT_CODE_SCANNED)]
+    public function onCodeScanned(
+        CurrentUser $currentUser,
+        QrScanBridge $qrBridge,
+        PairingGateway $gateway,
+        Session $session,
+        LoggerInterface $logger,
+        string $data = '',
+        string $format = '',
+        ?string $id = null,
+    ): void {
+        if ($data === '') {
+            return;
+        }
+
+        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger);
+    }
+
+    // Fired when the user backs out of the scanner or the OS refuses the
+    // camera permission. Both land on the same typed-code fallback - the
+    // flow is never a dead end.
+    #[On(self::EVENT_SCANNER_CANCELLED)]
+    public function onScannerCancelled(bool $cancelled = true, ?string $reason = null, ?string $id = null): void
+    {
+        $this->cameraDenied();
     }
 
     // The native camera reports permission-denied/no-camera at runtime -

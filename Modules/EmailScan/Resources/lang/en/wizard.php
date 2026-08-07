@@ -11,7 +11,7 @@ return [
     'cancel' => 'Cancel',
     'save_connect' => 'Save and connect',
 
-    'secret_help' => 'These are stored in a local config file outside the database with restrictive permissions and never leave your machine.',
+    'secret_help' => 'These are stored in a local config file outside the database with restrictive permissions and never leave this device.',
 
     'gmail' => [
         'step1_title' => 'Open Google Cloud Console',

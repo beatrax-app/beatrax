@@ -206,3 +206,69 @@ vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only
 `repo-root-only` marks assertions that resolve paths relative to the repository root —
 run from here they would look for `mobile-app/mobile-app/…`. The repo-root suite runs
 them; this one skips them.
+
+## A seeded environment to click through
+
+`demo:seed` stands up a realistic dataset — two users, five accounts, ~165
+transactions, plus chains, recurring series, forecasts, drift alerts, receipts,
+goals, pots, saved reports, anomalies and notifications — so every surface has
+something in it.
+
+**Which connection you seed depends on how you are going to run the app**, and
+getting it wrong is quiet rather than loud: the seeder reports success, the
+file fills up, and the app you launch shows the first-run welcome screen
+because it is reading a different database entirely.
+
+```sh
+composer dev:seed            # browser / `dev:serve` — the `sqlite` connection
+composer dev:seed-desktop    # the NativePHP shell — the `nativephp` connection
+composer dev:serve           # artisan serve on 127.0.0.1:8000 + vite in watch mode
+```
+
+NativePHP sets `NATIVEPHP_RUNNING=true` when it launches the desktop shell, and
+that flips `config('database.default')` from `sqlite` to its own `nativephp`
+connection at `database/nativephp.sqlite`. `dev:seed-desktop` sets the same
+variable through `@putenv` so the seeder lands where the shell will look.
+`NATIVEPHP_STORAGE_PATH` is a red herring here — it moves the *storage* tree,
+not which connection is default.
+
+If the desktop app shows the welcome screen on a database you know you seeded,
+ask it which connection it is on rather than which file exists:
+
+```sh
+NATIVEPHP_RUNNING=true php artisan tinker \
+    --execute="echo DB::connection()->getDatabaseName();"
+```
+
+Both seeds pass `--reset`, whose teardown is scoped to demo rows only — it
+never touches a real user you created by hand, so either is safe to re-run.
+
+Sign in as `demo-1@beatrax.local` with the password `demo-only`.
+
+`dev:serve` binds loopback rather than the `.test` host on purpose:
+`LoopbackOnly` rejects any request whose `SERVER_ADDR` is not a loopback
+address, and serving on 127.0.0.1 is also the closest match to how the mobile
+shell reaches the app on-device.
+
+### Running the desktop shell
+
+```sh
+php artisan native:run --no-interaction
+```
+
+If it dies in `patchPlist()` on a missing `Electron.app/Contents/Info.plist`,
+the Electron binary was downloaded but never unpacked — its npm postinstall
+exits 0 having extracted only `LICENSES.chromium.html`. Extract the cached zip
+by hand into the copy the dev runner actually uses, which is the one under
+`vendor/`, not `nativephp/electron/`:
+
+```sh
+D=vendor/nativephp/desktop/resources/electron/node_modules/electron
+V=$(node -e "console.log(require('./$D/package.json').version)")
+rm -rf $D/dist && mkdir -p $D/dist
+unzip -q ~/Library/Caches/electron/*/electron-v$V-darwin-arm64.zip -d $D/dist
+printf 'Electron.app/Contents/MacOS/Electron' > $D/path.txt
+```
+
+Then launch with `ELECTRON_SKIP_BINARY_DOWNLOAD=1`, because `native:run` runs
+`npm install` first and that postinstall wipes `dist` again.

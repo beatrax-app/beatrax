@@ -2,10 +2,11 @@
     "name": "beatrax/mobile-biometric-vault",
     "description": "SPIKE: biometric-gated secure vault for NativePHP Mobile (enclave-bound key release). First-party; not for distribution.",
     "type": "nativephp-plugin",
+    "version": "1.0.0",
     "license": "proprietary",
     "require": {
         "php": "^8.2",
-        "nativephp/mobile": "^3.0"
+        "nativephp/mobile": "^4.0"
     },
     "autoload": {
         "psr-4": {

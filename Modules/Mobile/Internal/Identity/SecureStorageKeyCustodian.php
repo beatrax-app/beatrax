@@ -6,6 +6,7 @@ namespace Modules\Mobile\Internal\Identity;
 
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserDataPathService;
 use Native\Mobile\Facades\SecureStorage;
 
 /**
@@ -81,7 +82,7 @@ class SecureStorageKeyCustodian implements KeyCustodian
             return false;
         }
 
-        return getenv('NATIVEPHP_PLATFORM') !== false;
+        return UserDataPathService::isMobileRuntime();
     }
 
     // Returns false on failure or when the facade is unresolvable. The

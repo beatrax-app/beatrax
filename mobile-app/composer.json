@@ -26,6 +26,7 @@
         "amphp/socket": "*",
         "amphp/websocket-client": "*",
         "amphp/websocket-server": "*",
+        "beatrax/mobile-biometric-vault": "*",
         "brick/math": "^0.14",
         "brick/money": "^0.11",
         "doctrine/sql-formatter": "^1.5",
@@ -44,12 +45,12 @@
         "livewire/flux": "^2.0",
         "livewire/livewire": "^4.0",
         "monolog/monolog": "^3.0",
-        "nativephp/mobile": "^3.0",
-        "nativephp/mobile-background-tasks": "0.0.3",
-        "nativephp/mobile-biometrics": "1.0.2",
-        "nativephp/mobile-local-notifications": "0.0.2",
+        "nativephp/mobile": "^4.0",
+        "nativephp/mobile-background-tasks": "0.0.4",
+        "nativephp/mobile-biometrics": "1.0.3",
+        "nativephp/mobile-local-notifications": "0.0.3",
         "nativephp/mobile-network": "*",
-        "nativephp/mobile-scanner": "1.0.2",
+        "nativephp/mobile-scanner": "1.0.3",
         "nativephp/mobile-secure-storage": "*",
         "nwidart/laravel-modules": "^13.0",
         "psr/log": "^3.0",
@@ -87,6 +88,15 @@
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "Google\\Task\\Composer::cleanup",
             "@php artisan package:discover --ansi"
+        ],
+        "post-update-cmd": [
+            "@php artisan native:install --with-icu --quiet",
+            "@php ../scripts/nativephp_grant_webview_camera.php",
+            "@php ../scripts/nativephp_keep_webview_cookies.php"
+        ],
+        "native:patch": [
+            "@php ../scripts/nativephp_grant_webview_camera.php",
+            "@php ../scripts/nativephp_keep_webview_cookies.php"
         ]
     },
     "extra": {
@@ -117,11 +127,20 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "repositories": [{
-        "name": "nativephp-plugins",
-        "type": "composer",
-        "url": "https://plugins.nativephp.com"
-    }],
+    "repositories": [
+        {
+            "name": "nativephp-plugins",
+            "type": "composer",
+            "url": "https://plugins.nativephp.com"
+        },
+        {
+            "type": "path",
+            "url": "nativephp-plugins/biometric-vault",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "require-dev": {
         "fakerphp/faker": "^1.23",
         "mockery/mockery": "^1.6",

@@ -19,6 +19,17 @@ parameters:
     # quality gate deterministic at a negligible speed cost.
     parallel:
         maximumNumberOfProcesses: 4
+    # The nativephp/mobile-* packages live only in mobile-app/vendor, so the
+    # repo-root toolchain cannot autoload them and every call through them
+    # types as `mixed` — which makes the fluent scanner builder uncheckable,
+    # the opposite of what level 10 is for. scanFiles (not stubFiles, which
+    # only override symbols that already resolve) hands PHPStan the real
+    # signatures so those calls are genuinely analysed. The file is never
+    # autoloaded at runtime — it lives outside every composer PSR-4 root — so
+    # the class_exists() guards that gate every native call stay false here
+    # and on the desktop build.
+    scanFiles:
+        - tools/phpstan-stubs/native-mobile-scanner.php
     paths:
         - Modules
         - app

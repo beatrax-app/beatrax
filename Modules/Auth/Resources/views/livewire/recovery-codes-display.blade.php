@@ -6,22 +6,54 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.subtitle') }}</p>
         </header>
 
-        <div aria-live="polite" class="grid grid-cols-2 gap-3">
+        {{-- One column on a phone: two columns of wide-tracked monospace
+             overflowed a 390px viewport and pushed the confirm control off
+             screen. The codes are the whole point of this page, so they get
+             the width. --}}
+        <div aria-live="polite" class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
             @foreach ($codes as $code)
-                <div class="bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-lg font-semibold font-mono tabular-nums tracking-wider text-slate-900 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
+                <div class="bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-base sm:text-lg font-semibold font-mono tabular-nums tracking-wider text-slate-900 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
                     {{ $code }}
                 </div>
             @endforeach
         </div>
 
         <div class="space-y-2">
-            <button
-                type="button"
-                wire:click="download"
-                class="rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            {{-- Copy alongside download because a WebView has nowhere obvious
+                 to put a streamed file — on a phone the clipboard is the route
+                 into a password manager, which is where these belong anyway.
+                 Both stay: desktop still wants the file. --}}
+            <div
+                class="flex flex-col gap-2 sm:flex-row"
+                x-data="{
+                    copied: false,
+                    codes: @js($codes),
+                    copy() {
+                        if (! navigator.clipboard) {
+                            return;
+                        }
+                        navigator.clipboard.writeText(this.codes.join('\n')).then(() => {
+                            this.copied = true;
+                            setTimeout(() => { this.copied = false; }, 2500);
+                        });
+                    },
+                }"
             >
-                {{ Lang::get('auth::recovery_codes.download') }}
-            </button>
+                <button
+                    type="button"
+                    x-on:click="copy()"
+                    class="min-h-[44px] flex-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    x-text="copied ? @js(Lang::get('auth::recovery_codes.copied')) : @js(Lang::get('auth::recovery_codes.copy'))"
+                >{{ Lang::get('auth::recovery_codes.copy') }}</button>
+
+                <button
+                    type="button"
+                    wire:click="download"
+                    class="min-h-[44px] flex-1 rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:bg-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                    {{ Lang::get('auth::recovery_codes.download') }}
+                </button>
+            </div>
 
             @if ($downloadShown)
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.saved_as', ['username' => $username]) }}</p>

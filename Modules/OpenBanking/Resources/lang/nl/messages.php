@@ -88,7 +88,7 @@ return [
 
     'warning' => [
         'heading' => 'Voordat je een externe partij verbindt',
-        'body' => 'Als je open banking inschakelt, worden je toestemming voor het bankinloggen en vervolgens je transactie- en saldogegevens rechtstreeks vanaf deze computer naar Enable Banking en je bank gestuurd. beatrax heeft geen server die deze gegevens ziet — Enable Banking en je bank wel. Dit is anders dan elke andere importmethode in beatrax, die nooit gegevens ergens naartoe stuurt.',
+        'body' => 'Als je open banking inschakelt, worden je toestemming voor het bankinloggen en vervolgens je transactie- en saldogegevens rechtstreeks vanaf dit apparaat naar Enable Banking en je bank gestuurd. beatrax heeft geen server die deze gegevens ziet — Enable Banking en je bank wel. Dit is anders dan elke andere importmethode in beatrax, die nooit gegevens ergens naartoe stuurt.',
         'acknowledge' => 'Ik begrijp dat mijn transactiegegevens worden gedeeld met Enable Banking en mijn bank.',
         'confirm' => 'Open banking inschakelen',
         'cancel' => 'Annuleren',
@@ -99,7 +99,7 @@ return [
         'intro' => 'beatrax gebruikt je eigen Enable Banking-applicatie, zodat je inloggegevens nooit op een gedeelde server terechtkomen. Dit is een eenmalige installatie per bank.',
 
         'step1_title' => 'Genereer je lokale sleutelpaar',
-        'step1_body' => 'beatrax genereert een RSA-sleutelpaar op deze computer. De privésleutel verlaat je machine nooit.',
+        'step1_body' => 'beatrax genereert een RSA-sleutelpaar op dit apparaat. De privésleutel verlaat het nooit.',
         'generate_keypair' => 'Sleutelpaar genereren',
         'public_key_label' => 'Openbare sleutel',
         'copy_public_key' => 'Openbare sleutel kopiëren',
@@ -113,7 +113,7 @@ return [
 
         'step3_title' => 'Plak je applicatie-ID',
         'application_id_label' => 'Applicatie-ID',
-        'step3_help' => 'Dit wordt opgeslagen in een lokaal bestand buiten de database met beperkte rechten en verlaat je machine nooit.',
+        'step3_help' => 'Dit wordt opgeslagen in een lokaal bestand buiten de database met beperkte rechten en verlaat dit apparaat nooit.',
 
         'step4_title' => 'Kies je bank',
         'via_enable_banking' => 'via Enable Banking',
@@ -130,7 +130,7 @@ return [
 
         'errors' => [
             'save_keypair_failed' => 'Kon je sleutelpaar niet naar schijf opslaan — controleer de rechten van je secrets-map en probeer het opnieuw.',
-            'generate_failed' => 'Kon geen sleutelpaar op deze machine genereren — controleer je OpenSSL-configuratie.',
+            'generate_failed' => 'Kon geen sleutelpaar op dit apparaat genereren — controleer je OpenSSL-configuratie.',
             'export_failed' => 'Kon het gegenereerde sleutelpaar niet exporteren.',
             'read_public_failed' => 'Kon de gegenereerde openbare sleutel niet lezen.',
             'generate_first' => 'Genereer eerst een sleutelpaar voordat je doorgaat.',

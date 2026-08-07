@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Suggest a mapping',
-    'intro' => 'Opens GitHub in your browser so you can submit the suggestion as a draft PR. Your name and email never leave this machine.',
+    'intro' => 'Opens GitHub in your browser so you can submit the suggestion as a draft PR. Your name and email never leave this device.',
 
     'pattern' => 'Pattern',
     'name' => 'Friendly name',

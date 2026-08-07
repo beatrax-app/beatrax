@@ -51,11 +51,15 @@ final class UserDataPathService
         return $databaseDir.DIRECTORY_SEPARATOR.'database.sqlite';
     }
 
-    // Read-only signal (no path derives from it) so callers — e.g. the
-    // mobile boot-reconciliation hook — can detect the mobile runtime.
+    // Read-only signal (no path derives from it) so callers can detect the
+    // mobile runtime. All three sources are read because NativePHP injects
+    // this as a server/env const, not through putenv() — a bare getenv()
+    // returns false on a real device and silently disables every gate.
     public static function platform(): ?string
     {
-        $platform = getenv('NATIVEPHP_PLATFORM');
+        $platform = $_SERVER['NATIVEPHP_PLATFORM']
+            ?? $_ENV['NATIVEPHP_PLATFORM']
+            ?? getenv('NATIVEPHP_PLATFORM');
 
         return is_string($platform) && $platform !== '' ? $platform : null;
     }
@@ -64,7 +68,10 @@ final class UserDataPathService
     // NativePHP's persistent runtime (see architecture.md), so this falls
     // back to a structural check: the sibling persisted_data directory
     // NativePHP mobile provisions never exists on desktop/host.
-    private static function isMobileRuntime(): bool
+
+    // Public because it is the one on-device signal the Mobile module's
+    // native-capability gates and the mobile root's boot hook share.
+    public static function isMobileRuntime(): bool
     {
         if (self::platform() !== null) {
             return true;

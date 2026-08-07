@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Where is my data?',
-    'intro' => 'beatrax stores everything on this device. Nothing is sent to a server, nothing syncs to the cloud, nothing leaves your machine without you exporting it.',
+    'intro' => 'beatrax stores everything on this device. Nothing is sent to a server, nothing syncs to the cloud, nothing leaves this device without you exporting it.',
 
     'lives_here' => 'Your data lives here',
     'sqlite_db' => 'SQLite database:',

@@ -89,7 +89,7 @@ return [
 
     'warning' => [
         'heading' => 'Before you connect a third party',
-        'body' => 'Enabling open banking sends your bank login consent, and then your transaction and balance data, directly from this computer to Enable Banking and your bank. beatrax does not operate a server that sees this data — but Enable Banking and your bank do. This is different from every other import method in beatrax, which never sends data anywhere.',
+        'body' => 'Enabling open banking sends your bank login consent, and then your transaction and balance data, directly from this device to Enable Banking and your bank. beatrax does not operate a server that sees this data — but Enable Banking and your bank do. This is different from every other import method in beatrax, which never sends data anywhere.',
         'acknowledge' => 'I understand my transaction data will be shared with Enable Banking and my bank.',
         'confirm' => 'Enable open banking',
         'cancel' => 'Cancel',
@@ -100,7 +100,7 @@ return [
         'intro' => 'beatrax uses your own Enable Banking application so your credentials never touch a shared server. This is a one-time setup per bank.',
 
         'step1_title' => 'Generate your local key pair',
-        'step1_body' => 'beatrax generates an RSA key pair on this computer. The private key never leaves your machine.',
+        'step1_body' => 'beatrax generates an RSA key pair on this device. The private key never leaves it.',
         'generate_keypair' => 'Generate keypair',
         'public_key_label' => 'Public key',
         'copy_public_key' => 'Copy public key',
@@ -114,7 +114,7 @@ return [
 
         'step3_title' => 'Paste your application ID',
         'application_id_label' => 'Application ID',
-        'step3_help' => 'This is stored in a local file outside the database with restrictive permissions and never leaves your machine.',
+        'step3_help' => 'This is stored in a local file outside the database with restrictive permissions and never leaves this device.',
 
         'step4_title' => 'Choose your bank',
         'via_enable_banking' => 'via Enable Banking',
@@ -131,7 +131,7 @@ return [
 
         'errors' => [
             'save_keypair_failed' => 'Could not save your key pair to disk — check your secrets-directory permissions and try again.',
-            'generate_failed' => 'Could not generate a key pair on this machine — check your OpenSSL configuration.',
+            'generate_failed' => 'Could not generate a key pair on this device — check your OpenSSL configuration.',
             'export_failed' => 'Could not export the generated key pair.',
             'read_public_failed' => 'Could not read the generated public key.',
             'generate_first' => 'Generate a key pair before continuing.',
