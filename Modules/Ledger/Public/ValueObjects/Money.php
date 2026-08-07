@@ -7,6 +7,7 @@ namespace Modules\Ledger\Public\ValueObjects;
 use Brick\Money\Money as BrickMoney;
 use IntlException;
 use Stringable;
+use ValueError;
 
 // Wraps brick/money so domain code never imports brick directly. The
 // only way to construct a Money is ofMinor(int, string) — no ofFloat
@@ -64,11 +65,11 @@ final class Money implements Stringable
 
         try {
             return $this->inner->formatTo($resolved);
-        } catch (IntlException) {
-            // The mobile PHP build's ext-intl cannot construct a
-            // NumberFormatter for these locales, so formatTo() throws on
-            // device. Every rendered amount funnels through here, which turned
-            // one missing locale into a 500 on any page showing money at all.
+        } catch (IntlException|ValueError) {
+            // The mobile build's ext-intl cannot construct a NumberFormatter
+            // for these locales, and reports that two ways — IntlException
+            // with intl error-exceptions on, ValueError from the constructor.
+            // Every amount funnels here, so an uncaught one 500s every page.
             return $this->formatWithoutIcu();
         }
     }
