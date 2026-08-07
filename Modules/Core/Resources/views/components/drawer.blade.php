@@ -12,8 +12,13 @@
     must NOT contain a second @livewire('core.app-sidebar') call.
 
     T-04-03-01: one mount only (verified by the acceptance test grep -c).
-    T-04-03-02: x-trap.inert.noscroll is bound to the reactive drawerOpen flag
-                and released automatically on close — no stuck focus trap.
+    Alpine's x-trap is deliberately absent. `x-trap.inert` on this overlay
+    crashed the WebView renderer outright on Android: the tap registered, the
+    renderer died, and every subsequent interaction did nothing while the page
+    still looked normal. Verified by removing it — the same tap then opens the
+    panel correctly. Escape and the scrim still dismiss, so the overlay is not
+    a keyboard dead end, but focus is no longer trapped inside it; restoring a
+    trap needs one that does not walk the document marking siblings inert.
 
     D-05 (Phase 15 Plan 10): the /sync status surface's drawer entry
     (route('sync.index'), side-item "Sync") lives INSIDE the embedded
@@ -46,7 +51,6 @@
     aria-modal="true"
     aria-label="{{ Lang::get('core::components.drawer_nav') }}"
     x-show="$store.mobileNav.drawerOpen"
-    x-trap.inert.noscroll="$store.mobileNav.drawerOpen"
     x-transition:enter="transition ease-[var(--ease-smooth)] duration-[220ms]"
     x-transition:enter-start="-translate-x-full"
     x-transition:enter-end="translate-x-0"
