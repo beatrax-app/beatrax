@@ -78,16 +78,30 @@ absence shows up only on-device.
 
 ## Navigation
 
-Sidebar entries carry `wire:navigate`. Without it every tap was a full page
-load: a Laravel boot through the persistent runtime, the layout's nine
-Livewire mounts, and a re-parse of the whole asset bundle — which is what made
-the phone feel slow and made the hardware back button, which is wired
-correctly in the shell, feel broken. Measured on a device after the change, a
-drawer tap produces zero full document loads.
+**Sidebar entries no longer carry `wire:navigate`, and this is a mitigation
+rather than a fix.** After a handful of drawer navigations the app hung on
+device — stuck on the page it was leaving, with nothing recovering it short of
+a relaunch. Dropping the attribute from the sidebar stops the hang. The root
+cause is not yet understood, so nothing here explains *why* repeated
+`wire:navigate` swaps wedge the WebView; it only records that they do.
 
-Alpine stores survive a `wire:navigate` swap, so the drawer had to be closed
-explicitly on `livewire:navigated` — otherwise it stayed open over the page it
-had just navigated to.
+That trade is real and was taken deliberately. Every sidebar tap is once again
+a full page load — a Laravel boot through the persistent runtime, the layout's
+nine Livewire mounts, and a re-parse of the whole asset bundle. That cost is
+what the attribute was added to avoid, and it is the reason the phone felt slow
+before. An app that is slow on every tap beats one that stops responding on the
+fifth.
+
+The mitigation is partial: eighteen `wire:navigate` attributes remain across
+nine views, including `mobile-top-bar.blade.php`, which is itself a mobile-only
+surface. If the hang is a property of the attribute rather than of the sidebar,
+it is still reachable from all of them. Anyone touching mobile navigation
+should treat that as the open question, not as settled ground.
+
+The drawer's explicit close on `livewire:navigated` (`resources/js/app.js`)
+stays. It is inert for sidebar taps now that those are full loads — which reset
+the Alpine store anyway — and still required for the surfaces that kept the
+attribute.
 
 ## First launch and route gating
 

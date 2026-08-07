@@ -83,28 +83,28 @@
         };
     @endphp
 
-    <a href="{{ route('dashboard') }}" wire:navigate class="side-item {{ $isActive('/') }}">
+    <a href="{{ route('dashboard') }}" class="side-item {{ $isActive('/') }}">
         <span class="ic" aria-hidden="true">◆</span>
         {{ Lang::get('core::sidebar.nav.dashboard') }}
     </a>
-    <a href="{{ route('transactions.index') }}" wire:navigate class="side-item {{ $isActive('/transactions') }}">
+    <a href="{{ route('transactions.index') }}" class="side-item {{ $isActive('/transactions') }}">
         <span class="ic" aria-hidden="true">≡</span>
         {{ Lang::get('core::sidebar.nav.transactions') }}
         @if (($navCounts['transactions'] ?? 0) > 0)
             <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.transactions', ['count' => $navCounts['transactions']]) }}">{{ $navCount('transactions') }}</span>
         @endif
     </a>
-    <a href="{{ route('forecast.index') }}" wire:navigate class="side-item {{ $isActive('/forecast') }}">
+    <a href="{{ route('forecast.index') }}" class="side-item {{ $isActive('/forecast') }}">
         <span class="ic" aria-hidden="true">↗</span>
         {{ Lang::get('core::sidebar.nav.forecasts') }}
     </a>
-    <a href="{{ route('calendar.index') }}" wire:navigate class="side-item {{ $isActive('/calendar') }}">
+    <a href="{{ route('calendar.index') }}" class="side-item {{ $isActive('/calendar') }}">
         <span class="ic" aria-hidden="true">▦</span>
         {{ Lang::get('core::sidebar.nav.calendar') }}
     </a>
 
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_money') }}</div>
-    <a href="{{ route('recurring.index') }}" wire:navigate class="side-item {{ $isActive('/recurring') }}">
+    <a href="{{ route('recurring.index') }}" class="side-item {{ $isActive('/recurring') }}">
         <span class="ic" aria-hidden="true">↻</span>
         {{ Lang::get('core::sidebar.nav.recurring') }}
         @if (($navCounts['recurring'] ?? 0) > 0)
@@ -116,7 +116,7 @@
         with?" surface. Resolves to the named route
         `counterparties.index` shipped with 17-06b.
     --}}
-    <a href="{{ route('counterparties.index') }}" wire:navigate class="side-item {{ $isActive('/counterparties') }}">
+    <a href="{{ route('counterparties.index') }}" class="side-item {{ $isActive('/counterparties') }}">
         <span class="ic" aria-hidden="true">◉</span>
         {{ Lang::get('core::sidebar.nav.counterparties') }}
         @if (($navCounts['counterparties'] ?? 0) > 0)
@@ -130,7 +130,7 @@
         sidebar stays calm. Count populated from the injected
         CounterpartyTriageQueue read query.
     --}}
-    <a href="{{ route('counterparties.triage') }}" wire:navigate class="side-item {{ $isActive('/counterparties/triage') }}">
+    <a href="{{ route('counterparties.triage') }}" class="side-item {{ $isActive('/counterparties/triage') }}">
         <span class="ic" aria-hidden="true">❋</span>
         {{ Lang::get('core::sidebar.nav.triage') }}
         @if ($unknownCounterpartyCount > 0)
@@ -146,11 +146,11 @@
          primary discovery surface is "what chains do I have?" rather
          than "what's awaiting triage?". The overview header links to
          the review queue and the hints surface in turn. --}}
-    <a href="{{ route('chains.index') }}" wire:navigate class="side-item {{ $isActive('/chains') }}">
+    <a href="{{ route('chains.index') }}" class="side-item {{ $isActive('/chains') }}">
         <span class="ic" aria-hidden="true">⇉</span>
         {{ Lang::get('core::sidebar.nav.chains') }}
     </a>
-    <a href="{{ route('drift.index') }}" wire:navigate class="side-item {{ $isActive('/drift') }}">
+    <a href="{{ route('drift.index') }}" class="side-item {{ $isActive('/drift') }}">
         <span class="ic" aria-hidden="true">⚠</span>
         {{ Lang::get('core::sidebar.nav.drift_alerts') }}
         @if (($navCounts['drift'] ?? 0) > 0)
@@ -161,7 +161,7 @@
          (D-02/D-03). Links to ?type=anomaly; amber .side-badge.alert
          shows the open anomaly count (revival-aware, merged into
          navCounts by the Anomaly nav-badge composer) and hides at zero. --}}
-    <a href="{{ route('drift.index', ['type' => 'anomaly']) }}" wire:navigate class="side-item">
+    <a href="{{ route('drift.index', ['type' => 'anomaly']) }}" class="side-item">
         <span class="ic" aria-hidden="true">◬</span>
         {{ Lang::get('core::sidebar.nav.unusual_charges') }}
         @if (($navCounts['anomaly'] ?? 0) > 0)
@@ -173,14 +173,14 @@
          Budgets. Default/inverted .side-badge (NOT .side-badge.alert) —
          an unread count is an actionable-count-to-clear, not a problem
          state, per component-library.md's badge-intensity taxonomy. --}}
-    <a href="{{ route('notifications.index') }}" wire:navigate class="side-item {{ $isActive('/notifications') }}">
+    <a href="{{ route('notifications.index') }}" class="side-item {{ $isActive('/notifications') }}">
         <span class="ic" aria-hidden="true">◈</span>
         {{ Lang::get('core::sidebar.nav.notifications') }}
         @if (($navCounts['notifications'] ?? 0) > 0)
             <span class="side-badge" aria-label="{{ Lang::get('core::sidebar.badge.notifications', ['count' => $navCounts['notifications']]) }}">{{ $navCount('notifications') }}</span>
         @endif
     </a>
-    <a href="{{ route('budgets.index') }}" wire:navigate class="side-item {{ $isActive('/budgets') }}">
+    <a href="{{ route('budgets.index') }}" class="side-item {{ $isActive('/budgets') }}">
         <span class="ic" aria-hidden="true">⊙</span>
         {{ Lang::get('core::sidebar.nav.budgets') }}
         @if (($navCounts['budgets'] ?? 0) > 0)
@@ -189,18 +189,18 @@
     </a>
     {{-- Tax tagging + per-year export (D-17). The muted side-badge shows the
          lifetime tagged item count when > 0; hidden when zero for calm posture. --}}
-    <a href="{{ route('tax.index') }}" wire:navigate class="side-item {{ $isActive('/tax') }}">
+    <a href="{{ route('tax.index') }}" class="side-item {{ $isActive('/tax') }}">
         <span class="ic" aria-hidden="true">⊞</span>
         {{ Lang::get('core::sidebar.nav.tax') }}
         @if (($navCounts['tax_tagged'] ?? 0) > 0)
             <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.tax', ['count' => $navCounts['tax_tagged']]) }}">{{ $navCount('tax_tagged') }}</span>
         @endif
     </a>
-    <a href="{{ route('goals.index') }}" wire:navigate class="side-item {{ $isActive('/goals') }}">
+    <a href="{{ route('goals.index') }}" class="side-item {{ $isActive('/goals') }}">
         <span class="ic" aria-hidden="true">◎</span>
         {{ Lang::get('core::sidebar.nav.goals') }}
     </a>
-    <a href="{{ route('pots.index') }}" wire:navigate class="side-item {{ $isActive('/pots') }}">
+    <a href="{{ route('pots.index') }}" class="side-item {{ $isActive('/pots') }}">
         <span class="ic" aria-hidden="true">◫</span>
         {{ Lang::get('core::sidebar.nav.pots') }}
     </a>
@@ -208,17 +208,17 @@
          library (999.6, Req 1/9). $isActive matches both /reports (the
          builder) and /reports/library (the saved-report index) since
          both share the "Reports" nav identity. --}}
-    <a href="{{ route('reports.index') }}" wire:navigate class="side-item {{ str_starts_with($currentPath, '/reports') ? 'active' : '' }}">
+    <a href="{{ route('reports.index') }}" class="side-item {{ str_starts_with($currentPath, '/reports') ? 'active' : '' }}">
         <span class="ic" aria-hidden="true">▤</span>
         {{ Lang::get('core::sidebar.nav.reports') }}
     </a>
     {{-- Reconcile — standalone SC-2 statement-balance confirmation surface
          (D-05, no account-detail page exists in the app). --}}
-    <a href="{{ route('reconcile.index') }}" wire:navigate class="side-item {{ $isActive('/reconcile') }}">
+    <a href="{{ route('reconcile.index') }}" class="side-item {{ $isActive('/reconcile') }}">
         <span class="ic" aria-hidden="true">✓</span>
         {{ Lang::get('core::sidebar.nav.reconcile') }}
     </a>
-    <a href="{{ route('drift.watch') }}" wire:navigate class="side-item {{ $isActive('/drift/watch') }}">
+    <a href="{{ route('drift.watch') }}" class="side-item {{ $isActive('/drift/watch') }}">
         <span class="ic" aria-hidden="true">↗</span>
         {{ Lang::get('core::sidebar.nav.subscriptions') }}
         @if (($navCounts['subscriptions'] ?? 0) > 0)
@@ -227,7 +227,7 @@
     </a>
 
     <div class="side-section-label">{{ Lang::get('core::sidebar.section_ingestion') }}</div>
-    <a href="{{ route('imports.new') }}" wire:navigate class="side-item {{ $isActive('/imports/new') }}">
+    <a href="{{ route('imports.new') }}" class="side-item {{ $isActive('/imports/new') }}">
         <span class="ic" aria-hidden="true">⊕</span>
         {{ Lang::get('core::sidebar.nav.imports') }}
         @if (($navCounts['imports'] ?? 0) > 0)
@@ -236,7 +236,7 @@
     </a>
     {{-- 13.5-08 UI-SPEC Copywriting Contract: locked nav-entry copy, placed
          beside the existing Import entry (planner's call on exact placement). --}}
-    <a href="{{ route('migrations.index') }}" wire:navigate class="side-item {{ $isActive('/migrations') }}">
+    <a href="{{ route('migrations.index') }}" class="side-item {{ $isActive('/migrations') }}">
         <span class="ic" aria-hidden="true">⇄</span>
         {{ Lang::get('core::sidebar.nav.migrations') }}
     </a>
@@ -244,15 +244,15 @@
         <span class="ic" aria-hidden="true">⌗</span>
         {{ Lang::get('core::sidebar.nav.receipts') }}
     </a>
-    <a href="{{ route('cashbook.index') }}" wire:navigate class="side-item {{ $isActive('/cash') }}">
+    <a href="{{ route('cashbook.index') }}" class="side-item {{ $isActive('/cash') }}">
         <span class="ic" aria-hidden="true">€</span>
         {{ Lang::get('core::sidebar.nav.cashbook') }}
     </a>
-    <a href="{{ route('inboxes.index') }}" wire:navigate class="side-item {{ $isActive('/inboxes') }}">
+    <a href="{{ route('inboxes.index') }}" class="side-item {{ $isActive('/inboxes') }}">
         <span class="ic" aria-hidden="true">✉</span>
         {{ Lang::get('core::sidebar.nav.email') }}
     </a>
-    <a href="{{ route('uncategorized') }}" wire:navigate class="side-item {{ $isActive('/uncategorized') }}">
+    <a href="{{ route('uncategorized') }}" class="side-item {{ $isActive('/uncategorized') }}">
         <span class="ic" aria-hidden="true">⌕</span>
         {{ Lang::get('core::sidebar.nav.categorization') }}
     </a>
@@ -264,7 +264,7 @@
          e.g. Modules/Sync/Resources/views/livewire/pairing-flow-modal.blade.php)
          — deliberately NOT Flux's device-phone-mobile icon, which is
          reserved for device-type indicators (15-UI-SPEC.md §3). --}}
-    <a href="{{ route('sync.index') }}" wire:navigate class="side-item {{ $isActive('/sync') }}">
+    <a href="{{ route('sync.index') }}" class="side-item {{ $isActive('/sync') }}">
         <span class="ic" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -272,7 +272,7 @@
         </span>
         {{ Lang::get('core::sidebar.nav.sync') }}
     </a>
-    <a href="{{ route('settings') }}" wire:navigate class="side-item {{ $isActive('/settings') }}">
+    <a href="{{ route('settings') }}" class="side-item {{ $isActive('/settings') }}">
         <span class="ic" aria-hidden="true">⚙</span>
         {{ Lang::get('core::sidebar.nav.settings') }}
     </a>
