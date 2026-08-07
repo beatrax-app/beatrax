@@ -462,6 +462,61 @@ a single bounded dial-out burst from within the mobile runtime, without
 attempting the real Noise handshake. Both are registered only from the
 mobile-app root's own bootstrap, never the shared `MobileServiceProvider`.
 
+## Native chrome over the web body
+
+`AppShellScreen` is the SuperNative shell: a `NativeComponent` registered at
+`/shell` whose top bar and bottom navigation are real SwiftUI / Jetpack Compose,
+wrapped around a `<webview php>` still rendering the shared Livewire surface.
+Nothing under it is reimplemented — the four destinations are `/`,
+`/transactions`, `/calendar` and `/settings`, the same routes the desktop
+serves. That is the point: the chrome is what makes a phone feel like a phone,
+and it is the only part worth paying for twice. Converting the bodies would
+fork the `resources/` symlink and mean maintaining every screen in two
+languages.
+
+`php` on the webview is what makes it the app's own runtime rather than a
+sandboxed foreign document — shared session, asset pipeline, `window.Native`.
+The `javascript` and `dom-storage` opt-ins are deliberately *not* passed: the
+renderers force both on in php mode, and naming them would imply they were
+optional here.
+
+**Inline chrome does not survive as tree nodes.** `wrapWithChrome()` hoists
+`<top-bar>` and `<bottom-nav>` onto the native shell, so a rendered tree has a
+`native_root_tabs` root carrying `nav_title`, the `bottom_nav_item`s promoted
+beside the content, and no `top_bar` or `bottom_nav` node at all. A test
+asserting on those types fails against a screen that is entirely correct.
+
+Three things fail silently here, all found by rendering rather than reading:
+
+- **A bare `<top-bar />` is dropped.** An empty chrome element contributes
+  nothing to hoist, so the bar never reaches the shell and `nav_title` is
+  absent. The `title` attribute is load-bearing, not decoration.
+- **`BottomNavItem` reads a fixed key list.** `active` selects; `selected` is
+  discarded without a word. Per-platform glyphs go on the item as
+  `ios` / `android`, not as a nested `<icon>`.
+- **The webview moves without telling the chrome.** A link followed inside the
+  page never calls `open()`, so `@navigated` re-derives the active destination
+  from the committed URL. It matches the longest destination path, because `/`
+  prefixes everything and would otherwise light Home on every screen; a path no
+  destination owns leaves the marker where it was, since a stale highlight
+  reads better mid-flow than a wrong one.
+
+**`nativephp/mobile-ui` is required, and the version skew is worth knowing.**
+`nativephp/mobile`'s `registerCoreElements()` registers 26 elements — layout,
+content, `pressable`, and the navigation chrome — and deliberately leaves
+`button`, the text inputs, `toggle` and `webview` for a UI plugin, because
+plugin discovery cannot override an existing registration. Installing
+`nativephp/mobile-ui` takes the registry to 55. The runtime is 4.x; that
+component library is 0.3.0.
+
+The route registers behind `Route::hasMacro('native')` rather than the
+`class_exists()` guard the web routes use. `Route::native()` is a macro
+`nativephp/mobile` installs, and the desktop root loads this same file from a
+tree where that package cannot exist. The screen itself is analysed at the repo
+root through `tools/phpstan-stubs/native-mobile-edge.php`, on the same
+`scanFiles` footing as the scanner stubs — excluding it instead would leave the
+one part of the mobile UI that is real PHP unchecked.
+
 ## Build packaging: materializing the symlink shell for Bifrost
 
 The `mobile-app/` root is a thin NativePHP-for-Mobile shell. Its own real

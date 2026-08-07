@@ -64,3 +64,11 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
         return app($component)();
     })->name('mobile.setup');
 });
+
+// Native screens (SuperNative / EDGE). Guarded on the macro rather than
+// class_exists(): `Route::native()` is installed by nativephp/mobile, and
+// the desktop root loads this same file from a tree where that package
+// cannot exist. A class-string target is safe here — the macro stores it.
+if (Route::hasMacro('native')) {
+    Route::native('/shell', 'Modules\Mobile\Internal\Native\AppShellScreen');
+}

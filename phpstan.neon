@@ -30,6 +30,7 @@ parameters:
     # and on the desktop build.
     scanFiles:
         - tools/phpstan-stubs/native-mobile-scanner.php
+        - tools/phpstan-stubs/native-mobile-edge.php
     paths:
         - Modules
         - app
