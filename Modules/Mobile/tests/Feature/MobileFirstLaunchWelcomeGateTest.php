@@ -107,7 +107,7 @@ it('exempts the mobile.welcome route itself so it does not loop', function (): v
 
     $this->get(route('mobile.welcome'))
         ->assertOk()
-        ->assertSee('Welcome to beatrax');
+        ->assertSee('Welcome to Beatrax');
 });
 
 it('exempts the signup route so the welcome to create-account chain does not loop', function (): void {
@@ -254,7 +254,7 @@ it('renders the welcome screen on a genuine fresh install with both CTAs', funct
     Livewire::test(MobileWelcomeScreen::class)
         ->assertNoRedirect()
         ->assertOk()
-        ->assertSee('Welcome to beatrax')
+        ->assertSee('Welcome to Beatrax')
         ->assertSee('Create account')
         ->assertSee('Import from another device')
         ->assertSeeHtml(route('signup'))

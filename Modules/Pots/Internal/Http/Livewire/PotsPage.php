@@ -478,7 +478,7 @@ final class PotsPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Pots · beatrax']);
+        $view->extends('layouts.app', ['title' => 'Pots · Beatrax']);
 
         return $view;
     }

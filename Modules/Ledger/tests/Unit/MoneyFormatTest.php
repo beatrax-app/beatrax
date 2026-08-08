@@ -45,7 +45,7 @@ it('honours an explicit locale argument for backward compat', function (): void 
 })->group('phase-3');
 
 /*
- * The no-ICU fallback. `formatTo()` builds a NumberFormatter, which the
+ * The no-ICU fallback. `formatToLocale()` builds a NumberFormatter, which the
  * mobile PHP build's ext-intl cannot always construct — and it reports that
  * two ways: IntlException when intl error-exceptions are enabled, ValueError
  * from the constructor when it rejects the locale outright. Every rendered

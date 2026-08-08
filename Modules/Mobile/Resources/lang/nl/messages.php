@@ -3,5 +3,5 @@
 declare(strict_types=1);
 
 return [
-    'notification_hidden_details' => 'Open beatrax om de details te zien.',
+    'notification_hidden_details' => 'Open Beatrax om de details te zien.',
 ];

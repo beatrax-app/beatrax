@@ -38,7 +38,7 @@
 
             <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 {{--
-                    "Quit beatrax" — destructive, rose-styled, NOT
+                    "Quit Beatrax" — destructive, rose-styled, NOT
                     default-focused (UI-SPEC). The heavier choice
                     silently stops the bundled queue worker and the
                     timer-based email scan, so it deliberately is not

@@ -59,5 +59,5 @@ it('includes the beatrax-specific Help menu entries', function (): void {
 
     expect($rendered)->toContain('GitHub repo');
     expect($rendered)->toContain('Report an issue');
-    expect($rendered)->toContain('About beatrax');
+    expect($rendered)->toContain('About Beatrax');
 });

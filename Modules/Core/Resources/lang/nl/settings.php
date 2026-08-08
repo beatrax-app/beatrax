@@ -84,20 +84,20 @@ return [
 
     'forecasting' => [
         'heading' => 'Prognoses',
-        'intro' => 'beatrax projecteert je saldo vooruit vanaf de huidige stand van je rekeningen. Voor rekeningen zonder afschriftsaldo (PayPal, oude CSV-imports) stel je hier het beginsaldo in, zodat prognoses vanaf een bekend punt starten.',
+        'intro' => 'Beatrax projecteert je saldo vooruit vanaf de huidige stand van je rekeningen. Voor rekeningen zonder afschriftsaldo (PayPal, oude CSV-imports) stel je hier het beginsaldo in, zodat prognoses vanaf een bekend punt starten.',
         'no_accounts' => 'Nog geen rekeningen — importeer een afschrift om er een toe te voegen.',
     ],
 
     'auto_import' => [
         'heading' => 'Automatisch importeren',
         'label' => 'Automatisch importeren uit de neerzetmap',
-        'active_html' => 'De neerzetmap is actief. beatrax scant <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op nieuwe bestanden.',
-        'inactive_html' => 'Indien ingeschakeld scant beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- en <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-bestanden en importeert deze via dezelfde matcher-pijplijn als de wizard. Verwerkte bestanden worden verplaatst naar <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> zodat ze nooit dubbel worden geïmporteerd.',
+        'active_html' => 'De neerzetmap is actief. Beatrax scant <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op nieuwe bestanden.',
+        'inactive_html' => 'Indien ingeschakeld scant Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> elke 5 minuten op <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- en <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-bestanden en importeert deze via dezelfde matcher-pijplijn als de wizard. Verwerkte bestanden worden verplaatst naar <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> zodat ze nooit dubbel worden geïmporteerd.',
     ],
 
     'aliases' => [
         'heading' => 'Aliassen',
-        'intro' => 'Bekijk en bewerk de herkenbare namen die je beatrax hebt geleerd voor cryptische afschriftomschrijvingen.',
+        'intro' => 'Bekijk en bewerk de herkenbare namen die je Beatrax hebt geleerd voor cryptische afschriftomschrijvingen.',
         'manage' => 'Aliassen beheren →',
     ],
 
@@ -108,7 +108,7 @@ return [
 
     'about_updates' => [
         'heading' => 'Over updates',
-        'body' => 'beatrax werkt zichzelf automatisch bij zodra het is geïnstalleerd. Na het installeren van de allereerste versie komen toekomstige versies binnen via een banner in de app — je hoeft GitHub niet opnieuw te bezoeken. Mocht een toekomstige update ooit niet lukken, dan kun je altijd handmatig de nieuwste installer downloaden van de releasespagina.',
+        'body' => 'Beatrax werkt zichzelf automatisch bij zodra het is geïnstalleerd. Na het installeren van de allereerste versie komen toekomstige versies binnen via een banner in de app — je hoeft GitHub niet opnieuw te bezoeken. Mocht een toekomstige update ooit niet lukken, dan kun je altijd handmatig de nieuwste installer downloaden van de releasespagina.',
         'open_releases' => 'Releasespagina openen →',
     ],
 

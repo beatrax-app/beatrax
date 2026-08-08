@@ -21,5 +21,5 @@ return [
 
     'subtotal' => 'Subtotaal',
 
-    'footer' => 'Gegenereerd door beatrax — alleen lokale persoonlijke financiën — :year',
+    'footer' => 'Gegenereerd door Beatrax — alleen lokale persoonlijke financiën — :year',
 ];

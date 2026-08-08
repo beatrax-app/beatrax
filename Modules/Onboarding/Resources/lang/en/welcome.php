@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'eyebrow' => 'Welcome',
-    'h1' => "Let's get beatrax to know your money.",
+    'h1' => "Let's get Beatrax to know your money.",
     'lede' => 'About 5 minutes. Nothing leaves this device — everything you connect stays in a file on it.',
     'tagline' => "Here's what we'll set up:",
 

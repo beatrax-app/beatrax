@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Wachtwoord opnieuw instellen · beatrax',
+    'page_title' => 'Wachtwoord opnieuw instellen · Beatrax',
     'title' => 'Wachtwoord opnieuw instellen',
     'subtitle' => 'Typ je gebruikersnaam, een van je herstelcodes en een nieuw wachtwoord. De code wordt als gebruikt gemarkeerd.',
     'username' => 'Gebruikersnaam',

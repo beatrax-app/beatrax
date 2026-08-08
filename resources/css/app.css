@@ -22,6 +22,26 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
+ * The one safe-area seam, because the two shipped runtimes disagree about
+ * where insets come from. iOS/WebKit populates env(safe-area-inset-*).
+ * NativePHP's Android shell does not — it injects --inset-* onto :root
+ * (MainActivity's nativephp-safe-area-style) and leaves env() at 0, so an
+ * env()-only rule silently pads nothing and content slides under the status
+ * bar. max() takes whichever is real; both resolve to 0 off-device.
+ *
+ * The `0px` fallback inside env() is load-bearing, not defensive. Where the
+ * engine does not recognise the variable, a bare env() is invalid at
+ * computed-value time and takes the WHOLE declaration with it — which is how
+ * every safe-area rule in this file came to be a silent no-op on Android.
+ */
+:root {
+    --safe-top: max(env(safe-area-inset-top, 0px), var(--inset-top, 0px));
+    --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--inset-bottom, 0px));
+    --safe-left: max(env(safe-area-inset-left, 0px), var(--inset-left, 0px));
+    --safe-right: max(env(safe-area-inset-right, 0px), var(--inset-right, 0px));
+}
+
+/*
  * Sketch-validated calm-slate Linear/Notion token set (Phase 16 D-05,
  * sketch session 001 — 2026-05-24). Hand-ported from
  * `Skill("sketch-findings-beatrax")/sources/themes/default.css` into a
@@ -2727,8 +2747,8 @@ td.date,
     .drawer-container .side {
         display: flex;
         height: 100%;
-        padding-top: calc(var(--space-4) + env(safe-area-inset-top));
-        padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+        padding-top: calc(var(--space-4) + var(--safe-top));
+        padding-bottom: calc(var(--space-4) + var(--safe-bottom));
         overscroll-behavior: contain;
     }
 }
@@ -2851,7 +2871,7 @@ td.date,
            the 44px controls on notched devices. */
         min-height: var(--top-bar-h);
         padding: 0 var(--space-4);
-        padding-top: env(safe-area-inset-top);
+        padding-top: var(--safe-top);
         border-bottom: 1px solid var(--color-border);
         background: var(--color-bg-subtle);
         gap: var(--space-2);
@@ -2951,7 +2971,7 @@ td.date,
             z-index: 60;
             background: var(--color-surface);
             border-radius: var(--sheet-radius);
-            padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+            padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-bottom));
             max-height: 85vh;
             overflow-y: auto;
         }
@@ -4056,6 +4076,13 @@ mark {
         ring: none;
         display: flex;
         flex-direction: column;
+        /* `inset: 0` spans the whole screen on an edge-to-edge Android
+           WebView, including the strips the system bars sit over, so the
+           search input landed under the status bar. Same insets the top bar
+           and the drawer already apply — the sheet covers the app chrome
+           (z-40 over the bar's z-30), but not the OS chrome. */
+        padding-top: var(--safe-top);
+        padding-bottom: var(--safe-bottom);
     }
 
     .phone-palette-sheet .palette-body {

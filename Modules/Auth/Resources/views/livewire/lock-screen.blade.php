@@ -46,7 +46,7 @@
                 src="/icon.png"
                 width="48"
                 height="48"
-                alt="beatrax"
+                alt="Beatrax"
                 class="rounded-xl"
                 aria-hidden="true"
             />
@@ -73,7 +73,7 @@
         {{-- Sign out (D-03). Forgot-PIN recovery (D-11/D-21): sign out →
              password login (primes the session, WR-03) → Settings →
              "Forgot your PIN?" resets it via the password recovery wrap. --}}
-        <form method="POST" action="{{ route('logout') }}">
+        <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
             @csrf
             <button
                 type="submit"

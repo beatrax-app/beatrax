@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Postvakken',
-    'intro' => 'Koppel Gmail- en Microsoft 365-postvakken zodat beatrax ze op bonnen kan scannen.',
+    'intro' => 'Koppel Gmail- en Microsoft 365-postvakken zodat Beatrax ze op bonnen kan scannen.',
 
     'connection_canceled' => 'Verbinding geannuleerd.',
     'connection_failed' => 'Kon de verbinding niet voltooien.',
@@ -13,10 +13,10 @@ return [
     'messages_suffix' => 'berichten',
 
     'connect_heading' => 'Koppel je e-mail',
-    'connect_body' => 'Importeer bonnen van PayPal, ICS Cards, Google Play en andere winkeliers door beatrax alleen-lezen toegang te geven tot een of meer van je postvakken.',
+    'connect_body' => 'Importeer bonnen van PayPal, ICS Cards, Google Play en andere winkeliers door Beatrax alleen-lezen toegang te geven tot een of meer van je postvakken.',
     'connect_gmail' => 'Gmail koppelen',
     'connect_microsoft' => 'Microsoft 365 koppelen',
-    'readonly_note' => 'beatrax leest alleen berichten. Het verstuurt, labelt, verplaatst of verwijdert nooit iets in je postvak.',
+    'readonly_note' => 'Beatrax leest alleen berichten. Het verstuurt, labelt, verplaatst of verwijdert nooit iets in je postvak.',
 
     'month' => '1 maand',
     'months' => ':count maanden',
@@ -43,11 +43,11 @@ return [
     'scan_in_progress_title' => 'Er loopt al een scan',
 
     'add_another' => 'Nog een postvak toevoegen',
-    'gmail_card_body' => 'Koppel een Gmail-account zodat beatrax het op bonnen kan scannen.',
-    'microsoft_card_body' => 'Koppel een Microsoft 365- of Outlook.com-account zodat beatrax het op bonnen kan scannen.',
+    'gmail_card_body' => 'Koppel een Gmail-account zodat Beatrax het op bonnen kan scannen.',
+    'microsoft_card_body' => 'Koppel een Microsoft 365- of Outlook.com-account zodat Beatrax het op bonnen kan scannen.',
 
     'discovered_heading' => 'Ontdekte afzenders',
-    'discovered_body' => 'Afzenders die eruitzien alsof ze bonnen sturen maar nog niet op je lijst met bekende bonnen staan. Voeg de afzenders toe die je door beatrax wilt laten scannen; wijs de rest af.',
+    'discovered_body' => 'Afzenders die eruitzien alsof ze bonnen sturen maar nog niet op je lijst met bekende bonnen staan. Voeg de afzenders toe die je door Beatrax wilt laten scannen; wijs de rest af.',
     'last_seen' => 'laatst gezien',
     'seen_times' => ':count keer gezien',
     'add' => 'Toevoegen',

@@ -62,7 +62,7 @@ return [
 
     'disconnect' => [
         'heading' => 'Open banking loskoppelen?',
-        'body' => 'Dit verwijdert je opgeslagen Enable Banking-inloggegevens en toestemming. Automatisch synchroniseren stopt direct. Transacties die al in beatrax zijn geïmporteerd, blijven ongewijzigd.',
+        'body' => 'Dit verwijdert je opgeslagen Enable Banking-inloggegevens en toestemming. Automatisch synchroniseren stopt direct. Transacties die al in Beatrax zijn geïmporteerd, blijven ongewijzigd.',
         'confirm' => 'Loskoppelen',
         'cancel' => 'Verbonden houden',
     ],
@@ -88,7 +88,7 @@ return [
 
     'warning' => [
         'heading' => 'Voordat je een externe partij verbindt',
-        'body' => 'Als je open banking inschakelt, worden je toestemming voor het bankinloggen en vervolgens je transactie- en saldogegevens rechtstreeks vanaf dit apparaat naar Enable Banking en je bank gestuurd. beatrax heeft geen server die deze gegevens ziet — Enable Banking en je bank wel. Dit is anders dan elke andere importmethode in beatrax, die nooit gegevens ergens naartoe stuurt.',
+        'body' => 'Als je open banking inschakelt, worden je toestemming voor het bankinloggen en vervolgens je transactie- en saldogegevens rechtstreeks vanaf dit apparaat naar Enable Banking en je bank gestuurd. Beatrax heeft geen server die deze gegevens ziet — Enable Banking en je bank wel. Dit is anders dan elke andere importmethode in Beatrax, die nooit gegevens ergens naartoe stuurt.',
         'acknowledge' => 'Ik begrijp dat mijn transactiegegevens worden gedeeld met Enable Banking en mijn bank.',
         'confirm' => 'Open banking inschakelen',
         'cancel' => 'Annuleren',
@@ -96,10 +96,10 @@ return [
 
     'wizard' => [
         'heading' => 'Verbind je bank',
-        'intro' => 'beatrax gebruikt je eigen Enable Banking-applicatie, zodat je inloggegevens nooit op een gedeelde server terechtkomen. Dit is een eenmalige installatie per bank.',
+        'intro' => 'Beatrax gebruikt je eigen Enable Banking-applicatie, zodat je inloggegevens nooit op een gedeelde server terechtkomen. Dit is een eenmalige installatie per bank.',
 
         'step1_title' => 'Genereer je lokale sleutelpaar',
-        'step1_body' => 'beatrax genereert een RSA-sleutelpaar op dit apparaat. De privésleutel verlaat het nooit.',
+        'step1_body' => 'Beatrax genereert een RSA-sleutelpaar op dit apparaat. De privésleutel verlaat het nooit.',
         'generate_keypair' => 'Sleutelpaar genereren',
         'public_key_label' => 'Openbare sleutel',
         'copy_public_key' => 'Openbare sleutel kopiëren',

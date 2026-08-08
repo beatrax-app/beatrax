@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Inboxes',
-    'intro' => 'Connect Gmail and Microsoft 365 inboxes so beatrax can scan them for receipts.',
+    'intro' => 'Connect Gmail and Microsoft 365 inboxes so Beatrax can scan them for receipts.',
 
     'connection_canceled' => 'Connection canceled.',
     'connection_failed' => "Couldn't complete the connection.",
@@ -13,10 +13,10 @@ return [
     'messages_suffix' => 'messages',
 
     'connect_heading' => 'Connect your email',
-    'connect_body' => 'Import receipts from PayPal, ICS Cards, Google Play, and other merchants by giving beatrax read-only access to one or more of your inboxes.',
+    'connect_body' => 'Import receipts from PayPal, ICS Cards, Google Play, and other merchants by giving Beatrax read-only access to one or more of your inboxes.',
     'connect_gmail' => 'Connect Gmail',
     'connect_microsoft' => 'Connect Microsoft 365',
-    'readonly_note' => 'beatrax only reads messages. It never sends, labels, moves, or deletes anything in your inbox.',
+    'readonly_note' => 'Beatrax only reads messages. It never sends, labels, moves, or deletes anything in your inbox.',
 
     'month' => '1 month',
     'months' => ':count months',
@@ -43,11 +43,11 @@ return [
     'scan_in_progress_title' => 'Scan already in progress',
 
     'add_another' => 'Add another inbox',
-    'gmail_card_body' => 'Connect a Gmail account so beatrax can scan it for receipts.',
-    'microsoft_card_body' => 'Connect a Microsoft 365 or Outlook.com account so beatrax can scan it for receipts.',
+    'gmail_card_body' => 'Connect a Gmail account so Beatrax can scan it for receipts.',
+    'microsoft_card_body' => 'Connect a Microsoft 365 or Outlook.com account so Beatrax can scan it for receipts.',
 
     'discovered_heading' => 'Discovered senders',
-    'discovered_body' => "Senders that look like they send receipts but aren't on your known-receipts list yet. Add the ones you want beatrax to scan; dismiss the rest.",
+    'discovered_body' => "Senders that look like they send receipts but aren't on your known-receipts list yet. Add the ones you want Beatrax to scan; dismiss the rest.",
     'last_seen' => 'last seen',
     'seen_times' => 'Seen :count times',
     'add' => 'Add',

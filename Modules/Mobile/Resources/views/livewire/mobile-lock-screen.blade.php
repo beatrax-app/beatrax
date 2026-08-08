@@ -71,7 +71,7 @@
                 src="/icon.png"
                 width="48"
                 height="48"
-                alt="beatrax"
+                alt="Beatrax"
                 class="rounded-xl"
                 aria-hidden="true"
             />
@@ -198,7 +198,7 @@
 
         {{-- Sign out (D-03). Forgot-PIN recovery mirrors the Auth lock
              screen exactly — sign out leads back to password login. --}}
-        <form method="POST" action="{{ route('logout') }}">
+        <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
             @csrf
             <button
                 type="submit"

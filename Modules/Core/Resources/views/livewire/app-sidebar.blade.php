@@ -21,8 +21,8 @@
 
 <aside class="side" aria-label="{{ Lang::get('core::sidebar.primary_nav') }}" style="--side-w: 248px;">
     <div class="side-brand">
-        <img src="{{ Vite::asset('resources/brand/logo.svg') }}" alt="beatrax" width="24" height="24" class="logo logo-svg" />
-        <span>beatrax</span>
+        <img src="{{ Vite::asset('resources/brand/logo.svg') }}" alt="Beatrax" width="24" height="24" class="logo logo-svg" />
+        <span>Beatrax</span>
         {{--
             Version chip reads from `config/nativephp.php#version`, which
             is the single source of truth Plan 17-01 (versioning baseline)
@@ -317,8 +317,15 @@
                     whole sidebar. The queue count is jobs.count()
                     (pending only); the worker delta is null when
                     no heartbeat exists in cache.
+
+                    NOT on mobile. The sidebar is mounted on every page
+                    (inside the drawer), and the mobile shell serialises
+                    every request through one persistent PHP interpreter,
+                    so this poll queues ahead of the taps the user is
+                    making and the app reads as frozen mid-navigation.
+                    The values still refresh on any page load.
                 --}}
-                <div class="dev-pulse" wire:poll.5s>
+                <div class="dev-pulse" @if ($pollsLiveData) wire:poll.5s @endif>
                     {{ Lang::get('core::sidebar.dev.pulse', ['queue' => $queueCount, 'worker' => $workerSecondsAgo !== null ? $workerSecondsAgo . 's ago' : '—']) }}
                 </div>
             </div>
@@ -339,7 +346,7 @@
             <span class="ic right" aria-hidden="true">⋯</span>
         </div>
 
-        <form method="POST" action="{{ route('logout') }}">
+        <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
             @csrf
             <button type="submit" class="side-item" style="width: 100%;">
                 <span class="ic" aria-hidden="true">⏻</span>

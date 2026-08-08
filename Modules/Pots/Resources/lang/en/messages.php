@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Pots · beatrax',
+    'page_title' => 'Pots · Beatrax',
     'heading' => 'Pots',
     'subtitle' => 'Virtual sub-balances that always add up to your real account balance.',
     'add_pot' => 'Add pot',

@@ -6,7 +6,7 @@ use Modules\Desktop\Internal\Native\WindowFocusState;
 
 /*
  * `WindowFocusState` is a tiny singleton holding the focused/unfocused
- * flag for the beatrax main window. The provider subscribes to
+ * flag for the Beatrax main window. The provider subscribes to
  * NativePHP's `WindowFocused` / `WindowBlurred` events and flips the
  * flag; `DispatchOsNotification` reads it to decide whether to fire an
  * OS notification or let the in-app SystemAlertsBanner handle the
@@ -17,7 +17,7 @@ use Modules\Desktop\Internal\Native\WindowFocusState;
  */
 
 it('defaults to focused on construction (D-13 conservative default)', function (): void {
-    // The freshly-launched beatrax window opens directly in front of
+    // The freshly-launched Beatrax window opens directly in front of
     // the user, so the conservative assumption is "focused" until the
     // first WindowBlurred event arrives. Defaulting the other way
     // (unfocused) would let every notification fired during the boot-

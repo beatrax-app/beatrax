@@ -22,5 +22,5 @@ return [
 
     'privacy' => 'Your data stays on this device',
     'need_help' => 'Need help?',
-    'need_help_aria' => 'Need help? Opens the beatrax issues page on GitHub',
+    'need_help_aria' => 'Need help? Opens the Beatrax issues page on GitHub',
 ];

@@ -63,8 +63,11 @@ final class Money implements Stringable
     {
         $resolved = $locale ?? ($this->currency() === 'EUR' ? 'nl_NL' : 'en_US');
 
+        // formatToLocale(), not formatTo(): the latter is deprecated in
+        // brick/money 0.11 and gone in 0.14, and it only forwards here anyway
+        // after raising a deprecation on every rendered amount.
         try {
-            return $this->inner->formatTo($resolved);
+            return $this->inner->formatToLocale($resolved);
         } catch (IntlException|ValueError) {
             // The mobile build's ext-intl cannot construct a NumberFormatter
             // for these locales, and reports that two ways — IntlException

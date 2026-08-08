@@ -30,7 +30,7 @@ return [
 
     'savings' => [
         'label' => 'Savings-opportunity prompts',
-        'help' => 'Get told when beatrax spots a cheaper plan or a place you could save.',
+        'help' => 'Get told when Beatrax spots a cheaper plan or a place you could save.',
     ],
 
     'when_heading' => 'When and how',

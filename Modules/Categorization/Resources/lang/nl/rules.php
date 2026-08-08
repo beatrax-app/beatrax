@@ -36,7 +36,7 @@ return [
     'edit_aria' => 'Regel bewerken (prioriteit :priority)',
     'delete_aria' => 'Regel verwijderen (prioriteit :priority)',
 
-    'footer_note' => 'Regels en winkeliergeschiedenis werken samen. Het verwijderen van een regel wist niet wat beatrax uit eerdere categorisaties heeft geleerd — bij de volgende import kan dezelfde categorie nog steeds automatisch uit de geschiedenis worden voorgesteld.',
+    'footer_note' => 'Regels en winkeliergeschiedenis werken samen. Het verwijderen van een regel wist niet wat Beatrax uit eerdere categorisaties heeft geleerd — bij de volgende import kan dezelfde categorie nog steeds automatisch uit de geschiedenis worden voorgesteld.',
 
     'chip_category' => 'Categorie: :path',
     'chip_counterparty' => 'Winkelier: :path',

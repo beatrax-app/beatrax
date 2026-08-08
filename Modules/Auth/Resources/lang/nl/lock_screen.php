@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Ontgrendelen · beatrax',
+    'page_title' => 'Ontgrendelen · Beatrax',
     'sign_out' => 'Afmelden',
 
     'digits_suffix' => 'cijfers ingevoerd',

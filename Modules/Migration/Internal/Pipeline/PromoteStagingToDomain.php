@@ -779,7 +779,7 @@ final class PromoteStagingToDomain
             $name = self::toString($row->name);
 
             if (! is_string($targetDate) || $targetDate === '') {
-                // beatrax's Goal model requires a non-null target_date; a
+                // Beatrax's Goal model requires a non-null target_date; a
                 // dateless flat goal_def cannot be represented without
                 // inventing one, so it is surfaced as unmapped instead of a
                 // lossy approximation.

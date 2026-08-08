@@ -63,10 +63,13 @@ final class Mt940Tag61Parser
         $amountInteger = $this->parseAmountToMinor($m['amount']);
 
         $status = $m['status'];
+        // `(?P<status>R?[CD])` admits exactly C, D, RC and RD, so credit is the
+        // only case worth naming and everything else is a debit. An explicit
+        // 'D', 'RC' arm plus a throwing default reads as defensive but is
+        // unreachable — the regex is the gate, and it already ran.
         $signed = match ($status) {
             'C', 'RD' => abs($amountInteger),
-            'D', 'RC' => -abs($amountInteger),
-            default => throw new InvalidAmountException(sprintf('Unknown :61: status code: %s', $status)),
+            default => -abs($amountInteger),
         };
 
         return new Mt940StatementLine(

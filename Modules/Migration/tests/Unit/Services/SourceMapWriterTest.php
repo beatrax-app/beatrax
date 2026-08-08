@@ -31,7 +31,7 @@ it('resolve() returns null before anything is recorded', function (): void {
     expect($this->writer->resolve($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key')))->toBeNull();
 });
 
-it('record() then resolve() round-trips the beatrax id via source_external_id', function (): void {
+it('record() then resolve() round-trips the Beatrax id via source_external_id', function (): void {
     $this->writer->record($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key'), 'category', 42);
 
     expect($this->writer->resolve($this->user, new SourceMapKey('ynab4', 'category', 'grocery-key')))->toBe(42);

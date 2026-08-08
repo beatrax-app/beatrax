@@ -154,7 +154,7 @@ it('uses the verbatim UI-SPEC body for the worker-crashed alert', function (): v
     // copy edit lands in one place and the test references the same
     // source of truth.
     expect(SurfaceWorkerCrashAlert::ALERT_BODY)
-        ->toContain("beatrax's background processing stopped unexpectedly")
+        ->toContain("Beatrax's background processing stopped unexpectedly")
         ->toContain('Imports and email scans are paused')
         ->toContain('Reopen the app to restart it');
 

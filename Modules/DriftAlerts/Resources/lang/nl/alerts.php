@@ -28,7 +28,7 @@ return [
 
     'anomaly_empty' => [
         'open_heading' => 'Geen ongewone afschrijvingen',
-        'open_body' => 'beatrax houdt je uitgaven in de gaten en markeert afschrijvingen die er ongewoon uitzien. Zodra er iets ongewoons binnenkomt, verschijnt het hier.',
+        'open_body' => 'Beatrax houdt je uitgaven in de gaten en markeert afschrijvingen die er ongewoon uitzien. Zodra er iets ongewoons binnenkomt, verschijnt het hier.',
         'history_heading' => 'Nog geen bevestigde afschrijvingen',
         'history_body' => 'Afschrijvingen die je hebt bevestigd verschijnen hier, zodat je ziet wat je al hebt bekeken.',
         'dismissed_heading' => 'Nog niets verworpen',
@@ -37,7 +37,7 @@ return [
 
     'empty_open' => [
         'heading' => 'Geen open driftmeldingen',
-        'body' => 'beatrax houdt je goedgekeurde terugkerende reeksen in de gaten en markeert elke reeks waarvan de laatste afschrijving meer dan je drempel afwijkt van het vorige bedrag. Pas de drempel aan bij',
+        'body' => 'Beatrax houdt je goedgekeurde terugkerende reeksen in de gaten en markeert elke reeks waarvan de laatste afschrijving meer dan je drempel afwijkt van het vorige bedrag. Pas de drempel aan bij',
         'link' => 'Instellingen → Standaard driftmelding',
     ],
     'empty_history' => [
@@ -46,7 +46,7 @@ return [
     ],
     'empty_dismissed' => [
         'heading' => 'Nog niets verworpen',
-        'body' => 'Wanneer je beatrax vertelt dat je een reeks hebt opgezegd, komt die beslissing hier terecht met een tijdstempel.',
+        'body' => 'Wanneer je Beatrax vertelt dat je een reeks hebt opgezegd, komt die beslissing hier terecht met een tijdstempel.',
     ],
 
     'row' => [

@@ -69,6 +69,48 @@ window.beatraxApplyChartTheme = function (options) {
  * defers to the plugin's full-screen scanner through $wire.startScan(), so
  * the affordance never promises a preview it cannot deliver.
  */
+/*
+ * Submits a plain POST form through fetch() instead of a native form submit.
+ *
+ * The mobile shell intercepts WebView requests and replays them into the
+ * embedded PHP runtime. Its form path has two defects: it builds the body with
+ * `new FormData(form)`, which omits the submitter button's own name/value, and
+ * the replayed request loses the POST method — Laravel answers 405 with
+ * `Allow: POST`, redirects, and the app loops on the error page. Sign-out and
+ * the pre-auth language switch are both plain POST forms, so both were dead on
+ * device with no error surfaced anywhere.
+ *
+ * fetch() is intercepted correctly — it is the path every Livewire round-trip
+ * already takes — so routing form submits through it fixes both defects
+ * without moving any endpoint. Desktop is unaffected either way.
+ */
+window.beatraxSubmitPostForm = async function (form, submitter) {
+    const body = new URLSearchParams(new FormData(form));
+
+    // FormData omits the submitter; re-add it, which is the whole payload for
+    // a form whose value lives on the button (the locale switcher).
+    if (submitter && submitter.name) {
+        body.set(submitter.name, submitter.value);
+    }
+
+    const response = await fetch(form.getAttribute('action'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+        redirect: 'follow',
+    });
+
+    // Follow wherever the server sent us. A redirected response exposes its
+    // final URL; anything else means "re-render where you are".
+    if (response.redirected && response.url) {
+        window.location.assign(response.url);
+
+        return;
+    }
+
+    window.location.reload();
+};
+
 function beatraxInlineScanner($wire) {
     return {
         live: false,
