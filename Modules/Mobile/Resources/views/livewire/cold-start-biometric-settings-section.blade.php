@@ -9,7 +9,7 @@
         your PIN. Your PIN is still required periodically and when biometrics
         change."
       - Empty state (no vault): "Biometric unlock is only available in the
-        beatrax mobile app."
+        Beatrax mobile app."
 --}}
 @use('Modules\Core\Public\Support\Lang')
 

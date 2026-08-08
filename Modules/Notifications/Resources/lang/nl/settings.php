@@ -30,7 +30,7 @@ return [
 
     'savings' => [
         'label' => 'Bespaartips',
-        'help' => 'Krijg een melding wanneer beatrax een goedkoper abonnement of een besparingsmogelijkheid ontdekt.',
+        'help' => 'Krijg een melding wanneer Beatrax een goedkoper abonnement of een besparingsmogelijkheid ontdekt.',
     ],
 
     'when_heading' => 'Wanneer en hoe',

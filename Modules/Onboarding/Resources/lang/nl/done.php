@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'eyebrow' => 'Klaar',
-    'h1' => 'beatrax kent je geld.',
+    'h1' => 'Beatrax kent je geld.',
     'lede' => 'Je gegevens staan klaar. Dit kun je nu doen.',
 
     'review_label' => 'Bekijk je eerste maand',

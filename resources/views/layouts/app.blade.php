@@ -18,7 +18,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <x-core::pwa-head />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <title>{{ $title ?? 'beatrax' }}</title>
+        <title>{{ $title ?? 'Beatrax' }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
         <x-core::head-assets />
     </head>
@@ -114,7 +114,7 @@
                  every authenticated page (Plan 08-05, SRCH-02). --}}
             @livewire('search.palette-search-endpoint')
             {{-- Arg-prompt modal for SAFE-tier commands with args
-                 (config:show, beatrax:reset-password, etc.). The
+                 (config:show, Beatrax:reset-password, etc.). The
                  palette dispatches `command-args:prompt` when the
                  picked command's CommandSpec carries argsSchema;
                  the form submits as `spawn-command` so the runner

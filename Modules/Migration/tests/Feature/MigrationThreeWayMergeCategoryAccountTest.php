@@ -32,7 +32,7 @@ beforeEach(function (): void {
 });
 
 /**
- * Seeds the 3-way-merge fixture for one category or account: the live beatrax
+ * Seeds the 3-way-merge fixture for one category or account: the live Beatrax
  * row (name = $localName), a source-map + baseline snapshot of $baselineName,
  * and a staging row carrying the re-import's $sourceName. Returns the new run
  * id to resolve against.

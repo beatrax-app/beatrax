@@ -9,7 +9,7 @@ declare(strict_types=1);
  * the NativePHP-published `nativephp/electron/src/main/index.js` to create
  * a persistent macOS menu-bar `Tray` directly in the Electron main process,
  * replacing the NativePHP `MenuBar` facade (which couples tray menu items
- * to a focused BrowserWindow and breaks "Open beatrax" once the user
+ * to a focused BrowserWindow and breaks "Open Beatrax" once the user
  * closes the main window via the X button).
  *
  * The tests below verify the patch on representative input shapes so a
@@ -48,7 +48,7 @@ it('injects the persistent-tray marker comment exactly once', function (): void 
 
     [$patched] = injectPersistentTray($upstream);
 
-    expect(substr_count($patched, '// ── beatrax persistent menu-bar tray ──'))->toBe(1);
+    expect(substr_count($patched, '// ── Beatrax persistent menu-bar tray ──'))->toBe(1);
 });
 
 it('emits a Tray construction that flags the loaded image as a macOS template image', function (): void {
@@ -67,12 +67,12 @@ it('emits a Tray construction that flags the loaded image as a macOS template im
     expect($patched)->toContain('new Tray(image)');
 });
 
-it('builds the verbatim D-09 three-row context menu — Open beatrax / Scan email now / Quit', function (): void {
+it('builds the verbatim D-09 three-row context menu — Open Beatrax / Scan email now / Quit', function (): void {
     $upstream = "import { app } from 'electron';\nNativePHP.bootstrap(app);\n";
 
     [$patched] = injectPersistentTray($upstream);
 
-    expect($patched)->toContain("label: 'Open beatrax'");
+    expect($patched)->toContain("label: 'Open Beatrax'");
     expect($patched)->toContain("label: 'Scan email now'");
     expect($patched)->toContain("label: 'Quit'");
     // Quit handler must call `app.quit()` directly — no HTTP roundtrip.
@@ -112,7 +112,7 @@ it('is idempotent — a source containing the marker is returned unchanged', fun
         import { app, Menu, Tray, nativeImage } from 'electron';
         NativePHP.bootstrap(app);
 
-        // ── beatrax persistent menu-bar tray ──
+        // ── Beatrax persistent menu-bar tray ──
         let tray = null;
         JS;
 
@@ -169,7 +169,7 @@ it('splices the injection AFTER the bootstrap statement, not before', function (
     [$patched] = injectPersistentTray($upstream);
 
     $bootstrapPos = strpos($patched, 'NativePHP.bootstrap(app);');
-    $injectionPos = strpos($patched, '// ── beatrax persistent menu-bar tray ──');
+    $injectionPos = strpos($patched, '// ── Beatrax persistent menu-bar tray ──');
 
     expect($bootstrapPos)->toBeLessThan($injectionPos);
 });

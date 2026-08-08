@@ -16,7 +16,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <x-core::pwa-head />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <title>{{ $title ?? 'beatrax' }}</title>
+        <title>{{ $title ?? 'Beatrax' }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
         <x-core::head-assets />
     </head>

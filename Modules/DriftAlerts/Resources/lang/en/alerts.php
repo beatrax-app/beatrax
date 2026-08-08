@@ -28,7 +28,7 @@ return [
 
     'anomaly_empty' => [
         'open_heading' => 'No unusual charges',
-        'open_body' => 'beatrax watches your spending and flags charges that look out of the ordinary. When something unusual lands, it shows up here.',
+        'open_body' => 'Beatrax watches your spending and flags charges that look out of the ordinary. When something unusual lands, it shows up here.',
         'history_heading' => 'No acknowledged charges yet',
         'history_body' => "Charges you've acknowledged will appear here so you can see what you've already reviewed.",
         'dismissed_heading' => 'Nothing dismissed yet',
@@ -37,7 +37,7 @@ return [
 
     'empty_open' => [
         'heading' => 'No open drift alerts',
-        'body' => 'beatrax watches your approved recurring series and flags any whose latest charge differs from the prior amount by more than your threshold. Adjust threshold on',
+        'body' => 'Beatrax watches your approved recurring series and flags any whose latest charge differs from the prior amount by more than your threshold. Adjust threshold on',
         'link' => 'Settings → Default drift alert',
     ],
     'empty_history' => [
@@ -46,7 +46,7 @@ return [
     ],
     'empty_dismissed' => [
         'heading' => 'Nothing dismissed yet',
-        'body' => "When you tell beatrax you've cancelled a series, that decision lands here with a timestamp.",
+        'body' => "When you tell Beatrax you've cancelled a series, that decision lands here with a timestamp.",
     ],
 
     'row' => [

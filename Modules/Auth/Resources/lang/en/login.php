@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Sign in · beatrax',
+    'page_title' => 'Sign in · Beatrax',
     'title' => 'Sign in',
     'subtitle' => 'Sign in to continue.',
     'username' => 'Username',

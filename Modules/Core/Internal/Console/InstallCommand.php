@@ -91,7 +91,7 @@ class InstallCommand extends Command
                 $resolvedPath,
                 $token,
             ));
-            $this->line('beatrax is local-only — move database.sqlite outside iCloud Drive, OneDrive, Dropbox, or any other cloud-sync folder before running install again.');
+            $this->line('Beatrax is local-only — move database.sqlite outside iCloud Drive, OneDrive, Dropbox, or any other cloud-sync folder before running install again.');
 
             return self::FAILURE;
         }

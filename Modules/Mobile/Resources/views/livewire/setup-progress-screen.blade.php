@@ -32,7 +32,7 @@
                 src="/icon.png"
                 width="48"
                 height="48"
-                alt="beatrax"
+                alt="Beatrax"
                 class="rounded-xl"
                 aria-hidden="true"
             />

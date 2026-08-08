@@ -85,7 +85,7 @@ return [
 
     'forecasting' => [
         'heading' => 'Forecasting',
-        'intro' => "beatrax projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.",
+        'intro' => "Beatrax projects your balance forward from your accounts' current state. For accounts without statement balances (PayPal, legacy CSV imports), set the opening balance here so projections start from a known point.",
         'no_accounts' => 'No accounts yet — import a statement to add one.',
     ],
 
@@ -93,13 +93,13 @@ return [
         'heading' => 'Auto-import',
         'label' => 'Auto-import from drop folder',
 
-        'active_html' => 'Drop folder is active. beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> every 5 minutes for new files.',
-        'inactive_html' => 'When on, beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they\'re never imported twice.',
+        'active_html' => 'Drop folder is active. Beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> every 5 minutes for new files.',
+        'inactive_html' => 'When on, Beatrax scans <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> every 5 minutes for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> and <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> files and imports them through the same matcher pipeline as the wizard. Processed files move to <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> so they\'re never imported twice.',
     ],
 
     'aliases' => [
         'heading' => 'Aliases',
-        'intro' => "Review and edit the friendly names you've taught beatrax for cryptic statement descriptions.",
+        'intro' => "Review and edit the friendly names you've taught Beatrax for cryptic statement descriptions.",
         'manage' => 'Manage aliases →',
     ],
 
@@ -110,7 +110,7 @@ return [
 
     'about_updates' => [
         'heading' => 'About updates',
-        'body' => "beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.",
+        'body' => "Beatrax updates itself automatically once installed. After installing the very first version, future versions arrive via an in-app banner — you don't need to revisit GitHub. If a future update ever fails to apply, you can always re-download the latest installer manually from the releases page.",
         'open_releases' => 'Open releases page →',
     ],
 

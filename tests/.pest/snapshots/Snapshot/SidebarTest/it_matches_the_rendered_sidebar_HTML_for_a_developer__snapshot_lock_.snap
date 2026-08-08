@@ -1,7 +1,7 @@
 <aside wire:name="core.app-sidebar" class="side" aria-label="Primary" style="--side-w: 248px;">
     <div class="side-brand">
-        <img src="https://beatrax.test/build/assets/logo-DEpTnGRK.svg" alt="beatrax" width="24" height="24" class="logo logo-svg" />
-        <span>beatrax</span>
+        <img src="https://beatrax.test/build/assets/logo-DEpTnGRK.svg" alt="Beatrax" width="24" height="24" class="logo logo-svg" />
+        <span>Beatrax</span>
         
         <span class="version-chip">v0.0.0-dev</span>
     </div>
@@ -175,7 +175,7 @@
                     >Ctrl+.</span>
                 </a>
                 
-                <div class="dev-pulse" wire:poll.5s>
+                <div class="dev-pulse"  wire:poll.5s >
                     Queue 0 · Worker —
                 </div>
             </div>
@@ -190,7 +190,7 @@
             <span class="ic right" aria-hidden="true">⋯</span>
         </div>
 
-        <form method="POST" action="https://beatrax.test/logout">
+        <form method="POST" action="https://beatrax.test/logout" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
                         <button type="submit" class="side-item" style="width: 100%;">
                 <span class="ic" aria-hidden="true">⏻</span>
                 Sign out

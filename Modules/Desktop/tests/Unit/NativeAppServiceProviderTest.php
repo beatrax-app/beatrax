@@ -70,7 +70,7 @@ it('does not call the NativePHP `menu-bar/create` endpoint — the persistent tr
      * lands in the popover-style menubar paradigm whose context-menu
      * link items early-return when no window is focused — once the
      * user closes the main window via the X button, the tray's
-     * "Open beatrax" item does nothing. Our fix relocates the tray
+     * "Open Beatrax" item does nothing. Our fix relocates the tray
      * to the Electron main process via a prebuild patch. If a future
      * refactor accidentally reintroduces a `MenuBar::create()` call,
      * the resulting POST to `/api/menu-bar/create` will be observed

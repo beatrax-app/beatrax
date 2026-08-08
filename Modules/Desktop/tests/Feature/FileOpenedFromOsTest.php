@@ -226,7 +226,7 @@ it('FileStagingPage shows the empty state when no file resolves', function (): v
 })->group('phase-15');
 
 it('pending intent survives login: file held across login round-trip', function (): void {
-    // Step 1: while logged OUT, the OS hands beatrax a file. The intake
+    // Step 1: while logged OUT, the OS hands Beatrax a file. The intake
     // route stores the validated intent in PendingFileIntent.
     $user = User::query()->create([
         'username' => 'pending-intent-fixture',

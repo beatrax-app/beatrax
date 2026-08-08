@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Support\Lang')
 @php
     /**
-     * D-01 / D-02 file-staging page. Shown after the OS hands beatrax
+     * D-01 / D-02 file-staging page. Shown after the OS hands Beatrax
      * a `.csv` / `.eml` file path; the page reads the pending intent
      * and either:
      *
@@ -28,7 +28,7 @@
             {{-- Brand mark — same surface the welcome / login screens use (D-18). --}}
             <img
                 src="{{ asset('icon.png') }}"
-                alt="beatrax"
+                alt="Beatrax"
                 class="h-20 w-20"
             />
         </div>

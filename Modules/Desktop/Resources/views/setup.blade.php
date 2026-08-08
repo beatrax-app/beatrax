@@ -8,7 +8,7 @@
             {{-- Brand mark — matches the welcome / login layout (D-18). --}}
             <img
                 src="{{ asset('icon.png') }}"
-                alt="beatrax"
+                alt="Beatrax"
                 class="h-16 w-16"
             />
         </div>

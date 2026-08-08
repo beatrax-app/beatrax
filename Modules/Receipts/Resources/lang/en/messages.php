@@ -19,7 +19,7 @@ return [
         'heading_cleaner' => 'An email receipt has a cleaner :field',
         'heading_different' => 'An email receipt records a different :field',
         'title' => 'Receipt and statement disagree.',
-        'body' => ':heading (“:receipt”) than the statement (“:statement”). Should beatrax prefer receipts for future conflicts?',
+        'body' => ':heading (“:receipt”) than the statement (“:statement”). Should Beatrax prefer receipts for future conflicts?',
         'use_receipt' => 'Use receipt',
         'keep_statement' => 'Keep statement',
     ],

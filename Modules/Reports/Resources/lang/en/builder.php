@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Reports',
-    'page_title' => 'Reports · beatrax',
+    'page_title' => 'Reports · Beatrax',
     'subtitle' => 'Compose a report from your ledger.',
     'controls_aria' => 'Report controls',
     'result_aria' => 'Report result',

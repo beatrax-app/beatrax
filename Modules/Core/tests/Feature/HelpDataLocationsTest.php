@@ -59,7 +59,7 @@ it('renders the verbatim local-only intro paragraph', function (): void {
     $user = hdlUser(false, 'hdl-intro');
 
     Livewire::actingAs($user)->test(HelpDataLocations::class)
-        ->assertSeeText('beatrax stores everything on this device. Nothing is sent to a server, nothing syncs to the cloud, nothing leaves this device without you exporting it.');
+        ->assertSeeText('Beatrax stores everything on this device. Nothing is sent to a server, nothing syncs to the cloud, nothing leaves this device without you exporting it.');
 });
 
 it('renders all three resolved paths exactly as UserDataPathService reports them', function (): void {
@@ -115,8 +115,8 @@ it('renders Section 3 "Deleting your data" verbatim with the no-telemetry line',
     $component = Livewire::actingAs($user)->test(HelpDataLocations::class);
 
     $component->assertSeeText('Deleting your data');
-    $component->assertSeeText('To remove beatrax and every trace of your data');
-    $component->assertSeeText('Drag beatrax to the Trash');
+    $component->assertSeeText('To remove Beatrax and every trace of your data');
+    $component->assertSeeText('Drag Beatrax to the Trash');
     $component->assertSeeText('Delete the folders listed above');
 
     // Livewire's assertSeeText HTML-escapes the needle by default

@@ -6,7 +6,7 @@ return [
     'aria' => 'Ways to save',
     'heading' => 'Ways to save',
     'subscriptions_link' => 'Subscriptions →',
-    'disclaimer' => 'Official links from the support corpus — beatrax never cancels or switches anything for you.',
+    'disclaimer' => 'Official links from the support corpus — Beatrax never cancels or switches anything for you.',
     'dismiss_aria' => 'Dismiss suggestion',
 
     'insight' => [

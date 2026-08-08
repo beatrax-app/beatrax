@@ -12,13 +12,13 @@ return [
     'filters_active' => ', :count active',
 
     'install' => [
-        'aria' => 'Install beatrax',
+        'aria' => 'Install Beatrax',
         'headline' => 'Also want to see your data on your phone?',
-        'body' => 'Install beatrax on your phone for quick access to your finances.',
+        'body' => 'Install Beatrax on your phone for quick access to your finances.',
         'dismiss_aria' => 'Dismiss install hint',
         'install_app' => 'Install app',
 
-        'desktop_html' => 'Open beatrax in your phone\'s browser and tap "Add to Home Screen" — or tap the <strong style="color: var(--color-text);">⚡</strong> icon in Safari\'s share sheet.',
+        'desktop_html' => 'Open Beatrax in your phone\'s browser and tap "Add to Home Screen" — or tap the <strong style="color: var(--color-text);">⚡</strong> icon in Safari\'s share sheet.',
     ],
 
     'topbar' => [

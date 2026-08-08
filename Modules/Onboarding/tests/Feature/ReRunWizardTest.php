@@ -70,7 +70,7 @@ it('resets every wizard_progress row and re-enters from welcome when ?force=1 is
         ->test(SetupWizard::class)
         ->assertSet('currentStepKey', 'welcome')
         ->assertSet('isResuming', false)
-        ->assertSee('get beatrax to know your money');
+        ->assertSee('get Beatrax to know your money');
 
     $nonPendingAfter = DB::table('wizard_progress')
         ->where('user_id', $this->user->id)

@@ -68,5 +68,5 @@ it('lands the user on the first pending step without the banner when nothing is 
     Livewire::test(SetupWizard::class)
         ->assertSet('currentStepKey', 'welcome')
         ->assertSet('isResuming', false)
-        ->assertSee('get beatrax to know your money');
+        ->assertSee('get Beatrax to know your money');
 });

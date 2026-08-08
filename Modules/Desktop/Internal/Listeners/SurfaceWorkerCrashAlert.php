@@ -32,7 +32,7 @@ final class SurfaceWorkerCrashAlert
     // source of truth (mirrored in desktop::native.worker_alert.*).
     // escalate() renders the copy through Lang::get so it localises; at the
     // `en` default the two are identical.
-    public const ALERT_BODY = "beatrax's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
+    public const ALERT_BODY = "Beatrax's background processing stopped unexpectedly. Imports and email scans are paused. Reopen the app to restart it.";
 
     public const OS_NOTIFICATION_TITLE = 'Background work stopped';
 

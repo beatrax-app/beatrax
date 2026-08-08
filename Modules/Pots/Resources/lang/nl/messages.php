@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Potjes · beatrax',
+    'page_title' => 'Potjes · Beatrax',
     'heading' => 'Potjes',
     'subtitle' => 'Virtuele deelsaldo\'s die altijd optellen tot je werkelijke rekeningsaldo.',
     'add_pot' => 'Potje toevoegen',

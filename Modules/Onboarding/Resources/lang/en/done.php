@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'eyebrow' => 'Done',
-    'h1' => 'beatrax knows your money.',
+    'h1' => 'Beatrax knows your money.',
     'lede' => "Your data is ready. Here's what to do next.",
 
     'review_label' => 'Review your first month',

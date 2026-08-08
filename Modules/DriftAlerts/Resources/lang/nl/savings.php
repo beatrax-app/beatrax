@@ -6,7 +6,7 @@ return [
     'aria' => 'Manieren om te besparen',
     'heading' => 'Manieren om te besparen',
     'subscriptions_link' => 'Abonnementen →',
-    'disclaimer' => 'Officiële links uit het ondersteuningscorpus — beatrax zegt of wisselt nooit iets voor je op.',
+    'disclaimer' => 'Officiële links uit het ondersteuningscorpus — Beatrax zegt of wisselt nooit iets voor je op.',
     'dismiss_aria' => 'Suggestie negeren',
 
     'insight' => [

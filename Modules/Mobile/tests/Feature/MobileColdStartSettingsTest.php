@@ -76,7 +76,7 @@ it('renders the empty-state (no toggle) when the vault is unavailable', function
 
     Livewire::test(ColdStartBiometricSettingsSection::class)
         ->assertSet('available', false)
-        ->assertSee('only available in the beatrax mobile app');
+        ->assertSee('only available in the Beatrax mobile app');
 });
 
 it('enables with the correct PIN', function (): void {

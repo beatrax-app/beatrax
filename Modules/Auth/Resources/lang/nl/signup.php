@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Welkom bij beatrax · beatrax',
-    'title' => 'Welkom bij beatrax',
+    'page_title' => 'Welkom bij Beatrax · Beatrax',
+    'title' => 'Welkom bij Beatrax',
     'subtitle' => 'Maak het eerste account op dit apparaat aan. Het eerste account wordt de eigenaar.',
     'username' => 'Gebruikersnaam',
     'username_hint' => 'Wordt in kleine letters opgeslagen. Dit wordt het eigenaarsaccount.',

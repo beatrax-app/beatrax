@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Unlock · beatrax',
+    'page_title' => 'Unlock · Beatrax',
     'sign_out' => 'Sign out',
 
     'digits_suffix' => 'digits entered',
