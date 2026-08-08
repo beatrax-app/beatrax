@@ -69,7 +69,7 @@ Node version             ok       Node v20.18.1 is installed.
 SQLite WAL mode          ok       WAL mode is enabled.
 Synchronous mode         ok       synchronous = NORMAL.
 Backup freshness         critical No verified backups found under the backups directory.
-ext-imap                 info     not loaded (beatrax uses webklex/php-imap regardless)
+ext-imap                 info     not loaded (Beatrax uses webklex/php-imap regardless)
 
 1 warning(s). Review the output above.
 TXT;

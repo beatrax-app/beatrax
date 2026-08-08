@@ -519,7 +519,7 @@ final class MobilePairingScan extends Component
         $view = $views->make('mobile::livewire.mobile-pairing-scan');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('mobile::pairing.page_title').' · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('mobile::pairing.page_title').' · Beatrax']);
 
         return $view;
     }

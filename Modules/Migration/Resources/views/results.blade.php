@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-@extends('layouts.app', ['title' => Lang::get('migration::results.page_title').' · beatrax'])
+@extends('layouts.app', ['title' => Lang::get('migration::results.page_title').' · Beatrax'])
 
 @section('content')
     <main class="min-h-screen bg-white dark:bg-slate-950">

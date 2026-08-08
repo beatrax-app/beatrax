@@ -5,7 +5,7 @@
     Renders the opening balance + opening-balance-as-of fields side by
     side. The soft-warning banner appears below the inputs when the
     Action raises an OpeningBalanceDivergenceWarning; the banner offers
-    two chips: "Use beatrax's number" (replaces the input with the
+    two chips: "Use Beatrax's number" (replaces the input with the
     computed sum-of-transactions) and "Use my number" (commits the
     user's value with allowDivergence=true).
 

@@ -23,7 +23,7 @@ final class AppMenuBuilder
 
     public const HELP_REPORT_ISSUE = 'Report an issue';
 
-    public const HELP_ABOUT = 'About beatrax';
+    public const HELP_ABOUT = 'About Beatrax';
 
     public const DEVELOPER_SUBMENU = 'Developer';
 
@@ -59,7 +59,7 @@ final class AppMenuBuilder
             Menu::help()->submenu(
                 Menu::link(self::GITHUB_REPO_URL, Lang::get('desktop::native.menu.help_github_repo'))->openInBrowser(),
                 Menu::link(self::REPORT_ISSUE_URL, Lang::get('desktop::native.menu.help_report_issue'))->openInBrowser(),
-                // "About beatrax" routes to Settings, where app
+                // "About Beatrax" routes to Settings, where app
                 // metadata + version already surface; no dedicated
                 // /about route exists.
                 Menu::route('settings', Lang::get('desktop::native.menu.help_about')),

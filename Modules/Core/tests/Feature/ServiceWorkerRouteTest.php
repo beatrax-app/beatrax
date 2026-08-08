@@ -11,7 +11,7 @@ declare(strict_types=1);
  * Assertions cover:
  *   - GET /sw.js returns 200 without authentication
  *   - Content-Type is application/javascript
- *   - Response body contains the beatrax cache name prefix
+ *   - Response body contains the Beatrax cache name prefix
  *   - Response body contains the version from config('nativephp.version')
  */
 
@@ -26,7 +26,7 @@ it('/sw.js returns Content-Type application/javascript', function (): void {
     $response->assertHeader('Content-Type', 'application/javascript');
 });
 
-it('/sw.js contains the beatrax cache name prefix', function (): void {
+it('/sw.js contains the Beatrax cache name prefix', function (): void {
     $html = (string) $this->get('/sw.js')->getContent();
     expect($html)->toContain('beatrax-shell-v');
 });

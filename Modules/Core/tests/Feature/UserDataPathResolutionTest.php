@@ -39,6 +39,12 @@ beforeEach(function (): void {
     // the storage root, so the app/ tree sits directly under <tmp> (no
     // extra `storage/` segment) — matching UserDataPathService::appPath().
     mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'database', 0o755, true);
+    // Laravel's SQLiteConnector refuses to connect to a database file that
+    // does not exist, and SqliteOptimizationsProvider's `PRAGMA journal_mode`
+    // runs on ConnectionEstablished — before migrate:fresh can create it. The
+    // real roots do not hit this because both bootstrap/app.php files touch
+    // the file during ->booting(); the simulated root has to do the same.
+    touch($this->tmpRoot.DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'database.sqlite');
     mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups', 0o755, true);
     mkdir($this->tmpRoot.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'secrets', 0o755, true);
 

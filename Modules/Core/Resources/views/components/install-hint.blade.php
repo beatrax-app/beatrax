@@ -8,7 +8,7 @@
     Behavior:
     - Captures beforeinstallprompt on phones/Chromium to show a native install CTA.
     - Always shown on desktop as a feature-discovery hint ("Also want to see your
-      data on your phone?") pointing the user to open beatrax on their phone.
+      data on your phone?") pointing the user to open Beatrax on their phone.
     - Dismissable but returns (standing hint, not one-time dismissed forever).
     - iOS Safari: shows instructions ("Tap Share, then Add to Home Screen") since
       beforeinstallprompt is not supported.

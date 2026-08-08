@@ -25,7 +25,7 @@ return [
         'import_finished_other' => ':count transacties geïmporteerd.',
         'drift' => 'Een terugkerende afschrijving ging :direction met :delta :currency.',
         'forecast' => 'Je verwachte saldo zakt binnen 30 dagen onder nul.',
-        'ics_statement_ready' => 'Download het uit het ICS-portaal en zet het in beatrax om de uitgaven van deze kaart bij te houden.',
+        'ics_statement_ready' => 'Download het uit het ICS-portaal en zet het in Beatrax om de uitgaven van deze kaart bij te houden.',
         'payment_reminder_hedged' => ':name — verwacht rond :day, :amount.',
         'payment_reminder_confident' => ':name — verschuldigd op :day (:date), :amount.',
         'savings_prompt' => ':message (:monthly/mnd)',

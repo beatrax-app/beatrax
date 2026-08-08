@@ -120,7 +120,7 @@ it('detects a truncated backup (missing final tag)', function (): void {
     $p['cleanup']();
 });
 
-it('rejects a file that is not a beatrax encrypted backup', function (): void {
+it('rejects a file that is not a Beatrax encrypted backup', function (): void {
     $p = backupTmpPaths();
     file_put_contents($p['enc'], 'this is not an encrypted backup at all');
 
@@ -155,7 +155,7 @@ it('refuses to read a backup that is not there', function (): void {
     $p['cleanup']();
 });
 
-// A file too short to hold even the magic. Distinct from the "not a beatrax
+// A file too short to hold even the magic. Distinct from the "not a Beatrax
 // backup" case, which has enough bytes to compare and finds the wrong ones.
 it('rejects a file that ends before the header does', function (): void {
     $p = backupTmpPaths();

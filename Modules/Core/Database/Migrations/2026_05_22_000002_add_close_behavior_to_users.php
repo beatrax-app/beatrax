@@ -13,7 +13,7 @@ use Modules\Core\Database\Support\ModuleMigration;
  *
  *   NULL    — no decision yet; the next window-close shows the
  *             Quit / Keep-in-tray prompt.
- *   'quit'  — the user chose "Quit beatrax" and asked to remember it;
+ *   'quit'  — the user chose "Quit Beatrax" and asked to remember it;
  *             future closes quit the app immediately.
  *   'tray'  — the user chose "Keep running in the tray" and asked to
  *             remember it; future closes hide the window and keep the

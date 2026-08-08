@@ -111,7 +111,7 @@ final class SetAccountOpeningBalance
     }
 
     // Exposed publicly so OpeningBalanceEditor can populate the "Use
-    // beatrax's number" chip without re-invoking the full Action.
+    // Beatrax's number" chip without re-invoking the full Action.
     public function sumOfTransactionsForAccount(int $accountId, User $user, string $asOfDate): int
     {
         return (int) $this->db->connection()->table('transactions')

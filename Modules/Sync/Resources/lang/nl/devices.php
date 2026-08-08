@@ -20,6 +20,11 @@ return [
     'enable_encryption' => 'Versleuteling inschakelen',
 
     'your_devices' => 'Je apparaten',
+
+    // Settings keeps a pointer to the moved surface; the section
+    // itself now lives on /sync with the status and sync action.
+    'moved_help' => 'Koppelen, apparaatnamen en versleuteling staan nu bij je synchronisatiestatus.',
+    'moved_cta' => 'Synchronisatie openen',
     'device_name' => 'Apparaatnaam',
     'save' => 'Opslaan',
     'rename_device' => 'Apparaat hernoemen',

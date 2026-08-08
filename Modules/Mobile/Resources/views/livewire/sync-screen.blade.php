@@ -57,6 +57,15 @@
         {{ Lang::get('mobile::sync.sync_now') }}
     </button>
 
+    {{-- Device identity, pairing and the encryption controls. This is the
+         canonical home for them: they are about the sync relationship
+         between devices, and Settings only ever linked to the same
+         component. Embedded by alias, the same cross-module seam the
+         status section above already uses. --}}
+    <section class="space-y-3" data-testid="sync-devices-management">
+        @livewire('sync.devices-and-sync-settings-section')
+    </section>
+
     <section class="space-y-3">
         <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::sync.network') }}</h2>
 

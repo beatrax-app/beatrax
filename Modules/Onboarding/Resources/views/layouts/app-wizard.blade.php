@@ -16,7 +16,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').' · beatrax' }}</title>
+        <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').' · Beatrax' }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
         <x-core::head-assets />
     </head>

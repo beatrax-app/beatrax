@@ -10,7 +10,7 @@ return [
     'error_advanced_off' => 'Advanced-schakelaar staat uit. Zet hem aan in de dev-zijbalk voordat je dit commando uitvoert.',
     'error_app_name_mismatch' => 'Appnaam kwam niet overeen. Typ het exacte woord in kleine letters.',
 
-    'type_to_confirm_html' => 'Typ <code>beatrax</code> om te bevestigen',
+    'type_to_confirm_html' => 'Typ <code>Beatrax</code> om te bevestigen',
     'cancel' => 'Annuleren',
     'run' => ':command uitvoeren',
     'running' => 'Bezig…',

@@ -20,5 +20,5 @@ return [
 
     'privacy' => 'Je gegevens blijven op dit apparaat',
     'need_help' => 'Hulp nodig?',
-    'need_help_aria' => 'Hulp nodig? Opent de beatrax issues-pagina op GitHub',
+    'need_help_aria' => 'Hulp nodig? Opent de Beatrax issues-pagina op GitHub',
 ];

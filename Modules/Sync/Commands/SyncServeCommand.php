@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Commands;
 
+use Amp\DeferredFuture;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\SocketHttpServer;
 use Amp\Websocket\Server\AllowOriginAcceptor;
@@ -71,13 +72,25 @@ final class SyncServeCommand extends Command
             $this->advertiser->advertise($handler->localDeviceId(), $port);
 
             $this->logger->info('sync:serve: listener started.', ['port' => $port]);
-            $this->info("sync:serve: listening on 0.0.0.0:{$port} (SIGTERM/SIGINT to stop).");
+            $stopHint = $this->canTrapSignals() ? 'SIGTERM/SIGINT to stop' : 'no signal handling on this runtime';
+            $this->info("sync:serve: listening on 0.0.0.0:{$port} ({$stopHint}).");
 
-            // Suspend this fiber until SIGTERM or SIGINT arrives. The revolt
-            // event loop continues processing WS connections in the background.
-            \Amp\trapSignal([\SIGTERM, \SIGINT]);
+            // trapSignal() needs ext-pcntl, and the PHP binary NativePHP
+            // bundles for the desktop build ships without it: SIGTERM is an
+            // undefined constant there, so the command fatalled right after
+            // binding the port and the supervisor restarted it forever.
+            if ($this->canTrapSignals()) {
+                \Amp\trapSignal([\SIGTERM, \SIGINT]);
+                $this->logger->info('sync:serve: shutdown signal received — stopping server.');
+            } else {
+                // Nothing to trap: park the fiber indefinitely and let the
+                // supervisor kill the process. Shutdown is not graceful here,
+                // which is survivable — the listener holds no unflushed state,
+                // and every peer exchange is a bounded open/do/close.
+                $this->logger->info('sync:serve: no signal handling available; running until terminated.');
+                (new DeferredFuture)->getFuture()->await();
+            }
 
-            $this->logger->info('sync:serve: shutdown signal received — stopping server.');
             $httpServer->stop();
         } catch (\Throwable $e) {
             $this->logger->error('sync:serve: fatal error.', ['error' => $e->getMessage()]);
@@ -92,5 +105,12 @@ final class SyncServeCommand extends Command
         $this->logger->info('sync:serve: stopped cleanly.');
 
         return self::SUCCESS;
+    }
+
+    // Both are required: ext-pcntl supplies the trapping machinery and the
+    // SIG* constants, and a runtime can define one without the other.
+    private function canTrapSignals(): bool
+    {
+        return \function_exists('pcntl_signal') && \defined('SIGTERM') && \defined('SIGINT');
     }
 }

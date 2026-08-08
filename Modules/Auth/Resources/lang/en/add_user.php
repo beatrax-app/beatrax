@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Add a user · beatrax',
+    'page_title' => 'Add a user · Beatrax',
     'title' => 'Add a user',
     'subtitle' => 'Create an account for someone else on this device. They will be asked to set their own password the first time they sign in.',
     'username' => 'Username',

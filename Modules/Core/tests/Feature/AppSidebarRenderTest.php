@@ -98,7 +98,7 @@ it('renders the brand row literal "beatrax" (post-rename lock per D-10)', functi
     // single grep across the entire rendered HTML for any case-
     // insensitive `diederik` substring is a tight regression guard.
     $html = (string) $component->html();
-    expect($html)->toContain('>beatrax</span>')
+    expect($html)->toContain('>Beatrax</span>')
         ->and(stripos($html, 'diederik'))
         ->toBeFalse('Rendered sidebar HTML must not contain any `diederik` literal post-rename.');
 });

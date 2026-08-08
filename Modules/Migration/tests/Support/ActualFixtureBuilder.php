@@ -20,7 +20,7 @@ use ZipArchive;
  * `ActualParser` (Plan 04) is documented to read: `accounts`, `payees`,
  * `category_groups`, `categories`, `category_mapping`, `payee_mapping`,
  * `transactions`, `zero_budgets`, `preferences`, `schedules`, `rules`, and
- * `custom_reports` (a synthetic "saved report" extra with no beatrax
+ * `custom_reports` (a synthetic "saved report" extra with no Beatrax
  * equivalent — Req 8's unmapped-not-dropped coverage), plus the resolving
  * views `v_transactions` / `v_categories` / `v_payees` (RESEARCH.md's
  * verified Pitfall 1: the raw tables carry stale pre-merge ids, the views
@@ -229,7 +229,7 @@ final class ActualFixtureBuilder
             )
             SQL);
 
-        // Synthetic "saved report" extra — no beatrax equivalent exists;
+        // Synthetic "saved report" extra — no Beatrax equivalent exists;
         // ActualParser must surface each row as an UnmappedItemDto('extra'),
         // never silently drop it (Req 8).
         $pdo->exec(<<<'SQL'

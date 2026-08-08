@@ -77,9 +77,9 @@ it('renders the verbatim UI-SPEC copy + flux:modal + h-12 buttons', function ():
     $rendered = Livewire::test(CloseWindowPrompt::class);
 
     $rendered
-        ->assertSee('Keep beatrax running?')
-        ->assertSee('Closing the window can either quit beatrax completely or keep it running quietly in the menu bar so scheduled email scans continue.')
-        ->assertSee('Quit beatrax')
+        ->assertSee('Keep Beatrax running?')
+        ->assertSee('Closing the window can either quit Beatrax completely or keep it running quietly in the menu bar so scheduled email scans continue.')
+        ->assertSee('Quit Beatrax')
         ->assertSee('Keep running in the tray')
         ->assertSee('Remember my choice');
 
@@ -102,7 +102,7 @@ it('persists close_behavior=tray when "Keep running in the tray" is chosen with 
     expect($this->user->fresh()->close_behavior)->toBe('tray');
 })->group('phase-15');
 
-it('persists close_behavior=quit when "Quit beatrax" is chosen with remember=true', function (): void {
+it('persists close_behavior=quit when "Quit Beatrax" is chosen with remember=true', function (): void {
     Livewire::test(CloseWindowPrompt::class)
         ->assertSet('rememberChoice', true)
         ->call('chooseQuit');

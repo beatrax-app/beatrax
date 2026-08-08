@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Rapporten',
-    'page_title' => 'Rapporten · beatrax',
+    'page_title' => 'Rapporten · Beatrax',
     'saved_report' => 'opgeslagen rapport|opgeslagen rapporten',
     'pinned_count' => 'vastgezet',
     'dismiss' => 'Sluiten',

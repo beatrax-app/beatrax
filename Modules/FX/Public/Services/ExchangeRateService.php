@@ -7,10 +7,11 @@ namespace Modules\FX\Public\Services;
 use Brick\Math\Exception\MathException;
 use Brick\Math\RoundingMode;
 use Brick\Money\Context\DefaultContext;
+use Brick\Money\Currency;
 use Brick\Money\CurrencyConverter;
-use Brick\Money\Exception\CurrencyConversionException;
+use Brick\Money\Exception\ExchangeRateNotFoundException;
 use Brick\Money\ExchangeRateProvider\BaseCurrencyProvider;
-use Brick\Money\ExchangeRateProvider\ConfigurableProvider;
+use Brick\Money\ExchangeRateProvider\Configurable\ConfigurableProviderBuilder;
 use Brick\Money\Money as BrickMoney;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
@@ -118,15 +119,18 @@ final class ExchangeRateService
     ): ConversionResult {
         // For a direct pair (source→target), tx.fx_rate_used stores the rate in the
         // direction the transaction needed. Use it as-is via ConfigurableProvider.
-        $configProvider = new ConfigurableProvider;
-        $configProvider->setExchangeRate($money->currency(), $targetCurrency, $knownRate);
+        // brick/money 0.14 made ConfigurableProvider immutable: rates go in
+        // through a builder, and the provider is built once.
+        $configProvider = (new ConfigurableProviderBuilder)
+            ->addExchangeRate($money->currency(), $targetCurrency, $knownRate)
+            ->build();
 
         try {
             $converter = new CurrencyConverter($configProvider);
             $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
-            $brickResult = $converter->convert($brickSource, $targetCurrency, new DefaultContext, RoundingMode::HALF_UP);
+            $brickResult = $converter->convert($brickSource, $targetCurrency, context: new DefaultContext, roundingMode: RoundingMode::HalfUp);
             $convertedMinor = $brickResult->getMinorAmount()->toInt();
-        } catch (CurrencyConversionException|MathException) {
+        } catch (ExchangeRateNotFoundException|MathException) {
             // Direct rate insufficient (cross-rate needed) or the result overflows
             // the platform integer range — fall back to the dated DB rows.
             return $this->convertWithRows($money, $targetCurrency, $this->fetchRatesForDate($date));
@@ -158,7 +162,7 @@ final class ExchangeRateService
         // result metadata reflects the pair(s) actually used in this
         // conversion, not just the globally newest row (which could
         // mis-report a genuinely stale pair as fresh).
-        $configProvider = new ConfigurableProvider;
+        $providerBuilder = new ConfigurableProviderBuilder;
 
         /** @var array<string, array{date: string, source: ?string}> $rateMeta */
         $rateMeta = [];
@@ -178,7 +182,7 @@ final class ExchangeRateService
                 continue;
             }
 
-            $configProvider->setExchangeRate($baseC, $quoteC, $rateStr);
+            $providerBuilder->addExchangeRate($baseC, $quoteC, $rateStr);
 
             $rowDate = self::toString($row->rate_date ?? null);
 
@@ -189,14 +193,14 @@ final class ExchangeRateService
 
         // BaseCurrencyProvider derives cross-rates automatically from
         // EUR-based pairs (e.g. USD->GBP from two EUR-based rows).
-        $basedProvider = new BaseCurrencyProvider($configProvider, self::BASE_CURRENCY);
+        $basedProvider = new BaseCurrencyProvider($providerBuilder->build(), self::BASE_CURRENCY);
 
         try {
             $converter = new CurrencyConverter($basedProvider);
             $brickSource = BrickMoney::ofMinor($money->toMinor(), $money->currency());
-            $brickResult = $converter->convert($brickSource, $targetCurrency, new DefaultContext, RoundingMode::HALF_UP);
+            $brickResult = $converter->convert($brickSource, $targetCurrency, context: new DefaultContext, roundingMode: RoundingMode::HalfUp);
             $convertedMinor = $brickResult->getMinorAmount()->toInt();
-        } catch (CurrencyConversionException|MathException) {
+        } catch (ExchangeRateNotFoundException|MathException) {
             // Rate pair unavailable, or the converted amount overflows the
             // platform integer range — fall back to passthrough rather
             // than crashing the caller (e.g. the whole net-worth render).
@@ -259,7 +263,10 @@ final class ExchangeRateService
     private function deriveRateString(string $fromCurrency, string $toCurrency, BaseCurrencyProvider $provider): ?string
     {
         try {
-            $rate = $provider->getExchangeRate($fromCurrency, $toCurrency);
+            $rate = $provider->getExchangeRate(
+                Currency::of($fromCurrency),
+                Currency::of($toCurrency),
+            );
 
             return (string) $rate;
         } catch (\Throwable) {

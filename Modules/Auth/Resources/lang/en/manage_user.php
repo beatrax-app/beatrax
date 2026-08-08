@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Manage :name · beatrax',
+    'page_title' => 'Manage :name · Beatrax',
     'heading' => 'Manage :name',
     'subtitle' => 'View, reset, or regenerate codes for this user.',
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'eyebrow' => 'Welkom',
-    'h1' => 'Laat beatrax je geld leren kennen.',
+    'h1' => 'Laat Beatrax je geld leren kennen.',
     'lede' => 'Ongeveer 5 minuten. Er verlaat niets dit apparaat — alles wat je koppelt blijft in een bestand erop.',
     'tagline' => 'Dit gaan we instellen:',
 

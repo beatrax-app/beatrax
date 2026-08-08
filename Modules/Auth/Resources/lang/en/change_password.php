@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Set a new password · beatrax',
+    'page_title' => 'Set a new password · Beatrax',
     'title' => 'Set a new password',
     'subtitle' => 'Beatrax needs you to set your own password before you continue.',
     'current_password' => 'Current password',

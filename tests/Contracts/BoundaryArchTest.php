@@ -1706,7 +1706,7 @@ it('does not allow the impersonation surface to re-appear on disk (impersonation
 });
 
 it('does not allow the literal `diederik` / `Diederik` anywhere in Modules / tests / resources / config (noDiederikLiteralAfterRename)', function (): void {
-    // Containment invariant for the diederik -> beatrax rename: every
+    // Containment invariant for the diederik -> Beatrax rename: every
     // production-side literal must be flipped so a future contributor
     // adding a new file does not accidentally re-introduce the old
     // brand name. The case-insensitive grep matches both `diederik`

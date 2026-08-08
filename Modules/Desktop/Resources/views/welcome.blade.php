@@ -5,7 +5,7 @@
             {{-- Brand mark — same surface the welcome / login screens use (D-18). --}}
             <img
                 src="{{ asset('icon.png') }}"
-                alt="beatrax"
+                alt="Beatrax"
                 class="h-20 w-20"
             />
         </div>

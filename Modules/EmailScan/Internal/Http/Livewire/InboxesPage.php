@@ -350,7 +350,7 @@ final class InboxesPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('email-scan::inboxes.heading').' · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('email-scan::inboxes.heading').' · Beatrax']);
 
         return $view;
     }

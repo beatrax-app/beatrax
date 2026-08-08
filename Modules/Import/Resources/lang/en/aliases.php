@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Aliases',
     'heading' => 'Aliases',
-    'subtitle' => "Friendly names you've taught beatrax for the cryptic descriptions on your statements. Edit a row's generalized pattern to widen or narrow which other transactions inherit the same friendly name.",
+    'subtitle' => "Friendly names you've taught Beatrax for the cryptic descriptions on your statements. Edit a row's generalized pattern to widen or narrow which other transactions inherit the same friendly name.",
     'dismiss' => 'dismiss',
 
     'selected_count' => ':count selected',

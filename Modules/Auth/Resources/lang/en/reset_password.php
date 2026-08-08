@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Reset your password · beatrax',
+    'page_title' => 'Reset your password · Beatrax',
     'title' => 'Reset your password',
     'subtitle' => 'Type your username, one of your recovery codes, and a new password. The code will be marked used.',
     'username' => 'Username',

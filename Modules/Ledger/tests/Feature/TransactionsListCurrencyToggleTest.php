@@ -70,8 +70,8 @@ it('renders two lines for a foreign-currency row in original mode', function ():
         'counterparty_name' => 'USD Merchant',
     ]);
 
-    $nativeUsd = BrickMoney::ofMinor(-1299, 'USD')->formatTo('en_US');
-    $settledEur = BrickMoney::ofMinor(-1207, 'EUR')->formatTo('nl_NL');
+    $nativeUsd = BrickMoney::ofMinor(-1299, 'USD')->formatToLocale('en_US');
+    $settledEur = BrickMoney::ofMinor(-1207, 'EUR')->formatToLocale('nl_NL');
 
     Livewire::test(TransactionsList::class)
         ->set('currency', 'original')
@@ -90,8 +90,8 @@ it('renders one line for a foreign-currency row in eur mode', function (): void 
         'counterparty_name' => 'USD Merchant',
     ]);
 
-    $nativeUsd = BrickMoney::ofMinor(-1299, 'USD')->formatTo('en_US');
-    $settledEur = BrickMoney::ofMinor(-1207, 'EUR')->formatTo('nl_NL');
+    $nativeUsd = BrickMoney::ofMinor(-1299, 'USD')->formatToLocale('en_US');
+    $settledEur = BrickMoney::ofMinor(-1207, 'EUR')->formatToLocale('nl_NL');
 
     Livewire::test(TransactionsList::class)
         ->set('currency', 'eur')
@@ -117,7 +117,7 @@ it('renders one line for an EUR-native row in original mode', function (): void 
     // for the amount cell. The EUR amount appears exactly twice since
     // Phase 4: once in the desktop table row and once in the phone
     // card-list item (the two are toggled by CSS, both are in the DOM).
-    $eur = BrickMoney::ofMinor(-2500, 'EUR')->formatTo('nl_NL');
+    $eur = BrickMoney::ofMinor(-2500, 'EUR')->formatToLocale('nl_NL');
 
     $component = Livewire::test(TransactionsList::class)
         ->set('currency', 'original');

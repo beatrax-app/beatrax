@@ -59,7 +59,7 @@ it('writes the dismissed version into user_preferences.skipped_update_versions A
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
     ]);
 
@@ -105,7 +105,7 @@ it('suppresses a subsequent update.available row for an already-skipped version'
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
     ]);
 
@@ -117,7 +117,7 @@ it('suppresses a subsequent update.available row for an already-skipped version'
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
         'created_at' => '2026-05-28 02:00:00',
     ]);
@@ -141,13 +141,13 @@ it('still renders update.available for a different version after skipping one ve
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — beatrax 0.1.2 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.2 is ready. It will install on next launch.',
         'metadata' => json_encode(['latestVersion' => '0.1.2']),
         'created_at' => '2026-05-28 03:00:00',
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertSee('beatrax 0.1.2 is ready')
+        ->assertSee('Beatrax 0.1.2 is ready')
         ->assertSeeHtml('data-testid="resolve-alert-'.$newId.'"');
 });
 

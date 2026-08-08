@@ -36,7 +36,7 @@ return [
     'edit_aria' => 'Edit rule (priority :priority)',
     'delete_aria' => 'Delete rule (priority :priority)',
 
-    'footer_note' => 'Rules and merchant history work together. Deleting a rule doesn\'t clear what beatrax has learned from past categorizations — the next import may still auto-suggest the same category from history.',
+    'footer_note' => 'Rules and merchant history work together. Deleting a rule doesn\'t clear what Beatrax has learned from past categorizations — the next import may still auto-suggest the same category from history.',
 
     'chip_category' => 'Category: :path',
     'chip_counterparty' => 'Counterparty: :path',

@@ -53,12 +53,12 @@ it('renders the update.available banner with the verbatim copy and the install +
         'user_id' => $this->user->id,
         'kind' => 'update.available',
         'severity' => 'info',
-        'message' => 'Update available — beatrax 0.1.1 is ready. It will install on next launch.',
+        'message' => 'Update available — Beatrax 0.1.1 is ready. It will install on next launch.',
         'metadata' => json_encode(['latestVersion' => '0.1.1']),
     ]);
 
     Livewire::actingAs($this->user)->test(SystemAlertsBanner::class)
-        ->assertSee('Update available — beatrax 0.1.1 is ready. It will install on next launch.', escape: false)
+        ->assertSee('Update available — Beatrax 0.1.1 is ready. It will install on next launch.', escape: false)
         ->assertSee('Install on next launch')
         ->assertSee('Skip this version')
         ->assertSee('Release notes')

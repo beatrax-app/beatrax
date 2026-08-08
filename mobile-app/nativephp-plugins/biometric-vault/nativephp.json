@@ -18,12 +18,6 @@
             "android": "com.beatrax.biometricvault.BiometricVaultFunctions.Delete",
             "ios": "BiometricVaultFunctions.Delete",
             "description": "Delete a biometric-gated entry"
-        },
-        {
-            "name": "BiometricVault.PollRecovered",
-            "android": "com.beatrax.biometricvault.BiometricVaultFunctions.PollRecovered",
-            "ios": "BiometricVaultFunctions.PollRecovered",
-            "description": "Consume the transient blob an async BiometricPrompt callback stashed (Android async recover; key never crosses the JS bridge)"
         }
     ],
     "android": {

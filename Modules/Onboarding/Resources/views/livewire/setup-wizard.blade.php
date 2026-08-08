@@ -26,12 +26,12 @@
         <div class="wiz-brand">
             <img
                 src="{{ Vite::asset('resources/brand/logo.svg') }}"
-                alt="beatrax"
+                alt="Beatrax"
                 width="22"
                 height="22"
                 class="wiz-brand-mark logo-svg"
             />
-            <span class="wiz-brand-name">beatrax</span>
+            <span class="wiz-brand-name">Beatrax</span>
         </div>
 
         <nav class="wiz-dots" aria-label="{{ Lang::get('onboarding::wizard.progress_aria') }}">

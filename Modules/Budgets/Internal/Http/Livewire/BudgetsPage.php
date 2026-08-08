@@ -300,7 +300,7 @@ final class BudgetsPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · Beatrax']);
 
             return $view;
         }
@@ -362,7 +362,7 @@ final class BudgetsPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('budgets::messages.page.title').' · Beatrax']);
 
         return $view;
     }

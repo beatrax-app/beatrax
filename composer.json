@@ -26,8 +26,8 @@
         "amphp/socket": "*",
         "amphp/websocket-client": "*",
         "amphp/websocket-server": "*",
-        "brick/math": "^0.14",
-        "brick/money": "^0.11",
+        "brick/math": "^0.18",
+        "brick/money": "^0.14",
         "doctrine/sql-formatter": "^1.5",
         "dompdf/dompdf": "^3.0",
         "firebase/php-jwt": "^7.1",
@@ -51,7 +51,7 @@
         "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-data": "^4.0",
         "spatie/pdf-to-text": "^1.0",
-        "symfony/process": "^7.0",
+        "symfony/process": "^8.1",
         "symfony/yaml": "^8.0",
         "thenetworg/oauth2-azure": "^2.2",
         "zbateson/mail-mime-parser": "^4.0"
@@ -59,7 +59,8 @@
     "conflict": {
         "webklex/laravel-imap": "*",
         "webklex/php-imap": "*",
-        "ddeboer/imap": "*"
+        "ddeboer/imap": "*",
+        "laravel/framework": ">=13.24"
     },
     "require-dev": {
         "calebdw/larastan-livewire": "^2.0",
@@ -70,9 +71,9 @@
         "laravel/pint": "^1.18",
         "maglnet/composer-require-checker": "^4",
         "mockery/mockery": "^1.6",
-        "pestphp/pest": "^4.0",
-        "pestphp/pest-plugin-arch": "^4.0",
-        "pestphp/pest-plugin-laravel": "^4.0",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-arch": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0",
         "phpstan/phpstan-strict-rules": "^2.0",
         "predis/predis": "^3.4",
         "spatie/pest-plugin-snapshots": "^2.0"

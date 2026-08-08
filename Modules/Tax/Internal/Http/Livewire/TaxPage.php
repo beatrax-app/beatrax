@@ -109,7 +109,7 @@ final class TaxPage extends Component
             ]);
 
             /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-            $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').' · beatrax']);
+            $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title').' · Beatrax']);
 
             return $view;
         }
@@ -135,7 +135,7 @@ final class TaxPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title_year', ['year' => $this->year]).' · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('tax::page.page_title_year', ['year' => $this->year]).' · Beatrax']);
 
         return $view;
     }

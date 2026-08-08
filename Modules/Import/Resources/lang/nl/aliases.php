@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'page_title' => 'Aliassen',
     'heading' => 'Aliassen',
-    'subtitle' => 'Herkenbare namen die je beatrax hebt geleerd voor de cryptische omschrijvingen op je afschriften. Bewerk het gegeneraliseerde patroon van een rij om te verbreden of te versmallen welke andere transacties dezelfde herkenbare naam overnemen.',
+    'subtitle' => 'Herkenbare namen die je Beatrax hebt geleerd voor de cryptische omschrijvingen op je afschriften. Bewerk het gegeneraliseerde patroon van een rij om te verbreden of te versmallen welke andere transacties dezelfde herkenbare naam overnemen.',
     'dismiss' => 'sluiten',
 
     'selected_count' => ':count geselecteerd',

@@ -34,7 +34,7 @@ return [
 
     'reauth' => [
         'title' => 'Een postvak moet opnieuw worden gekoppeld.',
-        'body' => 'Een of meer postvakken zijn afgemeld — beatrax kan ze niet scannen totdat je ze opnieuw koppelt.',
+        'body' => 'Een of meer postvakken zijn afgemeld — Beatrax kan ze niet scannen totdat je ze opnieuw koppelt.',
         'link' => 'Naar postvakken',
         'dismiss' => 'Sluiten',
     ],

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Gebruiker toevoegen · beatrax',
+    'page_title' => 'Gebruiker toevoegen · Beatrax',
     'title' => 'Gebruiker toevoegen',
     'subtitle' => 'Maak een account aan voor iemand anders op dit apparaat. Bij de eerste keer inloggen wordt gevraagd om zelf een wachtwoord in te stellen.',
     'username' => 'Gebruikersnaam',

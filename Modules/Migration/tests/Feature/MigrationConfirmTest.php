@@ -182,7 +182,7 @@ it('MigrationConfirm: non-base currency stamped in source currency, no fx rate w
     expect($usdTransaction)->not->toBeNull();
     expect($usdTransaction->settled_currency)->toBe('USD');
     // No FX conversion happens at import time — the migration preserves the
-    // budget-file currency verbatim; beatrax's own FX engine (v1.3 Phase 1)
+    // budget-file currency verbatim; Beatrax's own FX engine (v1.3 Phase 1)
     // handles reporting-currency roll-up separately.
     expect($usdTransaction->fx_rate_used)->toBeNull();
 

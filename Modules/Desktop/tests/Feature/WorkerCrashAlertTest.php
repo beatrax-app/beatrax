@@ -105,7 +105,7 @@ it('uses the UI-SPEC verbatim body for the worker-crashed alert', function (): v
     /** @var SystemAlert $alert */
     $alert = SystemAlert::query()->where('kind', 'worker.crashed')->first();
     expect($alert->message)
-        ->toContain("beatrax's background processing stopped unexpectedly")
+        ->toContain("Beatrax's background processing stopped unexpectedly")
         ->toContain('Imports and email scans are paused')
         ->toContain('Reopen the app to restart it');
 });

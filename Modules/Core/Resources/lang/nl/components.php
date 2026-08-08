@@ -12,12 +12,12 @@ return [
     'filters_active' => ', :count actief',
 
     'install' => [
-        'aria' => 'beatrax installeren',
+        'aria' => 'Beatrax installeren',
         'headline' => 'Wil je je gegevens ook op je telefoon zien?',
-        'body' => 'Installeer beatrax op je telefoon voor snelle toegang tot je financiën.',
+        'body' => 'Installeer Beatrax op je telefoon voor snelle toegang tot je financiën.',
         'dismiss_aria' => 'Installatietip sluiten',
         'install_app' => 'App installeren',
-        'desktop_html' => 'Open beatrax in de browser van je telefoon en tik op "Zet op beginscherm" — of tik op het <strong style="color: var(--color-text);">⚡</strong>-icoon in het deelmenu van Safari.',
+        'desktop_html' => 'Open Beatrax in de browser van je telefoon en tik op "Zet op beginscherm" — of tik op het <strong style="color: var(--color-text);">⚡</strong>-icoon in het deelmenu van Safari.',
     ],
 
     'topbar' => [

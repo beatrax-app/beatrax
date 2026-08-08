@@ -223,7 +223,7 @@ final class CalendarPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound */
-        $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').' · beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('calendar::messages.page.title').' · Beatrax']);
 
         return $view;
     }

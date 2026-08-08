@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'help_paypal' => "PayPal exports don't carry balance lines, so set this manually.",
     'help_asn' => 'Auto-anchored from your latest statement. Override only if you know the live balance differs.',
-    'help_default' => 'Override only if you know the current live balance differs from what beatrax computes.',
+    'help_default' => 'Override only if you know the current live balance differs from what Beatrax computes.',
 
     'legend' => 'Forecast opening balance for :name',
     'opening_label' => 'Opening balance',
@@ -13,8 +13,8 @@ return [
     'as_of_label' => 'Opening balance as of',
     'as_of_help' => 'The date the figure above is true for.',
 
-    'divergence' => 'This is more than €500 off the balance beatrax computes from your imported transactions. Are you sure?',
-    'use_beatrax' => "Use beatrax's number",
+    'divergence' => 'This is more than €500 off the balance Beatrax computes from your imported transactions. Are you sure?',
+    'use_beatrax' => "Use Beatrax's number",
     'use_mine' => 'Use my number',
 
     'save' => 'Save opening balance',

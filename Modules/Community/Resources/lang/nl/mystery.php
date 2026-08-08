@@ -6,7 +6,7 @@ return [
     'page_title' => 'Mysterieuze winkeliers',
 
     'heading' => 'Mysterieuze winkeliers',
-    'intro' => 'Namen die beatrax nog niet kon herkennen — kies er een, geef het een herkenbare naam en stuur het terug naar de gedeelde lijst zodat iedereen er baat bij heeft.',
+    'intro' => 'Namen die Beatrax nog niet kon herkennen — kies er een, geef het een herkenbare naam en stuur het terug naar de gedeelde lijst zodat iedereen er baat bij heeft.',
 
     'stats' => [
         'aria' => 'Statistieken gedeelde lijst',
@@ -16,9 +16,9 @@ return [
         'contributions' => 'Jouw bijdragen',
     ],
 
-    'empty' => 'Nog niets mysterieus. Importeer wat afschriften en beatrax toont hier de regels die het niet kon herkennen.',
+    'empty' => 'Nog niets mysterieus. Importeer wat afschriften en Beatrax toont hier de regels die het niet kon herkennen.',
 
-    'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser; verder verlaat er niets dit apparaat.',
+    'footer' => 'De gedeelde lijst is een meegeleverd YAML-bestand dat met Beatrax wordt geleverd. Een suggestie insturen opent GitHub in je browser; verder verlaat er niets dit apparaat.',
 
     'card' => [
         'likely' => 'Waarschijnlijk: een naamloze winkelier.',

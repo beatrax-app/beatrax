@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => ':name beheren · beatrax',
+    'page_title' => ':name beheren · Beatrax',
     'heading' => ':name beheren',
     'subtitle' => 'Codes voor deze gebruiker bekijken, opnieuw instellen of opnieuw genereren.',
 

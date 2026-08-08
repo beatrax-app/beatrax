@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'page_title' => 'Waar staan mijn gegevens?',
-    'intro' => 'beatrax bewaart alles op dit apparaat. Er wordt niets naar een server gestuurd, niets gesynchroniseerd met de cloud, niets verlaat je apparaat zonder dat je het exporteert.',
+    'intro' => 'Beatrax bewaart alles op dit apparaat. Er wordt niets naar een server gestuurd, niets gesynchroniseerd met de cloud, niets verlaat je apparaat zonder dat je het exporteert.',
 
     'lives_here' => 'Je gegevens staan hier',
     'sqlite_db' => 'SQLite-database:',
@@ -17,7 +17,7 @@ return [
     'copy_caches_aria' => 'Pad van merkbestanden + caches naar klembord kopiëren',
 
     'export_heading' => 'Alles exporteren',
-    'export_body' => 'Bundel elke byte die beatrax over je heeft opgeslagen in één .zip die je kunt back-uppen, archiveren of naar een ander apparaat verplaatsen.',
+    'export_body' => 'Bundel elke byte die Beatrax over je heeft opgeslagen in één .zip die je kunt back-uppen, archiveren of naar een ander apparaat verplaatsen.',
     'export_cta' => 'Alles exporteren als ZIP',
     'export_title_attr' => 'De exportactie komt beschikbaar met de export-everything-route van de Dev-modus.',
     'dev_off' => 'Dev-modus staat uit.',
@@ -26,8 +26,8 @@ return [
     'manual_copy' => 'Kopieer de bovenstaande mappen handmatig met je bestandsbeheerder.',
 
     'delete_heading' => 'Je gegevens verwijderen',
-    'delete_intro' => 'Om beatrax en elk spoor van je gegevens te verwijderen:',
-    'delete_step1' => 'Sleep beatrax naar de prullenbak / verwijder via Apps of Programma\'s.',
+    'delete_intro' => 'Om Beatrax en elk spoor van je gegevens te verwijderen:',
+    'delete_step1' => 'Sleep Beatrax naar de prullenbak / verwijder via Apps of Programma\'s.',
     'delete_step2' => 'Verwijder de hierboven vermelde mappen.',
     'no_telemetry' => 'Er is geen telemetrie om af te melden en geen extern account om op te heffen.',
 ];

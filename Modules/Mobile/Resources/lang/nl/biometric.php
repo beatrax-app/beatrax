@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Biometrisch ontgrendelen',
-    'unavailable' => 'Biometrisch ontgrendelen is alleen beschikbaar in de beatrax mobiele app.',
+    'unavailable' => 'Biometrisch ontgrendelen is alleen beschikbaar in de Beatrax mobiele app.',
     'toggle_label' => 'Ontgrendelen met Face ID / Touch ID',
     'toggle_help' => 'Ontgrendel de app na een herstart met biometrie in plaats van je pincode. Je pincode is nog steeds periodiek vereist en telkens wanneer je biometrie verandert.',
     'toggle_aria' => 'Ontgrendelen met biometrie',

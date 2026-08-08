@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
 
-    'name' => env('APP_NAME', 'beatrax'),
+    'name' => env('APP_NAME', 'Beatrax'),
     'env' => env('APP_ENV', 'production'),
     'debug' => (bool) env('APP_DEBUG', false),
     'dev_mode' => (bool) env('BEATRAX_DEV_MODE', false),

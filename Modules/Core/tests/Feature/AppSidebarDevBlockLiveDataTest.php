@@ -107,3 +107,26 @@ it('still hides the Dev block (and the live data) from a non-developer', functio
         ->and($html)->not->toContain('Open Dev Console')
         ->and($html)->not->toContain('dev-pulse');
 });
+
+it('drops the poll on mobile, where it queues ahead of the taps the user is making', function (): void {
+    // The mobile shell has no HTTP server: NativePHP serialises every request
+    // through one persistent PHP interpreter. The sidebar is mounted on every
+    // page inside the drawer, so a 5s poll from it competes with navigation —
+    // observed on a device as the drawer scrim painting over a page that then
+    // never changes. The Dev block itself stays; only the timer goes.
+    $user = sidebarLiveUser(true, 'sidebar-live-mobile');
+
+    $_SERVER['NATIVEPHP_PLATFORM'] = 'android';
+
+    try {
+        $html = (string) Livewire::actingAs($user)->test(AppSidebar::class)->html();
+    } finally {
+        unset($_SERVER['NATIVEPHP_PLATFORM']);
+    }
+
+    expect($html)->not->toContain('wire:poll');
+    // The values are still rendered — they refresh on page load rather than
+    // on a timer, so the block is informative without being expensive.
+    expect($html)->toContain('side-dev-block');
+    expect($html)->toContain('dev-pulse');
+});

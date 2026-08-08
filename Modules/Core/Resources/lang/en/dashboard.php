@@ -34,7 +34,7 @@ return [
 
     'reauth' => [
         'title' => 'An inbox needs reconnecting.',
-        'body' => "One or more inboxes were signed out — beatrax can't scan them until you reconnect.",
+        'body' => "One or more inboxes were signed out — Beatrax can't scan them until you reconnect.",
         'link' => 'Go to Inboxes',
         'dismiss' => 'Dismiss',
     ],

@@ -473,7 +473,7 @@ it('UAT-3c: take_source resolution on a budget-assignment conflict applies the S
     expect($confirmedRun->status)->toBe('confirmed');
 });
 
-it('UAT-3c: keep_local (default, no toggle interaction) leaves the beatrax value unchanged at Confirm', function (): void {
+it('UAT-3c: keep_local (default, no toggle interaction) leaves the Beatrax value unchanged at Confirm', function (): void {
     $firstRun = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',

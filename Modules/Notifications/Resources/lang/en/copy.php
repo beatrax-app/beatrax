@@ -32,7 +32,7 @@ return [
         'import_finished_other' => ':count transactions imported.',
         'drift' => 'A recurring charge moved :direction by :delta :currency.',
         'forecast' => 'Your projected balance dips below zero within the next 30 days.',
-        'ics_statement_ready' => "Download it from the ICS portal and drop it into beatrax to keep this card's spending up to date.",
+        'ics_statement_ready' => "Download it from the ICS portal and drop it into Beatrax to keep this card's spending up to date.",
         'payment_reminder_hedged' => ':name — expected around :day, :amount.',
         'payment_reminder_confident' => ':name — due :day (:date), :amount.',
         'savings_prompt' => ':message (:monthly/mo)',

@@ -22,7 +22,7 @@ return [
         ],
         'all' => [
             'heading' => 'Nog niets',
-            'body' => 'beatrax laat het je weten bij aankomende betalingen en alles wat aandacht nodig heeft.',
+            'body' => 'Beatrax laat het je weten bij aankomende betalingen en alles wat aandacht nodig heeft.',
         ],
         'dismissed' => [
             'heading' => 'Niets genegeerd',

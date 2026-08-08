@@ -60,7 +60,7 @@ final class NormalizeStage
                 ->dividedBy(
                     BigDecimal::of((string) $source->amountMinor),
                     8,
-                    RoundingMode::HALF_UP,
+                    RoundingMode::HalfUp,
                 );
         }
 

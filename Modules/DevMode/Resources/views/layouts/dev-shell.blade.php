@@ -116,7 +116,7 @@
              Livewire.dispatch('triple-gate:open', { command, args })
              to open the rose-tinted three-lock confirmation modal.
              The modal enforces all three gates server-side (Dev
-             Mode env on + session Advanced on + typed "beatrax"
+             Mode env on + session Advanced on + typed "Beatrax"
              matches via hash_equals); on success it dispatches
              `triple-gate:confirmed`, which downstream listeners
              (DestructiveSpawnController for artisan,

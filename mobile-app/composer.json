@@ -52,6 +52,7 @@
         "nativephp/mobile-network": "*",
         "nativephp/mobile-scanner": "1.0.3",
         "nativephp/mobile-secure-storage": "*",
+        "nativephp/mobile-ui": "^0.3",
         "nwidart/laravel-modules": "^13.0",
         "psr/log": "^3.0",
         "spatie/laravel-activitylog": "^5.0",

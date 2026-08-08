@@ -63,7 +63,7 @@ return [
 
     'disconnect' => [
         'heading' => 'Disconnect open banking?',
-        'body' => 'This removes your stored Enable Banking credentials and consent. Automatic syncing stops immediately. Transactions already imported into beatrax are not affected.',
+        'body' => 'This removes your stored Enable Banking credentials and consent. Automatic syncing stops immediately. Transactions already imported into Beatrax are not affected.',
         'confirm' => 'Disconnect',
         'cancel' => 'Keep connected',
     ],
@@ -89,7 +89,7 @@ return [
 
     'warning' => [
         'heading' => 'Before you connect a third party',
-        'body' => 'Enabling open banking sends your bank login consent, and then your transaction and balance data, directly from this device to Enable Banking and your bank. beatrax does not operate a server that sees this data — but Enable Banking and your bank do. This is different from every other import method in beatrax, which never sends data anywhere.',
+        'body' => 'Enabling open banking sends your bank login consent, and then your transaction and balance data, directly from this device to Enable Banking and your bank. Beatrax does not operate a server that sees this data — but Enable Banking and your bank do. This is different from every other import method in Beatrax, which never sends data anywhere.',
         'acknowledge' => 'I understand my transaction data will be shared with Enable Banking and my bank.',
         'confirm' => 'Enable open banking',
         'cancel' => 'Cancel',
@@ -97,10 +97,10 @@ return [
 
     'wizard' => [
         'heading' => 'Connect your bank',
-        'intro' => 'beatrax uses your own Enable Banking application so your credentials never touch a shared server. This is a one-time setup per bank.',
+        'intro' => 'Beatrax uses your own Enable Banking application so your credentials never touch a shared server. This is a one-time setup per bank.',
 
         'step1_title' => 'Generate your local key pair',
-        'step1_body' => 'beatrax generates an RSA key pair on this device. The private key never leaves it.',
+        'step1_body' => 'Beatrax generates an RSA key pair on this device. The private key never leaves it.',
         'generate_keypair' => 'Generate keypair',
         'public_key_label' => 'Public key',
         'copy_public_key' => 'Copy public key',

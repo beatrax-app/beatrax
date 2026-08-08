@@ -8,6 +8,7 @@ use Native\Mobile\Providers\BiometricsServiceProvider;
 use Native\Mobile\Providers\NetworkServiceProvider;
 use Native\Mobile\Providers\ScannerServiceProvider;
 use Native\Mobile\Providers\SecureStorageServiceProvider;
+use Native\Mobile\UI\NativeUIServiceProvider;
 use NativePHP\BackgroundTasks\BackgroundTasksServiceProvider;
 use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
 
@@ -51,7 +52,7 @@ it('does NOT register NativeServiceProvider in the desktop provider manifest (bo
     expect($manifest)->not->toContain('NativeServiceProvider');
 })->group('repo-root-only');
 
-it('NativeServiceProvider::plugins() lists all 7 registered NativePHP mobile plugin providers', function (): void {
+it('NativeServiceProvider::plugins() lists all 8 registered NativePHP mobile plugin providers', function (): void {
     $provider = new NativeServiceProvider(app());
 
     $plugins = $provider->plugins();
@@ -64,10 +65,11 @@ it('NativeServiceProvider::plugins() lists all 7 registered NativePHP mobile plu
         SecureStorageServiceProvider::class,
         LocalNotificationsServiceProvider::class,
         BiometricVaultServiceProvider::class,
+        NativeUIServiceProvider::class,
     ]);
 });
 
-it('NativeServiceProvider.php source references the 7 plugin FQCNs verbatim (belt-and-suspenders on the compiled-build source)', function (): void {
+it('NativeServiceProvider.php source references the 8 plugin FQCNs verbatim (belt-and-suspenders on the compiled-build source)', function (): void {
     $source = (string) file_get_contents(base_path('app/Providers/NativeServiceProvider.php'));
 
     foreach ([
@@ -78,6 +80,7 @@ it('NativeServiceProvider.php source references the 7 plugin FQCNs verbatim (bel
         'Native\Mobile\Providers\SecureStorageServiceProvider',
         'NativePHP\LocalNotifications\LocalNotificationsServiceProvider',
         'Beatrax\BiometricVault\BiometricVaultServiceProvider',
+        'Native\Mobile\UI\NativeUIServiceProvider',
     ] as $expectedFqcn) {
         expect($source)->toContain($expectedFqcn);
     }

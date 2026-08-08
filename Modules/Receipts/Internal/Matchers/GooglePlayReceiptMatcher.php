@@ -197,7 +197,7 @@ final class GooglePlayReceiptMatcher implements SenderMatcher
         }
 
         try {
-            $money = Money::of(BigDecimal::of($normalised), $currency, roundingMode: RoundingMode::HALF_UP);
+            $money = Money::of(BigDecimal::of($normalised), $currency, roundingMode: RoundingMode::HalfUp);
         } catch (NumberFormatException|UnknownCurrencyException) {
             return null;
         }

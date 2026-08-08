@@ -18,7 +18,7 @@ return [
         'heading_cleaner' => 'Een e-mailbon heeft een duidelijkere :field',
         'heading_different' => 'Een e-mailbon vermeldt een andere :field',
         'title' => 'Bon en afschrift komen niet overeen.',
-        'body' => ':heading (“:receipt”) dan het afschrift (“:statement”). Moet beatrax bonnen voorrang geven bij toekomstige conflicten?',
+        'body' => ':heading (“:receipt”) dan het afschrift (“:statement”). Moet Beatrax bonnen voorrang geven bij toekomstige conflicten?',
         'use_receipt' => 'Bon gebruiken',
         'keep_statement' => 'Afschrift behouden',
     ],

@@ -10,7 +10,7 @@ return [
     'error_advanced_off' => 'Advanced toggle is off. Flip it on in the dev sidebar before running this command.',
     'error_app_name_mismatch' => 'App name did not match. Type the exact lowercase word.',
 
-    'type_to_confirm_html' => 'Type <code>beatrax</code> to confirm',
+    'type_to_confirm_html' => 'Type <code>Beatrax</code> to confirm',
     'cancel' => 'Cancel',
     'run' => 'Run :command',
     'running' => 'Running…',

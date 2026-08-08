@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'heading' => 'Biometric unlock',
-    'unavailable' => 'Biometric unlock is only available in the beatrax mobile app.',
+    'unavailable' => 'Biometric unlock is only available in the Beatrax mobile app.',
     'toggle_label' => 'Unlock with Face ID / Touch ID',
     'toggle_help' => 'Unlock the app after a restart with biometrics instead of your PIN. Your PIN is still required periodically and whenever your biometrics change.',
     'toggle_aria' => 'Unlock with biometrics',

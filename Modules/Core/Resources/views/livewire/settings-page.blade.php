@@ -320,10 +320,21 @@
         </section>
     </div>
 
-    {{-- ===== Devices & Sync (device identity + pairing, Phase 12) ===== --}}
+    {{-- ===== Devices & Sync — link-out (the surface itself lives on /sync) =====
+         Moved rather than duplicated: pairing, device naming and the
+         encryption toggle all describe the sync relationship, so they belong
+         with the sync status and the manual-sync action instead of being a
+         second place to look. The row stays because Settings is where people
+         had learned to find it — the Aliases link-out shape, same as open
+         banking below. --}}
     <div class="{{ $card }}">
-        <section id="devices-sync">
-            @livewire('sync.devices-and-sync-settings-section')
+        <section id="devices-sync" class="space-y-2" data-testid="devices-sync-link-out">
+            <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-faint)]">{{ Lang::get('sync::devices.heading') }}</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.moved_help') }}</p>
+            <a
+                href="{{ route('sync.index') }}"
+                class="inline-flex min-h-[44px] items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >{{ Lang::get('sync::devices.moved_cta') }} &rarr;</a>
         </section>
     </div>
 
@@ -400,7 +411,7 @@
     </div>
 
     {{-- ===== Install (D-22 placement b) ===== --}}
-    {{-- Standing install row: "Install beatrax as an app" — copy and CTA
+    {{-- Standing install row: "Install Beatrax as an app" — copy and CTA
          logic owned by the x-core::install-hint component. --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="install-app">

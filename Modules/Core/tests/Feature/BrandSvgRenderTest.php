@@ -13,7 +13,7 @@ use Modules\Core\Models\User;
  *  at resources/brand/logo.svg, published through Vite to
  *  public/build/assets/logo-<hash>.svg) inside the .side-brand slot —
  *  not the placeholder text "b" glyph that previously occupied the
- *  spot. The rendered <img> carries alt="beatrax", width/height 24,
+ *  spot. The rendered <img> carries alt="Beatrax", width/height 24,
  *  and the `logo-svg` class so the dedicated CSS rule
  *  (.side-brand .logo-svg) can size and round it.
  */
@@ -36,7 +36,7 @@ it('renders the brand svg in the authenticated sidebar', function (): void {
     // (manifest entry written by `npm run build` from the
     // resources/brand/logo.svg input).
     expect($html)->toMatch('#/build/assets/logo-[A-Za-z0-9_-]+\.svg#');
-    expect($html)->toContain('alt="beatrax"');
+    expect($html)->toContain('alt="Beatrax"');
     expect($html)->toContain('logo-svg');
 
     // The pre-swap placeholder must be gone — guards against an

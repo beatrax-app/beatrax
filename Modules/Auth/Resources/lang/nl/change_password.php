@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Nieuw wachtwoord instellen · beatrax',
+    'page_title' => 'Nieuw wachtwoord instellen · Beatrax',
     'title' => 'Nieuw wachtwoord instellen',
     'subtitle' => 'Beatrax vereist dat je je eigen wachtwoord instelt voordat je verdergaat.',
     'current_password' => 'Huidig wachtwoord',

@@ -70,7 +70,7 @@ final class SetupProgressScreen extends Component
         $view = $views->make('mobile::livewire.setup-progress-screen');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.lock', ['title' => Lang::get('mobile::setup.page_title').' · beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::setup.page_title').' · Beatrax']);
 
         return $view;
     }
