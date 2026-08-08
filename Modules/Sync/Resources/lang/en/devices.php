@@ -20,6 +20,11 @@ return [
     'enable_encryption' => 'Enable encryption',
 
     'your_devices' => 'Your devices',
+
+    // Settings keeps a pointer to the moved surface; the section
+    // itself now lives on /sync with the status and sync action.
+    'moved_help' => 'Pairing, device names and encryption now live with your sync status.',
+    'moved_cta' => 'Open Sync',
     'device_name' => 'Device name',
     'save' => 'Save',
     'rename_device' => 'Rename device',
