@@ -132,7 +132,7 @@
             "Google\\Task\\Composer::cleanup",
             "@php artisan package:discover --ansi"
         ],
-        "test": "pest --parallel",
+        "test": "pest --parallel --processes=4",
         "analyse": "phpstan analyse --memory-limit=1G",
         "format": "pint",
         "format:check": "pint --test",
