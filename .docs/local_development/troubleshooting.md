@@ -113,3 +113,26 @@ APP_ENV=testing php artisan test --parallel
 The `APP_ENV=testing` prefix forces the test database (in-memory SQLite by default) and
 disables any developer overrides in `.env`. If a test then fails locally too, the
 real cause is a state leak in the developer's `.env` rather than a CI quirk.
+
+## `composer test` hangs and never prints a summary
+
+Cap the workers, or run the suite the way CI does.
+
+`composer test` is `pest --parallel --processes=4`. Without the cap, paratest
+defaults to the core count, and at eight workers the full suite deadlocks: the
+worker processes stay alive, output stops, and nothing is ever reported. It is
+not a slow run — it does not finish. The same suite completes in about eight
+minutes at four.
+
+This is the reason `phpstan.neon` pins `maximumNumberOfProcesses` as well; both
+tools fan out over the same tree and both became unreliable above four workers
+on this codebase.
+
+CI never hits it, because it shards the suite across three runners and each
+shard fans out over a fraction of the tests. That is also the fastest way to
+reproduce a CI failure locally:
+
+```sh
+APP_ENV=testing php artisan test --parallel \
+    --testsuite="$(python3 .github/scripts/shard-testsuites.py --shard 1 --of 3)"
+```
