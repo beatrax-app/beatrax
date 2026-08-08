@@ -19,7 +19,7 @@
     $fxRateDisplay = $transaction->fx_rate_used === null
         ? null
         : (string) BigDecimal::of($transaction->fx_rate_used)
-            ->toScale(3, RoundingMode::HALF_UP);
+            ->toScale(3, RoundingMode::HalfUp);
 @endphp
 
 <div>

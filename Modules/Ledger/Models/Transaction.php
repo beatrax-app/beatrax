@@ -94,6 +94,11 @@ final class Transaction extends Model
             'normalization_version' => 'integer',
             'fingerprint_version' => 'integer',
             'source_row_index' => 'integer',
+            // SQLite hands this back as a float, and brick/math 0.18 converts a
+            // float argument to int — 0.92917629 silently becomes 0, so every
+            // rate rendered or recomputed from it collapses to zero. The column
+            // is a decimal string end to end; the cast keeps it one.
+            'fx_rate_used' => 'string',
             'raw_payload' => EncryptedJsonCast::class,
             'auto_category_provenance' => 'array',
             'enriched_from' => AsArrayObject::class,

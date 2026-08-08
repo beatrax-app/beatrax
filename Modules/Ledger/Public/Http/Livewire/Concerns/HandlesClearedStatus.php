@@ -99,11 +99,10 @@ trait HandlesClearedStatus
             return;
         }
 
+        // Both branches are ClearedStatus cases, so the value is a member of
+        // Transaction::STATUSES by construction — the membership guard that
+        // used to sit here could never fail.
         $next = $current === ClearedStatus::Cleared->value ? ClearedStatus::Uncleared->value : ClearedStatus::Cleared->value;
-
-        if (! in_array($next, Transaction::STATUSES, true)) {
-            return;
-        }
 
         $db->connection()
             ->table('transactions')
