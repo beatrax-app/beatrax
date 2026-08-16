@@ -204,6 +204,19 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build mac arm64
 
+            # A green build proves nothing about the signature here: the
+            # Developer ID prebuild hook's non-zero exit is swallowed by
+            # NativePHP's runProcess(), electron-builder then falls back to
+            # an ad-hoc signature, and notarize.js skips notarisation — all
+            # three with a warning and a zero exit code. Interrogate the
+            # artifact instead. Kept in lockstep with release-build.yml,
+            # which carries the same step in the same position.
+            - name: Verify the macOS bundle is genuinely signed
+              uses: ./.github/actions/verify-signature
+              with:
+                  platform: macos
+                  artifact-path: nativephp/electron/dist/*.dmg
+
             - name: Emit auto-update manifest (latest-mac.yml)
               # electron-builder skips writing the publisher manifest
               # when invoked with `-p never` (NativePHP's default
@@ -325,6 +338,15 @@ jobs:
                   done
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
+
+            # The guard above proves the six Azure values reached the build;
+            # only the artifact proves electron-builder actually signed with
+            # them. Kept in lockstep with release-build.yml.
+            - name: Verify the Windows installer is genuinely signed
+              uses: ./.github/actions/verify-signature
+              with:
+                  platform: windows
+                  artifact-path: nativephp/electron/dist/*.exe
 
             - name: Emit auto-update manifest (latest.yml)
               shell: bash

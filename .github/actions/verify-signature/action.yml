@@ -1,0 +1,220 @@
+# Proves a built desktop artifact is genuinely code-signed, because the
+# bundler's own exit code does not.
+#
+# Every signing path in this repo degrades to a warning rather than a
+# failure when its credentials are missing:
+#   - Windows: the generated `electron-builder.mjs` drops the whole
+#     `azureSignOptions` block when any one NATIVEPHP_AZURE_* value is
+#     empty, so electron-builder packages an UNSIGNED installer and exits 0.
+#   - macOS: the Developer ID prebuild hook exits 1, but NativePHP's
+#     `runProcess()` only reports the failure and returns from its closure,
+#     so the build continues; electron-builder then falls back to an ad-hoc
+#     signature and `build/notarize.js` skips notarisation, each with a
+#     console warning nobody reads on a green run.
+#
+# `electron-builder.mjs` is generated and gitignored and `runProcess()` is
+# vendor code, so neither can be fixed in place. The durable answer is to
+# stop trusting the build and interrogate the artifact instead.
+#
+# Failure is the only safe default here: if a verifier is missing, if the
+# glob matches nothing, or if the platform is unknown, this action fails.
+# An artifact nobody could check is treated exactly like an unsigned one.
+name: 'Verify artifact signature'
+description: 'Fails the build unless a produced desktop artifact carries a valid, non-ad-hoc platform code signature.'
+
+inputs:
+    platform:
+        description: >-
+            Which verifier to run. "macos" runs codesign + Gatekeeper +
+            stapled-notarisation checks; "windows" runs Authenticode.
+        required: true
+    artifact-path:
+        description: >-
+            Path or glob resolving to the artifacts to verify, e.g.
+            nativephp/electron/dist/*.dmg or nativephp/electron/dist/*.exe.
+            Matching nothing is a failure.
+        required: true
+
+runs:
+    using: composite
+    steps:
+        - name: Reject an unknown platform
+          if: inputs.platform != 'macos' && inputs.platform != 'windows'
+          shell: bash
+          env:
+              PLATFORM: ${{ inputs.platform }}
+          run: |
+              echo "::error::verify-signature: unknown platform '${PLATFORM}' — expected 'macos' or 'windows'. Refusing to pass an unverified artifact."
+              exit 1
+
+        - name: Verify the macOS signature, Gatekeeper verdict and notarisation ticket
+          if: inputs.platform == 'macos'
+          shell: bash
+          env:
+              ARTIFACT_PATH: ${{ inputs.artifact-path }}
+          run: |
+              set -euo pipefail
+
+              MOUNTED=""
+
+              cleanup() {
+                  if [ -z "$MOUNTED" ]; then
+                      return
+                  fi
+                  # Gatekeeper keeps the volume open for a moment after spctl
+                  # and stapler have read from it, so the first detach can
+                  # come back "Resource busy". Retry, then force. A cleanup
+                  # problem must never decide the verdict, so this is
+                  # best-effort by design.
+                  for _ in 1 2 3 4 5; do
+                      if hdiutil detach "$MOUNTED" -quiet 2>/dev/null; then
+                          MOUNTED=""
+                          return
+                      fi
+                      sleep 2
+                  done
+                  hdiutil detach "$MOUNTED" -force -quiet 2>/dev/null || true
+                  MOUNTED=""
+              }
+              trap cleanup EXIT
+
+              fail() {
+                  # Close any open log group first, otherwise the annotation
+                  # is collapsed into a folded section on the run page.
+                  echo "::endgroup::"
+                  echo "::error::verify-signature (macOS): $*"
+                  exit 1
+              }
+
+              for tool in codesign spctl xcrun hdiutil; do
+                  if ! command -v "$tool" >/dev/null 2>&1; then
+                      fail "the '$tool' verifier is not on PATH, so the signature cannot be proven. An unverifiable artifact is treated as unsigned."
+                  fi
+              done
+
+              # The four checks that together separate a distributable bundle
+              # from one that merely built: a structurally intact signature, a
+              # real certificate behind it, Gatekeeper's verdict, and a
+              # notarisation ticket stapled into the bundle.
+              verify_app_bundle() {
+                  app="$1"
+
+                  echo "codesign --verify --deep --strict :: ${app}"
+                  if ! codesign --verify --deep --strict --verbose=2 "$app"; then
+                      fail "${app}: the code signature is missing or broken (codesign --verify --deep --strict rejected it)."
+                  fi
+
+                  details=$(codesign --display --verbose=4 "$app" 2>&1 || true)
+                  printf '%s\n' "$details"
+
+                  # An ad-hoc signature passes --verify quite happily: it is a
+                  # structurally valid signature with the identity '-' and no
+                  # certificate chain, which is exactly the silent fallback
+                  # electron-builder takes when no Developer ID is configured.
+                  if printf '%s\n' "$details" | grep -q 'Signature=adhoc'; then
+                      fail "${app}: signed AD-HOC (identity '-'), not with a Developer ID. Set NATIVEPHP_MAC_IDENTITY plus the Developer ID .p12 so electron-builder signs with the real certificate."
+                  fi
+
+                  if ! printf '%s\n' "$details" | grep -q '^Authority='; then
+                      fail "${app}: the signature carries no certificate chain (no Authority= line), so it is ad-hoc or unsigned."
+                  fi
+
+                  echo "spctl --assess --type exec :: ${app}"
+                  if ! spctl --assess --type exec --verbose=2 "$app"; then
+                      fail "${app}: Gatekeeper refused the bundle. A Developer ID signature that was never notarised is rejected here, and so is an ad-hoc one."
+                  fi
+
+                  echo "xcrun stapler validate :: ${app}"
+                  if ! xcrun stapler validate "$app"; then
+                      fail "${app}: no stapled notarisation ticket. build/notarize.js returns early when NATIVEPHP_APPLE_ID, NATIVEPHP_APPLE_ID_PASS or NATIVEPHP_APPLE_TEAM_ID is unset, and swallows notarytool errors when they are set."
+                  fi
+              }
+
+              targets=()
+              while IFS= read -r match; do
+                  targets+=("$match")
+              done < <(compgen -G "$ARTIFACT_PATH" || true)
+
+              if [ "${#targets[@]}" -eq 0 ]; then
+                  fail "no artifact matched '${ARTIFACT_PATH}', so nothing was verified."
+              fi
+
+              for target in "${targets[@]}"; do
+                  echo "::group::Verifying ${target}"
+                  case "$target" in
+                      *.dmg)
+                          # electron-builder leaves the .dmg container itself
+                          # unsigned (its dmg.sign default is false), so the
+                          # only honest subject is the .app inside. Mount
+                          # read-only, verify the bundle, unmount.
+                          MOUNTED=$(mktemp -d "${TMPDIR:-/tmp}/verify-signature.XXXXXX")
+                          if ! hdiutil attach "$target" -nobrowse -readonly -noverify -mountpoint "$MOUNTED" >/dev/null; then
+                              fail "${target}: could not be mounted, so the .app inside it could not be verified."
+                          fi
+
+                          apps=()
+                          while IFS= read -r found; do
+                              apps+=("$found")
+                          done < <(find "$MOUNTED" -maxdepth 1 -name '*.app' -print)
+
+                          if [ "${#apps[@]}" -eq 0 ]; then
+                              fail "${target}: holds no .app bundle to verify."
+                          fi
+
+                          for app in "${apps[@]}"; do
+                              verify_app_bundle "$app"
+                          done
+
+                          cleanup
+                          ;;
+                      *.app)
+                          verify_app_bundle "$target"
+                          ;;
+                      *)
+                          fail "${target}: unsupported macOS artifact — expected a .dmg or a .app."
+                          ;;
+                  esac
+                  echo "::endgroup::"
+              done
+
+              echo "Signature verified: every macOS artifact is Developer ID signed, accepted by Gatekeeper and carries a stapled notarisation ticket."
+
+        - name: Verify the Windows Authenticode signature
+          if: inputs.platform == 'windows'
+          shell: pwsh
+          env:
+              ARTIFACT_PATH: ${{ inputs.artifact-path }}
+          run: |
+              $ErrorActionPreference = 'Stop'
+
+              function Invoke-Fail([string] $Message) {
+                  Write-Output "::error::verify-signature (Windows): $Message"
+                  exit 1
+              }
+
+              if (-not (Get-Command Get-AuthenticodeSignature -ErrorAction SilentlyContinue)) {
+                  Invoke-Fail "Get-AuthenticodeSignature is unavailable on this runner, so the signature cannot be proven. An unverifiable artifact is treated as unsigned."
+              }
+
+              $targets = @(Get-ChildItem -Path $env:ARTIFACT_PATH -File -ErrorAction SilentlyContinue)
+              if ($targets.Count -eq 0) {
+                  Invoke-Fail "no artifact matched '$($env:ARTIFACT_PATH)', so nothing was verified."
+              }
+
+              foreach ($target in $targets) {
+                  $signature = Get-AuthenticodeSignature -FilePath $target.FullName
+                  Write-Output "$($target.Name): Status=$($signature.Status) Signer=$($signature.SignerCertificate.Subject)"
+
+                  # Valid is the only accepting status. NotSigned is the empty
+                  # azureSignOptions case; UnknownError, NotTrusted and
+                  # HashMismatch all mean the bytes cannot be trusted either.
+                  if ($signature.Status -ne 'Valid') {
+                      Invoke-Fail "$($target.Name): Authenticode status is '$($signature.Status)' — $($signature.StatusMessage) electron-builder drops azureSignOptions when any NATIVEPHP_AZURE_* value is empty, which ships an unsigned installer from a green build."
+                  }
+
+                  if (-not $signature.SignerCertificate) {
+                      Invoke-Fail "$($target.Name): reported Valid but carries no signer certificate, which should be impossible — treating it as unsigned."
+                  }
+              }
+
+              Write-Output "Signature verified: every Windows artifact carries a Valid Authenticode signature."

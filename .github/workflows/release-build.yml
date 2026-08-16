@@ -94,6 +94,17 @@ jobs:
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build mac arm64
 
+            # The same check release.yml runs, in the same position, so a
+            # bundle that would be rejected at release time is rejected here
+            # first. The action resolves from the checked-out tag, so a tag
+            # cut before this step existed cannot find it — rebuild from a
+            # tag that contains it.
+            - name: Verify the macOS bundle is genuinely signed
+              uses: ./.github/actions/verify-signature
+              with:
+                  platform: macos
+                  artifact-path: nativephp/electron/dist/*.dmg
+
             - name: Upload macOS artifacts (arm64)
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -164,6 +175,15 @@ jobs:
                   done
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
+
+            # The same check release.yml runs, in the same position. The
+            # guard above proves the six Azure values reached the build; only
+            # the artifact proves electron-builder signed with them.
+            - name: Verify the Windows installer is genuinely signed
+              uses: ./.github/actions/verify-signature
+              with:
+                  platform: windows
+                  artifact-path: nativephp/electron/dist/*.exe
 
             - name: Upload Windows artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
