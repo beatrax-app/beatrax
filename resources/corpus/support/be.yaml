@@ -42,6 +42,10 @@ entries:
     cancel_url: "https://vab.be/nl/over-vab/wijziging-opzegregels"
     support_url: "https://vab.be/nl/over-vab/contact"
     notes: "Sinds 1 oktober 2024 kan je je niet-levencontract vanaf het tweede verzekeringsjaar op elk moment opzeggen, met uitwerking 2 maanden na je aangetekende zending; de premie van de niet-genoten periode wordt terugbetaald. Opzeggen tegen de vervaldag kan tot 2 maanden ervoor. VAB stelt een voorbeeld-opzegbrief ter beschikking; sturen kan naar contact@vab.be of 03 253 61 30."
+  - name: Verisure
+    type: merchant
+    support_url: "https://www.verisure.be/nl/contact"
+    notes: "Verisure publiceert geen opzegformulier: de klantendienst is bereikbaar op het gratis nummer 0800 93 000, dat 24/7 bemand is omdat het ook de meldkamer bedient. Vraag de opzegging schriftelijk te bevestigen — het alarmcontract loopt door zolang die bevestiging er niet is, en de domiciliëring stopt niet vanzelf."
   - name: Rode Kruis
     type: merchant
     support_url: "https://www.rodekruis.be/contact/"

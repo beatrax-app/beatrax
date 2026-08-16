@@ -72,6 +72,12 @@ entries:
     rights_url: "https://www.allamkincstar.gov.hu/csaladok-tamogatasa/Csalad_gyermek/csaladi-potlek"
     phone: "1811"
     notes: "A Kincstár telefonos ügyfélszolgálata Magyarországról a 1811-es, külföldről a +36 1 327-3308-as számon érhető el; a hívás költsége a normál vezetékes hívással egyezik. A családtámogatási ellátások (családi pótlék, anyasági támogatás, CSED, GYES) jogosultsági feltételei és a kérelemhez szükséges nyomtatványok a családtámogatás rovatban vannak."
+  - name: NAV
+    type: government
+    help_url: "https://nav.gov.hu/ugyfeliranytu/keressen_minket"
+    apply_url: "https://ugyfelportal.nav.gov.hu/idopontfoglalas"
+    phone: "1819"
+    notes: "A NAV Infóvonal a 1819 (külföldről +36 1 461-1819), hétfőtől csütörtökig 8:30–16:00, pénteken 8:30–13:30. Ügyfélszolgálati időpont online foglalható, írásban pedig az E-Papír szolgáltatáson keresztül lehet beadványt küldeni. A személyi jövedelemadó-bevallási tervezet évente elkészül, és a határidő előtt módosítható vagy elfogadható — a legtöbb ügy így intézhető anélkül, hogy be kellene menni."
   - name: NEAK
     type: government
     help_url: "https://www.neak.gov.hu/felso_menu/rolunk/elerhetoseg"
