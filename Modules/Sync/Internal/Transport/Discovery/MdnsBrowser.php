@@ -223,16 +223,17 @@ final class MdnsBrowser
             return null;
         }
 
-        // A browse alone carries no address, and an unresolved peer was
-        // dropped as unconnectable — so mDNS discovery returned nothing on
-        // macOS however many peers were advertising.
+        return $this->peerFromInstance($deviceId, $instanceName);
+    }
+
+    // A browse alone carries no address, and an unresolved peer was dropped as
+    // unconnectable — so mDNS discovery returned nothing on macOS however many
+    // peers were advertising.
+    private function peerFromInstance(string $deviceId, string $instanceName): ?DiscoveredPeer
+    {
         $resolved = $this->resolveInstance($instanceName);
 
-        if ($resolved === null) {
-            return null;
-        }
-
-        return new DiscoveredPeer(
+        return $resolved === null ? null : new DiscoveredPeer(
             deviceId: $deviceId,
             host: $resolved['host'],
             port: $resolved['port'],
@@ -254,27 +255,35 @@ final class MdnsBrowser
             return null;
         }
 
+        $output = $this->runResolve($binary, $instanceName);
+
+        if (preg_match('/can be reached at\s+([^\s:]+):(\d+)/', $output, $matches) !== 1) {
+            return null;
+        }
+
+        $port = (int) $matches[2];
+
+        return $port > 0 && $port <= self::MAX_PORT
+            ? ['host' => rtrim($matches[1], '.'), 'port' => $port]
+            : null;
+    }
+
+    // Whatever -L printed before the time box expired. It streams until
+    // killed, so the timeout IS the normal exit rather than a failure, and
+    // the output collected up to that point is the answer.
+    private function runResolve(string $binary, string $instanceName): string
+    {
         $process = new Process([$binary, '-L', $instanceName, self::SERVICE_TYPE, 'local']);
         $process->setTimeout(self::RESOLVE_TIMEOUT_SECONDS);
 
         try {
             $process->run();
         } catch (ProcessTimedOutException) {
-            // Expected: -L streams until killed, so the timeout is the
-            // normal exit and whatever it printed is the answer.
+            // Expected: the time box is how this command ends, so there is
+            // nothing to report and the output below is still valid.
         }
 
-        if (preg_match('/can be reached at\s+([^\s:]+):(\d+)/', $process->getOutput(), $matches) !== 1) {
-            return null;
-        }
-
-        $port = (int) $matches[2];
-
-        if ($port <= 0 || $port > self::MAX_PORT) {
-            return null;
-        }
-
-        return ['host' => rtrim($matches[1], '.'), 'port' => $port];
+        return $process->getOutput();
     }
 
     // Extracts the advertised device id and confirms it against the caller's

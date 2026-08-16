@@ -78,6 +78,19 @@ final class LanSyncClient
             return false;
         }
 
+        return $this->runExchange($host, $port, $identity, $session, $peerStaticHex);
+    }
+
+    // The dial itself, and what each way it can end means. Split from the
+    // precondition above so one method decides whether there is anything to
+    // attempt and the other decides what the attempt's outcome was.
+    private function runExchange(
+        string $host,
+        int $port,
+        DeviceIdentityDto $identity,
+        Session $session,
+        string $peerStaticHex,
+    ): bool {
         $uri = "ws://{$host}:{$port}/";
         $connection = null;
 
@@ -330,16 +343,7 @@ final class LanSyncClient
     // that would consume the catch-up request queued behind it.
     private function readEpochPushCount(WebsocketConnection $connection, SyncSession $syncSession): int
     {
-        $message = $this->receiveWithTimeout($connection, 'gdk epoch push header');
-        if ($message === null) {
-            return 0;
-        }
-
-        try {
-            $parsed = $this->catchUp->parseControlMessage($syncSession->decrypt($message->buffer()));
-        } catch (\UnexpectedValueException) {
-            return 0;
-        }
+        $parsed = $this->readControlMessage($connection, $syncSession);
 
         // Mirrors SyncWebSocketHandler::MSG_PEER_REVOKED. The peer no longer
         // confirms this device, so there is nothing left to sync and the
@@ -357,6 +361,27 @@ final class LanSyncClient
         $count = $parsed['count'] ?? null;
 
         return is_int($count) ? max(0, min($count, self::MAX_GDK_WRAPS_PER_CONNECT)) : 0;
+    }
+
+    // An unreadable or unparseable header means nothing was pushed, which is
+    // an ordinary outcome rather than a failure — an empty set says so
+    // without the caller having to distinguish the two.
+    /**
+     * @return array<string, mixed>
+     */
+    private function readControlMessage(WebsocketConnection $connection, SyncSession $syncSession): array
+    {
+        $message = $this->receiveWithTimeout($connection, 'gdk epoch push header');
+
+        if ($message === null) {
+            return [];
+        }
+
+        try {
+            return $this->catchUp->parseControlMessage($syncSession->decrypt($message->buffer()));
+        } catch (\UnexpectedValueException) {
+            return [];
+        }
     }
 
     /**

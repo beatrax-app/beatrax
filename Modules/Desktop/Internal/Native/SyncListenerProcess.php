@@ -60,17 +60,7 @@ final readonly class SyncListenerProcess
         // listener holding the port. Starting a second one fatals with
         // "Address already in use" — the running one is already what we want.
         if ($this->portIsBound()) {
-            // A listener already up is only correct if it HAS credentials. One
-            // started at boot, before the app was unlocked, answers every
-            // handshake with an unusable key, so new credentials must replace
-            // it rather than be discarded.
-            if ($environment === []) {
-                $this->logger->info('sync listener: already listening; leaving the running process in place.');
-
-                return;
-            }
-
-            $this->restartWith($environment);
+            $this->reconcileRunningListener($environment);
 
             return;
         }
@@ -89,6 +79,24 @@ final readonly class SyncListenerProcess
                 'exception' => $e,
             ]);
         }
+    }
+
+    // A listener already up is only correct if it HAS credentials. One started
+    // at boot, before the app was unlocked, answers every handshake with an
+    // unusable key, so new credentials must replace it rather than be
+    // discarded.
+    /**
+     * @param  array<string, string>  $environment
+     */
+    private function reconcileRunningListener(array $environment): void
+    {
+        if ($environment === []) {
+            $this->logger->info('sync listener: already listening; leaving the running process in place.');
+
+            return;
+        }
+
+        $this->restartWith($environment);
     }
 
     // Replaces a running listener so the new environment takes effect: the

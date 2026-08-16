@@ -66,6 +66,24 @@ final readonly class DesktopColdStartVault implements ColdStartVault
             return null;
         }
 
+        $blob = $this->readBlob($userId);
+
+        if ($blob === null) {
+            return null;
+        }
+
+        $dataKey = $this->codec->unwrap($blob);
+        sodium_memzero($blob);
+
+        return $dataKey;
+    }
+
+    // Unwinds what enroll() wrote: file, then safeStorage, then base64. Any
+    // step failing means this machine cannot open the file — most often
+    // because another one wrote it — so every one of them is a null rather
+    // than an error the lock screen would have to render.
+    private function readBlob(int $userId): ?string
+    {
         $stored = @file_get_contents($this->path($userId));
 
         if ($stored === false || $stored === '') {
@@ -81,14 +99,7 @@ final readonly class DesktopColdStartVault implements ColdStartVault
         $blob = base64_decode($decrypted, true);
         sodium_memzero($decrypted);
 
-        if ($blob === false) {
-            return null;
-        }
-
-        $dataKey = $this->codec->unwrap($blob);
-        sodium_memzero($blob);
-
-        return $dataKey;
+        return $blob === false ? null : $blob;
     }
 
     public function forget(int $userId): void

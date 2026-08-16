@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Mobile\Internal\Boot;
 
 use Psr\Log\LoggerInterface;
-use RuntimeException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -48,26 +47,33 @@ final readonly class NativeBuildPatches
                 continue;
             }
 
-            try {
-                // Each script ends in exit(0), so requiring one would end the
-                // BUILD process with it — the first patch ran and nothing was
-                // ever compiled. A child process contains both that exit and
-                // any fatal inside the script.
-                $process = new Process([PHP_BINARY, $path]);
-                $process->setTimeout(self::TIMEOUT_SECONDS);
-                $process->run();
+            $failure = $this->runPatch($path);
 
-                if (! $process->isSuccessful()) {
-                    throw new RuntimeException(trim($process->getErrorOutput()));
-                }
-            } catch (Throwable $e) {
+            if ($failure !== null) {
                 // A failed patch must not abort the build; it degrades to the
                 // unpatched shell, which is visible and fixable.
                 $this->log->warning('NativeBuildPatches: patch script failed.', [
                     'script' => $script,
-                    'exception' => $e->getMessage(),
+                    'exception' => $failure,
                 ]);
             }
+        }
+    }
+
+    // The reason the patch did not apply, or null when it did. Each script
+    // ends in exit(0), so requiring one would end the BUILD process with it —
+    // the first patch ran and nothing was ever compiled. A child process
+    // contains both that exit and any fatal inside the script.
+    private function runPatch(string $path): ?string
+    {
+        try {
+            $process = new Process([PHP_BINARY, $path]);
+            $process->setTimeout(self::TIMEOUT_SECONDS);
+            $process->run();
+
+            return $process->isSuccessful() ? null : trim($process->getErrorOutput());
+        } catch (Throwable $e) {
+            return $e->getMessage();
         }
     }
 }
