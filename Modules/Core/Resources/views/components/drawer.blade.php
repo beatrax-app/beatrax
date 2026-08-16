@@ -30,8 +30,14 @@
 --}}
 
 {{-- Scrim (phone/tablet only — CSS hides it at desktop via .drawer-scrim rule) --}}
+{{-- x-cloak: on a full page load (e.g. the redirect to / after unlocking at
+     the PIN screen) the server HTML paints before Alpine boots, so an
+     x-show element with no cloak is visible for a frame — the scrim and the
+     drawer below flashed the whole nav panel over the dashboard. The paired
+     mobile-only [x-cloak] rule in app.css hides them until Alpine takes over. --}}
 <div
     class="drawer-scrim"
+    x-cloak
     x-show="$store.mobileNav.drawerOpen"
     x-on:click="$store.mobileNav.close()"
     x-transition:enter="transition duration-[180ms]"
@@ -47,6 +53,7 @@
 {{-- Drawer panel --}}
 <div
     class="drawer-container"
+    x-cloak
     role="dialog"
     aria-modal="true"
     aria-label="{{ Lang::get('core::components.drawer_nav') }}"

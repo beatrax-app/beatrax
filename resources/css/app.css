@@ -2935,6 +2935,16 @@ td.date,
         padding-bottom: calc(var(--space-4) + var(--safe-bottom));
         overscroll-behavior: contain;
     }
+
+    /* Cloak the x-show-driven drawer surfaces until Alpine boots. The app
+       ships no global [x-cloak] rule, so the attribute alone is inert; this
+       one is scoped to the drawer AND to <1024px on purpose — at desktop the
+       .drawer-container IS the static sidebar and must never be hidden, which
+       the min-width override below keeps it from being. */
+    .drawer-scrim[x-cloak],
+    .drawer-container[x-cloak] {
+        display: none !important;
+    }
 }
 
 /* Desktop: drawer container behaves as static sidebar (no translate, no scrim).
