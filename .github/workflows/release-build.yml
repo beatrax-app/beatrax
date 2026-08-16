@@ -259,3 +259,136 @@ jobs:
                       nativephp/electron/dist/*.AppImage
                       nativephp/electron/dist/*.deb
                   if-no-files-found: error
+
+    build-android:
+        # The public, sideloadable APK. Bifrost builds the store-shaped
+        # artifacts from its own credentials; this leg exists so a signed
+        # download sits alongside the desktop ones on the Release page.
+        name: build (Android)
+        runs-on: ubuntu-24.04
+        timeout-minutes: 40
+        env:
+            # The nativephp/mobile-* plugins are a paid, private Composer
+            # repository; the mobile root cannot install without these.
+            COMPOSER_AUTH: >-
+                {"http-basic":{"plugins.nativephp.com":{"username":"${{ secrets.NATIVEPHP_LICENSE_EMAIL }}","password":"${{ secrets.NATIVEPHP_LICENSE_KEY }}"}}}
+        steps:
+            - name: Check out the tagged source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  ref: ${{ inputs.tag }}
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # v2.37.2
+              with:
+                  php-version: '8.5'
+                  extensions: mbstring, sqlite3, pdo_sqlite, bcmath, gd, intl, xml, dom, fileinfo, tokenizer, json
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Install npm dependencies
+              run: npm ci --ignore-scripts
+
+            - name: Build Vite assets
+              # public/build is served on-device, so the bundle needs it before
+              # the Laravel tree is copied into the APK.
+              run: npm run build
+
+            - name: Lay down the mobile environment
+              working-directory: mobile-app
+              run: |
+                  set -euo pipefail
+                  cp .env.example .env
+                  mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+                  touch database/database.sqlite
+                  chmod -R u+rwX storage bootstrap/cache
+
+            - name: Install Composer dependencies (mobile-app/ root)
+              working-directory: mobile-app
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Mint the mobile application key
+              working-directory: mobile-app
+              run: php artisan key:generate --ansi
+
+            - name: Restore the release keystore
+              env:
+                  ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+              run: |
+                  set -euo pipefail
+                  if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+                      echo "::error::ANDROID_KEYSTORE_BASE64 is empty — refusing to publish an unsigned Android build."
+                      exit 1
+                  fi
+                  mkdir -p mobile-app/credentials
+                  printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > mobile-app/credentials/app-release-key.jks
+                  chmod 600 mobile-app/credentials/app-release-key.jks
+
+            - name: Build and sign the APK
+              working-directory: mobile-app
+              env:
+                  NATIVEPHP_APP_VERSION: ${{ inputs.tag }}
+                  # Read from the environment rather than passed as --flags:
+                  # command-line arguments are visible in the process list.
+                  ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+                  ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+                  ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+              run: |
+                  set -euo pipefail
+                  for required in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+                      if [ -z "${!required:-}" ]; then
+                          echo "::error::${required} is empty — refusing to publish an unsigned Android build."
+                          exit 1
+                      fi
+                  done
+                  export ANDROID_KEYSTORE_FILE="$GITHUB_WORKSPACE/mobile-app/credentials/app-release-key.jks"
+                  export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
+                  # native:package, never native:run --build=release: the latter
+                  # has no signing validation and emits app-release-unsigned.apk
+                  # while still reporting success.
+                  php artisan native:package android --build-type=release --no-interaction
+
+            - name: Verify the APK is signed by the release key
+              env:
+                  EXPECTED_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+              run: |
+                  set -euo pipefail
+                  apk=$(find mobile-app -name '*.apk' -not -name '*unsigned*' -print -quit)
+                  if [ -z "$apk" ]; then
+                      echo "::error::no signed APK was produced."
+                      exit 1
+                  fi
+                  echo "verifying $apk"
+
+                  apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner -print -quit)
+                  if [ -z "$apksigner" ]; then
+                      echo "::error::apksigner not found — cannot verify the signature."
+                      exit 1
+                  fi
+
+                  "$apksigner" verify --verbose "$apk"
+
+                  # apksigner verify passes on a DEBUG-signed APK too, so the
+                  # signer identity is the check that matters.
+                  actual=$("$apksigner" verify --print-certs "$apk" \
+                      | grep -i 'SHA-256 digest:' | head -1 \
+                      | sed 's/.*digest: *//' | tr -d ' :' | tr '[:lower:]' '[:upper:]')
+                  expected=$(printf '%s' "$EXPECTED_SHA256" | tr -d ' :' | tr '[:lower:]' '[:upper:]')
+
+                  if [ -z "$expected" ]; then
+                      echo "::error::ANDROID_SIGNING_CERT_SHA256 is not set — cannot prove which key signed this."
+                      exit 1
+                  fi
+                  if [ "$actual" != "$expected" ]; then
+                      echo "::error::APK is signed by an unexpected key."
+                      exit 1
+                  fi
+                  echo "signed by the expected release key"
+                  echo "APK_PATH=$apk" >> "$GITHUB_ENV"
+
+            - name: Upload Android artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+              with:
+                  name: android
+                  path: ${{ env.APK_PATH }}
+                  if-no-files-found: error
