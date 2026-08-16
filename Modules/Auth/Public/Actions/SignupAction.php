@@ -86,6 +86,12 @@ final class SignupAction
                 'locale' => $this->activeLocale(),
             ]);
 
+            // create() does not read the row back, so a DATABASE default is
+            // null on the instance it returns — and that instance is what the
+            // guard below holds. On the persistent mobile runtime it outlived
+            // the request, and SettingsPage fatally assigned null to a string.
+            $user->refresh();
+
             $now = $this->clock->now();
 
             // Generate distinct codes: a collision is astronomically rare,
