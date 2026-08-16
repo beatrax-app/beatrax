@@ -11,9 +11,10 @@ use Modules\Core\Models\User;
  * drawer panel and its scrim are driven by `x-show="$store.mobileNav.drawerOpen"`,
  * which only applies `display: none` once Alpine has booted; the server HTML
  * paints first, so the whole nav panel showed over the dashboard until Alpine
- * hid it. The fix cloaks both surfaces with `x-cloak` AND backs the attribute
- * with a stylesheet rule — the app ships no global `[x-cloak]` rule, so the
- * attribute is inert on its own.
+ * hid it. The fix cloaks both surfaces with `x-cloak` and owns the backing
+ * rule rather than leaving it to the copy `@livewireStyles` injects, whose
+ * position after this app's stylesheet is what made the desktop exemption
+ * below necessary.
  *
  * Uses /help/data-locations (not /) for the same reason PwaLayoutTest does:
  * it is a plain Route::view() that always renders the authenticated layout
@@ -53,11 +54,21 @@ it('cloaks the drawer panel and scrim in the rendered authenticated layout', fun
         ->and($panel)->toContain('x-cloak');
 });
 
-it('backs x-cloak with a mobile-scoped stylesheet rule so the drawer is hidden pre-boot', function (): void {
+it('backs x-cloak with its own global rule rather than the framework-injected one', function (): void {
     $css = (string) file_get_contents(base_path('resources/css/app.css'));
 
-    // Without a rule the attribute does nothing: assert both drawer surfaces
-    // are targeted while cloaked so the flash is actually suppressed.
-    expect($css)->toContain('.drawer-scrim[x-cloak]')
-        ->and($css)->toContain('.drawer-container[x-cloak]');
+    expect($css)->toContain("[x-cloak] {\n    display: none !important;\n}");
+});
+
+it('exempts the desktop sidebar from the global cloak', function (): void {
+    // At >=1024px the drawer container IS the static sidebar, and the rule
+    // that keeps it laid out is a single class — the same weight as [x-cloak],
+    // whose injected copy comes later in the cascade and therefore wins. The
+    // exemption has to out-specify it or the desktop nav blanks until Alpine
+    // boots.
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    $desktopBlock = strstr($css, '@media (min-width: 1024px)');
+
+    expect($desktopBlock)->toContain(".drawer-container[x-cloak] {\n        display: block !important;\n    }");
 });
