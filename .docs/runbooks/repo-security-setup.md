@@ -237,19 +237,53 @@ echo "Upload resources/brand/social-preview-1280.png via Settings → General �
 
 ## Release signing
 
-Both desktop platforms are signed with real certificates. The values live
-as repository secrets and variables; the originals are in the Beatrax
-1Password vault.
+macOS is signed with a real Developer ID certificate and notarised, proven
+end to end on a CI runner. **Windows is not yet signable** — see below.
+The values live as repository secrets and variables; the originals are in
+the Beatrax 1Password vault.
 
 | Platform | Secrets | Variables |
 |---|---|---|
-| Windows | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | `NATIVEPHP_AZURE_ENDPOINT`, `NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME`, `NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME` |
+| Windows | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | `NATIVEPHP_AZURE_ENDPOINT`, `NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME`, `NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME`, `NATIVEPHP_AZURE_PUBLISHER_NAME` |
 | macOS | `CSC_LINK`, `CSC_KEY_PASSWORD`, `NATIVEPHP_APPLE_ID`, `NATIVEPHP_APPLE_ID_PASS` | `NATIVEPHP_MAC_IDENTITY`, `NATIVEPHP_APPLE_TEAM_ID` |
 
-The three Azure entries are variables rather than secrets deliberately:
-they name an endpoint, an account and a certificate profile, none of
-which is confidential, and masking them turns a failed signing run into a
-log full of `***` at the moment those values are what you need to read.
+The Azure entries are variables rather than secrets deliberately: they
+name an endpoint, an account, a certificate profile and a publisher, none
+of which is confidential, and masking them turns a failed signing run into
+a log full of `***` at the moment those values are what you need to read.
+
+### Windows: blocked on a certificate profile
+
+The Azure Trusted Signing account (`beatraxsigning` in
+`rg-beatrax-signing`) exists, the service principal authenticates, and it
+holds the Trusted Signing Certificate Profile Signer role. But the account
+has **no certificate profile**:
+
+```sh
+az rest --method get --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/rg-beatrax-signing/providers/Microsoft.CodeSigning/codeSigningAccounts/beatraxsigning/certificateProfiles?api-version=2024-09-30-preview"
+# {"value": []}
+```
+
+The last two variables are therefore unset on purpose, so the guard blocks
+a Windows release rather than a build silently producing an unsigned
+artifact. To unblock, create a certificate profile in the Trusted Signing
+portal against the approved identity validation, then set:
+
+- `NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME` — the profile's name
+- `NATIVEPHP_AZURE_PUBLISHER_NAME` — the certificate subject's common
+  name, which is the validated legal entity name. signtool compares this
+  against the certificate, so a guess fails at sign time rather than at
+  config validation.
+
+Record both on the Azure service principal item in 1Password, replacing
+the `(pending — set after cert profile is created)` placeholder that field
+currently holds.
+
+`publisherName` is required by electron-builder 26 but not emitted by
+NativePHP, so `scripts/nativephp_azure_publisher_name.php` patches it into
+the generated config. Without that patch every Trusted Signing build
+aborts with `configuration.win.azureSignOptions misses the property
+'publisherName'`.
 
 `CSC_LINK` holds ONLY the Developer ID identity. The Keychain export that
 produces it (`security export -t identities`) emits every identity on the
