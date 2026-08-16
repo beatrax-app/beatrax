@@ -53,49 +53,45 @@
                 {{ Lang::get('mobile::sync_complete.how_it_works') }}
             </h2>
 
-            <dl class="space-y-5">
-                <div class="space-y-1">
-                    <dt class="text-sm font-medium text-slate-900 dark:text-slate-100">
-                        {{ Lang::get('mobile::sync_complete.automatic_title') }}
-                    </dt>
-                    <dd class="text-sm text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('mobile::sync_complete.automatic_body') }}
-                    </dd>
-                </div>
+            {{-- dt/dd are DIRECT children: grouping each pair in a <div> is
+                 valid HTML5 but the analyser still applies the older rule that
+                 a term must sit immediately inside its list, and reported four
+                 bugs for it. Spacing moves onto the items instead. --}}
+            <dl>
+                <dt class="mt-5 text-sm font-medium text-slate-900 first:mt-0 dark:text-slate-100">
+                    {{ Lang::get('mobile::sync_complete.automatic_title') }}
+                </dt>
+                <dd class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {{ Lang::get('mobile::sync_complete.automatic_body') }}
+                </dd>
 
-                <div class="space-y-1">
-                    <dt class="text-sm font-medium text-slate-900 dark:text-slate-100">
-                        {{ Lang::get('mobile::sync_complete.lan_title') }}
-                    </dt>
-                    <dd class="text-sm text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('mobile::sync_complete.lan_body') }}
-                    </dd>
-                </div>
+                <dt class="mt-5 text-sm font-medium text-slate-900 first:mt-0 dark:text-slate-100">
+                    {{ Lang::get('mobile::sync_complete.lan_title') }}
+                </dt>
+                <dd class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {{ Lang::get('mobile::sync_complete.lan_body') }}
+                </dd>
 
                 {{-- Relay copy is conditional: promising that changes travel
                      while the devices are apart is only true once an endpoint
                      is actually configured on this device. --}}
-                <div class="space-y-1">
-                    <dt class="text-sm font-medium text-slate-900 dark:text-slate-100">
-                        {{ $hasRelay
-                            ? Lang::get('mobile::sync_complete.relay_title')
-                            : Lang::get('mobile::sync_complete.no_relay_title') }}
-                    </dt>
-                    <dd class="text-sm text-slate-500 dark:text-slate-400">
-                        {{ $hasRelay
-                            ? Lang::get('mobile::sync_complete.relay_body')
-                            : Lang::get('mobile::sync_complete.no_relay_body') }}
-                    </dd>
-                </div>
+                <dt class="mt-5 text-sm font-medium text-slate-900 first:mt-0 dark:text-slate-100">
+                    {{ $hasRelay
+                        ? Lang::get('mobile::sync_complete.relay_title')
+                        : Lang::get('mobile::sync_complete.no_relay_title') }}
+                </dt>
+                <dd class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {{ $hasRelay
+                        ? Lang::get('mobile::sync_complete.relay_body')
+                        : Lang::get('mobile::sync_complete.no_relay_body') }}
+                </dd>
 
-                <div class="space-y-1">
-                    <dt class="text-sm font-medium text-slate-900 dark:text-slate-100">
-                        {{ Lang::get('mobile::sync_complete.encrypted_title') }}
-                    </dt>
-                    <dd class="text-sm text-slate-500 dark:text-slate-400">
-                        {{ Lang::get('mobile::sync_complete.encrypted_body') }}
-                    </dd>
-                </div>
+                <dt class="mt-5 text-sm font-medium text-slate-900 first:mt-0 dark:text-slate-100">
+                    {{ Lang::get('mobile::sync_complete.encrypted_title') }}
+                </dt>
+                <dd class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {{ Lang::get('mobile::sync_complete.encrypted_body') }}
+                </dd>
             </dl>
         </div>
 
