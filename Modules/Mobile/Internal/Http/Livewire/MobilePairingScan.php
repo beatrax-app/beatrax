@@ -18,6 +18,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Pairing\QrScanBridge;
 use Modules\Mobile\Internal\Sync\MobileImportIntentGate;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -82,12 +83,27 @@ final class MobilePairingScan extends Component
     /** @var list<string> the 6 derived safety-number words shown on the confirm step */
     public array $safetyWords = [];
 
+    // Shown beside the words so the user confirms WHICH two devices are
+    // pairing, not just that six words match on two screens.
+    public string $selfDeviceName = '';
+
+    public string $peerDeviceName = '';
+
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
 
-    public function mount(QrScanBridge $qrBridge, Request $request, CurrentUser $currentUser, MobileImportIntentGate $importIntent): void
-    {
+    public function mount(
+        QrScanBridge $qrBridge,
+        Request $request,
+        CurrentUser $currentUser,
+        MobileImportIntentGate $importIntent,
+        PairingGateway $gateway,
+        DeviceRegistryService $devices,
+        UrlGenerator $urls,
+    ): void {
+        $userId = $currentUser->user()->id;
+
         // Read-only signal, set once at mount() from the server-side
         // request query - never re-derived from client state afterward.
         $this->importMode = $request->query('mode') === 'import';
@@ -97,7 +113,45 @@ final class MobilePairingScan extends Component
         // MobileImportIntentGate marker the moment it is observed, so a
         // later re-entry without the param still reads the durable signal.
         if ($this->importMode) {
-            $importIntent->markImporting($currentUser->user()->id);
+            $importIntent->markImporting($userId);
+        }
+
+        // Resume the ceremony the SERVER is in, not the one this component
+        // last remembered: component state dies with a reload or an app-lock
+        // while the pairing row carries on, and restarting at the scanner then
+        // rescans against a token this screen no longer references.
+        $inFlight = $gateway->inFlightFor($userId);
+
+        // Pairing is a one-way door. Once a peer is confirmed, this screen has
+        // nothing left to do — whether the ceremony row is gone or merely
+        // finished. Treating only the gone case as done still let the back
+        // button land on the passed "device paired" step.
+        $ceremonyFinished = $inFlight === null
+            || $inFlight['state'] === PairingGateway::STATE_CONFIRMED;
+
+        if ($ceremonyFinished && $devices->otherDeviceNames($userId) !== []) {
+            $this->redirect(
+                $urls->route($importIntent->isImporting($userId) ? 'mobile.setup' : 'data-devices.index'),
+                navigate: false,
+            );
+
+            return;
+        }
+
+        if ($inFlight !== null) {
+            $this->pairingTokenId = (string) $inFlight['id'];
+            $this->safetyWords = $inFlight['safety_words'];
+            $this->side = 'responder';
+            $this->step = $inFlight['state'] === PairingGateway::STATE_CONFIRMED ? 'success' : 'confirm';
+
+            // Rearms the poll's responder-accept re-emit. Without it a resumed
+            // screen polls forever without ever retrying the frame the desktop
+            // is waiting on, because the addressing died with the old
+            // component state rather than with the ceremony.
+            $this->importResponderTokenHash = $inFlight['token_hash'];
+            $this->importDesktopDeviceId = $inFlight['peer_device_id'];
+
+            return;
         }
 
         $this->enterACode($qrBridge);
@@ -161,6 +215,7 @@ final class MobilePairingScan extends Component
         PairingGateway $gateway,
         Session $session,
         LoggerInterface $logger,
+        DeviceRegistryService $devices,
         string $data = '',
         string $format = '',
         ?string $id = null,
@@ -169,7 +224,7 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger);
+        $this->submitCode($data, $currentUser, $qrBridge, $gateway, $session, $logger, $devices);
     }
 
     // Fired when the user backs out of the scanner or the OS refuses the
@@ -211,6 +266,7 @@ final class MobilePairingScan extends Component
         PairingGateway $gateway,
         Session $session,
         LoggerInterface $logger,
+        DeviceRegistryService $devices,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -224,33 +280,40 @@ final class MobilePairingScan extends Component
             return;
         }
 
-        // On a genuinely fresh, separate device database, the underlying
-        // accept() call finds no local pending row - seed one from the
-        // scanned QR's initiator identity first (import mode only, which
-        // also carries the QR's optional relay/rtok params).
-        $identity = null;
+        // Read the QR for EVERY scan, not just an import: a phone and a
+        // desktop always hold separate databases, so the desktop learns of
+        // this device only through the relay frame below. Gating that on
+        // import mode made pairing from /sync a silent dead end.
+        $identity = $scannedPayload !== null
+            ? $qrBridge->extractIdentity($scannedPayload)
+            : null;
 
+        if ($scannedPayload !== null && $identity === null) {
+            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
+
+            return;
+        }
+
+        if ($identity !== null) {
+            // Configure the relay before accepting, so the send below has
+            // somewhere to deliver. No-op when the QR carried no relay param.
+            $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayAuthToken'], $identity['relayPin']);
+        }
+
+        // Seeding stays import-only: it exists for a fresh, separate database
+        // with no local pending row. Import mode already returned above
+        // without a payload, so $identity is non-null here.
         if ($this->importMode) {
-            $identity = $qrBridge->extractIdentity($scannedPayload);
-
-            if ($identity === null) {
-                $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
-
-                return;
-            }
-
-            // Auto-configure this device's relay transport from the QR
-            // before seeding/accepting, so the responder-accept send below
-            // has somewhere to deliver to. No-op when the QR carried no
-            // relay param.
-            $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayAuthToken']);
-
             $gateway->seedResponderToken(
                 $identity['token'],
                 $identity['deviceId'],
                 $identity['ed25519PubHex'],
                 $identity['x25519PubHex'],
                 $userId,
+                // Without the scanned name the desktop is admitted under the
+                // placeholder, and the finished sync reports as coming from
+                // "Paired device" rather than the machine it came from.
+                $identity['deviceName'],
             );
         }
 
@@ -259,6 +322,11 @@ final class MobilePairingScan extends Component
             : $gateway->acceptWordCode($this->wordCode, $userId, $session);
 
         if ($result === null) {
+            // Clear the dead attempt, not just the message: a token expiring
+            // mid-flow otherwise leaves the confirm step and its stale
+            // addressing in place, so the next scan is judged against a
+            // pairing that no longer exists.
+            $this->resetPairingAttempt();
             $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
 
             return;
@@ -267,15 +335,16 @@ final class MobilePairingScan extends Component
         $this->pairingTokenId = $result['pairingTokenId'];
         $this->side = 'responder';
         $this->safetyWords = $result['safetyWords'];
+        $this->hydrateDeviceNames($gateway, $devices, $userId);
         $this->flashMessage = '';
         $this->cameraUnavailableNotice = false;
         $this->step = 'confirm';
 
         // Propagate this device's responder identity to the desktop's own
-        // database over the relay (import mode only). Best-effort: a
-        // relay failure never dead-ends the confirm step already
-        // rendered above - the desktop's poll will not advance until retried.
-        if ($this->importMode) {
+        // database over the relay. Best-effort: a relay failure never
+        // dead-ends the confirm step already rendered above - the desktop's
+        // poll will not advance until retried.
+        if ($identity !== null) {
             $tokenHash = hash('sha256', $identity['token']);
 
             // Stash the addressing so the poll can idempotently re-emit
@@ -337,15 +406,21 @@ final class MobilePairingScan extends Component
         // delivery was lost the desktop never binds. Re-emit it
         // idempotently on each poll while still on the confirm step and
         // not yet confirmed - a transient relay failure self-heals.
-        if ($this->importMode
-            && $state !== PairingGateway::STATE_CONFIRMED
+        if ($state !== PairingGateway::STATE_CONFIRMED
             && $this->step === 'confirm'
             && $this->importResponderTokenHash !== ''
             && $this->importDesktopDeviceId !== ''
         ) {
             try {
                 $gateway->sendResponderAccept($userId, $this->importResponderTokenHash, $this->importDesktopDeviceId, $session);
+                $this->flashMessage = '';
             } catch (Throwable $e) {
+                // Say so. Swallowing this left the user watching a spinner
+                // forever while the desktop sat silent: the courier throws
+                // when no relay is configured, and nothing on screen ever
+                // admitted that the frame had nowhere to go.
+                $this->flashMessage = Lang::get('mobile::pairing.errors.relay_unreachable');
+
                 $logger->warning('MobilePairingScan: cross-device PAIR_RESPONDER_ACCEPT relay re-emit failed during poll.', [
                     'user_id' => $userId,
                     'exception' => $e::class,
@@ -369,6 +444,19 @@ final class MobilePairingScan extends Component
                 }
             }
         }
+    }
+
+    // Returns the screen to a clean scan, dropping every trace of the failed
+    // attempt so a retry cannot inherit it.
+    private function resetPairingAttempt(): void
+    {
+        // Keep the entry method the user chose: someone typing a word code
+        // should land back on the keypad, not be thrown to the camera.
+        $this->step = $this->step === 'enter_code' ? 'enter_code' : 'scan';
+        $this->pairingTokenId = '';
+        $this->safetyWords = [];
+        $this->importResponderTokenHash = '';
+        $this->importDesktopDeviceId = '';
     }
 
     // -------------------------------------------------------------------------
@@ -463,27 +551,61 @@ final class MobilePairingScan extends Component
         }
     }
 
-    // Whether the self-mint migrate() call above must be skipped -
-    // derived from durable state (isImporting() + an empty keyring),
-    // never $this->importMode alone, since a re-entry without the query
-    // param must still defer correctly. See .docs/features/mobile/architecture.md.
+    // This screen only ever plays responder, so the peer is the initiator —
+    // the device whose QR was scanned.
+    private function hydrateDeviceNames(PairingGateway $gateway, DeviceRegistryService $devices, int $userId): void
+    {
+        $names = $gateway->deviceNamesFor((int) $this->pairingTokenId, $userId);
+        $fallback = Lang::get('mobile::pairing.peer_default_name');
+
+        $this->selfDeviceName = $devices->localDeviceName($userId) ?? $fallback;
+        $this->peerDeviceName = $names['initiator'] ?? $fallback;
+    }
+
+    // Whether the self-mint migrate() call above must be skipped. A confirmed
+    // peer alone suffices: this screen only plays responder, so reaching it
+    // means joining a group whose epochs exist, and a rival epoch 1 made the
+    // peer's own epoch 1 look like a duplicate on arrival.
+    /**
+     * @link ../../../../../.docs/features/mobile/architecture.md
+     */
     private function shouldDeferSelfMint(int $userId, MobileImportIntentGate $importIntent, DatabaseManager $db): bool
     {
-        if (! $importIntent->isImporting($userId)) {
-            return false;
-        }
-
         $currentEpoch = $db->connection()
             ->table('sync_encryption_state')
             ->where('user_id', $userId)
             ->value('current_epoch');
 
-        return $currentEpoch === null;
+        if ($currentEpoch !== null) {
+            return false;
+        }
+
+        return $importIntent->isImporting($userId) || $this->hasConfirmedPeer($userId, $db);
+    }
+
+    private function hasConfirmedPeer(int $userId, DatabaseManager $db): bool
+    {
+        return $db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->whereNotNull('confirmed_at')
+            ->exists();
     }
 
     // -------------------------------------------------------------------------
     // Cancel / finish
     // -------------------------------------------------------------------------
+
+    // Leaves the typed-code detour and returns to the camera. Deliberately
+    // NOT cancelPairing(): nothing has been submitted yet, so there is no
+    // token to expire and no reason to drop out of the ceremony.
+    public function backToScan(QrScanBridge $qrBridge): void
+    {
+        $this->wordCode = '';
+        $this->flashMessage = '';
+        $this->enterACode($qrBridge);
+    }
 
     // Only expires a still-pending/awaiting_confirm token, never a
     // just-confirmed one.
@@ -496,7 +618,14 @@ final class MobilePairingScan extends Component
             $gateway->expire((int) $this->pairingTokenId, $currentUser->user()->id);
         }
 
-        $this->redirect($urls->route('sync.index'), navigate: false);
+        // Cancelling mid-onboarding returns to the wizard. Sending an
+        // unfinished setup to Devices & Sync dropped the user into the app's
+        // settings — mid-ceremony, with an encryption notice about data that
+        // had never synced — and no route back into setup.
+        $this->redirect(
+            $urls->route($this->importMode ? 'mobile.import' : 'data-devices.index'),
+            navigate: false,
+        );
     }
 
     // Does not touch the now-confirmed token. In import mode this
@@ -505,7 +634,7 @@ final class MobilePairingScan extends Component
     // dashboard); the non-import path still returns to the sync screen.
     public function finishPairing(UrlGenerator $urls): void
     {
-        $route = $this->importMode ? 'mobile.setup' : 'sync.index';
+        $route = $this->importMode ? 'mobile.setup' : 'data-devices.index';
 
         $this->redirect($urls->route($route), navigate: false);
     }
@@ -519,7 +648,7 @@ final class MobilePairingScan extends Component
         $view = $views->make('mobile::livewire.mobile-pairing-scan');
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => Lang::get('mobile::pairing.page_title').' · Beatrax']);
+        $view->extends('layouts.lock', ['title' => Lang::get('mobile::pairing.page_title').' · Beatrax']);
 
         return $view;
     }

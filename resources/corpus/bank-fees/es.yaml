@@ -1,0 +1,31 @@
+# Bank-fee classification rules — Spain (Spanish).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The fee word uses `regex:` with a LEADING \b on the stem: `\bCOMISI`
+# covers "comisión", "COMISION" and "comisiones" in one entry — the stem
+# stops before the accented "ó" because the matcher runs PCRE without /u, so
+# `#i` case-folds ASCII only and an accented letter inside a regex would
+# match one casing at best. The boundary keeps it off longer tokens, and
+# "MANTENIMIENTO" is only ever used as part of "MANTENIMIENTO DE CUENTA",
+# since on its own it belongs to maintenance merchants. Regex bodies must be
+# SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bCOMISI'
+    name: "Comisión bancaria"
+  - pattern: "MANTENIMIENTO DE CUENTA"
+    name: "Comisión de mantenimiento"
+  - pattern: "POSICIONES DEUDORAS"
+    name: "Comisión por reclamación de posiciones deudoras"
+  - pattern: 'regex:\bDESCUBIERTO\b'
+    name: "Descubierto"
+  - pattern: 'regex:\bINTERESES\b'
+    name: "Intereses"

@@ -26,19 +26,80 @@ final class BackupEncryptor implements FileEncryptor
     // libsodium's own SENSITIVE tier (1 GiB).
     private const MAX_OPSLIMIT = 10;
 
+    // Cost for a secret that is already a uniformly random key (see
+    // encryptWithKey). Argon2 is retained purely for domain separation and
+    // format compatibility; stretching a 256-bit key adds nothing, and
+    // MODERATE cost ~500ms on every keyring read.
+    private const KEY_OPSLIMIT = 1;
+
+    private const KEY_MEMLIMIT = 8192;
+
     /**
      * @throws BackupIoException on I/O failure
      * @throws SodiumException on a crypto failure (should not happen for valid input)
      */
     public function encrypt(string $plainPath, string $encPath, string $passphrase): void
     {
+        $this->encryptWithParams(
+            $plainPath,
+            $encPath,
+            $passphrase,
+            SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
+            SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE,
+        );
+    }
+
+    /**
+     * @throws BackupIoException on I/O failure
+     * @throws SodiumException on a crypto failure (should not happen for valid input)
+     */
+    public function encryptWithKey(string $plainPath, string $encPath, string $key): void
+    {
+        $this->encryptWithParams($plainPath, $encPath, $key, self::KEY_OPSLIMIT, self::KEY_MEMLIMIT);
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     *
+     * @throws BackupIoException on I/O failure
+     * @throws BackupFormatException when the header is not ours
+     */
+    public function kdfParams(string $encPath): array
+    {
+        $in = $this->open($encPath, 'rb', 'read encrypted backup');
+
+        try {
+            if ($this->readExactly($in, strlen(self::MAGIC)) !== self::MAGIC) {
+                throw new BackupFormatException('Not a beatrax encrypted backup (bad file header).');
+            }
+
+            $this->readExactly($in, SODIUM_CRYPTO_PWHASH_SALTBYTES);
+
+            return [
+                $this->unpackUint('V', $this->readExactly($in, 4)),
+                $this->unpackUint('P', $this->readExactly($in, 8)),
+            ];
+        } finally {
+            fclose($in);
+        }
+    }
+
+    /**
+     * @throws BackupIoException on I/O failure
+     * @throws SodiumException on a crypto failure (should not happen for valid input)
+     */
+    private function encryptWithParams(
+        string $plainPath,
+        string $encPath,
+        string $passphrase,
+        int $opslimit,
+        int $memlimit,
+    ): void {
         $in = $this->open($plainPath, 'rb', 'read backup source');
         $out = $this->open($encPath, 'wb', 'write encrypted backup', $in);
 
         try {
             $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
-            $opslimit = SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE;
-            $memlimit = SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE;
             $key = $this->deriveKey($passphrase, $salt, $opslimit, $memlimit);
 
             $init = sodium_crypto_secretstream_xchacha20poly1305_init_push($key);

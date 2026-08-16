@@ -162,16 +162,20 @@
             </button>
         </div>
 
-        {{-- 3c: Biometric enrollment row (05-05) --}}
+        {{-- 3c: Biometric enrollment row (05-05)
+
+             Detects browser WebAuthn capability and tells the server (D-13).
+
+             The comment lives HERE, not inside x-init: Alpine compiles an
+             attribute as an expression, so a leading `//` pushes the real code
+             onto the next line and `if` — a statement — raises "Unexpected
+             token 'if'". That threw on every render of this row, and the
+             capability was never reported, so the biometric option stayed
+             hidden on hardware that supports it. --}}
         <div
             class="py-1"
             x-data="{}"
-            x-init="
-                // Detect browser WebAuthn capability and tell the server (D-13).
-                if (window.PublicKeyCredential) {
-                    $wire.set('biometricCapable', true);
-                }
-            "
+            x-init="if (window.PublicKeyCredential) { $wire.set('biometricCapable', true) }"
         >
             @if ($biometricCapable || $biometricEnrolled)
                 {{-- Capable platform: show enroll/de-enroll controls --}}

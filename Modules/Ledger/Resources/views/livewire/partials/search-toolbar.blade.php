@@ -186,10 +186,7 @@
     {{-- ─── Summary strip (.srch-strip) — visible when search is active ── --}}
     @if ($isSearchMode ?? false)
         @php
-            $countLabel = Lang::get(
-                $searchTotalCount === 1 ? 'ledger::list.search.count_one' : 'ledger::list.search.count_many',
-                ['count' => $searchTotalCount],
-            );
+            $countLabel = Lang::choice('ledger::list.search.count', $searchTotalCount, ['count' => $searchTotalCount]);
             $flow = Lang::get('ledger::list.search.flow', [
                 'out' => $fmtMinor($searchTotalOut),
                 'in' => $fmtMinor($searchTotalIn),

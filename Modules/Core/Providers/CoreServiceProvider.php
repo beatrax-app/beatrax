@@ -15,6 +15,7 @@ use Modules\Core\Internal\Console\Probes\BootProbeState;
 use Modules\Core\Internal\Console\RestoreDatabaseCommand;
 use Modules\Core\Internal\Encryption\PreMigrationSnapshot;
 use Modules\Core\Internal\Http\Livewire\AppSidebar;
+use Modules\Core\Internal\Http\Livewire\AutoImportSettingsSection;
 use Modules\Core\Internal\Http\Livewire\Dashboard;
 use Modules\Core\Internal\Http\Livewire\EncryptedBackupDownload;
 use Modules\Core\Internal\Http\Livewire\EncryptedBackupRestore;
@@ -100,11 +101,20 @@ final class CoreServiceProvider extends ServiceProvider
 
     public function boot(LivewireManager $livewire): void
     {
+        // The desktop bundle launches PHP with -d max_execution_time=120:
+        // meaningless for console work, fatal for long-running commands. The
+        // queue worker and both sync daemons died every two minutes, and one
+        // killed mid-transaction left SQLite locked.
+        if ($this->app->runningInConsole()) {
+            set_time_limit(0);
+        }
+
         $this->loadModuleResources('core');
         $this->loadRoutesFrom(__DIR__.'/../Routes/console.php');
 
         $livewire->component('core.dashboard', Dashboard::class);
         $livewire->component('core.settings-page', SettingsPage::class);
+        $livewire->component('core.auto-import-settings-section', AutoImportSettingsSection::class);
         $livewire->component('core.encrypted-backup-download', EncryptedBackupDownload::class);
         $livewire->component('core.encrypted-backup-restore', EncryptedBackupRestore::class);
         $livewire->component('core.spending-trend-card', SpendingTrendCard::class);

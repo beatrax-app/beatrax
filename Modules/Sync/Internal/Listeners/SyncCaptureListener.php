@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Listeners;
 
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesEnvelopeMutations;
@@ -35,13 +36,33 @@ final class SyncCaptureListener
         private readonly LoggerInterface $log,
     ) {}
 
+    // Sync off, an app-lock engaged, and a mutation raised outside a request
+    // are ordinary states, not faults: the writer cannot be built and the
+    // binding says so by throwing. At error level that was a line per
+    // mutation — 120k in one log — burying the failures this level is for.
+    /**
+     * @param  array<string, scalar|null>  $context
+     */
+    private function report(string $message, \Throwable $e, array $context): void
+    {
+        $context['exception'] = $e->getMessage();
+
+        if ($e instanceof BindingResolutionException) {
+            $this->log->debug($message.' — no writer available; skipped.', $context);
+
+            return;
+        }
+
+        $this->log->error($message, $context);
+    }
+
     public function handle(TransactionMutated $event): void
     {
         try {
             // Lazy resolution — OpLogWriter needs runtime device credentials
             // that only exist once the device identity is configured. Until
             // then (or in test contexts without Sync setup), this throws
-            // BindingResolutionException which the catch block swallows.
+            // BindingResolutionException, which report() treats as a skip.
             $writer = $this->container->make(OpLogWriter::class);
 
             match ($event->mutationType) {
@@ -54,8 +75,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'transactionId' => $event->transactionId,
                 'userId' => $event->userId,
@@ -82,8 +102,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: split capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: split capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'splitId' => $event->splitId,
                 'transactionId' => $event->transactionId,
@@ -111,8 +130,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: envelope assignment capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: envelope assignment capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'assignmentId' => $event->assignmentId,
                 'userId' => $event->userId,
@@ -138,8 +156,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: envelope move capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: envelope move capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'moveId' => $event->moveId,
                 'userId' => $event->userId,
@@ -165,8 +182,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: envelope setting capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: envelope setting capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'settingId' => $event->settingId,
                 'userId' => $event->userId,
@@ -192,8 +208,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: saved report capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: saved report capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'reportId' => $event->reportId,
                 'userId' => $event->userId,
@@ -219,8 +234,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: notification capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: notification capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'notificationId' => $event->notificationId,
                 'userId' => $event->userId,
@@ -246,8 +260,7 @@ final class SyncCaptureListener
                 ]),
             };
         } catch (\Throwable $e) {
-            $this->log->error('SyncCaptureListener: notification preference capture failed', [
-                'exception' => $e->getMessage(),
+            $this->report('SyncCaptureListener: notification preference capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'preferenceId' => $event->preferenceId,
                 'userId' => $event->userId,

@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'eyebrow' => 'Vérifier et valider',
+    'h1' => 'Vérifie tout ce que nous avons trouvé',
+
+    'lede_across' => 'transactions réparties sur',
+    'source' => 'source|sources',
+    'lede_confirm' => 'Confirme tes soldes de départ, puis valide.',
+
+    'empty' => 'Rien à vérifier pour l\'instant. Dépose un relevé aux étapes précédentes pour voir tes transactions ici.',
+
+    'sb_eyebrow_label' => '🧮 SOLDES DE DÉPART ·',
+    'account_detected' => 'COMPTE DÉTECTÉ|COMPTES DÉTECTÉS',
+    'sb_lede' => 'Nous avons détecté le solde de départ de chaque compte. Confirme-le ou modifie-le avant que nous validions.',
+
+    'txn' => 'transaction|transactions',
+    'to_commit' => 'à valider ·',
+    'already_imported' => 'déjà importées',
+    'commit_committing' => 'Validation…',
+    'commit_count' => 'Tout valider (:count transactions) →',
+    'commit_empty' => 'Tout valider (—) →',
+
+    'errors' => [
+        'nothing_to_commit' => 'Rien à valider.',
+        'commit_failed' => 'Nous n\'avons pas pu valider tes relevés. Rien n\'a été modifié — réessaie.',
+    ],
+
+    'section' => [
+        'from_prefix' => 'DE ',
+        'from_bank' => 'DE TON RELEVÉ BANCAIRE',
+        'from_ics' => 'DE TES RELEVÉS DE CARTE ICS',
+        'from_paypal' => 'DE PAYPAL',
+        'row' => 'LIGNE|LIGNES',
+        'badge_ready' => '✓ PRÊT',
+        'badge_empty' => 'VIDE',
+        'badge_error' => 'À RENVOYER',
+        'badge_filtered' => 'DÉJÀ IMPORTÉ',
+        'error_body' => 'Nous n\'avons pas pu lire tous les fichiers de cette source. Essaie un autre fichier →',
+        'empty_body' => 'Ce relevé est vide.',
+        'filtered_body' => 'Ce relevé a déjà été importé ailleurs — nous l\'avons laissé de côté.',
+        'col_date' => 'Date',
+        'col_type' => 'Type',
+        'col_counterparty' => 'Tiers',
+        'col_amount' => 'Montant',
+        'load_more' => 'Afficher plus (:remaining restantes)',
+        'rows_shown' => ':count lignes affichées',
+    ],
+];

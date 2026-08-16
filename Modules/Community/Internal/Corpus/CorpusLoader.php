@@ -23,6 +23,7 @@ final class CorpusLoader
         private readonly LoggerInterface $logger,
         private readonly DatabaseManager $db,
         private readonly CorpusYamlReader $reader,
+        private readonly MerchantContactReader $contactReader,
     ) {}
 
     /**
@@ -105,6 +106,7 @@ final class CorpusLoader
             category: $this->resolveCategory($raw, $pattern, $validCategories),
             region: $this->resolveRegion($raw, $defaultRegion),
             contributor: $this->resolveContributor($raw),
+            contact: $this->contactReader->read($raw, $pattern),
         );
     }
 

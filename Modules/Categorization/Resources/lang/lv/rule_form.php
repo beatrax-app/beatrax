@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Rediģēt noteikumu',
+    'heading_new' => 'Jauns noteikums',
+
+    'combinator_aria' => 'Nosacījumu savienotājs',
+    'match_all' => 'Atbilst visiem nosacījumiem',
+    'match_any' => 'Atbilst jebkuram nosacījumam',
+
+    'condition_label' => 'Nosacījums :number',
+    'condition_field_aria' => 'Nosacījuma :number lauks',
+    'condition_operator_aria' => 'Nosacījuma :number operators',
+    'condition_value_aria' => 'Nosacījuma :number vērtība',
+    'condition_value_from_aria' => 'Nosacījuma :number vērtība (no)',
+    'condition_value_to_aria' => 'Nosacījuma :number vērtība (līdz)',
+    'to' => 'līdz',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'piem. SPOTIFY',
+    'remove_condition' => 'Noņemt nosacījumu',
+    'add_condition' => '+ Pievienot nosacījumu',
+
+    'then' => 'Tad',
+    'action_label' => 'Darbība :number',
+    'action_type_aria' => 'Darbības :number veids',
+    'action_category' => 'Kategorija',
+    'action_counterparty' => 'Darījuma partneris',
+    'action_note' => 'Piezīme',
+    'action_tax_tag' => 'Nodokļu atzīme',
+    'assign_category_aria' => 'Piešķirt kategoriju darbībai :number',
+    'reassign_counterparty_aria' => 'Pārpiešķirt citam darījuma partnerim darbībā :number',
+    'note_text_aria' => 'Piezīmes teksts darbībai :number',
+    'note_placeholder' => 'Piezīmes teksts…',
+    'note_mode_aria' => 'Piezīmes režīms darbībai :number',
+    'note_set' => 'Aizstāt',
+    'note_append' => 'Pievienot beigās',
+    'deduction_category_aria' => 'Atvieglojuma kategorija darbībai :number',
+    'remove_action' => 'Noņemt darbību',
+    'add_action' => '+ Pievienot darbību',
+
+    'this_year_only' => 'Tikai šogad ▾',
+    'override_tax_year' => 'Norādīt citu taksācijas gadu',
+    'tax_year_override_aria' => 'Cits taksācijas gads darbībai :number',
+    'tax_tag_note' => 'Nodokļu atzīmju darbības tiek piemērotas nākamajā atkārtotajā piemērošanā, nevis pašreizējā importā.',
+
+    'priority' => 'Prioritāte',
+    'priority_help' => 'Mazāki skaitļi tiek izpildīti pirmie. Noteikumi bez kopīgiem laukiem nekad nekonfliktē.',
+
+    'cancel' => 'Atcelt',
+    'save_changes' => 'Saglabāt izmaiņas',
+    'save_rule' => 'Saglabāt noteikumu',
+    'saving' => 'Saglabā…',
+
+    'error_rule_unavailable' => 'Šis noteikums vairs nav pieejams.',
+    'error_invalid_data' => 'Nederīgi noteikuma dati — izvēlieties vērtības no sarakstiem un mēģiniet vēlreiz.',
+    'error_duplicate' => 'Noteikums ar šādu lauku, atbilstību un vērtību jau pastāv. Rediģējiet esošo noteikumu.',
+    'error_priority_whole' => 'Prioritātei jābūt veselam skaitlim.',
+    'error_add_condition' => 'Pievienojiet vismaz vienu nosacījumu.',
+    'error_add_action' => 'Pievienojiet vismaz vienu darbību.',
+    'condition_value_required' => 'Ievadiet vērtību nosacījumam :position.',
+    'condition_bounds_required' => 'Izvēlieties apakšējo un augšējo robežu nosacījumam :position.',
+    'condition_amount_invalid' => 'Ievadiet derīgu summu nosacījumam :position.',
+    'action_pick_category' => 'Izvēlieties kategoriju šai darbībai.',
+    'action_pick_counterparty' => 'Izvēlieties darījuma partneri, kuram pārpiešķirt.',
+    'action_note_required' => 'Ievadiet piezīmes tekstu.',
+    'action_pick_deduction' => 'Izvēlieties atvieglojuma kategoriju nodokļu atzīmei.',
+];

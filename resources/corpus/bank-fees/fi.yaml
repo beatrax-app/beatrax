@@ -1,0 +1,32 @@
+# Bank-fee classification rules — Finland (Finnish).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Finnish compounds and inflects, so each entry uses `regex:` with the
+# boundary on the side that carries the meaning. The "-maksu" words are
+# fenced on the LEFT so the bare "MAKSU" — which simply means "payment" and
+# appears in most merchant descriptions — can never match on its own, while
+# the right side stays open for the case endings ("palvelumaksut",
+# "tilinhoitomaksun"). `KORKO\b` is fenced on the RIGHT instead, so it
+# matches "korko", "ylityskorko" and "viivästyskorko" but not "KOROTON"
+# (interest-free); "KORKOKULU" is listed separately because its compound
+# ending falls outside that boundary. All bodies are ASCII, so no umlaut
+# reaches the regex — the matcher runs PCRE without /u and `#i` case-folds
+# ASCII only. Regex bodies must be SINGLE-quoted in YAML so the backslash
+# reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bTILINHOITOMAKSU'
+    name: "Tilinhoitomaksu"
+  - pattern: 'regex:\bPALVELUMAKSU'
+    name: "Palvelumaksu"
+  - pattern: 'regex:\bKORKOKULU'
+    name: "Korkokulut"
+  - pattern: 'regex:KORKO\b'
+    name: "Korko"

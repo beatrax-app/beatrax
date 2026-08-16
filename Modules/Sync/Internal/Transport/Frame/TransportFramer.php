@@ -130,7 +130,10 @@ final class TransportFramer
             'device_id' => $entry->deviceId,
             'op_type' => $entry->opType->value,
             'signature' => $entry->signature,
-            'user_id' => $entry->userId,
+            // The id the entry was SIGNED under, not this device's local
+            // scope. A relayed entry carrying the re-scoped id verifies
+            // nowhere, because a v1 signature covers user_id.
+            'user_id' => $entry->originUserId ?? $entry->userId,
             // The GDK epoch tag doubles op-log-value encryption as transport
             // encryption — it MUST travel alongside the ciphertext, or the
             // receiving peer cannot decrypt a sensitive field's value at

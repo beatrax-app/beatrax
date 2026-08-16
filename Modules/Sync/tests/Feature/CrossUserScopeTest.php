@@ -271,22 +271,77 @@ it('hostile cross-user entry (userId=u2 in replay($entries, u1->id)) does NOT mu
 
     expect($u2CatIdAfter)->toBe($u2CatIdBefore);
 
-    // WR-08: the hostile cross-user entry must NEVER become a durable
-    // op_log_entries row — rejected entries go to quarantine ONLY, so a full
-    // rebuild or log export can never resurrect attacker-controlled content.
-    $persistedHostile = $db->connection()
+    // The entry's OWN userId claim buys it nothing either way: it is the
+    // sending device's local autoincrement, so it is overwritten with the
+    // replay scope rather than compared against it. What keeps u2 safe is the
+    // WHERE user_id guard asserted above — the write simply matches no row.
+    $persistedUnderU2 = $db->connection()
         ->table('op_log_entries')
-        ->where('table_name', 'transactions')
-        ->where('pk', (string) $this->txn2)
+        ->where('user_id', $this->u2->id)
         ->where('hlc_l', 9999)
         ->count();
-    expect($persistedHostile)->toBe(0);
+    expect($persistedUnderU2)->toBe(0, 'a replay scoped to u1 must never write an op_log row owned by u2');
+});
 
-    // It IS recorded in quarantine as cross_user.
+// The boundary that actually separates users now that a wire-supplied user_id
+// carries no authority: the device must be a confirmed peer OF THIS USER.
+// deviceKeys comes from DeviceRegistryService::deviceKeys($userId), which is
+// confirmed-only and user-scoped, so another user's device is simply absent.
+it('rejects an entry from a device that is not a confirmed peer of the replaying user (T-10-02)', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $u1CatBefore = $db->connection()
+        ->table('transactions')
+        ->where('id', $this->txn1)
+        ->value('category_id');
+
+    $foreignKeypair = sodium_crypto_sign_keypair();
+    $foreignSecret = sodium_crypto_sign_secretkey($foreignKeypair);
+
+    $stub = new OpLogEntry(
+        table: 'transactions',
+        pk: $this->txn1,
+        field: 'category_id',
+        value: (string) $this->cat1B,
+        hlcL: 8888,
+        hlcC: 0,
+        deviceId: 'device-not-paired',
+        opType: OpType::Set,
+        signature: '',
+        userId: (int) $this->u1->id,
+    );
+
+    $entry = new OpLogEntry(
+        table: 'transactions',
+        pk: $this->txn1,
+        field: 'category_id',
+        value: (string) $this->cat1B,
+        hlcL: 8888,
+        hlcC: 0,
+        deviceId: 'device-not-paired',
+        opType: OpType::Set,
+        signature: $this->signer->sign($stub->signingPayload(), $foreignSecret),
+        userId: (int) $this->u1->id,
+    );
+
+    // A perfectly-signed entry, claiming the right user, from a device this
+    // user never confirmed.
+    (new OpLogReplayer($db, $this->deviceKeys))->replay([$entry], (int) $this->u1->id);
+
+    expect($db->connection()->table('transactions')->where('id', $this->txn1)->value('category_id'))
+        ->toBe($u1CatBefore, 'an unconfirmed device must not mutate anything');
+
+    $persisted = $db->connection()
+        ->table('op_log_entries')
+        ->where('hlc_l', 8888)
+        ->count();
+    expect($persisted)->toBe(0, 'a rejected entry must never become a durable op_log row');
+
     $quarantined = $db->connection()
         ->table('op_log_quarantine')
-        ->where('reason', 'cross_user')
-        ->where('pk', (string) $this->txn2)
+        ->where('reason', 'missing_device_key')
+        ->where('hlc_l', 8888)
         ->count();
     expect($quarantined)->toBeGreaterThanOrEqual(1);
 });

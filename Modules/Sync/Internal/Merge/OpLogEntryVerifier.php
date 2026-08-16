@@ -49,8 +49,10 @@ final readonly class OpLogEntryVerifier
         $keyring = null;
         $keyringLoaded = false;
 
-        foreach ($entries as $entry) {
-            if (! $this->authorizeAndPersist($entry, $userId, $now)) {
+        foreach ($entries as $wireEntry) {
+            $entry = $this->authorizeAndPersist($wireEntry, $userId, $now);
+
+            if ($entry === null) {
                 continue;
             }
 
@@ -75,35 +77,41 @@ final readonly class OpLogEntryVerifier
         return $verified;
     }
 
-    // A rejected entry is routed to quarantine ONLY — never written to the
-    // authoritative op_log_entries table. A passing (or allow-listed system)
-    // entry is persisted here BEFORE any decrypt, so the durable log always
-    // stores the original ciphertext, never a decrypted projection.
-    private function authorizeAndPersist(OpLogEntry $entry, int $userId, string $now): bool
+    // A rejected entry goes to quarantine ONLY, never to op_log_entries, and
+    // a passing one is persisted BEFORE any decrypt so the durable log keeps
+    // the original ciphertext. Authorization judges the entry as the peer sent
+    // it; the copy returned is re-scoped onto this device's own user.
+    /**
+     * @return OpLogEntry|null The accepted, locally-scoped entry, or null when rejected.
+     */
+    private function authorizeAndPersist(OpLogEntry $entry, int $userId, string $now): ?OpLogEntry
     {
         $reason = $this->rejectionReason($entry, $userId);
 
         if ($reason !== null) {
             $this->quarantine->record($entry, $reason, $now);
 
-            return false;
+            return null;
         }
+
+        $entry = $entry->withUserId($userId);
 
         $this->persistVerifiedEntry($entry, $now);
 
-        return true;
+        return $entry;
     }
 
-    // The table allow-list gate blocks a signature-valid peer from targeting
-    // an unregistered wire-supplied table. System cascade ops carry no key and
-    // are allow-listed past the Ed25519 gate (null reason) — the cross-user
-    // gate above them STILL applies.
+    // Membership is proven by the DEVICE: $deviceKeys is confirmed-only and
+    // user-scoped, so the entry's user_id — a per-device autoincrement whose
+    // comparison rejected every op a paired peer sent — is not checked. System
+    // cascade ops are local, bypass the Ed25519 gate, and keep that check.
     private function rejectionReason(OpLogEntry $entry, int $userId): ?QuarantineReason
     {
         return match (true) {
-            $entry->userId !== $userId => QuarantineReason::CrossUser,
             ! $this->rules->isRegistered($entry->table) => QuarantineReason::UnknownTable,
-            $this->isSystemDevice($entry->deviceId) => null,
+            $this->isSystemDevice($entry->deviceId) => $entry->userId === $userId
+                ? null
+                : QuarantineReason::CrossUser,
             ($this->deviceKeys[$entry->deviceId] ?? null) === null => QuarantineReason::MissingDeviceKey,
             ! $this->verifySignature($entry) => QuarantineReason::ForgedSignature,
             default => null,
@@ -127,7 +135,7 @@ final readonly class OpLogEntryVerifier
             return false;
         }
 
-        return $this->signer->verify($entry->signingPayload(), $entry->signature, sodium_hex2bin($pubKeyHex));
+        return $this->signer->verifyAny($entry->signatureCandidates(), $entry->signature, sodium_hex2bin($pubKeyHex));
     }
 
     // Persists a VERIFIED entry to the authoritative op_log_entries table
@@ -151,6 +159,9 @@ final readonly class OpLogEntryVerifier
                 'value' => $entry->value,
                 'gdk_epoch' => $entry->gdkEpoch,
                 'signature' => $entry->signature,
+                // Without this the re-scope above is one-way: a v1 signature
+                // covers user_id, so the entry could never be re-verified.
+                'origin_user_id' => $entry->originUserId,
                 'recorded_at' => $now,
             ],
         );

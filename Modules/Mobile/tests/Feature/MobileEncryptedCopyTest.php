@@ -118,10 +118,12 @@ it('keeps sensitive columns ciphertext when the session is withheld — no plain
 
     $decrypted = $codec->decryptRow('counterparties', (array) $stored, (int) $this->user->id, $this->session);
 
-    // No plaintext leak: decryptRow() is a pass-through when the keyring
-    // cannot be loaded without the KEK — ciphertext in, ciphertext out,
-    // never a thrown exception.
-    expect($decrypted['display_name'])->toBe($stored->display_name);
+    // No plaintext leak, which is the property that matters on a stolen
+    // locked phone. The value now comes back BLANK rather than as the stored
+    // ciphertext: leaking nothing beats leaking base64, and rendering base64
+    // to a user is what this codec was doing on a device whose keyring an app
+    // update had wiped. Still never a thrown exception.
+    expect($decrypted['display_name'])->toBe('');
     expect($decrypted['display_name'])->not->toBe('Locked Merchant');
     expect($decrypted['iban'])->not->toBe('NL02ABNA0123456789');
     expect($decrypted['merchant_name'])->not->toBe('Locked Merchant BV');

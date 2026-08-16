@@ -1,0 +1,67 @@
+# Tax deduction categories — Romania
+# Mirrors the deducerile of Titlul IV (Impozitul pe venit) din Codul fiscal, as
+# applied by the employer at source, on the Declarația unică (formular 212) and
+# via formularul 230.
+# Source: ANAF, Legea nr. 227/2015 privind Codul fiscal, ediția consolidată ANAF
+# (actualizată prin OUG nr. 38/2026); ghidurile ANAF pentru formularele 212 și 230.
+# Anul fiscal 2026 / veniturile anului 2025.
+#
+# Romania is a flat-tax regime with almost no itemised personal deductions: there
+# is no relief for mortgage interest, medical bills, tuition, childcare, commuting,
+# donations or alimony. This short list is the honest complete set.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "ro_deducere_personala"
+    name: "Deducere personală de bază și suplimentară"
+    short_name: "Ded. pers."
+    hint: "Deducere lunară acordată de angajator la funcția de bază, în funcție de venit și de persoanele în întreținere"
+  - key: "ro_cotizatie_sindicala"
+    name: "Cotizația sindicală"
+    short_name: "Sindicat"
+    hint: "Cotizația plătită sindicatului, dedusă lunar de angajator din venitul salarial"
+  - key: "ro_pensii_facultative"
+    name: "Contribuții la fonduri de pensii facultative (Pilonul III)"
+    short_name: "Pilon III"
+    hint: "Contribuții proprii la pensii facultative din România sau din UE/SEE, deductibile în limita unui plafon anual"
+  - key: "ro_asigurare_sanatate_voluntara"
+    name: "Prime de asigurare voluntară de sănătate și abonamente medicale"
+    short_name: "Sănătate"
+    hint: "Prime de asigurare voluntară de sănătate și abonamente medicale, în limita unui plafon anual"
+  - key: "ro_abonament_sportiv"
+    name: "Abonamente pentru practicarea sportului și educației fizice"
+    short_name: "Sport"
+    hint: "Abonamente la săli și facilități sportive, în limita unui plafon anual"
+  - key: "ro_investitii_actiuni_etf"
+    name: "Sume plătite pentru dobândirea de acțiuni, obligațiuni și titluri ETF"
+    short_name: "Acțiuni/ETF"
+    hint: "Sume plătite prin intermediari autorizați pentru titluri financiare, în limita unui plafon anual"
+  - key: "ro_contributii_sociale"
+    name: "Contribuții sociale obligatorii (CAS și CASS)"
+    short_name: "CAS/CASS"
+    hint: "Contribuțiile obligatorii de pensie și sănătate, scăzute înainte de calculul impozitului"
+  - key: "ro_cheltuieli_activitate_independenta"
+    name: "Cheltuieli deductibile în sistem real din activități independente"
+    short_name: "Chelt. PFA"
+    hint: "Cheltuieli efectuate în scopul realizării de venituri din activități independente"
+  - key: "ro_cotizatii_profesionale"
+    name: "Cotizații profesionale și contribuții obligatorii la organizații profesionale"
+    short_name: "Cotiz. prof."
+    hint: "Cotizații către asociații și organizații profesionale, deductibile limitat"
+  - key: "ro_cota_forfetara_chirii"
+    name: "Cota forfetară de cheltuieli pentru cedarea folosinței bunurilor"
+    short_name: "Forfetar 20%"
+    hint: "Cheltuială forfetară scăzută automat din chiria brută; sistemul real nu mai este disponibil"
+  - key: "ro_cota_forfetara_drepturi_autor"
+    name: "Cota forfetară de cheltuieli pentru drepturi de proprietate intelectuală"
+    short_name: "Forfetar 40%"
+    hint: "Cheltuială forfetară scăzută din venitul brut din drepturi de autor și drepturi conexe"
+  - key: "ro_redirectionare_3_5"
+    name: "Redirecționarea a până la 3,5% din impozitul pe veniturile din salarii"
+    short_name: "3,5% ONG"
+    hint: "Direcționarea unei părți din impozitul deja reținut către entități nonprofit, unități de cult sau burse private, prin formularul 230"

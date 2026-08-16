@@ -1,0 +1,128 @@
+# Support-resource corpus — United Kingdom (GB merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: BT
+    type: merchant
+    cancel_url: "https://www.bt.com/help/account-and-billing/manage-account/how-to-change-or-cancel-a-bt-phone--tv-or-broadband-package"
+    notes: "There is no self-service cancel button — BT states you will usually need to speak to an adviser to cancel the service. The help page sets out how to change or cancel a phone, TV or broadband package and when an early-termination charge applies."
+  - name: Three
+    type: merchant
+    cancel_url: "https://www.three.co.uk/support/leave-three/leave-home-broadband"
+    support_url: "https://www.three.co.uk/support/contact-us"
+    notes: "Home Broadband comes with a 30-day money-back guarantee — inside those first 30 days you cancel by contacting Three rather than through an online form."
+  - name: EE
+    type: merchant
+    cancel_url: "https://ee.co.uk/help/profile/leaving-ee"
+    notes: "The Leaving EE help section covers ending your plan, the end-of-contract notification and the out-of-contract discount."
+  - name: The Gym Group
+    type: merchant
+    support_url: "https://www.thegymgroup.com/faqs/"
+    notes: "Cancel a monthly membership through the mobile app or by logging in to your online account — the FAQ points there rather than to a form or a phone line."
+  - name: RAC
+    type: merchant
+    support_url: "https://www.rac.co.uk/contact-us"
+    notes: "You can cancel RAC membership at any time, but it is handled through contact channels rather than a self-service page; the cancellation policy sets out any refund."
+  - name: Gousto
+    type: merchant
+    support_url: "https://www.gousto.co.uk/help-centre"
+    notes: "Manage or stop the subscription from your Gousto account; the help centre carries the cancellation and cut-off details."
+  - name: Octopus Energy
+    type: merchant
+    support_url: "https://octopus.energy/help-and-faqs/"
+    notes: "An energy supply is not cancelled directly — you switch to another supplier, who arranges the transfer. Octopus tariffs have no exit fee on variable plans; a fixed tariff may charge one."
+  - name: Virgin Media
+    type: merchant
+    cancel_url: "https://www.virginmedia.com/help/leaving"
+    notes: "You can cancel at any time by giving 30 days' notice, but if you cancel before the minimum term ends (normally 24 months) you may pay an early disconnection fee and be asked to return your equipment. There is a 14-day cooling-off period, and once you are out of contract the service rolls monthly with no disconnection fee — still on 30 days' notice. Cancelling is done by chat or by calling 150 from a Virgin Media phone or 0345 454 1111 from any other phone."
+  - name: Sky
+    type: merchant
+    cancel_url: "https://www.sky.com/help/articles/cancel-sky-tv"
+    notes: "Sky's cancellation help page is split by product and by timing — cancelling Sky+/Q, Sky Glass or Sky Stream inside your cooling-off period versus outside it. Ending a contract before the minimum term is up triggers an early termination charge, covered in the separate 'charges for ending your Sky contract early' article under Account and subscription > Cancelling."
+  - name: NOW
+    type: merchant
+    cancel_url: "https://www.nowtv.com/gb/help/article/how-do-i-cancel-now"
+    notes: "Cancel in My Account under Membership & payment — each membership, Boost and Ultra Boost has to be cancelled separately, and if you hold more than one NOW account you must sign in to each one. On a minimum-term plan you can cancel straight away but it only takes effect at the end of the term, the remaining monthly payments are still taken, and if you do not cancel before it ends the membership rolls on at the regular price."
+  - name: Tesco Mobile
+    type: merchant
+    cancel_url: "https://www.tescomobile.com/help/managing-your-account/leaving-tesco-mobile/cancelling-a-pay-monthly-account"
+    support_url: "https://www.tescomobile.com/help/managing-your-account/leaving-tesco-mobile"
+    notes: "There is a 14-day cooling-off period from the day you receive the phone or SIM; inside it you can return the handset 'as sold' for a refund or exchange using the online cancellation request, by calling customer care on 0345 301 4455, or by taking it back to a Tesco Mobile phone shop if you bought in store. Leaving later is covered by the early termination charge page, and switching network with your number goes via a PAC instead."
+  - name: British Gas
+    type: merchant
+    cancel_url: "https://www.britishgas.co.uk/help-and-support/my-account/leaving-british-gas"
+    support_url: "https://www.britishgas.co.uk/help-and-support/homecare-help/cancelling-your-homecare-cover"
+    notes: "Energy supply is not cancelled but switched — the Leaving British Gas page walks through moving to another supplier and pushes retention offers first. HomeCare boiler cover is separate: you can cancel at any time but a cancellation charge may apply, and there are three routes — live web chat, calling 0333 202 9343, or writing to HomeCare Membership Office, Murdoch House, Bothwell Road, Uddingston G71 7UD."
+  - name: Nuffield Health
+    type: merchant
+    cancel_url: "https://www.nuffieldhealth.com/cancel-or-freeze-your-gym-membership"
+    notes: "There is no cancel button — all cancellation requests must be received in writing by your home gym, either by emailing the request to that gym or by going in and completing a cancellation form in person. A calendar month's notice is required. Inside a commitment period you can only leave for listed reasons (serious illness or injury, pregnancy, redundancy, moving or the gym closing), and the same reasons let you freeze for up to 12 months."
+  - name: Thames Water
+    type: merchant
+    cancel_url: "https://www.thameswater.co.uk/contact-us/moving-home/close-your-account"
+    notes: "You can only close a Thames Water account if you are leaving the supply area, and it is done through their online closing form; otherwise contact them by WhatsApp (Mon–Fri 8am–8pm, Sat 8am–6pm, Sun 8am–5pm) or phone. A separate Contact us > Payments page handles cancelling a payment plan rather than the account itself."
+  - name: Aviva
+    type: merchant
+    cancel_url: "https://www.aviva.co.uk/insurance/motor/car-insurance/knowledge-centre/cancelling-your-car-insurance/"
+    notes: "The statutory cooling-off period is 14 days from buying the policy or receiving the documents, whichever is later; if cover has already started you may be charged proportionately for the days used. Cancel after that and you may pay a cancellation fee plus an admin fee — your own figures are in the policy documents in MyAviva. Never just stop the direct debit: cancelling the payment is not cancelling the policy."
+  - name: Admiral
+    type: merchant
+    cancel_url: "https://www.admiral.com/resources/home-hub/claiming/how-to-cancel-home-insurance-policy"
+    notes: "Cancelling means contacting the insurer by phone or through your online account; they confirm your address, policy number and renewal date, cancel it and send confirmation. If you pay monthly, do not cancel the direct debit without telling them first — they may read it as a missed payment and it can affect your credit. Waiting until the renewal date and simply not renewing avoids a cancellation fee, but note many policies auto-renew."
+  - name: British Red Cross
+    type: merchant
+    support_url: "https://www.redcross.org.uk/get-involved/donate/donation-questions"
+    notes: "A monthly donation paid by direct debit cannot be stopped on the website — you contact your own bank or building society to cancel it and then tell the Red Cross by email or on 0300 456 1155. A recurring card donation can be cancelled in the donor portal or through supporter care; changes to the amount or to bank details also go through the supporter care team."
+
+  # --- Government ---
+  - name: HMRC
+    type: government
+    help_url: "https://www.gov.uk/find-hmrc-contacts"
+    apply_url: "https://www.gov.uk/personal-tax-account"
+    rights_url: "https://www.gov.uk/tax-appeals"
+    notes: "Tax codes, Self Assessment and repayments live in the Personal Tax Account. If you disagree with a decision or penalty you can appeal — usually within 30 days of the decision."
+  - name: Department for Work and Pensions
+    type: government
+    help_url: "https://www.gov.uk/contact-jobcentre-plus"
+    apply_url: "https://www.gov.uk/universal-credit"
+    rights_url: "https://www.gov.uk/appeal-benefit-decision"
+    notes: "Universal Credit is claimed and managed online. To challenge a benefit decision you must first ask for a mandatory reconsideration, then appeal to an independent tribunal."
+  - name: Student Loans Company
+    type: government
+    apply_url: "https://www.gov.uk/student-finance"
+    rights_url: "https://www.gov.uk/repaying-your-student-loan"
+    notes: "Student finance is applied for each academic year through GOV.UK. Repayment starts only above the income threshold for your plan and is normally collected through PAYE."
+  - name: Council Tax
+    type: government
+    help_url: "https://www.gov.uk/council-tax"
+    rights_url: "https://www.gov.uk/council-tax-appeals"
+    notes: "Council Tax is billed by your local council, not centrally. Discounts (single occupancy, students, severe mental impairment) and a band challenge both go through the council or the Valuation Office."
+  - name: DVLA
+    type: government
+    help_url: "https://www.gov.uk/browse/driving"
+    notes: "Vehicle tax, SORN, driving licence changes and the V5C are all handled online through GOV.UK; vehicle tax is refunded automatically when you tell DVLA the vehicle is sold, scrapped or off the road."
+  - name: TV Licensing
+    type: government
+    apply_url: "https://www.gov.uk/find-licences/tv-licence"
+    notes: "You need a TV Licence to watch or record programmes on a TV, computer or other device as they are broadcast on any channel, and to watch on-demand BBC programmes on iPlayer — you may be able to get a free or discounted licence. Cancellations and refunds are handled in that section of the TV Licensing site, not on GOV.UK."
+  - name: Child Benefit
+    type: government
+    help_url: "https://www.gov.uk/child-benefit"
+    apply_url: "https://www.gov.uk/child-benefit/how-to-claim"
+    rights_url: "https://www.gov.uk/child-benefit-tax-charge"
+    notes: "Child Benefit is paid roughly every 4 weeks for each child under 16, or under 20 if they stay in approved education or training, with no limit on how many children — and it carries National Insurance credits that count towards your State Pension. Only one person can claim for a child. If you or your partner has an individual income over £60,000 (over £50,000 for tax years up to 2023 to 2024) the High Income Child Benefit Charge claws some or all of it back."
+  - name: The Pension Service
+    type: government
+    help_url: "https://www.gov.uk/contact-pension-service"
+    apply_url: "https://www.gov.uk/claim-state-pension-online"
+    rights_url: "https://www.gov.uk/check-state-pension"
+    phone: "0800 731 0469"
+    notes: "Call the Pension Service on 0800 731 0469 (Welsh language 0800 731 0453, Relay UK 18001 then 0800 731 0469), Monday to Friday 8am to 6pm except public holidays; post goes to The Pension Service, Post Handling Site A, Wolverhampton WV98 1AF. Check your forecast online first — the forecast tool cannot be used once you are already getting or have deferred your State Pension, and if you reach State Pension age in more than 30 days you can also use form BR19 or call the Future Pension Centre."
+  - name: Financial Ombudsman Service
+    type: government
+    help_url: "https://www.financial-ombudsman.org.uk/consumers/how-to-complain"
+    notes: "Complain to the bank, insurer or lender first — for most complaints they have up to 8 weeks to respond, but only 15 days for fraud and scams or payment services such as bank transfers and direct debits. Keep the final response letter; you then have 6 months from the date on it to bring the complaint to the ombudsman, and the service is free to consumers."

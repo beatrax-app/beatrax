@@ -1,11 +1,148 @@
 # Merchant corpus — Latvia. region defaults to LV. Schema: see merchants/nl.yaml.
 entries:
-  - { pattern: "RIMI", name: "Rimi", category: "Groceries" }
-  - { pattern: "MAXIMA", name: "Maxima", category: "Groceries" }
-  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
-  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
-  - { pattern: "NESTE", name: "Neste", category: "Fuel" }
   - { pattern: "LMT", name: "LMT", category: "Internet & Phone" }
-  - { pattern: "TELE2", name: "Tele2", category: "Internet & Phone" }
-  - { pattern: 'regex:\bBITE\b', name: "Bite", category: "Internet & Phone" }
-  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
+  # --- Telecom / TV ---
+  - { pattern: "LATVIJAS MOBILAIS TELEFONS", name: "LMT", category: "Internet & Phone", website: "https://www.lmt.lv" }
+  - { pattern: "regex:\\bTET\\b", name: "Tet", category: "Internet & Phone", website: "https://www.tet.lv" }
+  - { pattern: "TET PLUS", name: "Tet+", category: "Streaming", website: "https://tet.plus" }
+  - { pattern: "BALTICOM", name: "Balticom", category: "Internet & Phone", website: "https://www.balticom.lv", support_url: "https://www.balticom.lv/lv/kontakti" }
+  - { pattern: "BALTCOM", name: "Baltcom (Bite)", category: "Internet & Phone", website: "https://www.bite.lv/lv" }
+  - { pattern: "BITE LATVIJA", name: "Bite Latvija", category: "Internet & Phone", website: "https://www.bite.lv/lv" }
+  - { pattern: "TV3 LATVIJA", name: "TV3", category: "Streaming", website: "https://tv3.lv" }
+  - { pattern: "PLAY TV3", name: "TV3 Play", category: "Streaming", website: "https://play.tv3.lv" }
+  # --- Electricity, gas, heating, water, waste ---
+  - { pattern: "LATVENERGO", name: "Latvenergo", category: "Utilities", website: "https://latvenergo.lv/lv" }
+  - pattern: "ELEKTRUM"
+    name: "Elektrum"
+    category: "Utilities"
+    website: "https://www.elektrum.lv"
+    support_url: "https://www.elektrum.lv/lv/majai/par-mums/kontakti/"
+  - { pattern: "SADALES TIKLS", name: "Sadales tīkls", category: "Utilities", website: "https://sadalestikls.lv/lv" }
+  - { pattern: "GASO", name: "Gaso", category: "Utilities" }
+  - { pattern: "LATVIJAS GAZE", name: "Latvijas Gāze", category: "Utilities" }
+  - pattern: "RIGAS SILTUMS"
+    name: "Rīgas siltums"
+    category: "Utilities"
+    website: "https://www.rs.lv"
+    support_url: "https://www.rs.lv/kontakti"
+  - pattern: "RIGAS UDENS"
+    name: "Rīgas ūdens"
+    category: "Utilities"
+    website: "https://www.rigasudens.lv/lv"
+    support_url: "https://www.rigasudens.lv/lv/kontakti"
+  - { pattern: "AJ POWER", name: "AJ Power", category: "Utilities", website: "https://ajpower.lv/lv/" }
+  - { pattern: "ENEFIT LATVIJA", name: "Enefit Latvija", category: "Utilities" }
+  - pattern: "CLEAN R"
+    name: "Clean R"
+    category: "Utilities"
+    website: "https://cleanr.lv"
+    support_url: "https://cleanr.lv/clean-r/kontakti/"
+  - { pattern: "ECO BALTIA", name: "Eco Baltia vide", category: "Utilities", website: "https://www.ecobaltiavide.lv" }
+  - { pattern: "ZAAO", name: "ZAAO", category: "Utilities", website: "https://zaao.lv" }
+  - { pattern: "GETLINI", name: "Getliņi EKO", category: "Utilities", website: "https://www.getlini.lv" }
+  # --- Gyms ---
+  - { pattern: "LEMON GYM", name: "Lemon Gym", category: "Memberships", website: "https://www.lemongym.lv" }
+  - { pattern: "MYFITNESS LATVIJA", name: "MyFitness", category: "Memberships", website: "https://www.myfitness.lv" }
+  - { pattern: "CITY FITNESS", name: "City Fitness", category: "Memberships" }
+  # --- Insurance ---
+  - { pattern: "regex:\\bBTA\\b", name: "BTA Baltic Insurance", category: "Insurance", website: "https://www.bta.lv" }
+  - { pattern: "BALTA", name: "Balta", category: "Insurance", website: "https://balta.lv/lv/privatpersonam" }
+  - { pattern: "ERGO LATVIJA", name: "ERGO", category: "Insurance", website: "https://www.ergo.lv" }
+  - { pattern: "GJENSIDIGE LATVIJA", name: "Gjensidige", category: "Insurance" }
+  - { pattern: "COMPENSA LATVIJA", name: "Compensa", category: "Insurance", website: "https://www.compensa.lv" }
+  - { pattern: "BALCIA", name: "Balcia", category: "Insurance", website: "https://www.balcia.com" }
+  # --- Banks (recurring account & card fees) ---
+  - { pattern: "SWEDBANK LATVIJA", name: "Swedbank", category: "Fees & charges", website: "https://www.swedbank.lv/private" }
+  - { pattern: "SEB BANKA", name: "SEB banka", category: "Fees & charges", website: "https://www.seb.lv" }
+  - { pattern: "CITADELE", name: "Citadele", category: "Fees & charges", website: "https://www.citadele.lv/lv/private/" }
+  - { pattern: "RIETUMU", name: "Rietumu Banka", category: "Fees & charges", website: "https://www.rietumu.com/lv" }
+  - { pattern: "BLUOR", name: "BluOr Bank", category: "Fees & charges", website: "https://bluorbank.lv" }
+  - { pattern: "INDUSTRA", name: "Industra Bank", category: "Fees & charges", website: "https://www.industra.finance/en" }
+  - { pattern: "LUMINOR LATVIJA", name: "Luminor", category: "Fees & charges" }
+  # --- Transport ---
+  - pattern: "RIGAS SATIKSME"
+    name: "Rīgas satiksme"
+    category: "Public transport"
+    website: "https://www.rigassatiksme.lv/lv/"
+    support_url: "https://www.rigassatiksme.lv/lv/kontakti/"
+  - { pattern: "PASAZIERU VILCIENS", name: "Vivi (Pasažieru vilciens)", category: "Public transport", website: "https://www.vivi.lv/lv/" }
+  - { pattern: "VIVI LATVIJA", name: "Vivi", category: "Public transport", website: "https://www.vivi.lv/lv/" }
+  - { pattern: "AUTOTRANSPORTA DIREKCIJA", name: "Autotransporta direkcija", category: "Public transport", website: "https://www.atd.lv" }
+  - { pattern: "AIRBALTIC", name: "airBaltic", category: "Transport", website: "https://www.airbaltic.com/en/index" }
+  # --- News / media ---
+  - { pattern: "TVNET", name: "TVNET", category: "Subscriptions", website: "https://www.tvnet.lv" }
+  - { pattern: "DIENA", name: "Diena", category: "Subscriptions", website: "https://diena.lv" }
+  - { pattern: "LATVIJAS AVIZE", name: "Latvijas Avīze", category: "Subscriptions", website: "https://www.la.lv" }
+  - { pattern: "NEATKARIGA RITA AVIZE", name: "Neatkarīgā Rīta Avīze", category: "Subscriptions", website: "https://nra.lv" }
+  - { pattern: "ZURNALS IR", name: "Ir", category: "Subscriptions", website: "https://ir.lv" }
+  - { pattern: "SANTA.LV", name: "Santa", category: "Subscriptions", website: "https://www.santa.lv" }
+  - { pattern: "RIGAS VILNI", name: "Rīgas Viļņi", category: "Subscriptions", website: "https://www.rigasvilni.lv" }
+  - { pattern: "KAS JAUNS", name: "Kas Jauns", category: "Subscriptions" }
+  # --- Groceries / convenience ---
+  - { pattern: "MEGO", name: "Mego", category: "Groceries", website: "https://mego.lv" }
+  - { pattern: "ELVI", name: "Elvi", category: "Groceries", website: "https://elvi.lv" }
+  - { pattern: "TOP VEIKALS", name: "Top!", category: "Groceries" }
+  - { pattern: "BARBORA LATVIJA", name: "Barbora", category: "Groceries", website: "https://barbora.lv" }
+  - { pattern: "AIBE LATVIJA", name: "Aibe", category: "Groceries", website: "https://aibe.lv" }
+  - { pattern: "regex:\\bCITRO\\b", name: "Citro", category: "Groceries", website: "https://citro.lv" }
+  # --- Pharmacies ---
+  - { pattern: "MENESS APTIEKA", name: "Mēness aptieka", category: "Health", website: "https://www.menessaptieka.lv" }
+  - { pattern: "BENU APTIEKA", name: "BENU aptieka", category: "Health", website: "https://www.benu.lv" }
+  - { pattern: "EUROAPTIEKA", name: "Euroaptieka", category: "Health", website: "https://www.euroaptieka.lv" }
+  - { pattern: "APOTHEKA LATVIJA", name: "Apotheka", category: "Health", website: "https://www.apotheka.lv" }
+  # --- Retail / DIY / electronics ---
+  - { pattern: "DEPO DIY", name: "Depo DIY", category: "Housing", website: "https://depo.lv" }
+  - { pattern: "KURSI", name: "Kurši", category: "Housing" }
+  - { pattern: "KSENUKAI", name: "Kesko Senukai", category: "Housing" }
+  - { pattern: "220.LV", name: "220.lv", category: "Other", website: "https://220.lv/lv/" }
+  - { pattern: "1A.LV", name: "1a.lv", category: "Other" }
+  - { pattern: "RD ELECTRONICS", name: "RD Electronics", category: "Other" }
+  - { pattern: "DATEKS", name: "Dateks", category: "Other" }
+  - { pattern: "SPORTLAND LATVIJA", name: "Sportland", category: "Other", website: "https://sportland.lv" }
+  - { pattern: "DROGAS", name: "Drogas", category: "Personal care" }
+  - { pattern: "ZOO CENTRS", name: "Zoo Centrs", category: "Other", website: "https://www.zoocentrs.lv" }
+  # --- Eating out ---
+  - { pattern: "LIDO", name: "Lido", category: "Eating out", website: "https://www.lido.lv/lv/" }
+  - { pattern: "CILI PICA", name: "Čili Pica", category: "Eating out" }
+  - { pattern: "DOUBLE COFFEE", name: "Double Coffee", category: "Eating out" }
+  # --- Cloud / software ---
+  - { pattern: "regex:\\bDEAC\\b", name: "DEAC", category: "Cloud / Software" }
+  - { pattern: "SERVERIS.LV", name: "Serveris.lv", category: "Cloud / Software", website: "https://serveris.lv/lv" }
+  - { pattern: "TILDE", name: "Tilde", category: "Cloud / Software", website: "https://tilde.ai/lv/" }
+  # --- Charities ---
+  - { pattern: "ZIEDOT.LV", name: "Ziedot.lv", category: "Donations", website: "https://www.ziedot.lv" }
+  - { pattern: "LATVIJAS SARKANAIS KRUSTS", name: "Latvijas Sarkanais Krusts", category: "Donations", website: "https://www.redcross.lv" }
+  - { pattern: "ULUBELE", name: "Ulubele", category: "Donations", website: "https://ulubele.org" }
+  - { pattern: "BERNU SLIMNICA", name: "Bērnu klīniskā universitātes slimnīca", category: "Donations", website: "https://www.bkus.lv" }
+  # --- Post, government, gambling ---
+  - { pattern: "LATVIJAS PASTS", name: "Latvijas Pasts", category: "Fees & charges", website: "https://pasts.lv" }
+  - { pattern: "DPD LATVIJA", name: "DPD Latvija", category: "Fees & charges", website: "https://www.dpd.com/lv/lv/" }
+  - { pattern: "OMNIVA LATVIJA", name: "Omniva", category: "Fees & charges", website: "https://www.omniva.lv" }
+  - { pattern: "VENIPAK", name: "Venipak", category: "Fees & charges", website: "https://venipak.com/lv/" }
+  - { pattern: "LATVIJAS LOTO", name: "Latvijas Loto", category: "Other", website: "https://www.latloto.lv/lv/" }
+  - { pattern: "OLYMPIC CASINO LATVIJA", name: "Olympic Casino", category: "Other", website: "https://www.olympic-casino.lv/lv" }
+  - { pattern: "VALSTS IENEMUMU DIENESTS", name: "Valsts ieņēmumu dienests", category: "Fees & charges", website: "https://www.vid.gov.lv/lv" }
+  # --- Healthcare ---
+  - { pattern: "VESELIBAS CENTRS 4", name: "Veselības centrs 4", category: "Healthcare", website: "https://vc4.lv" }
+  - { pattern: "E.GULBJA LABORATORIJA", name: "E. Gulbja laboratorija", category: "Healthcare", website: "https://www.egl.lv" }
+  - { pattern: "CAPITAL CLINIC", name: "Capital Clinic Riga", category: "Healthcare", website: "https://capitalclinicriga.lv" }
+  # --- Fuel ---
+  - { pattern: "VIRSI", name: "Virši", category: "Fuel", website: "https://www.virsi.lv/lv/privatpersonam" }
+  - { pattern: "ASTARTE", name: "Astarte-Nafta", category: "Fuel", website: "https://astarte.lv" }
+  # --- Housing management / municipal (monthly bills) ---
+  - { pattern: "RIGAS NAMU PARVALDNIEKS", name: "Rīgas namu pārvaldnieks", category: "Housing", website: "https://rnparvaldnieks.lv" }
+  - { pattern: "LIEPAJAS ENERGIJA", name: "Liepājas enerģija", category: "Utilities", website: "https://liepajasenergija.lv" }
+  - { pattern: "DAUGAVPILS SILTUMTIKLI", name: "Daugavpils siltumtīkli", category: "Utilities", website: "https://www.dsiltumtikli.lv/lv/" }
+  - { pattern: "SALASPILS SILTUMS", name: "Salaspils Siltums", category: "Utilities", website: "https://salaspilssiltums.lv" }
+  - { pattern: "regex:\\bCSDD\\b", name: "CSDD", category: "Car maintenance", website: "https://www.csdd.lv" }
+  # --- More telecom brands ---
+  - { pattern: "AMIGO", name: "Amigo (LMT)", category: "Internet & Phone", website: "https://www.lmt.lv" }
+  - { pattern: "ZELTA ZIVTINA", name: "Zelta Zivtiņa (Bite)", category: "Internet & Phone", website: "https://www.zeltazivtina.lv" }
+  # --- More insurance / banking ---
+  - { pattern: "IF LATVIJA", name: "If apdrošināšana", category: "Insurance", website: "https://www.if.lv/privatpersonam" }
+  - { pattern: "SIGNET BANK", name: "Signet Bank", category: "Fees & charges", website: "https://signetbank.com" }
+  # --- Media / retail ---
+  - { pattern: "LATVIJAS TELEVIZIJA", name: "Latvijas Televīzija", category: "Streaming", website: "https://ltv.lsm.lv" }
+  - { pattern: "STOCKMANN LATVIJA", name: "Stockmann", category: "Other", website: "https://www.stockmann.lv" }
+  - { pattern: "MADARA COSMETICS", name: "Mádara Cosmetics", category: "Personal care", website: "https://www.madaracosmetics.com" }
+  - { pattern: "VESELIBAS CENTRU APVIENIBA", name: "Veselības centru apvienība", category: "Healthcare" }

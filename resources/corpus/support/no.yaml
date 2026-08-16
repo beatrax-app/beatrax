@@ -1,0 +1,110 @@
+# Support-resource corpus — Norway (NO merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Telenor
+    type: merchant
+    cancel_url: "https://www.telenor.no/kundeservice/oppsigelse/"
+    support_url: "https://www.telenor.no/kundeservice/"
+    notes: "For mobil og mobilt bredbånd betaler du månedsavgift ut den måneden du sier opp; for TV, bredbånd og hjemmetelefon er oppsigelsestiden én måned regnet fra første dag i påfølgende måned. Selve oppsigelsen gjøres via kundeservice på telefon 915 09000 eller e-postskjema, mens de fleste tilleggstjenester kan sies opp på Mine Sider."
+  - name: Telia Norge
+    type: merchant
+    cancel_url: "https://www.telia.no/mobilabonnement/hjelp/oppsigelse/"
+    support_url: "https://www.telia.no/hjelp/"
+    notes: "Det finnes ingen oppsigelsesknapp på nett — abonnementet må sies opp ved å ringe kundesenteret på 924 05 050 eller møte opp i en Telia-butikk med legitimasjon. Har du bindingstid, legges et bruddgebyr på sluttfakturaen, og skal du bytte operatør skal du ikke si opp selv fordi porteringen ordner oppsigelsen."
+  - name: Ice
+    type: merchant
+    support_url: "https://www.ice.no/kundeservice/kontakt-oss/"
+    notes: "ice har ingen egen oppsigelsesside for privatkunder — oppsigelsen må gjøres via kundeservice på chat eller telefon 21 00 00 00. Etter vilkårene punkt 11 opphører mobilabonnementet dagen etter at oppsigelsen er mottatt, mens mobilt bredbånd har én måneds oppsigelsestid regnet fra første kalenderdag i måneden etter; bindingstid utløser bruddgebyr."
+  - name: Fjordkraft
+    type: merchant
+    cancel_url: "https://www.fjordkraft.no/strom/kundeservice/si-opp-stromavtale/"
+    support_url: "https://www.fjordkraft.no/strom/kundeservice/"
+    notes: "Du trenger ikke kontakte Fjordkraft for å si opp strømavtalen — oppsigelsen skjer automatisk så snart du bestiller hos en ny strømleverandør, som ordner byttet for deg. Skal du flytte, flytter du avtalen fra gammel til ny adresse på Min side, eller ringer 23 00 61 00."
+  - name: Elvia
+    type: merchant
+    cancel_url: "https://www.elvia.no/nettleie/alt-om-nettleie/bestille-eller-si-opp-strom-og-nettleie/"
+    support_url: "https://www.elvia.no/hva-er-elvia/kontakt-oss/"
+    notes: "Nettleien kan ikke sies opp hos Elvia som netteier — både bestilling og oppsigelse gjøres hos strømleverandøren din, og nettleieavtalen blir sagt opp automatisk når de registrerer oppsigelsen. Husk å si opp når du flytter ut, ellers risikerer du å betale for strøm i en bolig du ikke lenger bor i. Kundeservice: 02024."
+  - name: Gjensidige
+    type: merchant
+    cancel_url: "https://www.gjensidige.no/forsikring/oppsigelse"
+    support_url: "https://www.gjensidige.no/kontakt-kundeservice"
+    notes: "Forsikringer sies opp ved å logge inn, velge forsikringen og trykke «Oppsigelse». Selger du bilen, trenger du ikke si opp — bilforsikringen avsluttes automatisk når salgsmeldingen er signert og godkjent av selger og kjøper. Kjøp gjort på telefon, skjema, e-post eller internett har angrerett."
+  - name: If Forsikring
+    type: merchant
+    cancel_url: "https://www.if.no/privat/kundeservice/oppsigelse"
+    support_url: "https://www.if.no/privat/kundeservice"
+    notes: "De aller fleste forsikringer sier du opp selv på Mine sider under «Si opp forsikring», men noen typer må du kontakte If for å avslutte. Har du ikke lenger behov for forsikringen, kan den som hovedregel sies opp fra dagens dato; ved bytte av selskap er det 30 dagers oppsigelsestid, men du kan flytte fritt ved årlig hovedforfall."
+  - name: SATS Norge
+    type: merchant
+    cancel_url: "https://www.sats.no/kundeservice/medlemskap/administrer-medlemskap/avslutte-medlemskap"
+    support_url: "https://www.sats.no/kundeservice"
+    cheaper_url: "https://www.sats.no/kundeservice/medlemskap/administrer-medlemskap/frys-medlemskap"
+    notes: "Oppsigelsen registreres på Min Side, men det er ikke mulig å si opp mens medlemskapet er fryst. Oppsigelsestiden er ut påfølgende måned — sier du opp i januar, løper medlemskapet ut februar — og bindingstid betyr minimum 12 månedlige medlemsavgifter før du kan avslutte. Frys uten dokumentasjon koster 99,- per måned i inntil to måneder av gangen."
+  - name: TV 2 Play
+    type: merchant
+    cancel_url: "https://hjelp.tv2.no/hovedkategori/konto-og-abonnement/oppsigelse"
+    support_url: "https://hjelp.tv2.no/"
+    notes: "Logg inn på Konto-siden, velg «Abonnement og kjøp» og trykk Stopp; pakken varer ut datoen du har betalt til, og du får en kvittering på e-post. Alternativt kan du pause abonnementet i én eller to måneder, og en oppsigelse kan stanses på Konto-sidene så lenge du fortsatt har tilgang."
+  - name: Sector Alarm
+    type: merchant
+    cancel_url: "https://www.sectoralarm.no/oppsigelse/"
+    support_url: "https://www.sectoralarm.no/kundeservice/"
+    notes: "Boligalarmavtalen sies opp ved å fylle ut oppsigelsesskjemaet på sectoralarm.no. Skjemaet ber også om bakgrunnen for at du vil si opp, men det feltet er valgfritt."
+  - name: NAF
+    type: merchant
+    support_url: "https://www.naf.no/kundeservice/medlemskapet"
+    notes: "Medlemskapet kan sies opp når som helst under «Mitt medlemskap» på Mitt NAF, men det er ikke avsluttet før kontingentåret er over. Sier du opp før hovedforfall, er medlemskapet gyldig fram til hovedforfall, og innbetalt kontingent refunderes ikke for gjenværende periode med mindre du er innenfor angreretten. Kundeservice: 08505."
+  - name: DNB
+    type: merchant
+    cancel_url: "https://www.dnb.no/hjelp-og-veiledning/konto"
+    support_url: "https://www.dnb.no/hjelp-og-veiledning"
+    notes: "Konto avsluttes i nettbanken under «Jeg vil avslutte en konto»: logg inn, velg kontoen og følg stegene. Har du avtaler knyttet til brukskontoen, må disse avsluttes først, og deretter må du vente to virkedager før du avslutter selve kontoen. Depositumskonto avsluttes med eget skjema i nettbanken."
+
+  # --- Government ---
+  - name: Skatteetaten
+    type: government
+    help_url: "https://www.skatteetaten.no/kontakt/"
+    apply_url: "https://www.skatteetaten.no/person/skatt/skattemelding/"
+    rights_url: "https://www.skatteetaten.no/kontakt/klage/"
+    phone: "800 80 000"
+    notes: "Hovednummeret 800 80 000 er gratis å ringe og har tastevalg; åpningstiden er 09:00–14:30 alle hverdager, og du kan også skrive til chat-roboten. Er du uenig i noe, kan du i mange tilfeller endre selv i skattemeldingen i stedet for å klage — hvordan du klager avhenger av hva klagen gjelder."
+  - name: NAV
+    type: government
+    help_url: "https://www.nav.no/kontaktoss"
+    apply_url: "https://www.nav.no/soknader"
+    rights_url: "https://www.nav.no/klage"
+    phone: "55 55 33 33"
+    notes: "Hovednummeret er 55 55 33 33 med tastevalg 1 for privatperson; pensjon har 55 55 33 34 og økonomi- og gjeldsveiledning 55 55 33 39. Dagpenger, sykepenger og andre ytelser søkes om under «Søknad og skjema», og et vedtak kan både klages og ankes på."
+  - name: Lånekassen
+    type: government
+    help_url: "https://lanekassen.no/nb-NO/hjelp-og-kontakt/"
+    apply_url: "https://lanekassen.no/nb-NO/stipend-og-lan/"
+    rights_url: "https://lanekassen.no/nb-NO/gjeld-og-betaling/betalingsutsettelse/"
+    phone: "+47 21 49 60 00"
+    notes: "Kundesenteret svarer på + 47 21 49 60 00 på hverdager kl. 09.00–15.00. Lånekassen har ingen e-postadresse for kunder — for å sende e-post må du logge inn på Dine sider. Har du problemer med å betale, kan du søke om betalingsutsettelse og sletting av renter."
+  - name: Statens vegvesen
+    type: government
+    help_url: "https://www.vegvesen.no/om-oss/kontakt-oss/"
+    apply_url: "https://www.vegvesen.no/dinside/"
+    rights_url: "https://www.vegvesen.no/om-oss/kontakt-oss/klage/"
+    phone: "22 07 30 00"
+    notes: "Telefonen 22 07 30 00 er åpen mandag–fredag kl. 09.00–14.00, og det kan være lang ventetid — prøv de digitale tjenestene på Din side først. Mener du et vedtak er feil, sender du klagen til Statens vegvesen, som vurderer den og eventuelt sender den videre til Vegdirektoratet. Trafikkfarlige situasjoner meldes til veitrafikksentralene på 175."
+  - name: Helsenorge
+    type: government
+    help_url: "https://www.helsenorge.no/kontakt/"
+    apply_url: "https://www.helsenorge.no/"
+    rights_url: "https://www.helsenorge.no/rettigheter/"
+    phone: "23 32 70 00"
+    notes: "Veiledningen for Helsenorge svarer på 23 32 70 00 på hverdager mellom 08:00 og 15:30; spørsmål om helsesituasjonen din må du ta med behandleren din. Pasientreiser har eget nummer, 05515, for refusjon av reiser, søknadsskjema og bestilling av reiser til og fra behandling."
+  - name: Altinn
+    type: government
+    help_url: "https://info.altinn.no/hjelp/"
+    apply_url: "https://www.altinn.no/"
+    phone: "75 00 60 00"
+    notes: "Altinn brukerservice hjelper med selve portalen på 75 00 60 00, hverdager kl. 08.00–15.00, men svartiden på e-post kan være opptil sju virkedager. Spørsmål om innholdet i et skjema eller et brev må stilles til den som eier skjemaet, for eksempel Skatteetaten, Brønnøysundregistrene eller Nav; Bedriftsveiledningen har nummeret 800 33 840."

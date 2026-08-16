@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
+use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
@@ -118,6 +119,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // exists, so it simply landed on an empty dashboard.
         $middleware->web(append: [
             MobileEnsureImportCompleted::class,
+            // Resolves the per-request UI language (user override → session
+            // → Accept-Language → English). This root has its own bootstrap,
+            // so omitting it left the translator on `config('app.locale')`:
+            // the switcher wrote `session('locale')` and nothing read it.
+            SetLocale::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -230,6 +236,11 @@ return Application::configure(basePath: dirname(__DIR__))
             // guarded so a caught-up install never re-migrates on every
             // launch — bounded, no daemon, no persistent process.
             $bootstrap = $app->make(MobileFirstLaunchBootstrap::class);
+
+            // Restores the plugin view directories the bundler strips; the
+            // first request otherwise fails view discovery outright.
+            $bootstrap->ensurePluginViewPaths($app->basePath());
+
             if ($bootstrap->hasPendingMigrations()) {
                 $bootstrap->runPendingMigrations();
             }

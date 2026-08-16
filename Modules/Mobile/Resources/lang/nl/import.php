@@ -23,6 +23,12 @@ return [
 
     'recovery_heading' => 'Bewaar deze herstelcodes',
     'recovery_body' => 'Print deze of bewaar ze op een veilige plek. Ze worden niet nog eens getoond.',
+    'already_heading' => 'Dit apparaat is al ingesteld',
+    'already_body' => 'Je account bestaat al op dit apparaat. Ga verder naar koppelen om het met je andere apparaten te verbinden.',
+    'recovery_download' => 'Downloaden als .txt',
+    'recovery_copy' => 'Codes kopiëren',
+    'recovery_copied' => 'Gekopieerd',
+    'recovery_saved' => 'Opgeslagen in je downloads.',
     'recovery_confirm' => 'Ik heb deze codes op een veilige plek bewaard.',
     'continue_to_pairing' => 'Doorgaan naar koppelen',
 

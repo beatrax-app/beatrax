@@ -22,4 +22,11 @@ paths = [
   # because of its shape. It is derived from a user id and a period, and
   # carries no secret material.
   '''Modules/Notifications/tests/Feature/NotificationWriterTest\.php''',
+  # Tax category slugs, matched by the generic-api-key rule because a
+  # `key:` assignment holding a long alphanumeric string is what an API key
+  # looks like. These are the machine names of real deductions and have to
+  # stay readable — `hu_30_ev_alatti_anyak_kedvezmenye` is Hungary's relief
+  # for mothers under thirty. The whole corpus is bundled data shipped in
+  # the repository, so there is nothing here that could be secret.
+  '''resources/corpus/tax/.*\.yaml''',
 ]

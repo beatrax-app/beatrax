@@ -1,0 +1,102 @@
+# Support-resource corpus — Czechia (CZ merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: O2 Czech Republic
+    type: merchant
+    support_url: "https://www.o2.cz/podpora"
+    notes: "V sekci Podpora na o2.cz je odkaz „Odstoupit od smlouvy“, který vede do Moje O₂ – odstoupení tedy vyřídíte online po přihlášení. Běžná výpověď smlouvy se přes tuto stránku nepodává; podmínky a konec závazku najdete ve smlouvě uložené v Moje O₂ v sekci Dokumenty."
+  - name: T-Mobile CZ
+    type: merchant
+    cancel_url: "https://www.t-mobile.cz/podpora/smlouva/jak-opustit-t-mobile"
+    support_url: "https://www.t-mobile.cz/kontakty-t-mobile"
+    notes: "Účastnickou smlouvu nelze ukončit klikem – je nutná písemná žádost s vlastnoručním podpisem, doručená kontaktním formulářem, poštou na T‑Mobile a.s., Tomíčkova 2144/1, 148 00 Praha 4 nebo osobně na prodejně. Smlouvu bez závazku ukončí s výpovědní dobou 30 dnů od doručení, smlouvu se závazkem k datu uplynutí závazku; při přenosu čísla k jinému operátorovi se výpověď nepodává, stačí OKU."
+  - name: ČEZ
+    type: merchant
+    cancel_url: "https://www.cez.cz/cs/podpora/prodavam-pronajimam-nemovitost-a-potrebuji-ukoncit-smlouvu-na-energie"
+    support_url: "https://www.cez.cz/cs/podpora"
+    notes: "Průvodce v Podpoře nabízí dvě cesty: „Chci přepsat energie na nového zákazníka“ (při prodeji či pronájmu nemovitosti) a „Chci ukončit s demontáží“. Většina kroků vyžaduje přihlášení do Můj ČEZ."
+  - name: innogy
+    type: merchant
+    cancel_url: "https://www.innogy.cz/pece/zmena-smlouvy/"
+    support_url: "https://www.innogy.cz/kontakty/zakaznicka-linka/"
+    notes: "Při ukončení je třeba dodržet typ smluvního vztahu a výpovědní lhůtu; možnosti ukončení formou změny dodavatele ověříte na zákaznické lince 800 11 33 55. Ukončení s demontáží měřidla se řeší formulářem „Návrh na ukončení smlouvy“, který je nutné vyplnit, podepsat a doručit osobně na pobočku nebo poštou na innogy Energie, s.r.o., oddělení komplexních požadavků, Plynární 2748/6, 702 00 Ostrava."
+  - name: Pražská plynárenská
+    type: merchant
+    cancel_url: "https://www.ppas.cz/zakaznicka-pece/prepisy-stehovani"
+    support_url: "https://www.ppas.cz/kontakty"
+    notes: "Přepis odběrného místa na nového zákazníka jde vyřídit on-line, ale ukončení smlouvy s odebráním měřidla vyžaduje doložený formulář a domluvenou návštěvu montéra; formulář se posílá e-mailem na callcentrum@ppas.cz a plynoměr je nutné zpřístupnit."
+  - name: Generali Česká pojišťovna
+    type: merchant
+    cancel_url: "https://www.generaliceska.cz/ukoncit-pojisteni"
+    support_url: "https://www.generaliceska.cz/kontakt"
+    notes: "Rozcestník „Chci ukončit pojištění“ – postup se liší podle druhu pojištění, proto si v seznamu nejdřív vyberte konkrétní produkt (vozidla, majetek, osoby)."
+  - name: Kooperativa
+    type: merchant
+    cancel_url: "https://www.koop.cz/file/edee/dokumenty/formulare/zmeny-dokonceni-ukonceni-pojistne-smlouvy/Zadost-o-ukonceni-smlouvy.pdf"
+    support_url: "https://www.koop.cz/kontakt"
+    notes: "Ukončení se podává formulářem „Žádost o ukončení pojistné smlouvy“, online tlačítko neexistuje. Výpověď lze doručit do 2 měsíců od uzavření smlouvy, ke konci pojistného období (doručení nejpozději 6 týdnů předem) nebo do 3 měsíců od oznámení pojistné události; u životního pojištění pozor na nižší odkupné a dodanění odpočtů."
+  - name: Česká spořitelna
+    type: merchant
+    cancel_url: "https://www.csas.cz/cs/caste-dotazy/co-mam-delat-kdyz-chci-zrusit-ucet"
+    support_url: "https://www.csas.cz/cs/osobni-finance/podpora"
+    notes: "Běžný účet nelze zrušit v Georgi – jsou jen tři cesty: osobně na kterékoli pobočce, telefonicky po objednání schůzky, nebo korespondenčně písemnou žádostí. Pojištění osobních věcí a karet se naopak dá ukončit kdykoli telefonicky, na pobočce nebo písemně s ověřeným podpisem a nevyužitá část měsíčního poplatku se vrací."
+  - name: Komerční banka
+    type: merchant
+    cancel_url: "https://www.kb.cz/cs/o-bance/spokojenost-klientu/jak-zrusit-ucet"
+    support_url: "https://www.kb.cz/cs/o-bance/kontakty"
+    notes: "Účet lze zrušit pouze na kterékoli pobočce – online cesta neexistuje; se sjednáním schůzky pomůže bezplatná infolinka +420 955 551 505. Smlouvu u KB Penzijní společnosti sepíše bankovní poradce rovněž na pobočce."
+  - name: ÚAMK
+    type: merchant
+    support_url: "https://www.uamk.cz/kontakt"
+    notes: "Karta asistenčních služeb se automaticky neprodlužuje – před koncem platnosti vás ÚAMK sám osloví s nabídkou prodloužení, takže není co vypovídat. Odstoupení od nákupu karty ve 14denní lhůtě se posílá písemně na sídlo ÚAMK nebo na podporu@uamk.cz; pokud jste kartu už použili, odstoupit nelze."
+  - name: Oneplay
+    type: merchant
+    support_url: "https://www.oneplay.cz/faq"
+    notes: "Nápověda Oneplay má sekce „Účet a služba“ (Administrace účtu) a „Plány předplatného“, ale samostatnou stránku pro zrušení předplatného nezveřejňuje – požadavek je nutné poslat přes odkaz „Kontaktovat Podporu“. Pokud máte Oneplay v balíčku od O₂, řeší se přes Moje O₂."
+  - name: Člověk v tísni
+    type: merchant
+    support_url: "https://www.clovekvtisni.cz/kontakty/dary-a-darcovstvi-68"
+    notes: "Pro zrušení nebo změnu pravidelného daru (Klub přátel) není na webu žádný samoobslužný formulář – je uveden kontakt pro dárce ve fundraisingovém oddělení (+420 734 428 384) a obecný kontaktní formulář. Sídlo: Šafaříkova 635/24, 120 00 Praha 2, telefon po–pá 9:00–16:00."
+
+  # --- Government ---
+  - name: Finanční správa ČR
+    type: government
+    help_url: "https://financnisprava.gov.cz/cs/kontakty"
+    rights_url: "https://financnisprava.gov.cz/cs/dane/danove-tiskopisy"
+    notes: "Daňové přiznání a další podání se podávají elektronicky přes portál MOJE daně (adisspr.mfcr.cz/pmd). Všechny tiskopisy včetně interaktivních verzí a aplikace EPO jsou v sekci Daňové tiskopisy; kontakty jsou vedeny po finančních úřadech a územních pracovištích jednotlivých krajů."
+  - name: Česká správa sociálního zabezpečení
+    type: government
+    help_url: "https://www.cssz.gov.cz/web/cz/call-centra-cssz"
+    apply_url: "https://eportal.cssz.cz/"
+    rights_url: "https://www.cssz.gov.cz/web/cz/starobni-duchod"
+    phone: "800 050 248"
+    notes: "Web ČSSZ dnes běží na cssz.gov.cz. Call centra jsou zcela bezplatná a fungují po 8:00–17:00, út 8:00–15:30, st 8:00–17:00, čt 8:00–15:30, pá 8:00–12:00; ze zahraničí volejte +420 257 066 077. Žádost o důchod lze podat online přes ePortál ČSSZ, kde není nutná samostatná registrace."
+  - name: Úřad práce ČR
+    type: government
+    help_url: "https://up.gov.cz/callcentrum-zamestnanost-x"
+    apply_url: "https://up.gov.cz/formulare"
+    rights_url: "https://up.gov.cz/co-delat-pri-ztrate-zamestnani"
+    phone: "+420 950 180 000"
+    notes: "Žádost o zprostředkování zaměstnání lze podat až po skončení pracovního poměru; do evidence uchazečů vás ÚP ČR zařadí nejdříve dnem následujícím po jeho skončení, proto se hlaste hned. Call centrum pro zaměstnanost pomůže i s vyplněním žádosti."
+  - name: VZP ČR
+    type: government
+    help_url: "https://www.vzp.cz/kontakty"
+    apply_url: "https://www.vzp.cz/formulare"
+    rights_url: "https://www.vzp.cz/o-nas/informace/zivotni-situace/zmena-zdravotni-pojistovny"
+    phone: "952 222 222"
+    notes: "Zdravotní pojišťovnu lze změnit jen jednou za 12 měsíců a vždy k 1. dni kalendářního pololetí; podepsanou přihlášku musí pojištěnec podat vybrané pojišťovně sám. Informační centrum odpovídá v pracovní dny 8:00–18:00, k dispozici je i linka pro neslyšící."
+  - name: Portál občana
+    type: government
+    help_url: "https://portal.gov.cz/sluzby-verejne-spravy/"
+    notes: "Rozcestník gov.cz řadí agendy na Služby občanům, Služby podnikatelům a Životní události; do Portálu občana se přihlašujete Identitou občana nebo bankovní identitou."
+  - name: Český telekomunikační úřad
+    type: government
+    help_url: "https://ctu.gov.cz/pro-spotrebitele"
+    rights_url: "https://ctu.gov.cz/ukonceni-smlouvy"
+    phone: "+420 224 004 111"
+    notes: "Smlouvu na dobu určitou vám operátor může po skončení závazku automaticky prodloužit, ale poté ji smíte kdykoli bezplatně vypovědět s nejvýše jednoměsíční výpovědní dobou; o konci závazku a způsobech výpovědi vás musí prokazatelně informovat nejméně měsíc předem. U smluv uzavřených na dálku nebo mimo provozovnu máte 14 dní na odstoupení bez udání důvodu, a pokud jste o tom nebyli poučeni, lhůta se prodlužuje o rok. ČTÚ řeší i mimosoudní spory s operátory."

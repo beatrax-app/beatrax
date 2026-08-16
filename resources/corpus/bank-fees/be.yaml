@@ -1,0 +1,34 @@
+# Bank-fee classification rules — Belgium (Dutch and French).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Belgian statements are printed in Dutch or French depending on the branch,
+# so both languages are listed. The fee words use `regex:` with \b word
+# boundaries so "KOSTEN" matches the standalone fee word but not "ONKOSTEN"
+# (expenses) or "KOSTELOOS" (free of charge), and "COTISATION" does not
+# match inside a longer token. `INTRESTEN\b` is deliberately open on the
+# left so it also matches the compound "DEBETINTRESTEN". Regex bodies must
+# be SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bBEHEERSKOSTEN\b'
+    name: "Beheerskosten"
+  - pattern: 'regex:\bKOSTEN\b'
+    name: "Bankkosten"
+  - pattern: 'regex:INTRESTEN\b'
+    name: "Intresten"
+  - pattern: "FRAIS DE GESTION"
+    name: "Frais de gestion"
+  - pattern: "FRAIS BANCAIRES"
+    name: "Frais bancaires"
+  - pattern: 'regex:\bCOTISATION\b'
+    name: "Cotisation"
+  - pattern: 'regex:\bINTERETS\b'
+    name: "Intérêts"

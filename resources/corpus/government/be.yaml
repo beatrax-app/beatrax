@@ -1,7 +1,260 @@
 # Government / public-agency classification rules — Belgium.
+# Belgium is bilingual and much of social security is regionalised, so the
+# Dutch and French names of the same body are both listed.
+# (Bare "DIV" for the vehicle registration office is too ambiguous and is
+# deliberately omitted. Child benefit is paid by a mix of public and private
+# funds — only the public schemes and payers are listed.)
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "FOD FINANCIEN"
     name: "FOD Financiën"
   - pattern: "SPF FINANCES"
     name: "SPF Finances"
+  - pattern: "regex:\\bRSZ\\b|\\bONSS\\b"
+    name: "RSZ / ONSS"
+  - pattern: "regex:\\bRVA\\b|\\bONEM\\b"
+    name: "RVA / ONEM"
+  - pattern: "regex:\\bRIZIV\\b|\\bINAMI\\b"
+    name: "RIZIV / INAMI"
+  - pattern: "regex:FEDERALE PENSIOENDIENST|SERVICE FEDERAL DES PENSIONS"
+    name: "Federale Pensioendienst / SFP"
+  - pattern: "regex:\\bVDAB\\b|\\bFOREM\\b|\\bACTIRIS\\b"
+    name: "Regionale arbeidsbemiddeling"
+  - pattern: "GROEIPAKKET"
+    name: "Groeipakket (Vlaamse kinderbijslag)"
+  - pattern: "FAMIRIS"
+    name: "Famiris"
+  - pattern: "IRISCARE"
+    name: "Iriscare"
+  # Municipalities bill local taxes, waste and administrative fees.
+  - pattern: "GEMEENTE"
+  - pattern: "COMMUNE DE"
+  - pattern: "STADSBESTUUR"
+  - pattern: "VLAAMSE BELASTINGDIENST"
+    name: "Vlaamse Belastingdienst"
+  - pattern: "regex:\\bVLABEL\\b"
+    name: "Vlaamse Belastingdienst"
+  - pattern: "VERKEERSBELASTING"
+    name: "Verkeersbelasting"
+  - pattern: "TAXE DE CIRCULATION"
+    name: "Taxe de circulation"
+  - pattern: "POLITIEZONE"
+    name: "Politiezone"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: financien.belgium.be / finances.belgium.be (FOD-SPF
+  # naming and the aanslagbiljet / avertissement-extrait de rôle), socialsecurity.be,
+  # rsz.fgov.be, riziv.fgov.be, onem.be, sfpd.fgov.be, groeipakket.be,
+  # famiris.brussels, iriscare.brussels, vlaanderen.be/vlabel,
+  # finances.wallonie.be (SPW Fiscalité), fiscalite.brussels, aquaflanders.be
+  # and aquawal.be for the intermunicipal water companies, and ibz.be
+  # (Dienst Vreemdelingenzaken / Office des étrangers).
+  #
+  # Both national languages are listed for the same body. Rejected as too
+  # ambiguous: bare "SPF" (also a sunscreen rating), bare "DIV", bare "ONE",
+  # "VILLE" and "PROVINCE" on their own, and "ETAT CIVIL". There is no
+  # licence-fee rule — the kijk- en luistergeld was abolished in Flanders
+  # (2001), Brussels (2002) and Wallonia (2018).
+  # ---------------------------------------------------------------------
+
+  # Federal public services under both their language prefixes.
+  - pattern: 'regex:\bFOD\b'
+    name: "Federale Overheidsdienst"
+  - pattern: "SERVICE PUBLIC FEDERAL"
+    name: "Service public fédéral"
+  - pattern: "FEDERALE OVERHEIDSDIENST"
+    name: "Federale Overheidsdienst"
+  - pattern: "FOD JUSTITIE"
+    name: "FOD Justitie"
+  - pattern: "SPF JUSTICE"
+    name: "SPF Justice"
+  - pattern: "FOD BINNENLANDSE ZAKEN"
+    name: "FOD Binnenlandse Zaken"
+  - pattern: "SPF INTERIEUR"
+    name: "SPF Intérieur"
+  - pattern: "FOD VOLKSGEZONDHEID"
+    name: "FOD Volksgezondheid"
+  - pattern: "SPF SANTE PUBLIQUE"
+    name: "SPF Santé publique"
+
+  # Tax bills and the named Belgian taxes.
+  - pattern: "AANSLAGBILJET"
+    name: "Aanslagbiljet"
+  - pattern: "EXTRAIT DE ROLE"
+    name: "Avertissement-extrait de rôle"
+  - pattern: "PERSONENBELASTING"
+    name: "Personenbelasting"
+  - pattern: "ONROERENDE VOORHEFFING"
+    name: "Onroerende voorheffing"
+  - pattern: "PRECOMPTE IMMOBILIER"
+    name: "Précompte immobilier"
+  - pattern: "BELASTING OP INVERKEERSTELLING"
+    name: "Belasting op inverkeerstelling"
+  - pattern: "TAXE DE MISE EN CIRCULATION"
+    name: "Taxe de mise en circulation"
+  - pattern: "SERVICE PUBLIC DE WALLONIE"
+    name: "SPW Fiscalité"
+  - pattern: "BRUXELLES FISCALITE"
+    name: "Bruxelles Fiscalité"
+  - pattern: "BRUSSEL FISCALITEIT"
+    name: "Brussel Fiscaliteit"
+
+  # Social security collectors and compulsory sickness funds.
+  - pattern: "RIJKSDIENST VOOR SOCIALE ZEKERHEID"
+    name: "RSZ"
+  - pattern: "OFFICE NATIONAL DE SECURITE SOCIALE"
+    name: "ONSS"
+  - pattern: "SOCIALE ZEKERHEID"
+    name: "Sociale zekerheid"
+  - pattern: "ZIEKENFONDS"
+    name: "Ziekenfonds"
+  - pattern: "MUTUALITEIT"
+    name: "Mutualiteit"
+  # Bare "MUTUALITE" also catches the Mutualité Française, a federation of
+  # private French mutuelles, so the Belgian funds are named individually.
+  - pattern: "MUTUALITE CHRETIENNE"
+    name: "Mutualité chrétienne"
+  - pattern: "MUTUALITE NEUTRE"
+    name: "Mutualité neutre"
+  - pattern: "MUTUALITE SOCIALISTE"
+    name: "Mutualité socialiste"
+  - pattern: "SOLIDARIS"
+    name: "Solidaris"
+  # The compulsory Flemish care insurance premium.
+  - pattern: "VLAAMSE SOCIALE BESCHERMING"
+    name: "Vlaamse sociale bescherming"
+  - pattern: "ZORGPREMIE"
+    name: "Zorgpremie (Vlaamse sociale bescherming)"
+  - pattern: 'regex:\bHZIV\b|\bCAAMI\b'
+    name: "HZIV / CAAMI"
+  - pattern: "FEDRIS"
+    name: "Fedris"
+  - pattern: "SOCIAAL VERZEKERINGSFONDS"
+    name: "Sociaal verzekeringsfonds (zelfstandigen)"
+  - pattern: "CAISSE D'ASSURANCES SOCIALES"
+    name: "Caisse d'assurances sociales"
+  - pattern: "PENSIOENDIENST"
+    name: "Federale Pensioendienst"
+  - pattern: "HULPKAS VOOR WERKLOOSHEIDSUITKERINGEN"
+    name: "HVW"
+  - pattern: 'regex:\bCAPAC\b'
+    name: "CAPAC"
+
+  # Child benefit outside the Flemish Groeipakket.
+  - pattern: "KIND EN GEZIN"
+    name: "Kind en Gezin"
+  # Bare "OPGROEIEN" is an ordinary Dutch verb — the agency prefix is required.
+  - pattern: "AGENTSCHAP OPGROEIEN"
+    name: "Agentschap Opgroeien"
+  - pattern: "KINDERBIJSLAGFONDS"
+    name: "Kinderbijslagfonds"
+
+  # Municipal, provincial and regional government.
+  - pattern: "GEMEENTEBESTUUR"
+    name: "Gemeentebestuur"
+  - pattern: "ADMINISTRATION COMMUNALE"
+    name: "Administration communale"
+  - pattern: "PROVINCIEBESTUUR"
+    name: "Provinciebestuur"
+  - pattern: "PROVINCE DE"
+    name: "Province"
+  - pattern: "VLAAMSE OVERHEID"
+    name: "Vlaamse overheid"
+  - pattern: "REGION WALLONNE"
+    name: "Région wallonne"
+  - pattern: "WAALS GEWEST"
+    name: "Waals Gewest"
+  - pattern: "REGION DE BRUXELLES"
+    name: "Région de Bruxelles-Capitale"
+  - pattern: "BRUSSELS HOOFDSTEDELIJK GEWEST"
+    name: "Brussels Hoofdstedelijk Gewest"
+  - pattern: "AGENTSCHAP"
+    name: "Vlaams agentschap"
+  - pattern: "INTERCOMMUNALE"
+    name: "Intercommunale"
+  - pattern: 'regex:\bOCMW\b'
+    name: "OCMW"
+  - pattern: 'regex:\bCPAS\b'
+    name: "CPAS"
+
+  # Police, fire and fines.
+  - pattern: "ZONE DE POLICE"
+    name: "Zone de police"
+  - pattern: "FEDERALE POLITIE"
+    name: "Federale Politie"
+  - pattern: "POLICE FEDERALE"
+    name: "Police fédérale"
+  - pattern: "BRANDWEERZONE"
+    name: "Brandweerzone"
+  - pattern: "ZONE DE SECOURS"
+    name: "Zone de secours"
+  - pattern: "ONMIDDELLIJKE INNING"
+    name: "Onmiddellijke inning (verkeersboete)"
+  - pattern: "PERCEPTION IMMEDIATE"
+    name: "Perception immédiate (amende routière)"
+
+  # Courts.
+  - pattern: "VREDEGERECHT"
+    name: "Vredegerecht"
+  - pattern: "JUSTICE DE PAIX"
+    name: "Justice de paix"
+  - pattern: "RECHTBANK VAN EERSTE AANLEG"
+    name: "Rechtbank van eerste aanleg"
+  - pattern: "GRIFFIE"
+    name: "Griffie"
+
+  # Vehicle registration, spelled out (bare "DIV" stays excluded).
+  - pattern: "DIENST INSCHRIJVINGEN VOERTUIGEN"
+    name: "DIV"
+  - pattern: "DIRECTION IMMATRICULATION DES VEHICULES"
+    name: "DIV"
+
+  # Intermunicipal water companies and the Flemish water regulator.
+  - pattern: "DE WATERGROEP"
+    name: "De Watergroep"
+  - pattern: "PIDPA"
+    name: "Pidpa"
+  - pattern: "WATER-LINK"
+    name: "water-link"
+  - pattern: "FARYS"
+    name: "Farys"
+  - pattern: "AQUAFIN"
+    name: "Aquafin"
+  - pattern: "VIVAQUA"
+    name: "Vivaqua"
+  - pattern: 'regex:\bSWDE\b'
+    name: "SWDE"
+  # \bCILE\b and \bVMM\b are too thin for a rule that runs against every
+  # user's transactions, so both bodies are spelled out.
+  - pattern: "COMPAGNIE INTERCOMMUNALE LIEGEOISE DES EAUX"
+    name: "CILE"
+  - pattern: 'regex:\bIWVA\b'
+    name: "IWVA"
+  - pattern: "VLAAMSE MILIEUMAATSCHAPPIJ"
+    name: "Vlaamse Milieumaatschappij"
+
+  # Waste intercommunales that invoice households directly.
+  - pattern: "LIMBURG.NET"
+    name: "Limburg.net"
+  - pattern: "IVAGO"
+    name: "IVAGO"
+  - pattern: "IVAREM"
+    name: "IVAREM"
+
+  # Immigration, civil registry and education.
+  - pattern: "DIENST VREEMDELINGENZAKEN"
+    name: "Dienst Vreemdelingenzaken"
+  - pattern: "OFFICE DES ETRANGERS"
+    name: "Office des étrangers"
+  - pattern: "DIENST BURGERZAKEN"
+    name: "Dienst Burgerzaken"
+  - pattern: "PATRIMONIUMDOCUMENTATIE"
+    name: "Algemene Administratie van de Patrimoniumdocumentatie"
+  - pattern: "INSCHRIJVINGSGELD"
+    name: "Inschrijvingsgeld"
+  - pattern: "MINERVAL"
+    name: "Minerval"
+  - pattern: "STUDIETOELAGE"
+    name: "Studietoelage"
+  - pattern: "SCHOOLTOELAGE"
+    name: "Schooltoelage"

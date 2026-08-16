@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'native_unlock_reason' => 'Desbloquear Beatrax',
+    'native_unlock_failed' => 'No se pudo desbloquear. Introduce tu PIN.',
+    'page_title' => 'Desbloquear · Beatrax',
+    'sign_out' => 'Cerrar sesión',
+
+    'digits_suffix' => 'dígitos introducidos',
+    'pad_label' => 'Teclado del PIN',
+    'digit_aria' => 'Dígito :digit',
+    'backspace_aria' => 'Retroceso',
+    'ok_aria' => 'OK — confirmar el PIN',
+    'ok' => 'OK',
+
+    'error_too_short' => 'El PIN debe tener al menos 4 dígitos.',
+
+    'error_backoff' => 'Demasiados intentos — vuelve a probar en :wait.',
+
+    'error_incorrect_remaining' => 'PIN incorrecto. Te quedan :remaining intentos.',
+    'error_incorrect' => 'PIN incorrecto.',
+];

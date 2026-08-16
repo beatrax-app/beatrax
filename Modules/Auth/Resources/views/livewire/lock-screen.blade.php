@@ -1,6 +1,6 @@
 @use('Modules\Core\Public\Support\Lang')
 <div
-    class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
+    class="beatrax-shell min-h-screen flex items-center justify-center
             px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
             motion-reduce:transition-none"
@@ -54,6 +54,22 @@
 
         {{-- PIN pad (includes dot display + flash) --}}
         @include('auth::livewire.partials.pin-pad')
+
+        {{-- OS-gated unlock (Touch ID / enclave). Unlike the WebAuthn button
+             below it returns the data key itself, so it unlocks outright. --}}
+        @if ($nativeUnlockAvailable)
+            <button
+                type="button"
+                wire:click="nativeUnlock()"
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 dark:bg-slate-100
+                       py-3 text-sm font-semibold text-white dark:text-slate-900
+                       hover:bg-slate-700 dark:hover:bg-slate-200
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 focus-visible:ring-offset-2
+                       transition-colors duration-[80ms] motion-reduce:transition-none"
+            >
+                {{ $biometricLabel }}
+            </button>
+        @endif
 
         {{-- Biometric button (only shown when a credential is enrolled — 05-05) --}}
         @if ($biometricAvailable)

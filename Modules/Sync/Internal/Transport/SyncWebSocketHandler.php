@@ -27,6 +27,7 @@ use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
@@ -48,6 +49,25 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
     // Bounded like MAX_CATCHUP_FRAMES so an unbounded mailbox backlog can't
     // pin this fiber; a larger backlog is picked up on the peer's next connect.
     private const MAX_GDK_WRAPS_PER_CONNECT = 100;
+
+    // Announces the epoch-push phase and how many wrap frames follow. The
+    // phase runs BEFORE catch-up, so it cannot end on a read timeout the way
+    // a trailing phase could — that would swallow the catch-up request queued
+    // behind it. An explicit count makes the boundary exact, not inferred.
+    public const string MSG_GDK_EPOCH_PUSH = 'GDK_EPOCH_PUSH';
+
+    // Told to a peer this device no longer confirms, so a removed device can
+    // stop presenting itself as synced. Sent over the completed Noise
+    // session, which is what makes it trustworthy: IK proves to the dialling
+    // peer that this responder holds the static key it dialled.
+    public const string MSG_PEER_REVOKED = 'PEER_REVOKED';
+
+    // How often an open session re-checks that its peer is still trusted.
+    // Short enough that a removal takes hold while the user is still looking
+    // at the screen, long enough not to query per message.
+    private const float REVOCATION_CHECK_SECONDS = 5.0;
+
+    private float $lastRevocationCheck = 0.0;
 
     /**
      * @param  string  $localStaticSecret  32-byte X25519 secret key for the local device.
@@ -82,7 +102,7 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
     {
         try {
             $noiseSession = $this->performHandshake($client);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: Noise handshake failed.', [
                 'error' => $e->getMessage(),
             ]);
@@ -122,6 +142,12 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
             $this->logger->warning('SyncWebSocketHandler: peer auth failed — closing connection.', [
                 'user_id' => $this->userId,
             ]);
+
+            // Say WHY before hanging up. Closing silently is indistinguishable
+            // from a flaky network, so a device removed here kept describing
+            // itself as connected and synced indefinitely.
+            $this->tellPeerItIsRevoked($client, $noiseSession);
+
             $client->close();
 
             return;
@@ -133,8 +159,14 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         ]);
 
         try {
+            // Keys BEFORE the data they decrypt. Delivered after catch-up, a
+            // joining device applied the peer's whole encrypted history against
+            // an empty keyring, and every sensitive op landed in quarantine —
+            // an audit table with no replay path.
+            $this->deliverGdkEpochWraps($client, $session);
+
             $this->runCatchUp($client, $session, $deviceKeys);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: catch-up exchange failed.', [
                 'error' => $e->getMessage(),
             ]);
@@ -152,16 +184,66 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
                 self::READ_TIMEOUT_SECONDS,
                 'live stream',
             )) {
+                // Trust is re-checked on the LIVE connection, not just at
+                // connect. Removing a device cleared its row while its open
+                // session carried on syncing, so "removed" only took hold
+                // whenever the peer next happened to reconnect.
+                if ($this->peerWasRevoked($session)) {
+                    $this->logger->info('SyncWebSocketHandler: peer revoked mid-session — closing.', [
+                        'peer_device_id' => $session->peerDeviceId(),
+                        'user_id' => $this->userId,
+                    ]);
+
+                    break;
+                }
+
                 $ciphertext = $message->buffer();
                 $session->receiveOps($ciphertext, $this->userId, $deviceKeys);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->logger->warning('SyncWebSocketHandler: live stream error.', [
                 'error' => $e->getMessage(),
             ]);
         }
 
         $session->close();
+    }
+
+    // Whether the connected peer has lost its confirmation since this
+    // session opened. Throttled: the answer only changes when the user
+    // removes a device, so re-asking per message would buy nothing and cost
+    // a query on every op.
+    private function peerWasRevoked(SyncSession $session): bool
+    {
+        $now = $this->clock->now()->getTimestamp();
+
+        if ($now - $this->lastRevocationCheck < self::REVOCATION_CHECK_SECONDS) {
+            return false;
+        }
+
+        $this->lastRevocationCheck = $now;
+
+        $peerDeviceId = $session->peerDeviceId();
+
+        return $peerDeviceId !== null
+            && ! $this->registryService->isStillConfirmed($this->userId, $peerDeviceId);
+    }
+
+    // Best-effort notice to an unconfirmed peer. Sent on the raw Noise
+    // session because SyncSession is deliberately unauthenticated here, and
+    // never allowed to throw — the connection is being closed either way.
+    private function tellPeerItIsRevoked(WebsocketClient $client, NoiseSession $noiseSession): void
+    {
+        try {
+            $client->sendBinary($noiseSession->encrypt(json_encode(
+                ['type' => self::MSG_PEER_REVOKED],
+                JSON_THROW_ON_ERROR,
+            )));
+        } catch (Throwable $e) {
+            $this->logger->info('SyncWebSocketHandler: could not tell the peer it was revoked.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     // Wire format: binary WebSocket messages, one per Noise message (msg1
@@ -272,23 +354,48 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         if ($completeMsg !== null) {
             $session->decrypt($completeMsg->buffer());
         }
-
-        // Fixed-point GDK_EPOCH_WRAP delivery: a dedicated linear step
-        // appended immediately after catch-up completes, mirroring the
-        // existing request/response/complete sequencing style rather than a
-        // generic control-message dispatch switch.
-        $this->deliverGdkEpochWraps($client, $session);
     }
 
-    // Delivers pending sealed-box GDK epoch wraps over the already-
-    // authenticated live Noise session (outbound to the peer, inbound via
-    // GdkEpochControlHandler) as an optimization over the relay round-trip
-    // (see @link). Degrades gracefully when a dependency is unavailable.
+    // Sends the epoch-push phase to the connected peer over the already-
+    // authenticated live Noise session, as an optimization over the relay
+    // round-trip (see @link). Degrades gracefully when the mailbox is unbound.
     /**
      * @internal Public so the fixed-point delivery step is directly
      *           testable without constructing a live amphp WebSocket connection.
      */
     public function deliverGdkEpochWraps(WebsocketClient $client, SyncSession $session): void
+    {
+        $container = Container::getInstance();
+        $relayMailbox = $container->bound(RelayMailbox::class)
+            ? $container->make(RelayMailbox::class)
+            : null;
+
+        // The header is unconditional — the peer reads it before catch-up and
+        // would otherwise block waiting for a phase this side silently
+        // skipped. An unbound mailbox is simply a zero-wrap push.
+        $wraps = $relayMailbox instanceof RelayMailbox
+            ? $this->pendingWrapsForPeer($session, $relayMailbox)
+            : [];
+
+        $client->sendBinary($session->encrypt(json_encode([
+            'type' => self::MSG_GDK_EPOCH_PUSH,
+            'count' => count($wraps),
+        ], JSON_THROW_ON_ERROR)));
+
+        if ($relayMailbox instanceof RelayMailbox) {
+            $this->sendWrapsToPeer($client, $session, $relayMailbox, $wraps);
+        }
+
+        $this->drainInboundEpochWraps();
+    }
+
+    // Applies wraps addressed to THIS device from its own mailbox. Nothing
+    // here touches the wire, so it stays callable independently of a live
+    // peer session — a backlog left by the relay is consumed either way.
+    /**
+     * @internal Public for the same reason as deliverGdkEpochWraps().
+     */
+    public function drainInboundEpochWraps(): void
     {
         $container = Container::getInstance();
         if (! $container->bound(RelayMailbox::class)) {
@@ -298,22 +405,23 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
         /** @var RelayMailbox $relayMailbox */
         $relayMailbox = $container->make(RelayMailbox::class);
 
-        $this->drainOutboundWrapsToPeer($client, $session, $relayMailbox);
         $this->drainInboundWrapsForLocalDevice($container, $relayMailbox);
     }
 
-    // Forwards sealed-box GDK epoch wraps addressed to the connected peer over
-    // the live Noise session, confirming each mailbox row only once it has been
-    // handed to the transport so an interrupted drain is retried next connect.
-    private function drainOutboundWrapsToPeer(
-        WebsocketClient $client,
-        SyncSession $session,
-        RelayMailbox $relayMailbox,
-    ): void {
+    // Collects the epoch wraps queued for the connected peer. Separate from
+    // sending because the count has to be known before the first frame goes
+    // out — the header announcing the phase carries it.
+    /**
+     * @return list<array{id: int, blob: string}>
+     */
+    private function pendingWrapsForPeer(SyncSession $session, RelayMailbox $relayMailbox): array
+    {
         $peerDeviceId = $session->peerDeviceId();
         if ($peerDeviceId === null || $peerDeviceId === '') {
-            return;
+            return [];
         }
+
+        $wraps = [];
 
         foreach ($relayMailbox->drain($peerDeviceId, self::MAX_GDK_WRAPS_PER_CONNECT) as $row) {
             $blob = is_string($row->blob) ? $row->blob : '';
@@ -322,9 +430,49 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
                 continue;
             }
 
-            $client->sendBinary($session->encrypt($blob));
-            $relayMailbox->confirm($rowId);
+            // Two protocols share this mailbox: the epoch wraps this step
+            // owns, and the pairing frames the relay stores for the same peer.
+            // Forwarding both confirmed a leftover PAIR_CONFIRM away down a
+            // channel whose reader discards it — wraps behind it included.
+            if (! self::isEpochWrap($blob)) {
+                continue;
+            }
+
+            $wraps[] = ['id' => $rowId, 'blob' => $blob];
         }
+
+        return $wraps;
+    }
+
+    // Forwards the collected wraps over the live Noise session, confirming
+    // each mailbox row only once it has been handed to the transport so an
+    // interrupted drain is retried on the next connect.
+    /**
+     * @param  list<array{id: int, blob: string}>  $wraps
+     */
+    private function sendWrapsToPeer(
+        WebsocketClient $client,
+        SyncSession $session,
+        RelayMailbox $relayMailbox,
+        array $wraps,
+    ): void {
+        foreach ($wraps as $wrap) {
+            $client->sendBinary($session->encrypt($wrap['blob']));
+            $relayMailbox->confirm($wrap['id']);
+        }
+    }
+
+    // Reads only the envelope type of a blob this device enqueued itself. Not
+    // a ZK violation: the relay's own store-and-forward path never calls this,
+    // and an epoch wrap is end-to-end material this device is a party to.
+    private static function isEpochWrap(string $blob): bool
+    {
+        /** @var mixed $decoded */
+        $decoded = json_decode($blob, true);
+
+        return is_array($decoded)
+            && isset($decoded['type'])
+            && $decoded['type'] === GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP;
     }
 
     // Applies sealed-box GDK epoch wraps addressed to THIS device via the
@@ -350,7 +498,20 @@ final class SyncWebSocketHandler implements WebsocketClientHandler
                 continue;
             }
 
-            $handler->handle($blob, $this->userId, $laravelSession);
+            try {
+                $handler->handle($blob, $this->userId, $laravelSession);
+            } catch (Throwable $e) {
+                // The daemon has no unlocked session, so unwrapping can fail
+                // outright. Left unconfirmed for a request-scoped drain to
+                // retry, and never rethrown: letting it escape aborted the
+                // whole exchange after catch-up had already succeeded.
+                $this->logger->info('SyncWebSocketHandler: inbound epoch wrap deferred.', [
+                    'reason' => $e::class,
+                ]);
+
+                continue;
+            }
+
             $relayMailbox->confirm($rowId);
         }
     }

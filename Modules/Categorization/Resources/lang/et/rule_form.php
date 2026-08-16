@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Muuda reeglit',
+    'heading_new' => 'Uus reegel',
+
+    'combinator_aria' => 'Tingimuste kombineerija',
+    'match_all' => 'Vasta kõigile tingimustele',
+    'match_any' => 'Vasta ükskõik millisele tingimusele',
+
+    'condition_label' => 'Tingimus :number',
+    'condition_field_aria' => 'Tingimuse :number väli',
+    'condition_operator_aria' => 'Tingimuse :number operaator',
+    'condition_value_aria' => 'Tingimuse :number väärtus',
+    'condition_value_from_aria' => 'Tingimuse :number väärtus (alates)',
+    'condition_value_to_aria' => 'Tingimuse :number väärtus (kuni)',
+    'to' => 'kuni',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'nt SPOTIFY',
+    'remove_condition' => 'Eemalda tingimus',
+    'add_condition' => '+ Lisa tingimus',
+
+    'then' => 'Siis',
+    'action_label' => 'Toiming :number',
+    'action_type_aria' => 'Toimingu :number tüüp',
+    'action_category' => 'Kategooria',
+    'action_counterparty' => 'Vastaspool',
+    'action_note' => 'Märkus',
+    'action_tax_tag' => 'Maksumärgend',
+    'assign_category_aria' => 'Määra toimingu :number kategooria',
+    'reassign_counterparty_aria' => 'Määra toimingu :number uus vastaspool',
+    'note_text_aria' => 'Toimingu :number märkuse tekst',
+    'note_placeholder' => 'Märkuse tekst…',
+    'note_mode_aria' => 'Toimingu :number märkuse režiim',
+    'note_set' => 'Asenda',
+    'note_append' => 'Lisa lõppu',
+    'deduction_category_aria' => 'Toimingu :number mahaarvamise kategooria',
+    'remove_action' => 'Eemalda toiming',
+    'add_action' => '+ Lisa toiming',
+
+    'this_year_only' => 'Ainult sel aastal ▾',
+    'override_tax_year' => 'Määra maksuaasta käsitsi',
+    'tax_year_override_aria' => 'Toimingu :number maksuaasta ülekirjutus',
+    'tax_tag_note' => 'Maksumärgendi toimingud rakenduvad järgmisel taasrakendamisel, mitte praegusel importimisel.',
+
+    'priority' => 'Prioriteet',
+    'priority_help' => 'Väiksemad numbrid rakenduvad esimesena. Reeglid, millel pole ühiseid välju, ei satu kunagi vastuollu.',
+
+    'cancel' => 'Tühista',
+    'save_changes' => 'Salvesta muudatused',
+    'save_rule' => 'Salvesta reegel',
+    'saving' => 'Salvestan…',
+
+    'error_rule_unavailable' => 'See reegel pole enam saadaval.',
+    'error_invalid_data' => 'Vigased reegli andmed — vali väärtused rippmenüüdest ja proovi uuesti.',
+    'error_duplicate' => 'Selle välja, vaste ja väärtusega reegel on juba olemas. Muuda selle asemel olemasolevat reeglit.',
+    'error_priority_whole' => 'Prioriteet peab olema täisarv.',
+    'error_add_condition' => 'Lisa vähemalt üks tingimus.',
+    'error_add_action' => 'Lisa vähemalt üks toiming.',
+    'condition_value_required' => 'Sisesta tingimuse :position väärtus.',
+    'condition_bounds_required' => 'Vali tingimuse :position alumine ja ülemine piir.',
+    'condition_amount_invalid' => 'Sisesta tingimuse :position jaoks kehtiv summa.',
+    'action_pick_category' => 'Vali selle toimingu jaoks kategooria.',
+    'action_pick_counterparty' => 'Vali vastaspool, kellele ümber määrata.',
+    'action_note_required' => 'Sisesta märkuse tekst.',
+    'action_pick_deduction' => 'Vali maksumärgendi jaoks mahaarvamise kategooria.',
+];

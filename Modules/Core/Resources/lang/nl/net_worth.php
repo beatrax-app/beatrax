@@ -9,11 +9,9 @@ return [
     'rate_details' => 'Koersdetails',
     'rate_details_for' => 'Koersdetails voor :name',
 
-    'across_one' => 'over :count rekening',
-    'across_many' => 'over :count rekeningen',
+    'across' => 'over :count rekening|over :count rekeningen',
 
-    'not_converted_one' => '· :count rekening niet omgerekend — geen koers beschikbaar',
-    'not_converted_many' => '· :count rekeningen niet omgerekend — geen koers beschikbaar',
+    'not_converted' => '· :count rekening niet omgerekend — geen koers beschikbaar|· :count rekeningen niet omgerekend — geen koers beschikbaar',
     'no_rate_available' => '· geen koers beschikbaar',
 
     'toggle_hide' => 'Verbergen',

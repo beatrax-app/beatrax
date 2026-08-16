@@ -1,0 +1,52 @@
+# Bank-fee classification rules — Liechtenstein (German, Swiss conventions).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Liechtenstein banks book in Swiss francs and use Swiss German banking
+# wording, so this file largely repeats the German half of ch.yaml — which
+# was checked rather than assumed against LLB's own pages. The one word that
+# is distinctly Swiss/Liechtenstein rather than German is "Überzugszinsen":
+# where a German bank writes "Überziehungszinsen", LLB heads its private
+# account overdraft page "Überzugszinsen".
+#
+# German fee words are compound heads, so the boundary that matters is the
+# TRAILING \b: `ZINSEN\b` matches "Überzugszinsen" and "Sollzinsen" but not
+# "ZINSENBERECHNUNG". Umlauts stay out of `regex:` bodies — the matcher runs
+# PCRE without /u, so `#i` case-folds ASCII only and \b never sees "Ü" as a
+# word character. "GEBÜHR", "KONTOFÜHRUNG" and "ÜBERZUGSZINS" are therefore
+# plain substrings, matched case-insensitively and multibyte-aware, each
+# listed alongside the ASCII transliteration Liechtenstein core-banking
+# systems fall back to.
+#
+# The trap here is one that no boundary can fence, because the umlaut forces
+# the literal path: "GEBÜHR" also sits inside "gebührenfrei" (fee-free) —
+# LLB's own package page advertises "Gebührenfrei mit LLB Invest". That is
+# product copy rather than a booking narrative, so the entry is kept, but
+# it is the reason a fee word is never extended into a looser stem here.
+# Regex bodies must be SINGLE-quoted in YAML so the backslash reaches the
+# matcher instead of being read as a YAML escape.
+#
+# Worked from: Liechtensteinische Landesbank (LLB) "Privatkonto —
+# Überzugszinsen/Konditionen" and the LLB Daily Bankpaket price pages.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "KONTOFÜHRUNG"
+    name: "Kontoführungsgebühr"
+  - pattern: "KONTOFUEHRUNG"
+    name: "Kontoführungsgebühr"
+  - pattern: "GEBÜHR"
+    name: "Bankgebühr"
+  - pattern: "GEBUEHR"
+    name: "Bankgebühr"
+  - pattern: "ÜBERZUGSZINS"
+    name: "Überzugszinsen"
+  - pattern: "UEBERZUGSZINS"
+    name: "Überzugszinsen"
+  - pattern: 'regex:ZINSEN\b'
+    name: "Zinsen"

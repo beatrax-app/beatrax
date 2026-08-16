@@ -1,0 +1,59 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'type_chip' => [
+        'aria' => 'Vastapuolen tyyppi: :type',
+        'merchant' => 'Kauppias',
+        'personal' => 'Henkilö',
+        'bank' => 'Pankki',
+        'government' => 'Julkishallinto',
+        'self' => 'Oma',
+        'unknown' => 'Tuntematon',
+    ],
+
+    'filter_chips' => [
+        'aria' => 'Suodata tyypin mukaan',
+        'all' => 'Kaikki',
+        'merchant' => 'Kauppiaat',
+        'personal' => 'Henkilöt',
+        'bank' => 'Pankit',
+        'government' => 'Julkishallinto',
+        'self' => 'Oma',
+        'unknown' => 'Tuntemattomat',
+    ],
+
+    'cp_card' => [
+        'aria' => 'Vastapuoli: :name',
+        'recent_aria' => 'Viimeaikainen toiminta',
+    ],
+
+    'chain_flow' => [
+        'aria_prefix' => 'Rahoitusketju: ',
+        'join' => ' kohteeseen ',
+    ],
+
+    'iban_row' => [
+        'label' => 'IBAN',
+        'hidden_aria' => 'IBAN piilotettu — paljasta se napsauttamalla Näytä IBAN',
+        'show' => 'Näytä IBAN',
+        'hide' => 'Piilota IBAN',
+    ],
+
+    'privacy_banner' => [
+        'aria' => 'Tietosuojahuomautus henkilöyhteystiedosta',
+        'body' => '🔒 Tämä on henkilöyhteystieto. IBAN ja henkilötiedot ovat oletuksena piilossa, eikä niitä jaeta koskaan vienneissä.',
+    ],
+
+    'self_stub' => [
+        'aria' => 'Ei todellinen vastapuoli',
+        'heading' => 'Tämä ei oikeastaan ole vastapuoli',
+
+        'body_rest_html' => ' näkyy täällä, koska se esiintyy tapahtumissasi tilien välisenä rahoitusosuutena. Se on kuitenkin <strong>oma tilisi</strong>, ei taho, jonka kanssa asioit.',
+        'body2' => 'Avaa tilinäkymä, niin näet saldon, tiliotteet ja koko tapahtumahistorian.',
+        'open_cta' => 'Avaa tilin :name näkymä →',
+        'hide_cta' => 'Piilota tästä listasta',
+        'recent_legs' => 'Viimeisimmät tilien väliset osuudet',
+    ],
+];

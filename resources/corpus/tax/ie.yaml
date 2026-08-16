@@ -1,0 +1,75 @@
+# Tax deduction categories — Ireland
+# Mirrors the IE Income Tax Return (Form 11 for self-assessed, the PAYE Income
+# Tax Return in myAccount) — personal tax credits, reliefs and exemptions.
+#
+# Authority: Revenue (Irish Tax and Customs), revenue.ie personal tax credits,
+# reliefs and exemptions pages, plus the Revenue Budget 2026 Summary.
+# Tax years 2025 (currently being filed) and 2026.
+#
+# Note: charitable donations are deliberately absent — in Ireland the approved
+# body claims the relief on the grossed-up donation, not the donor. Trade union
+# subscription relief and the Home Renovation Incentive are abolished.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "ie_health_expenses"
+    name: "Health expenses"
+    short_name: "Medical"
+    hint: "Doctor, consultant, prescription and hospital costs"
+  - key: "ie_nursing_home"
+    name: "Nursing home expenses"
+    short_name: "Nursing Home"
+    hint: "Nursing home fees, relieved at your highest rate of tax"
+  - key: "ie_dental_expenses"
+    name: "Non-routine dental expenses"
+    short_name: "Dental"
+    hint: "Crowns, root canal, braces and implants; routine work excluded"
+  - key: "ie_rent_tax_credit"
+    name: "Rent Tax Credit"
+    short_name: "Rent"
+    hint: "Rent paid on your home or on a student child's rented property"
+  - key: "ie_mortgage_interest"
+    name: "Mortgage Interest Tax Relief"
+    short_name: "Mortgage"
+    hint: "Relief on the increase in mortgage interest paid against 2022"
+  - key: "ie_remote_working"
+    name: "Remote Working Relief"
+    short_name: "Remote Work"
+    hint: "Share of electricity, heating and broadband for days worked at home"
+  - key: "ie_flat_rate_expenses"
+    name: "Flat Rate Expenses"
+    short_name: "Flat Rate"
+    hint: "Agreed annual expense allowance set by Revenue for your occupation"
+  - key: "ie_tuition_fees"
+    name: "Tuition fees for third-level education"
+    short_name: "Tuition"
+    hint: "Approved third-level course fees and the student contribution"
+  - key: "ie_pension_contributions"
+    name: "Pension contributions"
+    short_name: "Pension"
+    hint: "Occupational scheme, AVC, PRSA, RAC and PEPP contributions"
+  - key: "ie_medical_insurance"
+    name: "Medical insurance premiums"
+    short_name: "Health Ins"
+    hint: "Medical insurance relief, including where your employer pays it"
+  - key: "ie_permanent_health_benefit"
+    name: "Permanent Health Benefit contributions"
+    short_name: "Income Prot"
+    hint: "Premiums on an approved income continuance plan"
+  - key: "ie_employing_a_carer"
+    name: "Employing a carer"
+    short_name: "Carer Costs"
+    hint: "Cost of a carer for an incapacitated person, at your highest rate"
+  - key: "ie_help_to_buy"
+    name: "Help to Buy"
+    short_name: "Help to Buy"
+    hint: "Refund of income tax and DIRT for first-time buyers of a new home"
+  - key: "ie_employment_expenses"
+    name: "Employment and trading expenses"
+    short_name: "Business"
+    hint: "Costs incurred wholly and exclusively for your trade or profession"

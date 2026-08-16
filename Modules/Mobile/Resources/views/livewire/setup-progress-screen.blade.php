@@ -48,21 +48,64 @@
             @endif
         </p>
 
-        {{-- Progress bar --}}
+        {{-- Progress bar. Indeterminate while the running step has nothing
+             countable: a fixed full bar through a long rebuild read as a
+             finished sync that had stalled. --}}
         <div
-            class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"
+            class="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
             role="progressbar"
+            {{-- Always names the running step, so an indeterminate bar still
+                 announces what it is waiting on; the number is added only
+                 when the step actually has one. --}}
+            aria-valuetext="{{ Lang::get('mobile::setup.step.'.$step->value) }}"
             aria-valuenow="{{ $percent }}"
             aria-valuemin="0"
             aria-valuemax="100"
             aria-label="{{ Lang::get('mobile::setup.progress_aria') }}"
         >
-            <div class="h-2 rounded-full bg-slate-900 dark:bg-slate-100" style="width: {{ $percent }}%"></div>
+            @if ($percent > 0)
+                <div class="h-2 rounded-full bg-slate-900 transition-[width] duration-300 dark:bg-slate-100" style="width: {{ $percent }}%"></div>
+            @else
+                <div class="beatrax-indeterminate h-2 w-1/3 rounded-full bg-slate-900 dark:bg-slate-100"></div>
+            @endif
         </div>
 
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-            {{ Lang::get('mobile::setup.records', ['applied' => $recordsApplied, 'expected' => $recordsExpected ?? $recordsApplied]) }}
-        </p>
+        {{-- The count only. The step list already says WHICH stage is
+             running, so repeating that in prose underneath was noise — but
+             how much has moved is the one thing it cannot show. --}}
+        @if ($recordsApplied > 0)
+            <p aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">
+                {{ Lang::get('mobile::setup.records', ['applied' => $recordsApplied, 'expected' => $recordsExpected ?? $recordsApplied]) }}
+            </p>
+        @endif
 
+        {{-- Every stage, so a slow one reads as "3 of 4" rather than a hang. --}}
+        <ol class="space-y-2 text-left">
+            @foreach ($this->steps() as $entry)
+                @php($done = $entry->isBefore($step) || $phase === 'complete')
+                @php($current = ! $done && $entry === $step)
+                <li class="flex items-center gap-3 text-sm">
+                    <span
+                        @class([
+                            'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold',
+                            'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900' => $done,
+                            'border-slate-900 text-slate-900 dark:border-slate-100 dark:text-slate-100' => $current,
+                            'border-slate-300 text-slate-400 dark:border-slate-600 dark:text-slate-500' => ! $done && ! $current,
+                        ])
+                        aria-hidden="true"
+                    >{{ $done ? '✓' : $loop->iteration }}</span>
+                    <span @class([
+                        'text-slate-900 dark:text-slate-100' => $done || $current,
+                        'font-medium' => $current,
+                        'text-slate-400 dark:text-slate-500' => ! $done && ! $current,
+                    ])>
+                        {{ Lang::get('mobile::setup.step.'.$entry->value) }}
+                        @if ($current)
+                            <span class="sr-only">{{ Lang::get('mobile::setup.step_current') }}</span>
+                        @endif
+                    </span>
+                </li>
+            @endforeach
+        </ol>
     </div>
 </div>

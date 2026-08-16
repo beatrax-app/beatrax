@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Upraviť pravidlo',
+    'heading_new' => 'Nové pravidlo',
+
+    'combinator_aria' => 'Spojka podmienok',
+    'match_all' => 'Splniť všetky podmienky',
+    'match_any' => 'Splniť ktorúkoľvek podmienku',
+
+    'condition_label' => 'Podmienka :number',
+    'condition_field_aria' => 'Pole podmienky :number',
+    'condition_operator_aria' => 'Operátor podmienky :number',
+    'condition_value_aria' => 'Hodnota podmienky :number',
+    'condition_value_from_aria' => 'Hodnota podmienky :number (od)',
+    'condition_value_to_aria' => 'Hodnota podmienky :number (do)',
+    'to' => 'do',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'napr. SPOTIFY',
+    'remove_condition' => 'Odstrániť podmienku',
+    'add_condition' => '+ Pridať podmienku',
+
+    'then' => 'Potom',
+    'action_label' => 'Akcia :number',
+    'action_type_aria' => 'Typ akcie :number',
+    'action_category' => 'Kategória',
+    'action_counterparty' => 'Protistrana',
+    'action_note' => 'Poznámka',
+    'action_tax_tag' => 'Daňová značka',
+    'assign_category_aria' => 'Priradiť kategóriu pre akciu :number',
+    'reassign_counterparty_aria' => 'Zmeniť protistranu pre akciu :number',
+    'note_text_aria' => 'Text poznámky pre akciu :number',
+    'note_placeholder' => 'Text poznámky…',
+    'note_mode_aria' => 'Režim poznámky pre akciu :number',
+    'note_set' => 'Nastaviť',
+    'note_append' => 'Pripojiť',
+    'deduction_category_aria' => 'Kategória odpočtu pre akciu :number',
+    'remove_action' => 'Odstrániť akciu',
+    'add_action' => '+ Pridať akciu',
+
+    'this_year_only' => 'Len tento rok ▾',
+    'override_tax_year' => 'Prepísať daňový rok',
+    'tax_year_override_aria' => 'Prepísanie daňového roka pre akciu :number',
+    'tax_tag_note' => 'Akcie s daňovou značkou sa uplatnia až pri ďalšom použití pravidiel, nie pri tomto importe.',
+
+    'priority' => 'Priorita',
+    'priority_help' => 'Nižšie čísla sa vykonajú skôr. Pravidlá bez spoločných polí si nikdy neodporujú.',
+
+    'cancel' => 'Zrušiť',
+    'save_changes' => 'Uložiť zmeny',
+    'save_rule' => 'Uložiť pravidlo',
+    'saving' => 'Ukladá sa…',
+
+    'error_rule_unavailable' => 'Toto pravidlo už nie je dostupné.',
+    'error_invalid_data' => 'Neplatné údaje pravidla — vyber hodnoty zo zoznamov a skús to znova.',
+    'error_duplicate' => 'Pravidlo s týmto poľom, porovnaním a hodnotou už existuje. Uprav radšej existujúce pravidlo.',
+    'error_priority_whole' => 'Priorita musí byť celé číslo.',
+    'error_add_condition' => 'Pridaj aspoň jednu podmienku.',
+    'error_add_action' => 'Pridaj aspoň jednu akciu.',
+    'condition_value_required' => 'Zadaj hodnotu pre podmienku :position.',
+    'condition_bounds_required' => 'Vyber dolnú a hornú hranicu pre podmienku :position.',
+    'condition_amount_invalid' => 'Zadaj platnú sumu pre podmienku :position.',
+    'action_pick_category' => 'Vyber kategóriu pre túto akciu.',
+    'action_pick_counterparty' => 'Vyber protistranu, na ktorú sa má priradiť.',
+    'action_note_required' => 'Zadaj text poznámky.',
+    'action_pick_deduction' => 'Vyber kategóriu odpočtu pre daňovú značku.',
+];

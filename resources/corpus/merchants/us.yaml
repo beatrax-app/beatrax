@@ -1,47 +1,1231 @@
 # Merchant corpus — United States. region defaults to US. Schema: see merchants/nl.yaml.
 entries:
-  - { pattern: "WALMART", name: "Walmart", category: "Groceries" }
-  - { pattern: "WAL-MART", name: "Walmart", category: "Groceries" }
-  - { pattern: "TARGET", name: "Target", category: "Groceries" }
+  - { pattern: "24 HOUR FIT", name: "24 Hour Fitness", category: "Memberships" }
+  - { pattern: "7-ELEVEN", name: "7-Eleven", category: "Fuel" }
+  - { pattern: "ADT SECURITY", name: "ADT", category: "Housing" }
+  - pattern: "AETNA"
+    name: "Aetna"
+    category: "Healthcare"
+    website: "https://www.aetna.com/"
+  - { pattern: "ALBERTSONS", name: "Albertsons", category: "Groceries" }
+  - pattern: "ALLSTATE"
+    name: "Allstate"
+    category: "Insurance"
+    website: "https://www.allstate.com/"
+  - pattern: "AMERICAN HOME SHIELD"
+    name: "American Home Shield"
+    category: "Insurance"
+    website: "https://www.ahs.com/"
+  - pattern: "AMERICAN RED CROSS"
+    name: "American Red Cross"
+    category: "Donations"
+    website: "https://www.redcross.org/"
+  - { pattern: "AMTRAK", name: "Amtrak", category: "Public transport" }
+  - pattern: "ANTHEM BLUE CROSS"
+    name: "Anthem Blue Cross Blue Shield"
+    category: "Healthcare"
+    website: "https://www.anthem.com/"
+  - pattern: "ASTOUND BROADBAND"
+    name: "Astound Broadband"
+    category: "Internet & Phone"
+    website: "https://www.astound.com/"
+  - pattern: "ASURION"
+    name: "Asurion"
+    category: "Insurance"
+    website: "https://www.asurion.com/"
+  - pattern: "AT&T"
+    name: "AT&T"
+    category: "Internet & Phone"
+    support_url: "https://www.att.com/support/"
+  - pattern: "ATMOS ENERGY"
+    name: "Atmos Energy"
+    category: "Utilities"
+    website: "https://www.atmosenergy.com/"
+    support_phone: "888.286.6700"
+  - { pattern: "BEST BUY", name: "Best Buy" }
+  - pattern: "BETTERHELP"
+    name: "BetterHelp"
+    category: "Health"
+    website: "https://www.betterhelp.com/"
+    support_url: "https://www.betterhelp.com/faq/"
+  - { pattern: "BLUE APRON", name: "Blue Apron", category: "Groceries" }
+  - pattern: "BOOST MOBILE"
+    name: "Boost Mobile"
+    category: "Internet & Phone"
+    website: "https://www.boostmobile.com/"
+    support_url: "https://help.boostmobile.com/"
+  - pattern: "CENTERPOINT ENERGY"
+    name: "CenterPoint Energy"
+    category: "Utilities"
+    website: "https://www.centerpointenergy.com/en-us/"
+  - pattern: "CENTURYLINK"
+    name: "CenturyLink"
+    category: "Internet & Phone"
+    website: "https://www.centurylink.com/home.html"
+  - { pattern: "CHEVRON", name: "Chevron", category: "Fuel" }
+  - pattern: "CHEWY"
+    name: "Chewy"
+    category: "Other"
+    website: "https://www.chewy.com/"
+    support_phone: "1-800-672-4399"
+  - { pattern: "CHIPOTLE", name: "Chipotle", category: "Eating out" }
+  - pattern: "CIGNA"
+    name: "Cigna Healthcare"
+    category: "Healthcare"
+    website: "https://www.cigna.com/"
+  - pattern: "CLICKPAY"
+    name: "ClickPay"
+    category: "Housing"
+    website: "https://www.clickpay.com/"
+  - pattern: "COMCAST"
+    name: "Comcast Xfinity"
+    category: "Internet & Phone"
+    support_url: "https://www.xfinity.com/support/"
+  - pattern: "CON EDISON"
+    name: "Con Edison"
+    category: "Utilities"
+    website: "https://www.coned.com/en"
+  - { pattern: "COSTCO", name: "Costco", category: "Groceries" }
+  - { pattern: "COX COMM", name: "Cox Communications", category: "Internet & Phone" }
+  - pattern: "CRICKET WIRELESS"
+    name: "Cricket Wireless"
+    category: "Internet & Phone"
+    website: "https://www.cricketwireless.com/"
+    support_url: "https://www.cricketwireless.com/support"
+  - pattern: "CRUNCH FITNESS"
+    name: "Crunch Fitness"
+    category: "Memberships"
+    website: "https://www.crunch.com/"
+    support_url: "https://www.crunch.com/contact-us"
+    support_phone: "844-927-8624"
+  - pattern: "CUBESMART"
+    name: "CubeSmart"
+    category: "Housing"
+    website: "https://www.cubesmart.com/"
+  - { pattern: "CVS", name: "CVS" }
+  - { pattern: "DIRECTV", name: "DIRECTV", category: "Streaming" }
+  - pattern: "DISCOVERYPLUS"
+    name: "discovery+"
+    category: "Streaming"
+    website: "https://www.discoveryplus.com/"
+    support_url: "https://help.discoveryplus.com/hc/en-us"
+  - pattern: "DISH NETWORK"
+    name: "DISH Network"
+    category: "Streaming"
+    website: "https://www.dish.com/"
+  - pattern: "DOLLAR SHAVE CLUB"
+    name: "Dollar Shave Club"
+    category: "Personal care"
+    website: "https://us.dollarshaveclub.com/"
+    support_url: "https://ask.dollarshaveclub.com/en-US"
+  - pattern: "DOMINION ENERGY"
+    name: "Dominion Energy"
+    category: "Utilities"
+    website: "https://www.dominionenergy.com/"
+  - { pattern: "DOORDASH", name: "DoorDash", category: "Eating out" }
+  - pattern: "DOW JONES"
+    name: "The Wall Street Journal"
+    category: "Subscriptions"
+    support_url: "https://customercenter.wsj.com/public"
+  - pattern: "DREAMHOST"
+    name: "DreamHost"
+    category: "Cloud / Software"
+    website: "https://www.dreamhost.com/"
+    support_url: "https://www.dreamhost.com/support/"
+  - pattern: "DTE ENERGY"
+    name: "DTE Energy"
+    category: "Utilities"
+    website: "https://www.dteenergy.com/"
+    support_phone: "(800) 947-5000"
+  - { pattern: "DUKE ENERGY", name: "Duke Energy", category: "Utilities" }
+  - { pattern: "E-ZPASS", name: "E-ZPass", category: "Transport" }
+  - pattern: "EDFINANCIAL"
+    name: "Edfinancial Services"
+    category: "Fees & charges"
+  - pattern: "EQUINOX"
+    name: "Equinox"
+    category: "Memberships"
+    website: "https://www.equinox.com/"
+    support_url: "https://www.equinox.com/faq"
+    support_email: "cancellations@equinox.com"
+  - pattern: "EVERSOURCE"
+    name: "Eversource Energy"
+    category: "Utilities"
+    website: "https://www.eversource.com/residential"
+  - { pattern: "EXXON", name: "ExxonMobil", category: "Fuel" }
+  - { pattern: "EZPASS", name: "E-ZPass", category: "Transport" }
+  - pattern: "FACTOR75"
+    name: "Factor"
+    category: "Groceries"
+    website: "https://www.factor75.com/"
+  - { pattern: "FARMERS INS", name: "Farmers Insurance", category: "Insurance" }
+  - pattern: "FASTRAK"
+    name: "FasTrak (California)"
+    category: "Transport"
+    website: "https://www.bayareafastrak.org/en/home/index.shtml"
+  - pattern: "FEEDING AMERICA"
+    name: "Feeding America"
+    category: "Donations"
+    website: "https://www.feedingamerica.org/"
+    support_phone: "+1-800-771-2303"
+  - pattern: "FIRSTSERVICE RESIDENTIAL"
+    name: "FirstService Residential"
+    category: "Housing"
+    website: "https://www.fsresidential.com/corporate/"
+  - { pattern: "FLORIDA POWER", name: "Florida Power & Light", category: "Utilities" }
+  - { pattern: "FRONTIER COMM", name: "Frontier Communications", category: "Internet & Phone" }
+  - { pattern: "FUBOTV", name: "Fubo", category: "Streaming" }
+  - { pattern: "GEICO", name: "GEICO", category: "Insurance" }
+  - pattern: "GEORGIA POWER"
+    name: "Georgia Power"
+    category: "Utilities"
+    website: "https://www.georgiapower.com/"
+  - pattern: "GIANT EAGLE"
+    name: "Giant Eagle"
+    category: "Groceries"
+    website: "https://www.gianteagle.com/"
+  - pattern: "GREEN CHEF"
+    name: "Green Chef"
+    category: "Groceries"
+    website: "https://www.greenchef.com/"
+  - pattern: "GRUBHUB"
+    name: "Grubhub"
+    category: "Eating out"
+    support_url: "https://www.grubhub.com/help/contact-us"
+  - { pattern: "H-E-B", name: "H-E-B", category: "Groceries" }
+  - pattern: "HABITAT FOR HUMANITY"
+    name: "Habitat for Humanity"
+    category: "Donations"
+    website: "https://www.habitat.org/"
+  - { pattern: "HARRIS TEETER", name: "Harris Teeter", category: "Groceries" }
+  - { pattern: "HOME CHEF", name: "Home Chef", category: "Groceries" }
+  - { pattern: "HOME DEPOT", name: "Home Depot" }
+  - pattern: "HULU"
+    name: "Hulu"
+    category: "Streaming"
+    cancel_url: "https://help.hulu.com/article/hulu-cancel-hulu-subscription"
+  - pattern: "INSTACART"
+    name: "Instacart"
+    category: "Groceries"
+    website: "https://www.instacart.com/"
+    support_url: "https://www.instacart.com/help"
+  - pattern: "KAISER PERMANENTE"
+    name: "Kaiser Permanente"
+    category: "Healthcare"
+    website: "https://healthy.kaiserpermanente.org/front-door"
   - { pattern: "KROGER", name: "Kroger", category: "Groceries" }
-  - { pattern: "SAFEWAY", name: "Safeway", category: "Groceries" }
+  - { pattern: "LA FITNESS", name: "LA Fitness", category: "Memberships" }
+  - pattern: "LIBERTY MUTUAL"
+    name: "Liberty Mutual"
+    category: "Insurance"
+    website: "https://www.libertymutual.com/"
+  - pattern: "LIFE TIME FITNESS"
+    name: "Life Time"
+    category: "Memberships"
+    website: "https://www.lifetime.life/"
+  - { pattern: "LOWES", name: "Lowe's" }
+  - { pattern: "LYFT", name: "Lyft", category: "Public transport" }
+  - pattern: "MBTA"
+    name: "MBTA (Boston)"
+    category: "Public transport"
+    website: "https://www.mbta.com/"
+    support_phone: "617-222-3200"
+  - { pattern: "METROPCS", name: "Metro by T-Mobile", category: "Internet & Phone" }
+  - { pattern: "MINT MOBILE", name: "Mint Mobile", category: "Internet & Phone" }
+  - pattern: "MOHELA"
+    name: "MOHELA"
+    category: "Fees & charges"
+    website: "https://www.mohela.com/"
+    support_url: "https://www.mohela.com/DL/common/contactUs.aspx"
+  - pattern: "NATIONAL GRID"
+    name: "National Grid"
+    category: "Utilities"
+    website: "https://www.nationalgridus.com/"
+  - pattern: "NATIONWIDE INS"
+    name: "Nationwide"
+    category: "Insurance"
+    website: "https://www.nationwide.com/"
+  - pattern: "NAVIENT"
+    name: "Navient"
+    category: "Fees & charges"
+    website: "https://www.navient.com/"
+    support_url: "https://www.navient.com/contact-us/"
+  - { pattern: "NELNET", name: "Nelnet", category: "Fees & charges" }
+  - pattern: "NOOM"
+    name: "Noom"
+    category: "Health"
+    website: "https://www.noom.com/"
+    support_url: "https://www.noom.com/support/"
+  - pattern: "NYTIMES"
+    name: "The New York Times"
+    category: "Subscriptions"
+    website: "https://www.nytimes.com/"
+    support_url: "https://help.nytimes.com/"
+  - { pattern: "OMNY", name: "MTA OMNY (New York)", category: "Public transport" }
+  - { pattern: "OPTIMUM", name: "Optimum", category: "Internet & Phone" }
+  - pattern: "ORANGETHEORY"
+    name: "Orangetheory Fitness"
+    category: "Memberships"
+    website: "https://www.orangetheory.com/en-us"
+  - pattern: "ORKIN"
+    name: "Orkin"
+    category: "Housing"
+    website: "https://www.orkin.com/"
+  - { pattern: "PEACOCK", name: "Peacock", category: "Streaming" }
+  - { pattern: "PELOTON", name: "Peloton", category: "Memberships" }
+  - pattern: "PETINSURANCE.COM"
+    name: "Nationwide Pet Insurance"
+    category: "Insurance"
+    website: "https://www.petinsurance.com/"
+    support_phone: "1-888-899-4874"
+  - { pattern: "PG&E", name: "Pacific Gas and Electric", category: "Utilities" }
+  - pattern: "PHILO"
+    name: "Philo"
+    category: "Streaming"
+    website: "https://www.philo.com/"
+    support_url: "https://help.philo.com/"
+  - { pattern: "PLANET FIT", name: "Planet Fitness", category: "Memberships" }
+  - pattern: "PLANNED PARENTHOOD"
+    name: "Planned Parenthood"
+    category: "Donations"
+    website: "https://www.plannedparenthood.org/"
+    support_phone: "1-800-230-7526"
+  - { pattern: "PROGRESSIVE", name: "Progressive", category: "Insurance" }
+  - pattern: "PUBLIC STORAGE"
+    name: "Public Storage"
+    category: "Housing"
+    website: "https://www.publicstorage.com/"
   - { pattern: "PUBLIX", name: "Publix", category: "Groceries" }
+  - pattern: "QUANTUM FIBER"
+    name: "Quantum Fiber"
+    category: "Internet & Phone"
+    website: "https://www.quantumfiber.com/"
+  - pattern: "REPUBLIC SERVICES"
+    name: "Republic Services"
+    category: "Utilities"
+    website: "https://www.republicservices.com/"
+  - { pattern: "RITE AID", name: "Rite Aid", category: "Health" }
+  - { pattern: "SAFEWAY", name: "Safeway", category: "Groceries" }
+  - pattern: "SALLIE MAE"
+    name: "Sallie Mae"
+    category: "Fees & charges"
+    website: "https://www.salliemae.com/"
+    support_url: "https://www.salliemae.com/contact-us/"
+  - pattern: "SALVATION ARMY"
+    name: "The Salvation Army"
+    category: "Donations"
+    website: "https://www.salvationarmyusa.org/"
+  - { pattern: "SAMS CLUB", name: "Sam's Club", category: "Groceries" }
+  - { pattern: "SDGE", name: "San Diego Gas & Electric", category: "Utilities" }
+  - { pattern: "SHELL OIL", name: "Shell", category: "Fuel" }
+  - { pattern: "SHIPT", name: "Shipt", category: "Groceries" }
+  - pattern: "SIMPLISAFE"
+    name: "SimpliSafe"
+    category: "Housing"
+    website: "https://simplisafe.com/"
+    support_url: "https://support.simplisafe.com/"
+  - pattern: "SIRIUSXM"
+    name: "SiriusXM"
+    category: "Streaming"
+    cancel_url: "https://www.siriusxm.com/help/manage-or-cancel-service"
+    support_url: "https://www.siriusxm.com/help"
+  - { pattern: "SLING", name: "Sling TV", category: "Streaming" }
+  - pattern: "SO CAL EDISON"
+    name: "Southern California Edison"
+    category: "Utilities"
+    website: "https://www.sce.com/"
+  - { pattern: "SOCALGAS", name: "SoCalGas", category: "Utilities" }
+  - pattern: "SOULCYCLE"
+    name: "SoulCycle"
+    category: "Memberships"
+    website: "https://www.soul-cycle.com/"
+    support_url: "https://www.soul-cycle.com/faq/"
+  - pattern: "SPECTRUM"
+    name: "Spectrum"
+    category: "Internet & Phone"
+    support_url: "https://www.spectrum.net/support"
+  - pattern: "SQUARESPACE"
+    name: "Squarespace"
+    category: "Cloud / Software"
+    website: "https://www.squarespace.com/"
+    cancel_url: "https://support.squarespace.com/hc/en-us/articles/205810508-Cancel-your-website-subscription"
+    support_url: "https://support.squarespace.com/hc/en-us"
+  - pattern: "ST JUDE"
+    name: "St. Jude Children's Research Hospital"
+    category: "Donations"
+    website: "https://www.stjude.org/"
+    support_phone: "(800) 822-6344"
+  - { pattern: "STARBUCKS", name: "Starbucks", category: "Eating out" }
+  - pattern: "STARZ"
+    name: "Starz"
+    category: "Streaming"
+    website: "https://www.starz.com/us/en/"
+  - pattern: "STATE FARM"
+    name: "State Farm"
+    category: "Insurance"
+    support_url: "https://www.statefarm.com/customer-care"
+  - { pattern: "STRAIGHT TALK", name: "Straight Talk Wireless", category: "Internet & Phone" }
+  - { pattern: "SUNPASS", name: "SunPass (Florida)", category: "Transport" }
+  - { pattern: "TARGET", name: "Target", category: "Groceries" }
+  - pattern: "TERMINIX"
+    name: "Terminix"
+    category: "Housing"
+    website: "https://www.terminix.com/"
+    support_url: "https://www.terminix.com/contact-us/"
+  - { pattern: "TRACFONE", name: "TracFone Wireless", category: "Internet & Phone" }
+  - { pattern: "TRADER JOE", name: "Trader Joe's", category: "Groceries" }
+  - pattern: "TRAVELERS INS"
+    name: "Travelers"
+    category: "Insurance"
+    website: "https://www.travelers.com/"
+  - pattern: "UNITEDHEALTHCARE"
+    name: "UnitedHealthcare"
+    category: "Healthcare"
+    website: "https://www.uhc.com/"
+  - { pattern: "USAA", name: "USAA", category: "Insurance" }
+  - pattern: "VERIZON"
+    name: "Verizon"
+    category: "Internet & Phone"
+    support_url: "https://www.verizon.com/support/"
+    support_phone: "1-800-837-4966"
+  - { pattern: "VZWRLSS", name: "Verizon", category: "Internet & Phone" }
+  - { pattern: "WAL-MART", name: "Walmart", category: "Groceries" }
+  - { pattern: "WALGREENS", name: "Walgreens" }
+  - { pattern: "WALMART", name: "Walmart", category: "Groceries" }
+  - { pattern: "WASHINGTONPOST", name: "The Washington Post", category: "Subscriptions" }
+  - pattern: "WASTE CONNECTIONS"
+    name: "Waste Connections"
+    category: "Utilities"
+    website: "https://www.wasteconnections.com/"
+    support_phone: "844-708-7274"
+  - pattern: "WEGMANS"
+    name: "Wegmans"
+    category: "Groceries"
+    website: "https://www.wegmans.com/"
+  - pattern: "WEIGHTWATCHERS"
+    name: "WeightWatchers"
+    category: "Health"
+    website: "https://www.weightwatchers.com/us"
   - { pattern: "WHOLE FOODS", name: "Whole Foods", category: "Groceries" }
   - { pattern: "WHOLEFDS", name: "Whole Foods", category: "Groceries" }
-  - { pattern: "TRADER JOE", name: "Trader Joe's", category: "Groceries" }
-  - { pattern: "COSTCO", name: "Costco", category: "Groceries" }
-  - { pattern: "SAMS CLUB", name: "Sam's Club", category: "Groceries" }
-  - { pattern: "SHELL OIL", name: "Shell", category: "Fuel" }
-  - { pattern: "EXXON", name: "ExxonMobil", category: "Fuel" }
-  - { pattern: "CHEVRON", name: "Chevron", category: "Fuel" }
-  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
-  - { pattern: "7-ELEVEN", name: "7-Eleven", category: "Fuel" }
-  - { pattern: "VERIZON", name: "Verizon", category: "Internet & Phone" }
-  - { pattern: "VZWRLSS", name: "Verizon", category: "Internet & Phone" }
-  - { pattern: "AT&T", name: "AT&T", category: "Internet & Phone" }
-  - { pattern: "T-MOBILE", name: "T-Mobile", category: "Internet & Phone" }
-  - { pattern: "XFINITY", name: "Comcast Xfinity", category: "Internet & Phone" }
-  - { pattern: "COMCAST", name: "Comcast Xfinity", category: "Internet & Phone" }
-  - { pattern: "SPECTRUM", name: "Spectrum", category: "Internet & Phone" }
-  - { pattern: "HULU", name: "Hulu", category: "Streaming" }
-  - { pattern: "PEACOCK", name: "Peacock", category: "Streaming" }
-  - { pattern: "SLING", name: "Sling TV", category: "Streaming" }
+  - pattern: "WINDSTREAM"
+    name: "Windstream Kinetic"
+    category: "Internet & Phone"
+    website: "https://www.gokinetic.com/"
+  - pattern: "WIX.COM"
+    name: "Wix"
+    category: "Cloud / Software"
+    website: "https://www.wix.com/"
+    support_url: "https://support.wix.com/en"
+  - pattern: "WM EZPAY"
+    name: "WM (Waste Management)"
+    category: "Utilities"
+    website: "https://www.wm.com/us/en"
+  - pattern: "WMATA"
+    name: "WMATA / SmarTrip (Washington DC)"
+    category: "Public transport"
+    website: "https://www.wmata.com/"
+    support_url: "https://www.wmata.com/help/contact.html"
+  - pattern: "XCEL ENERGY"
+    name: "Xcel Energy"
+    category: "Utilities"
+    website: "https://www.xcelenergy.com/"
+  - pattern: "XFINITY"
+    name: "Comcast Xfinity"
+    category: "Internet & Phone"
+    support_url: "https://www.xfinity.com/support/"
   - { pattern: "YOUTUBE TV", name: "YouTube TV", category: "Streaming" }
-  - { pattern: "SIRIUSXM", name: "SiriusXM", category: "Streaming" }
-  - { pattern: "UBER", name: "Uber", category: "Public transport" }
-  - { pattern: "LYFT", name: "Lyft", category: "Public transport" }
-  - { pattern: "AMTRAK", name: "Amtrak", category: "Public transport" }
-  - { pattern: "BEST BUY", name: "Best Buy" }
-  - { pattern: "HOME DEPOT", name: "Home Depot" }
-  - { pattern: "LOWES", name: "Lowe's" }
-  - { pattern: "CVS", name: "CVS" }
-  - { pattern: "WALGREENS", name: "Walgreens" }
-  - { pattern: "GEICO", name: "GEICO", category: "Insurance" }
-  - { pattern: "STATE FARM", name: "State Farm", category: "Insurance" }
-  - { pattern: "PROGRESSIVE", name: "Progressive", category: "Insurance" }
-  - { pattern: "DOORDASH", name: "DoorDash", category: "Eating out" }
-  - { pattern: "GRUBHUB", name: "Grubhub", category: "Eating out" }
-  - { pattern: "STARBUCKS", name: "Starbucks", category: "Eating out" }
-  - { pattern: "CHIPOTLE", name: "Chipotle", category: "Eating out" }
-  - { pattern: "PLANET FIT", name: "Planet Fitness", category: "Memberships" }
-  - { pattern: "PELOTON", name: "Peloton", category: "Memberships" }
+
+  # ═══ Depth pass: US recurring billers, high-frequency retail and long tail ═══
+  - { pattern: "regex:^SQ \\*", name: "Square (merchant)" }
+  - { pattern: "regex:^TST\\*", name: "Toast (restaurant)", category: "Eating out" }
+  - { pattern: "regex:^PAYPAL \\*", name: "PayPal" }
+  - { pattern: "regex:^PP\\*", name: "PayPal" }
+  - { pattern: "ATT*BILL PAYMENT", name: "AT&T", category: "Internet & Phone" }
+  - { pattern: "TMOBILE", name: "T-Mobile", category: "Internet & Phone" }
+  - { pattern: "CHARTER COMM", name: "Spectrum (Charter)", category: "Internet & Phone" }
+  - { pattern: "IC* INSTACART", name: "Instacart", category: "Groceries" }
+  - { pattern: "DD *DOORDASH", name: "DoorDash", category: "Eating out" }
+  - { pattern: "WASTE MGMT", name: "WM (Waste Management)", category: "Utilities" }
+  - { pattern: "DISCOVER E-PAYMENT", name: "Discover", category: "Fees & charges" }
+  - { pattern: "CHASE CREDIT CRD", name: "Chase", category: "Fees & charges" }
+  - { pattern: "JPMORGAN CHASE", name: "Chase", category: "Fees & charges" }
+  - { pattern: "AMEX EPAYMENT", name: "American Express", category: "Fees & charges" }
+  - { pattern: "USCELLULAR", name: "UScellular", category: "Internet & Phone" }
+  - { pattern: "US CELLULAR", name: "UScellular", category: "Internet & Phone" }
+  - { pattern: "CONSUMER CELLULAR", name: "Consumer Cellular", category: "Internet & Phone" }
+  - { pattern: "TOTAL WIRELESS", name: "Total Wireless", category: "Internet & Phone" }
+  - { pattern: "SIMPLE MOBILE", name: "Simple Mobile", category: "Internet & Phone" }
+  - { pattern: "PURE TALK", name: "PureTalk", category: "Internet & Phone" }
+  - { pattern: "RED POCKET", name: "Red Pocket Mobile", category: "Internet & Phone" }
+  - { pattern: "H2O WIRELESS", name: "H2O Wireless", category: "Internet & Phone" }
+  - { pattern: "MEDIACOM", name: "Mediacom", category: "Internet & Phone" }
+  - pattern: "WOW INTERNET"
+    name: "WOW! Internet"
+    category: "Internet & Phone"
+    website: "https://www.wowway.com/"
+  - { pattern: "ZIPLY FIBER", name: "Ziply Fiber", category: "Internet & Phone" }
+  - { pattern: "HUGHESNET", name: "HughesNet", category: "Internet & Phone" }
+  - pattern: "VIASAT"
+    name: "Viasat"
+    category: "Internet & Phone"
+    website: "https://www.viasat.com/"
+  - { pattern: "EARTHLINK", name: "EarthLink", category: "Internet & Phone" }
+  - pattern: "GOOGLE FIBER"
+    name: "Google Fiber"
+    category: "Internet & Phone"
+    website: "https://fiber.google.com/"
+  - pattern: "STARLINK"
+    name: "Starlink"
+    category: "Internet & Phone"
+    website: "https://starlink.com/"
+  - pattern: "BREEZELINE"
+    name: "Breezeline"
+    category: "Internet & Phone"
+    website: "https://www.breezeline.com/"
+  - pattern: "TDS TELECOM"
+    name: "TDS Telecom"
+    category: "Internet & Phone"
+    website: "https://tdstelecom.com/"
+  - { pattern: "CONSOLIDATED COMM", name: "Consolidated Communications", category: "Internet & Phone" }
+  - pattern: "METRONET"
+    name: "Metronet"
+    category: "Internet & Phone"
+    website: "https://www.metronet.com/"
+  - { pattern: "ACORN TV", name: "Acorn TV", category: "Streaming" }
+  - { pattern: "AMC PLUS", name: "AMC+", category: "Streaming" }
+  - { pattern: "SHOWTIME", name: "Showtime", category: "Streaming" }
+  - { pattern: "ESPN PLUS", name: "ESPN+", category: "Streaming" }
+  - { pattern: "PANDORA MEDIA", name: "Pandora", category: "Music" }
+  - pattern: "FRNDLY TV"
+    name: "Frndly TV"
+    category: "Streaming"
+    website: "https://try.frndlytv.com/"
+  - { pattern: "SHUDDER", name: "Shudder", category: "Streaming" }
+  - pattern: "AMEREN"
+    name: "Ameren"
+    category: "Utilities"
+    website: "https://www.ameren.com/"
+  - pattern: "ENTERGY"
+    name: "Entergy"
+    category: "Utilities"
+    website: "https://www.entergy.com/"
+  - pattern: "FIRSTENERGY"
+    name: "FirstEnergy"
+    category: "Utilities"
+    website: "https://www.firstenergycorp.com/fehome.html"
+  - pattern: "ALLIANT ENERGY"
+    name: "Alliant Energy"
+    category: "Utilities"
+    website: "https://www.alliantenergy.com/"
+  - pattern: "WE ENERGIES"
+    name: "We Energies"
+    category: "Utilities"
+    website: "https://www.we-energies.com/"
+  - pattern: "PPL ELECTRIC"
+    name: "PPL Electric Utilities"
+    category: "Utilities"
+    website: "https://www.pplelectric.com/"
+  - pattern: "SPIRE ENERGY"
+    name: "Spire"
+    category: "Utilities"
+    website: "https://www.spireenergy.com/"
+  - pattern: "NICOR GAS"
+    name: "Nicor Gas"
+    category: "Utilities"
+    website: "https://www.nicorgas.com/"
+  - pattern: "WASHINGTON GAS"
+    name: "Washington Gas"
+    category: "Utilities"
+    website: "https://www.washingtongas.com/"
+  - pattern: "RELIANT ENERGY"
+    name: "Reliant Energy"
+    category: "Utilities"
+    website: "https://www.reliant.com/"
+  - pattern: "DIRECT ENERGY"
+    name: "Direct Energy"
+    category: "Utilities"
+    website: "https://www.directenergy.com/"
+  - pattern: "LADWP"
+    name: "LA Department of Water and Power"
+    category: "Utilities"
+    website: "https://www.ladwp.com/"
+  - pattern: "AUSTIN ENERGY"
+    name: "Austin Energy"
+    category: "Utilities"
+    website: "https://austinenergy.com/"
+  - pattern: "CPS ENERGY"
+    name: "CPS Energy"
+    category: "Utilities"
+    website: "https://www.cpsenergy.com/"
+  - pattern: "PORTLAND GENERAL"
+    name: "Portland General Electric"
+    category: "Utilities"
+    website: "https://portlandgeneral.com/"
+  - pattern: "ARIZONA PUBLIC SERVICE"
+    name: "Arizona Public Service"
+    category: "Utilities"
+    website: "https://www.aps.com/en/residential/home"
+  - { pattern: "SALT RIVER PROJECT", name: "Salt River Project", category: "Utilities" }
+  - { pattern: "SOUTHWEST GAS", name: "Southwest Gas", category: "Utilities" }
+  - { pattern: "NV ENERGY", name: "NV Energy", category: "Utilities" }
+  - { pattern: "PUGET SOUND ENERGY", name: "Puget Sound Energy", category: "Utilities" }
+  - { pattern: "CONSUMERS ENERGY", name: "Consumers Energy", category: "Utilities" }
+  - { pattern: "PSEG", name: "PSE&G", category: "Utilities" }
+  - { pattern: "TXU ENERGY", name: "TXU Energy", category: "Utilities" }
+  - { pattern: "GEXA ENERGY", name: "Gexa Energy", category: "Utilities" }
+  - pattern: "GREEN MOUNTAIN ENERGY"
+    name: "Green Mountain Energy"
+    category: "Utilities"
+    website: "https://www.greenmountainenergy.com/"
+  - { pattern: "PECO ENERGY", name: "PECO", category: "Utilities" }
+  - { pattern: "BALTIMORE GAS", name: "Baltimore Gas and Electric", category: "Utilities" }
+  - { pattern: "regex:\\bCOMED\\b", name: "ComEd", category: "Utilities" }
+  - { pattern: "DUQUESNE LIGHT", name: "Duquesne Light", category: "Utilities" }
+  - { pattern: "EVERGY", name: "Evergy", category: "Utilities" }
+  - pattern: "OGE ENERGY"
+    name: "OG&E"
+    category: "Utilities"
+    website: "https://www.oge.com/"
+  - pattern: "IDAHO POWER"
+    name: "Idaho Power"
+    category: "Utilities"
+    website: "https://www.idahopower.com/"
+  - pattern: "AVISTA"
+    name: "Avista Utilities"
+    category: "Utilities"
+    website: "https://www.myavista.com/"
+  - pattern: "ROCKY MOUNTAIN POWER"
+    name: "Rocky Mountain Power"
+    category: "Utilities"
+    website: "https://www.rockymountainpower.net/"
+  - pattern: "PACIFIC POWER"
+    name: "Pacific Power"
+    category: "Utilities"
+    website: "https://www.pacificpower.net/"
+  - pattern: "TAMPA ELECTRIC"
+    name: "Tampa Electric"
+    category: "Utilities"
+    website: "https://www.tampaelectric.com/"
+  - pattern: "ALABAMA POWER"
+    name: "Alabama Power"
+    category: "Utilities"
+    website: "https://www.alabamapower.com/"
+  - pattern: "MISSISSIPPI POWER"
+    name: "Mississippi Power"
+    category: "Utilities"
+    website: "https://www.mississippipower.com/"
+  - pattern: "NATIONAL FUEL GAS"
+    name: "National Fuel Gas"
+    category: "Utilities"
+    website: "https://www.nationalfuel.com/"
+  - { pattern: "PIEDMONT NATURAL GAS", name: "Piedmont Natural Gas", category: "Utilities" }
+  - pattern: "AMERICAN WATER"
+    name: "American Water"
+    category: "Utilities"
+    website: "https://www.amwater.com/"
+  - pattern: "CALIFORNIA WATER SERVICE"
+    name: "California Water Service"
+    category: "Utilities"
+    website: "https://www.calwater.com/"
+  - pattern: "DC WATER"
+    name: "DC Water"
+    category: "Utilities"
+    website: "https://www.dcwater.com/"
+  - pattern: "CASELLA WASTE"
+    name: "Casella Waste Systems"
+    category: "Utilities"
+    website: "https://www.casella.com/"
+  - { pattern: "GFL ENVIRONMENTAL", name: "GFL Environmental", category: "Utilities" }
+  - pattern: "RUMPKE"
+    name: "Rumpke Waste & Recycling"
+    category: "Utilities"
+    website: "https://www.rumpke.com/"
+  - pattern: "ERIE INSURANCE"
+    name: "Erie Insurance"
+    category: "Insurance"
+    website: "https://www.erieinsurance.com/"
+  - pattern: "MERCURY INSURANCE"
+    name: "Mercury Insurance"
+    category: "Insurance"
+    website: "https://www.mercuryinsurance.com/"
+  - pattern: "ROOT INSURANCE"
+    name: "Root Insurance"
+    category: "Insurance"
+    website: "https://www.joinroot.com/"
+  - pattern: "LEMONADE INS"
+    name: "Lemonade"
+    category: "Insurance"
+    website: "https://www.lemonade.com/"
+  - pattern: "HIPPO INSURANCE"
+    name: "Hippo"
+    category: "Insurance"
+    website: "https://www.hippo.com/"
+  - pattern: "AMERICAN FAMILY INS"
+    name: "American Family Insurance"
+    category: "Insurance"
+    website: "https://www.amfam.com/"
+  - { pattern: "AUTO-OWNERS INS", name: "Auto-Owners Insurance", category: "Insurance" }
+  - pattern: "THE HARTFORD"
+    name: "The Hartford"
+    category: "Insurance"
+    website: "https://www.thehartford.com/"
+  - pattern: "CHUBB"
+    name: "Chubb"
+    category: "Insurance"
+    website: "https://www.chubb.com/us-en/"
+  - pattern: "AMICA"
+    name: "Amica Mutual Insurance"
+    category: "Insurance"
+    website: "https://www.amica.com/"
+  - { pattern: "SAFECO", name: "Safeco Insurance", category: "Insurance" }
+  - pattern: "ESURANCE"
+    name: "Esurance"
+    category: "Insurance"
+  - { pattern: "NATIONAL GENERAL", name: "National General", category: "Insurance" }
+  - pattern: "KEMPER"
+    name: "Kemper Insurance"
+    category: "Insurance"
+    website: "https://www.kemper.com/"
+  - pattern: "PLYMOUTH ROCK"
+    name: "Plymouth Rock Assurance"
+    category: "Insurance"
+    website: "https://www.plymouthrock.com/"
+  - { pattern: "HUMANA", name: "Humana", category: "Healthcare" }
+  - { pattern: "MOLINA HEALTHCARE", name: "Molina Healthcare", category: "Healthcare" }
+  - pattern: "OSCAR HEALTH"
+    name: "Oscar Health"
+    category: "Healthcare"
+    website: "https://www.hioscar.com/"
+  - { pattern: "HIGHMARK", name: "Highmark Blue Cross Blue Shield", category: "Healthcare" }
+  - { pattern: "CAREFIRST", name: "CareFirst BlueCross BlueShield", category: "Healthcare" }
+  - pattern: "EMBLEMHEALTH"
+    name: "EmblemHealth"
+    category: "Healthcare"
+    website: "https://www.emblemhealth.com/"
+  - { pattern: "AMBETTER", name: "Ambetter Health", category: "Healthcare" }
+  - pattern: "WELLCARE"
+    name: "WellCare"
+    category: "Healthcare"
+    website: "https://www.wellcare.com/"
+  - { pattern: "DELTA DENTAL", name: "Delta Dental", category: "Healthcare" }
+  - pattern: "VSP VISION"
+    name: "VSP Vision Care"
+    category: "Healthcare"
+    website: "https://www.vsp.com/"
+  - pattern: "EYEMED"
+    name: "EyeMed Vision Care"
+    category: "Healthcare"
+    website: "https://www.eyemed.com/en-us/"
+  - pattern: "AFLAC"
+    name: "Aflac"
+    category: "Insurance"
+  - pattern: "UNUM"
+    name: "Unum"
+    category: "Insurance"
+    website: "https://www.unum.com/"
+  - pattern: "MUTUAL OF OMAHA"
+    name: "Mutual of Omaha"
+    category: "Insurance"
+    website: "https://www.mutualofomaha.com/"
+  - pattern: "NEW YORK LIFE"
+    name: "New York Life"
+    category: "Insurance"
+    website: "https://www.newyorklife.com/"
+  - pattern: "NORTHWESTERN MUTUAL"
+    name: "Northwestern Mutual"
+    category: "Insurance"
+    website: "https://www.northwesternmutual.com/"
+  - pattern: "MASSMUTUAL"
+    name: "MassMutual"
+    category: "Insurance"
+  - { pattern: "TRUPANION", name: "Trupanion", category: "Insurance" }
+  - { pattern: "HEALTHY PAWS", name: "Healthy Paws Pet Insurance", category: "Insurance" }
+  - pattern: "EMBRACE PET INS"
+    name: "Embrace Pet Insurance"
+    category: "Insurance"
+    website: "https://www.embracepetinsurance.com/"
+    # "Call Us: (800) 511-9172" on the site above
+    support_phone: "(800) 511-9172"
+  - { pattern: "ASPCA PET INSURANCE", name: "ASPCA Pet Health Insurance", category: "Insurance" }
+  - pattern: "FIGO PET"
+    name: "Figo Pet Insurance"
+    category: "Insurance"
+    website: "https://figopetinsurance.com/"
+  - pattern: "SQUARETRADE"
+    name: "SquareTrade (Allstate Protection Plans)"
+    category: "Insurance"
+    website: "https://www.squaretrade.com/"
+  - pattern: "CHOICE HOME WARRANTY"
+    name: "Choice Home Warranty"
+    category: "Insurance"
+    website: "https://www.choicehomewarranty.com/"
+  - { pattern: "CARSHIELD", name: "CarShield", category: "Car maintenance" }
+  - pattern: "ENDURANCE WARRANTY"
+    name: "Endurance Warranty"
+    category: "Car maintenance"
+    website: "https://www.endurancewarranty.com/"
+  - { pattern: "BANK OF AMERICA", name: "Bank of America", category: "Fees & charges" }
+  - { pattern: "WELLS FARGO", name: "Wells Fargo", category: "Fees & charges" }
+  - { pattern: "CITIBANK", name: "Citibank", category: "Fees & charges" }
+  - { pattern: "PNC BANK", name: "PNC Bank", category: "Fees & charges" }
+  - { pattern: "TRUIST", name: "Truist", category: "Fees & charges" }
+  - { pattern: "CAPITAL ONE", name: "Capital One", category: "Fees & charges" }
+  - { pattern: "FIFTH THIRD", name: "Fifth Third Bank", category: "Fees & charges" }
+  - { pattern: "KEYBANK", name: "KeyBank", category: "Fees & charges" }
+  - { pattern: "NAVY FEDERAL", name: "Navy Federal Credit Union", category: "Fees & charges" }
+  - { pattern: "SYNCHRONY", name: "Synchrony Bank", category: "Fees & charges" }
+  - { pattern: "FIDELITY INVESTMENTS", name: "Fidelity Investments", category: "Fees & charges" }
+  - { pattern: "VANGUARD", name: "Vanguard", category: "Fees & charges" }
+  - { pattern: "CHARLES SCHWAB", name: "Charles Schwab", category: "Fees & charges" }
+  - { pattern: "ROBINHOOD", name: "Robinhood", category: "Fees & charges" }
+  - { pattern: "BETTERMENT", name: "Betterment", category: "Fees & charges" }
+  - { pattern: "WEALTHFRONT", name: "Wealthfront", category: "Fees & charges" }
+  - { pattern: "EMPOWER RETIREMENT", name: "Empower", category: "Fees & charges" }
+  - { pattern: "ACORNS", name: "Acorns", category: "Fees & charges" }
+  - pattern: "GOLDS GYM"
+    name: "Gold's Gym"
+    category: "Memberships"
+    website: "https://www.goldsgym.com/"
+  - pattern: "F45 TRAINING"
+    name: "F45 Training"
+    category: "Memberships"
+    website: "https://f45training.com/"
+  - pattern: "CYCLEBAR"
+    name: "CycleBar"
+    category: "Memberships"
+    website: "https://www.cyclebar.com/"
+  - { pattern: "PURE BARRE", name: "Pure Barre", category: "Memberships" }
+  - { pattern: "CHUZE FITNESS", name: "Chuze Fitness", category: "Memberships" }
+  - { pattern: "ESPORTA FITNESS", name: "Esporta Fitness", category: "Memberships" }
+  - { pattern: "BLINK FITNESS", name: "Blink Fitness", category: "Memberships" }
+  - pattern: "YOUFIT"
+    name: "YouFit Gyms"
+    category: "Memberships"
+    website: "https://youfit.com/"
+  - pattern: "VASA FITNESS"
+    name: "VASA Fitness"
+    category: "Memberships"
+    website: "https://vasafitness.com/"
+  - pattern: "EOS FITNESS"
+    name: "EoS Fitness"
+    category: "Memberships"
+    website: "https://www.eosfitness.com/"
+  - pattern: "SOLIDCORE"
+    name: "[solidcore]"
+    category: "Memberships"
+    website: "https://www.solidcore.co/"
+  - pattern: "BURN BOOT CAMP"
+    name: "Burn Boot Camp"
+    category: "Memberships"
+    website: "https://burnbootcamp.com/"
+  - { pattern: "MASSAGE ENVY", name: "Massage Envy", category: "Personal care" }
+  - pattern: "YMCA"
+    name: "YMCA"
+    category: "Memberships"
+    website: "https://www.ymca.org/"
+  - { pattern: "VIVINT", name: "Vivint Smart Home", category: "Housing" }
+  - { pattern: "BRINKS HOME", name: "Brinks Home", category: "Housing" }
+  - pattern: "FRONTPOINT"
+    name: "Frontpoint Security"
+    category: "Housing"
+    website: "https://www.frontpointsecurity.com/"
+  - { pattern: "TRUGREEN", name: "TruGreen", category: "Housing" }
+  - { pattern: "EXTRA SPACE", name: "Extra Space Storage", category: "Housing" }
+  - { pattern: "LIFE STORAGE", name: "Life Storage", category: "Housing" }
+  - { pattern: "U-HAUL", name: "U-Haul", category: "Transport" }
+  - { pattern: "UHAUL", name: "U-Haul", category: "Transport" }
+  - { pattern: "STORAGEMART", name: "StorageMart", category: "Housing" }
+  - pattern: "CONSUMER REPORTS"
+    name: "Consumer Reports"
+    category: "Subscriptions"
+    website: "https://www.consumerreports.org/"
+  - { pattern: "USA TODAY", name: "USA Today", category: "Subscriptions" }
+  - { pattern: "LA TIMES", name: "Los Angeles Times", category: "Subscriptions" }
+  - { pattern: "BOSTON GLOBE", name: "The Boston Globe", category: "Subscriptions" }
+  - { pattern: "CHICAGO TRIBUNE", name: "Chicago Tribune", category: "Subscriptions" }
+  - { pattern: "THE ATLANTIC", name: "The Atlantic", category: "Subscriptions" }
+  - { pattern: "BARRONS", name: "Barron's", category: "Subscriptions" }
+  - { pattern: "FORBES", name: "Forbes", category: "Subscriptions" }
+  - { pattern: "NATIONAL GEOGRAPHIC", name: "National Geographic", category: "Subscriptions" }
+  - { pattern: "WIRED MAGAZINE", name: "WIRED", category: "Subscriptions" }
+  - { pattern: "CONDE NAST", name: "Condé Nast", category: "Subscriptions" }
+  - pattern: "CHEGG"
+    name: "Chegg"
+    category: "Subscriptions"
+    website: "https://www.chegg.com/"
+  - pattern: "DOCTORS WITHOUT BORDERS"
+    name: "Doctors Without Borders USA"
+    category: "Donations"
+    website: "https://www.doctorswithoutborders.org/"
+  - pattern: "CHARITY WATER"
+    name: "charity: water"
+    category: "Donations"
+    website: "https://www.charitywater.org/"
+  - pattern: "NATURE CONSERVANCY"
+    name: "The Nature Conservancy"
+    category: "Donations"
+    website: "https://www.nature.org/en-us/"
+  - pattern: "ACLU"
+    name: "ACLU"
+    category: "Donations"
+    website: "https://www.aclu.org/"
+  - { pattern: "SIERRA CLUB", name: "Sierra Club", category: "Donations" }
+  - { pattern: "UNICEF USA", name: "UNICEF USA", category: "Donations" }
+  - pattern: "ASPCA.ORG"
+    name: "ASPCA"
+    category: "Donations"
+    website: "https://www.aspca.org/"
+  - pattern: "UNITED WAY"
+    name: "United Way"
+    category: "Donations"
+    website: "https://www.unitedway.org/"
+  - pattern: "WOUNDED WARRIOR"
+    name: "Wounded Warrior Project"
+    category: "Donations"
+    website: "https://www.woundedwarriorproject.org/"
+  - pattern: "SMILE TRAIN"
+    name: "Smile Train"
+    category: "Donations"
+    website: "https://www.smiletrain.org/"
+  - pattern: "SAMARITANS PURSE"
+    name: "Samaritan's Purse"
+    category: "Donations"
+    website: "https://www.samaritanspurse.org/"
+  - pattern: "SHRINERS"
+    name: "Shriners Children's"
+    category: "Donations"
+    website: "https://www.shrinerschildrens.org/en"
+  - pattern: "AARP"
+    name: "AARP"
+    category: "Memberships"
+    website: "https://www.aarp.org/"
+  - pattern: "SEIU"
+    name: "SEIU"
+    category: "Memberships"
+    website: "https://www.seiu.org/"
+  - pattern: "TEAMSTERS"
+    name: "Teamsters"
+    category: "Memberships"
+    website: "https://teamster.org/"
+  - { pattern: "SAG-AFTRA", name: "SAG-AFTRA", category: "Memberships" }
+  - { pattern: "KINDERCARE", name: "KinderCare", category: "Housing" }
+  - pattern: "BRIGHT HORIZONS"
+    name: "Bright Horizons"
+    category: "Housing"
+    website: "https://www.brighthorizons.com/"
+  - pattern: "GODDARD SCHOOL"
+    name: "The Goddard School"
+    category: "Housing"
+    website: "https://www.goddardschool.com/"
+  - pattern: "PRIMROSE SCHOOL"
+    name: "Primrose Schools"
+    category: "Housing"
+    website: "https://www.primroseschools.com/"
+  - pattern: "LA PETITE ACADEMY"
+    name: "La Petite Academy"
+    category: "Housing"
+    website: "https://www.lapetite.com/"
+  - { pattern: "KUMON", name: "Kumon", category: "Housing" }
+  - { pattern: "SYLVAN LEARNING", name: "Sylvan Learning", category: "Housing" }
+  - pattern: "OUTSCHOOL"
+    name: "Outschool"
+    category: "Housing"
+    website: "https://outschool.com/"
+  - { pattern: "VENTRA", name: "Ventra (Chicago CTA)", category: "Public transport" }
+  - { pattern: "CLIPPER CARD", name: "Clipper (Bay Area)", category: "Public transport" }
+  - { pattern: "CALTRAIN", name: "Caltrain", category: "Public transport" }
+  - { pattern: "PEACH PASS", name: "Peach Pass (Georgia)", category: "Transport" }
+  - { pattern: "SEPTA", name: "SEPTA (Philadelphia)", category: "Public transport" }
+  - { pattern: "NJ TRANSIT", name: "NJ Transit", category: "Public transport" }
+  - { pattern: "METRA", name: "Metra (Chicago)", category: "Public transport" }
+  - { pattern: "SOUND TRANSIT", name: "Sound Transit (Seattle)", category: "Public transport" }
+  - { pattern: "RTD DENVER", name: "RTD Denver", category: "Public transport" }
+  - { pattern: "TRIMET", name: "TriMet (Portland)", category: "Public transport" }
+  - { pattern: "ORCA CARD", name: "ORCA Card (Puget Sound)", category: "Public transport" }
+  - { pattern: "TXTAG", name: "TxTag", category: "Transport" }
+  - { pattern: "NTTA", name: "North Texas Tollway Authority", category: "Transport" }
+  - { pattern: "PIKEPASS", name: "PIKEPASS (Oklahoma)", category: "Transport" }
+  - { pattern: "GOOD TO GO", name: "Good To Go! (Washington)", category: "Transport" }
+  - { pattern: "K-TAG", name: "K-TAG (Kansas)", category: "Transport" }
+  - { pattern: "PARKMOBILE", name: "ParkMobile", category: "Transport" }
+  - { pattern: "SPOTHERO", name: "SpotHero", category: "Transport" }
+  - { pattern: "PASSPORT PARKING", name: "Passport Parking", category: "Transport" }
+  - { pattern: "LAZ PARKING", name: "LAZ Parking", category: "Transport" }
+  - pattern: "AIDVANTAGE"
+    name: "Aidvantage"
+    category: "Fees & charges"
+    website: "https://aidvantage.studentaid.gov/"
+  - pattern: "MR COOPER"
+    name: "Mr. Cooper"
+    category: "Housing"
+    website: "https://www.mrcooper.com/"
+  - pattern: "ROCKET MORTGAGE"
+    name: "Rocket Mortgage"
+    category: "Housing"
+    website: "https://www.rocketmortgage.com/"
+  - pattern: "LOANDEPOT"
+    name: "loanDepot"
+    category: "Housing"
+    website: "https://www.loandepot.com/"
+  - pattern: "PENNYMAC"
+    name: "PennyMac"
+    category: "Housing"
+    website: "https://www.pennymac.com/"
+  - pattern: "FREEDOM MORTGAGE"
+    name: "Freedom Mortgage"
+    category: "Housing"
+    website: "https://www.freedommortgage.com/"
+  - pattern: "NEWREZ"
+    name: "NewRez"
+    category: "Housing"
+    website: "https://www.newrez.com/"
+  - pattern: "SHELLPOINT"
+    name: "Shellpoint Mortgage Servicing"
+    category: "Housing"
+    website: "https://www.shellpointmtg.com/"
+  - pattern: "CENLAR"
+    name: "Cenlar FSB"
+    category: "Housing"
+    website: "https://www.cenlar.com/"
+  - { pattern: "REALPAGE", name: "RealPage", category: "Housing" }
+  - pattern: "ENTRATA"
+    name: "Entrata"
+    category: "Housing"
+    website: "https://www.entrata.com/"
+  - { pattern: "RENTCAFE", name: "RentCafe", category: "Housing" }
+  - pattern: "BUILDIUM"
+    name: "Buildium"
+    category: "Housing"
+    website: "https://www.buildium.com/"
+  - pattern: "TOWNSQ"
+    name: "TownSq"
+    category: "Housing"
+    website: "https://www.townsq.io/"
+  - { pattern: "VONS", name: "Vons", category: "Groceries" }
+  - { pattern: "JEWEL-OSCO", name: "Jewel-Osco", category: "Groceries" }
+  - { pattern: "ACME MARKETS", name: "Acme Markets", category: "Groceries" }
+  - { pattern: "SHAWS", name: "Shaw's", category: "Groceries" }
+  - { pattern: "STAR MARKET", name: "Star Market", category: "Groceries" }
+  - { pattern: "RANDALLS", name: "Randalls", category: "Groceries" }
+  - { pattern: "TOM THUMB", name: "Tom Thumb", category: "Groceries" }
+  - { pattern: "PAVILIONS", name: "Pavilions", category: "Groceries" }
+  - { pattern: "SMITHS FOOD", name: "Smith's Food and Drug", category: "Groceries" }
+  - { pattern: "FRYS FOOD", name: "Fry's Food Stores", category: "Groceries" }
+  - { pattern: "DILLONS", name: "Dillons", category: "Groceries" }
+  - { pattern: "MARIANOS", name: "Mariano's", category: "Groceries" }
+  - { pattern: "PICK N SAVE", name: "Pick 'n Save", category: "Groceries" }
+  - { pattern: "FOOD 4 LESS", name: "Food 4 Less", category: "Groceries" }
+  - { pattern: "RALPHS", name: "Ralphs", category: "Groceries" }
+  - { pattern: "FRED MEYER", name: "Fred Meyer", category: "Groceries" }
+  - { pattern: "KING SOOPERS", name: "King Soopers", category: "Groceries" }
+  - { pattern: "FOOD LION", name: "Food Lion", category: "Groceries" }
+  - { pattern: "STOP & SHOP", name: "Stop & Shop", category: "Groceries" }
+  - { pattern: "GIANT FOOD", name: "Giant Food", category: "Groceries" }
+  - { pattern: "HANNAFORD", name: "Hannaford", category: "Groceries" }
+  - { pattern: "WINN-DIXIE", name: "Winn-Dixie", category: "Groceries" }
+  - { pattern: "SHOPRITE", name: "ShopRite", category: "Groceries" }
+  - { pattern: "BJS WHOLESALE", name: "BJ's Wholesale Club", category: "Groceries" }
+  - { pattern: "HY-VEE", name: "Hy-Vee", category: "Groceries" }
+  - { pattern: "MEIJER", name: "Meijer", category: "Groceries" }
+  - { pattern: "WINCO FOODS", name: "WinCo Foods", category: "Groceries" }
+  - pattern: "SPROUTS FARMERS"
+    name: "Sprouts Farmers Market"
+    category: "Groceries"
+    website: "https://www.sprouts.com/"
+  - { pattern: "NATURAL GROCERS", name: "Natural Grocers", category: "Groceries" }
+  - { pattern: "SAVE A LOT", name: "Save A Lot", category: "Groceries" }
+  - { pattern: "PIGGLY WIGGLY", name: "Piggly Wiggly", category: "Groceries" }
+  - { pattern: "INGLES MARKET", name: "Ingles Markets", category: "Groceries" }
+  - { pattern: "WEIS MARKETS", name: "Weis Markets", category: "Groceries" }
+  - { pattern: "PRICE CHOPPER", name: "Price Chopper", category: "Groceries" }
+  - { pattern: "SCHNUCKS", name: "Schnucks", category: "Groceries" }
+  - { pattern: "STATER BROS", name: "Stater Bros", category: "Groceries" }
+  - { pattern: "DUANE READE", name: "Duane Reade", category: "Health" }
+  - { pattern: "EXPRESS SCRIPTS", name: "Express Scripts", category: "Health" }
+  - { pattern: "OPTUMRX", name: "OptumRx", category: "Health" }
+  - { pattern: "GOODRX", name: "GoodRx", category: "Health" }
+  - { pattern: "WAWA", name: "Wawa", category: "Fuel" }
+  - { pattern: "SHEETZ", name: "Sheetz", category: "Fuel" }
+  - { pattern: "QUIKTRIP", name: "QuikTrip", category: "Fuel" }
+  - { pattern: "RACETRAC", name: "RaceTrac", category: "Fuel" }
+  - { pattern: "CASEYS", name: "Casey's", category: "Fuel" }
+  - { pattern: "BUC-EES", name: "Buc-ee's", category: "Fuel" }
+  - { pattern: "PILOT TRAVEL", name: "Pilot Travel Centers", category: "Fuel" }
+  - { pattern: "LOVES TRAVEL", name: "Love's Travel Stops", category: "Fuel" }
+  - { pattern: "SPEEDWAY", name: "Speedway", category: "Fuel" }
+  - { pattern: "MARATHON PETRO", name: "Marathon", category: "Fuel" }
+  - { pattern: "SUNOCO", name: "Sunoco", category: "Fuel" }
+  - { pattern: "VALERO", name: "Valero", category: "Fuel" }
+  - { pattern: "PHILLIPS 66", name: "Phillips 66", category: "Fuel" }
+  - { pattern: "CITGO", name: "Citgo", category: "Fuel" }
+  - { pattern: "KWIK TRIP", name: "Kwik Trip", category: "Fuel" }
+  - { pattern: "CUMBERLAND FARMS", name: "Cumberland Farms", category: "Fuel" }
+  - { pattern: "MURPHY USA", name: "Murphy USA", category: "Fuel" }
+  - { pattern: "MAVERIK", name: "Maverik", category: "Fuel" }
+  - { pattern: "TESLA SUPERCHARGER", name: "Tesla Supercharger", category: "Fuel" }
+  - { pattern: "ELECTRIFY AMERICA", name: "Electrify America", category: "Fuel" }
+  - { pattern: "EVGO", name: "EVgo", category: "Fuel" }
+  - { pattern: "CHARGEPOINT", name: "ChargePoint", category: "Fuel" }
+  - { pattern: "DUNKIN", name: "Dunkin'", category: "Eating out" }
+  - { pattern: "WENDYS", name: "Wendy's", category: "Eating out" }
+  - { pattern: "TACO BELL", name: "Taco Bell", category: "Eating out" }
+  - { pattern: "POPEYES", name: "Popeyes", category: "Eating out" }
+  - { pattern: "CHICK-FIL-A", name: "Chick-fil-A", category: "Eating out" }
+  - { pattern: "PANERA", name: "Panera Bread", category: "Eating out" }
+  - { pattern: "PANDA EXPRESS", name: "Panda Express", category: "Eating out" }
+  - { pattern: "SHAKE SHACK", name: "Shake Shack", category: "Eating out" }
+  - { pattern: "FIVE GUYS", name: "Five Guys", category: "Eating out" }
+  - { pattern: "IN-N-OUT", name: "In-N-Out Burger", category: "Eating out" }
+  - { pattern: "WHATABURGER", name: "Whataburger", category: "Eating out" }
+  - { pattern: "CULVERS", name: "Culver's", category: "Eating out" }
+  - { pattern: "SONIC DRIVE", name: "Sonic Drive-In", category: "Eating out" }
+  - { pattern: "ARBYS", name: "Arby's", category: "Eating out" }
+  - { pattern: "JIMMY JOHNS", name: "Jimmy John's", category: "Eating out" }
+  - { pattern: "JERSEY MIKES", name: "Jersey Mike's", category: "Eating out" }
+  - { pattern: "FIREHOUSE SUBS", name: "Firehouse Subs", category: "Eating out" }
+  - { pattern: "DOMINOS", name: "Domino's", category: "Eating out" }
+  - { pattern: "PIZZA HUT", name: "Pizza Hut", category: "Eating out" }
+  - { pattern: "LITTLE CAESARS", name: "Little Caesars", category: "Eating out" }
+  - { pattern: "OLIVE GARDEN", name: "Olive Garden", category: "Eating out" }
+  - { pattern: "TEXAS ROADHOUSE", name: "Texas Roadhouse", category: "Eating out" }
+  - { pattern: "APPLEBEES", name: "Applebee's", category: "Eating out" }
+  - { pattern: "CHILIS", name: "Chili's", category: "Eating out" }
+  - { pattern: "OUTBACK", name: "Outback Steakhouse", category: "Eating out" }
+  - { pattern: "CRACKER BARREL", name: "Cracker Barrel", category: "Eating out" }
+  - { pattern: "IHOP", name: "IHOP", category: "Eating out" }
+  - { pattern: "DENNYS", name: "Denny's", category: "Eating out" }
+  - { pattern: "WAFFLE HOUSE", name: "Waffle House", category: "Eating out" }
+  - { pattern: "BUFFALO WILD WINGS", name: "Buffalo Wild Wings", category: "Eating out" }
+  - { pattern: "CHEESECAKE FACTORY", name: "The Cheesecake Factory", category: "Eating out" }
+  - { pattern: "DUTCH BROS", name: "Dutch Bros Coffee", category: "Eating out" }
+  - { pattern: "PEETS COFFEE", name: "Peet's Coffee", category: "Eating out" }
+  - { pattern: "CARIBOU COFFEE", name: "Caribou Coffee", category: "Eating out" }
+  - { pattern: "KRISPY KREME", name: "Krispy Kreme", category: "Eating out" }
+  - { pattern: "DAIRY QUEEN", name: "Dairy Queen", category: "Eating out" }
+  - { pattern: "JACK IN THE BOX", name: "Jack in the Box", category: "Eating out" }
+  - { pattern: "RAISING CANES", name: "Raising Cane's", category: "Eating out" }
+  - { pattern: "WINGSTOP", name: "Wingstop", category: "Eating out" }
+  - { pattern: "ZAXBYS", name: "Zaxby's", category: "Eating out" }
+  - { pattern: "BOJANGLES", name: "Bojangles", category: "Eating out" }
+  - { pattern: "QDOBA", name: "Qdoba", category: "Eating out" }
+  - { pattern: "DEL TACO", name: "Del Taco", category: "Eating out" }
+  - { pattern: "POSTMATES", name: "Postmates", category: "Eating out" }
+  - { pattern: "GOPUFF", name: "Gopuff", category: "Groceries" }
+  - pattern: "EVERYPLATE"
+    name: "EveryPlate"
+    category: "Groceries"
+    website: "https://www.everyplate.com/"
+  - pattern: "HUNGRYROOT"
+    name: "Hungryroot"
+    category: "Groceries"
+    website: "https://www.hungryroot.com/"
+  - pattern: "THRIVE MARKET"
+    name: "Thrive Market"
+    category: "Groceries"
+    website: "https://thrivemarket.com/"
+  - pattern: "MISFITS MARKET"
+    name: "Misfits Market"
+    category: "Groceries"
+    website: "https://www.misfitsmarket.com/"
+  - { pattern: "ACE HARDWARE", name: "Ace Hardware", category: "Housing" }
+  - { pattern: "MENARDS", name: "Menards", category: "Housing" }
+  - { pattern: "TRACTOR SUPPLY", name: "Tractor Supply", category: "Housing" }
+  - { pattern: "HARBOR FREIGHT", name: "Harbor Freight Tools", category: "Housing" }
+  - { pattern: "SHERWIN WILLIAMS", name: "Sherwin-Williams", category: "Housing" }
+  - { pattern: "FLOOR & DECOR", name: "Floor & Decor", category: "Housing" }
+  - { pattern: "WAYFAIR", name: "Wayfair", category: "Housing" }
+  - { pattern: "ASHLEY FURNITURE", name: "Ashley Furniture", category: "Housing" }
+  - { pattern: "ROOMS TO GO", name: "Rooms To Go", category: "Housing" }
+  - { pattern: "POTTERY BARN", name: "Pottery Barn", category: "Housing" }
+  - { pattern: "CRATE & BARREL", name: "Crate & Barrel", category: "Housing" }
+  - { pattern: "HOMEGOODS", name: "HomeGoods", category: "Housing" }
+  - { pattern: "TJ MAXX", name: "T.J. Maxx", category: "Other" }
+  - { pattern: "MARSHALLS", name: "Marshalls", category: "Other" }
+  - { pattern: "ROSS STORES", name: "Ross Dress for Less", category: "Other" }
+  - { pattern: "BURLINGTON STORES", name: "Burlington", category: "Other" }
+  - { pattern: "NORDSTROM", name: "Nordstrom", category: "Other" }
+  - { pattern: "MACYS", name: "Macy's", category: "Other" }
+  - { pattern: "KOHLS", name: "Kohl's", category: "Other" }
+  - { pattern: "JCPENNEY", name: "JCPenney", category: "Other" }
+  - { pattern: "DILLARDS", name: "Dillard's", category: "Other" }
+  - { pattern: "OLD NAVY", name: "Old Navy", category: "Other" }
+  - { pattern: "BANANA REPUBLIC", name: "Banana Republic", category: "Other" }
+  - { pattern: "AMERICAN EAGLE", name: "American Eagle", category: "Other" }
+  - { pattern: "ABERCROMBIE", name: "Abercrombie & Fitch", category: "Other" }
+  - { pattern: "URBAN OUTFITTERS", name: "Urban Outfitters", category: "Other" }
+  - { pattern: "LULULEMON", name: "lululemon", category: "Other" }
+  - { pattern: "FOOT LOCKER", name: "Foot Locker", category: "Other" }
+  - { pattern: "DICKS SPORTING", name: "Dick's Sporting Goods", category: "Other" }
+  - { pattern: "ACADEMY SPORTS", name: "Academy Sports + Outdoors", category: "Other" }
+  - { pattern: "BASS PRO", name: "Bass Pro Shops", category: "Other" }
+  - { pattern: "CABELAS", name: "Cabela's", category: "Other" }
+  - { pattern: "PETSMART", name: "PetSmart", category: "Other" }
+  - { pattern: "PETCO", name: "Petco", category: "Other" }
+  - { pattern: "BARNES & NOBLE", name: "Barnes & Noble", category: "Other" }
+  - { pattern: "GAMESTOP", name: "GameStop", category: "Other" }
+  - { pattern: "MICRO CENTER", name: "Micro Center", category: "Other" }
+  - { pattern: "NEWEGG", name: "Newegg", category: "Other" }
+  - { pattern: "ULTA BEAUTY", name: "Ulta Beauty", category: "Personal care" }
+  - { pattern: "SEPHORA", name: "Sephora", category: "Personal care" }
+  - { pattern: "BATH & BODY WORKS", name: "Bath & Body Works", category: "Personal care" }
+  - { pattern: "FIVE BELOW", name: "Five Below", category: "Other" }
+  - { pattern: "DOLLAR TREE", name: "Dollar Tree", category: "Other" }
+  - { pattern: "DOLLAR GENERAL", name: "Dollar General", category: "Other" }
+  - { pattern: "FAMILY DOLLAR", name: "Family Dollar", category: "Other" }
+  - { pattern: "BIG LOTS", name: "Big Lots", category: "Other" }
+  - { pattern: "MICHAELS STORES", name: "Michaels", category: "Other" }
+  - { pattern: "HOBBY LOBBY", name: "Hobby Lobby", category: "Other" }
+  - { pattern: "PARTY CITY", name: "Party City", category: "Other" }
+  - { pattern: "STAPLES", name: "Staples", category: "Other" }
+  - { pattern: "OFFICE DEPOT", name: "Office Depot", category: "Other" }
+  - { pattern: "AUTOZONE", name: "AutoZone", category: "Car maintenance" }
+  - { pattern: "OREILLY AUTO", name: "O'Reilly Auto Parts", category: "Car maintenance" }
+  - { pattern: "ADVANCE AUTO", name: "Advance Auto Parts", category: "Car maintenance" }
+  - { pattern: "NAPA AUTO", name: "NAPA Auto Parts", category: "Car maintenance" }
+  - { pattern: "DISCOUNT TIRE", name: "Discount Tire", category: "Car maintenance" }
+  - { pattern: "LES SCHWAB", name: "Les Schwab Tire Centers", category: "Car maintenance" }
+  - { pattern: "JIFFY LUBE", name: "Jiffy Lube", category: "Car maintenance" }
+  - { pattern: "VALVOLINE", name: "Valvoline", category: "Car maintenance" }
+  - { pattern: "FIRESTONE COMPLETE", name: "Firestone Complete Auto Care", category: "Car maintenance" }
+  - { pattern: "AMC THEATRES", name: "AMC Theatres", category: "Other" }
+  - { pattern: "REGAL CINEMAS", name: "Regal Cinemas", category: "Other" }
+  - { pattern: "CINEMARK", name: "Cinemark", category: "Other" }
+  - { pattern: "ALAMO DRAFTHOUSE", name: "Alamo Drafthouse", category: "Other" }
+  - { pattern: "FANDANGO", name: "Fandango", category: "Other" }
+  - { pattern: "TICKETMASTER", name: "Ticketmaster", category: "Other" }
+  - { pattern: "STUBHUB", name: "StubHub", category: "Other" }
+  - { pattern: "SEATGEEK", name: "SeatGeek", category: "Other" }
+  - { pattern: "VIVID SEATS", name: "Vivid Seats", category: "Other" }
+  - { pattern: "EVENTBRITE", name: "Eventbrite", category: "Other" }
+  - { pattern: "DELTA AIR", name: "Delta Air Lines", category: "Transport" }
+  - { pattern: "UNITED AIRLINES", name: "United Airlines", category: "Transport" }
+  - { pattern: "AMERICAN AIRLINES", name: "American Airlines", category: "Transport" }
+  - { pattern: "SOUTHWEST AIR", name: "Southwest Airlines", category: "Transport" }
+  - { pattern: "JETBLUE", name: "JetBlue", category: "Transport" }
+  - { pattern: "ALASKA AIR", name: "Alaska Airlines", category: "Transport" }
+  - { pattern: "SPIRIT AIRLINES", name: "Spirit Airlines", category: "Transport" }
+  - { pattern: "ALLEGIANT AIR", name: "Allegiant Air", category: "Transport" }
+  - { pattern: "MARRIOTT", name: "Marriott", category: "Other" }
+  - { pattern: "HILTON", name: "Hilton", category: "Other" }
+  - { pattern: "HYATT", name: "Hyatt", category: "Other" }
+  - { pattern: "IHG HOTELS", name: "IHG Hotels & Resorts", category: "Other" }
+  - { pattern: "WYNDHAM", name: "Wyndham Hotels", category: "Other" }
+  - { pattern: "CHOICE HOTELS", name: "Choice Hotels", category: "Other" }
+  - { pattern: "BEST WESTERN", name: "Best Western", category: "Other" }
+  - { pattern: "EXPEDIA", name: "Expedia", category: "Other" }
+  - { pattern: "PRICELINE", name: "Priceline", category: "Other" }
+  - { pattern: "HOTELS.COM", name: "Hotels.com", category: "Other" }
+  - { pattern: "VRBO", name: "Vrbo", category: "Other" }
+  - { pattern: "HERTZ", name: "Hertz", category: "Transport" }
+  - { pattern: "AVIS RENT", name: "Avis", category: "Transport" }
+  - { pattern: "ENTERPRISE RENT", name: "Enterprise Rent-A-Car", category: "Transport" }
+  - { pattern: "BUDGET RENT", name: "Budget Rent a Car", category: "Transport" }
+  - { pattern: "NATIONAL CAR RENTAL", name: "National Car Rental", category: "Transport" }
+  - { pattern: "ALAMO RENT", name: "Alamo Rent A Car", category: "Transport" }
+  - { pattern: "TURO", name: "Turo", category: "Transport" }
+  - { pattern: "ZIPCAR", name: "Zipcar", category: "Transport" }
+  - { pattern: "FEDEX", name: "FedEx", category: "Other" }
+  - { pattern: "UPS STORE", name: "The UPS Store", category: "Other" }
+  - { pattern: "USPS", name: "USPS", category: "Other" }
+  - { pattern: "STAMPS.COM", name: "Stamps.com", category: "Other" }

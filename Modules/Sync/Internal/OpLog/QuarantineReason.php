@@ -25,4 +25,10 @@ enum QuarantineReason: string
     case IncompleteCreateRow = 'incomplete_create_row';
 
     case GdkDecryptFailed = 'gdk_decrypt_failed';
+
+    // The row named a parent the database does not have. Isolated to the one
+    // row: an uncaught insert failure aborted the whole replay transaction,
+    // so one unsatisfiable reference discarded every op beside it and the
+    // poll driving the UI answered 500 instead of advancing.
+    case MissingReference = 'missing_reference';
 }

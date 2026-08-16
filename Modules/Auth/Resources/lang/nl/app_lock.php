@@ -3,7 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'error_enroll_unsupported' => 'Biometrisch ontgrendelen is niet beschikbaar op dit apparaat.',
+    'error_enroll_locked' => 'Ontgrendel de app voordat je dit instelt.',
+    'error_enroll_failed' => 'Je apparaat wilde de sleutel niet opslaan. Biometrisch ontgrendelen is niet beschikbaar.',
     'heading' => 'App-vergrendeling',
+
+    // Instellingen verwijst alleen door; de bediening zelf staat op het
+    // synchronisatiescherm op /sync#app-lock.
+    'moved_help' => 'Je pincode, automatische vergrendeling en biometrisch ontgrendelen staan bij de synchronisatie-instellingen van dit apparaat.',
+    'moved_cta' => 'Synchronisatie & apparaat openen',
 
     'toggle_label' => 'App vergrendelen met pincode',
     'toggle_description' => 'Vervangt het dagelijkse inloggen door een pincode. Sessies blijven 30 dagen actief.',

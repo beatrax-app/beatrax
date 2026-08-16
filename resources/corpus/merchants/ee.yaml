@@ -1,12 +1,157 @@
 # Merchant corpus — Estonia. region defaults to EE. Schema: see merchants/nl.yaml.
 entries:
-  - { pattern: "RIMI", name: "Rimi", category: "Groceries" }
-  - { pattern: "MAXIMA", name: "Maxima", category: "Groceries" }
   - { pattern: "SELVER", name: "Selver", category: "Groceries" }
-  - { pattern: "COOP", name: "Coop", category: "Groceries" }
-  - { pattern: "PRISMA", name: "Prisma", category: "Groceries" }
-  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
-  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
-  - { pattern: "ELISA", name: "Elisa", category: "Internet & Phone" }
-  - { pattern: "TELE2", name: "Tele2", category: "Internet & Phone" }
-  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
+  # --- Telecom / TV ---
+  - { pattern: "regex:\\bSTV\\b", name: "STV", category: "Internet & Phone", website: "https://stv.ee" }
+  - { pattern: "LEVIRA", name: "Levira", category: "Internet & Phone", website: "https://levira.com/et-ee/" }
+  - { pattern: "TELSET", name: "Telset", category: "Internet & Phone", website: "https://telset.ee" }
+  - { pattern: "regex:\\bGO3\\b", name: "Go3", category: "Streaming" }
+  # --- Electricity, gas, heating, water, waste ---
+  - pattern: "ENEFIT"
+    name: "Enefit (Eesti Energia)"
+    category: "Utilities"
+    website: "https://www.enefit.ee"
+    support_email: "teenindus@enefit.ee"
+  - { pattern: "EESTI ENERGIA", name: "Eesti Energia", category: "Utilities", website: "https://www.enefit.ee" }
+  - pattern: "ELEKTRILEVI"
+    name: "Elektrilevi"
+    category: "Utilities"
+    website: "https://elektrilevi.ee/et"
+    cancel_url: "https://elektrilevi.ee/et/vorguleping/vorgulepingu-lopetamine"
+  - pattern: "ALEXELA"
+    name: "Alexela"
+    category: "Utilities"
+    website: "https://alexela.ee/et"
+    support_url: "https://alexela.ee/et/eraklient/abi-ja-kontakt/kontakt/kontaktid"
+    support_email: "alexela@alexela.ee"
+  - { pattern: "ELENGER", name: "Elenger (Eesti Gaas)", category: "Utilities", website: "https://elenger.ee" }
+  - { pattern: "EESTI GAAS", name: "Eesti Gaas", category: "Utilities", website: "https://elenger.ee" }
+  - pattern: "UTILITAS"
+    name: "Utilitas"
+    category: "Utilities"
+    website: "https://utilitas.ee"
+    support_url: "https://utilitas.ee/kontaktid-ja-abi/kontaktid/"
+  - pattern: "TALLINNA VESI"
+    name: "Tallinna Vesi"
+    category: "Utilities"
+    website: "https://www.tallinnavesi.ee"
+    support_email: "tvesi@tvesi.ee"
+  - pattern: "ELEKTRUM EESTI"
+    name: "Elektrum Eesti"
+    category: "Utilities"
+    website: "https://www.elektrum.ee/ee/eraklient"
+    support_url: "https://www.elektrum.ee/ee/eraklient/kontakt"
+  - { pattern: "IMATRA ELEKTER", name: "Imatra Elekter", category: "Utilities", website: "https://imatraelekter.ee" }
+  - { pattern: "ADVEN", name: "Adven", category: "Utilities", website: "https://adven.com/ee/" }
+  - { pattern: "regex:\\bGREN\\b", name: "Gren", category: "Utilities", website: "https://gren.com/ee/" }
+  - { pattern: "regex:\\bVKG\\b", name: "Viru Keemia Grupp", category: "Utilities", website: "https://www.vkg.ee" }
+  - { pattern: "EMAJOE VEEVARK", name: "Emajõe Veevärk", category: "Utilities", website: "https://www.emajoe.ee" }
+  - { pattern: "RAGN-SELLS", name: "Ragn-Sells", category: "Utilities", website: "https://www.ragnsells.ee" }
+  - { pattern: "EESTI KESKKONNATEENUSED", name: "Eesti Keskkonnateenused", category: "Utilities" }
+  # --- Gyms / memberships ---
+  - pattern: "MYFITNESS"
+    name: "MyFitness"
+    category: "Memberships"
+    website: "https://www.myfitness.ee"
+    support_url: "https://www.myfitness.ee/kontaktid/"
+    support_email: "myfitness@myfitness.ee"
+  - { pattern: "GYM EESTI", name: "Gym!", category: "Memberships", website: "https://gymeesti.ee" }
+  - { pattern: "KALEV SPA", name: "Kalev Spa", category: "Memberships", website: "https://www.kalevspa.ee" }
+  - { pattern: "REVAL SPORT", name: "Reval Sport", category: "Memberships", website: "https://www.revalsport.ee" }
+  - { pattern: "FITLAP", name: "Fitlap", category: "Memberships", website: "https://fitlap.ee" }
+  # --- Insurance ---
+  - { pattern: "ERGO KINDLUSTUS", name: "ERGO", category: "Insurance", website: "https://ergo.ee", support_url: "https://ergo.ee/kontaktid" }
+  - { pattern: "SALVA KINDLUSTUS", name: "Salva Kindlustus", category: "Insurance", website: "https://www.salva.ee/et", support_url: "https://www.salva.ee/et/kontakt" }
+  - { pattern: "SEESAM", name: "Seesam", category: "Insurance", website: "https://seesam.ee" }
+  - { pattern: "IF EESTI", name: "If Kindlustus", category: "Insurance", website: "https://www.if.ee/eraklient" }
+  - { pattern: "COMPENSA EESTI", name: "Compensa", category: "Insurance", website: "https://www.compensa.ee" }
+  - { pattern: "SWEDBANK KINDLUSTUS", name: "Swedbank Kindlustus", category: "Insurance", website: "https://www.swedbank.ee/private" }
+  - { pattern: "LHV KINDLUSTUS", name: "LHV Kindlustus", category: "Insurance", website: "https://www.lhv.ee" }
+  # --- Banks (recurring account & card fees) ---
+  - { pattern: "SWEDBANK", name: "Swedbank", category: "Fees & charges", website: "https://www.swedbank.ee/private" }
+  - { pattern: "SEB PANK", name: "SEB", category: "Fees & charges", website: "https://www.seb.ee" }
+  - { pattern: "LHV PANK", name: "LHV Pank", category: "Fees & charges", website: "https://www.lhv.ee" }
+  - { pattern: "COOP PANK", name: "Coop Pank", category: "Fees & charges", website: "https://www.cooppank.ee" }
+  - { pattern: "LUMINOR", name: "Luminor", category: "Fees & charges" }
+  - { pattern: "BIGBANK", name: "Bigbank", category: "Fees & charges", website: "https://www.bigbank.ee" }
+  - { pattern: "INBANK", name: "Inbank", category: "Fees & charges", website: "https://inbank.ee" }
+  # --- Public transport / mobility ---
+  - { pattern: "TALLINNA LINNATRANSPORT", name: "Tallinna Linnatransport", category: "Public transport", website: "https://tlt.ee" }
+  - { pattern: "PILET.EE", name: "Pilet.ee", category: "Public transport", website: "https://pilet.ee" }
+  - { pattern: "ELRON", name: "Elron", category: "Public transport", website: "https://elron.ee" }
+  - { pattern: "LUX EXPRESS", name: "Lux Express", category: "Public transport", website: "https://luxexpress.eu" }
+  - { pattern: "regex:\\bSEBE\\b", name: "Sebe", category: "Public transport", website: "https://www.sebe.ee" }
+  - { pattern: "GOBUS", name: "GoBus", category: "Public transport", website: "https://gobus.ee" }
+  - { pattern: "TALLINK", name: "Tallink", category: "Transport", website: "https://www.tallink.com" }
+  - { pattern: "VIKING LINE", name: "Viking Line", category: "Transport" }
+  - { pattern: "regex:\\bTUUL\\b", name: "Tuul", category: "Transport", website: "https://tuul.xyz" }
+  - { pattern: "ELEPORT", name: "Eleport", category: "Transport", website: "https://eleport.com/et/" }
+  - { pattern: "ENEFIT VOLT", name: "Enefit Volt", category: "Transport", website: "https://www.enefit.ee/et/era/elektriautode-laadimine" }
+  # --- News / media ---
+  - { pattern: "POSTIMEES", name: "Postimees", category: "Subscriptions", website: "https://www.postimees.ee" }
+  - { pattern: "DELFI", name: "Delfi", category: "Subscriptions", website: "https://www.delfi.ee" }
+  - { pattern: "OHTULEHT", name: "Õhtuleht", category: "Subscriptions", website: "https://www.ohtuleht.ee" }
+  - { pattern: "EESTI EKSPRESS", name: "Eesti Ekspress", category: "Subscriptions", website: "https://ekspress.delfi.ee" }
+  - { pattern: "EESTI PAEVALEHT", name: "Eesti Päevaleht", category: "Subscriptions" }
+  - { pattern: "MAALEHT", name: "Maaleht", category: "Subscriptions", website: "https://maaleht.delfi.ee" }
+  - { pattern: "ARIPAEV", name: "Äripäev", category: "Subscriptions", website: "https://www.aripaev.ee" }
+  # --- Groceries, retail, DIY ---
+  - { pattern: "GROSSI", name: "Grossi Toidukaubad", category: "Groceries", website: "https://www.grossi.ee" }
+  - { pattern: "COMARKET", name: "Comarket", category: "Groceries" }
+  - { pattern: "BAUHOF", name: "Bauhof", category: "Housing", website: "https://www.bauhof.ee/et" }
+  - { pattern: "DECORA", name: "Decora", category: "Housing", website: "https://www.decora.ee" }
+  - { pattern: "K-RAUTA", name: "K-Rauta", category: "Housing" }
+  - { pattern: "KAUBAMAJA", name: "Tallinna Kaubamaja", category: "Other" }
+  - { pattern: "STOCKMANN", name: "Stockmann", category: "Other", website: "https://www.stockmann.ee" }
+  - { pattern: "SPORTLAND", name: "Sportland", category: "Other", website: "https://sportland.ee" }
+  - { pattern: "RADEMAR", name: "Rademar", category: "Other", website: "https://www.rademar.ee" }
+  - { pattern: "APOLLO", name: "Apollo", category: "Other", website: "https://www.apollo.ee/et" }
+  - { pattern: "KAUP24", name: "Kaup24", category: "Other", website: "https://kaup24.ee/et/" }
+  - { pattern: "ON24", name: "On24", category: "Other", website: "https://www.on24.ee" }
+  - { pattern: "PHOTOPOINT", name: "Photopoint", category: "Other", website: "https://www.photopoint.ee" }
+  - { pattern: "EURONICS", name: "Euronics", category: "Other", website: "https://www.euronics.ee" }
+  - { pattern: "regex:\\bKLICK\\b", name: "Klick", category: "Other", website: "https://www.klick.ee" }
+  - { pattern: "1A.EE", name: "1a.ee", category: "Other" }
+  # --- Pharmacies ---
+  - { pattern: "APOTHEKA", name: "Apotheka", category: "Health", website: "https://www.apotheka.ee", support_email: "netiapteek@apotheka.ee" }
+  - { pattern: "BENU APTEEK", name: "BENU Apteek", category: "Health", website: "https://www.benu.ee", support_email: "veebiapteek@benu.ee" }
+  - { pattern: "SUDAMEAPTEEK", name: "Südameapteek", category: "Health", website: "https://www.sudameapteek.ee" }
+  - { pattern: "EUROAPTEEK", name: "Euroapteek", category: "Health", website: "https://www.euroapteek.ee" }
+  # --- Healthcare ---
+  - { pattern: "CONFIDO", name: "Confido", category: "Healthcare", website: "https://www.confido.ee" }
+  - { pattern: "MEDICUM", name: "Medicum", category: "Healthcare", website: "https://www.medicum.ee" }
+  - { pattern: "SYNLAB EESTI", name: "SYNLAB", category: "Healthcare", website: "https://synlab.ee" }
+  - { pattern: "FERTILITAS", name: "Fertilitas", category: "Healthcare", website: "https://www.fertilitas.ee" }
+  - { pattern: "IDA-TALLINNA KESKHAIGLA", name: "Ida-Tallinna Keskhaigla", category: "Healthcare", website: "https://www.itk.ee" }
+  - { pattern: "KLIINIK.EE", name: "Kliinik.ee", category: "Healthcare", website: "https://www.kliinik.ee" }
+  - { pattern: "DENTES", name: "Dentes", category: "Healthcare", website: "https://www.dentes.ee" }
+  # --- Cloud / software / hosting ---
+  - { pattern: "ZONE MEDIA", name: "Zone Media", category: "Cloud / Software", website: "https://www.zone.eu", support_url: "https://www.zone.ee/et/zone-klienditugi/" }
+  - pattern: "VEEBIMAJUTUS"
+    name: "Veebimajutus.ee"
+    category: "Cloud / Software"
+    website: "https://www.veebimajutus.ee"
+    support_url: "https://www.veebimajutus.ee/kontakt"
+    support_phone: "+372 6835 188"
+    support_email: "abi@veebimajutus.ee"
+  - { pattern: "RADICENTER", name: "Radicenter", category: "Cloud / Software", website: "https://www.radicenter.eu" }
+  - { pattern: "VOOG", name: "Voog", category: "Cloud / Software", website: "https://www.voog.com" }
+  - { pattern: "DIRECTO", name: "Directo", category: "Cloud / Software", website: "https://directo.ee" }
+  - { pattern: "MERIT TARKVARA", name: "Merit Tarkvara", category: "Cloud / Software", website: "https://www.merit.ee" }
+  - { pattern: "PIPEDRIVE", name: "Pipedrive", category: "Cloud / Software", website: "https://www.pipedrive.com" }
+  # --- Charities (recurring donations) ---
+  - { pattern: "SOS LASTEKYLA", name: "SOS Lasteküla", category: "Donations", website: "https://sos-lastekyla.ee" }
+  - { pattern: "TOIDUPANK", name: "Toidupank", category: "Donations", website: "https://www.toidupank.ee" }
+  - { pattern: "EESTI PUNANE RIST", name: "Eesti Punane Rist", category: "Donations", website: "https://redcross.ee" }
+  - { pattern: "LOOMUS", name: "Loomus", category: "Donations", website: "https://loomus.ee" }
+  - { pattern: "KINGITUD ELU", name: "Kingitud Elu", category: "Donations", website: "https://kingitudelu.ee" }
+  # --- Post, government, other recurring ---
+  - { pattern: "OMNIVA", name: "Omniva", category: "Fees & charges", website: "https://www.omniva.ee" }
+  - { pattern: "SMARTPOST", name: "Smartpost", category: "Fees & charges", website: "https://www.smartposti.ee" }
+  - { pattern: "DPD EESTI", name: "DPD Eesti", category: "Fees & charges", website: "https://www.dpd.com/ee/et/" }
+  - { pattern: "EESTI LOTO", name: "Eesti Loto", category: "Other", website: "https://www.eestiloto.ee" }
+  - { pattern: "OLYMPIC CASINO", name: "Olympic Casino", category: "Other", website: "https://www.olympic-casino.com" }
+  - { pattern: "MAKSU- JA TOLLIAMET", name: "Maksu- ja Tolliamet", category: "Fees & charges", website: "https://www.emta.ee" }
+  # --- Fuel / eating out ---
+  - { pattern: "OLEREX", name: "Olerex", category: "Fuel", website: "https://www.olerex.ee" }
+  - { pattern: "HESBURGER", name: "Hesburger", category: "Eating out", website: "https://www.hesburger.ee" }

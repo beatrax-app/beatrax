@@ -1,0 +1,242 @@
+# Government / public-agency classification rules — Switzerland.
+# Income tax is assessed cantonally and communally, so the generic office
+# words carry more weight than any single federal body — hence the German,
+# French and Italian variants below. Health insurance is private under the
+# KVG/LAMal, so KVG insurers are deliberately NOT listed as government.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "STEUERVERWALTUNG"
+    name: "Steuerverwaltung"
+  - pattern: "STEUERAMT"
+    name: "Steueramt"
+  - pattern: "ADMINISTRATION FISCALE"
+    name: "Administration fiscale cantonale"
+  - pattern: "SERVICE DES CONTRIBUTIONS"
+    name: "Service des contributions"
+  - pattern: "DIVISIONE DELLE CONTRIBUZIONI"
+    name: "Divisione delle contribuzioni (TI)"
+  # Swiss communes bill tax, waste and water directly — the bare word is the
+  # highest-value entry here, for the same reason GEMEENTE is in nl.yaml.
+  - pattern: "GEMEINDE"
+  - pattern: "COMMUNE DE"
+  - pattern: "COMUNE DI"
+  # AHV/AVS old-age insurance is collected by cantonal and professional
+  # compensation offices, not by a single national body.
+  - pattern: "AUSGLEICHSKASSE"
+    name: "Ausgleichskasse (AHV)"
+  - pattern: "CAISSE DE COMPENSATION"
+    name: "Caisse de compensation (AVS)"
+  - pattern: "CASSA DI COMPENSAZIONE"
+    name: "Cassa di compensazione (AVS)"
+  - pattern: "regex:\\bAHV\\b"
+    name: "AHV"
+  - pattern: "regex:\\bSUVA\\b"
+    name: "Suva"
+  - pattern: "ARBEITSLOSENKASSE"
+    name: "Arbeitslosenkasse"
+  - pattern: "STRASSENVERKEHRSAMT"
+    name: "Strassenverkehrsamt"
+  - pattern: "SERVICE DES AUTOMOBILES"
+    name: "Service des automobiles et de la navigation"
+  # BAZG (ex-Eidgenössische Zollverwaltung, renamed 2022) also sells the
+  # motorway e-vignette.
+  - pattern: "BUNDESAMT FUR ZOLL"
+    name: "Bundesamt für Zoll und Grenzsicherheit (BAZG)"
+  - pattern: "SERAFE"
+    name: "Serafe (Radio- und TV-Abgabe)"
+  - pattern: "BETREIBUNGSAMT"
+    name: "Betreibungsamt"
+  - pattern: "OFFICE DES POURSUITES"
+    name: "Office des poursuites"
+  - pattern: "KANTONSPOLIZEI"
+    name: "Kantonspolizei"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: estv.admin.ch (direkte Bundessteuer, Quellensteuer,
+  # Wehrpflichtersatzabgabe), bazg.admin.ch, ahv-iv.ch (AHV/IV/EO/EL and the
+  # Ausgleichskassen), the cantonal Steuerverwaltung / administration
+  # fiscale / divisione delle contribuzioni portals, ch.ch (Strassenverkehrs-
+  # amt, Zivilstandsamt, Betreibungsamt, Ordnungsbussen), serafe.ch and
+  # the communal Gebühren tariffs (Kehricht, Wasserversorgung, Hundetaxe).
+  #
+  # Tax is assessed cantonally and communally, so the three national
+  # languages of the same office all appear. Swiss basic health insurance
+  # (KVG/LAMal) is written by PRIVATE insurers and stays out; only the
+  # cantonal Prämienverbilligung — a public subsidy — is listed. Rejected
+  # as too ambiguous: "GEBAEUDEVERSICHERUNG" (a public-law monopoly in 19
+  # cantons but private in the GUSTAVO cantons, so the word alone cannot
+  # tell them apart), bare \bSVA\b, bare \bRAV\b, "TAXE AU SAC" (bags are
+  # bought over the counter) and the communal Elektrizitätswerke.
+  # ---------------------------------------------------------------------
+
+  # Federal and cantonal tax, in all three languages.
+  - pattern: "KANTONALES STEUERAMT"
+    name: "Kantonales Steueramt"
+  - pattern: 'regex:EIDGEN(O|OE)SSISCH'
+    name: "Eidgenössische Verwaltung"
+  - pattern: "EIDGENÖSSISCHE"
+    name: "Eidgenössische Verwaltung"
+  - pattern: 'regex:\bESTV\b'
+    name: "Eidgenössische Steuerverwaltung (ESTV)"
+  - pattern: "STAATSSTEUER"
+    name: "Staatssteuer"
+  - pattern: "KANTONSSTEUER"
+    name: "Kantonssteuer"
+  - pattern: "GEMEINDESTEUER"
+    name: "Gemeindesteuer"
+  - pattern: "BUNDESSTEUER"
+    name: "Direkte Bundessteuer"
+  - pattern: "QUELLENSTEUER"
+    name: "Quellensteuer"
+  - pattern: "ERBSCHAFTSSTEUER"
+    name: "Erbschaftssteuer"
+  - pattern: 'regex:HAND(A|AE)NDERUNGSSTEUER'
+    name: "Handänderungssteuer"
+  - pattern: "HANDÄNDERUNGSSTEUER"
+    name: "Handänderungssteuer"
+  - pattern: "LIEGENSCHAFTSSTEUER"
+    name: "Liegenschaftssteuer"
+  - pattern: "MOTORFAHRZEUGSTEUER"
+    name: "Motorfahrzeugsteuer"
+  - pattern: "IMPOT CANTONAL"
+    name: "Impôt cantonal"
+  - pattern: "IMPOT COMMUNAL"
+    name: "Impôt communal"
+  - pattern: "IMPOT FEDERAL DIRECT"
+    name: "Impôt fédéral direct"
+  - pattern: "IMPOT A LA SOURCE"
+    name: "Impôt à la source"
+  - pattern: "IMPOSTA CANTONALE"
+    name: "Imposta cantonale"
+  - pattern: "IMPOSTA COMUNALE"
+    name: "Imposta comunale"
+  - pattern: "IMPOSTA FEDERALE DIRETTA"
+    name: "Imposta federale diretta"
+  - pattern: "STAATSKASSE"
+    name: "Staatskasse"
+  - pattern: "FINANZDIREKTION"
+    name: "Finanzdirektion"
+
+  # Communal administration.
+  - pattern: "EINWOHNERGEMEINDE"
+    name: "Einwohnergemeinde"
+  # "ADMINISTRATION COMMUNALE" is shared with Belgium and carries its rule
+  # in be.yaml, which the loader reads first; only the Italian form is new.
+  - pattern: "AMMINISTRAZIONE COMUNALE"
+    name: "Amministrazione comunale"
+
+  # Communal charges.
+  - pattern: 'regex:KEHRICHTGEB(U|UE)HR'
+    name: "Kehrichtgebühr"
+  - pattern: "KEHRICHTGEBÜHR"
+    name: "Kehrichtgebühr"
+  - pattern: "WASSERVERSORGUNG"
+    name: "Wasserversorgung (kommunal)"
+  - pattern: "HUNDETAXE"
+    name: "Hundetaxe"
+  - pattern: "KURTAXE"
+    name: "Kurtaxe"
+  - pattern: "FEUERWEHRERSATZABGABE"
+    name: "Feuerwehrersatzabgabe"
+
+  # Compulsory-service levies.
+  - pattern: "WEHRPFLICHTERSATZABGABE"
+    name: "Wehrpflichtersatzabgabe"
+  - pattern: 'regex:MILIT(A|AE)RPFLICHTERSATZ'
+    name: "Militärpflichtersatz"
+  - pattern: "MILITÄRPFLICHTERSATZ"
+    name: "Militärpflichtersatz"
+  - pattern: "TAXE D'EXEMPTION DE L'OBLIGATION DE SERVIR"
+    name: "Taxe d'exemption de l'obligation de servir"
+
+  # First-pillar social insurance and the cantonal implementing offices.
+  - pattern: "SOZIALVERSICHERUNGSANSTALT"
+    name: "Sozialversicherungsanstalt (SVA)"
+  - pattern: 'regex:\bIV[- ]STELLE\b'
+    name: "IV-Stelle"
+  - pattern: 'regex:\bOFFICE AI\b'
+    name: "Office AI"
+  - pattern: 'regex:ERG(A|AE)NZUNGSLEISTUNG'
+    name: "Ergänzungsleistungen"
+  - pattern: "ERGÄNZUNGSLEISTUNG"
+    name: "Ergänzungsleistungen"
+  - pattern: "PRESTATIONS COMPLEMENTAIRES"
+    name: "Prestations complémentaires"
+  - pattern: "FAMILIENAUSGLEICHSKASSE"
+    name: "Familienausgleichskasse"
+  - pattern: "KINDERZULAGE"
+    name: "Kinderzulage"
+  - pattern: "CAISSE DE CHOMAGE"
+    name: "Caisse de chômage"
+  - pattern: "CAISSE DE CHÔMAGE"
+    name: "Caisse de chômage"
+  - pattern: "CASSA DISOCCUPAZIONE"
+    name: "Cassa disoccupazione"
+  - pattern: "REGIONALES ARBEITSVERMITTLUNGSZENTRUM"
+    name: "RAV"
+  - pattern: 'regex:PR(A|AE)MIENVERBILLIGUNG'
+    name: "Prämienverbilligung"
+  - pattern: "PRÄMIENVERBILLIGUNG"
+    name: "Prämienverbilligung"
+
+  # Vehicles and the motorway charge.
+  - pattern: "SEZIONE DELLA CIRCOLAZIONE"
+    name: "Sezione della circolazione (TI)"
+  - pattern: "NATIONALSTRASSENABGABE"
+    name: "Nationalstrassenabgabe (Vignette)"
+
+  # Fines, debt enforcement and courts.
+  - pattern: "ORDNUNGSBUSSE"
+    name: "Ordnungsbusse"
+  - pattern: "BUSSENZENTRALE"
+    name: "Bussenzentrale"
+  - pattern: "AMENDE D'ORDRE"
+    name: "Amende d'ordre"
+  - pattern: "UFFICIO ESECUZIONE"
+    name: "Ufficio esecuzione e fallimenti"
+  - pattern: "KONKURSAMT"
+    name: "Konkursamt"
+  - pattern: "KANTONSGERICHT"
+    name: "Kantonsgericht"
+  - pattern: "OBERGERICHT"
+    name: "Obergericht"
+  - pattern: "FRIEDENSRICHTERAMT"
+    name: "Friedensrichteramt"
+  - pattern: 'regex:SCHLICHTUNGSBEH(O|OE)RDE'
+    name: "Schlichtungsbehörde"
+  - pattern: 'regex:\bKESB\b'
+    name: "KESB"
+  - pattern: "STADTPOLIZEI"
+    name: "Stadtpolizei"
+  - pattern: "POLICE CANTONALE"
+    name: "Police cantonale"
+  - pattern: "POLIZIA CANTONALE"
+    name: "Polizia cantonale"
+
+  # Registers, civil status and migration.
+  - pattern: "HANDELSREGISTERAMT"
+    name: "Handelsregisteramt"
+  - pattern: "REGISTRE DU COMMERCE"
+    name: "Registre du commerce"
+  - pattern: "REGISTRE FONCIER"
+    name: "Registre foncier"
+  - pattern: "ZIVILSTANDSAMT"
+    name: "Zivilstandsamt"
+  - pattern: "OFFICE DE L'ETAT CIVIL"
+    name: "Office de l'état civil"
+  - pattern: "MIGRATIONSAMT"
+    name: "Migrationsamt"
+  - pattern: 'regex:AMT F(U|UE)R MIGRATION'
+    name: "Amt für Migration"
+  - pattern: "SERVICE DE LA POPULATION"
+    name: "Service de la population"
+  - pattern: 'regex:PASSB(U|UE)RO'
+    name: "Passbüro"
+
+  # Education.
+  - pattern: 'regex:SEMESTERGEB(U|UE)HR'
+    name: "Semestergebühr"
+  - pattern: "SEMESTERGEBÜHR"
+    name: "Semestergebühr"
+  - pattern: "STIPENDIENAMT"
+    name: "Stipendienamt"

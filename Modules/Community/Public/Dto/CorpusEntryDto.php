@@ -18,5 +18,6 @@ final class CorpusEntryDto extends Data
         public readonly ?string $category,
         public readonly ?string $region,
         public readonly string $contributor,
+        public readonly ?MerchantContactDto $contact = null,
     ) {}
 }

@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Daňová země',
+    'country_desc' => 'Určuje, které kategorie odpočtů jsou dostupné.',
+    'country_choose' => 'Vyber zemi…',
+    'country_switch_warning' => 'Změna přidá nové kategorie — stávající štítky se nikdy nemění.',
+
+    'countries' => [
+        'at' => 'Rakousko',
+        'be' => 'Belgie',
+        'bg' => 'Bulharsko',
+        'ca' => 'Kanada',
+        'ch' => 'Švýcarsko',
+        'cy' => 'Kypr',
+        'cz' => 'Česko',
+        'de' => 'Německo',
+        'dk' => 'Dánsko',
+        'ee' => 'Estonsko',
+        'es' => 'Španělsko',
+        'fi' => 'Finsko',
+        'fr' => 'Francie',
+        'gb' => 'Spojené království',
+        'gr' => 'Řecko',
+        'hr' => 'Chorvatsko',
+        'hu' => 'Maďarsko',
+        'ie' => 'Irsko',
+        'is' => 'Island',
+        'it' => 'Itálie',
+        'lt' => 'Litva',
+        'lu' => 'Lucembursko',
+        'lv' => 'Lotyšsko',
+        'mt' => 'Malta',
+        'nl' => 'Nizozemsko',
+        'no' => 'Norsko',
+        'pl' => 'Polsko',
+        'pt' => 'Portugalsko',
+        'ro' => 'Rumunsko',
+        'se' => 'Švédsko',
+        'si' => 'Slovinsko',
+        'sk' => 'Slovensko',
+        'us' => 'Spojené státy',
+    ],
+
+    'categories_label' => 'Kategorie odpočtů',
+    'categories_desc' => 'Uprav si škatulky, které používáš k označování.',
+    'categories_empty' => 'Zatím žádné kategorie. Přidej první kategorii nebo změň zemi, ať se načtou výchozí.',
+
+    'from_corpus' => 'z korpusu',
+    'rename_input_aria' => 'Nový název pro: :name',
+    'rename' => 'Přejmenovat',
+    'rename_aria' => 'Přejmenovat: :name',
+    'rename_save_aria' => 'Uložit nový název pro: :name',
+    'save' => 'Uložit',
+    'archive' => 'Archivovat',
+    'archive_aria' => 'Archivovat: :name',
+
+    'new_category_label' => 'Název nové kategorie',
+    'new_category_placeholder' => 'Název nové kategorie…',
+    'add_category' => 'Přidat kategorii',
+    'category_added' => 'Kategorie přidána.',
+
+    'archived_count' => 'Archivováno (:count)',
+    'restore' => 'Obnovit',
+    'restore_aria' => 'Obnovit: :name',
+];

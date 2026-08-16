@@ -27,3 +27,241 @@ entries:
     name: "DUO"
   - pattern: "TOESLAGEN"
     name: "Belastingdienst/Toeslagen"
+  # Water boards levy the waterschapsbelasting on every Dutch household.
+  - pattern: "WATERSCHAP"
+  - pattern: "HOOGHEEMRAADSCHAP"
+  # Regional joint tax offices that bill municipal and water-board levies on
+  # behalf of their members.
+  - pattern: "regex:BELASTINGSAMENWERKING|COCENSUS|REGIONALE BELASTINGGROEP|\\bBSGW\\b|\\bGBLT\\b|\\bSVHW\\b"
+    name: "Regionale belastingsamenwerking"
+  - pattern: "PROVINCIE"
+  - pattern: "regex:\\bCAK\\b"
+    name: "CAK"
+  - pattern: "KADASTER"
+    name: "Kadaster"
+  - pattern: "IMMIGRATIE- EN NATURALISATIEDIENST"
+    name: "IND"
+  - pattern: "POLITIE"
+    name: "Politie"
+  - pattern: "ZORGINSTITUUT NEDERLAND"
+    name: "Zorginstituut Nederland"
+  - pattern: "RIJKSWATERSTAAT"
+    name: "Rijkswaterstaat"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: belastingdienst.nl (aanslag- en middelnamen),
+  # toeslagen.nl, svb.nl, uwv.nl, duo.nl, cjib.nl, rdw.nl, kadaster.nl,
+  # kvk.nl, rechtspraak.nl, rijksoverheid.nl (rijksdienstenoverzicht),
+  # unievanwaterschappen.nl, and the ten statutory drinking-water companies
+  # listed at nl.wikipedia.org/wiki/Waterleidingbedrijf (Dutch drinking
+  # water may not be privatised, so all ten are publicly owned).
+  # Rejected as too ambiguous for the shared matcher: bare "DUO" (an
+  # ordinary word), bare "BTW", bare "WW", "TRIBUUT" (Dutch for tribute),
+  # "AANSLAG" on its own, "DIFTAR", and the private zorgverzekeraars —
+  # Dutch basic health insurance is sold by private insurers, so only the
+  # public CAK/Zorginstituut/GGD bodies are listed.
+  # ---------------------------------------------------------------------
+
+  # Belastingdienst middelen as they print on an aanslag or incasso.
+  - pattern: "INKOMSTENBELASTING"
+    name: "Belastingdienst (inkomstenbelasting)"
+  - pattern: "OMZETBELASTING"
+    name: "Belastingdienst (omzetbelasting)"
+  - pattern: "LOONHEFFING"
+    name: "Belastingdienst (loonheffingen)"
+  - pattern: "VENNOOTSCHAPSBELASTING"
+    name: "Belastingdienst (vennootschapsbelasting)"
+  - pattern: "MOTORRIJTUIGENBELASTING"
+    name: "Belastingdienst (motorrijtuigenbelasting)"
+  - pattern: "ERFBELASTING"
+    name: "Belastingdienst (erfbelasting)"
+  - pattern: "SCHENKBELASTING"
+    name: "Belastingdienst (schenkbelasting)"
+  - pattern: "VOORLOPIGE AANSLAG"
+    name: "Belastingdienst (voorlopige aanslag)"
+  - pattern: "DEFINITIEVE AANSLAG"
+    name: "Belastingdienst (definitieve aanslag)"
+  - pattern: "NAHEFFINGSAANSLAG"
+    name: "Naheffingsaanslag"
+  # \b keeps DOUANEKOSTEN (a carrier's own charge) out.
+  - pattern: 'regex:\bDOUANE\b'
+    name: "Douane"
+
+  # Toeslagen — the four means-tested allowances.
+  - pattern: "ZORGTOESLAG"
+    name: "Belastingdienst/Toeslagen (zorgtoeslag)"
+  - pattern: "HUURTOESLAG"
+    name: "Belastingdienst/Toeslagen (huurtoeslag)"
+  - pattern: "KINDEROPVANGTOESLAG"
+    name: "Belastingdienst/Toeslagen (kinderopvangtoeslag)"
+  - pattern: "KINDGEBONDEN BUDGET"
+    name: "Belastingdienst/Toeslagen (kindgebonden budget)"
+
+  # SVB and UWV benefit names.
+  - pattern: "SOCIALE VERZEKERINGSBANK"
+    name: "Sociale Verzekeringsbank (SVB)"
+  - pattern: "KINDERBIJSLAG"
+    name: "SVB (kinderbijslag)"
+  - pattern: 'regex:\bAOW\b'
+    name: "SVB (AOW)"
+  - pattern: 'regex:\bANW\b'
+    name: "SVB (Anw)"
+  - pattern: 'regex:\bPGB\b'
+    name: "SVB (pgb)"
+  - pattern: 'regex:\bWIA\b'
+    name: "UWV (WIA)"
+  - pattern: 'regex:\bWAO\b'
+    name: "UWV (WAO)"
+  - pattern: 'regex:\bWAJONG\b'
+    name: "UWV (Wajong)"
+  - pattern: "ZIEKTEWET"
+    name: "UWV (Ziektewet)"
+  - pattern: 'regex:\bWW[- ]UITKERING\b'
+    name: "UWV (WW-uitkering)"
+  - pattern: "BIJSTANDSUITKERING"
+    name: "Bijstandsuitkering"
+  - pattern: "PARTICIPATIEWET"
+    name: "Participatiewet"
+  # ABP is the statutory pension fund for civil servants and teachers.
+  - pattern: 'regex:\bABP\b'
+    name: "ABP (overheidspensioen)"
+
+  # Public health bodies. Long-term-care contributions run through the CAK.
+  - pattern: 'regex:\bWLZ\b'
+    name: "CAK (Wlz-bijdrage)"
+  - pattern: 'regex:\bGGD\b'
+    name: "GGD"
+  - pattern: "RIVM"
+    name: "RIVM"
+
+  # Municipal and water-board levies, as printed on a gecombineerde aanslag.
+  - pattern: "GEMEENTEBELASTINGEN"
+    name: "Gemeentebelastingen"
+  - pattern: "AFVALSTOFFENHEFFING"
+    name: "Afvalstoffenheffing"
+  - pattern: "REINIGINGSHEFFING"
+    name: "Reinigingsheffing"
+  - pattern: "RIOOLHEFFING"
+    name: "Rioolheffing"
+  - pattern: "RIOOLRECHT"
+    name: "Rioolrecht"
+  - pattern: "ONROERENDEZAAKBELASTING"
+    name: "Onroerendezaakbelasting (OZB)"
+  - pattern: "ONROERENDE ZAAKBELASTING"
+    name: "Onroerendezaakbelasting (OZB)"
+  - pattern: 'regex:\bOZB\b'
+    name: "Onroerendezaakbelasting (OZB)"
+  - pattern: 'regex:\bWOZ\b'
+    name: "WOZ-beschikking"
+  - pattern: "HONDENBELASTING"
+    name: "Hondenbelasting"
+  - pattern: "TOERISTENBELASTING"
+    name: "Toeristenbelasting"
+  - pattern: "FORENSENBELASTING"
+    name: "Forensenbelasting"
+  - pattern: "PRECARIOBELASTING"
+    name: "Precariobelasting"
+  - pattern: "PARKEERBELASTING"
+    name: "Parkeerbelasting"
+  - pattern: 'regex:\bLEGES\b'
+    name: "Leges"
+  - pattern: "ERFPACHT"
+    name: "Erfpacht (gemeentelijke canon)"
+  - pattern: "WATERSCHAPSBELASTING"
+    name: "Waterschapsbelasting"
+  - pattern: "ZUIVERINGSHEFFING"
+    name: "Zuiveringsheffing"
+  - pattern: "WATERSYSTEEMHEFFING"
+    name: "Watersysteemheffing"
+  - pattern: "VERONTREINIGINGSHEFFING"
+    name: "Verontreinigingsheffing"
+  - pattern: "NOORDELIJK BELASTINGKANTOOR"
+    name: "Noordelijk Belastingkantoor"
+
+  # Joint arrangements (gemeenschappelijke regelingen) that bill directly.
+  - pattern: "OMGEVINGSDIENST"
+    name: "Omgevingsdienst"
+  - pattern: "VEILIGHEIDSREGIO"
+    name: "Veiligheidsregio"
+  - pattern: "BRANDWEER"
+    name: "Brandweer"
+  - pattern: 'regex:\bAVRI\b'
+    name: "AVRI (afvalverwijdering Rivierenland)"
+
+  # The ten drinking-water companies — publicly owned by law.
+  - pattern: "VITENS"
+    name: "Vitens"
+  - pattern: "EVIDES"
+    name: "Evides"
+  - pattern: "BRABANT WATER"
+    name: "Brabant Water"
+  - pattern: "DUNEA"
+    name: "Dunea"
+  - pattern: "OASEN"
+    name: "Oasen"
+  - pattern: "WATERNET"
+    name: "Waternet"
+  - pattern: 'regex:\bPWN\b'
+    name: "PWN"
+  - pattern: "WATERLEIDING MAATSCHAPPIJ LIMBURG"
+    name: "WML"
+  - pattern: "WATERBEDRIJF GRONINGEN"
+    name: "Waterbedrijf Groningen"
+  - pattern: "WMD DRINKWATER"
+    name: "WMD Drinkwater"
+
+  # Justice, fines and courts.
+  - pattern: "CENTRAAL JUSTITIEEL INCASSOBUREAU"
+    name: "CJIB"
+  - pattern: "OPENBAAR MINISTERIE"
+    name: "Openbaar Ministerie"
+  - pattern: "RECHTSPRAAK"
+    name: "de Rechtspraak"
+  - pattern: "RECHTBANK"
+    name: "Rechtbank"
+  - pattern: "GERECHTSHOF"
+    name: "Gerechtshof"
+  - pattern: "GRIFFIERECHT"
+    name: "Griffierecht"
+  - pattern: "RAAD VOOR RECHTSBIJSTAND"
+    name: "Raad voor Rechtsbijstand"
+
+  # Education and student finance.
+  - pattern: "DIENST UITVOERING ONDERWIJS"
+    name: "DUO"
+  - pattern: "STUDIEFINANCIERING"
+    name: "DUO (studiefinanciering)"
+  - pattern: 'regex:\bLESGELD\b'
+    name: "DUO (lesgeld)"
+  - pattern: "COLLEGEGELD"
+    name: "Collegegeld"
+  - pattern: "UNIVERSITEIT"
+    name: "Universiteit"
+  - pattern: "HOGESCHOOL"
+    name: "Hogeschool"
+
+  # Registers, chambers and identity services.
+  - pattern: "KAMER VAN KOOPHANDEL"
+    name: "Kamer van Koophandel"
+  - pattern: 'regex:\bKVK\b'
+    name: "Kamer van Koophandel"
+  - pattern: "NATURALISATIEDIENST"
+    name: "IND"
+  - pattern: "RIJKSDIENST VOOR HET WEGVERKEER"
+    name: "RDW"
+  - pattern: 'regex:\bCBR\b'
+    name: "CBR"
+
+  # Central government, ministries and agencies.
+  - pattern: "MINISTERIE"
+    name: "Ministerie"
+  - pattern: "RIJKSOVERHEID"
+    name: "Rijksoverheid"
+  - pattern: "RIJKSDIENST"
+    name: "Rijksdienst"
+  - pattern: 'regex:\bRVO\b'
+    name: "RVO"
+  - pattern: 'regex:\bNVWA\b'
+    name: "NVWA"
+  - pattern: "STAATSBOSBEHEER"
+    name: "Staatsbosbeheer"

@@ -7,6 +7,7 @@ use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
 use Modules\Tax\Internal\Http\Livewire\TaxSettingsSection;
+use Modules\Tax\Public\Enums\TaxCountry;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /*
@@ -465,9 +466,19 @@ it('setTaxCountry rejects a code outside the allow-list (no-op)', function (): v
 });
 
 it('renders the country allow-list even when unauthenticated (no throw at mount)', function (): void {
+    // Derived from the enum, not copied out of it: the allow-list has grown
+    // from 6 to 33 as tax corpora landed, and a literal here only ever fails
+    // on the day someone adds a country. What matters is that the section
+    // mounts without a user and offers exactly what TaxCountry allows.
+    $expected = array_map(
+        static fn (TaxCountry $case): string => $case->value,
+        TaxCountry::cases(),
+    );
+    sort($expected);
+
     Livewire::test(TaxSettingsSection::class)
         ->assertOk()
-        ->assertViewHas('allowedCountries', ['nl', 'de', 'be', 'fr', 'gb', 'us']);
+        ->assertViewHas('allowedCountries', $expected);
 });
 
 it('settings page blade includes the tax settings section livewire tag', function (): void {

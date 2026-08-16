@@ -10,6 +10,7 @@ use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Sync\InitialSyncPuller;
+use Modules\Mobile\Internal\Sync\SyncBlockedReason;
 use Modules\Sync\Internal\Crypto\GdkEpoch;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
@@ -168,6 +169,12 @@ it('resumes an initial sync from a durable mobile_sync_progress cursor with no d
     /** @var InitialSyncPuller $puller */
     $puller = app(InitialSyncPuller::class);
 
+    // The rebuild is announced on its own tick before it runs, so the
+    // screen can show that step instead of jumping from transfer to done.
+    $announced = $puller->pull((int) $user->id, $session);
+    expect($announced['phase'])->toBe('rebuilding')
+        ->and($announced['blocked'])->toBe(SyncBlockedReason::Reprojecting);
+
     $progress = $puller->pull((int) $user->id, $session);
 
     expect($progress['records_applied'])->toBe(100, 'All 100 entries (40 pre-existing + 60 newly applied) must be counted exactly once.');
@@ -215,7 +222,15 @@ it('skips a pull entirely — no cursor mutation, data stays encrypted — when 
 
     $progress = $puller->pull((int) $user->id, $session);
 
-    expect($progress)->toBe(['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => 'pending']);
+    // `blocked` names what the pull is waiting on, so a stalled setup screen
+    // reads as a state instead of a frozen page.
+    expect($progress)->toBe([
+        'records_applied' => 0,
+        'records_expected' => null,
+        'percent' => 0,
+        'phase' => 'pending',
+        'blocked' => SyncBlockedReason::NoPeer,
+    ]);
     expect($db->connection()->table('mobile_sync_progress')->where('user_id', $user->id)->count())->toBe(0);
     expect($db->connection()->table('op_log_entries')->where('user_id', $user->id)->count())->toBe(0);
 });
@@ -278,6 +293,9 @@ it('runs the history re-projection AT MOST ONCE per cursor once the keyring beco
 
     /** @var InitialSyncPuller $puller */
     $puller = app(InitialSyncPuller::class);
+
+    // Tick one announces the rebuild; tick two performs it and completes.
+    expect($puller->pull($userId, $session)['phase'])->toBe('rebuilding');
 
     $first = $puller->pull($userId, $session);
     expect($first['phase'])->toBe('complete');

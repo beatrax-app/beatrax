@@ -1,0 +1,46 @@
+# Tax deduction categories — Croatia
+# Mirrors the osobni odbitak structure and the items claimed in the godišnji
+# obračun poreza na dohodak (obrazac ZPP-DOH).
+# Source: Porezna uprava (porezna-uprava.gov.hr), 2025/2026.
+# Croatia relieves income almost entirely through the osobni odbitak and its
+# uvećanja; this short list is the honest complete set, not a trimmed one.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "hr_osnovni_osobni_odbitak"
+    name: "Osnovni osobni odbitak"
+    short_name: "Osobni odb."
+    hint: "Neoporezivi dio dohotka koji se priznaje svakom rezidentu"
+  - key: "hr_uzdrzavani_clanovi"
+    name: "Uvećanje osobnog odbitka za uzdržavane članove uže obitelji"
+    short_name: "Uzdržavani"
+    hint: "Uvećanje po koeficijentu za bračnog druga i druge uzdržavane članove uže obitelji"
+  - key: "hr_uzdrzavana_djeca"
+    name: "Uvećanje osobnog odbitka za uzdržavanu djecu"
+    short_name: "Djeca"
+    hint: "Uvećanje po koeficijentu koji raste s rednim brojem uzdržavanog djeteta"
+  - key: "hr_invalidnost"
+    name: "Uvećanje osobnog odbitka za invalidnost i tjelesno oštećenje"
+    short_name: "Invalidnost"
+    hint: "Uvećanje za utvrđenu invalidnost poreznog obveznika ili uzdržavanog člana"
+  - key: "hr_darovanja"
+    name: "Darovanja"
+    short_name: "Darovanja"
+    hint: "Darovanja u kulturne, znanstvene, odgojno-obrazovne, zdravstvene i humanitarne svrhe"
+  - key: "hr_doprinosi_zdravstveno"
+    name: "Doprinosi za obvezno zdravstveno osiguranje"
+    short_name: "Zdrav. dopr."
+    hint: "Plaćeni doprinosi za obvezno zdravstveno osiguranje u tuzemstvu"
+  - key: "hr_potpomognuta_podrucja"
+    name: "Uvećani osobni odbitak za potpomognuta područja i Vukovar"
+    short_name: "Potpomognuto"
+    hint: "Veći osobni odbitak za obveznike s prebivalištem na potpomognutom području I. skupine i u Vukovaru"
+  - key: "hr_porez_placen_u_inozemstvu"
+    name: "Uračunavanje poreza plaćenog u inozemstvu"
+    short_name: "Inozemstvo"
+    hint: "Porez na dohodak plaćen u inozemstvu koji se uračunava u tuzemnu obvezu"

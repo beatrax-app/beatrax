@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'drawer_nav' => 'Navigacija',
+
+    'search_placeholder' => 'Pretraži…',
+    'search_aria' => 'Pretraži',
+    'filters' => 'Filtri',
+    'open_filters' => 'Otvori filtre',
+    'filters_active' => ', aktivnih: :count',
+
+    'install' => [
+        'aria' => 'Instaliraj Beatrax',
+        'headline' => 'Želiš svoje podatke vidjeti i na mobitelu?',
+        'body' => 'Instaliraj Beatrax na mobitel za brz pristup svojim financijama.',
+        'dismiss_aria' => 'Odbaci savjet o instalaciji',
+        'install_app' => 'Instaliraj aplikaciju',
+
+        'desktop_html' => 'Otvori Beatrax u pregledniku na mobitelu i dodirni „Dodaj na početni zaslon” — ili dodirni ikonu <strong style="color: var(--color-text);">⚡</strong> u Safarijevu izborniku za dijeljenje.',
+    ],
+
+    'topbar' => [
+        'mobile_nav' => 'Mobilna navigacija',
+        'back' => 'Natrag',
+        'open_nav' => 'Otvori navigaciju',
+        'search_transactions' => 'Pretraži transakcije',
+    ],
+];

@@ -1,0 +1,39 @@
+# Bank-fee classification rules — Cyprus (English and Greek).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Cypriot banks publish and print both English and Greek, so both are
+# listed. Bare "SERVICE CHARGE" is left out: rules are matched across every
+# region file, so it would also fire on the leasehold service charge that
+# British and Irish tenants pay by standing order. The English words use
+# `regex:` with \b word boundaries so "COMMISSION" matches the standalone
+# charge and not "COMMISSIONING", and
+# "OVERDRAFT" is anchored on the left so it cannot fire inside a longer
+# token while still covering "OVERDRAFTS". The Greek entries are plain
+# substrings: the matcher runs PCRE without /u, so \b only recognises ASCII
+# word characters and `#i` never case-folds Greek — substrings are matched
+# case-insensitively and multibyte-aware instead. They are written in the
+# unaccented UPPERCASE form the core-banking statement lines use, since
+# case-insensitive matching does not fold the accent of "προμήθεια" onto
+# "ΠΡΟΜΗΘΕΙΑ". Regex bodies must be SINGLE-quoted in YAML so the backslash
+# reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "ACCOUNT MAINTENANCE FEE"
+    name: "Account maintenance fee"
+  - pattern: "BANK CHARGES"
+    name: "Bank charges"
+  - pattern: 'regex:\bOVERDRAFT'
+    name: "Overdraft charge"
+  - pattern: 'regex:\bCOMMISSION\b'
+    name: "Commission"
+  - pattern: "ΠΡΟΜΗΘΕΙΑ"
+    name: "Προμήθεια"
+  - pattern: "ΧΡΕΩΣΤΙΚΟΙ ΤΟΚΟΙ"
+    name: "Χρεωστικοί τόκοι"

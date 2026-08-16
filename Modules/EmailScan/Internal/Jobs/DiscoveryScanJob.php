@@ -40,6 +40,8 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
     use SerializesModels;
     use TunedQueueJob;
 
+    public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
+
     // Locked keyword list for the broad discovery subject filter; the
     // mix of English + Dutch terms reflects the user's likely
     // receipt-sender pool (PayPal, ICS Cards, Bol.com, Coolblue, etc.).
@@ -81,7 +83,12 @@ final class DiscoveryScanJob implements ShouldBeUnique, ShouldQueue
         GmailApiClientContract $gmail,
         GraphApiClientContract $graph,
         KnownSenderQuery $senderQuery,
+        JobUserContext $jobUser,
     ): void {
+        // Before any API client runs: they reach OAuthSecretsRepository,
+        // which scopes through the guard a worker has nobody bound to.
+        $jobUser->bind($this->userId);
+
         $connection = $db->connection();
 
         // Sets busy_timeout once for the whole handle(): the daily

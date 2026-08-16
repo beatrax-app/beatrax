@@ -11,7 +11,15 @@
 <html
     lang="{{ $chrome->locale }}"
     class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
-    style="font-feature-settings: 'tnum';"
+    {{-- Only when the server already KNOWS the theme. An inline style beats
+         every stylesheet rule, so emitting it while the pre-paint script is
+         authoritative pinned a dark-OS phone to a white <html> and the page
+         flashed light against its own dark content. --}}
+    @if (! $chrome->needsPrePaintScript)
+        style="font-feature-settings: 'tnum'; background-color: {{ $chrome->isDark ? '#020617' : '#ffffff' }};"
+    @else
+        style="font-feature-settings: 'tnum';"
+    @endif
 >
     <head>
         <meta charset="utf-8" />
@@ -124,31 +132,6 @@
 
             <x-core::toast-host />
             {{--
-                Privacy veil (plan 05-03, D-07, T-05-11).
-                Drops synchronously on window background/blur (lock.js) to hide
-                financial data before OS screenshots. Starts opacity-0 /
-                pointer-events-none; lock.js flips classes on visibilitychange or
-                blur. 80ms CSS transition (motion-reduce:duration-0 for instant on
-                reduced-motion devices). Role/aria-modal/aria-label managed by JS.
-            --}}
-            <div
-                id="beatrax-veil"
-                class="fixed inset-0 z-[9999] flex items-center justify-center
-                       bg-white dark:bg-slate-950
-                       opacity-0 pointer-events-none
-                       transition-opacity duration-[80ms] motion-reduce:duration-0"
-                aria-hidden="true"
-            >
-                <img
-                    src="/icon.png"
-                    width="48"
-                    height="48"
-                    alt=""
-                    class="rounded-xl opacity-40"
-                    aria-hidden="true"
-                />
-            </div>
-            {{--
                 Idle-timeout injection (plan 05-03, D-17, T-05-13).
                 Emits window.beatraxIdleMs (milliseconds) ONLY when the app lock
                 is enabled for the current user, using their configured
@@ -164,7 +147,19 @@
                 ? $container->make(\Modules\Auth\Public\Services\AppLockClientConfig::class)->idleTimeoutMs($currentUser->user()->id)
                 : null)
             @if ($beatraxIdleMs !== null)
-                <script>window.beatraxIdleMs = {{ $beatraxIdleMs }};</script>
+                {{-- The lock URL travels with the timeout: lock.js used to
+                     navigate to a hardcoded /lock, which is the DESKTOP screen.
+                     On a phone that rendered the wrong lock surface first and
+                     only corrected itself a moment later. The server already
+                     knows which route applies, so it says so. --}}
+                @php($beatraxLockUrl = \Modules\Core\Public\Services\UserDataPathService::isMobileRuntime()
+                    && $container->make(\Illuminate\Routing\Router::class)->has('mobile.lock')
+                        ? route('mobile.lock')
+                        : route('auth.lock'))
+                <script>
+                    window.beatraxIdleMs = {{ $beatraxIdleMs }};
+                    window.beatraxLockUrl = @js($beatraxLockUrl);
+                </script>
             @endif
         @endauth
         @guest
@@ -246,5 +241,41 @@
                 </script>
             @endif
         @endauth
+        {{-- Last child of <body> ON PURPOSE. Nested inside the page wrapper
+             it sat in a stacking context of its own, so Flux modals — which
+             portal to the body root — painted straight over it and the QR
+             stayed readable through the privacy veil. --}}
+        {{--
+            Privacy veil (plan 05-03, D-07, T-05-11).
+            Drops synchronously on window background/blur (lock.js) to hide
+            financial data before OS screenshots. Starts opacity-0 /
+            pointer-events-none; lock.js flips classes on visibilitychange or
+            blur. 80ms CSS transition (motion-reduce:duration-0 for instant on
+            reduced-motion devices). Role/aria-modal/aria-label managed by JS.
+        --}}
+        <div
+            id="beatrax-veil"
+            {{-- Opened with showPopover() so the veil sits in the browser's
+                 top layer. A z-index cannot beat a dialog that opens its own
+                 top-layer entry, which is why modals kept showing through. --}}
+            popover="manual"
+            {{-- Background comes from CSS, not `bg-white dark:bg-slate-950`:
+                 the dark variant needs the `dark` class to already be on
+                 <html>, so the veil painted WHITE for a frame on a dark
+                 device — a flash of the exact colour it exists to hide. --}}
+            class="beatrax-veil fixed inset-0 z-[9999] flex items-center justify-center
+                   opacity-0 pointer-events-none
+                   transition-opacity duration-[80ms] motion-reduce:duration-0"
+            aria-hidden="true"
+        >
+            <img
+                src="/icon.png"
+                width="48"
+                height="48"
+                alt=""
+                class="rounded-xl opacity-40"
+                aria-hidden="true"
+            />
+        </div>
     </body>
 </html>

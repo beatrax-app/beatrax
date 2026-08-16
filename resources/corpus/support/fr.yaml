@@ -1,0 +1,112 @@
+# Support-resource corpus — France (FR merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Bouygues Telecom
+    type: merchant
+    cancel_url: "https://www.bouyguestelecom.fr/mon-compte/demande-resiliation?contexte=LEGAL"
+    notes: "Résiliation en ligne depuis l'espace client, via le lien « Résilier mon contrat » — c'est le parcours de résiliation en trois clics imposé aux opérateurs. Un lien distinct « Me rétracter de ma commande » couvre le droit de rétractation de 14 jours."
+  - name: SFR
+    type: merchant
+    cancel_url: "https://www.sfr.fr/mon-espace-client/redirect.html?D=RESIL"
+    support_url: "https://www.sfr.fr/offre-internet/frais-resiliation"
+    notes: "Résiliation depuis l'espace client SFR. Si vous conservez votre numéro, demandez d'abord votre RIO et laissez le nouvel opérateur s'occuper de la résiliation ; sinon la demande se fait directement en ligne."
+  - name: Free
+    type: merchant
+    cancel_url: "https://subscribe.free.fr/login/?link=resilonline"
+    notes: "Résiliation Freebox en ligne depuis l'espace abonné (résiliation en ligne). Pour le forfait mobile, la demande se fait séparément sur mobile.free.fr, dans le compte abonné."
+  - name: Orange
+    type: merchant
+    cancel_url: "https://assistance.orange.fr/article/abonnement-multimedia-mobile-resilier_759603"
+    support_url: "https://assistance.orange.fr/"
+    notes: "Les abonnements multimédia facturés sur la facture Orange (contenus d'éditeurs tiers) se résilient seuls, depuis l'espace client, en quelques clics. Une page distincte couvre les abonnements Internet+ Box."
+  - name: Engie
+    type: merchant
+    cancel_url: "https://particuliers.engie.fr/gaz-naturel/conseils-gaz-naturel/conseils-resiliation-gaz-naturel.html"
+    notes: "Un contrat gaz ou électricité se résilie sans frais et sans préavis. En cas de déménagement, il ne faut pas résilier mais signaler le déménagement — le contrat est alors transféré ou clôturé à la date du relevé."
+  - name: Canal+
+    type: merchant
+    cancel_url: "https://client.canalplus.com/unlogged-cancel-subscription"
+    support_url: "https://boutique.canalplus.com/contact-canal-plus/"
+    notes: "Demande de résiliation en ligne depuis l'espace client : connectez-vous pour faciliter la démarche, ou poursuivez sans compte. Sur les offres avec engagement, après 24 mois (+ le mois en cours) et sauf résiliation, le contrat est renouvelé pour 1 an au tarif hors promotion en vigueur."
+  - name: EDF
+    type: merchant
+    cancel_url: "https://particulier.edf.fr/fr/accueil/aide-contact/faq/contrat/resilier-contrat-edf.html"
+    notes: "Le contrat d'énergie se résilie à tout moment et sans préavis, depuis l'espace client rubrique « Résilier mon contrat », par téléphone au 3404 (du lundi au samedi de 8h à 20h) ou, sans espace client, via le formulaire en ligne. Communiquez votre relevé de compteur le jour du départ et faites-le inscrire sur l'état des lieux de sortie."
+  - name: TotalEnergies
+    type: merchant
+    cancel_url: "https://www.totalenergies.fr/demande-de-la-resiliation-non-connectee"
+    notes: "Le lien « Résilier » du site particuliers mène au formulaire « Demande de résiliation non connectée », qui permet de résilier son contrat d'électricité ou de gaz sans passer par l'espace client. Le formulaire nécessite un navigateur récent avec JavaScript."
+  - name: Suez - Tout sur mon eau
+    type: merchant
+    cancel_url: "https://www.toutsurmoneau.fr/resilier"
+    notes: "Le contrat d'eau se résilie depuis la page « Résilier votre contrat » du portail client Tout sur mon eau (SUEZ) ; un tutoriel « Comment résilier son contrat d'eau ? » détaille la démarche. Les pages sont des formulaires dynamiques : elles ne s'affichent qu'avec JavaScript activé."
+  - name: AXA France
+    type: merchant
+    cancel_url: "https://www.axa.fr/guide-resiliation-assurance.html"
+    notes: "La démarche dépend du contrat : habitation, auto, complémentaire santé, prévoyance, protection juridique, compte et services bancaires — chaque cas indique quoi envoyer et quand. Dans certaines situations un préavis légal s'applique avant que la résiliation ne soit effective ; pour un contrat souscrit chez un courtier, il faut remplir le formulaire en ligne prévu à cet effet."
+  - name: Harmonie Mutuelle
+    type: merchant
+    cancel_url: "https://www.harmonie-mutuelle.fr/resiliation"
+    notes: "L'espace résiliation demande de choisir le type de garantie (santé, prévoyance, emprunteur, secteur public) pour obtenir la procédure applicable. Les règles diffèrent selon la garantie, la nature individuelle ou collective de l'adhésion, sa durée et le motif : vérifiez les conditions générales, la notice d'information ou le règlement mutualiste."
+  - name: La Banque Postale
+    type: merchant
+    cancel_url: "https://www.labanquepostale.fr/particulier/footer/resiliation.html"
+    notes: "Page « Comment résilier / clôturer un compte ou un contrat ? » : les conditions sont présentées par famille de produit — comptes bancaires et comptes de dépôt, formules de compte, cartes, assurances, épargne et placements."
+  - name: Fitness Park
+    type: merchant
+    support_url: "https://www.fitnesspark.fr/conditions-generales-de-ventes/"
+    notes: "Pas de bouton public : la demande se fait auprès du club de rattachement, via l'espace adhérent en cliquant sur « Résilier mon abonnement » ou par lettre recommandée avec accusé de réception envoyée au club, accompagnée du justificatif exigé. Les prélèvements cessent après un préavis de quatre semaines courant à compter de la réception de la demande ; les résiliations pour motif médical prennent effet sous dix jours ouvrés."
+  - name: Quitoque
+    type: merchant
+    support_url: "https://www.quitoque.fr/aide"
+    notes: "Abonnement géré depuis l'espace client : on peut mettre un panier en pause semaine par semaine ou suspendre totalement l'abonnement. Toute modification ou résiliation doit intervenir au plus tard 6 jours avant la livraison (pour une livraison du mercredi, le jeudi soir minuit de la semaine précédente). Service client au 09 78 46 78 67, par WhatsApp au 07 43 52 60 71 ou par chat."
+  - name: Médecins Sans Frontières
+    type: merchant
+    support_url: "https://www.msf.fr/faq"
+    notes: "Le soutien régulier par prélèvement mensuel se modifie, se suspend ou s'arrête à tout moment depuis l'espace donateurs (msf.fr/donateurs) ou par courriel au service donateurs. Ce service est également joignable par téléphone au 01 40 21 27 27."
+
+  # --- Government ---
+  - name: Impôts
+    type: government
+    help_url: "https://www.impots.gouv.fr/contacts"
+    apply_url: "https://www.impots.gouv.fr/accueil"
+    phone: "0 809 401 401"
+    notes: "Déclaration, avis et paiement dans l'espace particulier sur impots.gouv.fr. Numéro national 0 809 401 401 (service gratuit + coût de l'appel), du lundi au vendredi de 8h30 à 19h ; une réclamation se dépose depuis la messagerie sécurisée."
+  - name: Assurance Maladie
+    type: government
+    help_url: "https://www.ameli.fr/assure/adresses-et-contacts"
+    rights_url: "https://www.ameli.fr/assure/droits-demarches"
+    notes: "Remboursements, carte Vitale et attestations dans le compte ameli. La rubrique « Droits et démarches » détaille les droits selon la situation ; un recours contre une décision passe par la commission de recours amiable de la caisse."
+  - name: Urssaf
+    type: government
+    help_url: "https://www.urssaf.fr/accueil.html"
+    notes: "Déclarations et cotisations des indépendants et employeurs sur urssaf.fr. Un délai de paiement se demande depuis le compte en ligne, avant l'échéance."
+  - name: Service-Public
+    type: government
+    help_url: "https://www.service-public.gouv.fr/"
+    notes: "Portail officiel des démarches administratives : il indique, pour chaque situation, l'organisme compétent, les pièces à fournir et les voies de recours."
+  - name: Caf
+    type: government
+    apply_url: "https://www.caf.fr/"
+    rights_url: "https://www.caf.fr/allocataires/aides-et-demarches/droits-et-prestations"
+    notes: "Prime d'activité, RSA, aides personnelles au logement, AAH, Paje : les prestations se demandent et se suivent depuis l'espace Mon Compte sur caf.fr. La Caf rappelle que seul caf.fr permet de vérifier et corriger son profil, de simuler ses droits et de demander ses prestations — méfiez-vous des fausses informations circulant ailleurs."
+  - name: L'Assurance retraite
+    type: government
+    help_url: "https://www.lassuranceretraite.fr/portail-info/hors-menu/footer/contacts.html"
+    phone: "3960"
+    notes: "Un seul numéro pour la retraite du régime général : le 3960 (ou +33 9 71 10 39 60 depuis l'étranger), du lundi au vendredi de 8h à 17h ; l'assistance aux services en ligne répond au 09 71 10 20 10. Réclamation, contestation et médiation partent de la page « Nous contacter » ; les démarches courantes se font dans l'espace personnel."
+  - name: ANTAI
+    type: government
+    help_url: "https://www.antai.gouv.fr/contact"
+    rights_url: "https://www.antai.gouv.fr/particulier/designation-ou-contestation"
+    notes: "Pour contester un avis de contravention ou une amende forfaitaire majorée, il faut adresser une requête en exonération ou une réclamation à l'officier du ministère public ; la démarche, comme la désignation d'un autre conducteur, se fait intégralement en ligne. Attention : le formulaire de contact ne permet pas de contester et n'interrompt ni les délais de contestation ni ceux de paiement."
+  - name: Crous - Mes services étudiants
+    type: government
+    apply_url: "https://messervices.etudiant.gouv.fr/"
+    rights_url: "https://www.etudiant.gouv.fr/fr/bourses-sur-criteres-sociaux-1897"
+    notes: "Le Dossier social étudiant (DSE), qui ouvre la bourse sur critères sociaux et le logement en résidence universitaire, se dépose sur MesServices.etudiant.gouv.fr. Un simulateur y calcule le droit à bourse et l'échelon selon les revenus et les charges familiales ; un rendez-vous avec un agent du Crous peut se tenir dans ses bureaux, en visio ou par téléphone."

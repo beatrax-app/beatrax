@@ -27,6 +27,7 @@ final class PairingFrame
         string $responderDeviceId,
         string $responderEd25519Hex,
         string $responderX25519Hex,
+        string $responderName = '',
     ): array {
         return [
             'type' => self::TYPE_RESPONDER_ACCEPT,
@@ -34,6 +35,10 @@ final class PairingFrame
             'responder_device_id' => $responderDeviceId,
             'responder_ed25519_pub_hex' => $responderEd25519Hex,
             'responder_x25519_pub_hex' => $responderX25519Hex,
+            // Cosmetic only — a label for the device list. It is NOT part of
+            // the signed confirm message and grants nothing, so a wrong name
+            // is a wrong caption and never a trust decision.
+            'responder_name' => $responderName,
         ];
     }
 

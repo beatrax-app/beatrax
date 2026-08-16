@@ -30,6 +30,42 @@ final readonly class SyncStatusService
             ->all();
     }
 
+    // Drops one recorded session. These rows outlive the device_registry
+    // rows they name, so a failed handshake or a removed peer otherwise sat
+    // in the list forever and held the overall status on "error" with no
+    // way for the user to clear it.
+    public function forgetSession(int $userId, string $peerDeviceId): void
+    {
+        if ($peerDeviceId === '') {
+            return;
+        }
+
+        $this->db->connection()
+            ->table('sync_sessions')
+            ->where('user_id', $userId)
+            ->where('peer_device_id', $peerDeviceId)
+            ->delete();
+    }
+
+    // Drops every session that no confirmed device backs. A session is a
+    // record of talking to a peer; once the peer is gone it is history, not
+    // a device, and listing it as one is what made removal look impossible.
+    public function forgetOrphanedSessions(int $userId): int
+    {
+        $confirmed = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->whereNotNull('confirmed_at')
+            ->pluck('device_id')
+            ->all();
+
+        return $this->db->connection()
+            ->table('sync_sessions')
+            ->where('user_id', $userId)
+            ->when($confirmed !== [], fn ($query) => $query->whereNotIn('peer_device_id', $confirmed))
+            ->delete();
+    }
+
     // Priority order: an errored peer outranks a syncing one, which outranks
     // a finished one. Written as the ladder the caller reads rather than as
     // nested guards, so the order is the code rather than a comment beside it.

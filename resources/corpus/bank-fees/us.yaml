@@ -1,0 +1,40 @@
+# Bank-fee classification rules — United States (English).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# English carries its fee wording in multi-word phrases, so those do the
+# work here: the single words ("FEE", "CHARGE", "INTEREST") are far too
+# generic to be safe on their own, and even "SERVICE CHARGE" is qualified —
+# rules are matched across every region file, so on its own it would fire on
+# the leasehold service charge that British and Irish tenants pay by
+# standing order. The `regex:` entries use \b word
+# boundaries for the two short tokens — `\bNSF\b` is fenced on both sides so
+# the acronym cannot fire inside a longer word, and `\bOVERDRAFT` is
+# anchored on the left so it stays a standalone word while the open right
+# side still covers "OVERDRAFTS", "OVERDRAFT FEE" and "OVERDRAFT ITEM FEE".
+# Regex bodies must be SINGLE-quoted in YAML so the backslash reaches the
+# matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "MONTHLY MAINTENANCE FEE"
+    name: "Monthly maintenance fee"
+  - pattern: "MONTHLY SERVICE FEE"
+    name: "Monthly service fee"
+  - pattern: "MONTHLY SERVICE CHARGE"
+    name: "Monthly service charge"
+  - pattern: 'regex:\bOVERDRAFT'
+    name: "Overdraft fee"
+  - pattern: 'regex:\bNSF\b'
+    name: "NSF fee"
+  - pattern: "INSUFFICIENT FUNDS"
+    name: "Insufficient funds fee"
+  - pattern: "FOREIGN TRANSACTION FEE"
+    name: "Foreign transaction fee"
+  - pattern: "ATM FEE"
+    name: "ATM fee"

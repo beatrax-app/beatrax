@@ -1,3 +1,35 @@
+
+/**
+ * Report the client's colour scheme to the server.
+ *
+ * A `system` theme is decided by prefers-color-scheme, which the server
+ * cannot read. Without this it renders one answer and the client computes
+ * another a moment later, and the page visibly changes theme between them.
+ * Reporting it as a cookie means the NEXT render already agrees.
+ */
+(function reportColorScheme() {
+    const write = (scheme) => {
+        // Lax so it rides ordinary navigations, including the one the idle
+        // lock performs; a year so it survives app restarts.
+        document.cookie = 'beatrax_scheme=' + scheme + '; path=/; max-age=31536000; SameSite=Lax';
+    };
+
+    try {
+        const query = window.matchMedia('(prefers-color-scheme: dark)');
+        write(query.matches ? 'dark' : 'light');
+
+        // Follow the OS while the app is open, so a scheme change mid-session
+        // is already reported by the time the next page renders.
+        const onChange = (event) => write(event.matches ? 'dark' : 'light');
+
+        if (typeof query.addEventListener === 'function') {
+            query.addEventListener('change', onChange);
+        }
+    } catch (e) {
+        // No matchMedia: the pre-paint script is unavailable too, and the
+        // server keeps its own fallback.
+    }
+})();
 import ApexCharts from 'apexcharts';
 import { palette } from './palette.js';
 import './lock.js';
@@ -6,6 +38,63 @@ import './lock.js';
 // chart-rendering Blade components can call `new window.ApexCharts(...)`
 // without re-importing the module on every component instance.
 window.ApexCharts = ApexCharts;
+
+/*
+ * Replace Livewire's page-expired prompt with an in-page reload.
+ *
+ * On a 419 Livewire calls window.confirm("This page has expired. Would you
+ * like to refresh the page?"). A native dialog inside the Android WebView
+ * blocks the whole runtime — it froze the app hard enough that the remote
+ * debugger stopped answering — and the OK path reloads, which on the
+ * recovery-codes screen destroys codes that are never shown again.
+ *
+ * Reloading without asking is the honest behaviour: the session is gone
+ * either way, and the question offered no outcome the user could act on.
+ */
+document.addEventListener('livewire:init', () => {
+    if (!window.Livewire || typeof window.Livewire.hook !== 'function') {
+        return;
+    }
+
+    window.Livewire.hook('request', ({ fail }) => {
+        fail(({ status, preventDefault }) => {
+            // A stale endpoint answers 404 for every update the page will
+            // ever send: Livewire derives its update URI from APP_KEY, so a
+            // page rendered under a previous key can never talk to this one.
+            // Reloading re-renders against the live URI; retrying cannot.
+            if (status === 419 || status === 404) {
+                preventDefault();
+                window.location.reload();
+
+                return;
+            }
+
+            // Livewire reports anything else through a <dialog> it opens with
+            // showModal(). That THROWS if a dialog is already open non-modally
+            // — a Flux modal, say — and the throw kills the error path itself,
+            // after which no update is ever processed and the app is frozen.
+            closeOpenDialogs();
+        });
+    });
+});
+
+// Closes dialogs that would make Livewire's error modal throw. Left open, one
+// stray <dialog> turns a single failed request into a permanently dead UI.
+function closeOpenDialogs() {
+    try {
+        document.querySelectorAll('dialog[open]').forEach((dialog) => {
+            try {
+                dialog.close();
+            } catch (e) {
+                // Already closing, or not closeable — either way it is no
+                // longer our problem to solve here.
+            }
+        });
+    } catch (e) {
+        // No querySelectorAll on dialogs in this engine: nothing to close,
+        // and the error modal will behave as it always did.
+    }
+}
 
 // Adjust ApexCharts options for the active theme so chart lines,
 // grid lines, and axis labels stay legible when `<html class="dark">`
@@ -83,20 +172,35 @@ window.beatraxApplyChartTheme = function (options) {
  * fetch() is intercepted correctly — it is the path every Livewire round-trip
  * already takes — so routing form submits through it fixes both defects
  * without moving any endpoint. Desktop is unaffected either way.
+ *
+ * The body MUST be JSON. The mobile shell forwards only JSON request bodies:
+ * `application/x-www-form-urlencoded` and `multipart/form-data` both arrive
+ * with an empty input bag, so the route runs, reads nothing and redirects
+ * back — the control looks dead while every response is a 200. Livewire works
+ * on device for exactly this reason: it has always posted JSON. Verified over
+ * CDP against a physical device; the query string survives too, but JSON keeps
+ * one shape for every form. Laravel merges a JSON body into the input bag, so
+ * `$request->string('code')` reads it unchanged on desktop.
  */
 window.beatraxSubmitPostForm = async function (form, submitter) {
-    const body = new URLSearchParams(new FormData(form));
+    const payload = Object.fromEntries(new FormData(form));
 
     // FormData omits the submitter; re-add it, which is the whole payload for
     // a form whose value lives on the button (the locale switcher).
     if (submitter && submitter.name) {
-        body.set(submitter.name, submitter.value);
+        payload[submitter.name] = submitter.value;
     }
 
     const response = await fetch(form.getAttribute('action'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/html',
+            // The token rides in the header as well as the body: a JSON body
+            // is only read after CSRF has already run on some Laravel paths.
+            'X-CSRF-TOKEN': payload._token ?? '',
+        },
+        body: JSON.stringify(payload),
         redirect: 'follow',
     });
 
@@ -115,6 +219,9 @@ function beatraxInlineScanner($wire) {
     return {
         live: false,
         supported: false,
+        starting: false,
+        permissionPending: false,
+        _retriedCamera: false,
         stream: null,
         detector: null,
         frame: null,
@@ -128,12 +235,20 @@ function beatraxInlineScanner($wire) {
         },
 
         toggle() {
+            // A start already in flight owns the camera. Without this every
+            // extra tap queued another getUserMedia, and they all opened one
+            // after another once permission was finally granted.
+            if (this.starting) {
+                return;
+            }
+
             if (this.live) {
                 this.stop();
                 return;
             }
             if (!this.supported) {
                 // No in-page camera here — hand off to the native scanner.
+                console.warn('[beatrax:scanner] probe reported unsupported; using the native scanner');
                 $wire.startScan();
                 return;
             }
@@ -141,6 +256,15 @@ function beatraxInlineScanner($wire) {
         },
 
         async start() {
+            // Logged to the console so a device failure is readable from
+            // logcat afterwards: the camera can only be opened while the app
+            // is foregrounded, so catching it live over the debugger means
+            // interrupting whatever the user is doing.
+            console.log('[beatrax:scanner] start requested');
+
+            this.starting = true;
+            this.permissionPending = false;
+
             try {
                 this.detector = new window.BarcodeDetector({ formats: ['qr_code'] });
                 this.stream = await navigator.mediaDevices.getUserMedia({
@@ -149,12 +273,40 @@ function beatraxInlineScanner($wire) {
                 this.$refs.preview.srcObject = this.stream;
                 await this.$refs.preview.play();
                 this.live = true;
+                this.starting = false;
+                this._retriedCamera = false;
+                console.log('[beatrax:scanner] preview live');
                 this.tick();
             } catch (e) {
-                // Permission refused, no camera, or the WebView never
-                // answered: fall back rather than strand the user staring at
-                // an empty frame.
+                // Retry once before giving up. The camera is briefly busy
+                // after a previous stream closes — returning to this screen,
+                // or an app-lock interrupting it — and treating that as
+                // "unsupported" permanently downgraded the page to the
+                // full-screen scanner for the rest of its life.
+                console.error('[beatrax:scanner] start failed: ' + (e && e.name) + ' / ' + (e && e.message));
                 this.stop();
+                this.starting = false;
+
+                // A denial while the OS prompt is up is not "no camera on this
+                // device". Falling through to the typed-code screen here threw
+                // the user off the camera the moment they granted permission.
+                if (e && e.name === 'NotAllowedError') {
+                    this.permissionPending = true;
+
+                    return;
+                }
+
+                if (!this._retriedCamera) {
+                    this._retriedCamera = true;
+                    setTimeout(() => this.start(), 400);
+
+                    return;
+                }
+
+                // Genuinely unavailable: permission refused, no camera, or the
+                // WebView never answered. Fall back rather than strand the
+                // user staring at an empty frame.
+                console.error('[beatrax:scanner] falling back to the native scanner');
                 this.supported = false;
                 $wire.startScan();
             }

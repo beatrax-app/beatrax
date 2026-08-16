@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Επεξεργασία κανόνα',
+    'heading_new' => 'Νέος κανόνας',
+
+    'combinator_aria' => 'Συνδυασμός συνθηκών',
+    'match_all' => 'Να ταιριάζουν όλες οι συνθήκες',
+    'match_any' => 'Να ταιριάζει οποιαδήποτε συνθήκη',
+
+    'condition_label' => 'Συνθήκη :number',
+    'condition_field_aria' => 'Πεδίο συνθήκης :number',
+    'condition_operator_aria' => 'Τελεστής συνθήκης :number',
+    'condition_value_aria' => 'Τιμή συνθήκης :number',
+    'condition_value_from_aria' => 'Τιμή συνθήκης :number (από)',
+    'condition_value_to_aria' => 'Τιμή συνθήκης :number (έως)',
+    'to' => 'έως',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'π.χ. SPOTIFY',
+    'remove_condition' => 'Αφαίρεση συνθήκης',
+    'add_condition' => '+ Προσθήκη συνθήκης',
+
+    'then' => 'Τότε',
+    'action_label' => 'Ενέργεια :number',
+    'action_type_aria' => 'Τύπος ενέργειας :number',
+    'action_category' => 'Κατηγορία',
+    'action_counterparty' => 'Αντισυμβαλλόμενος',
+    'action_note' => 'Σημείωση',
+    'action_tax_tag' => 'Φορολογική ετικέτα',
+    'assign_category_aria' => 'Ανάθεση κατηγορίας για την ενέργεια :number',
+    'reassign_counterparty_aria' => 'Ανάθεση σε άλλον αντισυμβαλλόμενο για την ενέργεια :number',
+    'note_text_aria' => 'Κείμενο σημείωσης για την ενέργεια :number',
+    'note_placeholder' => 'Κείμενο σημείωσης…',
+    'note_mode_aria' => 'Λειτουργία σημείωσης για την ενέργεια :number',
+    'note_set' => 'Ορισμός',
+    'note_append' => 'Προσθήκη στο τέλος',
+    'deduction_category_aria' => 'Κατηγορία έκπτωσης για την ενέργεια :number',
+    'remove_action' => 'Αφαίρεση ενέργειας',
+    'add_action' => '+ Προσθήκη ενέργειας',
+
+    'this_year_only' => 'Μόνο φέτος ▾',
+    'override_tax_year' => 'Παράκαμψη φορολογικού έτους',
+    'tax_year_override_aria' => 'Παράκαμψη φορολογικού έτους για την ενέργεια :number',
+    'tax_tag_note' => 'Οι ενέργειες φορολογικής ετικέτας εφαρμόζονται στην επόμενη εκ νέου εφαρμογή, όχι στην τρέχουσα εισαγωγή.',
+
+    'priority' => 'Προτεραιότητα',
+    'priority_help' => 'Οι μικρότεροι αριθμοί εκτελούνται πρώτοι. Κανόνες χωρίς κοινά πεδία δεν συγκρούονται ποτέ.',
+
+    'cancel' => 'Άκυρο',
+    'save_changes' => 'Αποθήκευση αλλαγών',
+    'save_rule' => 'Αποθήκευση κανόνα',
+    'saving' => 'Αποθήκευση…',
+
+    'error_rule_unavailable' => 'Αυτός ο κανόνας δεν είναι πλέον διαθέσιμος.',
+    'error_invalid_data' => 'Μη έγκυρα δεδομένα κανόνα — επίλεξε από τις αναπτυσσόμενες λίστες και δοκίμασε ξανά.',
+    'error_duplicate' => 'Υπάρχει ήδη κανόνας με αυτό το πεδίο, την ίδια αντιστοίχιση και την ίδια τιμή. Επεξεργάσου τον υπάρχοντα κανόνα.',
+    'error_priority_whole' => 'Η προτεραιότητα πρέπει να είναι ακέραιος αριθμός.',
+    'error_add_condition' => 'Πρόσθεσε τουλάχιστον μία συνθήκη.',
+    'error_add_action' => 'Πρόσθεσε τουλάχιστον μία ενέργεια.',
+    'condition_value_required' => 'Εισάγαγε τιμή για τη συνθήκη :position.',
+    'condition_bounds_required' => 'Επίλεξε κάτω και άνω όριο για τη συνθήκη :position.',
+    'condition_amount_invalid' => 'Εισάγαγε έγκυρο ποσό για τη συνθήκη :position.',
+    'action_pick_category' => 'Επίλεξε κατηγορία για αυτή την ενέργεια.',
+    'action_pick_counterparty' => 'Επίλεξε αντισυμβαλλόμενο για την ανάθεση.',
+    'action_note_required' => 'Εισάγαγε κείμενο σημείωσης.',
+    'action_pick_deduction' => 'Επίλεξε κατηγορία έκπτωσης για τη φορολογική ετικέτα.',
+];

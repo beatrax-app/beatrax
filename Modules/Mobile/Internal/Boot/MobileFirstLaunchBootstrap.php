@@ -48,6 +48,29 @@ final class MobileFirstLaunchBootstrap
         return false;
     }
 
+    // Every path a NativePHP plugin hands to loadViewsFrom(). The bundler
+    // strips their whole `resources/` tree, so each one has to be recreated.
+    private const PLUGIN_VIEW_PATHS = ['resources/views', 'resources/jump/views'];
+
+    // The bundler strips every plugin's `resources/` directory, but their
+    // service providers still call loadViewsFrom() on those paths.
+    // The view finder throws DirectoryNotFoundException on a path that is
+    // not there, so re-creating the empty directories restores the contract.
+    public function ensurePluginViewPaths(string $basePath): void
+    {
+        $candidates = glob($basePath.'/vendor/nativephp/*/src', GLOB_ONLYDIR);
+
+        foreach ($candidates === false ? [] : $candidates as $src) {
+            foreach (self::PLUGIN_VIEW_PATHS as $relative) {
+                $views = dirname($src).'/'.$relative;
+
+                if (! is_dir($views)) {
+                    @mkdir($views, 0755, true);
+                }
+            }
+        }
+    }
+
     // Idempotent - the migrator's own run() is a no-op when nothing is
     // pending. Creates the migrations repository first if it does not
     // yet exist so the migrator can record the first run.

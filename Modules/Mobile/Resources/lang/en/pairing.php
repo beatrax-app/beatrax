@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 return [
+    'peer_default_name' => 'Paired device',
     'page_title' => 'Pair a device',
 
     'scan_heading' => 'Pair this device',
     'scan_subtitle' => 'Point the camera at the code shown on the other device.',
+    'camera_permission_pending' => 'Camera access is off. Allow it for Beatrax in your device settings, then try again.',
     'open_camera' => 'Open the camera',
+    'opening_camera' => 'Waiting for camera access…',
     'close_camera' => 'Close the camera',
     'viewfinder_aria' => 'Camera viewfinder — point it at the code on your other device',
     'viewfinder_idle' => 'The camera is off. Open it to scan the code shown on your other device.',
@@ -31,6 +34,7 @@ return [
     'done' => 'Done',
 
     'errors' => [
+        'relay_unreachable' => 'Cannot reach the other device. Make sure both are on the same network and sync is enabled on the desktop.',
         'import_needs_qr' => 'Scan the QR code shown on the other device to import.',
         'invalid_code' => 'This code is invalid or has expired. Ask the other device to generate a new one.',
         'identity_locked' => 'Your device identity is locked. Unlock the app and try again.',

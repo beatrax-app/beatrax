@@ -139,6 +139,7 @@ final readonly class PeerCatchUpExchanger
             opType: $opType,
             signature: is_string($row->signature) ? $row->signature : '',
             userId: is_numeric($row->user_id) ? (int) $row->user_id : 0,
+            originUserId: is_numeric($row->origin_user_id ?? null) ? (int) $row->origin_user_id : null,
             // The GDK epoch tag MUST travel with the ciphertext over the
             // wire — the op-log value column doubles as the
             // transport-encrypted payload; dropping this here would

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Providers;
 
+use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\ServiceProvider;
@@ -11,6 +13,7 @@ use Livewire\LivewireManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Exceptions\NotAuthenticatedException;
+use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
@@ -21,11 +24,13 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\LibsodiumPrimitives;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
+use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Http\Livewire\SyncHealthPage;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Identity\DeviceNameDetector;
+use Modules\Sync\Internal\Listeners\BackfillOpLogOnSyncEnabled;
 use Modules\Sync\Internal\Listeners\SyncCaptureListener;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\Merge\Strategies\GCounterStrategy;
@@ -35,12 +40,14 @@ use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
+use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
+use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
@@ -51,6 +58,7 @@ use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\EncryptionMigrationSupport;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Services\SyncDaemonIdentity;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -161,8 +169,12 @@ final class SyncServiceProvider extends ServiceProvider
         if (class_exists(DeviceIdentityService::class)) {
             $this->app->singleton(DeviceIdentityService::class);
         }
+        // Not a singleton: it holds no state, and caching one instance froze
+        // whichever AppLockKeyService was bound at first resolve. A daemon
+        // handoff now reads the identity during DeviceSyncEnabled, which is
+        // early enough for that freeze to outlive a later rebind.
         if (class_exists(DeviceIdentityLoader::class)) {
-            $this->app->singleton(DeviceIdentityLoader::class);
+            $this->app->bind(DeviceIdentityLoader::class);
         }
         if (class_exists(DeviceNameDetector::class)) {
             $this->app->singleton(DeviceNameDetector::class);
@@ -205,13 +217,98 @@ final class SyncServiceProvider extends ServiceProvider
             $this->singletonIfExists($pairingNamespace.$pairingClass);
         }
 
-        // OpLogWriter requires device credentials resolved at runtime.
-        // Concrete construction (device id, keys, userId) is the caller's
-        // responsibility: resolve it with explicit constructor args via
-        // app(OpLogWriter::class, [...]) or a factory closure.
+        // OpLogWriter takes four runtime primitives no autowiring can
+        // supply, so EVERY resolution threw "Unresolvable dependency".
+        // SyncCaptureListener swallowed that: nothing was ever captured,
+        // and a paired device received an empty database.
         if (class_exists(OpLogWriter::class)) {
-            $this->app->singleton(OpLogWriter::class);
+            $this->app->bind(
+                OpLogWriter::class,
+                function (Container $app, array $parameters): OpLogWriter {
+                    /** @var array<string, mixed> $parameters */
+                    return $parameters === []
+                        ? $this->makeOpLogWriter($app)
+                        : $this->makeOpLogWriterWith($app, $parameters);
+                },
+            );
         }
+    }
+
+    // Throws (not returns null) when no identity is available: an unlocked
+    // key is a precondition for signing, and callers already treat a failed
+    // resolution as "capture is not possible right now".
+    /**
+     * @throws BindingResolutionException when sync is off, locked, or the
+     *                                    request has no authenticated user.
+     */
+    private function makeOpLogWriter(Container $app): OpLogWriter
+    {
+        $currentUser = $app->make(CurrentUser::class);
+
+        if (! $currentUser->isAuthenticated()) {
+            throw new BindingResolutionException('OpLogWriter: no authenticated user to capture for.');
+        }
+
+        $userId = $currentUser->id();
+        $sessionFactory = $app->make(SessionFactory::class);
+        $identity = $app->make(DeviceIdentityLoader::class)->load($userId, $sessionFactory());
+
+        if ($identity === null) {
+            throw new BindingResolutionException('OpLogWriter: no usable device identity (sync off or locked).');
+        }
+
+        return $this->buildOpLogWriter(
+            $app,
+            $identity->deviceId,
+            $userId,
+            sodium_hex2bin($identity->ed25519SecretKeyHex),
+            sodium_hex2bin($identity->ed25519PublicKeyHex),
+        );
+    }
+
+    // Callers that already hold credentials (tests, and any future
+    // multi-identity caller) pass them explicitly to app(); honouring that
+    // keeps the make-with-parameters contract this binding replaced.
+    /**
+     * @param  array<string, mixed>  $parameters
+     *
+     * @throws BindingResolutionException when a credential is missing or the wrong type.
+     */
+    private function makeOpLogWriterWith(Container $app, array $parameters): OpLogWriter
+    {
+        $deviceId = $parameters['deviceId'] ?? null;
+        $userId = $parameters['userId'] ?? null;
+        $secretKey = $parameters['secretKey'] ?? null;
+        $publicKey = $parameters['publicKey'] ?? null;
+
+        if (! is_string($deviceId) || ! is_int($userId) || ! is_string($secretKey) || ! is_string($publicKey)) {
+            throw new BindingResolutionException('OpLogWriter: explicit credentials are incomplete.');
+        }
+
+        return $this->buildOpLogWriter($app, $deviceId, $userId, $secretKey, $publicKey);
+    }
+
+    private function buildOpLogWriter(
+        Container $app,
+        string $deviceId,
+        int $userId,
+        string $secretKey,
+        string $publicKey,
+    ): OpLogWriter {
+        return new OpLogWriter(
+            clock: $app->make(HybridLogicalClock::class),
+            db: $app->make(DatabaseManager::class),
+            signer: $app->make(DeviceKeySigner::class),
+            wallClock: $app->make(Clock::class),
+            deviceId: $deviceId,
+            userId: $userId,
+            secretKey: $secretKey,
+            publicKey: $publicKey,
+            sensitiveFields: $app->make(SensitiveFieldRegistry::class),
+            fieldCrypto: $app->make(OpLogFieldCrypto::class),
+            keyring: $app->make(GdkKeyringService::class),
+            session: $app->make(SessionFactory::class),
+        );
     }
 
     private function registerTransportServices(): void
@@ -259,28 +356,34 @@ final class SyncServiceProvider extends ServiceProvider
 
         $this->app->bind(
             SyncWebSocketHandler::class,
-            fn () => new SyncWebSocketHandler(
-                registryService: $this->app->make(DeviceRegistryService::class),
-                signer: $this->app->make(DeviceKeySigner::class),
-                framer: new TransportFramer,
-                catchUp: $this->app->make(PeerCatchUpExchanger::class),
-                db: $this->app->make(DatabaseManager::class),
-                clock: $this->app->make(Clock::class),
-                logger: $this->app->make(LoggerInterface::class),
-                // Placeholder credentials — real values injected at
-                // daemon start by NativePHP ChildProcess or DeviceIdentityLoader.
-                localStaticSecret: '',
-                localStaticPublic: '',
-                localDeviceId: '',
-                userId: 0,
-                // Container-bound merge registry + FTS writer so the
-                // live sync replay path keeps the search index fresh,
-                // matching every other replay path.
-                rules: $this->app->make(MergeRulesRegistry::class),
-                searchWriter: $this->app->bound(SearchIndexWriterContract::class)
-                    ? $this->app->make(SearchIndexWriterContract::class)
-                    : null,
-            ),
+            function (): SyncWebSocketHandler {
+                $daemon = SyncDaemonIdentity::fromEnvironment();
+
+                return new SyncWebSocketHandler(
+                    registryService: $this->app->make(DeviceRegistryService::class),
+                    signer: $this->app->make(DeviceKeySigner::class),
+                    framer: new TransportFramer,
+                    catchUp: $this->app->make(PeerCatchUpExchanger::class),
+                    db: $this->app->make(DatabaseManager::class),
+                    clock: $this->app->make(Clock::class),
+                    logger: $this->app->make(LoggerInterface::class),
+                    // Handed to the daemon as environment at spawn. These were
+                    // hard-coded empty with a comment promising injection that
+                    // was never written, so the responder answered every Noise
+                    // handshake with an unusable key.
+                    localStaticSecret: $daemon === null ? '' : sodium_hex2bin($daemon['secret']),
+                    localStaticPublic: $daemon === null ? '' : sodium_hex2bin($daemon['public']),
+                    localDeviceId: $daemon === null ? '' : $daemon['deviceId'],
+                    userId: $daemon === null ? 0 : $daemon['userId'],
+                    // Container-bound merge registry + FTS writer so the
+                    // live sync replay path keeps the search index fresh,
+                    // matching every other replay path.
+                    rules: $this->app->make(MergeRulesRegistry::class),
+                    searchWriter: $this->app->bound(SearchIndexWriterContract::class)
+                        ? $this->app->make(SearchIndexWriterContract::class)
+                        : null,
+                );
+            },
         );
     }
 
@@ -299,6 +402,7 @@ final class SyncServiceProvider extends ServiceProvider
                 logger: $this->app->make(LoggerInterface::class),
                 handler: fn () => $this->app->make(SyncWebSocketHandler::class),
                 advertiser: $this->app->make(MdnsAdvertiser::class),
+                shutdown: $this->app->make(DaemonShutdownSignal::class),
             ));
         }
 
@@ -319,6 +423,7 @@ final class SyncServiceProvider extends ServiceProvider
 
         $this->registerCaptureListeners($events);
         $this->registerCryptoListeners($events);
+        $this->registerBackfillListener($events);
         $this->registerLivewireComponents();
         $this->registerConsoleCommands();
     }
@@ -348,6 +453,16 @@ final class SyncServiceProvider extends ServiceProvider
             if (class_exists($eventClass)) {
                 $events->listen($eventClass, [SyncCaptureListener::class, $method]);
             }
+        }
+    }
+
+    // Enabling sync is the only moment a device knows it must start
+    // carrying history: everything already in its database predates the
+    // op log and would otherwise never reach a peer.
+    private function registerBackfillListener(Dispatcher $events): void
+    {
+        if (class_exists(BackfillOpLogOnSyncEnabled::class)) {
+            $events->listen(DeviceSyncEnabled::class, [BackfillOpLogOnSyncEnabled::class, 'handle']);
         }
     }
 

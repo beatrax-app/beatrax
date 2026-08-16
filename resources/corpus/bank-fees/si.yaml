@@ -1,0 +1,32 @@
+# Bank-fee classification rules — Slovenia (Slovenian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The bare "NADOMESTILO" is never used on its own: outside banking it means
+# an allowance, and "nadomestilo za prehrano" is a payslip line rather than
+# a fee, so it is anchored to what the bank is charging for. `\bOBRESTI\b`
+# uses `regex:` with \b word boundaries so it matches the standalone
+# interest line and not "OBRESTNA MERA" in running text, and `\bPROVIZIJ`
+# is a LEADING-boundary stem covering "provizija", "provizije" and
+# "provizij". Slovenian diacritics stay out of `regex:` bodies — the matcher
+# runs PCRE without /u, so `#i` case-folds ASCII only and \b never sees "Š"
+# as a word character; "STROŠKI VODENJA" is therefore a plain substring,
+# matched case-insensitively and multibyte-aware. Regex bodies must be
+# SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "NADOMESTILO ZA VODENJE"
+    name: "Nadomestilo za vodenje računa"
+  - pattern: "STROŠKI VODENJA"
+    name: "Stroški vodenja računa"
+  - pattern: 'regex:\bPROVIZIJ'
+    name: "Provizija"
+  - pattern: 'regex:\bOBRESTI\b'
+    name: "Obresti"

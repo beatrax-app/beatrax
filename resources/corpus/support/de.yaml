@@ -1,0 +1,132 @@
+# Support-resource corpus — Germany (DE merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: o2
+    type: merchant
+    cancel_url: "https://www.o2online.de/service/kuendigung-info/"
+    support_url: "https://www.o2online.de/service/"
+    notes: "Der Vertrag kann unter Berücksichtigung der Kündigungsfrist zum Ablauf der Mindestvertragslaufzeit gekündigt werden; Laufzeit und Frist stehen in Mein o2 und in der Mein o2 App. Die Kündigung selbst läuft über den Kündigungsbutton auf info.o2online.de."
+  - name: Vattenfall
+    type: merchant
+    cancel_url: "https://www.vattenfall.de/service/kuendigen"
+    support_url: "https://www.vattenfall.de/service"
+    notes: "Kündigung des Strom- oder Gasvertrags über das Online-Formular unter Service & Kontakt. Bei einem Umzug ist keine Kündigung nötig — dann reicht die Ummeldung des Vertrags."
+  - name: EnBW
+    type: merchant
+    cancel_url: "https://www.enbw.com/kuendigen"
+    support_url: "https://www.enbw.com/service"
+    notes: "Kündigung des Energievertrags über das Formular auf enbw.com; dafür werden Kunden- und Zählerdaten abgefragt. Bei einem Umzug genügt die Auszugsmeldung statt einer Kündigung."
+  - name: ADAC
+    type: merchant
+    cancel_url: "https://www.adac.de/mitgliedschaft/kuendigung/formular/"
+    support_url: "https://www.adac.de/hilfe-vom-adac/"
+    notes: "Kündigung der Mitgliedschaft über das Online-Formular. Es gilt eine Frist von drei Monaten zum Ende der Beitragsperiode — wer später kündigt, zahlt den nächsten Jahresbeitrag noch."
+  - name: FitX
+    type: merchant
+    cancel_url: "https://www.fitx.de/vertrag-kuendigen"
+    notes: "Kündigung über den Kündigungsbutton 'Verträge hier kündigen' auf fitx.de; daneben gibt es einen eigenen Weg für den Widerruf eines frisch abgeschlossenen Vertrags."
+  - name: Rundfunkbeitrag
+    type: merchant
+    cancel_url: "https://www.rundfunkbeitrag.de/buergerinnen-und-buerger/formulare/abmelden"
+    support_url: "https://www.rundfunkbeitrag.de/buergerinnen-und-buerger/formulare/kontakt"
+    notes: "Der Rundfunkbeitrag lässt sich nicht 'kündigen' — nur eine Wohnung abmelden, etwa bei Umzug, Zusammenzug oder Auszug. Das geht über das Abmeldeformular des Beitragsservice, ein Nachweis ist erforderlich."
+  - name: Yello
+    type: merchant
+    cancel_url: "https://www.yello.de/kuendigen/"
+    support_url: "https://www.yello.de/service/"
+    notes: "Kündigung über das Kündigungsformular auf yello.de: Sparte (Strom, Gas oder Wärmestrom), Produkt und Kündigungsart auswählen. Bei einem Umzug ist keine Kündigung nötig — laut AGB zieht der Vertrag mit, dafür gibt es die separate Umzugsmeldung."
+  - name: LichtBlick
+    type: merchant
+    cancel_url: "https://www.lichtblick.de/vertrag-kuendigen/"
+    support_url: "https://www.lichtblick.de/kontakt/"
+    notes: "Kündigung über den Kündigungsbutton 'Vertrag hier kündigen' auf lichtblick.de. Fragen zum laufenden Vertrag laufen über die Kontaktseite mit FAQ und Kontaktformular."
+  - name: EWE
+    type: merchant
+    cancel_url: "https://www.ewe.de/vertragskuendigung"
+    support_url: "https://service.ewe.de/kontakt-hilfe"
+    notes: "Energie- und Telekommunikationsverträge werden über den Kündigungsbutton auf ewe.de gekündigt, der zum Kontaktformular führt. Die Zuhause+ Energietarife laufen 12 Monate; bei einem Umzug muss nicht gekündigt werden, der Vertrag zieht mit um."
+  - name: congstar
+    type: merchant
+    cancel_url: "https://www.congstar.de/hilfe-service/vertrag-jetzt-kuendigen"
+    support_url: "https://www.congstar.de/hilfe-service/"
+    notes: "Kündigung über den Kündigungsbutton 'Verträge kündigen' auf congstar.de; das Formular fragt die Vertragsangaben ab, ein Login ist nicht nötig. Viele congstar Handytarife sind ohnehin monatlich kündbar."
+  - name: freenet
+    type: merchant
+    cancel_url: "https://www.freenet.de/services/vertrag/kuendigung/"
+    support_url: "https://www.freenet.de/services/"
+    notes: "Auf der Serviceseite 'Kündigung und Tarifwechsel' laufen Vertragskündigung und das getrennte Kündigen zusätzlich gebuchter digitaler Produkte und Zusatzoptionen zusammen — beides muss einzeln beendet werden."
+  - name: ERGO
+    type: merchant
+    cancel_url: "https://www.ergo.de/de/Service/vertrag-kuendigen"
+    support_url: "https://www.ergo.de/de/Service"
+    notes: "Die Seite 'Versicherung kündigen' erklärt Kündigung und Alternativen je Sparte; Verträge lassen sich auch über das ERGO Kundenportal oder die Beraterin bzw. den Berater vor Ort beenden. Telefonisch unter 0800 / 3746 128, Mo–Sa 7–20 Uhr (gebührenfrei)."
+  - name: clever fit
+    type: merchant
+    cancel_url: "https://www.clever-fit.com/de/vertragskuendigung/"
+    notes: "Kündigung über den Kündigungsbutton 'Vertrag kündigen' auf clever-fit.com; für frisch abgeschlossene Verträge gibt es daneben den eigenen Weg 'Vertrag widerrufen'. Die Studios sind Franchisebetriebe mit je eigener Kontaktseite — es gibt keine zentrale Servicenummer."
+  - name: Marley Spoon
+    type: merchant
+    cancel_url: "https://marleyspoon.de/about/kuendigung"
+    notes: "Kündigung des Abos über das Formular auf marleyspoon.de. Dort wird zwischen ordentlicher Kündigung zum nächstmöglichen Liefertermin und außerordentlicher sofortiger Kündigung unterschieden — letztere nur bei einem validen Grund wählen."
+  - name: DKB
+    type: merchant
+    cancel_url: "https://www.dkb.de/fragen-antworten/wie-kuendige-ich-meine-konten-und-karten"
+    support_url: "https://www.dkb.de/fragen-antworten"
+    notes: "Girokonto, Girokonto u18 sowie Gemeinschafts- und Kinderkonten lassen sich direkt online kündigen; die Kündigung umfasst automatisch alle zum Girokonto gehörenden Karten. Für Tagesgeldkonto und Depot gibt es eigene Wege."
+  - name: AOK
+    type: merchant
+    cancel_url: "https://www.aok.de/pk/krankenkasse-wechseln/"
+    support_url: "https://www.aok.de/pk/kontakt/"
+    notes: "Bei einem Wechsel der gesetzlichen Krankenkasse muss man nicht selbst kündigen — die neue Kasse übernimmt die Kündigung. Es gilt in der Regel eine Kündigungsfrist von zwei Monaten und nach einem Wechsel eine Bindungsfrist von 12 Monaten; bei einem Jobwechsel ist der Wechsel sofort möglich."
+
+  # --- Government ---
+  - name: Finanzamt
+    type: government
+    help_url: "https://www.elster.de/eportal/infoseite/kontakt_standard"
+    apply_url: "https://www.elster.de/eportal/start"
+    phone: "0800 52 35 055"
+    notes: "Steuererklärung, Bescheide und Einspruch laufen über Mein ELSTER. ELSTER-Hotline 0800 52 35 055, Mo-Fr 7-22 Uhr, Sa/So und an bundeseinheitlichen Feiertagen 10-18 Uhr; aus dem Ausland +49 180 5 23 50 55."
+  - name: Bundesagentur für Arbeit
+    type: government
+    help_url: "https://www.arbeitsagentur.de/service-bereich"
+    apply_url: "https://www.arbeitsagentur.de/eservices"
+    rights_url: "https://www.arbeitsagentur.de/arbeitslos-arbeit-finden/arbeitslosengeld"
+    phone: "0800 4 555500"
+    notes: "Arbeitsuchendmeldung und Arbeitslosengeld online über die eServices; Servicerufnummer 0800 4 555500 gebührenfrei. Termine vor Ort oder per Video lassen sich über den Servicebereich vereinbaren."
+  - name: Deutsche Rentenversicherung
+    type: government
+    help_url: "https://www.deutsche-rentenversicherung.de/DRV/DE/Beratung-und-Kontakt/Kontakt"
+    apply_url: "https://www.deutsche-rentenversicherung.de/DRV/DE/Rente/Kurz-vor-der-Rente/Wie-beantrage-ich-meine-Rente/wie-beantrage-ich-meine-rente_node"
+    phone: "0800 1000 4800"
+    notes: "Kostenloses Servicetelefon 0800 1000 4800, Mo-Do 8-19 Uhr, Fr 8-15:30 Uhr. Rentenantrag, Unterlagen und persönliche Anliegen laufen über die Online-Dienste und das Kundenportal."
+  - name: Bundesnetzagentur
+    type: government
+    help_url: "https://www.bundesnetzagentur.de/DE/Allgemeines/Kontakt/start.html"
+    rights_url: "https://www.bundesnetzagentur.de/DE/Vportal/Schlichtung/start.html"
+    phone: "0228 14-0"
+    notes: "Anlaufstelle für Ärger mit Telekommunikations-, Energie- und Postanbietern: über das Verbraucherportal laufen Anfragen, Beschwerden und das kostenlose Schlichtungsverfahren, wenn der Anbieter eine Kündigung oder Rechnung nicht akzeptiert. Zentrale in Bonn, Telefon 0228 14-0, info@bnetza.de."
+  - name: Kraftfahrt-Bundesamt
+    type: government
+    help_url: "https://www.kba.de/DE/Service/Kontakt/kontakt_node.html"
+    apply_url: "https://www.kba.de/DE/Themen/ZentraleRegister/Digitale_Fahrzeugzulassung/iKfz/ikfz_node.html"
+    rights_url: "https://www.kba.de/DE/Themen/ZentraleRegister/FAER/Auskunft/faer_auskunft_node.html"
+    phone: "+49 461 316-0"
+    notes: "Die Auskunft aus dem Fahreignungsregister (Punktestand, 'Verkehrssündenkartei') ist gebührenfrei und online möglich. Der i-Kfz-Antrag zur Fahrzeugzulassung wird nicht beim KBA gestellt, sondern auf der Website der zuständigen Zulassungsbehörde — das KBA listet auf, welche Behörde bereits digital zulässt."
+  - name: Bundeszentralamt für Steuern
+    type: government
+    help_url: "https://www.bzst.de/DE/Service/SteuerlichesInfocenter/steuerlichesinfocenter_node.html"
+    apply_url: "https://online.portal.bzst.de"
+    rights_url: "https://www.bzst.de/DE/Privatpersonen/SteuerlicheIdentifikationsnummer/steuerlicheidentifikationsnummer_node.html"
+    phone: "+49 228 406-1200"
+    notes: "Zuständig unter anderem für die steuerliche Identifikationsnummer — wer sie verloren hat, kann die erneute Mitteilung über ein Formular beantragen, unterstützt vom Chatbot ViOlA. Service-Hotline zu allgemeinen steuerlichen Themen: +49 228 406-1200, Mo–Fr 9:00–14:00 Uhr."
+  - name: BAföG
+    type: government
+    help_url: "https://www.xn--bafg-7qa.de/bafoeg/de/services/kontakt/kontakt_node.html"
+    apply_url: "https://www.xn--bafg-7qa.de/bafoeg/de/antrag-stellen/antrag-stellen_node.html"
+    rights_url: "https://www.xn--bafg-7qa.de/bafoeg/de/das-bafoeg-alle-infos-auf-einen-blick/foerderungsarten-und-foerderungshoehe/foerderungsarten-und-foerderungshoehe_node.html"
+    notes: "Das offizielle BAföG-Portal des Bundes (www.bafög.de) erklärt Förderungsarten und Förderungshöhe und führt zur elektronischen Antragstellung über BAföG Digital. Entschieden wird nicht zentral, sondern vom zuständigen Amt für Ausbildungsförderung."

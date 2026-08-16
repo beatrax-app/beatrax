@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 return [
+    'peer_default_name' => 'Gekoppeld apparaat',
     'page_title' => 'Apparaat koppelen',
 
     'scan_heading' => 'Koppel dit apparaat',
     'scan_subtitle' => 'Richt de camera op de code die op het andere apparaat wordt getoond.',
+    'camera_permission_pending' => 'Cameratoegang staat uit. Sta die toe voor Beatrax in je apparaatinstellingen en probeer het opnieuw.',
     'open_camera' => 'Camera openen',
+    'opening_camera' => 'Wachten op cameratoegang…',
     'close_camera' => 'Camera sluiten',
     'viewfinder_aria' => 'Camerabeeld — richt het op de code op je andere apparaat',
     'viewfinder_idle' => 'De camera staat uit. Open hem om de code op je andere apparaat te scannen.',
@@ -31,6 +34,7 @@ return [
     'done' => 'Klaar',
 
     'errors' => [
+        'relay_unreachable' => 'Kan het andere apparaat niet bereiken. Zorg dat beide op hetzelfde netwerk zitten en synchronisatie op de desktop aanstaat.',
         'import_needs_qr' => 'Scan de QR-code op het andere apparaat om te importeren.',
         'invalid_code' => 'Deze code is ongeldig of verlopen. Vraag het andere apparaat om een nieuwe te genereren.',
         'identity_locked' => 'De identiteit van je apparaat is vergrendeld. Ontgrendel de app en probeer het opnieuw.',

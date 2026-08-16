@@ -7,6 +7,7 @@ namespace Modules\Auth\Internal\Lock;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\Clock;
@@ -141,6 +142,12 @@ final class PinVerificationService
                 // clock (see MobileLockGateway::pinFloorDue()).
                 'last_pin_unlock_at' => $this->clock->now(),
             ]);
+
+        // Drop the middleware's cached config. It carries last_activity_at,
+        // and the copy taken while the lock screen rendered still holds the
+        // stale value that caused the lock — leaving it would re-lock the
+        // session on the next request and demand a second PIN.
+        $session->forget(AppLockMiddleware::SESSION_CONFIG_CACHE);
 
         // A successful PIN unlock re-arms ALL of the user's biometric
         // credentials (resets biometric_failed_count so a disarmed

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
@@ -17,6 +18,8 @@ use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\AppLockEvents;
+use Modules\Auth\Public\Contracts\ColdStartVault;
+use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
@@ -88,6 +91,7 @@ final class AppLockSettingsSection extends Component
         PlatformDetector $detector,
         Request $request,
         Clock $clock,
+        ColdStartVault $vault,
     ): void {
         $user = $currentUser->user();
 
@@ -121,7 +125,7 @@ final class AppLockSettingsSection extends Component
         }
 
         $credentials = $biometricStore->findForUser($user->id);
-        $this->biometricEnrolled = $credentials->contains(
+        $this->biometricEnrolled = $vault->isEnrolled($user->id) || $credentials->contains(
             fn (object $cred): bool => $biometricStore->isArmed($cred)
         );
 
@@ -129,7 +133,9 @@ final class AppLockSettingsSection extends Component
         $this->biometricLabel = $detector->detectLabel($ua);
 
         // $biometricCapable is set client-side via JS (window.PublicKeyCredential
-        // check); the server default of false is overwritten by lock.js.
+        // check) and overwritten by lock.js — except where the OS owns the
+        // biometric, which the browser check cannot see at all.
+        $this->biometricCapable = $vault->isAvailable();
     }
 
     // -------------------------------------------------------------------------
@@ -330,15 +336,65 @@ final class AppLockSettingsSection extends Component
     // fetching creationOptions, calling navigator.credentials.create(),
     // POSTing the attestation to /lock/biometric/enroll, then dispatching
     // 'biometric-enrolled' back to this component on success.
-    public function startEnroll(): void
-    {
+    public function startEnroll(
+        CurrentUser $currentUser,
+        ColdStartVault $vault,
+        AppLockKeyService $keyService,
+        Session $session,
+        ConfigRepository $config,
+    ): void {
         if (! $this->lockEnabled) {
             $this->flashMessage = Lang::get('auth::app_lock.error_enable_first');
 
             return;
         }
 
+        // Where the OS owns the biometric, enrol against it directly.
+        // WebAuthn is a browser API and the desktop shell has no platform
+        // authenticator behind it, so navigator.credentials.create()
+        // resolved to nothing and the button appeared dead.
+        if ($vault->isAvailable()) {
+            $this->enrollNatively($currentUser, $vault, $keyService, $session);
+
+            return;
+        }
+
+        // The desktop shell has no WebAuthn platform authenticator behind
+        // navigator.credentials.create(), so dispatching there resolves to
+        // nothing and the button reads as broken. Say so instead.
+        if ($config->get('nativephp-internal.running') === true) {
+            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_unsupported');
+
+            return;
+        }
+
         $this->dispatch('beatrax:webauthn-create');
+    }
+
+    // Enrolling stores the LIVE data key under the OS gate, so it only works
+    // while unlocked — which is exactly when this settings screen is reachable.
+    private function enrollNatively(
+        CurrentUser $currentUser,
+        ColdStartVault $vault,
+        AppLockKeyService $keyService,
+        Session $session,
+    ): void {
+        $dataKey = $keyService->release($session);
+
+        if ($dataKey === null) {
+            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_locked');
+
+            return;
+        }
+
+        if (! $vault->enroll($currentUser->user()->id, $dataKey)) {
+            $this->flashMessage = Lang::get('auth::app_lock.error_enroll_failed');
+
+            return;
+        }
+
+        $this->biometricEnrolled = true;
+        $this->flashMessage = '';
     }
 
     #[On('biometric-enrolled')]
@@ -358,6 +414,7 @@ final class AppLockSettingsSection extends Component
         CurrentUser $currentUser,
         BiometricDeviceStore $biometricStore,
         AppLockProvisioner $provisioner,
+        ColdStartVault $vault,
     ): void {
         $user = $currentUser->user();
 
@@ -368,6 +425,7 @@ final class AppLockSettingsSection extends Component
         }
 
         $biometricStore->deleteForUser($user->id);
+        $vault->forget($user->id);
 
         $this->biometricEnrolled = false;
         $this->confirmingDeenroll = false;

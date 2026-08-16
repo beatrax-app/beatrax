@@ -1,0 +1,37 @@
+# Bank-fee classification rules — Switzerland (German, French, Italian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Swiss statements are printed in the language of the booking branch, so all
+# three are listed. German fee words are compound heads, so the boundary
+# that matters is the TRAILING \b: `ZINSEN\b` matches "Sollzinsen" and
+# "Überziehungszinsen" but not "ZINSENBERECHNUNG". Umlauts stay out of
+# `regex:` bodies — the matcher runs PCRE without /u, so `#i` case-folds
+# ASCII only; "GEBÜHR" is therefore a plain substring (matched
+# case-insensitively and multibyte-aware) with the ASCII "GEBUEHR"
+# transliteration listed alongside it. The French and Italian entries are
+# full phrases, since bare "FRAIS" or "SPESE" would fire on ordinary
+# merchant text. Regex bodies must be SINGLE-quoted in YAML so the backslash
+# reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "KONTOFÜHRUNG"
+    name: "Kontoführungsgebühr"
+  - pattern: "GEBÜHR"
+    name: "Bankgebühr"
+  - pattern: "GEBUEHR"
+    name: "Bankgebühr"
+  - pattern: 'regex:ZINSEN\b'
+    name: "Zinsen"
+  - pattern: "FRAIS DE TENUE DE COMPTE"
+    name: "Frais de tenue de compte"
+  - pattern: "FRAIS BANCAIRES"
+    name: "Frais bancaires"
+  - pattern: "SPESE DI TENUTA CONTO"
+    name: "Spese di tenuta conto"

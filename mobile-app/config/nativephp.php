@@ -107,4 +107,33 @@ return [
      * defense-in-depth for any stale local env values.
      */
     'development_team' => env('IOS_TEAM_ID'),
+
+    /*
+     * Deliberately NOT trimming `vendor/` here.
+     *
+     * Stripping the require-dev packages (phpunit, pestphp, myclabs, …) looks
+     * free — no on-device path reaches a test runner — but the bundle ships a
+     * composer classmap generated from the FULL vendor tree, so the autoloader
+     * still resolves those paths and the app dies on boot with
+     * `require(.../myclabs/deep-copy/...): No such file or directory`.
+     *
+     * Any future trim has to regenerate the autoloader after the exclusion,
+     * not before. Until then the storage entries below are the package
+     * defaults, restated because declaring this key replaces them wholesale.
+     */
+    'cleanup_exclude_files' => [
+        'storage/framework/sessions',
+        'storage/framework/cache',
+        'storage/framework/testing',
+        'storage/logs/laravel.log',
+
+        // Vite's dev-server marker. `public/` is a symlink to the repo root's,
+        // so running the desktop dev server writes this file straight into the
+        // mobile bundle's view of it — and Laravel then emits every asset URL
+        // pointing at http://[::1]:5174, which on a phone is the phone.
+
+        // The result is a shipped app with no CSS and no app.js at all, so the
+        // app-lock veil never even loads. Never bundle it.
+        'public/hot',
+    ],
 ];

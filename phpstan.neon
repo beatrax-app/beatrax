@@ -142,6 +142,8 @@ parameters:
                 - Modules/Desktop/Internal/Native/OsThemeProbe.php
                 - Modules/Desktop/Internal/Native/NativeBiometricUnlock.php
                 - Modules/Desktop/Internal/Native/DesktopKeyCustodian.php
+                - Modules/Desktop/Internal/Native/SyncListenerProcess.php
+                - Modules/Desktop/Internal/Native/RelayListenerProcess.php
                 - Modules/Desktop/Internal/Listeners/DispatchOsNotification.php
                 - Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php
                 - Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php
@@ -194,12 +196,22 @@ parameters:
         # contains a matching facade call (the nativephp/mobile-* packages
         # are not installed until Plan 03).
         -
-            message: '#Native\\Mobile\\Facades\\(Network|Biometrics|Scanner|SecureStorage) facade should not be used\.#'
+            message: '#Native\\Mobile\\Facades\\(Network|Biometrics|Scanner|SecureStorage|Device) facade should not be used\.#'
             paths:
                 - Modules/Mobile/Internal/NativeMobileAppServiceProvider.php
                 - Modules/Mobile/Internal/Identity/*.php
+                - Modules/Mobile/Internal/Native/*.php
                 - Modules/Mobile/Internal/Pairing/*.php
                 - Modules/Mobile/Internal/Sync/*.php
+            reportUnmatched: false
+        # Same carve-out for the classes themselves: `Native\Mobile\*` ships
+        # only in mobile-app/vendor, so this root cannot see it. The call
+        # sites are all class_exists-guarded and bound only under the mobile
+        # runtime, exactly like the SecureStorage custodian above.
+        -
+            message: '#(Call to static method [a-zA-Z]+\(\) on an unknown class Native\\Mobile\\Facades\\[A-Za-z]+|has invalid return type Native\\Mobile|used in class_exists is not a valid class name)#'
+            paths:
+                - Modules/Mobile/Internal/Native/*.php
             reportUnmatched: false
         # 18-15: `Internal/Listeners/` is a genuinely NEW sanctioned crossing
         # point in this same carve-out family — the mobile delivery adapter

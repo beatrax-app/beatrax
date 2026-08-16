@@ -242,7 +242,7 @@ function mobileSurfaceParityRoutes(): array
         'cashbook.index' => ['cashbook.index', []],
         'inboxes.index' => ['inboxes.index', []],
         'uncategorized' => ['uncategorized', []],
-        'sync.index' => ['sync.index', []],
+        'data-devices.index' => ['data-devices.index', []],
         'settings' => ['settings', []],
     ];
 }

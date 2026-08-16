@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Maksuriik',
+    'country_desc' => 'Määrab, millised mahaarvamiste kategooriad on saadaval.',
+    'country_choose' => 'Vali riik…',
+    'country_switch_warning' => 'Vahetamine lisab uusi kategooriaid — olemasolevaid märgendeid ei muudeta kunagi.',
+
+    'countries' => [
+        'at' => 'Austria',
+        'be' => 'Belgia',
+        'bg' => 'Bulgaaria',
+        'ca' => 'Kanada',
+        'ch' => 'Šveits',
+        'cy' => 'Küpros',
+        'cz' => 'Tšehhi',
+        'de' => 'Saksamaa',
+        'dk' => 'Taani',
+        'ee' => 'Eesti',
+        'es' => 'Hispaania',
+        'fi' => 'Soome',
+        'fr' => 'Prantsusmaa',
+        'gb' => 'Ühendkuningriik',
+        'gr' => 'Kreeka',
+        'hr' => 'Horvaatia',
+        'hu' => 'Ungari',
+        'ie' => 'Iirimaa',
+        'is' => 'Island',
+        'it' => 'Itaalia',
+        'lt' => 'Leedu',
+        'lu' => 'Luksemburg',
+        'lv' => 'Läti',
+        'mt' => 'Malta',
+        'nl' => 'Holland',
+        'no' => 'Norra',
+        'pl' => 'Poola',
+        'pt' => 'Portugal',
+        'ro' => 'Rumeenia',
+        'se' => 'Rootsi',
+        'si' => 'Sloveenia',
+        'sk' => 'Slovakkia',
+        'us' => 'Ameerika Ühendriigid',
+    ],
+
+    'categories_label' => 'Mahaarvamiste kategooriad',
+    'categories_desc' => 'Kohanda kategooriaid, mida märgistamisel kasutad.',
+    'categories_empty' => 'Kategooriaid veel pole. Lisa oma esimene kategooria või vaheta riiki, et laadida vaikeväärtused.',
+
+    'from_corpus' => 'korpusest',
+    'rename_input_aria' => 'Kategooria :name uus nimi',
+    'rename' => 'Nimeta ümber',
+    'rename_aria' => 'Nimeta :name ümber',
+    'rename_save_aria' => 'Salvesta kategooria :name uus nimi',
+    'save' => 'Salvesta',
+    'archive' => 'Arhiveeri',
+    'archive_aria' => 'Arhiveeri :name',
+
+    'new_category_label' => 'Uue kategooria nimi',
+    'new_category_placeholder' => 'Uue kategooria nimi…',
+    'add_category' => 'Lisa kategooria',
+    'category_added' => 'Kategooria on lisatud.',
+
+    'archived_count' => 'Arhiveeritud (:count)',
+    'restore' => 'Taasta',
+    'restore_aria' => 'Taasta :name',
+];

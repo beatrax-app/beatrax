@@ -1,0 +1,83 @@
+# Tax deduction categories — Austria
+# Mirrors AT Arbeitnehmerveranlagung / Einkommensteuererklärung deduction items
+# (Werbungskosten, Sonderausgaben, außergewöhnliche Belastungen).
+#
+# Authority: Bundesministerium für Finanzen (BMF), „Das Steuerbuch 2026 —
+# Tipps zur Arbeitnehmerveranlagung 2025", incl. the reproduced official forms
+# L 1, L 1ab and L 1d. Tax year 2025 (filed 2026).
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "at_pendlerpauschale"
+    name: "Pendlerpauschale und Pendlereuro"
+    short_name: "Pendlerp."
+    hint: "Fahrten Wohnung–Arbeitsstätte laut Pendlerrechner"
+  - key: "at_arbeitsmittel"
+    name: "Arbeitsmittel und Werkzeuge"
+    short_name: "Arbeitsm."
+    hint: "Beruflich genutzte Geräte, Computer und Werkzeuge"
+  - key: "at_fortbildung"
+    name: "Fortbildungs-, Ausbildungs- und Umschulungskosten"
+    short_name: "Fortbildung"
+    hint: "Kurse, Seminare und Umschulung mit Berufsbezug"
+  - key: "at_fachliteratur"
+    name: "Fachliteratur"
+    short_name: "Fachlit."
+    hint: "Berufsbezogene Fachbücher und Fachzeitschriften"
+  - key: "at_reisekosten"
+    name: "Beruflich veranlasste Reisekosten"
+    short_name: "Reisekosten"
+    hint: "Kilometergeld, Tagesgelder und Nächtigung bei Dienstreisen"
+  - key: "at_doppelte_haushaltsfuehrung"
+    name: "Doppelte Haushaltsführung und Familienheimfahrten"
+    short_name: "Dopp. HH"
+    hint: "Zweitwohnsitz am Arbeitsort und Heimfahrten zur Familie"
+  - key: "at_telearbeit"
+    name: "Telearbeitspauschale und ergonomisches Mobiliar"
+    short_name: "Telearbeit"
+    hint: "Telearbeitstage und ergonomisch geeignetes Mobiliar"
+  - key: "at_gewerkschaftsbeitraege"
+    name: "Gewerkschaftsbeiträge und Betriebsratsumlage"
+    short_name: "Gewerksch."
+    hint: "Beiträge an Berufsverbände und Betriebsratsumlage"
+  - key: "at_spenden"
+    name: "Spenden an begünstigte Einrichtungen"
+    short_name: "Spenden"
+    hint: "Geldspenden an begünstigte Einrichtungen laut BMF-Liste"
+  - key: "at_kirchenbeitrag"
+    name: "Kirchenbeitrag"
+    short_name: "Kirchenbeitr"
+    hint: "Pflichtbeitrag an gesetzlich anerkannte Religionsgesellschaften"
+  - key: "at_versicherungszeiten"
+    name: "Weiterversicherung und Nachkauf von Versicherungszeiten"
+    short_name: "Vers.zeiten"
+    hint: "Freiwillige Weiterversicherung, Nachkauf von Schul- und Studienzeiten"
+  - key: "at_oeko_sanierung"
+    name: "Öko-Sonderausgabenpauschale"
+    short_name: "Öko-Sanierg"
+    hint: "Geförderte thermisch-energetische Sanierung oder Heizkesseltausch"
+  - key: "at_steuerberatung"
+    name: "Steuerberatungskosten"
+    short_name: "Steuerber."
+    hint: "Honorare für Steuerberatung als Sonderausgabe"
+  - key: "at_krankheitskosten"
+    name: "Krankheitskosten"
+    short_name: "Krankheit"
+    hint: "Arzt, Medikamente, Zahnersatz und Sehbehelfe, mit Selbstbehalt"
+  - key: "at_behinderung"
+    name: "Außergewöhnliche Belastungen bei Behinderung"
+    short_name: "Behinderung"
+    hint: "Freibeträge oder tatsächliche Kosten bei festgestellter Behinderung"
+  - key: "at_begraebniskosten"
+    name: "Begräbniskosten"
+    short_name: "Begräbnis"
+    hint: "Bestattung und Grabmal, soweit nicht aus dem Nachlass gedeckt"
+  - key: "at_katastrophenschaeden"
+    name: "Katastrophenschäden"
+    short_name: "Katastrophe"
+    hint: "Beseitigung von Katastrophenschäden, ohne Selbstbehalt"

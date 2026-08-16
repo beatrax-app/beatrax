@@ -53,7 +53,12 @@ side query used by the import preview:
     `github.com` host allow-list.
 - **DTOs/**
   - `CorpusEntryDto` — one corpus row in flight (pattern, name,
-    category, region, contributor, generalized_pattern).
+    category, region, contributor, generalized_pattern, contact).
+  - `MerchantContactDto` — the optional contact/cancellation half of a
+    corpus row (website, cancel_url, support_url, support_phone,
+    support_email). Nested inside `CorpusEntryDto` rather than flattened
+    into it, so the "how do I leave this?" data travels as one nullable
+    unit and the entry DTO keeps a readable constructor.
   - `SuggestMappingDto` — payload the SuggestMappingModal feeds to
     `GitHubCompareUrlBuilder`.
 - **Events/**
@@ -83,8 +88,17 @@ NativePHP shell fallback:
   can paste into the PR composer.
 - **Internal/Listeners/SeedCommunityCorpus** — listens for
   `Core::UserInstalled`; upserts every loaded entry into
-  `community_merchant_mappings`. Idempotent via `updateOrInsert` keyed
-  on `(pattern, user_id IS NULL)`.
+  `community_merchant_mappings`. Idempotent, keyed on `(pattern,
+  user_id IS NULL)`. It reads the existing global tier as a single
+  pattern→id map and batches the inserts in chunks, because at one
+  SELECT+INSERT per row a six-thousand-entry corpus is the slowest
+  thing that happens during signup. `created_at` is written only on
+  the insert path, so a re-dispatch preserves the original seed
+  timestamp; the contact columns are written on both paths, nulls
+  included, so a field a contributor removes from the YAML is cleared
+  rather than left behind as a stale cancellation link. A chunk that
+  fails is retried row by row, keeping the original guarantee that one
+  malformed entry never costs its neighbours their seed.
 - **Internal/Shell/NoOpShell** — fallback for the
   `Native\Desktop\Contracts\Shell` contract when the bundle is not
   running inside the NativePHP runtime (local dev mode, CI tests).
@@ -185,6 +199,37 @@ PHP constants lets a contributor add another country's rules — including
 country is inferred from its filename; results are memoised per-type for the
 life of the (singleton) instance.
 
+`MerchantContactReader` (`Internal/Corpus/`) parses the optional contact and
+cancellation keys off a merchant entry and is the single validation gate for
+them. A URL must be `https://` (these are links a user clicks to end a real
+contract, so a downgradeable scheme is a hazard, not a style question), must
+parse, and must fit the 512-character column verbatim — a value that would be
+truncated is dropped instead, because a half-URL is a broken cancellation
+route. A phone number is kept in the merchant's own published notation rather
+than normalised to E.164: the numbers people actually need (0800/0900 service
+lines, three-digit short codes) have no E.164 form, so normalising would throw
+away the most useful half of the data; a shape check is what stops free text
+reaching a `tel:` href. An email must validate AND carry no `?`, `&` or
+whitespace — all three are legal RFC 5322 atext that `FILTER_VALIDATE_EMAIL`
+accepts but that forge extra headers inside a `mailto:`, the same guard
+`SupportResource::mailtoHref` applies to the support corpus, moved one layer
+earlier so a bad value never lands in the column at all.
+
+Every rejection is a logged warning, never a throw, matching the rest of the
+corpus pipeline. That tolerance is what makes `BundledCorpusIntegrityTest`
+necessary: it replays the whole bundled corpus through the real reader and
+fails the build on any warning, so a contributor's typo surfaces as a red test
+instead of a link that silently never renders. The same test enforces global
+pattern uniqueness, because the global tier is keyed on `pattern` alone — two
+country files sharing one pattern do not both seed, the later file's row
+overwrites the earlier one, including overwriting its contact data with nulls.
+Cross-border brands therefore live once in `merchants/eu.yaml`, not once per
+country. Where the shared token belongs to two genuinely unrelated companies
+(Maxi is a Quebec grocer and a Serbian one; ATB is a Norwegian transit
+operator and a Ukrainian grocer) the collision is resolved by keeping a single
+row with no `website`, because sending one country's customer to the other's
+site is precisely the harm the contact fields exist to avoid.
+
 `CorpusPatternMatcher` distinguishes two pattern kinds by an optional
 `regex:` prefix: a literal pattern is a case-insensitive substring test
 (`mb_stripos`); a `regex:` pattern strips the prefix, wraps the remaining PCRE
@@ -215,12 +260,26 @@ dedup check) exposes three lookup methods against the global corpus tier
 (`user_id IS NULL`): `lookupExact()` (verbatim pattern match), `lookupGeneralized()`
 (substring match against `generalized_pattern`, walked in PHP via `mb_strpos`
 — never SQL `LIKE` — so a malicious YAML entry carries no SQL-wildcard
-injection surface), and `lookupRegex()` (delegates to `CorpusPatternMatcher`
+injection surface), `contactForMerchant()` (the contact/cancellation card for
+a resolved merchant, keyed on the corpus NAME rather than the descriptor: a
+brand reaches the corpus through many descriptor variants that all collapse to
+one name, and a profile page holds the name, never the row that matched), and
+`lookupRegex()` (delegates to `CorpusPatternMatcher`
 for rows whose pattern carries the `regex:` prefix — the `like 'regex:%'`
 operand is a fixed constant, never a corpus value, so this SQL `LIKE` carries
-no injection surface of its own). Each scan is capped (1000 rows generalized,
-500 rows regex) as defence-in-depth against the bundled corpus growing far
-beyond its current size.
+no injection surface of its own).
+
+Neither scan is capped. The `LIMIT 1000` / `LIMIT 500` these queries once
+carried read as defence-in-depth against corpus growth but did the opposite:
+ordered by `id` — which is bundled-file sort order — a cap does not sample the
+corpus, it truncates it. Once the corpus outgrew the cap every pattern past
+`ee.yaml` became unmatchable, taking the whole of `eu.yaml` with it, so
+Netflix, Spotify, Vodafone and Lidl silently stopped resolving and the raw
+descriptor stayed on screen. A bound that changes answers without saying so
+costs more than the work it saves — the scan is one substring test per row
+against one haystack, linear either way — so the rows are now read and
+case-folded once per instance and matched in PHP, which is what keeps the
+repeated lookups off the database during an import.
 
 ## Settings, triage, and the suggest flow
 

@@ -18,7 +18,7 @@ return [
     'status_row' => [
         'heading' => 'Open banking',
         'manage' => 'Open banking beheren',
-        'not_connected' => 'Niet verbonden. Importeer ICS/ASN-afschriften handmatig, of verbind automatisch een bank.',
+        'not_connected' => 'Geen bank verbonden. Verbind er een om transacties automatisch te importeren.',
         'expired' => 'Toestemming verlopen — opnieuw verbinden nodig.',
         'connected' => 'Verbonden met :bank via Enable Banking. Laatst gesynchroniseerd :when.',
         'never' => 'nooit',

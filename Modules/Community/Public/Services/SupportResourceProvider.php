@@ -12,25 +12,78 @@ use Modules\Community\Public\Dto\SupportResource;
  */
 final class SupportResourceProvider
 {
-    /** @var array<string, SupportResource>|null space-joined word key => resource */
-    private ?array $byName = null;
+    // The file every country falls back to, and the only one that is not a
+    // country: brands that bill the same way everywhere live here.
+    private const SHARED = 'international';
+
+    /** @var array<string, array<string, SupportResource>>|null country => (word key => resource) */
+    private ?array $byCountry = null;
 
     public function __construct(
         private readonly CorpusYamlReader $reader,
     ) {}
 
-    public function forCounterparty(string $name, string $type): ?SupportResource
+    /**
+     * @param  string|null  $country  ISO 3166-1 alpha-2, lowercase; null searches every country
+     */
+    public function forCounterparty(string $name, string $type, ?string $country = null): ?SupportResource
     {
         $needle = $this->words($name);
         if ($needle === []) {
             return null;
         }
 
-        $map = $this->load();
+        // Own country first, then the shared file, then everyone else.
+        // Sanitas is a Swiss health insurer AND a Spanish provider, and the
+        // alphabetically-later file used to win for every user. A caller with
+        // no country still searches everything, as before.
+        foreach ($this->searchOrder($country) as $bucket) {
+            $best = $this->bestIn($bucket, $needle, $type);
+            if ($best !== null) {
+                return $best;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<array<string, SupportResource>>
+     */
+    private function searchOrder(?string $country): array
+    {
+        $byCountry = $this->load();
+        $code = $country === null ? null : mb_strtolower(trim($country));
+
+        $order = [];
+        if ($code !== null && isset($byCountry[$code])) {
+            $order[] = $byCountry[$code];
+        }
+        if (isset($byCountry[self::SHARED])) {
+            $order[] = $byCountry[self::SHARED];
+        }
+
+        foreach ($byCountry as $bucketCode => $bucket) {
+            if ($bucketCode !== $code && $bucketCode !== self::SHARED) {
+                $order[] = $bucket;
+            }
+        }
+
+        return $order;
+    }
+
+    // Longest word-prefix match wins, so "Albert Heijn Premium" beats the
+    // plain "Albert Heijn" row rather than whichever the loop reached first.
+    /**
+     * @param  array<string, SupportResource>  $bucket
+     * @param  list<string>  $needle
+     */
+    private function bestIn(array $bucket, array $needle, string $type): ?SupportResource
+    {
         $best = null;
         $bestLength = 0;
 
-        foreach ($map as $key => $resource) {
+        foreach ($bucket as $key => $resource) {
             if ($resource->type !== $type) {
                 continue;
             }
@@ -46,21 +99,21 @@ final class SupportResourceProvider
     }
 
     /**
-     * @return array<string, SupportResource>
+     * @return array<string, array<string, SupportResource>>
      */
     private function load(): array
     {
-        if ($this->byName !== null) {
-            return $this->byName;
+        if ($this->byCountry !== null) {
+            return $this->byCountry;
         }
 
         $dir = $this->reader->resolve('community.corpus.root', 'resources/corpus').'/support';
 
-        return $this->byName = $this->buildMap($dir);
+        return $this->byCountry = $this->buildMap($dir);
     }
 
     /**
-     * @return array<string, SupportResource>
+     * @return array<string, array<string, SupportResource>>
      */
     private function buildMap(string $dir): array
     {
@@ -76,8 +129,11 @@ final class SupportResourceProvider
 
         $map = [];
         foreach ($files as $file) {
+            // Country comes from the filename, the same convention the
+            // merchant and government corpora already use.
+            $code = mb_strtolower(basename($file, '.yaml'));
             foreach ($this->reader->readEntries($file) as $raw) {
-                $this->addResource($map, $raw);
+                $this->addResource($map, $code, $raw);
             }
         }
 
@@ -85,10 +141,10 @@ final class SupportResourceProvider
     }
 
     /**
-     * @param  array<string, SupportResource>  $map
+     * @param  array<string, array<string, SupportResource>>  $map
      * @param  array<int|string, mixed>  $raw
      */
-    private function addResource(array &$map, array $raw): void
+    private function addResource(array &$map, string $country, array $raw): void
     {
         $resource = $this->build($raw);
         if ($resource === null) {
@@ -97,7 +153,7 @@ final class SupportResourceProvider
 
         $key = implode(' ', $this->words($resource->name));
         if ($key !== '') {
-            $map[$key] = $resource;
+            $map[$country][$key] = $resource;
         }
     }
 

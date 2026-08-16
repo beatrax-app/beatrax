@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Імпорт з YNAB / Actual',
+
+    'eyebrow' => 'Міграції',
+    'heading' => 'Імпорт з YNAB / Actual',
+    'intro' => 'Перенеси дерево категорій, історію бюджету та транзакції з YNAB4, нового YNAB або Actual Budget. Нічого не записується у твій реєстр, доки ти не переглянеш і не підтвердиш.',
+    'reconcile_context' => 'Перевірка оновлень стосовно твого останнього імпорту (:product).',
+
+    'source_label' => 'Джерело',
+    'file_label' => 'Файл',
+    'parse_button' => 'Розібрати експорт',
+
+    'hints' => [
+        'ynab4' => 'Експортуй повний бюджет як ZIP-файл через меню File → Export у YNAB4.',
+        'nynab' => 'Експортуй бюджет із nYNAB через File → Export Budget, а потім спакуй експортовані CSV-файли в ZIP.',
+        'actual' => 'Експортуй бюджет як ZIP-файл через Settings → Export data в Actual Budget.',
+    ],
+
+    'errors' => [
+        'unrecognised' => 'Це не схоже на експорт YNAB4, nYNAB чи Actual, який ми можемо прочитати. Перевір файл і спробуй ще раз.',
+        'file_too_large' => 'Цей файл завеликий для експорту міграції.',
+    ],
+];

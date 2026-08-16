@@ -1,4 +1,6 @@
 # Government / public-agency classification rules — Germany.
+# (Bare "STADT" is too collision-prone for the municipal treasuries — the
+# -kasse/-verwaltung compounds are used instead.)
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "FINANZAMT"
@@ -10,3 +12,296 @@ entries:
   # TV/radio licence fee — billed under several creditor-name variants.
   - pattern: "regex:RUNDFUNK|ARD ZDF DEUTSCHLANDRADIO"
     name: "Rundfunkbeitrag"
+  # Zoll collects the Kfz-Steuer as well as customs duties.
+  - pattern: "HAUPTZOLLAMT"
+    name: "Hauptzollamt"
+  - pattern: "regex:KFZ[- ]STEUER"
+    name: "Kfz-Steuer"
+  - pattern: "GRUNDSTEUER"
+    name: "Grundsteuer"
+  # Municipal, district and state treasuries.
+  - pattern: "STADTKASSE"
+  - pattern: "STADTVERWALTUNG"
+  - pattern: "GEMEINDEKASSE"
+  - pattern: "KREISKASSE"
+  - pattern: "KREISVERWALTUNG"
+  - pattern: "LANDESHAUPTKASSE"
+  - pattern: "BUNDESKASSE"
+    name: "Bundeskasse"
+  - pattern: "FAMILIENKASSE"
+    name: "Familienkasse (Kindergeld)"
+  - pattern: "JOBCENTER"
+    name: "Jobcenter"
+  - pattern: "BAFOEG"
+    name: "BAföG"
+  - pattern: "JUSTIZKASSE"
+    name: "Justizkasse"
+  - pattern: "BUSSGELDSTELLE"
+    name: "Bußgeldstelle"
+  - pattern: "ORDNUNGSAMT"
+    name: "Ordnungsamt"
+  - pattern: "ZULASSUNGSSTELLE"
+    name: "Kfz-Zulassungsstelle"
+  # Statutory health insurers (AOK, Barmer, TK, …) are public-law
+  # corporations, so contributions to them count as government.
+  - pattern: "KRANKENKASSE"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: bundesfinanzministerium.de and the Länder tax
+  # portals (Steuerarten, Finanzkasse), zoll.de, deutsche-rentenversicherung.de,
+  # arbeitsagentur.de (Familienkasse, Bürgergeld), rundfunkbeitrag.de
+  # (Beitragsservice), gkv-spitzenverband.de (statutory funds), dihk.de and
+  # zdh.de (the compulsory IHK/HWK memberships), bamf.de, kba.de,
+  # studentenwerke.de, and municipal Kämmerei/Abgabenbescheid samples.
+  #
+  # Spelling: statements print umlauts either verbatim or transliterated,
+  # so a regex body uses the ASCII alternation F(U|UE)R / (A|AE) etc. and
+  # the umlaut spelling is added as a separate plain-substring entry where
+  # it is the common form. Rejected as too ambiguous: bare "STADT", bare
+  # "AMT", "STADTWERKE" (a municipal utility, but the payment is ordinary
+  # energy spend), "MAUT" (bought at kiosks abroad), and "GEZ" is kept
+  # \b-guarded because the three letters recur inside product codes.
+  # ---------------------------------------------------------------------
+
+  # Tax offices, treasuries and the named Steuerarten.
+  - pattern: "FINANZKASSE"
+    name: "Finanzkasse"
+  - pattern: 'regex:LANDESAMT F(U|UE)R STEUERN'
+    name: "Landesamt für Steuern"
+  - pattern: "OBERFINANZDIREKTION"
+    name: "Oberfinanzdirektion"
+  - pattern: "STAATSOBERKASSE"
+    name: "Staatsoberkasse"
+  - pattern: "LANDESKASSE"
+    name: "Landeskasse"
+  - pattern: "EINKOMMENSTEUER"
+    name: "Einkommensteuer"
+  - pattern: "LOHNSTEUER"
+    name: "Lohnsteuer"
+  - pattern: "UMSATZSTEUER"
+    name: "Umsatzsteuer"
+  - pattern: "GEWERBESTEUER"
+    name: "Gewerbesteuer"
+  - pattern: "KIRCHENSTEUER"
+    name: "Kirchensteuer (über das Finanzamt)"
+  - pattern: "ERBSCHAFTSTEUER"
+    name: "Erbschaftsteuer"
+  - pattern: "SCHENKUNGSTEUER"
+    name: "Schenkungsteuer"
+  - pattern: "GRUNDERWERBSTEUER"
+    name: "Grunderwerbsteuer"
+  - pattern: "ZWEITWOHNUNGSTEUER"
+    name: "Zweitwohnungsteuer"
+  - pattern: "HUNDESTEUER"
+    name: "Hundesteuer"
+  - pattern: "GRUNDABGABEN"
+    name: "Grundabgaben (kommunaler Sammelbescheid)"
+
+  # Municipal fees for waste, sewage and street cleaning.
+  - pattern: 'regex:ABFALLGEB(U|UE)HR'
+    name: "Abfallgebühr"
+  - pattern: "ABFALLGEBÜHR"
+    name: "Abfallgebühr"
+  - pattern: 'regex:M(U|UE)LLGEB(U|UE)HR'
+    name: "Müllgebühr"
+  - pattern: "MÜLLGEBÜHR"
+    name: "Müllgebühr"
+  - pattern: 'regex:ABWASSERGEB(U|UE)HR'
+    name: "Abwassergebühr"
+  - pattern: "ABWASSERGEBÜHR"
+    name: "Abwassergebühr"
+  - pattern: "STRASSENREINIGUNG"
+    name: "Straßenreinigungsgebühr"
+
+  # Public-law water and waste associations.
+  - pattern: "WASSERVERBAND"
+    name: "Wasserverband"
+  - pattern: "ABWASSERVERBAND"
+    name: "Abwasserverband"
+  - pattern: "ZWECKVERBAND"
+    name: "Zweckverband"
+
+  # Social insurance and benefits.
+  - pattern: "SOZIALVERSICHERUNG"
+    name: "Sozialversicherung"
+  - pattern: "KNAPPSCHAFT"
+    name: "Knappschaft-Bahn-See"
+  - pattern: "BERUFSGENOSSENSCHAFT"
+    name: "Berufsgenossenschaft"
+  - pattern: "PFLEGEKASSE"
+    name: "Pflegekasse"
+  - pattern: "VERSORGUNGSWERK"
+    name: "Versorgungswerk"
+  - pattern: 'regex:\bAOK\b'
+    name: "AOK"
+  - pattern: "BARMER"
+    name: "Barmer"
+  # Bare \bDAK\b would hit the Dutch word "dak" (roof), and bare \bIKK\b is
+  # three unremarkable letters — both are spelled out instead. The
+  # Innungskrankenkasse long form is already covered by KRANKENKASSE.
+  - pattern: "DAK-GESUNDHEIT"
+    name: "DAK-Gesundheit"
+  - pattern: "DAK GESUNDHEIT"
+    name: "DAK-Gesundheit"
+  - pattern: 'regex:\bBKK\b'
+    name: "Betriebskrankenkasse (BKK)"
+  - pattern: "IKK CLASSIC"
+    name: "IKK classic"
+  - pattern: "KINDERGELD"
+    name: "Kindergeld"
+  - pattern: "ELTERNGELD"
+    name: "Elterngeld"
+  - pattern: "WOHNGELD"
+    name: "Wohngeld"
+  - pattern: 'regex:B(U|UE)RGERGELD'
+    name: "Bürgergeld"
+  - pattern: "BÜRGERGELD"
+    name: "Bürgergeld"
+  - pattern: "GRUNDSICHERUNG"
+    name: "Grundsicherung"
+  - pattern: "SOZIALAMT"
+    name: "Sozialamt"
+  - pattern: "JUGENDAMT"
+    name: "Jugendamt"
+  - pattern: "VERSORGUNGSAMT"
+    name: "Versorgungsamt"
+  - pattern: "ELTERNBEITRAG"
+    name: "Elternbeitrag (Kita)"
+
+  # Municipal, district and federal administration.
+  - pattern: 'regex:STADTK(A|AE)MMEREI'
+    name: "Stadtkämmerei"
+  - pattern: "STADTKÄMMEREI"
+    name: "Stadtkämmerei"
+  - pattern: "GEMEINDEVERWALTUNG"
+    name: "Gemeindeverwaltung"
+  - pattern: "VERBANDSGEMEINDE"
+    name: "Verbandsgemeinde"
+  - pattern: "LANDRATSAMT"
+    name: "Landratsamt"
+  - pattern: 'regex:REGIERUNGSPR(A|AE)SIDIUM'
+    name: "Regierungspräsidium"
+  - pattern: "REGIERUNGSPRÄSIDIUM"
+    name: "Regierungspräsidium"
+  - pattern: "BEZIRKSREGIERUNG"
+    name: "Bezirksregierung"
+  - pattern: "BEZIRKSAMT"
+    name: "Bezirksamt"
+  - pattern: "RATHAUS"
+    name: "Rathaus"
+  - pattern: 'regex:B(U|UE)RGERAMT'
+    name: "Bürgeramt"
+  - pattern: "BÜRGERAMT"
+    name: "Bürgeramt"
+  - pattern: 'regex:B(U|UE)RGERB(U|UE)RO'
+    name: "Bürgerbüro"
+  - pattern: "BÜRGERBÜRO"
+    name: "Bürgerbüro"
+  - pattern: "EINWOHNERMELDEAMT"
+    name: "Einwohnermeldeamt"
+  - pattern: "LANDESAMT"
+    name: "Landesamt"
+  - pattern: "BUNDESAMT"
+    name: "Bundesamt"
+  - pattern: "BUNDESVERWALTUNGSAMT"
+    name: "Bundesverwaltungsamt"
+  - pattern: "BUNDESMINISTERIUM"
+    name: "Bundesministerium"
+
+  # Vehicles and roads.
+  - pattern: "KRAFTFAHRT-BUNDESAMT"
+    name: "Kraftfahrt-Bundesamt"
+  - pattern: "STRASSENVERKEHRSAMT"
+    name: "Straßenverkehrsamt"
+  - pattern: 'regex:KFZ[- ]ZULASSUNG'
+    name: "Kfz-Zulassung"
+
+  # Fines, courts and prosecution.
+  - pattern: "ORDNUNGSWIDRIGKEIT"
+    name: "Ordnungswidrigkeit"
+  - pattern: "VERWARNGELD"
+    name: "Verwarngeld"
+  - pattern: "BUSSGELDBESCHEID"
+    name: "Bußgeldbescheid"
+  - pattern: 'regex:FAHRERLAUBNISBEH(O|OE)RDE'
+    name: "Fahrerlaubnisbehörde"
+  - pattern: "AMTSGERICHT"
+    name: "Amtsgericht"
+  - pattern: "LANDGERICHT"
+    name: "Landgericht"
+  - pattern: "OBERLANDESGERICHT"
+    name: "Oberlandesgericht"
+  - pattern: "STAATSANWALTSCHAFT"
+    name: "Staatsanwaltschaft"
+  - pattern: "GERICHTSKASSE"
+    name: "Gerichtskasse"
+  - pattern: "GERICHTSVOLLZIEHER"
+    name: "Gerichtsvollzieher"
+  - pattern: "POLIZEI"
+    name: "Polizei"
+  - pattern: 'regex:POLIZEIPR(A|AE)SIDIUM'
+    name: "Polizeipräsidium"
+  - pattern: "BUNDESPOLIZEI"
+    name: "Bundespolizei"
+
+  # Broadcasting contribution — the creditor name people actually see.
+  - pattern: "BEITRAGSSERVICE"
+    name: "Rundfunkbeitrag"
+  - pattern: 'regex:\bGEZ\b'
+    name: "Rundfunkbeitrag (ex-GEZ)"
+
+  # Education, students and public universities.
+  - pattern: "STUDENTENWERK"
+    name: "Studentenwerk"
+  - pattern: "STUDIERENDENWERK"
+    name: "Studierendenwerk"
+  - pattern: "SEMESTERBEITRAG"
+    name: "Semesterbeitrag"
+  - pattern: 'regex:UNIVERSIT(A|AE)T'
+    name: "Universität"
+  - pattern: "UNIVERSITÄT"
+    name: "Universität"
+  - pattern: "FACHHOCHSCHULE"
+    name: "Fachhochschule"
+  - pattern: "BAFÖG"
+    name: "BAföG"
+  - pattern: 'regex:\bKFW\b'
+    name: "KfW"
+
+  # Compulsory chambers — public-law bodies with mandatory membership.
+  - pattern: "INDUSTRIE- UND HANDELSKAMMER"
+    name: "IHK"
+  - pattern: 'regex:\bIHK\b'
+    name: "IHK"
+  - pattern: "HANDWERKSKAMMER"
+    name: "Handwerkskammer"
+  # Bare \bHWK\b is too thin for a rule that runs against every user, and
+  # the chamber's own creditor name is the spelled-out form above.
+  - pattern: "LANDWIRTSCHAFTSKAMMER"
+    name: "Landwirtschaftskammer"
+  - pattern: 'regex:(A|AE)RZTEKAMMER'
+    name: "Ärztekammer"
+  - pattern: "ÄRZTEKAMMER"
+    name: "Ärztekammer"
+  - pattern: "RECHTSANWALTSKAMMER"
+    name: "Rechtsanwaltskammer"
+  - pattern: "STEUERBERATERKAMMER"
+    name: "Steuerberaterkammer"
+  - pattern: "ARCHITEKTENKAMMER"
+    name: "Architektenkammer"
+
+  # Immigration, identity and registries.
+  - pattern: 'regex:AUSL(A|AE)NDERBEH(O|OE)RDE'
+    name: "Ausländerbehörde"
+  - pattern: "AUSLÄNDERBEHÖRDE"
+    name: "Ausländerbehörde"
+  - pattern: 'regex:\bBAMF\b'
+    name: "BAMF"
+  - pattern: "STANDESAMT"
+    name: "Standesamt"
+  - pattern: "GRUNDBUCHAMT"
+    name: "Grundbuchamt"
+  - pattern: "KATASTERAMT"
+    name: "Katasteramt"
+  - pattern: "VERMESSUNGSAMT"
+    name: "Vermessungsamt"

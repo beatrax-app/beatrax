@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Redaguoti taisyklę',
+    'heading_new' => 'Nauja taisyklė',
+
+    'combinator_aria' => 'Sąlygų jungtis',
+    'match_all' => 'Atitinka visas sąlygas',
+    'match_any' => 'Atitinka bet kurią sąlygą',
+
+    'condition_label' => 'Sąlyga :number',
+    'condition_field_aria' => 'Sąlygos :number laukas',
+    'condition_operator_aria' => 'Sąlygos :number operatorius',
+    'condition_value_aria' => 'Sąlygos :number reikšmė',
+    'condition_value_from_aria' => 'Sąlygos :number reikšmė (nuo)',
+    'condition_value_to_aria' => 'Sąlygos :number reikšmė (iki)',
+    'to' => 'iki',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'pvz. SPOTIFY',
+    'remove_condition' => 'Pašalinti sąlygą',
+    'add_condition' => '+ Pridėti sąlygą',
+
+    'then' => 'Tada',
+    'action_label' => 'Veiksmas :number',
+    'action_type_aria' => 'Veiksmo :number tipas',
+    'action_category' => 'Kategorija',
+    'action_counterparty' => 'Kita šalis',
+    'action_note' => 'Pastaba',
+    'action_tax_tag' => 'Mokesčių žyma',
+    'assign_category_aria' => 'Priskirti kategoriją veiksmui :number',
+    'reassign_counterparty_aria' => 'Priskirti kitai šaliai veiksme :number',
+    'note_text_aria' => 'Veiksmo :number pastabos tekstas',
+    'note_placeholder' => 'Pastabos tekstas…',
+    'note_mode_aria' => 'Veiksmo :number pastabos režimas',
+    'note_set' => 'Nustatyti',
+    'note_append' => 'Pridėti gale',
+    'deduction_category_aria' => 'Veiksmo :number lengvatos kategorija',
+    'remove_action' => 'Pašalinti veiksmą',
+    'add_action' => '+ Pridėti veiksmą',
+
+    'this_year_only' => 'Tik šiais metais ▾',
+    'override_tax_year' => 'Nepaisyti mokestinių metų',
+    'tax_year_override_aria' => 'Veiksmo :number mokestinių metų perrašymas',
+    'tax_tag_note' => 'Mokesčių žymos veiksmai pritaikomi kitą kartą taikant taisykles iš naujo, o ne einamajam importui.',
+
+    'priority' => 'Prioritetas',
+    'priority_help' => 'Mažesni skaičiai vykdomi pirmiau. Taisyklės, neturinčios bendrų laukų, niekada nekonfliktuoja.',
+
+    'cancel' => 'Atšaukti',
+    'save_changes' => 'Išsaugoti pakeitimus',
+    'save_rule' => 'Išsaugoti taisyklę',
+    'saving' => 'Išsaugoma…',
+
+    'error_rule_unavailable' => 'Ši taisyklė nebepasiekiama.',
+    'error_invalid_data' => 'Netinkami taisyklės duomenys — pasirink iš sąrašų ir bandyk dar kartą.',
+    'error_duplicate' => 'Taisyklė su tokiu lauku, atitikimu ir reikšme jau yra. Redaguok esamą taisyklę.',
+    'error_priority_whole' => 'Prioritetas turi būti sveikasis skaičius.',
+    'error_add_condition' => 'Pridėk bent vieną sąlygą.',
+    'error_add_action' => 'Pridėk bent vieną veiksmą.',
+    'condition_value_required' => 'Įvesk sąlygos :position reikšmę.',
+    'condition_bounds_required' => 'Pasirink sąlygos :position apatinę ir viršutinę ribą.',
+    'condition_amount_invalid' => 'Įvesk tinkamą sąlygos :position sumą.',
+    'action_pick_category' => 'Pasirink šio veiksmo kategoriją.',
+    'action_pick_counterparty' => 'Pasirink kitą šalį, kuriai priskirti.',
+    'action_note_required' => 'Įvesk pastabos tekstą.',
+    'action_pick_deduction' => 'Pasirink mokesčių žymos lengvatos kategoriją.',
+];

@@ -1,0 +1,107 @@
+# Support-resource corpus — Slovenia (SI merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Telekom Slovenije
+    type: merchant
+    support_url: "https://www.telekom.si/pomoc/kontakt"
+    notes: "Naročniškega razmerja ni mogoče odpovedati s klikom na spletu — po 9. točki splošnih pogojev je treba poslati lastnoročno ali digitalno podpisano odpoved po pošti ali elektronski pošti oziroma jo urediti na prodajnem mestu, z navedbo številke priključka in želenega datuma izključitve, razmerje pa preneha najkasneje v dvanajstih (12) delovnih dneh od prejema odpovedi. Če želite daljši odpovedni rok, ga morate izrecno navesti v pisni odpovedi; terminalsko opremo (kartico SIM, modem, NEO Smartbox) je treba vrniti v petih dneh po prejemu zahteve, sicer se zaračuna pogodbena kazen po ceniku, obveznosti iz predčasne prekinitve pa se poravnajo posebej. Svetovalci: 041 700 700, info@telekom.si."
+  - name: A1 Slovenija
+    type: merchant
+    cancel_url: "https://www.a1.si/pogosta-vprasanja/narocnina-in-razmerje/narocnisko-razmerje/prekinitev-narocniskega-razmerja"
+    support_url: "https://www.a1.si/pomoc-in-informacije"
+    notes: "Zahtevo za prekinitev lahko predloži le naročnik sam z lastnoročno podpisanim zahtevkom — na prodajnem mestu A1, po pošti na A1 Slovenija, d.d., Ameriška ulica 4, 1000 Ljubljana, prek obrazca na spletni strani ali prek spletnega klepeta — prekinitev pa se samodejno izvede zadnji dan vašega obračunskega obdobja. Naročniško razmerje velja za nedoločen čas in se z iztekom vezave ne prekine samo; če prekinete med veljavno vezavo, plačate 9,99 EUR stroška prekinitve oziroma zapiranja računa in povrnete sorazmerni del prejete ugodnosti, pri fiksnih paketih in paketih Ultra, sklenjenih po 3. septembru 2025, pa ob prekinitvi pred 730 dnevi še strošek vzpostavitve priključka. Kontakt: 040 40 40 40."
+  - name: Telemach Slovenija
+    type: merchant
+    cancel_url: "https://telemach.si/download/terms/zahteva-za-odpoved-zamrznitev-narocniskega-razmerja/2557"
+    support_url: "https://telemach.si/pomoc"
+    notes: "Odpoved se odda na obrazcu »Zahteva za odpoved/zamrznitev naročniškega razmerja«, na katerem izberete redno odpoved, začasni izklop, odpoved po 192. členu ZEKom-2 ali prekinitev testnega obdobja in navedete datum odklopa. Po 10. členu splošnih pogojev lahko naročnik kadar koli pisno odpove razmerje, sklenjeno za nedoločen čas, odpoved, ki jo Telemach prejme med prvim in zadnjim dnem tekočega meseca, pa začne veljati s prvim dnem naslednjega meseca; s podpisom obrazca potrdite, da ste seznanjeni s stroški prekinitve po ceniku in z obračunom ugodnosti iz aneksov vezave. Pomoč za fizične uporabnike: 070 700 700."
+  - name: T-2
+    type: merchant
+    support_url: "https://www.t-2.net/podpora"
+    notes: "Odpovedi ni mogoče oddati po spletu — po 23.a členu splošnih pogojev mora naročnik dopis lastnoročno podpisati in ga poslati s priporočeno pošto ter v njem jasno, brezpogojno in nedvoumno izraziti svojo voljo, sicer se šteje, da odpoved ni bila zahtevana. Odpoved učinkuje najkasneje zadnji dan koledarskega meseca, v katerem je podana, oziroma do desetega dne naslednjega meseca, če je podana v zadnjih petih dneh v mesecu. Naročniška pogodba je sklenjena za nedoločen čas z morebitno vezavo za določen čas; če odpoveste med vezavo, plačate strošek izvedbe preklica po ceniku in znesek izgube posebnih ugodnosti, ki se določi sorazmerno."
+  - name: GEN-I
+    type: merchant
+    support_url: "https://gen-i.si/podpora/elektricna-energija/zamenjava-dobavitelja/"
+    notes: "Starega dobavitelja vam ni treba odpovedati sami — GEN-I celoten postopek zamenjave izpelje v vašem imenu pri distribucijskem operaterju, potrebujete le podatke z zadnjega računa obstoječega dobavitelja, zamenjava pa je urejena najkasneje v 21 dneh od prejema podpisane pogodbe. Pogodbo lahko sklenete prek spletnega obrazca ali po telefonu 080 1558; gospodinjski odjemalec, ki se šteje za potrošnika, lahko pri pogodbah, sklenjenih na daljavo ali zunaj poslovnih prostorov, v 14 dneh od sklenitve odstopi z vzorčnim odstopnim obrazcem. Kontakt: elektrika@gen-i.si, plin@gen-i.si."
+  - name: Petrol
+    type: merchant
+    cancel_url: "https://www.petrol.si/petrol-klub/prekinitev-poslovanja"
+    support_url: "https://www.petrol.si/pomoc-in-svetovanje"
+    notes: "Plačilno kartico zvestobe Petrol Pay Loyalty prekličete tako, da na strani »Prekinitev poslovanja« oddate zahtevek za prekinitev poslovanja; obrazec je aplikacija Vue in brez vklopljenega JavaScripta ne deluje. Ta stran ne velja za pogodbe o dobavi elektrike in zemeljskega plina — pri zamenjavi dobavitelja ter izpolnjevanju pogodb in aneksov pomagajo svetovalci na Petrolovih prodajnih mestih po vsej Sloveniji."
+  - name: Zavarovalnica Sava
+    type: merchant
+    support_url: "https://www.zav-sava.si/kontakti-in-lokacije/kontakti"
+    notes: "Zavarovalnica Sava nima spletnega obrazca za odpoved police — na straneh Kontakti in Pogosta vprašanja izberete razlog »Prekinitev zavarovanja« in zahtevo oddate prek kontaktnega obrazca, po elektronski pošti na info@zav-sava.si ali po brezplačnem telefonu 080 19 20. Med objavljenimi obrazci in dokumenti so le soglasje SEPA in obrazci za povračilo stroškov ter prijavo škode, obrazca za odpoved zavarovanja med njimi ni."
+  - name: Vzajemna
+    type: merchant
+    cancel_url: "https://www.vzajemna.si/dogodki/prekinitev-zavarovanja"
+    support_url: "https://www.vzajemna.si/za-stranke/pogosta-vprasanja"
+    notes: "Odpoved zavarovalne pogodbe oddate prek spletnega obrazca, kjer vpišete osebne podatke, izberete razlog (finančni razlogi, odpoved zaradi dviga premije, prehod k drugi zavarovalnici, zavarovanje ni več potrebno …), po potrebi priložite dokazila in se podpišete; za vsako zavarovanje je treba oddati svoj obrazec, zavarovanje pa se prekine v skladu s splošnimi pogoji zavarovanja. Vzajemna pred oddajo opozarja, da boste ob morebitni ponovni sklenitvi znova prestali čakalno dobo in da izgubite ugodnosti programa Varuh zdravja; kontakt: 080 20 60, info@vzajemna.si."
+  - name: AMZS
+    type: merchant
+    support_url: "https://www.amzs.si/o-amzs/kontakt"
+    notes: "Članstva ni treba odpovedati — po 6. členu splošnih pogojev je veljavno s plačano članarino 365 dni od včlanitve in po izteku preprosto preneha, če članarine ne podaljšate; v 30 dneh po izteku ga še lahko podaljšate, po tem roku pa je treba članstvo skleniti na novo. Fizična oseba lahko v 14 dneh od plačila članarine odstopi od članstva brez navedbe razloga z nedvoumno izjavo na clanstvo@amzs.si ali po pošti na AMZS, Dunajska cesta 128, 1000 Ljubljana, pri čemer mora v 14 dneh vrniti vse članske dokumente in nosi stroške vračila. Pomoč na cesti: 1987."
+  - name: RTV Slovenija
+    type: merchant
+    support_url: "https://www.rtvslo.si/rtv/rtv-prispevek/urejanje-zadev-rtv-prispevka-in-obrazci/488272"
+    notes: "RTV-prispevka ni mogoče odpovedati — obveznost je vezana na imetništvo radijskih ali televizijskih sprejemnikov (tudi računalnika, tablice ali telefona z dostopom do spleta) in ne preneha, če imate naročnino pri kabelskem, satelitskem ali internetnem operaterju, saj gre za dve povsem ločeni obveznosti; domnevo, da sprejemnik imate, ovrže le zakonsko predpisana izjava o neposedovanju sprejemnikov. Sprejemnike morate prijaviti sami v 30 dneh po pridobitvi, vsako spremembo pa sporočiti v 15 dneh; med obrazci za fizične osebe so vloga za oprostitev (prejemniki denarne socialne pomoči ali varstvenega dodatka, 100-odstotna telesna okvara, trajna izguba sluha), vloga za odpis dolga, družinski pavšal in pavšal za vikend. Služba za obračun RTV-prispevka, Čufarjeva ulica 2, 1550 Ljubljana, 01/475 46 00, rtv.prispevki@rtvslo.si."
+  - name: NLB
+    type: merchant
+    support_url: "https://www.nlb.si/osebno/kontakt"
+    notes: "Osebni račun se zapre z vlogo za odstop od pogodbe z enomesečnim odpovednim rokom, ob kateri morate podati tudi izjavo, da prevzemate vse obveznosti, vključno s tistimi, ki bi po ukinitvi računa nastale s plačilnimi ali posojilnimi karticami. Na dan prejema vloge banka blokira BA kartico in vse druge kartice imetnika ter pooblaščencev in preneha izvrševati trajne naloge in naloge za direktno obremenitev, račun pa ukine šele s potekom odpovednega roka; pri pogodbi, sklenjeni na daljavo, lahko v 14 dneh odstopite brez navedbe razloga in brez pogodbene kazni."
+  - name: UNICEF Slovenija
+    type: merchant
+    support_url: "https://unicef.si/pogoji"
+    notes: "Mesečna podpora teče prek SEPA direktne obremenitve (trajnika), s podpisom obrazca pa pooblastite UNICEF Slovenija za bremenitev vašega računa. Po pogojih poslovanja morebitne spremembe ali ukinitev trajnikov urejate neposredno z UNICEF Slovenija, vsak delovnik med 8.00 in 15.00 na telefonski številki (01) 583 80 89 ali po elektronski pošti; s pravicami glede same bremenitve (npr. zahtevkom za vračilo) se seznanite pri banki, ki vodi vaš račun."
+
+  # --- Government ---
+  - name: Finančna uprava RS
+    type: government
+    help_url: "https://www.fu.gov.si/kontakti/kontaktni_center_furs/"
+    apply_url: "https://edavki.durs.si/"
+    rights_url: "https://www.fu.gov.si/davki_in_druge_dajatve/podrocja/dohodnina/letna_odmera_dohodnine/"
+    phone: "08 200 1001"
+    notes: "Za telefonska vprašanja s področja davkov fizičnih oseb je vzpostavljen enotni klicni center za celoten FURS na številki 08 200 1001, davčne zadeve in vloge pa se oddajajo prek portala eDavki. Če se z informativnim izračunom dohodnine ne strinjate, morate v roku, objavljenem na strani Letna odmera dohodnine, vložiti ugovor — za drugo tranšo v letu 2026 se je rok iztekel 29. junija 2026, rok za doplačilo premalo plačane dohodnine pa 29. julija 2026. Prijave kršitev sprejema anonimni telefon 080 11 22."
+  - name: ZPIZ
+    type: government
+    help_url: "https://www.zpiz.si/cms/content2019/obmone-enote"
+    apply_url: "https://www.zpiz.si/wps/portal/HP/oddajaevlogjavno"
+    rights_url: "https://www.zpiz.si/cms/?ids=content2019&inf=1266"
+    phone: "01 4745 100"
+    notes: "Zahtevo za priznanje pravice do starostne ali predčasne pokojnine je priporočljivo vložiti približno dva meseca pred zaključkom dela, da je odločba izdana pravočasno in da se uredi obvezno zdravstveno zavarovanje, v katerega vas zavod z dnem upokojitve vključi pri ZZZS. Vloge lahko oddate elektronsko prek storitve eVloge za VSE, za katero ne potrebujete digitalnega potrdila, temveč le mobilno telefonsko številko, ali osebno na najbližji območni enoti v času uradnih ur (ponedeljek 8–12 in 13–15, sreda 8–12 in 13–17, petek 8–13). Splošne informacije: 01 4745 100 in informacije@zpiz.si, za uveljavljanje pravic iz pokojninskega zavarovanja 01 4745 903."
+  - name: ZZZS
+    type: government
+    help_url: "https://www.zzzs.si/kontaktni-center-zzzs/"
+    apply_url: "https://www.zzzs.si/zzzs-api/obrazci/evloge/"
+    rights_url: "https://zavarovanec.zzzs.si/pravice-do-zdravstvenih-storitev/"
+    phone: "01 30 77 300"
+    notes: "Prostovoljno dopolnilno zdravstveno zavarovanje je bilo ukinjeno 31. decembra 2023, s 1. januarjem 2024 pa je bil uveden obvezni zdravstveni prispevek (OZP), ki od marca 2026 do vključno februarja 2027 znaša 39,36 EUR mesečno in se enkrat letno 1. marca uskladi z rastjo povprečne bruto plače. ZZZS opozarja, naj zavarovane osebe ne nasedajo ponudbam dodatnih zavarovanj, saj obvezno zdravstveno zavarovanje po 1. 1. 2024 v celoti krije košarico pravic; obveznega zdravstvenega prispevka ni mogoče odpisati, odložiti ali plačati po obrokih, prenos obveznosti na drugo osebo pa ni mogoč. eVloge so obrazci, za katere ne potrebujete digitalnega potrdila."
+  - name: Zavod RS za zaposlovanje
+    type: government
+    help_url: "https://www.ess.gov.si/o-zrsz/kontaktni-center/"
+    apply_url: "https://www.ess.gov.si/iskalci-zaposlitve/koraki-ob-izgubi-zaposlitve/prijava-v-evidenco/"
+    rights_url: "https://www.ess.gov.si/iskalci-zaposlitve/koraki-ob-izgubi-zaposlitve/denarno-nadomestilo/"
+    phone: "080 20 55"
+    notes: "Denarnega nadomestila ni mogoče uveljavljati brez prijave v evidenco brezposelnih — prijaviti se je treba in vlogo oddati v 30 dneh po prenehanju obveznega zavarovanja, sicer se skupna dolžina prejemanja nadomestila skrajša za koledarske dneve od 31. dneva po prenehanju zavarovanja do dneva oddaje vloge. Vlogo oddate elektronsko na portalu PoiščiDelo.si (mogoče tudi brez digitalnega potrdila, s strežniškim podpisom), osebno pri območni službi ali uradu za delo, kjer ste prijavljeni, ali po pošti; priložiti je treba kopijo pogodbe o zaposlitvi, potrdila o povprečni plači pa ne. Brezplačni telefon kontaktnega centra: 080 20 55, kontaktni.center@ess.gov.si."
+  - name: eUprava
+    type: government
+    help_url: "https://e-uprava.gov.si/si/pomoc-informacije/pomoc-pri-uporabi.html"
+    apply_url: "https://e-uprava.gov.si/si/podrocja/vloge.html"
+    phone: "080 2002"
+    notes: "Na portalu eUprava najdete seznam vlog za oddajo elektronskih vlog državnih in občinskih organov; za oddajo večine vlog in za modul Moja eUprava potrebujete elektronsko identiteto (npr. prijavo SI-PASS). Enotni kontaktni center državne uprave je dosegljiv na brezplačni številki 080 2002, prek Viberja ali WhatsAppa in na elektronskem naslovu ekc@gov.si."
+  - name: Upravne enote
+    type: government
+    help_url: "https://www.gov.si/drzavni-organi/upravne-enote/"
+    apply_url: "https://e-uprava.gov.si/si/podrocja/promet/vozniki-in-vozila/registracija-vozila.html"
+    notes: "Veljavnost prometnega dovoljenja podaljšate z vlogo, ki jo oddate elektronsko ali osebno pri registracijski organizaciji (upravna enota ali pooblaščena registracijska organizacija), pri čemer vloga ne sme biti oddana več kot 30 dni pred iztekom veljavnosti in od izteka ne sme miniti več kot 30 dni (pri mopedih, motornih kolesih, bivalnih vozilih in starodobnikih več kot eno leto). Podaljšanje je mogoče le, če imate veljavno potrdilo o tehnični brezhibnosti in dokazilo o zavarovanju avtomobilske odgovornosti ter poravnano letno dajatev za uporabo vozila, na vozilu pa ni zabeleženega odpoklica ali zastavne pravice brez dovoljenja upnika. Za obisk upravne enote je na več enotah mogoča rezervacija termina; ob oddaji vloge potrebujete osebni dokument s sliko."
+  - name: Center za socialno delo
+    type: government
+    help_url: "https://www.gov.si/teme/drzavna-stipendija/"
+    apply_url: "https://e-uprava.gov.si/si/podrocja/izobrazevanje-kultura/stipendije/drzavna-stipendija.html"
+    rights_url: "https://e-uprava.gov.si/si/podrocja/izobrazevanje-kultura/stipendije.html"
+    notes: "O državni štipendiji na prvi stopnji odloča krajevno pristojni center za socialno delo, zato mu sporočate vse spremembe med šolskim ali študijskim letom — zaposlitev, spremembo bančnega računa, ponavljanje letnika, prekinitev ali predčasen zaključek izobraževanja in odpoved štipendijskega razmerja. Roka za oddajo vloge ni, saj štipendija pripada od prvega dne naslednjega meseca po vložitvi, zato dijaki vlogo vložijo avgusta (upravičenost s 1. septembrom), študenti pa septembra (upravičenost s 1. oktobrom); avgusta oziroma septembra je mogoče oddati tudi nepopolno vlogo, če vpis zaradi vpisnih rokov še ni urejen. Za nadaljnje prejemanje štipendije vloge ni treba oddati, ker CSD pogoje preveri po uradni dolžnosti."

@@ -1,0 +1,170 @@
+# Merchant corpus — Bosnia and Herzegovina. region defaults to BA.
+# Schema: see merchants/nl.yaml. Descriptors printed in Latin script.
+entries:
+  - pattern: "BH TELECOM"
+    name: "BH Telecom"
+    category: "Internet & Phone"
+    website: "https://www.bhtelecom.ba/"
+    support_url: "https://www.bhtelecom.ba/podrska-privatnim-korisnicima/"
+  - pattern: "regex:\\bMTEL\\b"
+    name: "m:tel"
+    category: "Internet & Phone"
+    website: "https://mtel.ba/"
+    support_url: "https://mtel.ba/Korisnicka-zona/Kontakt/Kontaktirajte-nas"
+    support_phone: "0800 50 000"
+    support_email: "korisnicka.podrska@mtel.ba"
+  - pattern: "HT ERONET"
+    name: "HT Eronet"
+    category: "Internet & Phone"
+    website: "https://www.hteronet.ba/"
+    support_url: "https://www.hteronet.ba/korisnicka-podrska"
+  - pattern: "LOGOSOFT"
+    name: "Logosoft"
+    category: "Internet & Phone"
+    website: "https://www.logosoft.ba/"
+  - pattern: "MOJA TV"
+    name: "Moja TV (BH Telecom)"
+    category: "Streaming"
+    website: "https://www.bhtelecom.ba/mojatv/"
+  - pattern: "ELEKTROPRIVREDA BIH"
+    name: "Elektroprivreda BiH"
+    category: "Utilities"
+    website: "https://www.epbih.ba/"
+  - pattern: "ELEKTROPRIVREDA HZHB"
+    name: "Elektroprivreda HZHB"
+    category: "Utilities"
+    website: "https://ephzhb.ba/"
+    support_phone: "0800 80001"
+  - pattern: "ELEKTROKRAJINA"
+    name: "Elektrokrajina"
+    category: "Utilities"
+    website: "https://www.elektrokrajina.com/"
+    support_email: "callcentar@elektrokrajina.com"
+  - pattern: "SARAJEVOGAS"
+    name: "KJKP Sarajevogas"
+    category: "Utilities"
+    website: "https://www.sarajevogas.ba/"
+  - pattern: "TOPLANE SARAJEVO"
+    name: "KJKP Toplane Sarajevo"
+    category: "Utilities"
+    website: "https://www.toplanesarajevo.ba/"
+  - pattern: "KJKP VODOVOD"
+    name: "KJKP Vodovod i kanalizacija Sarajevo"
+    category: "Utilities"
+    website: "https://www.viksa.ba/"
+  - { pattern: "KJKP RAD", name: "KJKP Rad Sarajevo", category: "Utilities" }
+  - pattern: "GRAS SARAJEVO"
+    name: "GRAS Sarajevo"
+    category: "Public transport"
+    website: "https://gras.ba/"
+    support_email: "info@gras.ba"
+  - pattern: "ZFBH"
+    name: "Željeznice Federacije BiH"
+    category: "Public transport"
+    website: "https://www.zfbh.ba/"
+  - pattern: "CENTROTRANS"
+    name: "Centrotrans"
+    category: "Public transport"
+    website: "https://centrotrans.com/"
+  - pattern: "regex:\\bBINGO\\b"
+    name: "Bingo"
+    category: "Groceries"
+    website: "https://www.bingotuzla.ba/"
+  - pattern: "AMKO KOMERC"
+    name: "Amko Komerc"
+    category: "Groceries"
+    website: "https://amko.ba/"
+  - pattern: "ROBOT GENERAL"
+    name: "Robot General Trading"
+    category: "Groceries"
+    website: "https://robot.ba/"
+  - pattern: "FIS VITEZ"
+    name: "FIS Vitez"
+    category: "Groceries"
+    website: "https://fis.ba/"
+  - pattern: "SARAJEVO OSIGURANJE"
+    name: "Sarajevo osiguranje"
+    category: "Insurance"
+    website: "https://www.sarajevoosiguranje.ba/"
+  - pattern: "ADRIATIC OSIGURANJE"
+    name: "Adriatic osiguranje"
+    category: "Insurance"
+    website: "https://www.adriatic.ba/"
+    support_email: "info@adriatic.ba"
+  - pattern: "OSLOBODJENJE"
+    name: "Oslobođenje"
+    category: "Subscriptions"
+    website: "https://www.oslobodjenje.ba/"
+  - pattern: "KLIX.BA"
+    name: "Klix.ba"
+    category: "Subscriptions"
+    website: "https://www.klix.ba/"
+  - pattern: "DNEVNI AVAZ"
+    name: "Dnevni avaz"
+    category: "Subscriptions"
+    website: "https://avaz.ba/"
+  - pattern: "NIC.BA"
+    name: "NIC.BA (.ba registry)"
+    category: "Cloud / Software"
+    website: "https://www.nic.ba/"
+  - pattern: "POMOZI.BA"
+    name: "Pomozi.ba"
+    category: "Donations"
+    website: "https://pomoziba.org/"
+  - pattern: "MERHAMET"
+    name: "Merhamet"
+    category: "Donations"
+    website: "https://www.merhamet.ba/"
+  - { pattern: "RAIFFEISEN BANK BH", name: "Raiffeisen Bank BiH", category: "Fees & charges", website: "https://www.raiffeisenbank.ba/" }
+  - { pattern: "UNICREDIT BANK MOSTAR", name: "UniCredit Bank BiH", category: "Fees & charges", website: "https://www.unicredit.ba/" }
+  - { pattern: "ASA BANKA", name: "ASA Banka", category: "Fees & charges", website: "https://www.asabanka.ba/" }
+  - { pattern: "SPARKASSE BANK", name: "Sparkasse Bank BiH", category: "Fees & charges", website: "https://www.sparkasse.ba/" }
+  - { pattern: "PROCREDIT BANK BIH", name: "ProCredit Bank BiH", category: "Fees & charges", website: "https://www.procreditbank.ba/" }
+  - { pattern: "ZIRAAT BANK BH", name: "Ziraat Bank BH", category: "Fees & charges", website: "https://ziraatbank.ba/" }
+  - { pattern: "ADDIKO BANK BIH", name: "Addiko Bank BiH", category: "Fees & charges", website: "https://www.addiko.ba/" }
+  - { pattern: "BOSNA BANK INTERNATIONAL", name: "Bosna Bank International", category: "Fees & charges", website: "https://bbi.ba/" }
+  - { pattern: "UNION BANKA", name: "Union Banka", category: "Fees & charges", website: "https://unionbank.ba/" }
+  - { pattern: "NLB BANKA SARAJEVO", name: "NLB Banka Sarajevo", category: "Fees & charges" }
+  - { pattern: "CROATIA OSIGURANJE BH", name: "Croatia osiguranje BiH", category: "Insurance", website: "https://crosig.ba/" }
+  - { pattern: "GRAWE OSIGURANJE SARAJEVO", name: "GRAWE osiguranje", category: "Insurance", website: "https://www.grawe.ba/" }
+  - { pattern: "ASA CENTRAL OSIGURANJE", name: "ASA Central Osiguranje", category: "Insurance", website: "https://asacentral.ba/" }
+  - { pattern: "CENTRAL OSIGURANJE", name: "Central osiguranje", category: "Insurance", website: "https://www.central-osiguranje.com/" }
+  - { pattern: "UNIQA OSIGURANJE BIH", name: "UNIQA Osiguranje BiH", category: "Insurance", website: "https://www.uniqa.ba/" }
+  - { pattern: "BOSNA SUNCE OSIGURANJE", name: "Bosna-Sunce osiguranje", category: "Insurance" }
+  - { pattern: "VGT OSIGURANJE", name: "VGT osiguranje", category: "Insurance" }
+  - { pattern: "ELEKTROPRIVREDA RS", name: "Elektroprivreda Republike Srpske", category: "Utilities", website: "https://ers.ba/" }
+  - { pattern: "ELEKTRO DOBOJ", name: "Elektro Doboj", category: "Utilities", website: "https://www.elektrodoboj.net/" }
+  - { pattern: "ELEKTRO BIJELJINA", name: "Elektro-Bijeljina", category: "Utilities", website: "https://www.elektrobijeljina.com/" }
+  - { pattern: "VODOVOD BANJA LUKA", name: "Vodovod Banja Luka", category: "Utilities", website: "https://vodovod-bl.com/" }
+  - { pattern: "TOPLANA BANJA LUKA", name: "Toplana Banja Luka", category: "Utilities" }
+  - { pattern: "VODOVOD TUZLA", name: "Vodovod Tuzla", category: "Utilities" }
+  - { pattern: "VODOVOD ZENICA", name: "Vodovod Zenica", category: "Utilities" }
+  - { pattern: "JP ELEKTROPRIVREDA BIH", name: "Elektroprivreda BiH", category: "Utilities", website: "https://www.epbih.ba/" }
+  - { pattern: "KJKP TOPLANE", name: "KJKP Toplane Sarajevo", category: "Utilities", website: "https://www.toplanesarajevo.ba/" }
+  - { pattern: "KJKP SARAJEVOGAS", name: "KJKP Sarajevogas", category: "Utilities", website: "https://www.sarajevogas.ba/" }
+  - { pattern: "APOTEKE SARAJEVO", name: "JU Apoteke Sarajevo", category: "Health", website: "https://www.apoteke-sarajevo.ba/" }
+  - { pattern: "EUROFARM CENTAR", name: "Eurofarm Centar", category: "Healthcare", website: "https://eurofarmcentar.ba/" }
+  - { pattern: "NEZAVISNE NOVINE", name: "Nezavisne novine", category: "Subscriptions", website: "https://www.nezavisne.com/" }
+  - { pattern: "GLAS SRPSKE", name: "Glas Srpske", category: "Subscriptions" }
+  - { pattern: "BH POSTA", name: "BH Pošta", category: "Other", website: "https://www.posta.ba/" }
+  - { pattern: "POSTE SRPSKE", name: "Pošte Srpske", category: "Other", website: "https://www.postesrpske.com/" }
+  - { pattern: "ZELJEZNICE REPUBLIKE SRPSKE", name: "Željeznice Republike Srpske", category: "Public transport", website: "https://www.zrs-rs.com/" }
+  - { pattern: "JP AUTOCESTE", name: "JP Autoceste FBiH", category: "Transport", website: "https://www.jpautoceste.ba/" }
+  - { pattern: "HIFA OIL", name: "Hifa-Oil", category: "Fuel", website: "https://www.hifa-oil.ba/" }
+  - { pattern: "NESTRO PETROL", name: "Nestro Petrol", category: "Fuel", website: "https://nestropetrol.com/" }
+  - { pattern: "HOLDINA", name: "Holdina", category: "Fuel", website: "https://ina.ba/" }
+  - { pattern: "TROPIC", name: "Tropic", category: "Groceries", website: "https://tropic.ba/" }
+  - { pattern: "KLAS SARAJEVO", name: "Klas", category: "Groceries", website: "https://www.klas.ba/" }
+  - { pattern: "VIOLETA", name: "Violeta", category: "Groceries", website: "https://violeta.com/" }
+  - { pattern: "BLICNET", name: "Blicnet", category: "Internet & Phone" }
+  - { pattern: "TELRAD NET", name: "Telrad Net", category: "Internet & Phone" }
+  - { pattern: "SOS DJECIJA SELA", name: "SOS Dječija sela BiH", category: "Donations", website: "https://sos-ds.ba/" }
+  - { pattern: "VODOVOD MOSTAR", name: "Vodovod Mostar", category: "Utilities", website: "https://vodovod-mostar.ba/" }
+  - { pattern: "TOPLANA ZENICA", name: "Toplana Zenica", category: "Utilities" }
+  - { pattern: "MOJA BANKA", name: "Moja Banka", category: "Fees & charges" }
+  - { pattern: "MEGAMARKET BH", name: "Mega Market", category: "Groceries" }
+  - { pattern: "SARAJEVSKA PIVARA", name: "Sarajevska Pivara", category: "Other", website: "https://sarajevska-pivara.com/" }
+  - { pattern: "BH TELECOM DD SARAJEVO", name: "BH Telecom", category: "Internet & Phone", website: "https://www.bhtelecom.ba/" }
+  - { pattern: "MTEL AD BANJA LUKA", name: "m:tel", category: "Internet & Phone", website: "https://mtel.ba/" }
+  - { pattern: "HRVATSKE TELEKOMUNIKACIJE MOSTAR", name: "HT Eronet", category: "Internet & Phone", website: "https://www.hteronet.ba/" }
+  - { pattern: "ELEKTROPRIVREDA HZ HB", name: "Elektroprivreda HZHB", category: "Utilities", website: "https://ephzhb.ba/" }

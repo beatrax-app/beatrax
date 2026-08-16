@@ -1,0 +1,35 @@
+# Bank-fee classification rules — Poland (Polish).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The bare "OPŁATA" is never used on its own: Polish transfer titles read
+# "opłata za prąd" or "opłata za przedszkole", which are ordinary outgoing
+# payments, so it only appears as part of the fixed statement phrases.
+# `\bPROWIZJ` uses `regex:` with a LEADING \b on the stem so it covers
+# "prowizja", "prowizji" and "prowizje" while the boundary keeps it off
+# longer tokens, and `\bODSETKI\b` is fenced on both sides so it matches the
+# interest line but not "ODSETEK" (a share, a percentage). Polish
+# diacritics stay out of `regex:` bodies — the matcher runs PCRE without /u,
+# so `#i` case-folds ASCII only and \b never sees "Ł" or "Ę" as a word
+# character; those phrases are plain substrings, which are matched
+# case-insensitively and multibyte-aware. Regex bodies must be
+# SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "PROWADZENIE RACHUNKU"
+    name: "Opłata za prowadzenie rachunku"
+  - pattern: "OPŁATA MIESIĘCZNA"
+    name: "Opłata miesięczna"
+  - pattern: "OPŁATA ZA KARTĘ"
+    name: "Opłata za kartę"
+  - pattern: 'regex:\bPROWIZJ'
+    name: "Prowizja"
+  - pattern: 'regex:\bODSETKI\b'
+    name: "Odsetki"

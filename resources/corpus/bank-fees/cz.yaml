@@ -1,0 +1,30 @@
+# Bank-fee classification rules — Czechia (Czech).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Czech declines its fee nouns, so the fee word uses `regex:` with a LEADING
+# \b on the stem: `\bPOPLAT` covers "poplatek", "poplatku", "poplatky" and
+# "poplatků" while the boundary keeps it from firing inside "DOPLATEK"
+# (balance due) or "PŘÍPLATEK" (surcharge). Diacritics stay out of `regex:`
+# bodies — the matcher runs PCRE without /u, so `#i` case-folds ASCII only
+# and \b never sees "Č" or "Ú" as a word character; "ÚROK" and
+# "VEDENÍ ÚČTU" are therefore plain substrings, which are matched
+# case-insensitively and multibyte-aware. Regex bodies must be
+# SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "VEDENÍ ÚČTU"
+    name: "Poplatek za vedení účtu"
+  - pattern: 'regex:\bPOPLAT'
+    name: "Bankovní poplatek"
+  - pattern: 'regex:\bPROVIZE\b'
+    name: "Provize"
+  - pattern: "ÚROK"
+    name: "Úrok"

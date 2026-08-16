@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading' => 'Przegląd',
+    'subtitle' => 'Powierzchnia operacyjna wbudowanej konsoli deweloperskiej.',
+    'worker_heartbeat' => 'Puls workera',
+    'not_running' => 'NIE DZIAŁA',
+    'queue' => 'Kolejka',
+    'pending' => 'oczekujące',
+    'failed' => 'nieudane',
+    'batches' => 'partie',
+    'queue_summary' => 'Nieudane zadania: :failed · aktywne partie: :batches',
+    'last_command' => 'Ostatnie polecenie',
+    'waiting_for_logs' => 'Oczekiwanie na wiersze logu…',
+    'recent_runs' => 'Ostatnie uruchomienia',
+    'recent_runs_empty' => 'Brak uruchomień. Naciśnij ⌘K, aby uruchomić polecenie.',
+    'open_alerts' => 'Otwarte alerty',
+    'open_alerts_empty' => 'Brak otwartych alertów.',
+    'reauth' => 'Autoryzuj ponownie →',
+];

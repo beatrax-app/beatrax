@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Community\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
+use Modules\Community\Public\Dto\MerchantContactDto;
 use stdClass;
 
 /**
@@ -12,12 +14,25 @@ use stdClass;
  */
 final class CommunityCorpusQuery
 {
-    // Defence-in-depth caps keeping the per-render scan cost bounded even if
-    // the bundled corpus grows well past its current size; regex patterns are
-    // a small minority of the corpus, so REGEX_SCAN_LIMIT is a tighter bound.
-    private const GENERALIZED_SCAN_LIMIT = 1000;
+    /** @var list<string> */
+    private const CONTACT_COLUMNS = ['website', 'cancel_url', 'support_url', 'support_phone', 'support_email'];
 
-    private const REGEX_SCAN_LIMIT = 500;
+    // The `LIMIT 1000` / `LIMIT 500` these scans once carried read as
+    // defence-in-depth but did the opposite. Ordered by id — bundled-file sort
+    // order — a cap does not sample the corpus, it truncates it: once the
+    // corpus outgrew the cap, every country after it stopped resolving.
+
+    // A bound that changes answers without saying so costs more than the work
+    // it saves. The scan is one substring test per row against one haystack,
+    // linear either way, so the rows are read and folded once per instance
+    // instead — which is what keeps an import off the database.
+    /**
+     * @var list<array{needle: string, name: string}>|null
+     */
+    private ?array $generalizedRows = null;
+
+    /** @var list<array{pattern: string, name: string}>|null */
+    private ?array $regexRows = null;
 
     public function __construct(
         private readonly DatabaseManager $db,
@@ -38,25 +53,9 @@ final class CommunityCorpusQuery
     {
         $haystack = mb_strtolower($rawDescription);
 
-        // Regex rows carry an empty generalized_pattern and are matched only
-        // by lookupRegex(); excluding them here keeps the LIMIT reflecting
-        // genuinely substring-matchable rows.
-        /** @var iterable<stdClass> $rows */
-        $rows = $this->db->connection()->table('community_merchant_mappings')
-            ->whereNull('user_id')
-            ->where('generalized_pattern', '!=', '')
-            ->orderBy('id')
-            ->limit(self::GENERALIZED_SCAN_LIMIT)
-            ->get(['generalized_pattern', 'name']);
-
-        foreach ($rows as $row) {
-            $needle = is_string($row->generalized_pattern) ? $row->generalized_pattern : '';
-            $name = is_string($row->name) ? $row->name : '';
-            if ($needle === '' || $name === '') {
-                continue;
-            }
-            if (mb_strpos($haystack, mb_strtolower($needle)) !== false) {
-                return $name;
+        foreach ($this->generalizedRows() as $row) {
+            if (mb_strpos($haystack, $row['needle']) !== false) {
+                return $row['name'];
             }
         }
 
@@ -65,26 +64,119 @@ final class CommunityCorpusQuery
 
     public function lookupRegex(string $rawDescription): ?string
     {
+        foreach ($this->regexRows() as $row) {
+            if ($this->matcher->matches($row['pattern'], $rawDescription)) {
+                return $row['name'];
+            }
+        }
+
+        return null;
+    }
+
+    // Regex rows carry an empty generalized_pattern and are matched only by
+    // lookupRegex(), so they are excluded here rather than skipped once per
+    // call; needles are case-folded at load rather than per transaction.
+    /**
+     * @return list<array{needle: string, name: string}>
+     */
+    private function generalizedRows(): array
+    {
+        if ($this->generalizedRows !== null) {
+            return $this->generalizedRows;
+        }
+
+        /** @var iterable<stdClass> $rows */
+        $rows = $this->db->connection()->table('community_merchant_mappings')
+            ->whereNull('user_id')
+            ->where('generalized_pattern', '!=', '')
+            ->orderBy('id')
+            ->get(['generalized_pattern', 'name']);
+
+        $loaded = [];
+        foreach ($rows as $row) {
+            $needle = is_string($row->generalized_pattern) ? $row->generalized_pattern : '';
+            $name = is_string($row->name) ? $row->name : '';
+            if ($needle === '' || $name === '') {
+                continue;
+            }
+            $loaded[] = ['needle' => mb_strtolower($needle), 'name' => $name];
+        }
+
+        return $this->generalizedRows = $loaded;
+    }
+
+    /**
+     * @return list<array{pattern: string, name: string}>
+     */
+    private function regexRows(): array
+    {
+        if ($this->regexRows !== null) {
+            return $this->regexRows;
+        }
+
         /** @var iterable<stdClass> $rows */
         $rows = $this->db->connection()->table('community_merchant_mappings')
             ->whereNull('user_id')
             ->where('pattern', 'like', CorpusPatternMatcher::REGEX_PREFIX.'%')
             ->orderBy('id')
-            ->limit(self::REGEX_SCAN_LIMIT)
             ->get(['pattern', 'name']);
 
+        $loaded = [];
         foreach ($rows as $row) {
             $pattern = is_string($row->pattern) ? $row->pattern : '';
             $name = is_string($row->name) ? $row->name : '';
             if ($pattern === '' || $name === '') {
                 continue;
             }
-            if ($this->matcher->matches($pattern, $rawDescription)) {
-                return $name;
-            }
+            $loaded[] = ['pattern' => $pattern, 'name' => $name];
         }
 
-        return null;
+        return $this->regexRows = $loaded;
+    }
+
+    public function contactForMerchant(string $name): ?MerchantContactDto
+    {
+        // Keyed on the resolved merchant NAME, not the raw descriptor: a brand
+        // reaches the corpus through many descriptor variants that collapse to
+        // one name, and a profile page holds the name, never the matched row.
+
+        // Requiring one populated column stops a brand whose lowest-id row
+        // carries no contact data from masking a sibling row that does.
+        if (trim($name) === '') {
+            return null;
+        }
+
+        /** @var stdClass|null $row */
+        $row = $this->db->connection()->table('community_merchant_mappings')
+            ->whereNull('user_id')
+            ->where('name', $name)
+            ->where(static function (Builder $query): void {
+                foreach (self::CONTACT_COLUMNS as $column) {
+                    $query->orWhereNotNull($column);
+                }
+            })
+            ->orderBy('id')
+            ->first(self::CONTACT_COLUMNS);
+
+        return $row === null ? null : self::toContact($row);
+    }
+
+    private static function toContact(stdClass $row): MerchantContactDto
+    {
+        return new MerchantContactDto(
+            website: self::str($row, 'website'),
+            cancelUrl: self::str($row, 'cancel_url'),
+            supportUrl: self::str($row, 'support_url'),
+            supportPhone: self::str($row, 'support_phone'),
+            supportEmail: self::str($row, 'support_email'),
+        );
+    }
+
+    private static function str(stdClass $row, string $column): ?string
+    {
+        $value = $row->{$column} ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     public function mappingsCount(): int

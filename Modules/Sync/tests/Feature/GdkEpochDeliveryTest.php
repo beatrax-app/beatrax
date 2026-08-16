@@ -398,15 +398,14 @@ it('is idempotent — re-handling an already-present epoch does not duplicate or
 });
 
 /*
- * MEDIUM-02 (15-import-join-REVIEW.md) — the idempotency-guard drop above
- * (an already-present epoch_id) is EXACTLY where a normal (non-import)
- * desktop ADD-device fan-out silently collides: PairingFlowModal::
- * fanOutToNewlyConfirmedDevice() fires on every confirmed peer, including
- * a self-minting one that already holds its OWN epoch 1 under a DIFFERENT
- * key. Before this fix the drop was silent (no log line at all). This
- * test proves the drop is now observable via a distinct warning.
+ * MEDIUM-02 (15-import-join-REVIEW.md) — an already-present epoch_id is
+ * EXACTLY where a desktop ADD-device fan-out collides: the peer may have
+ * self-minted its OWN epoch 1 under a DIFFERENT key. Dropping the inbound
+ * wrap, as this once did, left every row the desktop encrypted under its
+ * epoch 1 permanently unreadable on that peer. The group's key wins when
+ * the local one has encrypted nothing.
  */
-it('logs a distinct warning when an inbound GDK_EPOCH_WRAP collides with an already-present epoch_id (MEDIUM-02)', function (): void {
+it('adopts the peer GDK epoch over a colliding local key that has encrypted nothing', function (): void {
     $user = deliveryUser('delivery-collision-user');
 
     // Cross-test filesystem-isolation gap (documented at the top of the
@@ -457,16 +456,79 @@ it('logs a distinct warning when an inbound GDK_EPOCH_WRAP collides with an alre
     $logSpy->shouldHaveReceived('warning')
         ->withArgs(function (string $message, array $ctx) use ($deviceB): bool {
             return str_starts_with($message, 'GdkEpochControlHandler:')
-                && str_contains($message, 'colliding delivery dropped')
+                && str_contains($message, 'adopted the peer GDK epoch')
                 && ($ctx['epoch_id'] ?? null) === 1
                 && ($ctx['recipient_device_id'] ?? null) === $deviceB->deviceId;
         })
         ->once();
 
-    // The collision must still be a genuine no-op — device B's OWN
-    // epoch-1 key is unchanged (never overwritten by the colliding wrap).
+    // Nothing local was encrypted under the self-minted epoch 1, so the
+    // group's key replaces it and the desktop's rows become readable.
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
-    expect($loaded->keyFor(1))->not->toBe(sodium_bin2hex($rawGdkKey), 'the colliding wrap must never overwrite the already-present epoch key');
+    expect($loaded->keyFor(1))->toBe(sodium_bin2hex($rawGdkKey), 'the group key must replace an unused local epoch of the same id');
+});
+
+/*
+ * The mirror case: once a row IS encrypted under the local epoch, that key
+ * is the only way to read it, so adopting the peer's would trade one set of
+ * unreadable rows for another. The conflict is raised instead of resolved.
+ */
+it('keeps a colliding local GDK epoch that local rows are already encrypted under', function (): void {
+    $user = deliveryUser('delivery-collision-used');
+
+    @unlink(UserDataPathService::appPath('sync/gdk/'.$user->id.'.enc'));
+
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    /** @var DeviceIdentityDto $deviceB */
+    $deviceB = $identityService->generateAndPersist((int) $user->id, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $keyring->generateAndPersist((int) $user->id, $session);
+    $localKeyHex = $keyring->loadKeyring((int) $user->id, $session)->keyFor(1);
+
+    // One durable row encrypted under the local epoch 1 is all it takes.
+    app(DatabaseManager::class)->connection()->table('op_log_entries')->insert([
+        'user_id' => (int) $user->id,
+        'device_id' => $deviceB->deviceId,
+        'table_name' => 'transactions',
+        'pk' => 'collision-pk',
+        'field' => 'note',
+        'value' => 'ciphertext',
+        'op_type' => 'set',
+        'hlc_l' => 1,
+        'hlc_c' => 0,
+        'signature' => str_repeat('0', 128),
+        'gdk_epoch' => 1,
+        'recorded_at' => '2026-01-01 00:00:00',
+    ]);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+    $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId);
+
+    /** @var MockInterface $logSpy */
+    $logSpy = Mockery::spy(LoggerInterface::class);
+    app()->instance(LoggerInterface::class, $logSpy);
+    app()->forgetInstance(GdkEpochControlHandler::class);
+
+    /** @var GdkEpochControlHandler $handler */
+    $handler = app(GdkEpochControlHandler::class);
+    $handler->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
+
+    $logSpy->shouldHaveReceived('error')
+        ->withArgs(fn (string $message, array $ctx): bool => str_contains($message, 'locally-USED epoch')
+            && ($ctx['epoch_id'] ?? null) === 1)
+        ->once();
+
+    $loaded = $keyring->loadKeyring((int) $user->id, $session);
+    expect($loaded->keyFor(1))->toBe($localKeyHex, 'a used local epoch key must survive a colliding delivery');
 });
 
 // ---------------------------------------------------------------------
@@ -569,7 +631,9 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
     $fakeClient = deliveryFakeClient();
     $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
 
-    expect($fakeClient->sentBinary)->toHaveCount(1, 'the pending wrap must be pushed over the live session');
+    // Frame 0 is the GDK_EPOCH_PUSH header announcing the phase and its
+    // count; the wrap itself follows it.
+    expect($fakeClient->sentBinary)->toHaveCount(2, 'the phase header plus the pending wrap must be pushed');
     expect(
         $db->connection()->table('relay_mailbox')
             ->where('recipient_did', $deviceB->deviceId)
@@ -577,16 +641,20 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
             ->count()
     )->toBe(0, 'the delivered wrap must be cleared (T-14-17 — no redelivery)');
 
-    $deliveredPlaintext = $bNoiseSession->decrypt($fakeClient->sentBinary[0]);
+    // Noise cipher states are counter-based, so frames open in the order
+    // they were sealed — the phase header first, then the wrap behind it.
+    $bNoiseSession->decrypt($fakeClient->sentBinary[0]);
+    $deliveredPlaintext = $bNoiseSession->decrypt($fakeClient->sentBinary[1]);
     /** @var array<string, mixed> $deliveredWrap */
     $deliveredWrap = json_decode($deliveredPlaintext, true, 8, JSON_THROW_ON_ERROR);
     expect($deliveredWrap['type'])->toBe('GDK_EPOCH_WRAP');
     expect($deliveredWrap['epoch_id'])->toBe($aEpoch->epochId);
     expect($deliveredWrap['recipient_device_id'])->toBe($deviceB->deviceId);
 
-    // Re-running delivery must not resend an already-cleared wrap.
+    // Re-running delivery must not resend an already-cleared wrap — the
+    // second pass adds its phase header (count 0) and nothing else.
     $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
-    expect($fakeClient->sentBinary)->toHaveCount(1, 'a cleared wrap must never be redelivered');
+    expect($fakeClient->sentBinary)->toHaveCount(3, 'a cleared wrap must never be redelivered');
 
     // --- Direction 2: device-b's OWN daemon drains ITS OWN inbound mailbox
     // and routes each wrap through GdkEpochControlHandler, converging its
@@ -598,11 +666,8 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
         $deviceB->x25519PublicKeyHex,
     );
 
-    // A fresh, never-authenticated SyncSession — peerDeviceId() is null, so
-    // Direction 1's outbound half safely no-ops; only Direction 2 (drain
-    // this device's own mailbox) runs.
-    $unauthSession = deliveryBareSyncSession();
-    $noopClient = deliveryFakeClient();
+    // Direction 2 is wire-independent: draining this device's own mailbox
+    // needs no peer session at all, so it is exercised on its own.
 
     // Simulate the wrap having reached device-b's own local relay_mailbox
     // (e.g. via an external relay or a peer forwarding it) by decrypting
@@ -617,7 +682,7 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
         'expires_at' => '2026-08-08T10:10:00Z',
     ]);
 
-    $handlerOnB->deliverGdkEpochWraps($noopClient, $unauthSession);
+    $handlerOnB->drainInboundEpochWraps();
 
     $bKeyring = $keyring->loadKeyring((int) $user->id, $session);
     expect($bKeyring->keyFor($aEpoch->epochId))->not->toBeNull('device-b\'s own keyring must converge after draining its inbound mailbox');
@@ -628,4 +693,119 @@ it('rotate-on-A delivers the enqueued wrap to a live-connecting peer over Noise 
             ->whereNull('delivered_at')
             ->count()
     )->toBe(0, 'device-b\'s own inbound wrap must be cleared after processing');
+});
+
+// The relay mailbox carries two protocols at once: the epoch wraps this step
+// owns, and the pairing frames the relay endpoint stores for the same peer.
+// Forwarding indiscriminately confirmed a leftover PAIR_CONFIRM away down a
+// channel whose reader discards it — and because that reader stopped at the
+// first thing it did not recognise, every wrap queued behind it went too. The
+// phone was then left holding no epoch key at all, quarantining the very
+// history it had just been sent.
+it('pushes only epoch wraps to the peer and leaves a pairing frame for the courier', function (): void {
+    $user = deliveryUser('delivery-mixed-mailbox-user');
+
+    /** @var Session $session */
+    $session = app(Session::class);
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    $kpA = sodium_crypto_kx_keypair();
+    $secretA = sodium_crypto_kx_secretkey($kpA);
+    $publicA = sodium_crypto_kx_publickey($kpA);
+    deliveryRegistryRow($db, (int) $user->id, 'device-a', sodium_bin2hex($publicA), isSelf: true);
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    /** @var DeviceIdentityDto $deviceB */
+    $deviceB = $identityService->generateAndPersist((int) $user->id, $session);
+    $db->connection()->table('device_registry')->where('device_id', $deviceB->deviceId)->update(['is_self' => 0]);
+
+    // The pairing frame is OLDER, so an ordered drain reaches it first —
+    // precisely the ordering that used to swallow the wrap behind it.
+    $db->connection()->table('relay_mailbox')->insert([
+        'sender_did' => 'device-a',
+        'recipient_did' => $deviceB->deviceId,
+        'blob' => json_encode([
+            'type' => 'PAIR_CONFIRM',
+            'token_hash' => str_repeat('c', 64),
+            'confirming_device_id' => 'device-a',
+            'peer_device_id' => $deviceB->deviceId,
+            'sig_hex' => str_repeat('d', 128),
+        ], JSON_THROW_ON_ERROR),
+        'created_at' => '2026-07-09T10:00:00Z',
+        'delivered_at' => null,
+        'expires_at' => '2026-12-09T10:00:00Z',
+    ]);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+    $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    $wrap = $rotation->buildGdkEpochWrap(
+        3,
+        $rawGdkKey,
+        sodium_hex2bin($deviceB->x25519PublicKeyHex),
+        $deviceB->deviceId,
+    );
+
+    $db->connection()->table('relay_mailbox')->insert([
+        'sender_did' => 'device-a',
+        'recipient_did' => $deviceB->deviceId,
+        'blob' => json_encode($wrap, JSON_THROW_ON_ERROR),
+        'created_at' => '2026-07-09T11:00:00Z',
+        'delivered_at' => null,
+        'expires_at' => '2026-12-09T11:00:00Z',
+    ]);
+
+    $initHs = NoiseHandshakeState::initIkInitiator(
+        sodium_hex2bin($deviceB->x25519SecretKeyHex),
+        sodium_hex2bin($deviceB->x25519PublicKeyHex),
+        $publicA,
+    );
+    $respHs = NoiseHandshakeState::initIkResponder($secretA, $publicA);
+    $respHs->readMessage($initHs->writeMessage(''));
+    $initHs->readMessage($respHs->writeMessage(''));
+
+    [$respSend, $respRecv, $peerStaticRevealedToResp] = $respHs->split();
+    [$initSend, $initRecv, $peerStaticRevealedToInit] = $initHs->split();
+
+    $aSyncSession = deliveryBareSyncSession();
+    expect($aSyncSession->authenticate(
+        new NoiseSession($respSend, $respRecv, $peerStaticRevealedToResp),
+        (int) $user->id,
+        'device-a',
+    ))->toBeTrue();
+
+    $handlerOnA = deliverySyncWebSocketHandler(
+        (int) $user->id,
+        'device-a',
+        sodium_bin2hex($secretA),
+        sodium_bin2hex($publicA),
+    );
+
+    $fakeClient = deliveryFakeClient();
+    $handlerOnA->deliverGdkEpochWraps($fakeClient, $aSyncSession);
+
+    expect($fakeClient->sentBinary)->toHaveCount(2, 'only the phase header and the epoch wrap belong on this channel');
+
+    $bNoiseSession = new NoiseSession($initSend, $initRecv, $peerStaticRevealedToInit);
+    /** @var array<string, mixed> $delivered */
+    $header = json_decode($bNoiseSession->decrypt($fakeClient->sentBinary[0]), true, 8, JSON_THROW_ON_ERROR);
+    expect($header)->toBe(['type' => 'GDK_EPOCH_PUSH', 'count' => 1]);
+    /** @var array<string, mixed> $delivered */
+    $delivered = json_decode($bNoiseSession->decrypt($fakeClient->sentBinary[1]), true, 8, JSON_THROW_ON_ERROR);
+
+    expect($delivered['type'])->toBe('GDK_EPOCH_WRAP')
+        ->and($delivered['epoch_id'])->toBe(3);
+
+    // The pairing frame stays pending: the courier that polls this mailbox
+    // over HTTP is the only thing that knows how to act on it.
+    $pending = $db->connection()->table('relay_mailbox')
+        ->where('recipient_did', $deviceB->deviceId)
+        ->whereNull('delivered_at')
+        ->pluck('blob')
+        ->all();
+
+    expect($pending)->toHaveCount(1)
+        ->and($pending[0])->toContain('PAIR_CONFIRM');
 });

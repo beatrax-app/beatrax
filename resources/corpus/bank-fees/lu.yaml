@@ -1,0 +1,38 @@
+# Bank-fee classification rules — Luxembourg (French and German).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Luxembourgish statements are printed in French or German depending on the
+# bank, so both are listed. The French fee words use `regex:` with \b word
+# boundaries so "COMMISSION" and "COTISATION" match the standalone charge
+# and not a longer token. German fee words are compounds instead, so they
+# are plain substrings: "GEBÜHR" is meant to match inside
+# "Kontoführungsgebühr". Umlauts stay out of `regex:` bodies — the matcher
+# runs PCRE without /u, so `#i` case-folds ASCII only — and the ASCII
+# "GEBUEHR" transliteration is listed alongside the umlaut spelling. Regex
+# bodies must be SINGLE-quoted in YAML so the backslash reaches the matcher
+# instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "FRAIS DE TENUE DE COMPTE"
+    name: "Frais de tenue de compte"
+  - pattern: "FRAIS BANCAIRES"
+    name: "Frais bancaires"
+  - pattern: 'regex:\bCOMMISSION\b'
+    name: "Commission"
+  - pattern: 'regex:\bCOTISATION\b'
+    name: "Cotisation"
+  - pattern: 'regex:\bINTERETS\b'
+    name: "Intérêts"
+  - pattern: "KONTOFÜHRUNG"
+    name: "Kontoführungsgebühr"
+  - pattern: "GEBÜHR"
+    name: "Bankgebühr"
+  - pattern: "GEBUEHR"
+    name: "Bankgebühr"

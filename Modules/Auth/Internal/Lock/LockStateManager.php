@@ -16,6 +16,12 @@ final class LockStateManager
 
     public const DATA_KEY_SESSION = 'beatrax_data_key';
 
+    // Set by unlock(), consumed by AppLockMiddleware on the next request.
+    // An unlock IS activity, but only the PIN path ever stamped the config
+    // row to say so: a biometric unlock left a row that still read as idle,
+    // so the very next request locked again and asked for a second unlock.
+    public const SESSION_UNLOCK_ACTIVITY_PENDING = 'beatrax_unlock_activity_pending';
+
     /**
      * @param  KeyCustodian  $custodian  Defaults to the pass-through
      *                                   NullKeyCustodian so `new LockStateManager` (used widely in tests)
@@ -45,6 +51,11 @@ final class LockStateManager
 
         $session->put(self::SESSION_KEY, true);
         $session->forget(self::DATA_KEY_SESSION);
+
+        // A pending record belongs to the unlock that has just been undone;
+        // carrying it past a lock would credit the next session with presence
+        // nobody proved.
+        $session->forget(self::SESSION_UNLOCK_ACTIVITY_PENDING);
     }
 
     // Releases a lock flag stranded on a session whose user has no enabled
@@ -63,6 +74,12 @@ final class LockStateManager
     {
         $session->put(self::SESSION_KEY, false);
         $session->put(self::DATA_KEY_SESSION, $this->custodian->store($dataKey));
+
+        // Flagged here rather than at each call site because there are three
+        // of them and only one remembered: PIN, the OS-gated vault, and
+        // WebAuthn all land on this method, so this is the one place the
+        // record cannot be forgotten by whichever path is added next.
+        $session->put(self::SESSION_UNLOCK_ACTIVITY_PENDING, true);
     }
 
     // The single sanctioned reader every consumer of the held key must go

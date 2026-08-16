@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Nodokļu valsts',
+    'country_desc' => 'Nosaka, kuras atvieglojumu kategorijas ir pieejamas.',
+    'country_choose' => 'Izvēlieties valsti…',
+    'country_switch_warning' => 'Pārslēgšana pievieno jaunas kategorijas — esošās atzīmes netiek mainītas.',
+
+    'countries' => [
+        'at' => 'Austrija',
+        'be' => 'Beļģija',
+        'bg' => 'Bulgārija',
+        'ca' => 'Kanāda',
+        'ch' => 'Šveice',
+        'cy' => 'Kipra',
+        'cz' => 'Čehija',
+        'de' => 'Vācija',
+        'dk' => 'Dānija',
+        'ee' => 'Igaunija',
+        'es' => 'Spānija',
+        'fi' => 'Somija',
+        'fr' => 'Francija',
+        'gb' => 'Apvienotā Karaliste',
+        'gr' => 'Grieķija',
+        'hr' => 'Horvātija',
+        'hu' => 'Ungārija',
+        'ie' => 'Īrija',
+        'is' => 'Islande',
+        'it' => 'Itālija',
+        'lt' => 'Lietuva',
+        'lu' => 'Luksemburga',
+        'lv' => 'Latvija',
+        'mt' => 'Malta',
+        'nl' => 'Nīderlande',
+        'no' => 'Norvēģija',
+        'pl' => 'Polija',
+        'pt' => 'Portugāle',
+        'ro' => 'Rumānija',
+        'se' => 'Zviedrija',
+        'si' => 'Slovēnija',
+        'sk' => 'Slovākija',
+        'us' => 'Amerikas Savienotās Valstis',
+    ],
+
+    'categories_label' => 'Atvieglojumu kategorijas',
+    'categories_desc' => 'Pielāgojiet kopas, ko izmanto atzīmēšanai.',
+    'categories_empty' => 'Vēl nav kategoriju. Pievienojiet savu pirmo kategoriju vai nomainiet valsti, lai ielādētu noklusējuma kategorijas.',
+
+    'from_corpus' => 'no korpusa',
+    'rename_input_aria' => 'Jauns nosaukums: :name',
+    'rename' => 'Pārdēvēt',
+    'rename_aria' => 'Pārdēvēt: :name',
+    'rename_save_aria' => 'Saglabāt jauno nosaukumu: :name',
+    'save' => 'Saglabāt',
+    'archive' => 'Arhivēt',
+    'archive_aria' => 'Arhivēt: :name',
+
+    'new_category_label' => 'Jaunās kategorijas nosaukums',
+    'new_category_placeholder' => 'Jaunās kategorijas nosaukums…',
+    'add_category' => 'Pievienot kategoriju',
+    'category_added' => 'Kategorija pievienota.',
+
+    'archived_count' => 'Arhivētās (:count)',
+    'restore' => 'Atjaunot',
+    'restore_aria' => 'Atjaunot: :name',
+];

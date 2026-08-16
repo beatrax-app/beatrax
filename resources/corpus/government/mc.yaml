@@ -1,0 +1,111 @@
+# Government / public-agency classification rules — Monaco.
+# A microstate: the distinct public-body set is small and is not padded.
+# Monaco levies no personal income tax, so there is deliberately no
+# income-tax rule — the Direction des Services Fiscaux bills VAT and duties.
+# Patterns stay Monaco-specific: generic French terms would collide with
+# ordinary French merchant text.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "CAISSES SOCIALES DE MONACO"
+    name: "Caisses Sociales de Monaco"
+  - pattern: "regex:\\bCCSS\\b"
+    name: "CCSS Monaco"
+  - pattern: "CAISSE AUTONOME DE RETRAITE"
+    name: "Caisse Autonome de Retraite (CAR)"
+  - pattern: "DIRECTION DES SERVICES FISCAUX"
+    name: "Direction des Services Fiscaux"
+  - pattern: "TRESORERIE GENERALE DES FINANCES"
+    name: "Trésorerie Générale des Finances"
+  - pattern: "ADMINISTRATION DES DOMAINES"
+    name: "Administration des Domaines"
+  - pattern: "SERVICE DES TITRES DE CIRCULATION"
+    name: "Service des Titres de Circulation"
+  - pattern: "MAIRIE DE MONACO"
+    name: "Mairie de Monaco"
+  - pattern: "GOUVERNEMENT PRINCIER"
+    name: "Gouvernement Princier"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Every Direction and Service below is taken verbatim from
+  # the official list of ministerial departments at
+  # gouv.mc/Action-Gouvernementale/.../Les-Departements-Ministeriels;
+  # the social funds from caisses-sociales.mc.
+  #
+  # Still no income-tax rule — Monaco levies none. Patterns stay Monaco-
+  # specific or long enough not to collide with ordinary French merchant
+  # text, and the accented spelling is added where the SEPA creditor name
+  # normally carries it. Monaco Telecom and SMEG are commercial utilities
+  # with private shareholders and are deliberately NOT listed.
+  # ---------------------------------------------------------------------
+
+  # Ministère d'État and the Finance department.
+  - pattern: "MINISTERE D'ETAT"
+    name: "Ministère d'État"
+  - pattern: "DIRECTION DU BUDGET ET DU TRESOR"
+    name: "Direction du Budget et du Trésor"
+  - pattern: "DIRECTION DE L'HABITAT"
+    name: "Direction de l'Habitat"
+  - pattern: "DIRECTION DU DEVELOPPEMENT ECONOMIQUE"
+    name: "Direction du Développement Économique"
+  - pattern: "REGIE MONEGASQUE DES TABACS"
+    name: "Régie Monégasque des Tabacs et Monopoles Associés"
+  - pattern: "OFFICE DES EMISSIONS DE TIMBRES-POSTE"
+    name: "Office des Émissions de Timbres-Poste"
+  - pattern: "LA POSTE MONACO"
+    name: "La Poste Monaco"
+  - pattern: "SERVICE DE CONTROLE DES JEUX"
+    name: "Service de Contrôle des Jeux"
+  - pattern: "INSTITUT MONEGASQUE DE LA STATISTIQUE"
+    name: "IMSEE"
+  - pattern: "JOURNAL DE MONACO"
+    name: "Journal de Monaco"
+
+  # Interior: policing, fire and education.
+  - pattern: "DIRECTION DE LA SURETE PUBLIQUE"
+    name: "Direction de la Sûreté Publique"
+  - pattern: "DIRECTION DE LA SÛRETÉ PUBLIQUE"
+    name: "Direction de la Sûreté Publique"
+  - pattern: "COMPAGNIE DES CARABINIERS"
+    name: "Compagnie des Carabiniers du Prince"
+  - pattern: "SAPEURS-POMPIERS DE MONACO"
+    name: "Corps des Sapeurs-pompiers de Monaco"
+  - pattern: "DIRECTION DE L'EDUCATION NATIONALE"
+    name: "Direction de l'Éducation Nationale, de la Jeunesse et des Sports"
+  - pattern: "DIRECTION DES AFFAIRES CULTURELLES"
+    name: "Direction des Affaires Culturelles"
+
+  # Health, social action and labour.
+  - pattern: "DIRECTION DE L'ACTION SANITAIRE"
+    name: "Direction de l'Action Sanitaire"
+  - pattern: "DIRECTION DE L'ACTION ET DE L'AIDE SOCIALES"
+    name: "Direction de l'Action et de l'Aide Sociales"
+  - pattern: "DIRECTION DES PRESTATIONS MEDICALES"
+    name: "Direction des Prestations Médicales et Familiales de l'État"
+  - pattern: "DIRECTION DU TRAVAIL"
+    name: "Direction du Travail"
+  - pattern: "CAISSE DE COMPENSATION DES SERVICES SOCIAUX"
+    name: "CCSS Monaco"
+
+  # Public works, urbanism and transport.
+  - pattern: "DIRECTION DES TRAVAUX PUBLICS"
+    name: "Direction des Travaux Publics"
+  - pattern: "DIRECTION DES PARKINGS PUBLICS"
+    name: "Direction des Parkings Publics"
+  - pattern: "DIRECTION DE L'AMENAGEMENT URBAIN"
+    name: "Direction de l'Aménagement Urbain"
+  - pattern: "DIRECTION DES BATIMENTS PUBLICS"
+    name: "Direction des Bâtiments Publics"
+  - pattern: "DIRECTION DE L'ENVIRONNEMENT"
+    name: "Direction de l'Environnement"
+  - pattern: "DIRECTION DES AFFAIRES MARITIMES"
+    name: "Direction des Affaires Maritimes"
+  - pattern: "DIRECTION DE L'AVIATION CIVILE"
+    name: "Direction de l'Aviation Civile"
+
+  # Justice.
+  - pattern: "DIRECTION DES SERVICES JUDICIAIRES"
+    name: "Direction des Services Judiciaires"
+  - pattern: "DIRECTION DES AFFAIRES JURIDIQUES"
+    name: "Direction des Affaires Juridiques"
+  - pattern: "TRIBUNAL DE PREMIERE INSTANCE"
+    name: "Tribunal de Première Instance"

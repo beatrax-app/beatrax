@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Редагувати правило',
+    'heading_new' => 'Нове правило',
+
+    'combinator_aria' => 'Комбінатор умов',
+    'match_all' => 'Відповідає всім умовам',
+    'match_any' => 'Відповідає будь-якій умові',
+
+    'condition_label' => 'Умова :number',
+    'condition_field_aria' => 'Поле умови :number',
+    'condition_operator_aria' => 'Оператор умови :number',
+    'condition_value_aria' => 'Значення умови :number',
+    'condition_value_from_aria' => 'Значення умови :number (від)',
+    'condition_value_to_aria' => 'Значення умови :number (до)',
+    'to' => 'до',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'напр. SPOTIFY',
+    'remove_condition' => 'Видалити умову',
+    'add_condition' => '+ Додати умову',
+
+    'then' => 'Тоді',
+    'action_label' => 'Дія :number',
+    'action_type_aria' => 'Тип дії :number',
+    'action_category' => 'Категорія',
+    'action_counterparty' => 'Контрагент',
+    'action_note' => 'Нотатка',
+    'action_tax_tag' => 'Податкова позначка',
+    'assign_category_aria' => 'Призначити категорію для дії :number',
+    'reassign_counterparty_aria' => 'Перепризначити контрагента для дії :number',
+    'note_text_aria' => 'Текст нотатки для дії :number',
+    'note_placeholder' => 'Текст нотатки…',
+    'note_mode_aria' => 'Режим нотатки для дії :number',
+    'note_set' => 'Замінити',
+    'note_append' => 'Дописати',
+    'deduction_category_aria' => 'Категорія відрахування для дії :number',
+    'remove_action' => 'Видалити дію',
+    'add_action' => '+ Додати дію',
+
+    'this_year_only' => 'Лише цей рік ▾',
+    'override_tax_year' => 'Змінити податковий рік',
+    'tax_year_override_aria' => 'Заміна податкового року для дії :number',
+    'tax_tag_note' => 'Дії з податковими позначками спрацьовують під час наступного повторного застосування, а не в поточному імпорті.',
+
+    'priority' => 'Пріоритет',
+    'priority_help' => 'Менші числа виконуються першими. Правила без спільних полів ніколи не конфліктують.',
+
+    'cancel' => 'Скасувати',
+    'save_changes' => 'Зберегти зміни',
+    'save_rule' => 'Зберегти правило',
+    'saving' => 'Збереження…',
+
+    'error_rule_unavailable' => 'Це правило більше недоступне.',
+    'error_invalid_data' => 'Некоректні дані правила — вибери значення зі списків і спробуй ще раз.',
+    'error_duplicate' => 'Правило з таким полем, збігом і значенням уже існує. Відредагуй наявне правило.',
+    'error_priority_whole' => 'Пріоритет має бути цілим числом.',
+    'error_add_condition' => 'Додай щонайменше одну умову.',
+    'error_add_action' => 'Додай щонайменше одну дію.',
+    'condition_value_required' => 'Введи значення для умови :position.',
+    'condition_bounds_required' => 'Вибери нижню та верхню межу для умови :position.',
+    'condition_amount_invalid' => 'Введи коректну суму для умови :position.',
+    'action_pick_category' => 'Вибери категорію для цієї дії.',
+    'action_pick_counterparty' => 'Вибери контрагента для перепризначення.',
+    'action_note_required' => 'Введи текст нотатки.',
+    'action_pick_deduction' => 'Вибери категорію відрахування для податкової позначки.',
+];

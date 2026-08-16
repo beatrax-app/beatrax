@@ -1,0 +1,196 @@
+# Merchant corpus — Serbia. region defaults to RS. Schema: see merchants/nl.yaml.
+# Serbian card descriptors are normally printed in Latin transliteration.
+entries:
+  - pattern: "TELEKOM SRBIJA"
+    name: "Telekom Srbija (mts)"
+    category: "Internet & Phone"
+    website: "https://mts.rs/"
+    support_url: "https://mts.rs/Privatni/Korisnicka-zona/Kontakt/Kontaktirajte-nas"
+    support_phone: "0800 100 100"
+  - pattern: "regex:\\bMTS\\b"
+    name: "mts"
+    category: "Internet & Phone"
+    website: "https://mts.rs/"
+  - pattern: "A1 SRBIJA"
+    name: "A1 Srbija"
+    category: "Internet & Phone"
+    website: "https://a1.rs/"
+    support_url: "https://a1.rs/podrska"
+    support_phone: "060 1234"
+  - pattern: "regex:\\bSBB\\b"
+    name: "SBB"
+    category: "Internet & Phone"
+    website: "https://sbb.rs/"
+    support_url: "https://sbb.rs/podrska/"
+    support_phone: "19900"
+  - pattern: "ORION TELEKOM"
+    name: "Orion Telekom"
+    category: "Internet & Phone"
+    website: "https://oriontelekom.rs/"
+  - pattern: "GLOBALTEL"
+    name: "Globaltel"
+    category: "Internet & Phone"
+    website: "https://www.globaltel.rs/"
+    support_email: "podrska@globaltel.rs"
+  - pattern: "EON TV"
+    name: "EON TV"
+    category: "Streaming"
+    website: "https://eon.tv/"
+  - pattern: "EPS SNABDEVANJE"
+    name: "EPS Snabdevanje"
+    category: "Utilities"
+    website: "https://www.eps.rs/"
+  - pattern: "ELEKTROPRIVREDA SRBIJE"
+    name: "Elektroprivreda Srbije (EPS)"
+    category: "Utilities"
+    website: "https://www.eps.rs/"
+  - pattern: "SRBIJAGAS"
+    name: "Srbijagas"
+    category: "Utilities"
+    website: "https://www.srbijagas.com/"
+  - pattern: "BEOGRADSKE ELEKTRANE"
+    name: "Beogradske elektrane"
+    category: "Utilities"
+    website: "https://beoelektrane.co.rs/"
+  - pattern: "INFOSTAN"
+    name: "Infostan tehnologije"
+    category: "Utilities"
+    website: "https://www.infostan.rs/"
+    support_email: "infostan@infostan.rs"
+  - pattern: "BEOGRADSKI VODOVOD"
+    name: "Beogradski vodovod i kanalizacija"
+    category: "Utilities"
+    website: "https://www.bvk.rs/"
+  - pattern: "GRADSKA CISTOCA"
+    name: "JKP Gradska čistoća Beograd"
+    category: "Utilities"
+    website: "https://www.gradskacistoca.rs/"
+  - { pattern: "BUSPLUS", name: "BusPlus", category: "Public transport" }
+  - pattern: "SRBIJAVOZ"
+    name: "Srbija Voz"
+    category: "Public transport"
+    website: "https://srbijavoz.rs/"
+  - pattern: "regex:\\bLASTA\\b"
+    name: "Lasta"
+    category: "Public transport"
+    website: "https://lasta.rs/"
+  - { pattern: "BENU APOTEKA", name: "BENU Apoteka", category: "Health" }
+  - { pattern: "LILLY DROGERIE", name: "Lilly drogerie", category: "Health" }
+  - pattern: "NIS PETROL"
+    name: "NIS Petrol"
+    category: "Fuel"
+    website: "https://www.nisgazprom.rs/"
+  - pattern: "KNEZ PETROL"
+    name: "Knez Petrol"
+    category: "Fuel"
+    website: "https://knezpetrol.com/"
+  - pattern: "DUNAV OSIGURANJE"
+    name: "Dunav osiguranje"
+    category: "Insurance"
+    website: "https://www.dunav.com/"
+  - pattern: "DDOR NOVI SAD"
+    name: "DDOR Novi Sad"
+    category: "Insurance"
+    website: "https://www.ddor.rs/"
+    support_email: "ddor@ddor.rs"
+  - pattern: "WIENER STADTISCHE"
+    name: "Wiener Städtische osiguranje"
+    category: "Insurance"
+    website: "https://wiener.co.rs/"
+  - pattern: "FITPASS"
+    name: "FitPass"
+    category: "Memberships"
+    website: "https://fitpass.rs/"
+  - pattern: "UNIVEREXPORT"
+    name: "Univerexport"
+    category: "Groceries"
+    website: "https://www.univerexport.rs/"
+    support_email: "korisnicki.servis@univerexport.rs"
+  - pattern: "GOMEX"
+    name: "Gomex"
+    category: "Groceries"
+    website: "https://gomex.rs/"
+    support_email: "potrosaci@gomex.rs"
+  - pattern: "RNIDS"
+    name: "RNIDS (.rs registry)"
+    category: "Cloud / Software"
+    website: "https://www.rnids.rs/"
+  - pattern: "CRVENI KRST SRBIJE"
+    name: "Crveni krst Srbije"
+    category: "Donations"
+    website: "https://www.redcross.org.rs/"
+  - pattern: "NURDOR"
+    name: "NURDOR"
+    category: "Donations"
+    website: "https://www.nurdor.org/"
+  - { pattern: "BANCA INTESA", name: "Banca Intesa Beograd", category: "Fees & charges", website: "https://www.bancaintesa.rs/" }
+  - { pattern: "OTP BANKA", name: "OTP banka Srbija", category: "Fees & charges", website: "https://www.otpbanka.rs/" }
+  - { pattern: "RAIFFEISEN BANKA", name: "Raiffeisen banka", category: "Fees & charges", website: "https://www.raiffeisenbank.rs/" }
+  - { pattern: "UNICREDIT BANK SRBIJA", name: "UniCredit Bank Srbija", category: "Fees & charges", website: "https://www.unicreditbank.rs/" }
+  - { pattern: "ERSTE BANK NOVI SAD", name: "Erste Bank Srbija", category: "Fees & charges", website: "https://www.erstebank.rs/" }
+  - { pattern: "ADDIKO BANK", name: "Addiko Bank", category: "Fees & charges", website: "https://www.addiko.rs/" }
+  - { pattern: "AIK BANKA", name: "AIK Banka", category: "Fees & charges", website: "https://www.aikbank.rs/" }
+  - { pattern: "POSTANSKA STEDIONICA", name: "Banka Poštanska štedionica", category: "Fees & charges", website: "https://www.posted.co.rs/" }
+  - { pattern: "NLB KOMERCIJALNA", name: "NLB Komercijalna banka", category: "Fees & charges", website: "https://www.nlbkb.rs/" }
+  - { pattern: "EUROBANK DIREKTNA", name: "Eurobank Direktna", category: "Fees & charges", website: "https://www.eurobank-direktna.rs/" }
+  - { pattern: "PROCREDIT BANK", name: "ProCredit Bank", category: "Fees & charges", website: "https://www.procreditbank.rs/" }
+  - { pattern: "ALTA BANKA", name: "Alta Banka", category: "Fees & charges", website: "https://altabanka.rs/" }
+  - { pattern: "YETTEL BANK", name: "Yettel Bank", category: "Fees & charges", website: "https://www.yettelbank.rs/" }
+  - { pattern: "MOBI BANKA", name: "Mobi Banka", category: "Fees & charges" }
+  - { pattern: "MILENIJUM OSIGURANJE", name: "Milenijum Osiguranje", category: "Insurance", website: "https://mios.rs/" }
+  - { pattern: "GRAWE OSIGURANJE", name: "GRAWE osiguranje", category: "Insurance", website: "https://www.grawe.rs/" }
+  - { pattern: "GLOBOS OSIGURANJE", name: "Globos osiguranje", category: "Insurance" }
+  - { pattern: "BEL MEDIC", name: "Acibadem Bel Medic", category: "Healthcare", website: "https://www.acibadembelmedic.rs/" }
+  - { pattern: "EUROMEDIK", name: "Euromedik", category: "Healthcare", website: "https://euromedic.rs/" }
+  - { pattern: "MEDIGROUP", name: "MediGroup", category: "Healthcare", website: "https://www.medigroup.rs/" }
+  - { pattern: "APOTEKA BEOGRAD", name: "Apoteka Beograd", category: "Health", website: "https://shop.apotekabeograd.co.rs/" }
+  - { pattern: "SERBIA BROADBAND", name: "SBB — Serbia Broadband", category: "Internet & Phone", website: "https://sbb.rs/" }
+  - { pattern: "TELEKOM SRBIJA AD", name: "Telekom Srbija", category: "Internet & Phone", website: "https://mts.rs/" }
+  - { pattern: "SAT-TRAKT", name: "SAT-TRAKT", category: "Internet & Phone", website: "https://www.sattrakt.com/" }
+  - { pattern: "BEOTEL", name: "Beotel", category: "Internet & Phone" }
+  - { pattern: "SPORT KLUB", name: "Sport Klub", category: "Streaming" }
+  - { pattern: "ARENA SPORT", name: "Arena Sport", category: "Streaming" }
+  - { pattern: "EPS DISTRIBUCIJA", name: "EPS Distribucija", category: "Utilities", website: "https://www.eps.rs/" }
+  - { pattern: "ELEKTRODISTRIBUCIJA SRBIJE", name: "Elektrodistribucija Srbije", category: "Utilities", website: "https://www.eps.rs/" }
+  - { pattern: "JUGOROSGAZ", name: "Jugorosgaz", category: "Utilities" }
+  - { pattern: "NOVOSADSKA TOPLANA", name: "Novosadska toplana", category: "Utilities" }
+  - { pattern: "VODOVOD NOVI SAD", name: "Vodovod i kanalizacija Novi Sad", category: "Utilities" }
+  - { pattern: "JKP NAISSUS", name: "JKP Naissus Niš", category: "Utilities", website: "https://jkpnaissus.co.rs/" }
+  - { pattern: "GRADSKA TOPLANA NIS", name: "Gradska toplana Niš", category: "Utilities" }
+  - { pattern: "IDEA MARKETI", name: "IDEA", category: "Groceries", website: "https://www.idea.rs/" }
+  - { pattern: "RODA MEGAMARKET", name: "Roda", category: "Groceries", website: "https://roda.rs/" }
+  - { pattern: "DIS MARKET", name: "DIS", category: "Groceries", website: "https://www.dis.rs/" }
+  - { pattern: "TEMPO CENTAR", name: "Tempo", category: "Groceries" }
+  - { pattern: "SHOP AND GO", name: "Shop&Go", category: "Groceries" }
+  - { pattern: "AMAN DOO", name: "Aman", category: "Groceries" }
+  - { pattern: "SUPER KARTICA", name: "Super Kartica", category: "Groceries", website: "https://www.superkartica.rs/" }
+  - { pattern: "POLITIKA AD", name: "Politika", category: "Subscriptions", website: "https://www.politika.rs/" }
+  - { pattern: "BLIC ONLINE", name: "Blic", category: "Subscriptions", website: "https://www.blic.rs/" }
+  - { pattern: "DNEVNI LIST DANAS", name: "Danas", category: "Subscriptions", website: "https://www.danas.rs/" }
+  - { pattern: "VECERNJE NOVOSTI", name: "Večernje novosti", category: "Subscriptions", website: "https://www.novosti.rs/" }
+  - { pattern: "KURIR", name: "Kurir", category: "Subscriptions", website: "https://www.kurir.rs/" }
+  - { pattern: 'regex:\bNIN\b', name: "NIN", category: "Subscriptions", website: "https://www.nin.rs/" }
+  - { pattern: "POSTA SRBIJE", name: "Pošta Srbije", category: "Other", website: "https://www.posta.rs/" }
+  - { pattern: "PUTEVI SRBIJE", name: "Putevi Srbije", category: "Transport", website: "https://www.putevi-srbije.rs/" }
+  - { pattern: "PARKING SERVIS", name: "JKP Parking servis Beograd", category: "Transport", website: "https://www.parking-servis.co.rs/" }
+  - { pattern: "NIS EKSPRES", name: "Niš-ekspres", category: "Public transport", website: "https://nis-ekspres.rs/" }
+  - { pattern: "AIR SERBIA", name: "Air Serbia", category: "Transport" }
+  - { pattern: "GIGATRON", name: "Gigatron", category: "Other", website: "https://gigatron.rs/" }
+  - { pattern: "EMMEZETA", name: "Emmezeta", category: "Other", website: "https://www.emmezeta.rs/" }
+  - { pattern: "FORMA IDEALE", name: "Forma Ideale", category: "Other", website: "https://formaideale.rs/" }
+  - { pattern: "SIMPO", name: "Simpo", category: "Other", website: "https://simpo.rs/" }
+  - { pattern: "SPORT VISION", name: "Sport Vision", category: "Other", website: "https://www.sportvision.rs/" }
+  - { pattern: "DELFI KNJIZARE", name: "Delfi knjižare", category: "Other", website: "https://delfi.rs/" }
+  - { pattern: "LAGUNA", name: "Laguna", category: "Other", website: "https://laguna.rs/" }
+  - { pattern: "KNJIZARE VULKAN", name: "Knjižare Vulkan", category: "Other", website: "https://www.knjizare-vulkan.rs/" }
+  - { pattern: "CINEPLEXX", name: "Cineplexx", category: "Other", website: "https://www.cineplexx.rs/" }
+  - { pattern: "TEHNOMANIJA", name: "Tehnomanija", category: "Other" }
+  - { pattern: "PLANETA SPORT", name: "Planeta Sport", category: "Other" }
+  - { pattern: "DONESI", name: "Donesi", category: "Eating out" }
+  - { pattern: "BUDI HUMAN", name: "Budi human", category: "Donations", website: "https://www.budihuman.rs/" }
+  - { pattern: "HALKBANK BEOGRAD", name: "Halkbank Srbija", category: "Fees & charges", website: "https://www.halkbank.rs/" }
+  - { pattern: "API BANK", name: "API Bank", category: "Fees & charges", website: "https://www.apibank.rs/" }
+  - { pattern: "3 BANKA", name: "3 Banka", category: "Fees & charges", website: "https://www.3bank.rs/" }
+  - { pattern: "METALAC", name: "Metalac", category: "Other", website: "https://www.metalac.com/" }
+  - { pattern: "JKP INFOSTAN TEHNOLOGIJE", name: "Infostan tehnologije", category: "Utilities", website: "https://www.infostan.rs/" }
+  - { pattern: "JKP BEOGRADSKI VODOVOD", name: "Beogradski vodovod i kanalizacija", category: "Utilities", website: "https://www.bvk.rs/" }

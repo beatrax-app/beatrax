@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+
+    'drop_zone_lead' => 'Pudota tiliotetiedostosi tähän',
+    'drop_zone_sublink' => 'tai selaa tiedosto',
+
+    'vd_optional' => ' — valinnainen',
+
+    'remove_file_aria' => 'Poista :filename lähetysjonosta',
+
+    'privacy' => 'Tietosi pysyvät tällä laitteella',
+
+    'progress_aria' => 'Käyttöönoton edistyminen',
+    'step_progress' => 'Vaihe :current / :total',
+    'step_dot_aria' => 'Vaihe :number / :total',
+
+    'eyebrow_step' => 'Vaihe :number — ',
+];

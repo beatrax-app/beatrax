@@ -1,0 +1,88 @@
+# Tax deduction categories — Switzerland
+#
+# SCOPE WARNING: this file covers the FEDERAL deductions only — the direkte
+# Bundessteuer under DBG (Art. 26, 32, 33, 33a). Swiss income-tax deductions are
+# substantially CANTONAL: each canton sets its own catalogue and its own ceilings,
+# and several cantonal deductions have no federal counterpart at all (e.g. union
+# membership dues, which are NOT deductible for the direkte Bundessteuer but are in
+# ZH, BE, FR, LU, GL, SO, VD and NE). CANTONAL DEDUCTIONS ARE NOT COVERED HERE.
+#
+# Source: Eidgenössische Steuerverwaltung ESTV, Dossier Steuerinformationen,
+# "Einkommenssteuer natürlicher Personen", Ausgabe September 2025 (Steuerperiode 2025).
+# Names are in German, Switzerland's largest official language.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "ch_fahrkosten"
+    name: "Auslagen für Fahrten zwischen Wohn- und Arbeitsstätte"
+    short_name: "Fahrkosten"
+    hint: "Notwendige Fahrkosten zum Arbeitsort, bei der direkten Bundessteuer bis zu einem Höchstbetrag"
+  - key: "ch_auswaertige_verpflegung"
+    name: "Mehrkosten für auswärtige Verpflegung und bei Schichtarbeit"
+    short_name: "Verpflegung"
+    hint: "Pauschalen für Hauptmahlzeiten ausserhalb der Wohnstätte und bei Schichtarbeit"
+  - key: "ch_uebrige_berufskosten"
+    name: "Übrige Berufskosten"
+    short_name: "Berufskosten"
+    hint: "Pauschalabzug für Berufswerkzeuge, Fachliteratur, Arbeitszimmer und Berufskleider"
+  - key: "ch_aus_und_weiterbildung"
+    name: "Aus- und Weiterbildungskosten"
+    short_name: "Weiterbild."
+    hint: "Berufsorientierte Aus-, Weiterbildungs- und Umschulungskosten nach dem ersten Abschluss"
+  - key: "ch_saeule_3a"
+    name: "Beiträge an die gebundene Selbstvorsorge (Säule 3a)"
+    short_name: "Säule 3a"
+    hint: "Im Jahr tatsächlich einbezahlte Beiträge an eine anerkannte Vorsorgeform"
+  - key: "ch_berufliche_vorsorge"
+    name: "Beiträge an Einrichtungen der beruflichen Vorsorge (2. Säule)"
+    short_name: "2. Säule"
+    hint: "Reglementarische Beiträge und freiwillige Einkäufe in die Pensionskasse"
+  - key: "ch_schuldzinsen"
+    name: "Private Schuldzinsen"
+    short_name: "Schuldzinsen"
+    hint: "Zinsen auf privaten Schulden, begrenzt auf den Vermögensertrag zuzüglich eines Zuschlags"
+  - key: "ch_krankheits_und_unfallkosten"
+    name: "Krankheits- und Unfallkosten"
+    short_name: "Krankheitsk."
+    hint: "Selbst getragene Arzt-, Zahnarzt- und Arzneikosten, soweit sie den Selbstbehalt übersteigen"
+  - key: "ch_behinderungsbedingte_kosten"
+    name: "Behinderungsbedingte Kosten"
+    short_name: "Behind. Kost"
+    hint: "Selbst getragene behinderungsbedingte Kosten, abziehbar ohne Selbstbehalt"
+  - key: "ch_freiwillige_leistungen"
+    name: "Freiwillige Zuwendungen an gemeinnützige Organisationen"
+    short_name: "Spenden"
+    hint: "Zuwendungen an steuerbefreite juristische Personen mit Sitz in der Schweiz"
+  - key: "ch_politische_parteien"
+    name: "Mitgliederbeiträge und Zuwendungen an politische Parteien"
+    short_name: "Parteien"
+    hint: "Beiträge an im Parteienregister eingetragene oder im Kantonsparlament vertretene Parteien"
+  - key: "ch_kinderdrittbetreuung"
+    name: "Kosten für die Drittbetreuung der Kinder"
+    short_name: "Kinderbetr."
+    hint: "Nachgewiesene Betreuungskosten, wenn beide Elternteile erwerbstätig oder dauernd invalid sind"
+  - key: "ch_unterhaltsbeitraege"
+    name: "Unterhaltsbeiträge und Alimente"
+    short_name: "Alimente"
+    hint: "Beiträge an den geschiedenen oder getrennt lebenden Ehegatten und für minderjährige Kinder"
+  - key: "ch_versicherungspraemien"
+    name: "Versicherungsprämien und Zinsen von Sparkapitalien"
+    short_name: "Versich.präm"
+    hint: "Prämien für Kranken-, Lebens- und nicht obligatorische Unfallversicherung, bis zu einem Höchstbetrag"
+  - key: "ch_liegenschaftsunterhalt"
+    name: "Liegenschaftsunterhaltskosten"
+    short_name: "Liegenschaft"
+    hint: "Werterhaltender Unterhalt, Versicherungsprämien und Verwaltungskosten; wahlweise pauschal"
+  - key: "ch_vermoegensverwaltungskosten"
+    name: "Kosten der Vermögensverwaltung"
+    short_name: "Vermögensv."
+    hint: "Aufwendungen für die Verwaltung und Verwahrung von beweglichem Kapitalvermögen"
+  - key: "ch_zweiverdienerabzug"
+    name: "Zweiverdienerabzug"
+    short_name: "Zweiverdien."
+    hint: "Abzug vom Erwerbseinkommen des zweitverdienenden Ehegatten"

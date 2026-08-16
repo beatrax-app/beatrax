@@ -41,13 +41,9 @@
                     </svg>
                     {{ Lang::get('calendar::messages.summary.computing') }}
                 </span>
-            @elseif ($riskCount === 1)
-                <span style="color: var(--color-rose);">
-                    {{ Lang::get('calendar::messages.summary.risk_one', ['date' => $riskDayList[0]->date->translatedFormat('M j')]) }}
-                </span>
             @else
                 <span style="color: var(--color-rose);">
-                    {{ Lang::get('calendar::messages.summary.risk_many', ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('M j')]) }}
+                    {{ Lang::choice('calendar::messages.summary.risk', $riskCount, ['count' => $riskCount, 'date' => $riskDayList[0]->date->translatedFormat('M j')]) }}
                 </span>
             @endif
         </div>
@@ -230,9 +226,7 @@
                                 ? 'var(--color-text-muted)'
                                 : 'var(--color-rose)';
 
-                            $entriesWord = $entryCount === 1
-                                ? Lang::get('calendar::messages.cell.entry_one')
-                                : Lang::get('calendar::messages.cell.entry_many');
+                            $entriesWord = Lang::choice('calendar::messages.cell.entry', $entryCount);
                             $ariaLabel = Lang::get('calendar::messages.cell.aria', [
                                 'date' => $day->date->translatedFormat('F j, Y'),
                                 'count' => $entryCount,

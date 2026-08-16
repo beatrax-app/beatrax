@@ -23,8 +23,7 @@ return [
     'card' => [
         'likely' => 'Likely: an unnamed merchant.',
         'seen' => 'Seen',
-        'time_one' => 'time',
-        'time_other' => 'times',
+        'time' => 'time|times',
         'last_seen' => 'Last seen :date',
         'suggest' => 'Suggest a name →',
     ],

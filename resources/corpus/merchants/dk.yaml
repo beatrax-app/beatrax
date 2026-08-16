@@ -1,14 +1,486 @@
 # Merchant corpus — Denmark. region defaults to DK. Schema: see merchants/nl.yaml.
 entries:
-  - { pattern: "NETTO", name: "Netto", category: "Groceries" }
-  - { pattern: "FOTEX", name: "Føtex", category: "Groceries" }
-  - { pattern: "REMA 1000", name: "Rema 1000", category: "Groceries" }
-  - { pattern: "BILKA", name: "Bilka", category: "Groceries" }
-  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
-  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
-  - { pattern: "YOUSEE", name: "YouSee", category: "Internet & Phone" }
-  - { pattern: "TELENOR", name: "Telenor", category: "Internet & Phone" }
-  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
-  - { pattern: 'regex:\bDSB\b', name: "DSB", category: "Public transport" }
-  - { pattern: "REJSEKORT", name: "Rejsekort", category: "Public transport" }
-  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
+  - pattern: "AARHUS VAND"
+    name: "Aarhus Vand"
+    category: "Utilities"
+    website: "https://www.aarhusvand.dk"
+  - pattern: "AARSTIDERNE"
+    name: "Aarstiderne"
+    category: "Groceries"
+    website: "https://www.aarstiderne.com"
+    support_url: "https://www.aarstiderne.com/kundeservice"
+  - pattern: "ALM. BRAND"
+    name: "Alm. Brand"
+    category: "Insurance"
+    website: "https://www.almbrand.dk"
+    cancel_url: "https://www.almbrand.dk/kundeservice/hjaelp/opsig-forsikring/"
+  - pattern: "ANDEL ENERGI"
+    name: "Andel Energi"
+    category: "Utilities"
+    website: "https://andelenergi.dk"
+    cancel_url: "https://andelenergi.dk/kundeservice/aftaler-og-priser/opsig-din-aftale-hos-andel-energi/"
+    support_url: "https://andelenergi.dk/kundeservice/"
+    support_phone: "70 29 29 29"
+  - pattern: "APOTEKEREN"
+    name: "Apoteket / Apotekeren"
+    category: "Health"
+    website: "https://www.apotekeren.dk"
+  - pattern: "ASE A-KASSE"
+    name: "Ase"
+    category: "Memberships"
+    website: "https://www.ase.dk"
+  - pattern: "BERLINGSKE"
+    name: "Berlingske"
+    category: "Subscriptions"
+    website: "https://www.berlingske.dk"
+  - pattern: "BILKA"
+    name: "Bilka"
+    category: "Groceries"
+    website: "https://www.bilka.dk"
+  - pattern: "BILLY REGNSKAB"
+    name: "Billy"
+    category: "Cloud / Software"
+    website: "https://www.billy.dk"
+  - pattern: "BORSEN"
+    name: "Børsen"
+    category: "Subscriptions"
+    website: "https://borsen.dk"
+    support_url: "https://borsen.dk/kundeservice"
+  - pattern: "CALL ME"
+    name: "Call me"
+    category: "Internet & Phone"
+    website: "https://www.callme.dk"
+    cancel_url: "https://www.callme.dk/kundeservice/abonnement/opsigelse/"
+    support_url: "https://www.callme.dk/kundeservice/kontakt-kundeservice/"
+    support_phone: "43 66 90 90"
+  - pattern: "CBB MOBIL"
+    name: "CBB Mobil"
+    category: "Internet & Phone"
+    website: "https://www.cbb.dk"
+    support_url: "https://www.cbb.dk/hjaelp/"
+    support_email: "kundeservice@cbb.dk"
+  - pattern: "DAGBLADET INFORMATION"
+    name: "Information"
+    category: "Subscriptions"
+    website: "https://www.information.dk"
+  - pattern: "DANDOMAIN"
+    name: "DanDomain"
+    category: "Cloud / Software"
+    website: "https://dandomain.dk"
+  - pattern: "DANICA PENSION"
+    name: "Danica Pension"
+    category: "Insurance"
+    website: "https://danica.dk"
+  - pattern: "DANSK METAL"
+    name: "Dansk Metal"
+    category: "Memberships"
+    website: "https://www.danskmetal.dk"
+  - pattern: "DINERO"
+    name: "Dinero"
+    category: "Cloud / Software"
+    website: "https://dinero.dk"
+  - pattern: "DONKEY REPUBLIC"
+    name: "Donkey Republic"
+    category: "Transport"
+    website: "https://www.donkey.bike"
+  - pattern: "DYRENES BESKYTTELSE"
+    name: "Dyrenes Beskyttelse"
+    category: "Donations"
+    website: "https://www.dyrenesbeskyttelse.dk"
+  - pattern: "E-CONOMIC"
+    name: "e-conomic"
+    category: "Cloud / Software"
+    website: "https://www.e-conomic.dk"
+  - pattern: "EKSTRA BLADET"
+    name: "Ekstra Bladet"
+    category: "Subscriptions"
+    website: "https://ekstrabladet.dk"
+  - pattern: "EWII"
+    name: "EWII"
+    category: "Utilities"
+    website: "https://www.ewii.dk"
+    cancel_url: "https://www.ewii.dk/privat/kundeservice/fortrydelse-og-opsigelse/opsigelse-el/"
+    support_url: "https://www.ewii.dk/privat/kundeservice/"
+    support_email: "ewii@ewii.dk"
+  - pattern: "FALCK DANMARK"
+    name: "Falck"
+    category: "Memberships"
+    website: "https://www.falck.dk"
+  - pattern: "FASTSPEED"
+    name: "Fastspeed"
+    category: "Internet & Phone"
+    website: "https://fastspeed.dk"
+    support_url: "https://fastspeed.dk/kundeservice/"
+    support_phone: "89 87 37 00"
+    support_email: "kundeservice@fastspeed.dk"
+  - pattern: "FITNESS WORLD"
+    name: "Fitness World (PureGym)"
+    category: "Memberships"
+    website: "https://www.puregym.dk"
+  - pattern: "FJERNVARME FYN"
+    name: "Fjernvarme Fyn"
+    category: "Utilities"
+    website: "https://www.fjernvarmefyn.dk"
+  - pattern: "FOLKEKIRKENS NODHJAELP"
+    name: "Folkekirkens Nødhjælp"
+    category: "Donations"
+    website: "https://www.noedhjaelp.dk"
+  - pattern: "FOTEX"
+    name: "Føtex"
+    category: "Groceries"
+    website: "https://www.foetex.dk"
+  - pattern: "GF FORSIKRING"
+    name: "GF Forsikring"
+    category: "Insurance"
+    website: "https://www.gfforsikring.dk"
+    support_url: "https://www.gfforsikring.dk/kontakt/"
+  - pattern: "GOMORE"
+    name: "GoMore"
+    category: "Transport"
+    website: "https://gomore.dk"
+  - pattern: "GREENTEL"
+    name: "Greentel"
+    category: "Internet & Phone"
+    website: "https://www.greentel.dk"
+    cancel_url: "https://www.greentel.dk/hjaelp-og-spoergsmaal/opsigelse-binding-fortydelse/"
+    support_url: "https://www.greentel.dk/hjaelp-og-spoergsmaal/"
+  - pattern: "HI3G DENMARK"
+    name: "3 (Tre)"
+    category: "Internet & Phone"
+    website: "https://www.3.dk"
+    support_url: "https://www.3.dk/hjalp/"
+  - pattern: "HIPER"
+    name: "Hiper"
+    category: "Internet & Phone"
+    website: "https://www.hiper.dk"
+    cancel_url: "https://www.hiper.dk/hjaelp/abonnement-og-regning/abonnement/opsigelse"
+    support_url: "https://www.hiper.dk/hjaelp"
+    support_email: "kundeservice@hiper.dk"
+  - pattern: "HK DANMARK"
+    name: "HK"
+    category: "Memberships"
+    website: "https://www.hk.dk"
+  - pattern: "HOFOR"
+    name: "HOFOR"
+    category: "Utilities"
+    website: "https://www.hofor.dk"
+  - pattern: "JYLLANDS-POSTEN"
+    name: "Jyllands-Posten"
+    category: "Subscriptions"
+    website: "https://jyllands-posten.dk"
+    support_url: "https://jyllands-posten.dk/kundeservice"
+  - pattern: "KRAEFTENS BEKAEMPELSE"
+    name: "Kræftens Bekæmpelse"
+    category: "Donations"
+    website: "https://www.cancer.dk"
+  - pattern: "KRIFA"
+    name: "Krifa"
+    category: "Memberships"
+    website: "https://www.krifa.dk"
+  - pattern: "KVICKLY"
+    name: "Kvickly"
+    category: "Groceries"
+    website: "https://kvickly.coop.dk"
+  - pattern: "LAEGER UDEN GRAENSER"
+    name: "Læger uden Grænser"
+    category: "Donations"
+    website: "https://msf.dk"
+  - pattern: "LB FORSIKRING"
+    name: "LB Forsikring"
+    category: "Insurance"
+    website: "https://www.lb.dk"
+    cancel_url: "https://www.lb.dk/vaerd-at-vide/opsig-forsikring"
+  - pattern: "LOOP FITNESS"
+    name: "Loop Fitness"
+    category: "Memberships"
+    website: "https://loopfitness.dk"
+    support_url: "https://loopfitness.dk/om-loop-fitness/kontakt/"
+  - pattern: "MA-KASSE"
+    name: "Magistrenes A-kasse"
+    category: "Memberships"
+    website: "https://ma-kasse.dk"
+  - pattern: "MATAS"
+    name: "Matas"
+    category: "Personal care"
+    website: "https://www.matas.dk"
+  - pattern: "MIDTTRAFIK"
+    name: "Midttrafik"
+    category: "Public transport"
+    website: "https://www.midttrafik.dk"
+  - pattern: "MOVIA"
+    name: "Movia"
+    category: "Public transport"
+    website: "https://moviatrafik.dk"
+  - { pattern: "NEMLIG.COM", name: "Nemlig.com", category: "Groceries" }
+  - pattern: "NETTO"
+    name: "Netto"
+    category: "Groceries"
+    website: "https://netto.dk"
+  - pattern: "NORLYS"
+    name: "Norlys"
+    category: "Internet & Phone"
+    website: "https://norlys.dk"
+    cancel_url: "https://norlys.dk/kundeservice/fortrydelse-og-opsigelse/"
+    support_url: "https://norlys.dk/kundeservice/"
+  - pattern: "NOVAFOS"
+    name: "Novafos"
+    category: "Utilities"
+    website: "https://novafos.dk"
+  - { pattern: "NRGI", name: "NRGi", category: "Utilities" }
+  - pattern: "OISTER"
+    name: "OiSTER"
+    category: "Internet & Phone"
+    website: "https://www.oister.dk"
+    cancel_url: "https://www.oister.dk/hjalp/abonnement/opsigelse/"
+    support_url: "https://www.oister.dk/hjalp"
+    support_email: "kundeservice@oister.dk"
+  - pattern: "OK A.M.B.A"
+    name: "OK"
+    category: "Fuel"
+    website: "https://www.ok.dk"
+    cancel_url: "https://www.ok.dk/privat/hjaelp/naturgas/hvordan-opsiger-jeg-min-naturgasaftale"
+    support_url: "https://www.ok.dk/privat/hjaelp"
+  - pattern: "ORSTED"
+    name: "Ørsted"
+    category: "Utilities"
+    website: "https://orsted.dk"
+  - pattern: "PFA PENSION"
+    name: "PFA Pension"
+    category: "Insurance"
+    website: "https://www.pfa.dk"
+  - pattern: "PODIMO"
+    name: "Podimo"
+    category: "Streaming"
+    website: "https://podimo.com/dk"
+  - pattern: "POLITIKEN"
+    name: "Politiken"
+    category: "Subscriptions"
+    website: "https://www.politiken.dk"
+  - pattern: "REJSEKORT"
+    name: "Rejsekort"
+    category: "Public transport"
+    website: "https://www.rejsekort.dk"
+    support_url: "https://www.rejsekort.dk/kundecenter"
+  - pattern: "REJSEPLANEN"
+    name: "Rejseplanen"
+    category: "Public transport"
+    website: "https://www.rejseplanen.dk"
+  - pattern: "REMA 1000"
+    name: "Rema 1000"
+    category: "Groceries"
+    website: "https://rema1000.dk"
+  - pattern: "RODE KORS"
+    name: "Røde Kors"
+    category: "Donations"
+    website: "https://www.rodekors.dk"
+  - pattern: "SALLING"
+    name: "Salling"
+    category: "Groceries"
+    website: "https://salling.dk"
+  - pattern: "SATS DANMARK"
+    name: "SATS"
+    category: "Memberships"
+    website: "https://www.sats.dk"
+    cancel_url: "https://www.sats.dk/kundeservice/medlemskab/administrer-mit-medlemskab/opsigelse-af-medlemskab"
+    support_url: "https://www.sats.dk/kundeservice"
+  - pattern: "SIMPLY.COM"
+    name: "Simply.com"
+    category: "Cloud / Software"
+    website: "https://www.simply.com/dk/"
+  - pattern: "SKAGENFOOD"
+    name: "Skagenfood"
+    category: "Groceries"
+    website: "https://skagenfood.dk"
+  - pattern: "STOFA"
+    name: "Stofa (Norlys)"
+    category: "Internet & Phone"
+    website: "https://norlys.dk"
+    cancel_url: "https://norlys.dk/kundeservice/fortrydelse-og-opsigelse/"
+  - pattern: "SUPERBRUGSEN"
+    name: "SuperBrugsen"
+    category: "Groceries"
+    website: "https://superbrugsen.coop.dk"
+  - pattern: "SYGEFORSIKRING DANMARK"
+    name: "Sygeforsikringen \"danmark\""
+    category: "Healthcare"
+    website: "https://www.sygeforsikring.dk"
+    cancel_url: "https://www.sygeforsikring.dk/udmeldelse"
+  - pattern: "SYGEFORSIKRINGEN DANMARK"
+    name: "Sygeforsikringen \"danmark\""
+    category: "Healthcare"
+    website: "https://www.sygeforsikring.dk"
+    cancel_url: "https://www.sygeforsikring.dk/udmeldelse"
+  - pattern: "TELMORE"
+    name: "Telmore"
+    category: "Internet & Phone"
+    website: "https://www.telmore.dk"
+    cancel_url: "https://www.telmore.dk/hjaelp/abonnement/opsigelse-af-abonnement"
+    support_url: "https://www.telmore.dk/hjaelp"
+  - pattern: "TOPDANMARK"
+    name: "Topdanmark"
+    category: "Insurance"
+    website: "https://www.topdanmark.dk"
+    support_url: "https://www.topdanmark.dk/faa-hjaelp/kontakt-os/"
+  - pattern: "UNICEF DANMARK"
+    name: "UNICEF Danmark"
+    category: "Donations"
+    website: "https://www.unicef.dk"
+  - pattern: "VELKOMMEN"
+    name: "Velkommen"
+    category: "Utilities"
+    website: "https://velkommen.dk"
+  - pattern: "VERISURE DANMARK"
+    name: "Verisure"
+    category: "Memberships"
+    website: "https://www.verisure.dk"
+  - pattern: "VINDSTOED"
+    name: "Vindstød"
+    category: "Utilities"
+    website: "https://www.vindstoed.dk"
+  - pattern: "WAOO"
+    name: "Waoo"
+    category: "Internet & Phone"
+    website: "https://www.waoo.dk"
+    support_url: "https://www.waoo.dk/privat/kundeservice/"
+    support_email: "kundeservice@waoo.dk"
+  - pattern: "YOUSEE"
+    name: "YouSee"
+    category: "Internet & Phone"
+    website: "https://yousee.dk"
+    support_url: "https://yousee.dk/hjaelp"
+  - pattern: "ZETLAND"
+    name: "Zetland"
+    category: "Subscriptions"
+    website: "https://www.zetland.dk"
+    support_url: "https://www.zetland.dk/om/kontakt"
+  - pattern: "regex:\\b3F\\b"
+    name: "3F"
+    category: "Memberships"
+    website: "https://www.3f.dk"
+  - pattern: "regex:\\bDSB\\b"
+    name: "DSB"
+    category: "Public transport"
+    website: "https://www.dsb.dk"
+    support_url: "https://www.dsb.dk/hjaelp-og-kontakt/"
+  - pattern: "regex:\\bN1 A/S\\b"
+    name: "N1"
+    category: "Utilities"
+    website: "https://n1.dk"
+  # --- Banks (recurring account and card fees) ---
+  - { pattern: "DANSKE BANK", name: "Danske Bank", category: "Fees & charges", website: "https://danskebank.dk/privat" }
+  - { pattern: "NORDEA DANMARK", name: "Nordea", category: "Fees & charges", website: "https://www.nordea.dk" }
+  - { pattern: "JYSKE BANK", name: "Jyske Bank", category: "Fees & charges" }
+  - { pattern: "SYDBANK", name: "Sydbank", category: "Fees & charges" }
+  - { pattern: "NYKREDIT", name: "Nykredit", category: "Fees & charges", website: "https://www.nykredit.dk/dit-liv/" }
+  - { pattern: "ARBEJDERNES LANDSBANK", name: "Arbejdernes Landsbank", category: "Fees & charges", website: "https://www.al-bank.dk/privat" }
+  - { pattern: "SPAR NORD", name: "Spar Nord", category: "Fees & charges", website: "https://www.sparnord.dk/dit-liv/" }
+  - { pattern: "LUNAR", name: "Lunar", category: "Fees & charges", website: "https://www.lunar.app/en/personal" }
+  - { pattern: "SAXO BANK", name: "Saxo Bank", category: "Fees & charges", website: "https://www.home.saxo" }
+  # --- Pension / labour-market schemes ---
+  - { pattern: "AP PENSION", name: "AP Pension", category: "Insurance", website: "https://appension.dk" }
+  - { pattern: "VELLIV", name: "Velliv", category: "Insurance", website: "https://www.velliv.dk" }
+  - { pattern: "SAMPENSION", name: "Sampension", category: "Insurance", website: "https://www.sampension.dk/kunde/" }
+  - { pattern: "PENSIONDANMARK", name: "PensionDanmark", category: "Insurance" }
+  - { pattern: "INDUSTRIENS PENSION", name: "Industriens Pension", category: "Insurance", website: "https://www.industrienspension.dk/ForMedlemmer" }
+  - { pattern: "regex:\\bATP\\b", name: "ATP", category: "Insurance", website: "https://www.atp.dk" }
+  - { pattern: "regex:\\bPKA\\b", name: "PKA", category: "Insurance", website: "https://pka.dk" }
+  # --- More insurance ---
+  - { pattern: "CODAN", name: "Codan", category: "Insurance", website: "https://www.codan.dk" }
+  - { pattern: "IF DANMARK", name: "If Forsikring", category: "Insurance", website: "https://www.if.dk/privat" }
+  - { pattern: "GJENSIDIGE DANMARK", name: "Gjensidige", category: "Insurance", website: "https://www.gjensidige.dk" }
+  # --- More energy, grid, heating and water ---
+  - { pattern: "ENERGI FYN", name: "Energi Fyn", category: "Utilities" }
+  - { pattern: "AURA ENERGI", name: "Aura Energi", category: "Utilities", website: "https://www.aura.dk" }
+  - { pattern: "VERDO", name: "Verdo", category: "Utilities", website: "https://www.verdo.com/int/" }
+  - { pattern: "MODSTROEM", name: "Modstrøm", category: "Utilities", website: "https://www.modstroem.dk" }
+  - { pattern: "TREFOR", name: "TREFOR", category: "Utilities", website: "https://www.trefor.dk" }
+  - { pattern: "VANDCENTER SYD", name: "VandCenter Syd", category: "Utilities", website: "https://www.vandcenter.dk" }
+  - { pattern: "RADIUS ELNET", name: "Radius Elnet", category: "Utilities", website: "https://radiuselnet.dk" }
+  - { pattern: "CERIUS", name: "Cerius", category: "Utilities", website: "https://cerius.dk" }
+  # --- Unions and a-kasser (monthly dues) ---
+  - { pattern: "regex:\\bFOA\\b", name: "FOA", category: "Memberships", website: "https://www.foa.dk" }
+  - { pattern: "DJOEF", name: "Djøf", category: "Memberships", website: "https://www.djoef.dk" }
+  - { pattern: "regex:\\bIDA\\b", name: "IDA — Ingeniørforeningen", category: "Memberships", website: "https://ida.dk" }
+  - { pattern: "DANSK MAGISTERFORENING", name: "Dansk Magisterforening", category: "Memberships", website: "https://dm.dk" }
+  - { pattern: "regex:\\bBUPL\\b", name: "BUPL", category: "Memberships", website: "https://bupl.dk" }
+  - { pattern: "DANSK SYGEPLEJERAAD", name: "Dansk Sygeplejeråd", category: "Memberships", website: "https://dsr.dk" }
+  - { pattern: "regex:\\bFTFA\\b", name: "FTFa", category: "Memberships" }
+  - { pattern: "MIN A-KASSE", name: "Min A-kasse", category: "Memberships", website: "https://minakasse.dk" }
+  # --- More charities ---
+  - { pattern: "WWF VERDENSNATURFONDEN", name: "WWF Verdensnaturfonden", category: "Donations", website: "https://wwf.dk" }
+  - { pattern: "SOS BORNEBYERNE", name: "SOS Børnebyerne", category: "Donations", website: "https://sosbornebyerne.dk" }
+  - { pattern: "MODREHJAELPEN", name: "Mødrehjælpen", category: "Donations", website: "https://moedrehjaelpen.dk" }
+  - { pattern: "HJERTEFORENINGEN", name: "Hjerteforeningen", category: "Donations", website: "https://www.hjerteforeningen.dk" }
+  - { pattern: "DIABETESFORENINGEN", name: "Diabetesforeningen", category: "Donations" }
+  - { pattern: "KIRKENS KORSHAER", name: "Kirkens Korshær", category: "Donations", website: "https://kirkenskorshaer.dk" }
+  - { pattern: "BORNS VILKAR", name: "Børns Vilkår", category: "Donations", website: "https://bornsvilkar.dk" }
+  - { pattern: "JULEMAERKEFONDEN", name: "Julemærkefonden", category: "Donations", website: "https://www.julemaerket.dk" }
+  # --- Public transport, ferries, EV charging ---
+  - { pattern: "SYDTRAFIK", name: "Sydtrafik", category: "Public transport", website: "https://www.sydtrafik.dk" }
+  - { pattern: "NT REJSE", name: "Nordjyllands Trafikselskab", category: "Public transport", website: "https://www.ntrejse.dk" }
+  - { pattern: "FYNBUS", name: "FynBus", category: "Public transport", website: "https://fynbus.dk" }
+  - { pattern: "MOLSLINJEN", name: "Molslinjen", category: "Transport", website: "https://www.molslinjen.dk" }
+  - { pattern: "regex:\\bDFDS\\b", name: "DFDS", category: "Transport", website: "https://www.dfds.com/en/passenger-ferries" }
+  - { pattern: "SCANDLINES", name: "Scandlines", category: "Transport", website: "https://www.scandlines.dk" }
+  - { pattern: "BORNHOLMSLINJEN", name: "Bornholmslinjen", category: "Transport", website: "https://www.bornholmslinjen.dk" }
+  - { pattern: "CLEVER", name: "Clever", category: "Transport", website: "https://clever.dk" }
+  - { pattern: "SPIRII", name: "Spirii", category: "Transport", website: "https://www.spirii.com/da" }
+  - { pattern: "UNO-X", name: "Uno-X", category: "Fuel", website: "https://unoxmobility.dk/privat" }
+  # --- More newspapers / media ---
+  - { pattern: "FYENS STIFTSTIDENDE", name: "Fyens Stiftstidende", category: "Subscriptions", website: "https://fyens.dk" }
+  - { pattern: "JYDSKEVESTKYSTEN", name: "JydskeVestkysten", category: "Subscriptions", website: "https://jv.dk" }
+  - { pattern: "NORDJYSKE", name: "Nordjyske", category: "Subscriptions", website: "https://nordjyske.dk" }
+  - { pattern: "KRISTELIGT DAGBLAD", name: "Kristeligt Dagblad", category: "Subscriptions", website: "https://www.kristeligt-dagblad.dk" }
+  - { pattern: "WEEKENDAVISEN", name: "Weekendavisen", category: "Subscriptions", website: "https://www.weekendavisen.dk" }
+  - { pattern: "ALTINGET", name: "Altinget", category: "Subscriptions", website: "https://www.altinget.dk" }
+  - { pattern: "INGENIOREN", name: "Ingeniøren", category: "Subscriptions", website: "https://ing.dk" }
+  - { pattern: "FINANS.DK", name: "Finans", category: "Subscriptions", website: "https://finans.dk" }
+  # --- Retail, DIY, furniture, electronics ---
+  - { pattern: "regex:\\bJYSK\\b", name: "JYSK", category: "Housing", website: "https://jysk.dk" }
+  - { pattern: "regex:\\bILVA\\b", name: "ILVA", category: "Housing", website: "https://ilva.dk" }
+  - { pattern: "POWER DANMARK", name: "Power", category: "Other", website: "https://www.power.dk" }
+  - { pattern: "SILVAN", name: "Silvan", category: "Housing", website: "https://www.silvan.dk" }
+  - { pattern: "regex:\\bSTARK\\b", name: "STARK", category: "Housing", website: "https://www.stark.dk" }
+  - { pattern: "XL-BYG", name: "XL-BYG", category: "Housing", website: "https://www.xl-byg.dk" }
+  - { pattern: "JEM & FIX", name: "jem & fix", category: "Housing", website: "https://www.jemogfix.dk" }
+  - { pattern: "HARALD NYBORG", name: "Harald Nyborg", category: "Housing", website: "https://www.harald-nyborg.dk" }
+  - { pattern: "NORMAL", name: "Normal", category: "Personal care", website: "https://www.normalstores.com/dk/" }
+  - { pattern: "FLYING TIGER", name: "Flying Tiger Copenhagen", category: "Other", website: "https://flyingtiger.com" }
+  - { pattern: "SPORTMASTER", name: "Sportmaster / Sports World", category: "Other", website: "https://www.sportsworld.dk" }
+  - { pattern: "BOG & IDE", name: "Bog & idé", category: "Other", website: "https://www.bog-ide.dk" }
+  - { pattern: "MAGASIN DU NORD", name: "Magasin du Nord", category: "Other", website: "https://www.magasin.dk" }
+  - { pattern: "IMERCO", name: "Imerco", category: "Other", website: "https://www.imerco.dk" }
+  - { pattern: "KOP & KANDE", name: "Kop & Kande", category: "Other", website: "https://www.kop-kande.dk" }
+  # --- Groceries / eating out ---
+  - { pattern: "COOP DANMARK", name: "Coop Danmark", category: "Groceries", website: "https://coop.dk" }
+  - { pattern: "MIN KOBMAND", name: "Min Købmand", category: "Groceries" }
+  - { pattern: "SUNSET BOULEVARD", name: "Sunset Boulevard", category: "Eating out", website: "https://sunset-boulevard.dk" }
+  - { pattern: "JOE & THE JUICE", name: "Joe & The Juice", category: "Eating out" }
+  - { pattern: "STICKS'N'SUSHI", name: "Sticks'n'Sushi", category: "Eating out", website: "https://www.sticksnsushi.com/dk/en/" }
+  # --- Post and delivery ---
+  - { pattern: "POSTNORD DANMARK", name: "PostNord Danmark", category: "Fees & charges" }
+  - { pattern: "GLS DANMARK", name: "GLS", category: "Fees & charges", website: "https://gls-group.com" }
+  - { pattern: "regex:\\bDAO\\b", name: "DAO", category: "Fees & charges", website: "https://dao.as" }
+  # --- Health and housing services ---
+  - { pattern: "ALERIS", name: "Aleris", category: "Healthcare", website: "https://www.aleris.dk" }
+  - { pattern: "SUNDHED.DK", name: "Sundhed.dk", category: "Healthcare", website: "https://www.sundhed.dk" }
+  - { pattern: "regex:\\bDEAS\\b", name: "DEAS", category: "Housing", website: "https://deas.dk/da/" }
+  # --- Cloud / software ---
+  - { pattern: "ONE.COM", name: "one.com", category: "Cloud / Software", website: "https://www.one.com/da-dk/" }
+  - { pattern: "UNICONTA", name: "Uniconta", category: "Cloud / Software", website: "https://www.uniconta.com" }
+  - { pattern: "ZENEGY", name: "Zenegy", category: "Cloud / Software", website: "https://www.zenegy.com" }
+  # --- Additional recurring billers ---
+  - { pattern: "MOFIBO", name: "Mofibo", category: "Streaming", website: "https://mofibo.com/dk" }
+  - { pattern: "NORDISK FILM", name: "Nordisk Film", category: "Other", website: "https://nordiskfilm.com" }
+  - { pattern: "BAUHAUS DANMARK", name: "Bauhaus", category: "Housing", website: "https://www.bauhaus.dk" }
+  - { pattern: "PLANTORAMA", name: "Plantorama", category: "Other", website: "https://www.plantorama.dk" }
+  - { pattern: "ELGIGANTEN DANMARK", name: "Elgiganten", category: "Other" }
+  - { pattern: "TELIA DANMARK", name: "Telia Danmark", category: "Internet & Phone" }
+  - { pattern: "LEBARA DANMARK", name: "Lebara", category: "Internet & Phone" }
+  - { pattern: "FITNESS DK", name: "Fitness dk", category: "Memberships" }
+  - { pattern: "G4S DANMARK", name: "G4S", category: "Memberships" }
+  - { pattern: "DANMARKS RADIO", name: "DR", category: "Streaming", website: "https://www.dr.dk" }
+  - { pattern: "LOVBJERG", name: "Løvbjerg", category: "Groceries" }
+  - { pattern: "SALLING GROUP", name: "Salling Group", category: "Groceries", website: "https://salling.dk" }
+  - { pattern: "COOP 365", name: "Coop 365", category: "Groceries", website: "https://coop.dk" }
+  - { pattern: "DSB PENDLERKORT", name: "DSB Pendlerkort", category: "Public transport", website: "https://www.dsb.dk/pendlerkort/" }

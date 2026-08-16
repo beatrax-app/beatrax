@@ -1,0 +1,37 @@
+# Bank-fee classification rules — Canada (English and Quebec French).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# English fee wording is carried by multi-word phrases, because the single
+# words ("FEE", "CHARGE", "INTEREST") are far too generic to be safe on
+# their own. Bare "SERVICE CHARGE" is left out even though Canadian banks
+# print it: rules are matched across every region file, so it would also
+# fire on the leasehold service charge that British and Irish tenants pay by
+# standing order. The `regex:` entries fence the two short tokens with \b —
+# `\bNSF\b` on both sides so the acronym cannot fire inside a longer word,
+# and `\bOVERDRAFT` on the left so it stays a standalone word while the open
+# right side covers "OVERDRAFT FEE", "OVERDRAFT INTEREST" and "OVERDRAFT
+# PROTECTION FEE". Regex bodies must be SINGLE-quoted in YAML so the
+# backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "ACCOUNT FEE"
+    name: "Monthly account fee"
+  - pattern: 'regex:\bOVERDRAFT'
+    name: "Overdraft charge"
+  - pattern: 'regex:\bNSF\b'
+    name: "NSF fee"
+  - pattern: "INSUFFICIENT FUNDS"
+    name: "Insufficient funds fee"
+  - pattern: "TRANSACTION FEE"
+    name: "Transaction fee"
+  - pattern: "FRAIS MENSUELS"
+    name: "Frais mensuels"
+  - pattern: "FRAIS DE SERVICE"
+    name: "Frais de service"

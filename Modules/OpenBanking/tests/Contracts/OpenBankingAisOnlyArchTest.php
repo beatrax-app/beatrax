@@ -75,8 +75,15 @@ function aisOnlyGuardPhpFiles(string $relativeDir): array
  * `'/aspsps'`), a bare `PIS` token, or a `payment-initiation`/
  * `payment_initiation` phrase (case-insensitive, word-boundaried so it
  * doesn't accidentally flag unrelated words like "payments_processed").
+ *
+ * The `u` flag is load-bearing, not decoration: without it `\b` matches on
+ * BYTE boundaries, so the multibyte `ý` in the Czech and Slovak word "výpis"
+ * (bank statement) reads as a word break and `\bPIS\b` fires on ordinary
+ * translated copy. It cost two false offenders the day those locales landed.
+ * Verified it still catches a real bare `PIS`, a quoted `/payments` path and
+ * `payment-initiation`.
  */
-const AIS_ONLY_FORBIDDEN_PATTERN = '#[\'"]/?payments[\'"]|\bPIS\b|payment[-_]initiation#i';
+const AIS_ONLY_FORBIDDEN_PATTERN = '#[\'"]/?payments[\'"]|\bPIS\b|payment[-_]initiation#iu';
 
 it('never references a PIS/payments endpoint or scope anywhere in Modules/OpenBanking outside tests/comments', function (): void {
     $hits = [];

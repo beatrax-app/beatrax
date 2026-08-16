@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Pénztárkönyv',
+    'heading' => 'Pénztárkönyv',
+    'intro' => 'Rögzítsd kézzel a készpénzes és egyéb, bankon kívüli kiadásokat. A kézi tételek ugyanabba a nyilvántartásba kerülnek, mint az importált tételek — kategorizálhatók, részt vesznek az ismétlődések felismerésében, és beleszámítanak a hónapodba.',
+
+    'direction' => 'Irány',
+    'expense' => 'Kiadás',
+    'income' => 'Bevétel',
+
+    'amount' => 'Összeg (€)',
+    'date' => 'Dátum',
+    'counterparty' => 'Partner',
+    'counterparty_placeholder' => 'pl. Pékség',
+    'category' => 'Kategória',
+    'optional' => '(opcionális)',
+    'uncategorized' => 'Kategorizálatlan',
+    'note' => 'Megjegyzés',
+
+    'add_entry' => 'Tétel hozzáadása',
+    'manual_entries' => 'Kézi tételek',
+    'no_entries' => 'Még nincs kézi tétel.',
+    'delete_entry' => 'Tétel törlése',
+    'delete' => 'Törlés',
+
+    'errors' => [
+        'amount_positive' => 'Adj meg nullánál nagyobb összeget.',
+        'invalid_date' => 'Adj meg érvényes dátumot.',
+    ],
+
+    'toast' => [
+        'added' => 'Készpénzes tétel hozzáadva.',
+        'removed' => 'Készpénzes tétel törölve.',
+    ],
+];

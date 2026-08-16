@@ -2201,6 +2201,13 @@ it('does not allow the Desktop NativePHP facade allow-list to grow beyond the pi
         'Modules/Desktop/Internal/Native/OsThemeProbe.php',
         'Modules/Desktop/Internal/Native/NativeBiometricUnlock.php',
         'Modules/Desktop/Internal/Native/DesktopKeyCustodian.php',
+        // Not new facade surface: the ChildProcess call that starts
+        // `sync:serve` moved here out of NativeAppServiceProvider, so the
+        // boot hook and the DeviceSyncEnabled listener can share one owner.
+        'Modules/Desktop/Internal/Native/SyncListenerProcess.php',
+        // Same relocation rationale: the relay daemon is the pairing
+        // transport, started by the same boot hook as the sync listener.
+        'Modules/Desktop/Internal/Native/RelayListenerProcess.php',
         'Modules/Desktop/Internal/Listeners/DispatchOsNotification.php',
         'Modules/Desktop/Internal/Listeners/SurfaceWorkerCrashAlert.php',
         'Modules/Desktop/Internal/Listeners/NavigateOnNotificationDeepLink.php',

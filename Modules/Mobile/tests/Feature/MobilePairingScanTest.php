@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -640,4 +641,127 @@ it('an empty CodeScanned payload is ignored rather than treated as a bad code', 
         ->call('onCodeScanned', data: '')
         ->assertSet('step', 'scan')
         ->assertSet('flashMessage', '');
+});
+
+/*
+ * Pairing is a one-way door.
+ *
+ * With a confirmed peer already in the registry and no ceremony in flight,
+ * the pairing screen has nothing left to do — but it still rendered, so the
+ * back button dropped a fully-paired device back into the wizard it had
+ * already finished, mid-sync.
+ */
+it('refuses to re-enter the wizard once a peer is already confirmed', function (): void {
+    $user = pairingScanTestUser('paired-'.bin2hex(random_bytes(3)));
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+    test()->actingAs($user);
+
+    $now = CarbonImmutable::now()->toIso8601String();
+
+    app(DatabaseManager::class)->connection()->table('device_registry')->insert([
+        'user_id' => $user->id,
+        'device_id' => 'already-paired-desktop',
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => str_repeat('a', 64),
+        'x25519_public_key_hex' => str_repeat('b', 64),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => $now,
+        'confirmed_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    Livewire::test(MobilePairingScan::class)->assertRedirect(route('data-devices.index'));
+});
+
+// A device still finishing its import owes the setup gate, not the app: it has
+// a peer but not yet the history that peer is sending.
+it('sends a still-importing device to the setup gate rather than the app', function (): void {
+    $user = pairingScanTestUser('paired-'.bin2hex(random_bytes(3)));
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+
+    test()->actingAs($user);
+    app(MobileImportIntentGate::class)->markImporting((int) $user->id);
+
+    $now = CarbonImmutable::now()->toIso8601String();
+
+    app(DatabaseManager::class)->connection()->table('device_registry')->insert([
+        'user_id' => $user->id,
+        'device_id' => 'importing-desktop',
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => str_repeat('a', 64),
+        'x25519_public_key_hex' => str_repeat('b', 64),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => $now,
+        'confirmed_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    Livewire::test(MobilePairingScan::class)->assertRedirect(route('mobile.setup'));
+});
+
+// The back button landed on the passed "device paired" step because the
+// ceremony row still existed, merely finished. A confirmed peer plus a
+// confirmed token is done twice over.
+it('refuses to re-show the passed success step after the ceremony confirmed', function (): void {
+    $user = pairingScanTestUser('confirmed-'.bin2hex(random_bytes(3)));
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+    test()->actingAs($user);
+
+    $now = CarbonImmutable::now()->toIso8601String();
+    $db = app(DatabaseManager::class)->connection();
+
+    $db->table('device_registry')->insert([
+        'user_id' => $user->id,
+        'device_id' => 'confirmed-desktop',
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => str_repeat('a', 64),
+        'x25519_public_key_hex' => str_repeat('b', 64),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => $now,
+        'confirmed_at' => $now,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+
+    // A finished ceremony row that has not been pruned yet.
+    $db->table('pairing_tokens')->insert([
+        'user_id' => $user->id,
+        'token_hash' => hash('sha256', 'done-token'),
+        'initiator_device_id' => 'confirmed-desktop',
+        'initiator_ed25519_pub_hex' => str_repeat('a', 64),
+        'initiator_x25519_pub_hex' => str_repeat('b', 64),
+        'state' => 'confirmed',
+        'expires_at' => CarbonImmutable::now()->addMinutes(10)->toIso8601String(),
+        'created_at' => $now,
+    ]);
+
+    Livewire::test(MobilePairingScan::class)->assertRedirect(route('data-devices.index'));
+});
+
+// The wizard is blocking by design; app navigation wrapped around it let the
+// user tap straight out of a ceremony they had to finish.
+it('renders without the app navigation chrome', function (): void {
+    $user = pairingScanTestUser('chrome-'.bin2hex(random_bytes(3)));
+    /** @var Session $session */
+    $session = app(Session::class);
+    pairingScanSetUpIdentity($user, $session);
+    test()->actingAs($user);
+
+    $source = (string) file_get_contents(
+        base_path('Modules/Mobile/Internal/Http/Livewire/MobilePairingScan.php'),
+    );
+
+    expect($source)->toContain("extends('layouts.lock'")
+        ->and($source)->not->toContain("extends('layouts.app'");
 });

@@ -11,6 +11,9 @@
       (180×180 with #f8fafc background) — iOS ignores transparency.
 --}}
 <link rel="manifest" href="/site.webmanifest" />
+{{-- Same purpose as the `color-scheme` property in app.css, but effective
+     on the frames before any stylesheet has loaded. --}}
+<meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

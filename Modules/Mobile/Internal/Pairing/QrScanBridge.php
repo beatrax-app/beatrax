@@ -95,7 +95,7 @@ final class QrScanBridge
     // branch, to seed a local pairing_tokens row on a fresh device),
     // plus the optional relay/rtok params for relay auto-configuration.
     /**
-     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, relayEndpoint: ?string, relayAuthToken: ?string}|null
+     * @return array{token: string, deviceId: string, ed25519PubHex: string, x25519PubHex: string, deviceName: ?string, relayEndpoint: ?string, relayAuthToken: ?string, relayPin: ?string}|null
      */
     public function extractIdentity(string $decodedPayload): ?array
     {
@@ -119,19 +119,32 @@ final class QrScanBridge
             return null;
         }
 
+        // Cosmetic only, exactly like the responder's name: it labels a row
+        // and grants nothing, so a forged name is a wrong caption and never
+        // a trust decision.
+        $name = $query['name'] ?? null;
+        $deviceName = is_string($name) && trim($name) !== '' ? trim($name) : null;
+
         $relay = $query['relay'] ?? null;
         $relayEndpoint = is_string($relay) && $relay !== '' ? $relay : null;
 
         $rtok = $query['rtok'] ?? null;
         $relayAuthToken = $relayEndpoint !== null && is_string($rtok) && $rtok !== '' ? $rtok : null;
 
+        // The pinned relay key. Only meaningful alongside an endpoint, and
+        // only trustworthy because the QR itself is out-of-band.
+        $rpin = $query['rpin'] ?? null;
+        $relayPin = $relayEndpoint !== null && is_string($rpin) && $rpin !== '' ? $rpin : null;
+
         return [
             'token' => $token,
             'deviceId' => $deviceId,
             'ed25519PubHex' => $ed,
             'x25519PubHex' => $kx,
+            'deviceName' => $deviceName,
             'relayEndpoint' => $relayEndpoint,
             'relayAuthToken' => $relayAuthToken,
+            'relayPin' => $relayPin,
         ];
     }
 }

@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page' => [
+        'title' => 'Célok',
+        'subtitle' => 'Kövesd nyomon a megtakarítási céljaid alakulását.',
+        'add_goal' => 'Cél hozzáadása',
+    ],
+
+    'empty' => [
+        'heading' => 'Még nincs cél',
+        'body' => 'Adj meg egy célösszeget és egy céldátumot, hogy nyomon követhesd a megtakarításod alakulását.',
+        'add_first' => 'Add hozzá az első célod',
+    ],
+
+    'status' => [
+        'overdue' => 'Lejárt',
+        'reached' => 'Elérve',
+        'completed' => 'Teljesítve',
+        'archived' => 'Archiválva',
+    ],
+
+    'row' => [
+        'edit' => 'Szerkesztés',
+    ],
+
+    'progress' => [
+        'aria' => ':name: :pct% kész',
+    ],
+
+    'projection' => [
+        'target_reached' => 'Cél elérve',
+        'add_contributions' => 'Adj hozzá befizetéseket az előrejelzéshez',
+        'building' => 'Előrejelzés készül…',
+        'est' => 'Becsült: :date ·',
+        'projection_note' => '(előrejelzés)',
+        'projected' => 'Előrejelzés: :date',
+    ],
+
+    'archive' => [
+        'confirm_question' => 'Archiválod ezt a célt?',
+        'close' => 'Bezárás',
+        'confirm_aria' => 'A(z) :name archiválásának megerősítése',
+        'archive' => 'Archiválás',
+    ],
+
+    'actions' => [
+        'more_aria' => 'További műveletek: :name',
+        'mark_complete' => 'Megjelölés teljesítettként',
+        'archive' => 'Archiválás',
+        'restore' => 'Visszaállítás',
+    ],
+
+    'archived_disclosure' => 'Archivált célok (:count)',
+
+    'form' => [
+        'title_edit' => 'Cél szerkesztése',
+        'title_create' => 'Megtakarítási cél létrehozása',
+        'subtitle_edit' => 'Módosítsd a nevet, a célösszeget, a dátumot vagy a kapcsolt számlát.',
+        'subtitle_create' => 'Adj meg egy célösszeget és egy céldátumot a megtakarításod követéséhez.',
+        'name' => 'Név',
+        'name_placeholder' => 'pl. Vésztartalék',
+        'target_amount' => 'Célösszeg (:currency)',
+        'target_date' => 'Céldátum',
+        'savings_account' => 'Megtakarítási számla (opcionális)',
+        'no_account' => 'Nincs számla — kézi követés',
+        'linked_pot' => 'Kapcsolt persely (opcionális)',
+        'select_account_first' => 'Előbb válassz számlát',
+        'no_pot' => 'Nincs persely — átutalás-alapú követés',
+        'linked_pot_help' => 'Ha kapcsolod, a persely egyenlege határozza meg a cél előrehaladását.',
+        'save_changes' => 'Módosítások mentése',
+        'save_goal' => 'Cél mentése',
+        'close' => 'Bezárás',
+    ],
+
+    'summary' => [
+        'see_all' => 'Összes megtekintése →',
+        'no_goals' => 'Még nincs cél.',
+        'add_first' => 'Add hozzá az első célod →',
+    ],
+
+    'notices' => [
+        'goal_created' => 'Cél létrehozva.',
+        'goal_updated' => 'Cél frissítve.',
+        'goal_marked_complete' => 'A cél teljesítettként megjelölve.',
+        'goal_archived' => 'Cél archiválva.',
+        'goal_restored' => 'Cél visszaállítva.',
+    ],
+
+    'errors' => [
+        'name' => 'Adj nevet a célnak.',
+        'date' => 'Válassz céldátumot.',
+        'amount' => 'Adj meg érvényes, nullánál nagyobb összeget.',
+        'pot_linked_category' => 'Ez a persely egy kategóriához van kapcsolva. Előbb szüntesd meg a kapcsolatot a Perselyek oldalon.',
+        'account_not_owned' => 'A számla nem a hitelesített felhasználóé.',
+    ],
+];

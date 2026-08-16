@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Rediger regel',
+    'heading_new' => 'Ny regel',
+
+    'combinator_aria' => 'Kombinasjon av betingelser',
+    'match_all' => 'Match alle betingelser',
+    'match_any' => 'Match en av betingelsene',
+
+    'condition_label' => 'Betingelse :number',
+    'condition_field_aria' => 'Felt for betingelse :number',
+    'condition_operator_aria' => 'Operator for betingelse :number',
+    'condition_value_aria' => 'Verdi for betingelse :number',
+    'condition_value_from_aria' => 'Verdi for betingelse :number (fra)',
+    'condition_value_to_aria' => 'Verdi for betingelse :number (til)',
+    'to' => 'til',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'f.eks. SPOTIFY',
+    'remove_condition' => 'Fjern betingelse',
+    'add_condition' => '+ Legg til betingelse',
+
+    'then' => 'Så',
+    'action_label' => 'Handling :number',
+    'action_type_aria' => 'Type for handling :number',
+    'action_category' => 'Kategori',
+    'action_counterparty' => 'Motpart',
+    'action_note' => 'Notat',
+    'action_tax_tag' => 'Skattemerke',
+    'assign_category_aria' => 'Tildel kategori for handling :number',
+    'reassign_counterparty_aria' => 'Flytt til motpart for handling :number',
+    'note_text_aria' => 'Notattekst for handling :number',
+    'note_placeholder' => 'Notattekst…',
+    'note_mode_aria' => 'Notatmodus for handling :number',
+    'note_set' => 'Angi',
+    'note_append' => 'Legg til',
+    'deduction_category_aria' => 'Fradragskategori for handling :number',
+    'remove_action' => 'Fjern handling',
+    'add_action' => '+ Legg til handling',
+
+    'this_year_only' => 'Bare i år ▾',
+    'override_tax_year' => 'Overstyr inntektsår',
+    'tax_year_override_aria' => 'Overstyring av inntektsår for handling :number',
+    'tax_tag_note' => 'Handlinger med skattemerke trer i kraft neste gang du kjører reglene på nytt, ikke ved den gjeldende importen.',
+
+    'priority' => 'Prioritet',
+    'priority_help' => 'Lavere tall kjøres først. Regler uten felles felter kommer aldri i konflikt.',
+
+    'cancel' => 'Avbryt',
+    'save_changes' => 'Lagre endringer',
+    'save_rule' => 'Lagre regel',
+    'saving' => 'Lagrer…',
+
+    'error_rule_unavailable' => 'Den regelen er ikke lenger tilgjengelig.',
+    'error_invalid_data' => 'Ugyldige regeldata — velg fra nedtrekksmenyene og prøv igjen.',
+    'error_duplicate' => 'Det finnes allerede en regel med dette feltet, denne matchen og denne verdien. Rediger den eksisterende regelen i stedet.',
+    'error_priority_whole' => 'Prioritet må være et heltall.',
+    'error_add_condition' => 'Legg til minst én betingelse.',
+    'error_add_action' => 'Legg til minst én handling.',
+    'condition_value_required' => 'Angi en verdi for betingelse :position.',
+    'condition_bounds_required' => 'Velg en nedre og en øvre grense for betingelse :position.',
+    'condition_amount_invalid' => 'Angi et gyldig beløp for betingelse :position.',
+    'action_pick_category' => 'Velg en kategori for denne handlingen.',
+    'action_pick_counterparty' => 'Velg en motpart å flytte til.',
+    'action_note_required' => 'Angi notattekst.',
+    'action_pick_deduction' => 'Velg en fradragskategori for skattemerket.',
+];

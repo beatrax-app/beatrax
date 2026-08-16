@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'groups' => [
+        'display' => 'Weergave',
+        'money' => 'Geld',
+        'insights' => 'Inzichten & meldingen',
+        'security' => 'Beveiliging & apparaten',
+        'data' => 'Imports & gegevens',
+        'app' => 'App',
+    ],
+
     'title' => 'Instellingen',
     'subtitle' => 'Voorkeuren voor hoe je financiën in de app worden weergegeven.',
 
@@ -16,6 +25,7 @@ return [
     ],
 
     'language' => [
+        'apply' => 'Toepassen',
         'heading' => 'Taal',
         'label' => 'Weergavetaal',
         'system' => 'Systeem',

@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Regras',
+    'heading' => 'Regras',
+    'intro' => 'Pré-categoriza as transações na importação. As regras aplicam-se a todas as origens — banco, cartão, PayPal e recibos de e-mail.',
+
+    'reapply' => 'Reaplicar as regras ao histórico',
+    'reapplying' => 'A reaplicar…',
+    'new_rule' => 'Nova regra',
+
+    'reapply_progress_lead' => 'A reaplicar as regras…',
+    'reapply_progress_of' => 'de',
+    'reapply_progress_trail' => 'transações verificadas',
+
+    'empty_heading' => 'Ainda não há regras',
+    'empty_body' => 'As regras encontram transações através de várias condições e aplicam automaticamente alterações de categoria, contraparte, nota e etiqueta fiscal — na importação e sempre que as reaplicares ao teu histórico existente.',
+    'empty_cta' => 'Cria a tua primeira regra',
+
+    'col_priority' => 'Prioridade',
+    'col_conditions' => 'Condições',
+    'col_actions' => 'Ações',
+    'col_hits' => 'Ocorrências',
+    'col_created' => 'Criada',
+    'col_row_actions' => 'Ações',
+
+    'more_conditions' => '+:count mais',
+
+    'delete_confirm' => 'Eliminar?',
+    'delete_yes' => 'Sim, eliminar',
+    'cancel' => 'Cancelar',
+    'edit' => 'Editar',
+    'delete' => 'Eliminar',
+    'edit_aria' => 'Editar a regra (prioridade :priority)',
+    'delete_aria' => 'Eliminar a regra (prioridade :priority)',
+
+    'footer_note' => 'As regras e o histórico de comerciantes funcionam em conjunto. Eliminar uma regra não apaga o que o Beatrax aprendeu com categorizações anteriores — a próxima importação pode continuar a sugerir a mesma categoria a partir do histórico.',
+
+    'chip_category' => 'Categoria: :path',
+    'chip_counterparty' => 'Contraparte: :path',
+    'chip_note' => 'Nota',
+    'chip_tax_tag' => 'Etiqueta fiscal',
+
+    'flash_deleted' => 'Regra eliminada.',
+    'flash_not_found' => 'Regra não encontrada (pode ter sido eliminada noutro separador).',
+    'flash_saved' => 'Regra guardada.',
+    'flash_reapplying' => 'A reaplicar as regras ao teu histórico…',
+    'summary_no_changes' => 'Sem alterações — o teu histórico já corresponde às tuas regras.',
+    'summary_updated' => 'Atualizados :fields campos em :transactions transações.',
+    'summary_reconciled_skipped' => ':count transações reconciliadas foram ignoradas.',
+];

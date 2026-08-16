@@ -1,4 +1,7 @@
 # Government / public-agency classification rules — Ireland.
+# (Domestic water charges were abolished, so Uisce Éireann is not a personal
+# government counterparty. The NCT is run by a private contractor and is
+# likewise omitted.)
 # Schema: see government/nl.yaml.
 entries:
   # "REVENUE" alone is a common word; require the full body or ROS.
@@ -10,3 +13,202 @@ entries:
     name: "TV Licence"
   - pattern: "MOTOR TAX"
     name: "Motor Tax"
+  - pattern: "LOCAL PROPERTY TAX"
+    name: "Local Property Tax"
+  - pattern: "DEPARTMENT OF SOCIAL PROTECTION"
+    name: "Department of Social Protection"
+  - pattern: "regex:\\bPRSI\\b"
+    name: "PRSI"
+  # Local authorities bill refuse, planning and parking charges.
+  - pattern: "COUNTY COUNCIL"
+  - pattern: "CITY COUNCIL"
+  - pattern: "regex:\\bSUSI\\b"
+    name: "SUSI (student grants)"
+  - pattern: "regex:\\bHSE\\b"
+    name: "HSE"
+  - pattern: "regex:\\bTUSLA\\b"
+    name: "Tusla"
+  - pattern: "PASSPORT OFFICE"
+    name: "Passport Office"
+  - pattern: "COURTS SERVICE"
+    name: "Courts Service"
+  # Merged the Property Registration Authority, Valuation Office and OSi in 2023.
+  - pattern: "TAILTE EIREANN"
+    name: "Tailte Éireann"
+  - pattern: "ROAD SAFETY AUTHORITY"
+    name: "Road Safety Authority"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: revenue.ie (Collector-General, ROS, VRT, USC,
+  # Capital Acquisitions Tax), gov.ie and welfare.ie (scheme names),
+  # citizensinformation.ie, motortax.ie, tii.ie / eflow.ie (the M50 and
+  # Dublin Tunnel are state toll schemes), garda.ie (fixed charge notices),
+  # irishimmigration.ie, cro.ie, tailte.ie, susi.ie and rtb.ie.
+  #
+  # Irish-language names are given both with and without fadas, because
+  # statement narratives strip them about as often as they keep them.
+  # Terms Ireland shares verbatim with the UK are left in gb.yaml rather
+  # than duplicated. Rejected as too ambiguous: bare \bGARDA\b (also an
+  # Italian place name and a security brand), \bRSA\b, \bCRO\b, \bUSC\b,
+  # \bVRT\b, \bPAYE\b (French "payé") and "AN POST" on its own. Household
+  # refuse is billed by private operators here and is not listed; domestic
+  # water charges remain abolished, so Uisce Éireann stays out.
+  # ---------------------------------------------------------------------
+
+  # Revenue.
+  - pattern: "COLLECTOR GENERAL"
+    name: "Revenue (Collector-General)"
+  - pattern: "COLLECTOR-GENERAL"
+    name: "Revenue (Collector-General)"
+  - pattern: "REVENUE ONLINE SERVICE"
+    name: "Revenue (ROS)"
+  - pattern: "PRELIMINARY TAX"
+    name: "Revenue (Preliminary Tax)"
+  - pattern: "UNIVERSAL SOCIAL CHARGE"
+    name: "Universal Social Charge"
+  - pattern: "VEHICLE REGISTRATION TAX"
+    name: "Vehicle Registration Tax"
+  - pattern: "CAPITAL ACQUISITIONS TAX"
+    name: "Capital Acquisitions Tax"
+  - pattern: "RELEVANT CONTRACTS TAX"
+    name: "Relevant Contracts Tax"
+
+  # Motor tax and local authority charges.
+  - pattern: "MOTORTAX.IE"
+    name: "Motor Tax Online"
+  - pattern: "MOTOR TAX OFFICE"
+    name: "Motor Tax Office"
+  - pattern: "COMMERCIAL RATES"
+    name: "Commercial rates"
+  - pattern: "COMHAIRLE CONTAE"
+    name: "Comhairle Contae"
+  - pattern: "COMHAIRLE CHONTAE"
+    name: "Comhairle Chontae"
+  - pattern: "COMHAIRLE CATHRACH"
+    name: "Comhairle Cathrach"
+
+  # Department of Social Protection schemes.
+  - pattern: "SOCIAL WELFARE"
+    name: "Social welfare payment"
+  - pattern: "JOBSEEKERS BENEFIT"
+    name: "Jobseeker's Benefit"
+  - pattern: "WORKING FAMILY PAYMENT"
+    name: "Working Family Payment"
+  - pattern: "ILLNESS BENEFIT"
+    name: "Illness Benefit"
+  - pattern: "CONTRIBUTORY PENSION"
+    name: "State Pension (Contributory)"
+  - pattern: "FUEL ALLOWANCE"
+    name: "Fuel Allowance"
+  - pattern: "BACK TO SCHOOL"
+    name: "Back to School Clothing and Footwear Allowance"
+  - pattern: "DISABILITY ALLOWANCE"
+    name: "Disability Allowance"
+  - pattern: "DOMICILIARY CARE ALLOWANCE"
+    name: "Domiciliary Care Allowance"
+  - pattern: "INVALIDITY PENSION"
+    name: "Invalidity Pension"
+  - pattern: "MATERNITY BENEFIT"
+    name: "Maternity Benefit"
+  - pattern: "PATERNITY BENEFIT"
+    name: "Paternity Benefit"
+  - pattern: "PARENTS BENEFIT"
+    name: "Parent's Benefit"
+  - pattern: "SUPPLEMENTARY WELFARE"
+    name: "Supplementary Welfare Allowance"
+  - pattern: "HOUSING ASSISTANCE PAYMENT"
+    name: "Housing Assistance Payment"
+  - pattern: "RENT SUPPLEMENT"
+    name: "Rent Supplement"
+
+  # Health.
+  - pattern: "HEALTH SERVICE EXECUTIVE"
+    name: "HSE"
+  - pattern: "DRUGS PAYMENT SCHEME"
+    name: "Drugs Payment Scheme"
+
+  # Policing, courts and tribunals.
+  - pattern: "AN GARDA SIOCHANA"
+    name: "An Garda Síochána"
+  - pattern: "AN GARDA SÍOCHÁNA"
+    name: "An Garda Síochána"
+  - pattern: "FIXED CHARGE NOTICE"
+    name: "Fixed Charge Notice"
+  - pattern: "DISTRICT COURT"
+    name: "District Court"
+  - pattern: "CIRCUIT COURT"
+    name: "Circuit Court"
+  - pattern: "HIGH COURT"
+    name: "High Court"
+  - pattern: "LEGAL AID BOARD"
+    name: "Legal Aid Board"
+  - pattern: "PROBATE OFFICE"
+    name: "Probate Office"
+
+  # State tolls and transport bodies.
+  - pattern: "TRANSPORT INFRASTRUCTURE IRELAND"
+    name: "Transport Infrastructure Ireland"
+  - pattern: "EFLOW"
+    name: "eFlow (M50 toll)"
+  - pattern: "M50 TOLL"
+    name: "M50 toll"
+  - pattern: "DUBLIN TUNNEL"
+    name: "Dublin Tunnel"
+  - pattern: "NATIONAL TRANSPORT AUTHORITY"
+    name: "National Transport Authority"
+
+  # Immigration and identity.
+  - pattern: "IMMIGRATION SERVICE DELIVERY"
+    name: "Immigration Service Delivery"
+  - pattern: "IRISH RESIDENCE PERMIT"
+    name: "Irish Residence Permit"
+  - pattern: 'regex:\bGNIB\b'
+    name: "GNIB"
+  - pattern: "PASSPORT SERVICE"
+    name: "Passport Service"
+
+  # Registries, regulators and planning.
+  - pattern: "COMPANIES REGISTRATION OFFICE"
+    name: "Companies Registration Office"
+  - pattern: "PROPERTY REGISTRATION AUTHORITY"
+    name: "Property Registration Authority (now Tailte Éireann)"
+  - pattern: "TAILTE ÉIREANN"
+    name: "Tailte Éireann"
+  - pattern: "AN BORD PLEANALA"
+    name: "An Bord Pleanála"
+  - pattern: "AN BORD PLEANÁLA"
+    name: "An Bord Pleanála"
+  - pattern: "RESIDENTIAL TENANCIES BOARD"
+    name: "Residential Tenancies Board"
+  - pattern: "PROPERTY SERVICES REGULATORY AUTHORITY"
+    name: "Property Services Regulatory Authority"
+  - pattern: "OFFICE OF PUBLIC WORKS"
+    name: "Office of Public Works"
+
+  # Education and departments that bill or pay individuals.
+  - pattern: "STUDENT CONTRIBUTION"
+    name: "Student contribution charge"
+  - pattern: "UNIVERSITY COLLEGE"
+    name: "University College"
+  - pattern: "TECHNOLOGICAL UNIVERSITY"
+    name: "Technological University"
+  - pattern: "DEPARTMENT OF EDUCATION"
+    name: "Department of Education"
+  - pattern: "DEPARTMENT OF JUSTICE"
+    name: "Department of Justice"
+  - pattern: "DEPARTMENT OF AGRICULTURE"
+    name: "Department of Agriculture, Food and the Marine"
+  - pattern: "DEPARTMENT OF FOREIGN AFFAIRS"
+    name: "Department of Foreign Affairs (passports)"
+  - pattern: "DEPARTMENT OF HOUSING"
+    name: "Department of Housing, Local Government and Heritage"
+  - pattern: "DEPARTMENT OF TRANSPORT"
+    name: "Department of Transport"
+  - pattern: "INTREO"
+    name: "Intreo (DSP employment service)"
+  - pattern: "MYWELFARE"
+    name: "MyWelfare (DSP)"
+  - pattern: "STATE EXAMINATIONS COMMISSION"
+    name: "State Examinations Commission"
+  - pattern: "HIGHER EDUCATION AUTHORITY"
+    name: "Higher Education Authority"

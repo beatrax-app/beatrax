@@ -1,4 +1,32 @@
 # Government / public-agency classification rules — Italy.
+# (Bare "ACI" is too collision-prone — the Pubblico Registro Automobilistico
+# is matched instead.)
+#
+# Sources: agenziaentrate.gov.it and agenziaentrateriscossione.gov.it,
+# adm.gov.it (Dogane e Monopoli), gdf.gov.it, mef.gov.it, inps.it,
+# inail.it, salute.gov.it, pagopa.gov.it, aci.it (PRA),
+# mit.gov.it (Motorizzazione Civile), stradeanas.it, interno.gov.it,
+# poliziadistato.it, carabinieri.it, giustizia.it, mim.gov.it,
+# camcom.gov.it and registroimprese.it, agenziademanio.it,
+# cassaforense.it, inarcassa.it, enpam.it, enasarco.it, aqp.it,
+# regione.<nome>.it for each Regione, and the Province autonome di Trento
+# and Bolzano.
+#
+# Diacritics and apostrophes: Italian descriptors keep à/è/ì/ò/ù and the
+# apostrophe about as often as they strip them, so any body whose name
+# carries one is listed twice (CITTA/CITTÀ, UNIVERSITA/UNIVERSITÀ,
+# COMUNITA/COMUNITÀ, DELL ECONOMIA/DELL'ECONOMIA).
+#
+# Ownership: the listed multi-utilities (ACEA, HERA, IREN, A2A, AMSA,
+# Publiacqua) are stock-exchange companies with public shareholders and
+# bill commercially, so they are NOT classified as government — only the
+# wholly public water operators are. Telepass and Autostrade per l'Italia
+# are likewise out.
+# Rejected as too collision-prone: "REGIONE", "PROVINCIA", "AZIENDA",
+# "CAMERA" ("room"), "UFFICIO", "ENTRATE", "TASSA", "CANONE", "BOLLO",
+# "AMA" ("loves"), and the three-letter tokens ACI, MEF, ATS, DSU, MAV and
+# RAV — each is listed only inside a qualified form. "ASILO NIDO" is out
+# too: privately run nidi use exactly the same words as municipal ones.
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "AGENZIA DELLE ENTRATE"
@@ -7,3 +35,306 @@ entries:
     name: "INPS"
   - pattern: "CANONE RAI"
     name: "Canone RAI"
+  # pagoPA is the national public-payment platform; almost every payment to
+  # an Italian public body now clears through it.
+  - pattern: "PAGOPA"
+    name: "pagoPA"
+  - pattern: "regex:\\bF24\\b"
+    name: "Modello F24"
+  - pattern: "CARTELLA ESATTORIALE"
+    name: "Agenzia delle Entrate-Riscossione"
+  # Comuni bill IMU, TARI and school/waste charges.
+  - pattern: "COMUNE DI"
+  - pattern: "regex:\\bIMU\\b|\\bTARI\\b"
+    name: "IMU / TARI"
+  - pattern: "TASSA AUTOMOBILISTICA"
+    name: "Tassa automobilistica (bollo auto)"
+  - pattern: "PUBBLICO REGISTRO AUTOMOBILISTICO"
+    name: "PRA"
+  - pattern: "MOTORIZZAZIONE CIVILE"
+    name: "Motorizzazione Civile"
+  - pattern: "regex:\\bINAIL\\b"
+    name: "INAIL"
+  - pattern: "AZIENDA SANITARIA"
+    name: "Azienda Sanitaria"
+  - pattern: "PREFETTURA"
+    name: "Prefettura"
+  - pattern: "POLIZIA MUNICIPALE"
+    name: "Polizia Municipale"
+  - pattern: "QUESTURA"
+    name: "Questura"
+  - pattern: "AGENZIA DEL DEMANIO"
+    name: "Agenzia del Demanio"
+  - pattern: "TESORERIA DELLO STATO"
+    name: "Tesoreria dello Stato"
+  # --- Tax, collection and customs -------------------------------------------
+  - pattern: "AGENZIA DELLE ENTRATE-RISCOSSIONE"
+    name: "Agenzia delle Entrate-Riscossione"
+  - pattern: "AGENZIA ENTRATE RISCOSSIONE"
+    name: "Agenzia delle Entrate-Riscossione"
+  - pattern: "EQUITALIA"
+    name: "Agenzia delle Entrate-Riscossione (ex Equitalia)"
+  - pattern: "AGENZIA DELLE DOGANE"
+    name: "Agenzia delle Dogane e dei Monopoli"
+  - pattern: "GUARDIA DI FINANZA"
+    name: "Guardia di Finanza"
+  - pattern: "MINISTERO DELL ECONOMIA E DELLE FINANZE"
+    name: "Ministero dell'Economia e delle Finanze"
+  - pattern: "MINISTERO DELL'ECONOMIA E DELLE FINANZE"
+    name: "Ministero dell'Economia e delle Finanze"
+  - pattern: 'regex:\bF23\b'
+    name: "Modello F23"
+  - pattern: 'regex:\bIRPEF\b'
+    name: "IRPEF"
+  - pattern: "ADDIZIONALE COMUNALE"
+    name: "Addizionale comunale IRPEF"
+  - pattern: "ADDIZIONALE REGIONALE"
+    name: "Addizionale regionale IRPEF"
+  - pattern: "IMPOSTA DI BOLLO"
+    name: "Imposta di bollo"
+  - pattern: "IMPOSTA DI REGISTRO"
+    name: "Imposta di registro"
+  - pattern: "CARTELLA DI PAGAMENTO"
+    name: "Cartella di pagamento"
+  - pattern: "AVVISO DI ACCERTAMENTO"
+    name: "Avviso di accertamento"
+  # --- Social security, welfare and the professional pension funds -------------
+  - pattern: "ISTITUTO NAZIONALE DELLA PREVIDENZA SOCIALE"
+    name: "INPS"
+  - pattern: "CONTRIBUTI INPS"
+    name: "Contributi INPS"
+  - pattern: "GESTIONE SEPARATA"
+    name: "INPS Gestione Separata"
+  - pattern: "ASSEGNO UNICO"
+    name: "Assegno unico universale"
+  - pattern: 'regex:\bNASPI\b'
+    name: "NASpI"
+  - pattern: "CASSA FORENSE"
+    name: "Cassa Forense"
+  - pattern: "INARCASSA"
+    name: "Inarcassa"
+  - pattern: "ENASARCO"
+    name: "Fondazione Enasarco"
+  - pattern: 'regex:\bENPAM\b'
+    name: "ENPAM"
+  - pattern: 'regex:\bENPAP\b'
+    name: "ENPAP"
+  - pattern: 'regex:\bENPACL\b'
+    name: "ENPACL"
+  - pattern: 'regex:\bENPAB\b'
+    name: "ENPAB"
+  - pattern: 'regex:\bENPAV\b'
+    name: "ENPAV"
+  - pattern: 'regex:\bEPPI\b'
+    name: "EPPI"
+  - pattern: 'regex:\bINPGI\b'
+    name: "INPGI"
+  - pattern: 'regex:\bCNPADC\b'
+    name: "CNPADC"
+  - pattern: 'regex:\bCIPAG\b'
+    name: "CIPAG (geometri)"
+  - pattern: "CASSA NAZIONALE DI PREVIDENZA"
+    name: "Cassa nazionale di previdenza"
+  # --- Public health -------------------------------------------------------------
+  - pattern: "AZIENDA SANITARIA LOCALE"
+    name: "Azienda Sanitaria Locale"
+  - pattern: "AZIENDA OSPEDALIERA"
+    name: "Azienda Ospedaliera"
+  - pattern: 'regex:\bAUSL\b'
+    name: "AUSL"
+  - pattern: 'regex:\bASST\b'
+    name: "ASST"
+  - pattern: "AZIENDA PROVINCIALE PER I SERVIZI SANITARI"
+    name: "APSS"
+  - pattern: "SERVIZIO SANITARIO NAZIONALE"
+    name: "Servizio Sanitario Nazionale"
+  - pattern: "TICKET SANITARIO"
+    name: "Ticket sanitario"
+  - pattern: "MINISTERO DELLA SALUTE"
+    name: "Ministero della Salute"
+  # --- Local and regional government ------------------------------------------------
+  - pattern: "CITTA METROPOLITANA"
+    name: "Città Metropolitana"
+  - pattern: "CITTÀ METROPOLITANA"
+    name: "Città Metropolitana"
+  - pattern: "PROVINCIA DI"
+    name: "Provincia"
+  - pattern: "UNIONE DEI COMUNI"
+    name: "Unione dei Comuni"
+  - pattern: "COMUNITA MONTANA"
+    name: "Comunità Montana"
+  - pattern: "COMUNITÀ MONTANA"
+    name: "Comunità Montana"
+  - pattern: "MUNICIPIO"
+    name: "Municipio"
+  - pattern: "REGIONE LOMBARDIA"
+    name: "Regione Lombardia"
+  - pattern: "REGIONE LAZIO"
+    name: "Regione Lazio"
+  - pattern: "REGIONE VENETO"
+    name: "Regione Veneto"
+  - pattern: "REGIONE PIEMONTE"
+    name: "Regione Piemonte"
+  - pattern: "REGIONE CAMPANIA"
+    name: "Regione Campania"
+  - pattern: "REGIONE TOSCANA"
+    name: "Regione Toscana"
+  - pattern: "REGIONE EMILIA-ROMAGNA"
+    name: "Regione Emilia-Romagna"
+  - pattern: "REGIONE SICILIANA"
+    name: "Regione Siciliana"
+  - pattern: "REGIONE PUGLIA"
+    name: "Regione Puglia"
+  - pattern: "REGIONE CALABRIA"
+    name: "Regione Calabria"
+  - pattern: "REGIONE LIGURIA"
+    name: "Regione Liguria"
+  - pattern: "REGIONE MARCHE"
+    name: "Regione Marche"
+  - pattern: "REGIONE ABRUZZO"
+    name: "Regione Abruzzo"
+  - pattern: "REGIONE SARDEGNA"
+    name: "Regione Autonoma della Sardegna"
+  - pattern: "REGIONE UMBRIA"
+    name: "Regione Umbria"
+  - pattern: "REGIONE BASILICATA"
+    name: "Regione Basilicata"
+  - pattern: "REGIONE MOLISE"
+    name: "Regione Molise"
+  - pattern: "REGIONE FRIULI"
+    name: "Regione Friuli Venezia Giulia"
+  - pattern: "REGIONE VALLE D'AOSTA"
+    name: "Regione Valle d'Aosta"
+  - pattern: "PROVINCIA AUTONOMA DI TRENTO"
+    name: "Provincia autonoma di Trento"
+  - pattern: "PROVINCIA AUTONOMA DI BOLZANO"
+    name: "Provincia autonoma di Bolzano"
+  # --- Local taxes and charges ---------------------------------------------------------
+  - pattern: "IMPOSTA MUNICIPALE PROPRIA"
+    name: "IMU"
+  - pattern: "TASSA SUI RIFIUTI"
+    name: "TARI"
+  - pattern: "TASSA RIFIUTI"
+    name: "TARI"
+  - pattern: "CANONE UNICO PATRIMONIALE"
+    name: "Canone unico patrimoniale"
+  - pattern: "IMPOSTA DI SOGGIORNO"
+    name: "Imposta di soggiorno"
+  - pattern: 'regex:\bCOSAP\b'
+    name: "COSAP"
+  - pattern: 'regex:\bTOSAP\b'
+    name: "TOSAP"
+  - pattern: 'regex:\bTEFA\b'
+    name: "TEFA (tributo provinciale)"
+  # --- Wholly public water and waste operators -------------------------------------------
+  - pattern: "ACQUEDOTTO PUGLIESE"
+    name: "Acquedotto Pugliese"
+  - pattern: "ACQUA BENE COMUNE"
+    name: "ABC Napoli"
+  # --- Vehicles and roads -------------------------------------------------------------------
+  - pattern: "BOLLO AUTO"
+    name: "Bollo auto"
+  - pattern: "ACI PRA"
+    name: "PRA"
+  - pattern: 'regex:\bANAS\b'
+    name: "ANAS"
+  # --- Fines, police and the courts ------------------------------------------------------------
+  - pattern: "POLIZIA LOCALE"
+    name: "Polizia Locale"
+  - pattern: "POLIZIA DI STATO"
+    name: "Polizia di Stato"
+  - pattern: "CARABINIERI"
+    name: "Arma dei Carabinieri"
+  - pattern: "VIGILI DEL FUOCO"
+    name: "Vigili del Fuoco"
+  - pattern: "MINISTERO DELL INTERNO"
+    name: "Ministero dell'Interno"
+  - pattern: "MINISTERO DELL'INTERNO"
+    name: "Ministero dell'Interno"
+  - pattern: "VERBALE DI ACCERTAMENTO"
+    name: "Verbale di accertamento"
+  - pattern: "SANZIONE AMMINISTRATIVA"
+    name: "Sanzione amministrativa"
+  - pattern: "TRIBUNALE DI"
+    name: "Tribunale"
+  - pattern: "GIUDICE DI PACE"
+    name: "Giudice di Pace"
+  - pattern: "CORTE DI APPELLO"
+    name: "Corte di Appello"
+  - pattern: "PROCURA DELLA REPUBBLICA"
+    name: "Procura della Repubblica"
+  - pattern: "CONTRIBUTO UNIFICATO"
+    name: "Contributo unificato"
+  - pattern: "MARCA DA BOLLO"
+    name: "Marca da bollo"
+  - pattern: "MINISTERO DELLA GIUSTIZIA"
+    name: "Ministero della Giustizia"
+  - pattern: "PERMESSO DI SOGGIORNO"
+    name: "Permesso di soggiorno"
+  # --- Broadcasting -----------------------------------------------------------------------------
+  - pattern: "CANONE SPECIALE RAI"
+    name: "Canone speciale RAI"
+  - pattern: "CANONE TV"
+    name: "Canone RAI"
+  # --- Registries, cadastre and chambers -----------------------------------------------------------
+  - pattern: "CAMERA DI COMMERCIO"
+    name: "Camera di Commercio"
+  - pattern: "DIRITTO ANNUALE"
+    name: "Diritto annuale camerale"
+  - pattern: "REGISTRO IMPRESE"
+    name: "Registro Imprese"
+  - pattern: "INFOCAMERE"
+    name: "InfoCamere"
+  - pattern: "CONSERVATORIA DEI REGISTRI IMMOBILIARI"
+    name: "Conservatoria dei Registri Immobiliari"
+  - pattern: "AGENZIA DEL TERRITORIO"
+    name: "Agenzia del Territorio (ora Entrate)"
+  - pattern: "CATASTO"
+    name: "Catasto"
+  - pattern: "ORDINE DEGLI AVVOCATI"
+    name: "Ordine degli Avvocati"
+  - pattern: "ORDINE DEI MEDICI"
+    name: "Ordine dei Medici"
+  - pattern: "ORDINE DEGLI INGEGNERI"
+    name: "Ordine degli Ingegneri"
+  - pattern: "COLLEGIO DEI GEOMETRI"
+    name: "Collegio dei Geometri"
+  # --- Civil registry and identity documents ----------------------------------------------------------
+  - pattern: "ANAGRAFE"
+    name: "Anagrafe"
+  - pattern: "CARTA DI IDENTITA ELETTRONICA"
+    name: "Carta d'identità elettronica"
+  - pattern: "CARTA D'IDENTITÀ ELETTRONICA"
+    name: "Carta d'identità elettronica"
+  - pattern: "PASSAPORTO ELETTRONICO"
+    name: "Passaporto elettronico"
+  # --- Education and student support ---------------------------------------------------------------------
+  - pattern: "MINISTERO DELL ISTRUZIONE"
+    name: "Ministero dell'Istruzione e del Merito"
+  - pattern: "MINISTERO DELL'ISTRUZIONE"
+    name: "Ministero dell'Istruzione e del Merito"
+  - pattern: "UNIVERSITA DEGLI STUDI"
+    name: "Università degli Studi"
+  - pattern: "UNIVERSITÀ DEGLI STUDI"
+    name: "Università degli Studi"
+  - pattern: "TASSE UNIVERSITARIE"
+    name: "Tasse universitarie"
+  - pattern: "DIRITTO ALLO STUDIO"
+    name: "Diritto allo studio"
+  - pattern: 'regex:\bERSU\b'
+    name: "ERSU"
+  - pattern: 'regex:\bEDISU\b'
+    name: "EDISU"
+  - pattern: 'regex:\bADISU\b'
+    name: "ADISU"
+  - pattern: "ISTITUTO COMPRENSIVO"
+    name: "Istituto Comprensivo"
+  - pattern: "MENSA SCOLASTICA"
+    name: "Mensa scolastica"
+  # --- Central bank and generic ministry prefix -----------------------------------------------------------
+  - pattern: "BANCA D ITALIA"
+    name: "Banca d'Italia"
+  - pattern: "BANCA D'ITALIA"
+    name: "Banca d'Italia"
+  - pattern: "MINISTERO"
+    name: "Ministero"

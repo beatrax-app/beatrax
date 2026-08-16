@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Modifier la règle',
+    'heading_new' => 'Nouvelle règle',
+
+    'combinator_aria' => 'Combinaison des conditions',
+    'match_all' => 'Toutes les conditions',
+    'match_any' => 'Au moins une condition',
+
+    'condition_label' => 'Condition :number',
+    'condition_field_aria' => 'Champ de la condition :number',
+    'condition_operator_aria' => 'Opérateur de la condition :number',
+    'condition_value_aria' => 'Valeur de la condition :number',
+    'condition_value_from_aria' => 'Valeur de la condition :number (de)',
+    'condition_value_to_aria' => 'Valeur de la condition :number (à)',
+    'to' => 'à',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'ex. SPOTIFY',
+    'remove_condition' => 'Supprimer la condition',
+    'add_condition' => '+ Ajouter une condition',
+
+    'then' => 'Alors',
+    'action_label' => 'Action :number',
+    'action_type_aria' => 'Type de l\'action :number',
+    'action_category' => 'Catégorie',
+    'action_counterparty' => 'Tiers',
+    'action_note' => 'Note',
+    'action_tax_tag' => 'Marquage fiscal',
+    'assign_category_aria' => 'Attribuer une catégorie à l\'action :number',
+    'reassign_counterparty_aria' => 'Réattribuer à un tiers pour l\'action :number',
+    'note_text_aria' => 'Texte de la note pour l\'action :number',
+    'note_placeholder' => 'Texte de la note…',
+    'note_mode_aria' => 'Mode de la note pour l\'action :number',
+    'note_set' => 'Remplacer',
+    'note_append' => 'Ajouter à la suite',
+    'deduction_category_aria' => 'Catégorie de déduction pour l\'action :number',
+    'remove_action' => 'Supprimer l\'action',
+    'add_action' => '+ Ajouter une action',
+
+    'this_year_only' => 'Cette année seulement ▾',
+    'override_tax_year' => 'Forcer l\'année fiscale',
+    'tax_year_override_aria' => 'Année fiscale forcée pour l\'action :number',
+    'tax_tag_note' => 'Les actions de marquage fiscal s\'appliquent à la prochaine réapplication, pas à l\'import en cours.',
+
+    'priority' => 'Priorité',
+    'priority_help' => 'Les nombres les plus bas passent en premier. Les règles sans champs communs n\'entrent jamais en conflit.',
+
+    'cancel' => 'Annuler',
+    'save_changes' => 'Enregistrer les modifications',
+    'save_rule' => 'Enregistrer la règle',
+    'saving' => 'Enregistrement…',
+
+    'error_rule_unavailable' => 'Cette règle n\'est plus disponible.',
+    'error_invalid_data' => 'Données de règle invalides — choisis dans les listes déroulantes et réessaie.',
+    'error_duplicate' => 'Une règle avec ce champ, cette correspondance et cette valeur existe déjà. Modifie plutôt la règle existante.',
+    'error_priority_whole' => 'La priorité doit être un nombre entier.',
+    'error_add_condition' => 'Ajoute au moins une condition.',
+    'error_add_action' => 'Ajoute au moins une action.',
+    'condition_value_required' => 'Saisis une valeur pour la condition :position.',
+    'condition_bounds_required' => 'Choisis une borne inférieure et une borne supérieure pour la condition :position.',
+    'condition_amount_invalid' => 'Saisis un montant valide pour la condition :position.',
+    'action_pick_category' => 'Choisis une catégorie pour cette action.',
+    'action_pick_counterparty' => 'Choisis le tiers auquel réattribuer.',
+    'action_note_required' => 'Saisis le texte de la note.',
+    'action_pick_deduction' => 'Choisis une catégorie de déduction pour le marquage fiscal.',
+];

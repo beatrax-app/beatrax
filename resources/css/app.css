@@ -53,6 +53,23 @@
  * (16-03) can override it to 220px without re-declaring every other
  * token (UI-SPEC § Density rules).
  */
+/*
+ * Declares which schemes this page renders itself.
+ *
+ * Android's WebView applies ALGORITHMIC DARKENING to any page that does not
+ * say this, whenever the host app theme is dark — so it auto-inverted a page
+ * that was already dark, and the inversion engaged and disengaged across
+ * repaints. The DOM never changed, which is why the flicker was invisible to
+ * every class/style measurement; only this declaration turns it off.
+ */
+:root {
+    color-scheme: light;
+}
+
+:root.dark {
+    color-scheme: dark;
+}
+
 @theme {
     /* Surfaces */
     --color-bg: #ffffff;
@@ -221,6 +238,38 @@ td.date,
  * classes below honour the token block above — no hard-coded colors,
  * sizes flip with `.dark` automatically.
  */
+/*
+ * The app shell never scrolls sideways as a whole.
+ *
+ * A wide element inside a page — a data table, a long unbroken descriptor —
+ * can make the ROOT scroller wider than the viewport even when every ancestor
+ * measures correctly and clips its own overflow. When that happens the entire
+ * shell slides left: header, sidebar and all, so the page reads as broken
+ * rather than as "this table scrolls". Pages that need horizontal movement
+ * own it locally with `.overflow-x-auto` on the element itself, which keeps
+ * working — this only stops the document behind them from moving.
+ *
+ * Deliberately outside @layer components: unlayered rules beat layered ones
+ * in the cascade, and this must not lose to a utility.
+ */
+/*
+ * A horizontally scrollable box must not drag the page with it.
+ *
+ * `overflow-x: auto` lets the box scroll, but the wide content inside still
+ * contributes its width to the viewport's own scrollable area: on /uncategorized
+ * a 959px table inside a 324px wrapper let the whole app drag 586px sideways to
+ * a blank white screen, with every ancestor correctly measuring 390px. Clipping
+ * html/body does not help, because the overflow area is established regardless.
+ *
+ * `contain: paint` is what actually fixes it — it promises the browser nothing
+ * paints outside this box, so the box's overflow stops propagating upward.
+ * Verified by measurement: 586px of page drag becomes 0, and the box itself
+ * still scrolls its full 636px.
+ */
+.overflow-x-auto {
+    contain: paint;
+}
+
 @layer components {
     .side {
         background: var(--color-bg-subtle);
@@ -1395,10 +1444,33 @@ td.date,
      */
     .settings-section {
         display: grid;
-        grid-template-columns: 280px 1fr;
+        /* Single column first. A fixed 280px track plus its 1fr sibling needs
+           ~330px before padding, so on a phone the second column was laid out
+           past the right edge of a container narrower than the track itself. */
+        grid-template-columns: 1fr;
         gap: 24px;
         padding: 22px;
         border-bottom: 1px solid var(--color-border);
+    }
+
+    /* The 22px inset is a desktop measure. Nested inside the page card's own
+       padding it left too little room on a phone, so the rows still ran a
+       little past the right edge after the columns collapsed. */
+    @media (max-width: 767px) {
+        .settings-section {
+            padding: 14px 0;
+        }
+
+        .settings-section .meta-side,
+        .settings-section .body-side {
+            padding: 14px 0;
+        }
+    }
+
+    @media (min-width: 768px) {
+        .settings-section {
+            grid-template-columns: 280px 1fr;
+        }
     }
 
     .settings-section .meta-side {
@@ -1931,6 +2003,44 @@ td.date,
         transition: var(--tx-quick);
         text-decoration: none;
         color: inherit;
+        /* A counterparty name can be one unbroken token — an IBAN, a payment
+           reference — and a flex item defaults to min-width:auto, so the card
+           grew to whatever the token measured. On a phone that was ~970px
+           against a 390px viewport, dragging the whole page sideways. */
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    /* /chains rows carry counterparty names in the same flex shape, so they
+       inherit the same hazard the comment above describes. Named rather than
+       reusing .cp-card because a chain leg is a row in a group, not a card. */
+    .chain-name {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    /* The rail that ties a settlement's payments to the charge above them.
+       A plain border-l reads as decoration at 1px of --color-border; the
+       elbow into each row is what makes it read as "these feed into that",
+       which is the one thing this page exists to show. */
+    .chain-legs {
+        border-left: 1px solid var(--color-border-strong);
+    }
+
+    .chain-leg {
+        position: relative;
+    }
+
+    .chain-leg::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        /* Meets the first line of the row's text rather than its box, so the
+           elbow stays put when a long name wraps to three lines. */
+        top: 0.7em;
+        width: var(--space-2);
+        height: 1px;
+        background: var(--color-border-strong);
     }
 
     .cp-card:hover {
@@ -2352,6 +2462,80 @@ td.date,
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
+    }
+
+    /* The report builder's control rail. It was a hardcoded `flex: 0 0 280px`,
+       which is right beside a results pane and wrong on its own: the row wraps
+       on a phone, but the rail kept its 280px basis against a 390px viewport
+       and left ~80px of dead space down the right-hand side. */
+    .rpt-rail {
+        flex: 0 0 280px;
+        min-width: 260px;
+        background: var(--color-bg-subtle);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+
+    @media (max-width: 640px) {
+        .rpt-rail {
+            /* Alone on its line, so it should own the line. */
+            flex: 1 1 100%;
+            min-width: 0;
+            padding: var(--space-4);
+        }
+    }
+
+    /* One recent-transaction row. Three columns fit comfortably on a desktop
+       card, but at 390px the date and amount leave the description barely
+       100px — a bank descriptor shredded into a dozen lines. Below the card
+       breakpoint the description gets its own line and the date/amount pair
+       reads as one caption above it. */
+    .triage-tx {
+        display: flex;
+        gap: var(--space-3);
+        padding: var(--space-1) 0;
+        font-size: var(--text-sm);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .triage-tx__date {
+        color: var(--color-text-muted);
+        white-space: nowrap;
+    }
+
+    .triage-tx__desc {
+        flex: 1 1 auto;
+        /* A descriptor is frequently one unbroken token, and a flex item
+           defaults to min-width:auto, so the row grew to whatever the token
+           measured and ran off the right edge. */
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .triage-tx__amount {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+        .triage-tx {
+            flex-wrap: wrap;
+            gap: 0 var(--space-3);
+        }
+
+        .triage-tx__desc {
+            /* Full width on its own line, after the date/amount caption. */
+            flex: 1 0 100%;
+            order: 2;
+        }
+
+        .triage-tx__amount {
+            margin-left: auto;
+        }
     }
 
     .triage-actions {
@@ -2888,6 +3072,42 @@ td.date,
         gap: var(--space-2);
     }
 
+    .locale-switcher-select {
+        min-height: 44px;
+        padding: 0 var(--space-3);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-surface);
+        color: var(--color-text);
+        font-size: var(--text-sm);
+        cursor: pointer;
+    }
+
+    .locale-switcher-select:focus-visible,
+    .locale-switcher-go:focus-visible {
+        outline: 2px solid var(--color-emerald);
+        outline-offset: 2px;
+    }
+
+    /* Only needed before the bundle boots — once Alpine is up the select
+       submits on change and this is dead weight in the corner of a first-run
+       screen. */
+    .locale-switcher-go {
+        min-height: 44px;
+        padding: 0 var(--space-3);
+        border: 0;
+        border-radius: var(--radius-md);
+        background: transparent;
+        color: var(--color-text-muted);
+        font-size: var(--text-sm);
+        cursor: pointer;
+    }
+
+    /* The Apply button is hidden by Alpine's own x-show once it boots, not by
+       a cloak rule: cloaking hides an element UNTIL Alpine is alive, which is
+       exactly backwards here. Without JS the button must stay — it is the
+       only way to change language before the bundle loads. */
+
     .locale-switcher-option {
         min-height: 44px;
         padding: 0 var(--space-3);
@@ -2916,8 +3136,17 @@ td.date,
         flex-shrink: 0;
     }
 
-    .top-bar-title {
+    .top-bar-brand {
         flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        min-width: 0;
+    }
+
+    .top-bar-title {
+        min-width: 0;
         text-align: center;
         font-size: var(--text-sm);
         font-weight: 600;
@@ -2976,8 +3205,59 @@ td.date,
             overflow-y: auto;
         }
 
+        /* No display rule here. Alpine's x-show owns whether the scrim is
+           shown, and `display: block !important` beat it — so on every
+           phone-width page carrying a sheet, a fixed full-screen layer sat
+           over the app swallowing taps while scrolling still worked. */
+        /* Small controls need a 44px TOUCH target (D-14 / WCAG 2.5.5) without
+           becoming 44px of visible button — growing them with min-height made
+           every chip and link look inflated. An overlaid pseudo-element
+           extends the hit area past the paint instead, so the control keeps
+           its size and the finger gets its room. */
+        .chip,
+        .srch-chip-toggle,
+        .tap-link,
+        td > a:only-child {
+            position: relative;
+        }
+
+        .chip::after,
+        .srch-chip-toggle::after,
+        .tap-link::after,
+        td > a:only-child::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 44px;
+            transform: translateY(-50%);
+        }
+
+        /* The transaction row is one flex line: the name link shrinks (min-w-0)
+           while the tax badge, status pill and amount do not. At phone width
+           those three took ~230px of 324 and left the counterparty name 28px
+           — a two-line clamp inside a sliver. The link takes the full first
+           line (w-full below sm, in the markup), and these let the rest wrap
+           beneath it with the amount kept to the right. */
+        .card-list-item {
+            flex-wrap: wrap;
+            row-gap: var(--space-2);
+        }
+
+        /* A counterparty with no spaces — an IBAN, a payment reference — has
+           no break opportunity, so the clamp cannot save it and the text runs
+           under the amount. Same guard the counterparty cards and the tax
+           rows already carry. */
+        .card-list-item .primary {
+            overflow-wrap: anywhere;
+        }
+
+        .card-list-item .amount {
+            margin-left: auto;
+        }
+
         .bottom-sheet-scrim {
-            display: block !important;
             position: fixed;
             inset: 0;
             z-index: 50;
@@ -4285,5 +4565,92 @@ mark {
         background: var(--color-surface-2);
         color: var(--color-text-muted);
         white-space: nowrap;
+    }
+}
+
+/*
+ * Lock veil background.
+ *
+ * `bg-white dark:bg-slate-950` resolved to white until the `dark` class landed
+ * on <html>, so backgrounding the app flashed white before covering the
+ * content — the one thing the veil exists to prevent. `--color-bg` already
+ * tracks the active theme, and the media query covers the frames before any
+ * class is applied at all.
+ */
+.beatrax-veil {
+    background-color: var(--color-bg, #ffffff);
+    /*
+     * A popover carries UA styles (auto margins, a border, fit-content
+     * sizing) that would shrink the veil to a centred box, so the full-screen
+     * geometry is restated here for when it is in the top layer.
+     */
+    margin: 0;
+    border: 0;
+    padding: 0;
+    max-width: none;
+    max-height: none;
+    width: 100%;
+    height: 100%;
+    /*
+     * Above EVERYTHING, including Flux's modal layer. The Tailwind z-[9999] on
+     * the element lost to dialogs that create their own stacking context, so an
+     * open modal — the pairing QR among them — stayed readable through the
+     * privacy veil, which is the one moment it must not.
+     */
+    z-index: 2147483000;
+}
+
+@media (prefers-color-scheme: dark) {
+    html:not(.light) .beatrax-veil {
+        background-color: var(--color-bg, #020617);
+    }
+}
+
+/*
+ * Covering is instant; only uncovering fades. An 80ms fade-IN left the page
+ * legible underneath for those 80ms, which is precisely the window an
+ * app-switcher snapshot lands in.
+ */
+.beatrax-veil.opacity-100 {
+    transition-duration: 0ms;
+}
+
+/*
+ * `popover` elements are display:none until opened; the veil manages its own
+ * visibility through opacity so it can fade out, and must stay laid out.
+ */
+.beatrax-veil:popover-open {
+    display: flex;
+}
+
+/*
+ * Shell background for the lock surfaces.
+ *
+ * `bg-white dark:bg-slate-950` cannot be correct before the `dark` class is
+ * applied, and on the lock screen that first frame IS the whole page — it
+ * painted white and then flipped. `--color-bg` already tracks the resolved
+ * theme, and the prepaint component adds a prefers-color-scheme fallback for
+ * the frames before any class exists.
+ */
+.beatrax-shell {
+    background-color: var(--color-bg, #ffffff);
+}
+
+/* Indeterminate progress: the running setup step often has no countable
+   unit, and a static full bar read as a finished sync that had stalled. */
+@keyframes beatrax-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+}
+
+.beatrax-indeterminate {
+    animation: beatrax-indeterminate 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .beatrax-indeterminate {
+        animation: none;
+        width: 100%;
+        opacity: 0.35;
     }
 }

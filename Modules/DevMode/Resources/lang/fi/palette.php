@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'search_placeholder' => 'Kirjoita hakeaksesi näkymiä, komentoja ja toimintoja. Sulje painamalla Esc.',
+    'search_aria' => 'Kirjoita hakeaksesi näkymiä, komentoja ja toimintoja',
+    'dialog_aria' => 'Komentopaletti',
+    'token_suggest_aria' => 'Token-ehdotukset',
+    'rail_view' => 'Näkymä',
+    'rail_dev' => 'Dev',
+    'rail_action' => 'Toiminto',
+    'rail_recent' => 'Viimeisimmät',
+    'no_recent' => 'Ei vielä viimeisimpiä valintoja.',
+    'section_transactions' => 'Tapahtumat',
+    'section_counterparties' => 'Vastapuolet',
+    'section_categories' => 'Kategoriat',
+    'section_goals_recurring' => 'Tavoitteet ja toistuvat maksut',
+    'no_name' => '(ei nimeä)',
+    'see_all_prefix' => 'Näytä kaikki ',
+    'see_all_suffix' => ' tulosta →',
+    'no_transactions_prefix' => 'Mikään tapahtuma ei vastaa hakua ”',
+    'no_transactions_suffix' => '”',
+    'source_txn' => 'tapahtuma',
+    'source_counterparty' => 'vastapuoli',
+    'source_category' => 'kategoria',
+    'no_results' => 'Ei tuloksia.',
+    'foot_navigate' => 'siirry',
+    'foot_select' => 'valitse',
+    'foot_close' => 'sulje',
+    'foot_try' => 'Kokeile',
+    'results_suffix' => ' tulosta',
+];

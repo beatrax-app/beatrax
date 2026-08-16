@@ -9,6 +9,7 @@ use Livewire\Livewire;
 use Modules\Core\Internal\Http\Livewire\SettingsPage;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Enums\Locale;
 use Symfony\Component\HttpFoundation\Response;
 
 /*
@@ -59,7 +60,13 @@ it('detects Dutch from a guest Accept-Language header', function (): void {
 });
 
 it('defaults a guest to English when the browser prefers an unsupported language', function (): void {
-    expect(localeAfterMiddleware(localeBrowserRequest('de-DE,de;q=0.9')))->toBe('en');
+    expect(localeAfterMiddleware(localeBrowserRequest('ja-JP,ja;q=0.9')))->toBe('en');
+});
+
+it('detects every shipped language from a guest Accept-Language header', function (): void {
+    foreach (Locale::cases() as $case) {
+        expect(localeAfterMiddleware(localeBrowserRequest($case->value)))->toBe($case->value);
+    }
 });
 
 it('honours a stored user override above the browser preference', function (): void {
@@ -102,10 +109,23 @@ it('rejects an unsupported locale value', function (): void {
     $this->actingAs($user);
 
     Livewire::test(SettingsPage::class)
-        ->call('setLocale', 'de')
+        ->call('setLocale', 'ja')
         ->assertHasErrors('locale');
 
     expect($user->fresh()->locale)->toBeNull();
+});
+
+it('accepts every locale the enum declares', function (): void {
+    $user = makeLocaleUser(null);
+    $this->actingAs($user);
+
+    foreach (Locale::cases() as $case) {
+        Livewire::test(SettingsPage::class)
+            ->call('setLocale', $case->value)
+            ->assertHasNoErrors('locale');
+
+        expect($user->fresh()->locale)->toBe($case->value);
+    }
 });
 
 it('renders the settings page in Dutch when the active locale is nl', function (): void {

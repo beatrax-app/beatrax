@@ -7,7 +7,7 @@ return [
     'heading' => 'Ketens',
     'review_link' => 'Beoordelingswachtrij →',
     'hints_link' => 'Hints →',
-    'subtitle' => 'Elke keten die de resolver heeft gevonden. Klik op de gefinancierde transactie van een rij om de ketenlade te openen voor de volledige vertakking.',
+    'subtitle' => 'Aankopen die samen als één afschrijving zijn geïnd. Elke kaart toont één afschrijving en de betalingen die erin zaten.',
 
     'empty_heading' => 'Nog geen ketens',
     'empty_body' => 'Importeer een paar afschriften (bank, PayPal, kaart) en de resolver toont hier automatisch ketens over meerdere rekeningen.',
@@ -15,6 +15,7 @@ return [
     'no_counterparty' => '(geen tegenpartij)',
     'open_from_row' => 'Van-rij openen',
     'open_to_row' => 'Naar-rij openen',
+    'leg_count' => '1 betaling|:count betalingen',
     'state_aria' => 'Status: :state',
 
     'kind' => [

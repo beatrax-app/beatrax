@@ -47,7 +47,7 @@ it('all six shipped country files parse and yield at least 3 entries each', func
         expect($entry)->toHaveKey('key');
         expect($entry)->toHaveKey('name');
     }
-})->with(['nl', 'de', 'be', 'fr', 'gb', 'us']);
+})->with(['at', 'be', 'cy', 'cz', 'de', 'dk', 'ee', 'es', 'fi', 'fr', 'gb', 'gr', 'ie', 'is', 'it', 'lt', 'lu', 'lv', 'mt', 'nl', 'no', 'pl', 'pt', 'se', 'sk', 'us']);
 
 it('logs a warning and returns empty list when a known country has no corpus file', function (): void {
     /** @var LoggerInterface&MockInterface $logger */

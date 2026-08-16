@@ -16,6 +16,7 @@ use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
+use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
@@ -105,6 +106,7 @@ it('unlinks the .eml when the following DB transaction throws, then succeeds on 
             $this->app->make(MimeHeaderParser::class),
             new InboxScanStateMachine($realDb, $this->app->make(Clock::class)),
             $this->app->make(KnownSenderQuery::class),
+            $this->app->make(JobUserContext::class),
         );
         $this->fail('Expected RuntimeException from injected DB failure');
     } catch (RuntimeException $e) {

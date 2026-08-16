@@ -25,6 +25,18 @@ final class RelayRefusedException extends RuntimeException
         );
     }
 
+    // A configured pin is an explicit security expectation, so a runtime that
+    // cannot honour it refuses rather than connecting unauthenticated: the
+    // certificate is self-signed, and without the pin nothing tells it apart
+    // from an impostor on the same network.
+    public static function pinningUnsupported(string $sslBackend): self
+    {
+        return new self(
+            'The relay endpoint is pinned, but this runtime cannot verify certificate pins '
+            ."(TLS backend: {$sslBackend}). Refusing to connect without verifying the relay's identity.",
+        );
+    }
+
     // Routing metadata — which device is talking to which — is visible to
     // anything on the path even though the payload is not, which is the whole
     // reason the transport insists on TLS to the relay.

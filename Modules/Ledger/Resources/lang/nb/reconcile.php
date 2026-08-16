@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Avstemming',
+    'heading' => 'Avstemming',
+    'intro' => 'Bekreft saldoen på kontoutskriften for en konto mot de bokførte transaksjonene dine. Når de stemmer, fullfører du avstemmingen for å låse radene.',
+
+    'account' => 'Konto',
+    'choose_account' => 'Velg en konto…',
+    'statement_date' => 'Kontoutskriftens dato',
+    'statement_balance' => 'Saldo ifølge kontoutskrift (€)',
+    'balance_help' => 'Fylles ut på forhånd fra den sist importerte kontoutskriften din når det er mulig — negativ ved gjeld, og redigerbar uansett.',
+
+    'cleared_balance' => 'Bokført saldo',
+    'statement_target' => 'Målsaldo ifølge kontoutskrift',
+    'difference' => 'Differanse',
+
+    'pill' => [
+        'choose_account' => 'velg en konto',
+        'enter_balance' => 'angi en saldo fra kontoutskriften',
+        'matched' => 'stemmer — :amount',
+        'discrepancy' => 'avvik — :amount',
+    ],
+
+    'mismatch_html' => 'Saldoen ifølge kontoutskriften stemmer ennå ikke med den bokførte saldoen din. Slå bokførte rader av og på i <a href=":url" class="underline">transaksjonslisten</a>, eller juster saldoen du har angitt, til differansen når null — denne flyten oppretter aldri en utjevnende postering.',
+
+    'check' => 'Kontroller',
+    'complete' => 'Fullfør avstemmingen',
+
+    'errors' => [
+        'choose_account' => 'Velg en konto først.',
+        'invalid_balance_date' => 'Angi en gyldig saldo fra kontoutskriften og en gyldig dato.',
+        'mismatch' => 'Saldoen ifølge kontoutskriften stemmer ennå ikke med den bokførte saldoen — juster bokførte rader eller saldoen du har angitt, til differansen er null.',
+    ],
+
+    'toast' => [
+        'nothing_to_lock' => 'Ingenting å låse for denne datoen på kontoutskriften.',
+        'complete' => 'Avstemmingen er fullført — :count rader er låst.',
+    ],
+];

@@ -19,6 +19,11 @@ use Psr\Log\LoggerInterface;
  */
 final class InitialSyncPuller
 {
+    // The cursor state between "transfer finished" and "history rebuilt".
+    // Without it the rebuild ran inside the tick that finished the transfer
+    // and the step was never rendered.
+    private const string PHASE_REBUILDING = 'rebuilding';
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly MobileSyncTriggerService $trigger,
@@ -34,7 +39,7 @@ final class InitialSyncPuller
     // Safe to call repeatedly (e.g. from a Livewire wire:poll tick) -
     // once phase reaches complete this is a cheap idempotent no-op.
     /**
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
      */
     public function pull(
         int $userId,
@@ -51,7 +56,7 @@ final class InitialSyncPuller
             // Locked / no key / sync never enabled, or no confirmed peer
             // yet - skip entirely. Data stays encrypted; the cursor is left
             // untouched.
-            return $this->progress($userId);
+            return [...$this->progress($userId), 'blocked' => SyncBlockedReason::NoPeer];
         }
 
         $cursor = $this->loadOrCreateCursor($userId, $peerDeviceId);
@@ -69,7 +74,7 @@ final class InitialSyncPuller
     // apply-and-persist body behind them.
     /**
      * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string, reprojected_at: ?string}  $cursor
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
      */
     private function advance(
         int $userId,
@@ -84,13 +89,14 @@ final class InitialSyncPuller
         if ($result === null) {
             // The key became unavailable mid-flow (race) - skip, no
             // mutation.
-            return $this->toProgressArray($cursor);
+            return [...$this->toProgressArray($cursor), 'blocked' => SyncBlockedReason::Locked];
         }
 
         [$newlyApplied, $maxHlcL, $maxHlcC] = $this->countAppliedSince(
             $userId,
             $cursor['last_hlc_l'],
             $cursor['last_hlc_c'],
+            $peerDeviceId,
         );
 
         $recordsApplied = $cursor['records_applied'] + $newlyApplied;
@@ -99,11 +105,39 @@ final class InitialSyncPuller
 
         $keysInstalled = $this->keyringIsNonEmpty($userId);
 
+        // Announce the rebuild on the tick BEFORE running it. Re-projecting
+        // blocks the request it runs in, so doing it in the tick that
+        // finished the transfer made the screen jump straight to done,
+        // never showing the step that actually takes the time.
+        $reprojectedAt = $cursor['reprojected_at'];
+        $announceRebuild = $reprojectedAt === null
+            && $keysInstalled
+            && $result === true
+            && $cursor['phase'] !== self::PHASE_REBUILDING;
+
+        if ($announceRebuild) {
+            $this->persistCursor($userId, $peerDeviceId, new MobileSyncCursor(
+                recordsApplied: $recordsApplied,
+                recordsExpected: max($cursor['records_expected'] ?? 0, $recordsApplied),
+                lastHlcL: $lastHlcL,
+                lastHlcC: $lastHlcC,
+                phase: self::PHASE_REBUILDING,
+                reprojectedAt: null,
+            ));
+
+            return [
+                'records_applied' => $recordsApplied,
+                'records_expected' => $recordsApplied,
+                'percent' => 100,
+                'phase' => self::PHASE_REBUILDING,
+                'blocked' => SyncBlockedReason::Reprojecting,
+            ];
+        }
+
         // The FIRST pull() step to observe a non-empty keyring re-projects
         // the entire persisted op-log so any entry quarantined before the
         // keyring was populated now decrypts and projects. Runs at most
         // once per (user, peer) cursor, synchronously before completion.
-        $reprojectedAt = $cursor['reprojected_at'];
         if ($reprojectedAt === null && $keysInstalled) {
             try {
                 $this->reprojector->reproject($userId);
@@ -139,11 +173,22 @@ final class InitialSyncPuller
             reprojectedAt: $reprojectedAt,
         ));
 
+        // A silent screen is indistinguishable from a working one: this
+        // names what the pull is waiting on so a stall is legible instead of
+        // looking like an ordinary slow sync.
+        $blocked = match (true) {
+            $result === false => SyncBlockedReason::Unreachable,
+            ! $keysInstalled => SyncBlockedReason::NoKeys,
+            $reprojectedAt === null => SyncBlockedReason::Reprojecting,
+            default => null,
+        };
+
         return [
             'records_applied' => $recordsApplied,
             'records_expected' => $recordsExpected,
             'percent' => self::percentOf($recordsApplied, $recordsExpected),
             'phase' => $phase,
+            'blocked' => $blocked,
         ];
     }
 
@@ -165,7 +210,7 @@ final class InitialSyncPuller
     // so a cold-started process renders at the true resumed percent on
     // its very first paint - never a default-0 flash.
     /**
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
      */
     public function progress(int $userId): array
     {
@@ -176,7 +221,7 @@ final class InitialSyncPuller
             ->first();
 
         if ($row === null) {
-            return ['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => 'pending'];
+            return ['records_applied' => 0, 'records_expected' => null, 'percent' => 0, 'phase' => 'pending', 'blocked' => null];
         }
 
         $recordsApplied = is_numeric($row->records_applied) ? (int) $row->records_applied : 0;
@@ -188,6 +233,7 @@ final class InitialSyncPuller
             'records_expected' => $recordsExpected,
             'percent' => self::percentOf($recordsApplied, $recordsExpected),
             'phase' => $phase,
+            'blocked' => null,
         ];
     }
 
@@ -271,14 +317,14 @@ final class InitialSyncPuller
             ]);
     }
 
-    // Counts how many local op_log_entries rows exist strictly after
-    // ($lastHlcL, $lastHlcC), and the max (hlc_l, hlc_c) among them. A
-    // repeated call against an unchanged watermark returns 0 - the
-    // watermark only ever advances, so this never double-counts.
+    // Counts how many entries FROM THE PEER exist strictly after ($lastHlcL,
+    // $lastHlcC), and the max (hlc_l, hlc_c) among them. A repeated call
+    // against an unchanged watermark returns 0 - the watermark only ever
+    // advances, so this never double-counts.
     /**
      * @return array{0: int, 1: int, 2: int} [count, maxHlcL, maxHlcC]
      */
-    private function countAppliedSince(int $userId, int $lastHlcL, int $lastHlcC): array
+    private function countAppliedSince(int $userId, int $lastHlcL, int $lastHlcC, string $peerDeviceId): array
     {
         $frames = $this->catchUp->opsAfterWatermark($userId, $lastHlcL, $lastHlcC);
 
@@ -288,6 +334,14 @@ final class InitialSyncPuller
 
         foreach ($frames as $frame) {
             foreach ($this->framer->decode($frame) as $entry) {
+                // Only what the PEER sent counts as progress. The watermark
+                // covers this device's own writes too, so a phone reported its
+                // own seeded rows as records received from a desktop it had
+                // never actually reached.
+                if ($entry->deviceId !== $peerDeviceId) {
+                    continue;
+                }
+
                 $count++;
 
                 if ($entry->hlcL > $maxHlcL || ($entry->hlcL === $maxHlcL && $entry->hlcC > $maxHlcC)) {
@@ -302,7 +356,7 @@ final class InitialSyncPuller
 
     /**
      * @param  array{records_applied: int, records_expected: ?int, last_hlc_l: int, last_hlc_c: int, phase: string}  $cursor
-     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string}
+     * @return array{records_applied: int, records_expected: ?int, percent: int, phase: string, blocked: ?SyncBlockedReason}
      */
     private function toProgressArray(array $cursor): array
     {
@@ -311,6 +365,7 @@ final class InitialSyncPuller
             'records_expected' => $cursor['records_expected'],
             'percent' => self::percentOf($cursor['records_applied'], $cursor['records_expected']),
             'phase' => $cursor['phase'],
+            'blocked' => null,
         ];
     }
 

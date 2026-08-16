@@ -1,0 +1,105 @@
+# Support-resource corpus — Poland (PL merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Orange Polska
+    type: merchant
+    support_url: "https://www.orange.pl/kontakt"
+    notes: "Orange nie udostępnia online formularza wypowiedzenia umowy — sprawy obsługowe załatwisz pod numerem *100 lub 510 100 100 (połączenie bezpłatne dla klientów Orange), w salonie albo pisemnie na adres Orange Polska S.A., ul. Jagiellońska 34, 96-100 Skierniewice."
+  - name: Play
+    type: merchant
+    cancel_url: "https://www.play.pl/pomoc/moja-umowa/rozwiazanie-umowy"
+    support_url: "https://www.play.pl/pomoc/kontakt"
+    notes: "Strona Wypowiedzenie umowy – najważniejsze informacje prowadzi do osobnych instrukcji dla klienta usług telekomunikacyjnych i dla abonenta usług multimedialnych. Play zastrzega, że ma prawo dochodzić zapłaty odszkodowania, jeśli rozwiążesz umowę przed upływem okresu zobowiązania promocyjnego."
+  - name: T-Mobile Polska
+    type: merchant
+    cancel_url: "https://www.t-mobile.pl/c/prawo-do-odstapienia-od-umowy-w-kanale-zdalnym-strona-internet"
+    support_url: "https://www.t-mobile.pl/d/kontakt"
+    notes: "Odstąpienie od umowy zawartej zdalnie złożysz pisemnie, pocztą elektroniczną, przez formatkę dostępną po zalogowaniu na www.t-mobile.pl albo na czacie; przy ofertach z gwarancją satysfakcji z sieci masz 30 dni i darmowy zwrot sprzętu przez InPost. Na zwykłe wypowiedzenie umowy T-Mobile nie ma żadnego formularza online."
+  - name: Plus
+    type: merchant
+    support_url: "https://www.plus.pl/pomoc-faq"
+    notes: "W pomocy Plusa są wyłącznie przedłużenie lub zmiana umowy, faktury i doładowania — nie ma ani formularza rezygnacji, ani strony o wypowiedzeniu umowy, więc sprawę trzeba zgłosić kanałami kontaktu wskazanymi na plus.pl."
+  - name: Netia
+    type: merchant
+    cancel_url: "https://www.netia.pl/pl/wypowiedzenie-umowy"
+    support_url: "https://www.netia.pl/pl/kontakt"
+    notes: "Umowę przedłużoną automatycznie na czas nieokreślony wypowiesz w dowolnym momencie z miesięcznym okresem wypowiedzenia; rozwiązanie umowy terminowej przed czasem oznacza opłatę odszkodowawczą, a żeby umowa skończyła się dokładnie z dniem jej zakończenia, dyspozycję złóż co najmniej jeden pełny okres rozliczeniowy wcześniej. Rezygnację składasz mailem na info@netia.pl, pocztą na Netia SA, skr. poczt. nr 597, 40-950 Katowice S105, w salonie albo w serwisie Netia Online."
+  - name: Vectra
+    type: merchant
+    support_url: "https://www.vectra.pl/kontakt"
+    notes: "Vectra nie publikuje formularza rezygnacji — na stronie kontaktu jest infolinia 601 601 601, Strefa Klienta i baza dokumentów, a pytania o umowę zbiera FAQ w kategorii umowy i płatności."
+  - name: TAURON
+    type: merchant
+    cancel_url: "https://www.tauron.pl/dla-domu/obsluga-i-pomoc/formularze-i-wnioski/protokol-zdawczo-odbiorczy"
+    support_url: "https://www.tauron.pl/dla-domu/kontakt"
+    notes: "Umowę na prąd kończy się protokołem zdawczo-odbiorczym — poprawnie wypełniona część zdającego jest dla TAURONA sygnałem do rozwiązania z tą osobą umowy i wystawienia rozliczenia końcowego za zużytą energię, a osoba przejmująca licznik zawiera nową umowę."
+  - name: PZU
+    type: merchant
+    cancel_url: "https://www.pzu.pl/kontakt-i-pomoc/produkty-i-ich-kontynuacja/jak-wypowiedziec-umowe"
+    support_url: "https://www.pzu.pl/kontakt-i-pomoc"
+    notes: "Wypowiedzenie przekażesz jako załącznik do zgłoszenia w aplikacji mojePZU, mailem na kontakt@pzu.pl, pocztą na PZU, ul. Postępu 18a, 02-676 Warszawa albo osobiście w oddziale lub u agenta; PZU udostępnia gotowe wzory wypowiedzenia m.in. dla OC pojazdów mechanicznych, OC rolników i ubezpieczeń NNW oraz na życie."
+  - name: CANAL+ Polska
+    type: merchant
+    cancel_url: "https://pl.canalplus.com/pomoc/jak-zrezygnowac-z-umowy"
+    support_url: "https://pl.canalplus.com/pomoc"
+    notes: "Instrukcja rezygnacji jest w Centrum pomocy CANAL+ na stronie Jak zrezygnować z umowy; osobny artykuł Chcę wycofać złożoną rezygnację opisuje, jak cofnąć wypowiedzenie, które już złożyłeś."
+  - name: CityFit
+    type: merchant
+    support_url: "https://cityfit.pl/faq"
+    notes: "Karnet elastyczny ma miesięczny okres wypowiedzenia liczony od końca bieżącego okresu rozliczeniowego — po złożeniu wypowiedzenia system naliczy jeszcze jeden pełny miesiąc i dopiero zakończy karnet. Rezygnację z karnetu na 6 lub 12 miesięcy złóż najpóźniej w ostatnim miesiącu trwania umowy, bo inaczej przejdzie ona automatycznie na czas nieokreślony i będzie odnawiać się co miesiąc."
+  - name: mBank
+    type: merchant
+    cancel_url: "https://www.mbank.pl/firmy/konta-firmowe/pytania-i-odpowiedzi/wypowiedzenie-rachunku/"
+    support_url: "https://www.mbank.pl/kontakt/"
+    notes: "Wypowiedzenie umowy rachunku — w całości albo w części dotyczącej rachunku osobistego lub firmowego — złożysz w serwisie transakcyjnym w ścieżce Finanse, Usługi, Nowa usługa, Wypowiedzenie umowy, u konsultanta mLinii albo w placówce. Karta płatnicza działa przez cały okres wypowiedzenia, a potwierdzenie mBank wyśle e-mailem lub listem na adres korespondencyjny."
+  - name: LUX MED
+    type: merchant
+    support_url: "https://www.luxmed.pl/dla-pacjenta/kontakt"
+    notes: "Infolinia ogólna LUX MED to 22 33 22 888, czynna pon.-pt. 6:00-22:00 oraz sob.-nd. 7:00-21:00, obok niej działają infolinie specjalistyczne; serwis nie publikuje formularza rezygnacji z pakietu medycznego."
+  - name: Medicover
+    type: merchant
+    support_url: "https://www.medicover.pl/uslugi-medicover/kontakt-i-pomoc/"
+    notes: "Wizyty domowe 500 900 999 (7 dni w tygodniu, 24 godziny na dobę), telefoniczna porada medyczna 500 900 510 (pn.-pt. 7:00-24:00, sob.-nd. 7:00-18:00), a umawianie wizyt i czat z lekarzem w Medicover OnLine; formularza rezygnacji z pakietu w serwisie nie ma."
+
+  # --- Government ---
+  - name: e-Urząd Skarbowy
+    type: government
+    help_url: "https://www.podatki.gov.pl/skontaktuj-sie-z-nami"
+    apply_url: "https://www.podatki.gov.pl/e-urzad-skarbowy"
+    phone: "22 330 03 30"
+    notes: "Sprawy podatkowe załatwisz w e-Urzędzie Skarbowym, logując się m.in. aplikacją mObywatel lub bankowością elektroniczną. Konsultant KAS odpowiada na pytania podatkowe i celne pod numerem 22 330 03 30, wizytę w urzędzie skarbowym rezerwujesz online, a naruszenia prawa podatkowego lub celnego zgłaszasz na krajowy telefon interwencyjny KAS 800 060 000."
+  - name: ZUS
+    type: government
+    help_url: "https://www.zus.pl/o-zus/kontakt/centrum-obslugi-telefonicznej-cot-"
+    rights_url: "https://www.zus.pl/swiadczenia"
+    phone: "22 560 16 00"
+    notes: "Centrum Kontaktu Klientów ZUS działa pod numerem 22 560 16 00 — komunikaty informacyjne odsłuchasz 24 godziny na dobę przez 7 dni w tygodniu, a konsultanci (wybierz 0) są dostępni pon.-pt. w godz. 7:00-18:00. Wnioski, pisma i informacje o zasiłkach, emeryturach i rentach masz po zalogowaniu do eZUS."
+  - name: NFZ
+    type: government
+    help_url: "https://www.nfz.gov.pl/kontakt/telefoniczna-informacja-pacjenta/"
+    apply_url: "https://pacjent.gov.pl/"
+    rights_url: "https://www.nfz.gov.pl/dla-pacjenta/prawa-pacjenta/"
+    phone: "800 190 590"
+    notes: "Telefoniczna Informacja Pacjenta to bezpłatna infolinia 800 190 590 czynna 24 godziny na dobę przez 7 dni w tygodniu. E-recepty, skierowania i historię leczenia znajdziesz na Internetowym Koncie Pacjenta na pacjent.gov.pl — logujesz się profilem zaufanym albo bezpłatną aplikacją mojeIKP."
+  - name: Urzędy pracy
+    type: government
+    help_url: "https://zielonalinia.gov.pl/"
+    apply_url: "https://zielonalinia.gov.pl/rejestracja-32132/"
+    rights_url: "https://zielonalinia.gov.pl/zasilek-dla-bezrobotnych"
+    phone: "19524"
+    notes: "Zielona Linia to centrum informacyjne urzędów pracy — infolinia 19524 (opłata zgodna z taryfą osoby dzwoniącej) czynna w dni robocze w godzinach 8:00-18:00, jest też bezpłatna usługa oddzwonienia i czat z konsultantem. Tu sprawdzisz zasady rejestracji w urzędzie pracy i wysokość zasiłku dla bezrobotnych."
+  - name: mObywatel / gov.pl
+    type: government
+    help_url: "https://www.gov.pl/web/gov/uslugi-dla-obywatela"
+    apply_url: "https://www.gov.pl/web/mobywatel"
+    phone: "222 500 115"
+    notes: "Katalog usług dla obywatela na gov.pl obejmuje m.in. unieważnienie dowodu osobistego, mLegitymację i Kartę Dużej Rodziny, a w sprawach urzędowych pomaga infolinia Informacja dla obywatela 222 500 115. mObywatel to bezpłatna aplikacja z mDowodem i dostępem do usług administracji państwowej."
+  - name: CEPiK - Historia pojazdu
+    type: government
+    apply_url: "https://www.gov.pl/web/gov/sprawdz-historie-pojazdu"
+    notes: "Usługa Historia pojazdu daje bezpłatny dostęp do aktualnych danych z państwowego rejestru Centralnej Ewidencji Pojazdów (CEP) oraz z rejestrów zagranicznych — sprawdzisz w niej m.in. ważność obowiązkowego badania technicznego i ubezpieczenia używanego samochodu lub motocykla."

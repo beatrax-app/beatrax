@@ -127,12 +127,22 @@
         }
     },
     "scripts": {
+        "pre-autoload-dump": [
+            "Google\\Task\\Composer::cleanup"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "Google\\Task\\Composer::cleanup",
             "@php artisan package:discover --ansi"
         ],
-        "test": "pest --parallel --processes=4",
+        "test": [
+            "@putenv PHP_INI_SCAN_DIR=:tools/test-php-ini",
+            "pest --parallel --processes=4"
+        ],
+        "test:tia": [
+            "@putenv PHP_INI_SCAN_DIR=:tools/test-php-ini",
+            "pest --parallel --processes=4 --tia --passthru-php=\"-d pcov.enabled=1\""
+        ],
+        "test:coverage": "pest --parallel --processes=4 --coverage",
         "analyse": "phpstan analyse --memory-limit=1G",
         "format": "pint",
         "format:check": "pint --test",
@@ -157,6 +167,13 @@
         "post-update-cmd": [
             "@php artisan native:install --force --quiet --publish"
         ]
+    },
+    "scripts-descriptions": {
+        "test": "The gate: every test, no result reuse. Run this before handing work back.",
+        "test:tia": "Iteration only. Pest replays tests your changes cannot have affected from its cache and re-runs the rest, so it is only faster than `test` when few files differ from origin/main — on a large branch it runs everything anyway and pays for coverage recording on top. TIA also refuses partial runs: passing a path, --filter or --testsuite disables it, so scope by module with `pest <path>` instead. Never use it as the gate; a replayed pass is a cached pass.",
+        "test:coverage": "Full suite with pcov, writing the clover report SonarCloud reads.",
+        "analyse": "PHPStan level 10, including the beatrax.boundary rule.",
+        "format:check": "Pint in --test mode; use `format` to apply."
     },
     "extra": {
         "laravel": {

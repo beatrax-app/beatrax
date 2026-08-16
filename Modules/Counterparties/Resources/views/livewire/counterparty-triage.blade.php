@@ -143,10 +143,10 @@
                             @php
                                 $date = is_string($tx->posted_at ?? null) ? substr($tx->posted_at, 0, 10) : '';
                             @endphp
-                            <li style="display: flex; gap: var(--space-3); padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
-                                <span style="color: var(--color-text-muted); white-space: nowrap;">{{ $date }}</span>
-                                <span style="flex: 1 1 auto;">{{ $tx->description ?? '' }}</span>
-                                <span>{{ Number::currency(abs((int) ($tx->amount_minor ?? 0)) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
+                            <li class="triage-tx">
+                                <span class="triage-tx__date">{{ $date }}</span>
+                                <span class="triage-tx__desc">{{ $tx->description ?? '' }}</span>
+                                <span class="triage-tx__amount">{{ Number::currency(abs((int) ($tx->amount_minor ?? 0)) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
                             </li>
                         @endforeach
                     </ul>

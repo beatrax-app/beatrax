@@ -8,6 +8,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Response;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\AppLockKeyService;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 
 // lock.js posts here via fetch with keepalive:true, not
@@ -19,10 +20,13 @@ use Modules\Core\Public\Contracts\CurrentUser;
  */
 final readonly class LockEngageController
 {
+    private const UNLOCK_GRACE_SECONDS = 10;
+
     public function __construct(
         private AppLockKeyService $keyService,
         private AppLockClientConfig $lockConfig,
         private CurrentUser $currentUser,
+        private Clock $clock,
     ) {}
 
     public function __invoke(Session $session): Response
@@ -36,11 +40,32 @@ final readonly class LockEngageController
             return new Response('', 204);
         }
 
+        // A fire-and-forget engage can land AFTER the user has already
+        // unlocked — the idle timer posts with keepalive and does not wait —
+        // and locking then demands a second PIN for presence they just
+        // proved. Recent activity wins over a request already in flight.
+        if ($this->unlockedWithinGrace()) {
+            return new Response('', 204);
+        }
+
         // Idempotent: withhold() on an already-locked session is a
         // harmless no-op, so a request racing an already-locked session
         // (this route is allow-listed in AppLockMiddleware) is safe.
         $this->keyService->withhold($session);
 
         return new Response('', 204);
+    }
+
+    // Wide enough to cover an in-flight request plus the unlock round trip,
+    // far short of any idle timeout the user can configure.
+    private function unlockedWithinGrace(): bool
+    {
+        $lastActivity = $this->lockConfig->lastActivityAt($this->currentUser->user()->id);
+
+        if ($lastActivity === null) {
+            return false;
+        }
+
+        return $lastActivity->greaterThan($this->clock->now()->subSeconds(self::UNLOCK_GRACE_SECONDS));
     }
 }

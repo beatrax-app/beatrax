@@ -47,9 +47,7 @@ final class PersistCoalescedImport
                     subjectKey: 'import',
                     occurrence: $occurrence,
                     title: Lang::get('notifications::copy.title.receipts'),
-                    body: $event->insertedCount === 1
-                        ? Lang::get('notifications::copy.body.receipts_matched_one', ['count' => $event->insertedCount])
-                        : Lang::get('notifications::copy.body.receipts_matched_other', ['count' => $event->insertedCount]),
+                    body: Lang::choice('notifications::copy.body.receipts_matched', $event->insertedCount, ['count' => $event->insertedCount]),
                     params: ['target_kind' => 'inbox'],
                     deepLinkRoute: $this->urls->route('inboxes.index'),
                 ));
@@ -64,9 +62,7 @@ final class PersistCoalescedImport
                 subjectKey: 'import',
                 occurrence: $occurrence,
                 title: Lang::get('notifications::copy.title.import_finished'),
-                body: $event->insertedCount === 1
-                    ? Lang::get('notifications::copy.body.import_finished_one', ['count' => $event->insertedCount])
-                    : Lang::get('notifications::copy.body.import_finished_other', ['count' => $event->insertedCount]),
+                body: Lang::choice('notifications::copy.body.import_finished', $event->insertedCount, ['count' => $event->insertedCount]),
                 params: ['target_kind' => 'import'],
                 deepLinkRoute: $this->urls->route('imports.new'),
             ));

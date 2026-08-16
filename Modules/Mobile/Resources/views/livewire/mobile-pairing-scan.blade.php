@@ -18,7 +18,17 @@
     reflection-only signatures in tools/phpstan-stubs.
 --}}
 @use('Modules\Core\Public\Support\Lang')
-<div class="max-w-lg mx-auto px-6 py-8 space-y-4" data-testid="mobile-pairing-scan" wire:key="pairing-step-{{ $step }}">
+{{-- Full-screen safe-area chrome, matching setup-progress-screen and
+     sync-complete-screen. This screen used to render inside layouts.app,
+     which brought the drawer, sidebar and mobile top bar along with it —
+     app navigation wrapped around a blocking setup step the user cannot
+     leave, and tapping it left the wizard mid-ceremony. --}}
+<div class="min-h-screen bg-white dark:bg-slate-950
+            px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
+            pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+     data-testid="mobile-pairing-scan"
+     wire:key="pairing-step-{{ $step }}">
+<div class="max-w-lg mx-auto px-6 py-8 space-y-4">
 
     {{-- ===== Step: camera scan (default landing, D-01) ===== --}}
     @if ($step === 'scan')
@@ -37,8 +47,15 @@
              full-screen activity is the fallback where neither is offered.
              Both funnel into the same submitCode(). --}}
         <div x-data="beatraxInlineScanner($wire)" x-init="probe()" x-on:beatrax-step-left.window="stop()">
+            {{-- The filled panel is the IDLE state's affordance — it shows
+                 there is a frame to fill. Once the camera is live it is pure
+                 chrome behind an opaque video, and dropping it lets the
+                 preview sit in the page instead of arriving as a grey box
+                 that suddenly turns into a camera. Everything around it —
+                 heading, guides, buttons — stays put. --}}
             <div
-                class="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800"
+                :class="live ? 'bg-transparent' : 'bg-slate-100 dark:bg-slate-800'"
+                class="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-xl transition-colors duration-200"
                 data-testid="qr-viewfinder"
             >
                 <video
@@ -50,7 +67,14 @@
                     aria-label="{{ Lang::get('mobile::pairing.viewfinder_aria') }}"
                 ></video>
 
-                <svg class="absolute inset-6 h-[calc(100%-3rem)] w-[calc(100%-3rem)] text-slate-700 dark:text-slate-300" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                {{-- Over a live camera the slate guides lose contrast against
+                     whatever the lens sees, so they go white with a drop
+                     shadow the moment the preview starts. --}}
+                <svg
+                    :class="live ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]' : 'text-slate-700 dark:text-slate-300'"
+                    class="absolute inset-6 h-[calc(100%-3rem)] w-[calc(100%-3rem)]"
+                    viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                >
                     <path stroke-linecap="round" d="M4 20V8a4 4 0 014-4h12" />
                     <path stroke-linecap="round" d="M96 20V8a4 4 0 00-4-4H80" />
                     <path stroke-linecap="round" d="M4 80v12a4 4 0 004 4h12" />
@@ -66,12 +90,22 @@
                 >{{ Lang::get('mobile::pairing.viewfinder_idle') }}</p>
             </div>
 
+            <p
+                x-show="permissionPending"
+                x-cloak
+                class="mt-3 text-xs text-amber-600 dark:text-amber-400"
+                aria-live="polite"
+            >{{ Lang::get('mobile::pairing.camera_permission_pending') }}</p>
+
             <button
                 type="button"
                 x-on:click="toggle()"
-                x-text="live
-                    ? @js(Lang::get('mobile::pairing.close_camera'))
-                    : @js(Lang::get('mobile::pairing.open_camera'))"
+                x-bind:disabled="starting"
+                x-text="starting
+                    ? @js(Lang::get('mobile::pairing.opening_camera'))
+                    : (live
+                        ? @js(Lang::get('mobile::pairing.close_camera'))
+                        : @js(Lang::get('mobile::pairing.open_camera')))"
                 class="mt-4 w-full min-h-[44px] rounded-md bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white
                        hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-slate-100"
@@ -142,9 +176,12 @@
             >
                 {{ Lang::get('mobile::pairing.submit_code') }}
             </button>
+            {{-- Backs out of TYPING, not out of pairing. cancelPairing() here
+                 expired the token and left the flow entirely, landing the user
+                 on a screen they had already finished. --}}
             <button
                 type="button"
-                wire:click="cancelPairing"
+                wire:click="backToScan"
                 class="flex-1 min-h-[44px] rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900
                        hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
                        dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-slate-100"
@@ -158,6 +195,14 @@
     @if ($step === 'confirm')
         <div wire:poll.3s="checkPairingState">
             <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('mobile::pairing.confirm_heading') }}</h1>
+
+            {{-- The words prove the CHANNEL is untampered; the names say
+                 WHICH two devices it connects. Both are part of the check. --}}
+            <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
+                <span class="font-medium">{{ $selfDeviceName }}</span>
+                <span class="text-slate-400 dark:text-slate-500">&harr;</span>
+                <span class="font-medium">{{ $peerDeviceName }}</span>
+            </p>
 
             @php
                 $rowOne = array_slice($safetyWords, 0, 3);
@@ -241,4 +286,5 @@
         </div>
     @endif
 
+</div>
 </div>

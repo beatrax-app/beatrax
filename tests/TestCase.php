@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Foundation\Vite;
 use Modules\Ledger\Models\Account;
 
 /**
@@ -103,6 +104,30 @@ abstract class TestCase extends BaseTestCase
         putenv('NATIVEPHP_STORAGE_PATH='.$this->isolatedStorageRoot);
         $this->app->useStoragePath($this->isolatedStorageRoot);
         $this->app['config']->set('view.compiled', $this->isolatedStorageRoot.'/framework/views');
+
+        // A third path API, and it did not agree with the other two. Disk
+        // roots are resolved from storage_path() when config LOADS, which is
+        // before useStoragePath() above moves it — so Storage::disk('local')
+        // went on writing to the real tree while everything else relocated.
+
+        // Under --parallel that is one directory shared by every process. The
+        // import staging path is the content hash under the user id, both of
+        // which repeat across isolated databases, so processes overwrote each
+        // other's staged uploads mid-read.
+        foreach (['local' => 'app/private', 'public' => 'app/public'] as $disk => $sub) {
+            $this->app['config']->set(
+                "filesystems.disks.{$disk}.root",
+                $this->isolatedStorageRoot.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $sub),
+            );
+        }
+
+        // Vite decides between manifest URLs and dev-server URLs by looking
+        // for `public/hot`, which the running dev server writes. So starting
+        // the desktop app turned every rendered-HTML assertion red — asset
+        // URLs came back as http://[::1]:5174/… — for as long as it was up.
+        $this->app->make(Vite::class)->useHotFile(
+            $this->isolatedStorageRoot.DIRECTORY_SEPARATOR.'vite-never-hot',
+        );
     }
 
     protected function tearDown(): void

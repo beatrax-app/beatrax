@@ -1,0 +1,58 @@
+# Bank-fee classification rules — Bosnia and Herzegovina (Bosnian/Croatian
+# and Serbian, Latin and Cyrillic).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Both scripts are really in use and both are listed: UniCredit Bank d.d.
+# prints its Federation and its Republika Srpska tariff in Latin, while the
+# Republika Srpska banking agency publishes the same standardised service
+# list ("ВОЂЕЊЕ ПЛАТНОГ РАЧУНА", "Вођење рачуна", "накнаде и провизије") in
+# Cyrillic. The Cyrillic terms are plain substrings, never a `regex:`: the
+# matcher runs PCRE without /u, so \b only recognises ASCII word characters
+# and a Cyrillic word can never be fenced by one, while the literal path
+# goes through mb_stripos and folds multibyte case correctly.
+#
+# The trap is "KAMATA". A bare stem would fire on "kamatnom stopom" — the
+# interest RATE that UniCredit's tariff quotes on every loan and leasing
+# line as a property of the product, not as a charge — so `\bKAMAT[AEIU]\b`
+# spells out the case endings inside both boundaries: it matches "kamata",
+# "kamate", "kamati" and "kamatu" and stops before "kamatna" / "kamatnom".
+# The same shape protects `\bNAKNAD[AEIU]\b` from "NAKNADNO" and "NAKNADNI"
+# (subsequently, later). "TROŠKOVI" is deliberately absent: the tariff uses
+# it for pass-through costs ("u visini stvarnih troškova"), and on a
+# statement it is simply the word for an expense of any kind. Diacritics
+# stay out of `regex:` bodies for the same reason as Cyrillic, so
+# "VOĐENJE TEKUĆEG RAČUNA" and "DOPUŠTENO PREKORAČENJE" are plain
+# substrings, listed alongside the ASCII transliteration the region's
+# payment systems fall back to. Regex bodies must be SINGLE-quoted in YAML
+# so the backslash reaches the matcher instead of being read as a YAML
+# escape.
+#
+# Worked from: UniCredit Bank d.d. "Odluka o tarifi naknada za usluge u
+# poslovanju s fizičkim osobama" for FBiH/Distrikt Brčko and for Republika
+# Srpska (both 29.4.2026), and Agencija za bankarstvo Republike Srpske,
+# "Накнаде и провизије за услуге у пословању са становништвом".
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bNAKNAD[AEIU]\b'
+    name: "Naknada"
+  - pattern: "VOĐENJE TEKUĆEG RAČUNA"
+    name: "Naknada za vođenje računa"
+  - pattern: "VODJENJE TEKUCEG RACUNA"
+    name: "Naknada za vođenje računa"
+  - pattern: "DOPUŠTENO PREKORAČENJE"
+    name: "Kamata na prekoračenje"
+  - pattern: 'regex:\bKAMAT[AEIU]\b'
+    name: "Kamata"
+  - pattern: "ВОЂЕЊЕ РАЧУНА"
+    name: "Накнада за вођење рачуна"
+  - pattern: "ПРОВИЗИЈА"
+    name: "Провизија"
+  - pattern: "КАМАТА"
+    name: "Камата"

@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Redigera regel',
+    'heading_new' => 'Ny regel',
+
+    'combinator_aria' => 'Kombination av villkor',
+    'match_all' => 'Matcha alla villkor',
+    'match_any' => 'Matcha något villkor',
+
+    'condition_label' => 'Villkor :number',
+    'condition_field_aria' => 'Fält för villkor :number',
+    'condition_operator_aria' => 'Operator för villkor :number',
+    'condition_value_aria' => 'Värde för villkor :number',
+    'condition_value_from_aria' => 'Värde för villkor :number (från)',
+    'condition_value_to_aria' => 'Värde för villkor :number (till)',
+    'to' => 'till',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 't.ex. SPOTIFY',
+    'remove_condition' => 'Ta bort villkor',
+    'add_condition' => '+ Lägg till villkor',
+
+    'then' => 'Då',
+    'action_label' => 'Åtgärd :number',
+    'action_type_aria' => 'Typ för åtgärd :number',
+    'action_category' => 'Kategori',
+    'action_counterparty' => 'Motpart',
+    'action_note' => 'Anteckning',
+    'action_tax_tag' => 'Skatteetikett',
+    'assign_category_aria' => 'Tilldela kategori för åtgärd :number',
+    'reassign_counterparty_aria' => 'Flytta till motpart för åtgärd :number',
+    'note_text_aria' => 'Anteckningstext för åtgärd :number',
+    'note_placeholder' => 'Anteckningstext…',
+    'note_mode_aria' => 'Anteckningsläge för åtgärd :number',
+    'note_set' => 'Ange',
+    'note_append' => 'Lägg till',
+    'deduction_category_aria' => 'Avdragskategori för åtgärd :number',
+    'remove_action' => 'Ta bort åtgärd',
+    'add_action' => '+ Lägg till åtgärd',
+
+    'this_year_only' => 'Endast i år ▾',
+    'override_tax_year' => 'Åsidosätt beskattningsår',
+    'tax_year_override_aria' => 'Åsidosättning av beskattningsår för åtgärd :number',
+    'tax_tag_note' => 'Åtgärder med skatteetikett tillämpas nästa gång du kör reglerna igen, inte vid den aktuella importen.',
+
+    'priority' => 'Prioritet',
+    'priority_help' => 'Lägre nummer körs först. Regler utan gemensamma fält krockar aldrig.',
+
+    'cancel' => 'Avbryt',
+    'save_changes' => 'Spara ändringar',
+    'save_rule' => 'Spara regel',
+    'saving' => 'Sparar…',
+
+    'error_rule_unavailable' => 'Den regeln är inte längre tillgänglig.',
+    'error_invalid_data' => 'Ogiltiga regeldata — välj från rullgardinsmenyerna och försök igen.',
+    'error_duplicate' => 'Det finns redan en regel med det här fältet, den här matchningen och det här värdet. Redigera den befintliga regeln i stället.',
+    'error_priority_whole' => 'Prioritet måste vara ett heltal.',
+    'error_add_condition' => 'Lägg till minst ett villkor.',
+    'error_add_action' => 'Lägg till minst en åtgärd.',
+    'condition_value_required' => 'Ange ett värde för villkor :position.',
+    'condition_bounds_required' => 'Välj en undre och en övre gräns för villkor :position.',
+    'condition_amount_invalid' => 'Ange ett giltigt belopp för villkor :position.',
+    'action_pick_category' => 'Välj en kategori för den här åtgärden.',
+    'action_pick_counterparty' => 'Välj en motpart att flytta till.',
+    'action_note_required' => 'Ange anteckningstext.',
+    'action_pick_deduction' => 'Välj en avdragskategori för skatteetiketten.',
+];

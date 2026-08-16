@@ -13,6 +13,8 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
 use Modules\Mobile\Internal\Sync\NetworkPolicyResolver;
+use Modules\Mobile\Internal\Sync\PeerLanAddress;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 
 /**
  * @link ../../../../../.docs/features/mobile/architecture.md
@@ -31,13 +33,20 @@ final class SyncScreen extends Component
 
     public bool $pauseOnCellular = false;
 
+    // No confirmed peer means "Sync now" has nothing to talk to: the burst
+    // would dial nobody and report success, which reads as a working sync on
+    // a device that has never been paired.
+    public bool $hasPeers = false;
+
     public function mount(
         CurrentUser $currentUser,
         DatabaseManager $db,
         NetworkPolicyResolver $networkPolicy,
+        DeviceRegistryService $devices,
     ): void {
         $this->hydrateProgress($currentUser->id(), $db);
         $this->pauseOnCellular = $networkPolicy->pauseOnCellular();
+        $this->hasPeers = $devices->otherDeviceNames($currentUser->id()) !== [];
     }
 
     // Manual "Sync now" trigger. Runs one bounded sync burst, falling
@@ -49,10 +58,22 @@ final class SyncScreen extends Component
         MobileSyncTriggerService $trigger,
         Session $session,
         DatabaseManager $db,
+        DeviceRegistryService $devices,
+        PeerLanAddress $peerAddress,
     ): void {
-        $trigger->syncOnce($currentUser->id(), $session);
+        if (! $this->hasPeers) {
+            return;
+        }
+
+        // Same reason as the setup screen: without an address the LAN leg is
+        // skipped and the relay fallback applies nothing.
+        $trigger->syncOnce($currentUser->id(), $session, $peerAddress->host(), $peerAddress->port());
 
         $this->hydrateProgress($currentUser->id(), $db);
+
+        // A pairing may have completed since mount; re-read rather than
+        // trusting the value the button was rendered with.
+        $this->hasPeers = $devices->otherDeviceNames($currentUser->id()) !== [];
     }
 
     // Reads/writes NetworkPolicyResolver's file-backed policy, never a

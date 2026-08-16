@@ -1,0 +1,34 @@
+# Bank-fee classification rules — Bulgaria (Bulgarian, Cyrillic).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# No `regex:` entries here: the matcher runs PCRE without /u, so \b only
+# recognises ASCII word characters and a Cyrillic word can never be fenced
+# by one. Cyrillic terms are plain substrings instead — those are matched
+# case-insensitively and multibyte-aware — and precision comes from
+# multi-word phrases: bare "ТАКСА" would also fire on municipal levies
+# ("такса битови отпадъци") and school/nursery fees, so every fee word is
+# anchored to what the bank is charging for. "КОМИСИОН" is left as a stem so
+# it covers "комисиона", "комисионна" and "комисионни". Any regex body added
+# later must be SINGLE-quoted in YAML so the backslash reaches the matcher
+# instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "ТАКСА ЗА ОБСЛУЖВАНЕ"
+    name: "Такса за обслужване"
+  - pattern: "МЕСЕЧНА ТАКСА"
+    name: "Месечна такса"
+  - pattern: "ТАКСА ЗА ПРЕВОД"
+    name: "Такса за превод"
+  - pattern: "ТАКСА ЗА ТЕГЛЕНЕ"
+    name: "Такса за теглене"
+  - pattern: "КОМИСИОН"
+    name: "Банкова комисиона"
+  - pattern: "ЛИХВА"
+    name: "Лихва"

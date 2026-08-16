@@ -1,0 +1,51 @@
+# Bank-fee classification rules — San Marino (Italian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Sammarinese banks use the Italian foglio informativo format and the
+# Italian fee vocabulary, which was checked rather than assumed: Banca
+# Agricola Commerciale prices "Spese trimestrali", "Spese per operazione"
+# and a "Canone mensile", and Cassa di Risparmio advertises a card "senza
+# canone annuale" and a facility "senza spese di istruttoria". Every entry
+# below is wording taken from one of those two banks. All bodies are ASCII,
+# so no accented letter reaches a regex — the matcher runs PCRE without /u
+# and `#i` case-folds ASCII only.
+#
+# The trap is that both Italian fee words are unusable bare. "SPESE" alone
+# fires on "spese condominiali", the building service charge an Italian or
+# Sammarinese household pays out every month, and "CANONE" alone fires on
+# "canone di locazione" (rent) and the Italian "canone RAI" — all ordinary
+# outgoing payments. Neither word therefore appears without the qualifier
+# the bank prints next to it. `\bCOMMISSION[EI]\b` is fenced on both sides
+# with its plural spelled out so it matches "commissione" and "commissioni"
+# and not a longer token; note that BAC abbreviates these to "Comm.ne" and
+# "Comm.ni" in its own price list, which the rule deliberately does not try
+# to catch. Regex bodies must be SINGLE-quoted in YAML so the backslash
+# reaches the matcher instead of being read as a YAML escape.
+#
+# Worked from: Banca Agricola Commerciale — Istituto Bancario Sammarinese
+# "ONLINE" price list (Cod. 022, ed. 11/2022) and Cassa di Risparmio della
+# Repubblica di San Marino, foglio informativo "Conto corrente di
+# corrispondenza" plus the TornaConto / conto pensionati conditions.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "SPESE TRIMESTRALI"
+    name: "Spese trimestrali"
+  - pattern: "SPESE PER OPERAZIONE"
+    name: "Spese per operazione"
+  - pattern: "SPESE DI ISTRUTTORIA"
+    name: "Spese di istruttoria"
+  - pattern: "CANONE MENSILE"
+    name: "Canone mensile"
+  - pattern: "CANONE ANNUALE"
+    name: "Canone annuale"
+  - pattern: "LIQUIDAZIONE INTERESSI"
+    name: "Liquidazione interessi"
+  - pattern: 'regex:\bCOMMISSION[EI]\b'
+    name: "Commissioni"

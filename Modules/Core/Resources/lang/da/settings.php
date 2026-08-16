@@ -1,0 +1,148 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'groups' => [
+        'display' => 'Visning',
+        'money' => 'Penge',
+        'insights' => 'Indsigter & advarsler',
+        'security' => 'Sikkerhed & enheder',
+        'data' => 'Import & data',
+        'app' => 'App',
+    ],
+
+    'title' => 'Indstillinger',
+    'subtitle' => 'Præferencer for, hvordan din økonomi vises i appen.',
+
+    'appearance' => [
+        'heading' => 'Udseende',
+        'theme' => 'Tema',
+        'theme_light' => 'Lyst',
+        'theme_dark' => 'Mørkt',
+        'theme_system' => 'System',
+        'theme_help' => 'System følger lys- eller mørkeindstillingen i dit styresystem.',
+    ],
+
+    'language' => [
+        'apply' => 'Anvend',
+        'heading' => 'Sprog',
+        'label' => 'Visningssprog',
+
+        'system' => 'System',
+        'help' => 'System følger sproget i din browser eller dit styresystem med engelsk som standard.',
+    ],
+
+    'currency_display' => [
+        'heading' => 'Valutavisning',
+        'label' => 'Standardvisning på transaktionslisten',
+        'eur_only' => 'Kun EUR',
+        'original' => 'Oprindelig valuta',
+        'help' => 'Du kan stadig skifte pr. side fra transaktionslisten.',
+    ],
+
+    'base_currency' => [
+        'heading' => 'Basisvaluta til rapportering',
+        'label' => 'Rapporteringsvaluta',
+        'help' => 'Alle totaler og opsummeringer omregnes til denne valuta. Hver konto viser stadig sin egen oprindelige valuta ved siden af.',
+    ],
+
+    'exchange_rates' => [
+        'heading' => 'Valutakurser',
+        'fetch_online' => 'Hent aktuelle kurser online',
+        'online_on' => 'Kurser hentes dagligt fra ECB. Kun opslag af valutapar — ingen personoplysninger.',
+        'last_updated' => 'Sidst opdateret: :date.',
+        'online_off' => 'Der bruges medfølgende kurser. Ingen data forlader denne enhed.',
+        'fetch_aria' => 'Hent aktuelle valutakurser online',
+        'refreshing' => 'Opdaterer…',
+        'next_refresh' => 'Næste automatiske opdatering: dagligt kl. 09:00',
+        'refresh_now' => 'Opdatér nu',
+    ],
+
+    'period' => [
+        'heading' => 'Periode',
+        'label' => 'Perioden begynder på dag',
+        'help' => 'Nummereret fra 1 til 28. De fleste lader den stå på 1 (kalendermåned). Brug 25, hvis din løn går ind den 25., og du tænker på "din måned" som noget, der begynder der.',
+    ],
+
+    'recurring' => [
+        'heading' => 'Registrering af tilbagevendende betalinger',
+        'window_label' => 'Registreringsvindue (måneder)',
+        'window_help' => 'Hvor mange måneders historik der gennemsøges, når transaktioner grupperes i tilbagevendende mønstre.',
+        'income_label' => 'Mindste indtægt (cent)',
+        'income_help' => 'Indtægter under denne tærskel grupperes ikke automatisk. Gemmes i cent — 200000 betyder 2.000,00 €. Sæt den til 0 for at slå tærsklen fra.',
+    ],
+
+    'drift' => [
+        'heading' => 'Afvigelsesadvarsler',
+        'label' => 'Standardtærskel for afvigelsesadvarsler',
+        'help' => 'Advarsler udløses, når det seneste beløb for en tilbagevendende postering afviger mere end denne procentdel fra det forrige beløb. Indstillinger pr. serie har forrang.',
+        'options' => [
+            '1' => '±1%',
+            '2' => '±2%',
+            '5' => '±5% (standard)',
+            '10' => '±10%',
+            '25' => '±25%',
+            '50' => '±50%',
+        ],
+    ],
+
+    'save' => 'Gem indstillinger',
+    'saved' => 'Gemt.',
+
+    'anomaly_heading' => 'Anomalidetektion',
+    'notifications_heading' => 'Notifikationer',
+
+    'forecasting' => [
+        'heading' => 'Prognoser',
+        'intro' => 'Beatrax fremskriver din saldo ud fra kontienes aktuelle stand. For konti uden saldo fra kontoudtog (PayPal, gamle CSV-import) angiver du startsaldoen her, så prognoserne begynder fra et kendt punkt.',
+        'no_accounts' => 'Ingen konti endnu — importér et kontoudtog for at tilføje en.',
+    ],
+
+    'auto_import' => [
+        'heading' => 'Automatisk import',
+        'label' => 'Automatisk import fra afleveringsmappen',
+
+        'active_html' => 'Afleveringsmappen er aktiv. Beatrax gennemsøger <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> hvert 5. minut for nye filer.',
+        'inactive_html' => 'Når funktionen er slået til, gennemsøger Beatrax <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> hvert 5. minut for <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- og <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-filer og importerer dem gennem den samme matcher-pipeline som guiden. Behandlede filer flyttes til <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, så de aldrig importeres to gange.',
+    ],
+
+    'aliases' => [
+        'heading' => 'Aliasser',
+        'intro' => 'Gennemgå og redigér de letforståelige navne, du har lært Beatrax for kryptiske beskrivelser i kontoudtog.',
+        'manage' => 'Administrér aliasser →',
+    ],
+
+    'tax_heading' => 'Skat',
+    'shared_merchant_heading' => 'Delt forhandlerliste',
+    'data_backup_heading' => 'Data & sikkerhedskopi',
+    'install_heading' => 'Installation',
+
+    'about_updates' => [
+        'heading' => 'Om opdateringer',
+        'body' => 'Beatrax opdaterer sig selv automatisk, når appen først er installeret. Efter installationen af den allerførste version kommer fremtidige versioner via et banner i appen — du behøver ikke besøge GitHub igen. Skulle en fremtidig opdatering mislykkes, kan du altid hente det nyeste installationsprogram manuelt fra udgivelsessiden.',
+        'open_releases' => 'Åbn udgivelsessiden →',
+    ],
+
+    'first_run_tour' => [
+        'heading' => 'Rundvisning ved første opstart',
+        'body' => 'Start opsætningsguiden igen, hvis du vil gennemgå introduktionen en gang til.',
+        'run_again' => 'Kør opsætningsguiden igen',
+    ],
+
+    'developer' => [
+        'heading' => 'Udvikler',
+        'label' => 'Udviklerkonsol i appen',
+        'help' => 'Vis udviklerkonsollen på /dev. Nulstiller kontakten Avanceret ved hvert login.',
+        'aria' => 'Udviklertilstand',
+    ],
+
+    'errors' => [
+        'currency_required' => 'Vælg en valuta.',
+        'window_months' => 'Vælg mellem 2 og 60 måneder.',
+        'threshold' => 'Vælg en tærskel på 1%, 2%, 5%, 10%, 25% eller 50%.',
+        'amount' => 'Indtast et beløb fra €0 og opefter.',
+        'period_day' => 'Vælg en dag fra 1 til 28.',
+        'currency_view' => 'Vælg en af de tilgængelige muligheder.',
+    ],
+];

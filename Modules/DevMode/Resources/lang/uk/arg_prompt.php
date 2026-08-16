@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading' => 'Виконати команду',
+    'pick_command' => 'Вибери команду з палітри, щоб побачити її аргументи.',
+    'no_args' => 'Ця команда не приймає аргументів — надішли форму, щоб виконати її.',
+    'required_aria' => 'обов’язково',
+    'select_placeholder' => '— вибери —',
+    'enable' => 'Увімкнути',
+    'cancel' => 'Скасувати',
+    'run_command' => 'Виконати команду',
+
+    'errors' => [
+        'unknown_command' => 'Невідома команда: :command',
+        'missing' => 'Бракує :noun: :list',
+        'invalid_args' => 'Один або кілька аргументів некоректні.',
+        'arg_singular' => 'аргумента',
+        'arg_plural' => 'аргументів',
+    ],
+];

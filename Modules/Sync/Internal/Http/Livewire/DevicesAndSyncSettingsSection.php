@@ -21,6 +21,7 @@ use Modules\Sync\Internal\Http\Livewire\Concerns\ReadsDeviceState;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Public\Services\DeviceRegistryService;
+use Modules\Sync\Public\Services\SyncStatusService;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -255,6 +256,8 @@ final class DevicesAndSyncSettingsSection extends Component
         CurrentUser $currentUser,
         Session $session,
         DatabaseManager $db,
+        DeviceRegistryService $registry,
+        SyncStatusService $statusService,
     ): void {
         if ($this->removingDeviceId === null) {
             return;
@@ -280,6 +283,17 @@ final class DevicesAndSyncSettingsSection extends Component
 
         try {
             $rotationService->rotateAndRevoke($userId, $targetId, $session);
+
+            // Revocation stops at confirmed_at; everything else keyed to this
+            // device — its sessions, mailbox, tokens, and the row itself —
+            // has to go, or "removed" devices keep surfacing elsewhere.
+            $registry->purge($userId, $targetId);
+
+            // purge() can only clear sessions it can name. A failed handshake
+            // records a session under a peer id that never became a device,
+            // so removing the real one left those behind — still red, still
+            // listed, with nothing tying them to anything removable.
+            $statusService->forgetOrphanedSessions($userId);
         } catch (\Throwable) {
             $this->flashMessage = Lang::get('sync::devices.flash.remove_failed');
             $this->cancelRemove();

@@ -1,0 +1,162 @@
+# Government / public-agency classification rules — Montenegro.
+# The merged Uprava prihoda i carina was split back into a Poreska uprava
+# and an Uprava carina, so all three names are matched.
+# (Montenegro has no separate broadcasting fee billed to households.)
+#
+# Sources: gov.me institution register, poreskauprava.gov.me,
+# upravacarina.gov.me, fondpio.me (which publishes the exact form "Fond
+# penzijskog i invalidskog osiguranja Crne Gore"), fzocg.me, zzzcg.me,
+# uzk.gov.me (katastar), monteput.me, mup.gov.me, podgorica.me,
+# prijestonica.me, ucg.ac.me, privrednakomora.me, sudovi.me.
+#
+# Script coverage: Montenegrin banking is overwhelmingly Latin, so Latin
+# leads throughout; Cyrillic is added only for the bodies that genuinely
+# issue Cyrillic invoices (tax, customs, the two funds, the employment
+# bureau, the municipality prefix, the police and the ministry prefix).
+# Every Cyrillic entry is a plain substring, never a `regex:`.
+# Rejected as too collision-prone: "CRNA GORA" (the country name turns up
+# inside ordinary merchant names and addresses), bare "FZO" and "PIO", and
+# "CISTOCA" on its own.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "PORESKA UPRAVA"
+    name: "Poreska uprava"
+  - pattern: "UPRAVA PRIHODA I CARINA"
+    name: "Uprava prihoda i carina"
+  - pattern: "UPRAVA CARINA"
+    name: "Uprava carina"
+  - pattern: "FOND PENZIJSKOG I INVALIDSKOG OSIGURANJA"
+    name: "Fond PIO Crne Gore"
+  - pattern: "FOND ZA ZDRAVSTVENO OSIGURANJE"
+    name: "Fond za zdravstveno osiguranje"
+  - pattern: "ZAVOD ZA ZAPOSLJAVANJE"
+    name: "Zavod za zapošljavanje"
+  - pattern: "CENTAR ZA SOCIJALNI RAD"
+    name: "Centar za socijalni rad"
+  - pattern: "OPSTINA"
+  - pattern: "GLAVNI GRAD PODGORICA"
+    name: "Glavni grad Podgorica"
+  - pattern: "POREZ NA NEPOKRETNOSTI"
+    name: "Porez na nepokretnosti"
+  - pattern: "MINISTARSTVO UNUTRASNJIH POSLOVA"
+    name: "MUP Crne Gore"
+  - pattern: "REGISTRACIJA VOZILA"
+    name: "Registracija vozila"
+  - pattern: "MONTEPUT"
+    name: "Monteput (putarina)"
+  - pattern: "UPRAVA ZA KATASTAR"
+    name: "Uprava za katastar i državnu imovinu"
+  - pattern: "ADMINISTRATIVNA TAKSA"
+    name: "Administrativna taksa"
+  # --- Tax, customs and treasury -------------------------------------------
+  - pattern: "UPRAVA PRIHODA"
+    name: "Uprava prihoda"
+  - pattern: "ПОРЕСКА УПРАВА"
+    name: "Poreska uprava"
+  - pattern: "УПРАВА ЦАРИНА"
+    name: "Uprava carina"
+  - pattern: "MINISTARSTVO FINANSIJA"
+    name: "Ministarstvo finansija"
+  - pattern: "МИНИСТАРСТВО ФИНАНСИЈА"
+    name: "Ministarstvo finansija"
+  - pattern: "DRZAVNI TREZOR"
+    name: "Državni trezor"
+  - pattern: "POREZ NA DOHODAK FIZICKIH LICA"
+    name: "Porez na dohodak fizičkih lica"
+  # Montenegrin municipalities levy a surtax on top of the income tax.
+  - pattern: "PRIREZ POREZU NA DOHODAK"
+    name: "Prirez porezu na dohodak"
+  - pattern: "SUDSKA TAKSA"
+    name: "Sudska taksa"
+  # --- Pensions, health insurance, employment and benefits -------------------
+  - pattern: "ФОНД ПЕНЗИЈСКОГ И ИНВАЛИДСКОГ ОСИГУРАЊА"
+    name: "Fond PIO Crne Gore"
+  - pattern: "ФОНД ЗА ЗДРАВСТВЕНО ОСИГУРАЊЕ"
+    name: "Fond za zdravstveno osiguranje"
+  - pattern: "ZAVOD ZA ZAPOŠLJAVANJE"
+    name: "Zavod za zapošljavanje"
+  - pattern: "ЗАВОД ЗА ЗАПОШЉАВАЊЕ"
+    name: "Zavod za zapošljavanje"
+  - pattern: "ЦЕНТАР ЗА СОЦИЈАЛНИ РАД"
+    name: "Centar za socijalni rad"
+  - pattern: "DOPRINOSI ZA SOCIJALNO OSIGURANJE"
+    name: "Doprinosi za socijalno osiguranje"
+  - pattern: "DJECJI DODATAK"
+    name: "Dječji dodatak"
+  - pattern: "DJEČJI DODATAK"
+    name: "Dječji dodatak"
+  # --- Public health providers ------------------------------------------------
+  - pattern: "DOM ZDRAVLJA"
+    name: "Dom zdravlja"
+  - pattern: "KLINICKI CENTAR CRNE GORE"
+    name: "Klinički centar Crne Gore"
+  - pattern: "OPSTA BOLNICA"
+    name: "Opšta bolnica"
+  - pattern: "INSTITUT ZA JAVNO ZDRAVLJE"
+    name: "Institut za javno zdravlje"
+  # --- Local government and municipal utilities ---------------------------------
+  - pattern: "ОПШТИНА"
+  - pattern: "OPSTINSKA UPRAVA"
+    name: "Opštinska uprava"
+  - pattern: "ГЛАВНИ ГРАД ПОДГОРИЦА"
+    name: "Glavni grad Podgorica"
+  - pattern: "PRIJESTONICA CETINJE"
+    name: "Prijestonica Cetinje"
+  - pattern: "VODOVOD I KANALIZACIJA"
+    name: "Vodovod i kanalizacija"
+  - pattern: "KOMUNALNO PREDUZECE"
+    name: "Komunalno preduzeće"
+  - pattern: "KOMUNALNO PREDUZEĆE"
+    name: "Komunalno preduzeće"
+  - pattern: "BORAVISNA TAKSA"
+    name: "Boravišna taksa"
+  - pattern: "BORAVIŠNA TAKSA"
+    name: "Boravišna taksa"
+  # --- Roads, tolls and vehicles --------------------------------------------------
+  - pattern: "UPRAVA ZA SAOBRACAJ"
+    name: "Uprava za saobraćaj"
+  - pattern: "UPRAVA ZA SAOBRAĆAJ"
+    name: "Uprava za saobraćaj"
+  - pattern: "PUTARINA"
+    name: "Putarina"
+  # --- Police, courts and enforcement ----------------------------------------------
+  - pattern: 'regex:\bMUP\b'
+    name: "MUP Crne Gore"
+  - pattern: "UPRAVA POLICIJE"
+    name: "Uprava policije"
+  - pattern: "УПРАВА ПОЛИЦИЈЕ"
+    name: "Uprava policije"
+  - pattern: "OSNOVNI SUD"
+    name: "Osnovni sud"
+  - pattern: "VISI SUD"
+    name: "Viši sud"
+  - pattern: "PRIVREDNI SUD"
+    name: "Privredni sud"
+  - pattern: "JAVNI IZVRSITELJ"
+    name: "Javni izvršitelj"
+  - pattern: "DRZAVNO TUZILASTVO"
+    name: "Državno tužilaštvo"
+  # --- Registries and cadastre ---------------------------------------------------------
+  - pattern: "KATASTAR"
+    name: "Katastar"
+  - pattern: "CENTRALNI REGISTAR PRIVREDNIH SUBJEKATA"
+    name: "CRPS"
+  # --- Chambers --------------------------------------------------------------------------
+  - pattern: "PRIVREDNA KOMORA CRNE GORE"
+    name: "Privredna komora Crne Gore"
+  - pattern: "ADVOKATSKA KOMORA"
+    name: "Advokatska komora"
+  # --- Education -------------------------------------------------------------------------
+  - pattern: "MINISTARSTVO PROSVJETE"
+    name: "Ministarstvo prosvjete"
+  - pattern: "UNIVERZITET CRNE GORE"
+    name: "Univerzitet Crne Gore"
+  - pattern: "OSNOVNA SKOLA"
+    name: "Osnovna škola"
+  - pattern: "OSNOVNA ŠKOLA"
+    name: "Osnovna škola"
+  # --- Generic government prefixes --------------------------------------------------------
+  - pattern: "MINISTARSTVO"
+  - pattern: "МИНИСТАРСТВО"
+  - pattern: "JAVNA USTANOVA"
+    name: "Javna ustanova"

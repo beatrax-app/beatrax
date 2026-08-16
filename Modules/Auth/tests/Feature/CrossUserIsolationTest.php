@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Routing\Router;
@@ -207,6 +208,7 @@ const ISOLATION_ROUTE_COVERED = [
     'imports.preview',
     'imports.results',
     'settings.aliases',
+    'community.index',
     'community.mystery-merchants',
     'counterparties.index',
     'counterparties.triage',
@@ -257,12 +259,16 @@ const ISOLATION_ROUTE_COVERED = [
     // sync.sync-status-section component (SyncStatusService-backed peer
     // rows) and reads the own-module mobile_sync_progress cursor; both
     // genuinely bear user-scoped data (T-15-26). Probed below.
-    'sync.index',
+    'data-devices.index',
     // Phase 15 Plan 08 shipped SetupProgressScreen behind this route; its
     // mount() reads the user-scoped mobile_sync_progress durable cursor
     // (InitialSyncPuller::progress()). Probed below (closes the gap
     // 15-05-SUMMARY.md logged as deferred to a later plan).
     'mobile.setup',
+    // The confirmation the setup gate hands off to. It names the peer device
+    // it caught up from and the record count it applied — both user-scoped
+    // reads (device_registry, mobile_sync_progress). Probed below.
+    'mobile.setup.done',
     // Phase 18 — Notifications inbox. NotificationInbox lists the acting
     // user's own `notifications` rows (user_id-scoped read); genuinely bears
     // user-scoped data, so probed below rather than allow-listed.
@@ -463,6 +469,12 @@ function xuiSavedReport(DatabaseManager $db, int $userId, string $name): int
 }
 
 beforeEach(function (): void {
+    // Every fixture here books into May 2026, and the pages under test scope
+    // to the CURRENT period — so this suite quietly stopped asserting
+    // anything the moment the real clock left that month, and then failed
+    // outright. Pinning now() to the fixture window makes it date-independent.
+    $this->travelTo(CarbonImmutable::parse('2026-05-19 12:00:00'));
+
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
     $this->db = $db;
@@ -803,6 +815,19 @@ it('does not bleed the owner merchant aliases into the partner aliases settings 
         ->assertDontSee('Owner Secret Alias');
 });
 
+it('does not bleed the owner shared-list counts into the partner community page', function (): void {
+    // The Community hub embeds the shared-merchant-list panel, which reads
+    // per-user mapping rows. A partner opening it must see their own state,
+    // never a count or name sourced from the owner.
+    xuiTransaction($this->db, $this->owner->id, 'OWNER COMMUNITY MERCHANT BV', description: 'OWNER COMMUNITY DESCRIPTION QZ42');
+
+    $this->actingAs($this->partner)
+        ->get('/community')
+        ->assertOk()
+        ->assertDontSee('OWNER COMMUNITY DESCRIPTION QZ42')
+        ->assertDontSee('OWNER COMMUNITY MERCHANT BV');
+});
+
 it('does not bleed the owner mystery descriptions into the partner mystery-merchants page', function (): void {
     // An unresolvable description (no alias, no corpus match) becomes
     // a mystery card on the OWNER's page — it must never surface on
@@ -1063,7 +1088,7 @@ it('does not bleed the owner peer device id into the partner /sync status surfac
     $seedSession($this->partner->id, 'partner-local-dev', 'partner-visible-peer-device');
 
     $this->actingAs($this->partner)
-        ->get('/sync')
+        ->get('/data-devices')
         ->assertOk()
         ->assertSee('partner-visible-peer-device')
         ->assertDontSee('owner-secret-peer-device');
@@ -1092,6 +1117,46 @@ it('does not bleed the owner initial-sync progress cursor into the partner /mobi
         ->assertOk()
         ->assertSee('12 of 40 records')
         ->assertDontSee('77 of 100 records');
+});
+
+it('does not bleed the owner peer device name or record count into the partner /mobile/setup/done screen', function (): void {
+    $seedPeer = function (int $userId, string $deviceId, string $name): void {
+        $this->db->connection()->table('device_registry')->insert([
+            'user_id' => $userId,
+            'device_id' => $deviceId,
+            'name' => $name,
+            'ed25519_public_key_hex' => str_repeat('a', 64),
+            'x25519_public_key_hex' => str_repeat('b', 64),
+            'safety_number_words' => '',
+            'is_self' => 0,
+            'paired_at' => '2026-07-11T09:55:00Z',
+            'confirmed_at' => '2026-07-11T09:55:00Z',
+            'created_at' => '2026-07-11T09:55:00Z',
+            'updated_at' => '2026-07-11T09:55:00Z',
+        ]);
+    };
+
+    $seedPeer($this->owner->id, 'owner-peer-device-done', 'Owner Secret Laptop');
+    $seedPeer($this->partner->id, 'partner-peer-device-done', 'Partner Visible Laptop');
+
+    $this->db->connection()->table('mobile_sync_progress')->insert([
+        'user_id' => $this->owner->id,
+        'peer_device_id' => 'owner-peer-device-done',
+        'records_expected' => 4242,
+        'records_applied' => 4242,
+        'last_hlc_l' => 4242,
+        'last_hlc_c' => 0,
+        'phase' => 'complete',
+        'created_at' => '2026-07-11T09:55:00Z',
+        'updated_at' => '2026-07-11T10:00:00Z',
+    ]);
+
+    $this->actingAs($this->partner)
+        ->get('/mobile/setup/done')
+        ->assertOk()
+        ->assertSee('Partner Visible Laptop')
+        ->assertDontSee('Owner Secret Laptop')
+        ->assertDontSee('4242');
 });
 
 it('does not bleed the owner spend into the partner reports CSV export (999.6-07, T-999.6-20)', function (): void {

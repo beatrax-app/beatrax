@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Țara de impozitare',
+    'country_desc' => 'Stabilește ce categorii de deducere sunt disponibile.',
+    'country_choose' => 'Alege o țară…',
+    'country_switch_warning' => 'Schimbarea adaugă categorii noi — etichetele existente nu se modifică niciodată.',
+
+    'countries' => [
+        'at' => 'Austria',
+        'be' => 'Belgia',
+        'bg' => 'Bulgaria',
+        'ca' => 'Canada',
+        'ch' => 'Elveția',
+        'cy' => 'Cipru',
+        'cz' => 'Cehia',
+        'de' => 'Germania',
+        'dk' => 'Danemarca',
+        'ee' => 'Estonia',
+        'es' => 'Spania',
+        'fi' => 'Finlanda',
+        'fr' => 'Franța',
+        'gb' => 'Regatul Unit',
+        'gr' => 'Grecia',
+        'hr' => 'Croația',
+        'hu' => 'Ungaria',
+        'ie' => 'Irlanda',
+        'is' => 'Islanda',
+        'it' => 'Italia',
+        'lt' => 'Lituania',
+        'lu' => 'Luxemburg',
+        'lv' => 'Letonia',
+        'mt' => 'Malta',
+        'nl' => 'Țările de Jos',
+        'no' => 'Norvegia',
+        'pl' => 'Polonia',
+        'pt' => 'Portugalia',
+        'ro' => 'România',
+        'se' => 'Suedia',
+        'si' => 'Slovenia',
+        'sk' => 'Slovacia',
+        'us' => 'Statele Unite',
+    ],
+
+    'categories_label' => 'Categorii de deducere',
+    'categories_desc' => 'Personalizează categoriile pe care le folosești la etichetare.',
+    'categories_empty' => 'Nicio categorie deocamdată. Adaugă prima categorie sau schimbă țara pentru a încărca valorile implicite.',
+
+    'from_corpus' => 'din corpus',
+    'rename_input_aria' => 'Nume nou pentru :name',
+    'rename' => 'Redenumește',
+    'rename_aria' => 'Redenumește :name',
+    'rename_save_aria' => 'Salvează numele nou pentru :name',
+    'save' => 'Salvează',
+    'archive' => 'Arhivează',
+    'archive_aria' => 'Arhivează :name',
+
+    'new_category_label' => 'Numele noii categorii',
+    'new_category_placeholder' => 'Numele noii categorii…',
+    'add_category' => 'Adaugă categorie',
+    'category_added' => 'Categorie adăugată.',
+
+    'archived_count' => 'Arhivate (:count)',
+    'restore' => 'Restaurează',
+    'restore_aria' => 'Restaurează :name',
+];

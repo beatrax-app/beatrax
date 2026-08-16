@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Mokesčių šalis',
+    'country_desc' => 'Nustato, kurios lengvatų kategorijos bus prieinamos.',
+    'country_choose' => 'Pasirink šalį…',
+    'country_switch_warning' => 'Pakeitus pridedamos naujos kategorijos — esamos žymos niekada nekeičiamos.',
+
+    'countries' => [
+        'at' => 'Austrija',
+        'be' => 'Belgija',
+        'bg' => 'Bulgarija',
+        'ca' => 'Kanada',
+        'ch' => 'Šveicarija',
+        'cy' => 'Kipras',
+        'cz' => 'Čekija',
+        'de' => 'Vokietija',
+        'dk' => 'Danija',
+        'ee' => 'Estija',
+        'es' => 'Ispanija',
+        'fi' => 'Suomija',
+        'fr' => 'Prancūzija',
+        'gb' => 'Jungtinė Karalystė',
+        'gr' => 'Graikija',
+        'hr' => 'Kroatija',
+        'hu' => 'Vengrija',
+        'ie' => 'Airija',
+        'is' => 'Islandija',
+        'it' => 'Italija',
+        'lt' => 'Lietuva',
+        'lu' => 'Liuksemburgas',
+        'lv' => 'Latvija',
+        'mt' => 'Malta',
+        'nl' => 'Nyderlandai',
+        'no' => 'Norvegija',
+        'pl' => 'Lenkija',
+        'pt' => 'Portugalija',
+        'ro' => 'Rumunija',
+        'se' => 'Švedija',
+        'si' => 'Slovėnija',
+        'sk' => 'Slovakija',
+        'us' => 'Jungtinės Amerikos Valstijos',
+    ],
+
+    'categories_label' => 'Lengvatų kategorijos',
+    'categories_desc' => 'Pritaikyk kategorijas, kurias naudoji žymėdamas.',
+    'categories_empty' => 'Kategorijų dar nėra. Pridėk pirmą kategoriją arba pakeisk šalį, kad būtų įkeltos numatytosios.',
+
+    'from_corpus' => 'iš korpuso',
+    'rename_input_aria' => 'Naujas :name pavadinimas',
+    'rename' => 'Pervadinti',
+    'rename_aria' => 'Pervadinti :name',
+    'rename_save_aria' => 'Išsaugoti naują :name pavadinimą',
+    'save' => 'Išsaugoti',
+    'archive' => 'Archyvuoti',
+    'archive_aria' => 'Archyvuoti :name',
+
+    'new_category_label' => 'Naujos kategorijos pavadinimas',
+    'new_category_placeholder' => 'Naujos kategorijos pavadinimas…',
+    'add_category' => 'Pridėti kategoriją',
+    'category_added' => 'Kategorija pridėta.',
+
+    'archived_count' => 'Archyvuota (:count)',
+    'restore' => 'Atkurti',
+    'restore_aria' => 'Atkurti :name',
+];

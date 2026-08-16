@@ -45,7 +45,12 @@ return [
             'database' => env('DB_DATABASE', UserDataPathService::databaseFile()),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => 5000,
+            // A catch-up applies thousands of ops inside one write
+            // transaction while the queue worker and both sync daemons write
+            // to the same file. Five seconds was shorter than that
+            // transaction, so job reservation failed with "database is
+            // locked" instead of simply waiting its turn.
+            'busy_timeout' => 30000,
             'journal_mode' => 'WAL',
             'synchronous' => 'NORMAL',
         ];

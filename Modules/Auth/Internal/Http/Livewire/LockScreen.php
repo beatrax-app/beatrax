@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
@@ -11,10 +12,13 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Request;
 use Livewire\Component;
+use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
+use Modules\Auth\Public\Contracts\ColdStartVault;
+use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
@@ -30,6 +34,11 @@ final class LockScreen extends Component
 
     public string $biometricLabel = 'Use Touch ID';
 
+    // The OS-gated key vault (Touch ID on desktop, the enclave on mobile) as
+    // distinct from the WebAuthn credential above: this one hands back the
+    // data key, so it can unlock on its own.
+    public bool $nativeUnlockAvailable = false;
+
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
@@ -39,6 +48,7 @@ final class LockScreen extends Component
         BiometricDeviceStore $biometricStore,
         PlatformDetector $detector,
         Request $request,
+        ColdStartVault $vault,
     ): void {
         $user = $currentUser->user();
         $ua = $request->userAgent() ?? '';
@@ -49,6 +59,8 @@ final class LockScreen extends Component
         $this->biometricAvailable = $credentials->contains(
             fn (object $cred): bool => $biometricStore->isArmed($cred)
         );
+
+        $this->nativeUnlockAvailable = $vault->isAvailable() && $vault->isEnrolled($user->id);
     }
 
     // -------------------------------------------------------------------------
@@ -64,6 +76,7 @@ final class LockScreen extends Component
         Session $session,
         DatabaseManager $db,
         Clock $clock,
+        ColdStartVault $vault,
     ): void {
         if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
             $this->flashMessage = Lang::get('auth::lock_screen.error_too_short');
@@ -94,12 +107,54 @@ final class LockScreen extends Component
             return;
         }
 
-        $intendedUrl = $session->pull('url.intended', $urls->route('dashboard'));
-        if (! is_string($intendedUrl)) {
-            $intendedUrl = $urls->route('dashboard');
+        // Enrol on the way through: this is the only moment the raw data key
+        // is in hand, and the vault re-protects it under the OS gate.
+        if ($vault->isAvailable() && ! $vault->isEnrolled($user->id)) {
+            $vault->enroll($user->id, $dataKey);
         }
 
-        $this->redirect($intendedUrl, navigate: false);
+        $this->redirect($this->intendedUrl($session, $urls), navigate: false);
+    }
+
+    // Unlocks from the OS-gated vault. The vault prompts and returns the key
+    // only on a successful authentication, so a false/null here is a refusal
+    // and never a partial unlock.
+    public function nativeUnlock(
+        CurrentUser $currentUser,
+        ColdStartVault $vault,
+        MobileLockGateway $gateway,
+        Session $session,
+        UrlGenerator $urls,
+    ): void {
+        $user = $currentUser->user();
+        $dataKey = $vault->recover($user->id, Lang::get('auth::lock_screen.native_unlock_reason'));
+
+        if ($dataKey === null) {
+            $this->flashMessage = Lang::get('auth::lock_screen.native_unlock_failed');
+
+            return;
+        }
+
+        $gateway->unlockWithRecoveredKey($user->id, $dataKey, $session);
+
+        $this->redirect($this->intendedUrl($session, $urls), navigate: false);
+    }
+
+    // Shared by both unlock paths so a PIN and a biometric unlock land on
+    // the same page.
+    private function intendedUrl(Session $session, UrlGenerator $urls): string
+    {
+        $intended = $session->pull('url.intended');
+        $lastPage = $session->pull(AppLockMiddleware::SESSION_LAST_PAGE);
+
+        // `url.intended` only exists when the middleware itself redirected
+        // here; an idle lock engaged from the client leaves only the last
+        // page the user was on.
+        return match (true) {
+            is_string($intended) && $intended !== '' => $intended,
+            is_string($lastPage) && $lastPage !== '' => $lastPage,
+            default => $urls->route('dashboard'),
+        };
     }
 
     // -------------------------------------------------------------------------
@@ -110,8 +165,17 @@ final class LockScreen extends Component
     // navigator.credentials.get with the requestOptions fetched from
     // /lock/biometric/challenge, then POSTs the assertion to
     // /lock/biometric/verify.
-    public function biometricPrompt(): void
+    public function biometricPrompt(ConfigRepository $config): void
     {
+        // No WebAuthn platform authenticator exists behind the desktop shell,
+        // so the prompt would resolve to nothing and the button would read as
+        // broken. The OS-gated vault above is that platform's real path.
+        if ($config->get('nativephp-internal.running') === true) {
+            $this->flashMessage = Lang::get('auth::lock_screen.native_unlock_failed');
+
+            return;
+        }
+
         $this->dispatch('beatrax:webauthn-get');
     }
 

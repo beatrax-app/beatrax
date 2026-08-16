@@ -1,0 +1,105 @@
+# Support-resource corpus — Estonia (EE merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Telia Eesti
+    type: merchant
+    cancel_url: "https://www.telia.ee/abi/juhend/4266/mobiilinumbri-lepingu-l%C3%B5petamine-ja-ajutine-peatamine"
+    support_url: "https://www.telia.ee/abi-ja-kontaktid/"
+    cheaper_url: "https://www.telia.ee/abi/juhend/4264/telia-koduinterneti-teenuse-l%C3%B5petamine-ja-ajutiselt-peatamine"
+    notes: "Mobiilinumbri lepingu lõpetad iseteeninduses jaotisest „Leping ja haldamine“ → „Lõpetan teenuse“, kas kohe või kuni 30 päeva ette valitud kuupäeval; kui numbril on tähtajaline kohustus, pooleliolev tegevus või võlgnevus, kuvatakse teade ja tuleb pöörduda klienditeenindusse (erakliendi number 123). Lõpetamiskuul arvestatakse kuutasu päevapõhiselt, number jääb 6 kuuks endise omaniku nimele broneerituks, ja kui viid numbri teise võrku, ei tohi lepingut ise lõpetada — seda teeb vastuvõttev operaator."
+  - name: Elisa Eesti
+    type: merchant
+    cancel_url: "https://www.elisa.ee/et/abi/abikeskus/arveldus-ja-lepingud/lepingud/lepingu-lopetamine"
+    support_url: "https://www.elisa.ee/et/elisast/esindused-ja-kontaktid"
+    cheaper_url: "https://www.elisa.ee/et/abi/abikeskus/arveldus-ja-lepingud/lepingud/lepingu-peatamine"
+    notes: "Lõpetamine algab abikeskuse lehelt nupuga „Lepingut lõpetama“ — Elisa palub enne vestlusaknas ühendust võtta. Odavam vahevariant on lepingu ajutine peatamine iseteeninduses kuni 12 kuuks (ühekordne tasu 3,99 €, kuutasu ei maksa), kuid kui sa numbrit enne peatamisperioodi lõppu ei ava, lõpetatakse leping automaatselt ja avamisel tuleb valida uus, hetkel müügis olev pakett. Erakliendi telefon 6 600 600 (E–R 9.00–17.30)."
+  - name: Tele2 Eesti
+    type: merchant
+    support_url: "https://tele2.ee/kontaktid"
+    notes: "Veebis lepingu lõpetamise lehte ei ole — ülesütlemine käib klienditoe kaudu (eraklient 6866866, E–R 9–19) või esinduses. Üldtingimuste järgi sõlmitakse tavapäraselt tähtajatu leping, mille klient võib igal ajal ja olenemata põhjusest üles öelda; tähtajalise lepingu ennetähtaegsel ülesütlemisel tuleb tasuda hüvitis, käsitlustasu ja/või muu kulu, millega hüvitatakse saadud seadme maksumus ja/või muu saadud soodustus. Tähtajalise lepingu lõppemisel muutub leping tähtajatuks, kui lepingus ei ole teisiti ette nähtud."
+  - name: Enefit
+    type: merchant
+    support_url: "https://www.enefit.ee/et/abi/lepingud-ja-volitused"
+    notes: "Ennetähtaegse lõpetamise tasu puudutab ainult pikaajalist fikseeritud hinnaga elektripaketti: Enefit ostab elektri ette ära ja kui ta peab selle odavamalt tagasi müüma, korvab kahju lepingu lõpetaja. Tasu suurus sõltub tarbimismahust ja ajahetkest — mida hiljem lepingust loobud, seda väiksem see on — ja tasu ei rakendu iga kord, vaid ainult siis, kui kahju päriselt tekib. Iga elektripaketi juures on kodulehel eraldi näha, kas lõpetamine on tasuta; eraklientide teenindus +372 777 4040 (E–R 9–17)."
+  - name: Alexela
+    type: merchant
+    support_url: "https://www.alexela.ee/et/eraklient/abi-ja-kontakt/kontakt/kontaktid"
+    notes: "Veebis lõpetamisnuppu ei ole. Eratarbija elektrilepingu tüüptingimuste järgi on sul õigus leping sõltumata põhjusest igal ajal üles öelda, teavitades Alexelat kirjalikult e-posti või posti teel või telefoni teel vähemalt 14 päeva ette. Tähtajaline leping loetakse pikenenuks samaks tähtajaks ja samadel tingimustel, kui vähemalt üks kuu enne kehtivusaja lõppu ei teata kumbki pool lõpetamise soovist; sidevahendi teel sõlmitud lepingust saab taganeda 14 päeva jooksul. Erakliendi teenindus +372 629 0000."
+  - name: Eesti Gaas
+    type: merchant
+    support_url: "https://elenger.ee/kodukliendile/kontaktivorm/"
+    notes: "Kodukliendi äri käib nüüd Elengeri nime all — gaas.ee suunab ümber elenger.ee-le. Kodulehel eraldi lepingu lõpetamise lehte ei ole: e-teeninduse kiirlingid on „sõlmi leping“, „teata näidud“ ja „maksa arved“, seega lõpetamiseks tuleb pöörduda klienditoe poole numbril 63 62 555 (tööpäeviti 8.30–17.00) või klienditugi@elenger.ee. Gaasivõrgu näitude teatamine 66 00 009, avariist teatamine 13404."
+  - name: Elektrilevi
+    type: merchant
+    cancel_url: "https://elektrilevi.ee/et/vorguleping/vorgulepingu-lopetamine"
+    support_url: "https://elektrilevi.ee/et/ettevottest/kontaktid"
+    notes: "Võrguleping tuleb lõpetada eluaseme müümisel või tarbija vahetumisel ja seda saab teha igal ajal, teatades vähemalt 30 kalendripäeva ette — kõige mugavam on esitada avaldus iseteeninduses. Võrgulepingu lõpetamisega lõpeb automaatselt ka selle tarbimiskoha elektrileping, kuid elektrimüüja võib ennetähtaegse lõpetamise eest lisatasu küsida, seega uuri seda enne müüjalt. Kui uut tarbijat ei ole, lülitatakse 30 päeva pärast vool välja; varem lõpetades tasud sa väljalülitamise kulud ja hilisem võrguühenduse taastamine on tasuline. Klienditeenindus 777 1545, rikketelefon 1343."
+  - name: If Kindlustus
+    type: merchant
+    cancel_url: "https://www.if.ee/eraklient/kindlustused/liikluskindlustus/liikluskindlustuse-lopetamine"
+    support_url: "https://www.if.ee/eraklient/kontakt"
+    notes: "Liikluskindlustuse leping on tähtajaline ja sõiduki müümisel lähevad leping ning sellega seotud õigused liikluskindlustuse seaduse § 21 lg 4 alusel üle uuele omanikule — endine omanik saab lepingu lõpetada ja raha tagasi küsida ainult seni, kuni ta on veel sõiduki omanik. Avalduse menetlemine võib võtta kuni 2 tööpäeva. Ennetähtaegne lõpetamine on erandkorras võimalik, kui sõiduk on hävinud või varastatud või kui seda ei saa tehnilistel põhjustel üle 1 kuu kasutada. Kindlustustelefon (+372) 777 1211 vastab ööpäevaringselt."
+  - name: ERGO Kindlustus
+    type: merchant
+    support_url: "https://ergo.ee/kontaktid"
+    notes: "Kindlustusteenuste üldtingimuste järgi kehtib tähtajatu kindlustusleping kuni ülesütlemiseni ja selle lõpetamise soovist tuleb teisele poolele ette teatada vähemalt üks kuu enne kindlustusperioodi lõppu; ERGO rõhutab, et uue perioodi makse tasumata jätmist ei loeta ülesütlemisavalduseks — lõpetamise soovist tuleb selgelt teada anda. Tähtajalise lepingu saab ennetähtaegselt lõpetada erakorralisel põhjusel, näiteks kindlustatud eseme võõrandamisel või kindlustushuvi lõppemisel, ning ka ühe kuu jooksul pärast kindlustusjuhtumi otsust. Klienditeenindus 610 6500."
+  - name: MyFitness
+    type: merchant
+    cancel_url: "https://www.myfitness.ee/kusimused/"
+    support_url: "https://www.myfitness.ee/kontaktid/"
+    notes: "Liikmelepingut ei saa iseteeninduses lõpetada — lõpetamise kokkulepe sõlmitakse koduklubis kohapeal või e-kirja teel. Kui sõlmid kokkuleppe kuu 1.–14. kuupäeval, lõpeb leping sama kuu viimasel päeval; 15. kuupäeval või hiljem sõlmides alles järgmise kuu viimasel päeval. Nõuetekohaselt vormistamata tahteavalduse võib klubi tähelepanuta jätta. Kui tahad vaid pausi, saab treeningpuhkust võtta kuni kaheks järjestikuseks kuuks kohatasuga 8 € kuus."
+  - name: SEB Pank
+    type: merchant
+    support_url: "https://www.seb.ee/kontakt"
+    notes: "Kui kolid teise panka, ei pea sa vana kontot ise sulgema: arvelduskonto ületoomisel hoolitseb SEB endises pangas konto sulgemise eest ja avab uue SEB-s, kusjuures konto number muutub ning püsikorraldused ja e-arved viiakse üle. Erakliendi klienditugi +372 665 5100 (E–R 8.00–20.00), kaardi blokeerimiseks ja pettuse kahtluse korral saab helistada ööpäev läbi."
+  - name: LHV Pank
+    type: merchant
+    support_url: "https://www.lhv.ee/et/kontakt/klienditugi"
+    notes: "LHV kodulehel eraldi konto sulgemise juhendit ei ole — küsimustega suunatakse korduma kippuvate küsimuste juurde, vestlusrobot Uku juurde või klienditoele 6 800 400 / info@lhv.ee. Laenu- ja järelmaksulepingute jaoks on eraldi liinid: kodulaen, eralaen, krediitkaart ja õppelaen 699 9118, väikelaenud ja järelmaks 699 9119 (E–R 9–17). Pane tähele, et pank ei küsi kunagi sinu privaatseid pangaandmeid ega saada sõnumiga linke."
+  - name: Eesti Toidupank
+    type: merchant
+    cancel_url: "https://www.toidupank.ee/rahalised-annetused/"
+    notes: "Püsiannetus vormistatakse pangalingi kaudu püsiannetajaks registreerudes ja Toidupank ütleb otse välja: kui soovid püsiannetuse tegemisest loobuda, saad seda teha enda pangakontol Toidupangale tehtava püsimakse tühistamise teel. Seega tühistamiseks pole vaja Toidupangaga ühendust võtta ega kodulehelt nuppu otsida — muudatus tehakse oma internetipangas."
+
+  # --- Government ---
+  - name: Maksu- ja Tolliamet
+    type: government
+    help_url: "https://www.emta.ee/eraklient/amet-uudised-ja-kontakt/kontaktid/klienditugi"
+    apply_url: "https://maasikas.emta.ee/login/?lang=et"
+    rights_url: "https://www.emta.ee/eraklient/amet-uudised-ja-kontakt/kontaktid/ametlik-poordumine"
+    phone: "+372 880 0811"
+    notes: "Eraklientide ja FIE-de nõustamine käib numbril +372 880 0811, teenindusajad E–N 9.00–16.30 ja R 9.00–15.30; isikupõhiseks nõustamiseks soovitab MTA kirjutada e-teenuste keskkonnas e-MTA, sest telefoni teel väljastatakse maksusaladust sisaldavat teavet ainult mobiil-ID või Smart-ID-ga autenditud kliendile. E-MTA kirjadele vastatakse hiljemalt viie tööpäeva jooksul ja kui vastamine eeldab info kogumist, siis hiljemalt 30 kalendripäeva jooksul. Ametlikud pöördumised saab esitada teabenõude, selgitustaotluse või märgukirjana."
+  - name: Sotsiaalkindlustusamet
+    type: government
+    help_url: "https://sotsiaalkindlustusamet.ee/kontakt"
+    apply_url: "https://sotsiaalkindlustusamet.ee/pensioni-taotlemine"
+    rights_url: "https://sotsiaalkindlustusamet.ee/vaie"
+    phone: "+372 612 1360"
+    notes: "Kui sa ameti otsuse või toiminguga ei nõustu, on sul 30 päeva jooksul otsusest või toimingust teada saamisest õigus esitada vaie või pöörduda kaebusega kohtusse; vaie tuleb esitada iseteeninduse suhtluse kaudu, digiallkirjastatult e-postile, allkirjastatult postiga või klienditeenindusse tuues, ja vaide koopiat (nt allkirjastatud ning seejärel skannitud vaiet) loetakse puudustega vaideks. Infotelefon +372 612 1360 töötab tööpäeviti 9–17, kuu viimasel reedel 9–13; lauatelefonilt on tasuta lühinumber 16106."
+  - name: Eesti Töötukassa
+    type: government
+    phone: "777 3000"
+    notes: "Sissetulekupõhist töötuskindlustushüvitist saad, kui oled töötuna arvele võetud, esitanud avalduse ja sul on viimase kolme aasta jooksul vähemalt 12 kuud töötuskindlustusstaaži ning sa ei lahkunud töölt omal algatusel — esimesel sajal päeval on see 60% ja seejärel 40% kalendripäeva keskmisest töötasust. Alates 01.01.2026 on olemas ka baasmääras hüvitis (8 kuud staaži, suurus 50% eelmise aasta töötasu alammäärast), mille õigus ei sõltu lahkumise põhjusest. Kui leiad, et otsus rikub sinu õigusi, tuleb vaie esitada 30 päeva jooksul; infotelefon 777 3000 vastab E–N 8.15–16.15 ja R 8.15–14.00."
+  - name: Tervisekassa
+    type: government
+    help_url: "https://tervisekassa.ee/tervisekassa/kontakt"
+    apply_url: "https://tervisekassa.ee/inimesele/huvitised"
+    rights_url: "https://tervisekassa.ee/kontaktpunkt/patsientide-oigused-ja-kaebevoimalused"
+    phone: "+372 669 6630"
+    notes: "Tervisekassa korraldab riiklikku ravikindlustust ja oma kindlustuse kehtivust ning arvelduskonto andmeid saad kontrollida terviseportaalis, riigiportaali eesti.ee teenuses „Arvelduskonto ja andmed Tervisekassas“ või helistades klienditelefonile +372 669 6630. Hüvitiste lehelt leiad haigus-, hooldus- ja hambaravihüvitise tingimused; ravi kvaliteedi või arstiabi kättesaadavuse üle saab kaevata patsientide õiguste ja kaebevõimaluste lehel kirjeldatud korras."
+  - name: Transpordiamet
+    type: government
+    help_url: "https://www.transpordiamet.ee/kontakt"
+    apply_url: "https://eteenindus.mnt.ee/main.jsf"
+    rights_url: "https://www.transpordiamet.ee/juhiluba"
+    notes: "E-teeninduses saab ID-kaardi või mobiil-IDga siseneda ning taotleda juhiluba, juhendaja tunnistust ja digitaalse sõidumeeriku kaarti, registreerida end teooria- ja sõidueksamile, vormistada auto või veesõiduki ostu-müüki ja taotleda eriveolube. Infotelefon klientidele (+372) 620 1200 on avatud E, T, K 9.00–17.00, N 10.00–17.00 ja R 9.00–16.00; teeolude ja liikluspiirangute infotelefon on 1247."
+  - name: Haridus- ja Teadusministeerium
+    type: government
+    help_url: "https://www.hm.ee/korgharidus-ja-teadus/korgharidus/oppetoetused"
+    phone: "663 1496"
+    notes: "Vajaduspõhist õppetoetust saab täiskoormusega õppiv tudeng, kes täidab õppekava nõudeid 75% ulatuses, ja selle suurus sõltub pereliikme kohta arvestatud keskmisest kuusissetulekust: kuni 189,1 € → 440 € kuus, 189,11–378,19 € → 270 € kuus, 378,2–756,38 € → 150 € kuus; vajaduspõhine eritoetus on 135 € kuus. Taotlus esitatakse haridusportaalis, mis hangib pereliikmete ja sissetulekute andmed ise rahvastikuregistrist ja maksukohustuslaste registrist; menetlusaeg on kuni 15 tööpäeva. Akadeemilisel puhkusel olles toetust ei saa. Küsimused: 663 1496, vastatakse 15 päeva jooksul."

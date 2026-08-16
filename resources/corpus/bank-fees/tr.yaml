@@ -1,0 +1,40 @@
+# Bank-fee classification rules — Türkiye (Turkish).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Turkish patterns are written in the UPPERCASE form the statement lines
+# print, and the suffixes are cut off the stem ("… ÜCRETİ" is listed as
+# "… ÜCRET"): case-insensitive matching folds the dotted "İ" to "i" plus a
+# combining dot, which does not equal the plain "i" of the mixed-case
+# spelling, so a pattern ending in "İ" would only ever match uppercase text.
+# The stems avoid that. The bare "ÜCRET" is not used on its own either — it
+# is the everyday word for any charge ("otopark ücreti") — so each entry
+# keeps the word that says what is being charged for. Only "MASRAF" is
+# ASCII, and it uses `regex:` with a LEADING \b so it stays a standalone
+# word while the open right side covers "masraflar" and "masrafı"; Turkish
+# letters never go inside a `regex:` body, because the matcher runs PCRE
+# without /u, so `#i` case-folds ASCII only and \b never sees "Ü" or "İ" as
+# a word character. Regex bodies must be SINGLE-quoted in YAML so the
+# backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "HESAP İŞLET"
+    name: "Hesap işletim ücreti"
+  - pattern: "İŞLEM ÜCRET"
+    name: "İşlem ücreti"
+  - pattern: "EFT ÜCRET"
+    name: "EFT ücreti"
+  - pattern: "HAVALE ÜCRET"
+    name: "Havale ücreti"
+  - pattern: "KART ÜCRET"
+    name: "Kart ücreti"
+  - pattern: "KOMİSYON"
+    name: "Komisyon"
+  - pattern: 'regex:\bMASRAF'
+    name: "Masraf"

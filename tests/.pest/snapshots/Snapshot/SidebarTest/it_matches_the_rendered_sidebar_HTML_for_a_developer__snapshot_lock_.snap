@@ -30,7 +30,7 @@
         >Ctrl+K</span>
     </div>
 
-    <div class="side-section-label">THIS MONTH</div>
+    <div class="side-section-label">OVERVIEW</div>
     
     <a href="https://beatrax.test" class="side-item ">
         <span class="ic" aria-hidden="true">◆</span>
@@ -48,41 +48,39 @@
         <span class="ic" aria-hidden="true">▦</span>
         Calendar
     </a>
+    
+    <a href="https://beatrax.test/notifications" class="side-item ">
+        <span class="ic" aria-hidden="true">◈</span>
+        Notifications
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
 
-    <div class="side-section-label">MONEY</div>
+    
+    <div class="side-section-label">COMMITMENTS</div>
     <a href="https://beatrax.test/recurring" class="side-item ">
         <span class="ic" aria-hidden="true">↻</span>
         Recurring
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
-    
-    <a href="https://beatrax.test/counterparties" class="side-item ">
-        <span class="ic" aria-hidden="true">◉</span>
-        Counterparties
-        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
-    
-    <a href="https://beatrax.test/counterparties/triage" class="side-item ">
-        <span class="ic" aria-hidden="true">❋</span>
-        Triage
+    <a href="https://beatrax.test/drift/watch" class="side-item ">
+        <span class="ic" aria-hidden="true">↗</span>
+        Subscriptions
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
     <a href="https://beatrax.test/chains" class="side-item ">
         <span class="ic" aria-hidden="true">⇉</span>
         Chains
     </a>
-    <a href="https://beatrax.test/drift" class="side-item ">
-        <span class="ic" aria-hidden="true">⚠</span>
-        Drift Alerts
-        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
     <a href="https://beatrax.test/drift?type=anomaly" class="side-item">
         <span class="ic" aria-hidden="true">◬</span>
         Unusual charges
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
-    
-    <a href="https://beatrax.test/notifications" class="side-item ">
-        <span class="ic" aria-hidden="true">◈</span>
-        Notifications
+    <a href="https://beatrax.test/drift" class="side-item ">
+        <span class="ic" aria-hidden="true">⚠</span>
+        Drift Alerts
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+
+    
+    <div class="side-section-label">PLANNING</div>
     <a href="https://beatrax.test/budgets" class="side-item ">
         <span class="ic" aria-hidden="true">⊙</span>
         Budgets
@@ -100,6 +98,9 @@
         <span class="ic" aria-hidden="true">◫</span>
         Pots
     </a>
+
+    
+    <div class="side-section-label">INSIGHTS</div>
     
     <a href="https://beatrax.test/reports" class="side-item ">
         <span class="ic" aria-hidden="true">▤</span>
@@ -110,21 +111,13 @@
         <span class="ic" aria-hidden="true">✓</span>
         Reconcile
     </a>
-    <a href="https://beatrax.test/drift/watch" class="side-item ">
-        <span class="ic" aria-hidden="true">↗</span>
-        Subscriptions
-        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
 
-    <div class="side-section-label">INGESTION</div>
+    <div class="side-section-label">DATA IN</div>
     <a href="https://beatrax.test/imports/new" class="side-item ">
         <span class="ic" aria-hidden="true">⊕</span>
         Imports
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/migrations" class="side-item ">
-        <span class="ic" aria-hidden="true">⇄</span>
-        Import from YNAB / Actual
-    </a>
     <a href="#" class="side-item">
         <span class="ic" aria-hidden="true">⌗</span>
         Receipts
@@ -137,20 +130,37 @@
         <span class="ic" aria-hidden="true">✉</span>
         Email
     </a>
+
+    
+    <div class="side-section-label">ORGANISE</div>
+    
+    <a href="https://beatrax.test/counterparties" class="side-item ">
+        <span class="ic" aria-hidden="true">◉</span>
+        Counterparties
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
+    
+    <a href="https://beatrax.test/counterparties/triage" class="side-item ">
+        <span class="ic" aria-hidden="true">❋</span>
+        Triage
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     <a href="https://beatrax.test/uncategorized" class="side-item ">
         <span class="ic" aria-hidden="true">⌕</span>
         Categorization
     </a>
+    <a href="https://beatrax.test/community" class="side-item ">
+        <span class="ic" aria-hidden="true">◇</span>
+        Community
+    </a>
 
     <div class="side-section-label">SETTINGS</div>
     
-    <a href="https://beatrax.test/sync" class="side-item ">
+    <a href="https://beatrax.test/data-devices" class="side-item ">
         <span class="ic" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
         </span>
-        Sync
+        Data &amp; Devices
     </a>
     <a href="https://beatrax.test/settings" class="side-item ">
         <span class="ic" aria-hidden="true">⚙</span>

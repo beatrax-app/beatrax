@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Regel bearbeiten',
+    'heading_new' => 'Neue Regel',
+
+    'combinator_aria' => 'Bedingungsverknüpfung',
+    'match_all' => 'Alle Bedingungen müssen zutreffen',
+    'match_any' => 'Eine Bedingung muss zutreffen',
+
+    'condition_label' => 'Bedingung :number',
+    'condition_field_aria' => 'Feld von Bedingung :number',
+    'condition_operator_aria' => 'Operator von Bedingung :number',
+    'condition_value_aria' => 'Wert von Bedingung :number',
+    'condition_value_from_aria' => 'Wert von Bedingung :number (von)',
+    'condition_value_to_aria' => 'Wert von Bedingung :number (bis)',
+    'to' => 'bis',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'z. B. SPOTIFY',
+    'remove_condition' => 'Bedingung entfernen',
+    'add_condition' => '+ Bedingung hinzufügen',
+
+    'then' => 'Dann',
+    'action_label' => 'Aktion :number',
+    'action_type_aria' => 'Typ von Aktion :number',
+    'action_category' => 'Kategorie',
+    'action_counterparty' => 'Zahlungspartner',
+    'action_note' => 'Notiz',
+    'action_tax_tag' => 'Steuer-Markierung',
+    'assign_category_aria' => 'Kategorie für Aktion :number zuweisen',
+    'reassign_counterparty_aria' => 'Zahlungspartner für Aktion :number neu zuweisen',
+    'note_text_aria' => 'Notiztext für Aktion :number',
+    'note_placeholder' => 'Notiztext…',
+    'note_mode_aria' => 'Notizmodus für Aktion :number',
+    'note_set' => 'Setzen',
+    'note_append' => 'Anhängen',
+    'deduction_category_aria' => 'Abzugskategorie für Aktion :number',
+    'remove_action' => 'Aktion entfernen',
+    'add_action' => '+ Aktion hinzufügen',
+
+    'this_year_only' => 'Nur dieses Jahr ▾',
+    'override_tax_year' => 'Steuerjahr überschreiben',
+    'tax_year_override_aria' => 'Steuerjahr überschreiben für Aktion :number',
+    'tax_tag_note' => 'Aktionen mit Steuer-Markierung greifen bei der nächsten erneuten Anwendung, nicht beim aktuellen Import.',
+
+    'priority' => 'Priorität',
+    'priority_help' => 'Niedrigere Zahlen laufen zuerst. Regeln ohne gemeinsame Felder geraten nie in Konflikt.',
+
+    'cancel' => 'Abbrechen',
+    'save_changes' => 'Änderungen speichern',
+    'save_rule' => 'Regel speichern',
+    'saving' => 'Wird gespeichert…',
+
+    'error_rule_unavailable' => 'Diese Regel ist nicht mehr verfügbar.',
+    'error_invalid_data' => 'Ungültige Regeldaten — wähle aus den Auswahllisten und versuche es erneut.',
+    'error_duplicate' => 'Eine Regel mit diesem Feld, diesem Vergleich und diesem Wert gibt es bereits. Bearbeite stattdessen die vorhandene Regel.',
+    'error_priority_whole' => 'Die Priorität muss eine ganze Zahl sein.',
+    'error_add_condition' => 'Füge mindestens eine Bedingung hinzu.',
+    'error_add_action' => 'Füge mindestens eine Aktion hinzu.',
+    'condition_value_required' => 'Gib einen Wert für Bedingung :position ein.',
+    'condition_bounds_required' => 'Wähle eine Unter- und eine Obergrenze für Bedingung :position.',
+    'condition_amount_invalid' => 'Gib einen gültigen Betrag für Bedingung :position ein.',
+    'action_pick_category' => 'Wähle eine Kategorie für diese Aktion.',
+    'action_pick_counterparty' => 'Wähle einen Zahlungspartner, dem neu zugewiesen werden soll.',
+    'action_note_required' => 'Gib einen Notiztext ein.',
+    'action_pick_deduction' => 'Wähle eine Abzugskategorie für die Steuer-Markierung.',
+];

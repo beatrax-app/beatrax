@@ -1,0 +1,102 @@
+# Government / public-agency classification rules — Liechtenstein.
+# Health insurance is private (KVG insurers), so no health-fund rule here.
+# The Motorfahrzeugkontrolle was renamed Amt für Strassenverkehr in 2019 —
+# both forms are kept, the old one still appears on standing orders.
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "STEUERVERWALTUNG"
+    name: "Steuerverwaltung Liechtenstein"
+  - pattern: "AHV-IV-FAK"
+    name: "Liechtensteinische AHV-IV-FAK"
+  - pattern: "LANDESVERWALTUNG"
+    name: "Liechtensteinische Landesverwaltung"
+  - pattern: "AMT FUR STRASSENVERKEHR"
+    name: "Amt für Strassenverkehr"
+  - pattern: "MOTORFAHRZEUGKONTROLLE"
+    name: "Amt für Strassenverkehr (ex-Motorfahrzeugkontrolle)"
+  - pattern: "AMT FUR SOZIALE DIENSTE"
+    name: "Amt für Soziale Dienste"
+  - pattern: "AMT FUR JUSTIZ"
+    name: "Amt für Justiz"
+  - pattern: "LANDESPOLIZEI"
+    name: "Landespolizei"
+  # The eleven Gemeinden bill communal tax and utility charges directly.
+  - pattern: "GEMEINDE"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. The Amtsstellen below are the verbatim office names of the
+  # Liechtensteinische Landesverwaltung, taken from the llv.li site tree
+  # (five Ministerien, 19 Ämter and the Stabsstellen; captured through the
+  # Internet Archive because llv.li blocks direct fetches). Court and
+  # prosecution styles from gerichte.li; AHV-IV-FAK from ahv.li.
+  #
+  # Statements print "Amt für" either verbatim or with the umlaut dropped
+  # or expanded, so each office gets one ASCII regex covering FUR/FUER and
+  # — for the offices a household actually pays — one plain entry carrying
+  # the real umlaut. There is deliberately NO broadcasting-fee rule: the
+  # Rundfunkgebühr was abolished in January 1999 and the Liechtensteinischer
+  # Rundfunk was wound up in 2025. Health insurance is private under the
+  # KVG, so no health-fund rule either.
+  # ---------------------------------------------------------------------
+
+  - pattern: "AMT FÜR STRASSENVERKEHR"
+    name: "Amt für Strassenverkehr"
+  - pattern: "AMT FÜR SOZIALE DIENSTE"
+    name: "Amt für Soziale Dienste"
+  - pattern: "AMT FÜR JUSTIZ"
+    name: "Amt für Justiz"
+  - pattern: 'regex:AMT F(U|UE)R GESUNDHEIT'
+    name: "Amt für Gesundheit"
+  - pattern: "AMT FÜR GESUNDHEIT"
+    name: "Amt für Gesundheit"
+  - pattern: 'regex:AMT F(U|UE)R UMWELT'
+    name: "Amt für Umwelt"
+  - pattern: 'regex:AMT F(U|UE)R VOLKSWIRTSCHAFT'
+    name: "Amt für Volkswirtschaft"
+  - pattern: 'regex:AMT F(U|UE)R BEV(O|OE)LKERUNGSSCHUTZ'
+    name: "Amt für Bevölkerungsschutz"
+  - pattern: 'regex:AMT F(U|UE)R KOMMUNIKATION'
+    name: "Amt für Kommunikation"
+  - pattern: 'regex:AMT F(U|UE)R STATISTIK'
+    name: "Amt für Statistik"
+  - pattern: 'regex:AMT F(U|UE)R INFORMATIK'
+    name: "Amt für Informatik"
+  - pattern: 'regex:AMT F(U|UE)R KULTUR'
+    name: "Amt für Kultur"
+  - pattern: 'regex:AMT F(U|UE)R HOCHBAU UND RAUMPLANUNG'
+    name: "Amt für Hochbau und Raumplanung"
+  - pattern: 'regex:AMT F(U|UE)R TIEFBAU UND GEOINFORMATION'
+    name: "Amt für Tiefbau und Geoinformation"
+  - pattern: 'regex:AMT F(U|UE)R BERUFSBILDUNG'
+    name: "Amt für Berufsbildung und Berufsberatung"
+  - pattern: 'regex:AMT F(U|UE)R LEBENSMITTELKONTROLLE'
+    name: "Amt für Lebensmittelkontrolle und Veterinärwesen"
+  - pattern: 'regex:AMT F(U|UE)R AUSW(A|AE)RTIGE ANGELEGENHEITEN'
+    name: "Amt für Auswärtige Angelegenheiten"
+  - pattern: 'regex:AMT F(U|UE)R PERSONAL UND ORGANISATION'
+    name: "Amt für Personal und Organisation"
+
+  # Passports, residence permits and schooling.
+  - pattern: 'regex:AUSL(A|AE)NDER- UND PASSAMT'
+    name: "Ausländer- und Passamt"
+  - pattern: "AUSLÄNDER- UND PASSAMT"
+    name: "Ausländer- und Passamt"
+  - pattern: "SCHULAMT"
+    name: "Schulamt"
+
+  # Courts and oversight bodies. "Fürstliches" keeps the Liechtenstein
+  # Landgericht apart from the German Landgericht rule in de.yaml.
+  - pattern: 'regex:F(U|UE)RSTLICHES LANDGERICHT'
+    name: "Fürstliches Landgericht"
+  - pattern: "FÜRSTLICHES LANDGERICHT"
+    name: "Fürstliches Landgericht"
+  - pattern: "FINANZKONTROLLE"
+    name: "Finanzkontrolle"
+  - pattern: "OPFERHILFESTELLE"
+    name: "Opferhilfestelle"
+  - pattern: "STABSSTELLE"
+    name: "Stabsstelle der Landesverwaltung"
+
+  # Old-age and survivors' insurance, spelled out.
+  - pattern: "ALTERS- UND HINTERLASSENENVERSICHERUNG"
+    name: "Liechtensteinische AHV-IV-FAK"

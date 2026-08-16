@@ -1,0 +1,46 @@
+# Bank-fee classification rules — Andorra (Catalan and Spanish).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Andorran banks publish their tariff book in either language — MoraBanc's
+# is Catalan, Andbank's is Spanish — so both are listed. The fee word uses
+# `regex:` with a LEADING \b on the stem: `\bCOMISSI` covers "comissió" and
+# "comissions", `\bCOMISI` covers "comisión" and "comisiones". Each stops
+# before the accented "ó" because the matcher runs PCRE without /u, so `#i`
+# case-folds ASCII only and an accented letter inside a regex would match
+# one casing at best. The two stems cannot cross-fire: Catalan doubles the
+# S, so `\bCOMISI` never reaches "comissió".
+#
+# The trap here is "MANTENIMENT", which is never used on its own. MoraBanc's
+# own tariff book prints "període de manteniment de la inversió" for an
+# investment holding period, and outside banking the word belongs to the
+# building- and vehicle-maintenance merchants a household actually pays —
+# the fee sense only survives anchored to the account. "MANTENIMENT DE
+# COMPTE" is therefore the entry, and being a prefix it still covers the
+# plural "manteniment de comptes" that the tariff heading uses. Regex bodies
+# must be SINGLE-quoted in YAML so the backslash reaches the matcher instead
+# of being read as a YAML escape.
+#
+# Worked from: MoraBanc "Tarifes repercutibles a clients" V03/2025 (Catalan)
+# and Andbank "Libro de tarifas ANDBANK" AND2026.05.04 (Spanish). Creand's
+# site refuses automated requests, so its wording is not represented here.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bCOMISSI'
+    name: "Comissió bancària"
+  - pattern: "MANTENIMENT DE COMPTE"
+    name: "Comissió de manteniment"
+  - pattern: 'regex:\bDESCOBERT'
+    name: "Descobert"
+  - pattern: 'regex:\bINTERESSOS\b'
+    name: "Interessos"
+  - pattern: 'regex:\bCOMISI'
+    name: "Comisión bancaria"
+  - pattern: "MANTENIMIENTO DE CUENTA"
+    name: "Comisión de mantenimiento"

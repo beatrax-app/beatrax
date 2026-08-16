@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Poreska država',
+    'country_desc' => 'Određuje koje su kategorije odbitaka dostupne.',
+    'country_choose' => 'Izaberi državu…',
+    'country_switch_warning' => 'Promena dodaje nove kategorije — postojeće oznake se nikad ne menjaju.',
+
+    'countries' => [
+        'at' => 'Austrija',
+        'be' => 'Belgija',
+        'bg' => 'Bugarska',
+        'ca' => 'Kanada',
+        'ch' => 'Švajcarska',
+        'cy' => 'Kipar',
+        'cz' => 'Češka',
+        'de' => 'Nemačka',
+        'dk' => 'Danska',
+        'ee' => 'Estonija',
+        'es' => 'Španija',
+        'fi' => 'Finska',
+        'fr' => 'Francuska',
+        'gb' => 'Ujedinjeno Kraljevstvo',
+        'gr' => 'Grčka',
+        'hr' => 'Hrvatska',
+        'hu' => 'Mađarska',
+        'ie' => 'Irska',
+        'is' => 'Island',
+        'it' => 'Italija',
+        'lt' => 'Litvanija',
+        'lu' => 'Luksemburg',
+        'lv' => 'Letonija',
+        'mt' => 'Malta',
+        'nl' => 'Holandija',
+        'no' => 'Norveška',
+        'pl' => 'Poljska',
+        'pt' => 'Portugal',
+        'ro' => 'Rumunija',
+        'se' => 'Švedska',
+        'si' => 'Slovenija',
+        'sk' => 'Slovačka',
+        'us' => 'Sjedinjene Američke Države',
+    ],
+
+    'categories_label' => 'Kategorije odbitaka',
+    'categories_desc' => 'Prilagodi grupe koje koristiš za označavanje.',
+    'categories_empty' => 'Još nema kategorija. Dodaj prvu kategoriju ili promeni državu da učitaš podrazumevane.',
+
+    'from_corpus' => 'iz korpusa',
+    'rename_input_aria' => 'Novi naziv za :name',
+    'rename' => 'Preimenuj',
+    'rename_aria' => 'Preimenuj :name',
+    'rename_save_aria' => 'Sačuvaj novi naziv za :name',
+    'save' => 'Sačuvaj',
+    'archive' => 'Arhiviraj',
+    'archive_aria' => 'Arhiviraj :name',
+
+    'new_category_label' => 'Naziv nove kategorije',
+    'new_category_placeholder' => 'Naziv nove kategorije…',
+    'add_category' => 'Dodaj kategoriju',
+    'category_added' => 'Kategorija dodata.',
+
+    'archived_count' => 'Arhivirano (:count)',
+    'restore' => 'Vrati',
+    'restore_aria' => 'Vrati :name',
+];

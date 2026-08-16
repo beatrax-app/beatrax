@@ -99,7 +99,10 @@ it('returns the raw value + decrypted:false for a tampered ciphertext, and never
 
     $result = $codec->decryptValue('counterparties', 'display_name', $tampered, $userId, $session);
     expect($result['decrypted'])->toBeFalse();
-    expect($result['value'])->toBe($tampered);
+    // Blanked, not echoed back. The value is ciphertext-shaped and did not
+    // verify, so handing it to a caller only ever puts base64 on a screen —
+    // which is precisely what a phone missing its keyring used to render.
+    expect($result['value'])->toBe('');
 });
 
 it('a relabeled table/field association still fails to decrypt (AD epoch binding, defense in depth)', function (): void {
@@ -120,7 +123,7 @@ it('a relabeled table/field association still fails to decrypt (AD epoch binding
     // associated data no longer matches, so the AEAD auth tag must fail.
     $result = $codec->decryptValue('transactions', 'counterparty_name', $ciphertext, $userId, $session);
     expect($result['decrypted'])->toBeFalse();
-    expect($result['value'])->toBe($ciphertext);
+    expect($result['value'])->toBe('');
 });
 
 it('is a pass-through in both directions when encryption is not enabled for the user', function (): void {

@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Skatteland',
+    'country_desc' => 'Bestemmer hvilke fradragskategorier som er tilgjengelige.',
+    'country_choose' => 'Velg et land…',
+    'country_switch_warning' => 'Et bytte legger til nye kategorier — eksisterende merkinger endres aldri.',
+
+    'countries' => [
+        'at' => 'Østerrike',
+        'be' => 'Belgia',
+        'bg' => 'Bulgaria',
+        'ca' => 'Canada',
+        'ch' => 'Sveits',
+        'cy' => 'Kypros',
+        'cz' => 'Tsjekkia',
+        'de' => 'Tyskland',
+        'dk' => 'Danmark',
+        'ee' => 'Estland',
+        'es' => 'Spania',
+        'fi' => 'Finland',
+        'fr' => 'Frankrike',
+        'gb' => 'Storbritannia',
+        'gr' => 'Hellas',
+        'hr' => 'Kroatia',
+        'hu' => 'Ungarn',
+        'ie' => 'Irland',
+        'is' => 'Island',
+        'it' => 'Italia',
+        'lt' => 'Litauen',
+        'lu' => 'Luxembourg',
+        'lv' => 'Latvia',
+        'mt' => 'Malta',
+        'nl' => 'Nederland',
+        'no' => 'Norge',
+        'pl' => 'Polen',
+        'pt' => 'Portugal',
+        'ro' => 'Romania',
+        'se' => 'Sverige',
+        'si' => 'Slovenia',
+        'sk' => 'Slovakia',
+        'us' => 'USA',
+    ],
+
+    'categories_label' => 'Fradragskategorier',
+    'categories_desc' => 'Tilpass kategoriene du bruker når du merker.',
+    'categories_empty' => 'Ingen kategorier ennå. Legg til din første kategori, eller bytt land for å laste inn standardverdier.',
+
+    'from_corpus' => 'fra korpus',
+    'rename_input_aria' => 'Nytt navn for :name',
+    'rename' => 'Gi nytt navn',
+    'rename_aria' => 'Gi :name nytt navn',
+    'rename_save_aria' => 'Lagre nytt navn for :name',
+    'save' => 'Lagre',
+    'archive' => 'Arkiver',
+    'archive_aria' => 'Arkiver :name',
+
+    'new_category_label' => 'Navn på ny kategori',
+    'new_category_placeholder' => 'Navn på ny kategori…',
+    'add_category' => 'Legg til kategori',
+    'category_added' => 'Kategorien ble lagt til.',
+
+    'archived_count' => 'Arkiverte (:count)',
+    'restore' => 'Gjenopprett',
+    'restore_aria' => 'Gjenopprett :name',
+];

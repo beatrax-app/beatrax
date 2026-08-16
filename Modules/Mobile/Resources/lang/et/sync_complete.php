@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'See seade on sünkroonitud',
+    'heading' => 'See seade on sünkroonitud',
+    'records' => 'Seadmest :peer kopeeriti :count kirjet.',
+    'records_none' => 'Seadmega :peer ollakse ühel lainel. Uut polnud midagi kopeerida.',
+    'how_it_works' => 'Edaspidi',
+    'automatic_title' => 'See hoiab end ise ajakohasena',
+    'automatic_body' => 'Kõik, mida ühes seadmes muudad, ilmub ka teise. Sünkroonimisnuppu pole vaja vajutada.',
+    'lan_title' => 'Samas võrgus',
+    'lan_body' => 'Kui mõlemad seadmed on sinu koduvõrgus, suhtlevad nad omavahel otse, ilma vahendajata.',
+    'relay_title' => 'Kui oled väljas',
+    'relay_body' => 'Muudatused ootavad krüpteeritult sinu releel, kuni teine seade taas võrku tuleb, ja jõuavad siis automaatselt kohale.',
+    'no_relay_title' => 'Kui oled väljas',
+    'no_relay_body' => 'Muudatused ootavad selles seadmes ja sünkroonitakse järgmisel korral, kui mõlemad on koos sinu koduvõrgus.',
+    'encrypted_title' => 'Lugeda saavad ainult sinu seadmed',
+    'encrypted_body' => 'Kõik krüpteeritakse enne seadmest lahkumist ja võtmeid hoiavad ainult sinu seotud seadmed.',
+    'continue' => 'Hakka Beatraxi kasutama',
+    'peer_fallback' => 'sinu teine seade',
+];

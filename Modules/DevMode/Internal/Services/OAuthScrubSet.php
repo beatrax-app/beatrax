@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\DevMode\Internal\Services;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Modules\Core\Models\SystemAlert;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\EmailScan\Models\OAuthSecret;
@@ -94,20 +95,7 @@ class OAuthScrubSet
             /** @var iterable<OAuthSecret> $rows */
             $rows = OAuthSecret::query()->get();
             foreach ($rows as $row) {
-                // Reveal the keychain shield so the scrub set holds the true
-                // plaintext secret, not desktop safeStorage ciphertext.
-                $clientSecret = $this->shield->reveal($row->client_secret);
-                if (trim($clientSecret) !== '') {
-                    $collected[$clientSecret] = true;
-                }
-
-                $blob = $row->tokens_blob;
-                if (is_string($blob) && $blob !== '') {
-                    $decoded = json_decode($this->shield->reveal($blob), true);
-                    if (is_array($decoded)) {
-                        $this->collectStrings($decoded, $collected);
-                    }
-                }
+                $this->collectRow($row, $collected);
             }
         } catch (Throwable $e) {
             if (! $this->bootPhase) {
@@ -122,6 +110,36 @@ class OAuthScrubSet
         $this->bootPhase = false;
 
         return array_keys($collected);
+    }
+
+    // Collects one row, tolerating a secret this app can no longer read. A
+    // row encrypted under a superseded APP_KEY throws, and letting that reach
+    // load()'s catch emptied the WHOLE set — so a single stale credential
+    // turned redaction off everywhere rather than for itself.
+    /**
+     * @param  array<string, true>  $collected
+     */
+    private function collectRow(OAuthSecret $row, array &$collected): void
+    {
+        try {
+            // Reveal the keychain shield so the scrub set holds the true
+            // plaintext secret, not desktop safeStorage ciphertext.
+            $clientSecret = $this->shield->reveal($row->client_secret);
+            if (trim($clientSecret) !== '') {
+                $collected[$clientSecret] = true;
+            }
+
+            $blob = $row->tokens_blob;
+            if (is_string($blob) && $blob !== '') {
+                $decoded = json_decode($this->shield->reveal($blob), true);
+                if (is_array($decoded)) {
+                    $this->collectStrings($decoded, $collected);
+                }
+            }
+        } catch (DecryptException) {
+            // Unreadable is also unleakable: there is no plaintext here to
+            // scrub, and the credential itself needs re-authenticating.
+        }
     }
 
     // Best-effort: a SystemAlert write that also fails (e.g. DB fully

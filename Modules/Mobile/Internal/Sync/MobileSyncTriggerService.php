@@ -70,11 +70,17 @@ final class MobileSyncTriggerService
             return null;
         }
 
+        // ALWAYS drain the relay, never only as a LAN fallback. A working
+        // LAN leg used to skip this entirely, leaving anything queued in the
+        // mailbox — epoch wraps included — unread for as long as the LAN
+        // stayed reachable.
+        $relayReached = $this->relayLeg($identity);
+
         $lanReached = $lanHost !== null
             && $lanPort !== null
             && $this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session);
 
-        return $lanReached ? true : $this->relayLeg($identity);
+        return $lanReached || $relayReached;
     }
 
     // Re-drives exactly ONCE on a retryable outcome (the iOS Local
@@ -112,8 +118,12 @@ final class MobileSyncTriggerService
 
             return true;
         } catch (Throwable $e) {
+            // The class alone says "connection failed" and nothing about why;
+            // the message carries the curl error that distinguishes a refused
+            // TLS handshake from a timeout or a wrong address.
             $this->logger?->info('MobileSyncTriggerService: relay leg unreachable (retryable).', [
                 'reason' => $e::class,
+                'message' => $e->getMessage(),
             ]);
 
             return false;

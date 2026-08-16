@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'status' => [
+        'cleared' => 'Knjiženo',
+        'uncleared' => 'Neknjiženo',
+        'reconciled' => 'Usklajeno',
+    ],
+
+    'badge' => [
+
+        'reconciled_hint' => 'Usklajeno — najprej razveljavi uskladitev, da spremeniš stanje.',
+        'toggle_aria' => ':label — klikni za preklop',
+    ],
+];

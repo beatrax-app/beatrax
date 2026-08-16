@@ -1,0 +1,34 @@
+# Bank-fee classification rules — Italy (Italian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The fee words use `regex:` with \b word boundaries and their plural
+# spelled out, so `\bCOMMISSION[EI]\b` matches "commissione" and
+# "commissioni" but not a longer token, and `\bCOMPETENZE\b` matches the
+# statement's interest-and-charges settlement line only as a standalone
+# word. Bare "SPESE" and bare "CANONE" are deliberately absent: they would
+# fire on "spese condominiali" (service charges paid to a building) and
+# "canone di locazione" (rent), which are ordinary outgoing payments — the
+# account-fee sense is picked up through the fixed phrases instead. All
+# bodies are ASCII, so no accented letter reaches the regex — the matcher
+# runs PCRE without /u and `#i` case-folds ASCII only. Regex bodies must be
+# SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "TENUTA CONTO"
+    name: "Spese di tenuta conto"
+  - pattern: "CANONE ANNUO"
+    name: "Canone annuo"
+  - pattern: 'regex:\bCOMMISSION[EI]\b'
+    name: "Commissioni"
+  - pattern: 'regex:\bCOMPETENZE\b'
+    name: "Competenze"
+  - pattern: "INTERESSI DEBITORI"
+    name: "Interessi debitori"

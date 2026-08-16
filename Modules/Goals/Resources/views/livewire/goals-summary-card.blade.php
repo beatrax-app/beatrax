@@ -22,7 +22,7 @@
         <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.page.title') }}</p>
         <a
             href="{{ route('goals.index') }}"
-            class="text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
+            class="tap-link text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
         >{{ Lang::get('goals::messages.summary.see_all') }}</a>
     </div>
 
@@ -45,8 +45,11 @@
                     $barWidth = $pct === 0 ? 0 : max(2, $pct);
                     $color = $progressColor[$row->progressState] ?? $progressColor['in_progress'];
                 @endphp
-                <li class="flex items-center gap-3">
-                    <p class="min-w-0 flex-1 truncate text-sm text-slate-900 dark:text-slate-100">{{ $row->name }}</p>
+                {{-- Wraps below sm: the 80px bar, the percentage and the status
+                     badge do not shrink, so on a phone the goal name was left
+                     ~64px for text needing 113px. --}}
+                <li class="flex flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
+                    <p class="w-full min-w-0 truncate text-sm text-slate-900 sm:w-auto sm:flex-1 dark:text-slate-100">{{ $row->name }}</p>
                     {{-- Mini progress bar: 4px × 80px --}}
                     <div
                         class="h-1 w-20 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"

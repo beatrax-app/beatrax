@@ -37,7 +37,9 @@
 @endphp
 
 <div class="mx-auto max-w-5xl px-4 py-12">
-    <header class="mb-6 flex items-start justify-between gap-4">
+    {{-- Baseline, not items-start: the link is 14px beside a 24px title, so
+         aligning their tops left it floating above the heading it belongs to. --}}
+    <header class="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::inbox.heading') }}</h1>
         </div>

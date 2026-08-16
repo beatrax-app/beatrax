@@ -199,6 +199,14 @@
             <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('sync::pairing.compare_words') }}</h3>
             <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('sync::pairing.step_3_of_3') }}</p>
 
+            {{-- The words prove the CHANNEL is untampered; the names say
+                 WHICH two devices it connects. Both are part of the check. --}}
+            <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
+                <span class="font-medium">{{ $selfDeviceName }}</span>
+                <span class="text-slate-400 dark:text-slate-500">&harr;</span>
+                <span class="font-medium">{{ $peerDeviceName }}</span>
+            </p>
+
             @php
                 $rowOne = array_slice($safetyWords, 0, 3);
                 $rowTwo = array_slice($safetyWords, 3, 3);

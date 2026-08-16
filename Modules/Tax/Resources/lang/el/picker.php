@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'dialog_aria' => 'Επισήμανση ως φορολογικά εκπιπτόμενο',
+
+    'note_label' => 'Σημείωση',
+    'note_optional' => '(προαιρετικά)',
+    'note_placeholder' => 'Αριθμός τιμολογίου, ημερομηνία ή άλλη αναφορά…',
+
+    'category_label' => 'Κατηγορία',
+    'category_listbox_aria' => 'Κατηγορία έκπτωσης',
+    'no_category' => 'Χωρίς κατηγορία',
+
+    'new_category' => 'Νέα κατηγορία…',
+    'new_category_placeholder' => 'Όνομα νέας κατηγορίας…',
+    'new_category_aria' => 'Όνομα νέας κατηγορίας',
+    'add' => 'Προσθήκη',
+    'cancel' => 'Άκυρο',
+    'cancel_new_category_aria' => 'Ακύρωση νέας κατηγορίας',
+
+    'assign_year' => 'Καταχώριση στο φορολογικό έτος:',
+
+    'save' => 'Αποθήκευση',
+    'remove_tag' => 'Αφαίρεση επισήμανσης',
+
+    'batch_before' => 'Να επισημανθούν και :count ακόμη από',
+    'batch_after' => ';',
+    'batch_tag_all' => 'Επισήμανση όλων',
+    'batch_dismiss' => 'Απόρριψη',
+];

@@ -1,0 +1,33 @@
+# Bank-fee classification rules — Malta (English).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Maltese banks print their statement lines in English, so this file is
+# English only. The wording is carried by multi-word phrases, because the
+# single words ("FEE", "CHARGE", "INTEREST") are far too generic to be safe
+# on their own. The `regex:` entries anchor the two bank-specific words with
+# a LEADING \b so they stay standalone words — "COMMISSION" cannot fire
+# inside "COMMISSIONING", and "OVERDRAFT" cannot fire inside a longer token
+# while the open right side still covers "OVERDRAFTS" and "OVERDRAFT
+# INTEREST". Regex bodies must be SINGLE-quoted in YAML so the backslash
+# reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "BANK CHARGES"
+    name: "Bank charges"
+  - pattern: "ACCOUNT MAINTENANCE FEE"
+    name: "Account maintenance fee"
+  - pattern: "ANNUAL CARD FEE"
+    name: "Annual card fee"
+  - pattern: "TRANSACTION FEE"
+    name: "Transaction fee"
+  - pattern: 'regex:\bOVERDRAFT'
+    name: "Overdraft charge"
+  - pattern: 'regex:\bCOMMISSION\b'
+    name: "Commission"

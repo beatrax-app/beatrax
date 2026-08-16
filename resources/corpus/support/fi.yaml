@@ -1,0 +1,102 @@
+# Support-resource corpus — Finland (FI merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Elisa
+    type: merchant
+    cancel_url: "https://elisa.fi/asiakaspalvelu/sopimukset/irtisanominen/"
+    support_url: "https://elisa.fi/asiakaspalvelu/"
+    notes: "Useimmat tuotteet irtisanotaan OmaElisassa: avaa Tuotteesi ja tilauksesi, valitse liittymä ja klikkaa Päätä sopimus. Irtisanomisaika on 14 vuorokautta, ja määräaikainen liittymä on irtisanottavissa vasta määräajan päättymisen jälkeen; liittymän numeroa ei voi irtisanomisen jälkeen säilyttää."
+  - name: Telia Finland
+    type: merchant
+    cancel_url: "https://www.telia.fi/asiakastuki/liittymat/irtisanominen"
+    support_url: "https://www.telia.fi/asiakastuki/yhteystiedot"
+    notes: "Toistaiseksi voimassa olevan liittymän irtisanominen onnistuu Minun Teliassa nettiselaimella (Hallinnoi tilausta > Sopimuksen irtisanominen) — sovelluksessa se ei ole mahdollista. Määräaikaista liittymää ei voi irtisanoa: sopimuksen purku käy vain asiakaspalvelun kautta ja maksamalla käyttämättä jäävän sopimuskauden maksut sekä hinnaston mukaisen irtisanomismaksun."
+  - name: DNA
+    type: merchant
+    cancel_url: "https://www.dna.fi/tuki/asiakkuus/peruuttaminen-ja-irtisanominen"
+    support_url: "https://www.dna.fi/tuki/yhteystiedot/asiakaspalvelu"
+    notes: "DNA:n irtisanomisohjeet on jaettu palvelun mukaan: puhelinliittymälle, nettiliittymälle ja viihdepalveluille on kullekin oma ohjesivunsa DNA:n tuessa. Lain mukaan toistaiseksi voimassa olevan liittymäsopimuksen irtisanomisaika voi olla enintään kaksi viikkoa."
+  - name: Helen
+    type: merchant
+    cancel_url: "https://www.helen.fi/asiakastuki/henkiloasiakkaat/irtisanominen-ja-peruuttaminen"
+    support_url: "https://www.helen.fi/tietoa-meista/ota-yhteytta/yhteystiedot"
+    notes: "Irtisanominen ja peruuttaminen hoituvat sopimustyypin ja tilanteen mukaan Oma Helenissä, jossa valitaan se sopimus, jota muutos koskee. Muuttaessa sopimusta ei tarvitse irtisanoa vaan sen voi siirtää mukanaan muuttoilmoituksella; uudella tilauksella on 14 vuorokauden etämyynnin peruutusoikeus."
+  - name: Vattenfall Suomi
+    type: merchant
+    cancel_url: "https://www.vattenfall.fi/sahkosopimukset/sahkosopimuksen-irtisanominen/"
+    support_url: "https://www.vattenfall.fi/asiakaspalvelu/usein-kysyttyja-kysymyksia/"
+    notes: "Toistaiseksi voimassa olevan sähkösopimuksen voi irtisanoa kahden viikon irtisanomisajalla; määräaikaista sopimusta ei voi irtisanoa kesken sopimuskauden, ja se muuttuu määräajan jälkeen automaattisesti toistaiseksi voimassa olevaksi. Muuton yhteydessä sopimuksen päättämisestä ilmoitetaan muuttopalveluun numeroon 0800 177 733 (maksuton, arkisin klo 8–18)."
+  - name: Caruna
+    type: merchant
+    support_url: "https://caruna.fi/asiakaspalvelu-ja-omat-sahkoasiat"
+    notes: "Sähköverkkosopimusta ei irtisanota Carunalle erikseen eikä verkkoyhtiötä voi kilpailuttaa: kun teet tai päätät sähkösopimuksen myyjäsi kanssa, myyjä ilmoittaa muutoksen Carunalle ja verkkosopimus syntyy, päivittyy tai päättyy sen perusteella. Muuton peruuntuessakin ilmoitus tehdään sähkönmyyjälle, ei Carunaan."
+  - name: If Vahinkovakuutus
+    type: merchant
+    cancel_url: "https://www.if.fi/henkiloasiakkaat/asiakaspalvelu/usein-kysyttya/vakuutuksen-irtisanominen"
+    support_url: "https://www.if.fi/henkiloasiakkaat/asiakaspalvelu"
+    notes: "Vakuutuksenottajana voit irtisanoa vapaaehtoisen vakuutuksesi milloin tahansa kirjallisesti, ja sivulla on tähän Irtisano vakuutus -toiminto. Jos irtisanomisen syynä on liian iso kertalasku, saman laskun voi vaihtaa 12 erään e-laskulla ilman lisäkuluja."
+  - name: EasyFit
+    type: merchant
+    support_url: "https://www.easyfit.fi/sopimusehdot/"
+    notes: "Toistaiseksi voimassa olevan jäsenyyden irtisanomisaika on yksi asiakkuuskuukausi ja irtisanominen tehdään EasyFit-asiakastilillä; päättymispäivä määräytyy henkilökohtaisen laskutuseräpäivän mukaan ja vahvistus tulee sähköpostitse. Kertaluonteista aloitusmaksua ei palauteta irtisanomisen yhteydessä."
+  - name: Verisure Suomi
+    type: merchant
+    support_url: "https://www.verisure.fi/asiakaspalvelu"
+    notes: "Verisurella ei ole verkossa irtisanomislomaketta: toistaiseksi voimassa oleva sopimus päätetään soittamalla asiakaspalveluun numeroon 010 217 9000 (arkisin klo 8–17) tai omien sivujen chatissa. Kuluttajan irtisanomisaika on yksi täysi kalenterikuukausi, ja Verisure varmistaa erikseen valtuutesi sopimuksen irtisanomiseen."
+  - name: Ruutu
+    type: merchant
+    cancel_url: "https://nelonen.fi/palaute/ruutu/tilaukset"
+    support_url: "https://nelonen.fi/palaute/ruutu"
+    notes: "Tilauksen voi irtisanoa itse Ruutu-palvelun Tilaukset-kohdasta. Tilaus- ja irtisanomisasioissa auttaa lisäksi Nelosen yhteydenottolomake sekä puhelinpalvelu 0203 34444 arkisin klo 9.00–16.30."
+  - name: Autoliitto
+    type: merchant
+    cancel_url: "https://www.autoliitto.fi/jasenyys/jasentietojen-muutokset/jasenyyden-irtisanominen/"
+    notes: "Jäsenyys irtisanotaan sivun lomakkeella, jossa jäsennumero, nimi, osoite ja sähköpostiosoite ovat pakollisia tietoja. Lomakkeella valitaan, päättyykö jäsenyys jäsenmaksukauden päättyessä vai heti — heti päätettäessä jo maksettua jäsenmaksua ei palauteta."
+  - name: UNICEF Suomi
+    type: merchant
+    support_url: "https://www.unicef.fi/tue-lapsia/lahjoita/kuukausilahjoitus/kysymyksia-ja-vastauksia/"
+    notes: "Kuukausilahjoituksen lopettamiseen ei ole verkkolomaketta: ilmoita siitä UNICEFille puhelimitse, sähköpostitse tai kirjeitse. Suoramaksuna tai e-laskuna maksettavan lahjoituksen lopetustiedon pitää tulla perille kolme viikkoa ennen eräpäivää, kortti- ja MobilePay-lahjoitus katkaistaan ilmoituspäivänä."
+
+  # --- Government ---
+  - name: Verohallinto
+    type: government
+    help_url: "https://www.vero.fi/yhteystiedot/"
+    apply_url: "https://www.vero.fi/sahkoiset-asiointipalvelut/omavero/"
+    rights_url: "https://www.vero.fi/henkiloasiakkaat/verokortti-ja-veroilmoitus/veroilmoitus_ja_verotuspaato/unohditko-ilmoittaa-tietoja/oikaisuvaatimus/"
+    phone: "029 497 002"
+    notes: "Veroasiat, veroilmoitus ja verokortti hoidetaan OmaVerossa. Puhelinpalvelu on avoinna ma–pe klo 9–16 (heinäkuussa 9–15): henkilöasiakkaan tuloverotus 029 497 002, verokortti ja ennakkovero 029 497 000 (klo 9–12), maksuvaikeudet ja maksujärjestelyt 029 497 028."
+  - name: Kela
+    type: government
+    help_url: "https://www.kela.fi/soita-kelaan"
+    apply_url: "https://www.kela.fi/omakela"
+    rights_url: "https://www.kela.fi/hakemuksesta-paatokseen"
+    notes: "OmaKelassa haet tuet, luet päätökset, lähetät liitteet, ilmoitat muutoksista ja hoidat perintäasioita. Kelalla ei ole yhtä yleisnumeroa vaan aihekohtaiset palvelunumerot ma–pe klo 9–16, esim. toimeentulotuki 020 692 207, työttömyys 020 692 210 ja opiskelu 020 692 209."
+  - name: Työmarkkinatori
+    type: government
+    help_url: "https://tyomarkkinatori.fi/ohjeet-ja-tuki/henkiloasiakkaat/henkiloasiakkaan-neuvontapalvelut/tyottomyysturvaneuvonta"
+    apply_url: "https://tyomarkkinatori.fi/henkiloasiakkaat/tietoa-tyoelamasta/tyonhaku/ilmoittautuminen-tyonhakijaksi"
+    rights_url: "https://tyomarkkinatori.fi/henkiloasiakkaat/tietoa-tyoelamasta/tyottomyysturva"
+    notes: "Jos jäät työttömäksi tai sinut lomautetaan, ilmoittaudu työnhakijaksi mahdollisimman pian Työmarkkinatorin asiointi-osiossa. Työnhaun aloittamisen jälkeen saat työvoimapoliittisen lausunnon oikeudestasi työttömyysturvaan; entiset TE-palvelut hoitavat nyt työllisyysalueet, joiden yhteystiedot löytyvät samalta sivustolta."
+  - name: Eläketurvakeskus
+    type: government
+    help_url: "https://www.etk.fi/tietoa-etksta/yhteystiedot/asiakaspalvelu/"
+    apply_url: "https://asiointi.etk.fi/"
+    phone: "029 411 2110"
+    notes: "Eläketurvakeskus palvelee vain puhelimitse ja verkossa — toimitiloissa ei ole asiakaspalvelupistettä. Puhelinpalvelu 029 411 2110 on avoinna maanantaisin, keskiviikkoisin ja perjantaisin klo 9–15, ja asiointipalveluun kirjaudutaan Suomi.fi-tunnistuksella."
+  - name: Traficom
+    type: government
+    help_url: "https://www.traficom.fi/fi/traficomin-yhteystiedot"
+    apply_url: "https://www.traficom.fi/fi/asioi-kanssamme"
+    rights_url: "https://www.traficom.fi/fi/puhelin-ja-laajakaista/puhelimen-ja-laajakaistan-kayttajalle/liittymasopimus"
+    notes: "Traficom valvoo viestintäpalveluja ja ajoneuvoasiointia. Toistaiseksi voimassa olevan liittymäsopimuksen voi irtisanoa suullisesti tai kirjallisesti päättymään aikaisintaan kahden viikon kuluttua, ja määräaikaisen matkaviestinliittymän päättymispäivän saa tekstiviestillä lähettämällä viestin SOPIMUS numeroon 18321."
+  - name: Suomi.fi
+    type: government
+    help_url: "https://www.suomi.fi/ohjeet-ja-tuki/tuki-ja-neuvonta/suomi-fi-palvelujen-neuvonta"
+    apply_url: "https://www.suomi.fi/etusivu"
+    phone: "0295 000"
+    notes: "Suomi.fi kokoaa julkiset palvelut, viestit ja valtuudet yhteen paikkaan. Suomi.fi-palvelujen neuvonta auttaa kansalaisia numerossa 0295 000 ma–pe klo 9.00–15.00; neuvonta on maksutonta, mutta puhelu ja jonotus maksavat, eikä viranomaisten yleisneuvonta enää kuulu palveluun."

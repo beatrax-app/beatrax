@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Edytuj regułę',
+    'heading_new' => 'Nowa reguła',
+
+    'combinator_aria' => 'Łącznik warunków',
+    'match_all' => 'Dopasuj wszystkie warunki',
+    'match_any' => 'Dopasuj dowolny warunek',
+
+    'condition_label' => 'Warunek :number',
+    'condition_field_aria' => 'Pole warunku :number',
+    'condition_operator_aria' => 'Operator warunku :number',
+    'condition_value_aria' => 'Wartość warunku :number',
+    'condition_value_from_aria' => 'Wartość warunku :number (od)',
+    'condition_value_to_aria' => 'Wartość warunku :number (do)',
+    'to' => 'do',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'np. SPOTIFY',
+    'remove_condition' => 'Usuń warunek',
+    'add_condition' => '+ Dodaj warunek',
+
+    'then' => 'Wtedy',
+    'action_label' => 'Akcja :number',
+    'action_type_aria' => 'Typ akcji :number',
+    'action_category' => 'Kategoria',
+    'action_counterparty' => 'Kontrahent',
+    'action_note' => 'Notatka',
+    'action_tax_tag' => 'Znacznik podatkowy',
+    'assign_category_aria' => 'Przypisz kategorię dla akcji :number',
+    'reassign_counterparty_aria' => 'Zmień kontrahenta dla akcji :number',
+    'note_text_aria' => 'Treść notatki dla akcji :number',
+    'note_placeholder' => 'Treść notatki…',
+    'note_mode_aria' => 'Tryb notatki dla akcji :number',
+    'note_set' => 'Ustaw',
+    'note_append' => 'Dopisz',
+    'deduction_category_aria' => 'Kategoria odliczenia dla akcji :number',
+    'remove_action' => 'Usuń akcję',
+    'add_action' => '+ Dodaj akcję',
+
+    'this_year_only' => 'Tylko ten rok ▾',
+    'override_tax_year' => 'Nadpisz rok podatkowy',
+    'tax_year_override_aria' => 'Nadpisanie roku podatkowego dla akcji :number',
+    'tax_tag_note' => 'Akcje znacznika podatkowego działają przy następnym ponownym zastosowaniu, a nie przy bieżącym imporcie.',
+
+    'priority' => 'Priorytet',
+    'priority_help' => 'Niższe liczby wykonują się pierwsze. Reguły bez wspólnych pól nigdy nie kolidują.',
+
+    'cancel' => 'Anuluj',
+    'save_changes' => 'Zapisz zmiany',
+    'save_rule' => 'Zapisz regułę',
+    'saving' => 'Zapisywanie…',
+
+    'error_rule_unavailable' => 'Ta reguła nie jest już dostępna.',
+    'error_invalid_data' => 'Nieprawidłowe dane reguły — wybierz wartości z list i spróbuj ponownie.',
+    'error_duplicate' => 'Reguła z tym polem, dopasowaniem i wartością już istnieje. Edytuj istniejącą regułę.',
+    'error_priority_whole' => 'Priorytet musi być liczbą całkowitą.',
+    'error_add_condition' => 'Dodaj co najmniej jeden warunek.',
+    'error_add_action' => 'Dodaj co najmniej jedną akcję.',
+    'condition_value_required' => 'Podaj wartość dla warunku :position.',
+    'condition_bounds_required' => 'Wybierz dolną i górną granicę dla warunku :position.',
+    'condition_amount_invalid' => 'Podaj prawidłową kwotę dla warunku :position.',
+    'action_pick_category' => 'Wybierz kategorię dla tej akcji.',
+    'action_pick_counterparty' => 'Wybierz kontrahenta, do którego ma nastąpić przypisanie.',
+    'action_note_required' => 'Wpisz treść notatki.',
+    'action_pick_deduction' => 'Wybierz kategorię odliczenia dla znacznika podatkowego.',
+];

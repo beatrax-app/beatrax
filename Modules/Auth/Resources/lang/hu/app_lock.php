@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'error_enroll_unsupported' => 'A biometrikus feloldás nem érhető el ezen az eszközön.',
+    'error_enroll_locked' => 'Oldd fel az alkalmazást a regisztrálás előtt.',
+    'error_enroll_failed' => 'Az eszközöd elutasította a kulcs tárolását. A biometrikus feloldás nem érhető el.',
+    'heading' => 'Alkalmazászár',
+
+    'moved_help' => 'A PIN-kód, az automatikus zárolás ideje és a biometrikus feloldás ennek az eszköznek a szinkronizálási beállításai között található.',
+    'moved_cta' => 'Szinkronizálás és eszköz megnyitása',
+
+    'toggle_label' => 'Alkalmazás zárolása PIN-kóddal',
+    'toggle_description' => 'A napi bejelentkezést PIN-kódra cseréli. A munkamenetek 30 napig aktívak maradnak.',
+
+    'setup_heading' => 'Állíts be PIN-kódot a zárolás bekapcsolásához',
+    'new_pin_label' => 'Új PIN-kód (4–10 számjegy)',
+    'confirm_pin_label' => 'PIN-kód megerősítése',
+    'account_password_label' => 'Fiókjelszó',
+    'account_password_note' => '(a helyreállítási kulcs létrehozásához szükséges)',
+    'account_password_placeholder' => 'A fiókod jelszava',
+    'set_pin' => 'PIN-kód beállítása',
+
+    'pin_row_label' => 'PIN-kód',
+    'pin_row_description' => 'Módosítsd a jelenlegi PIN-kódodat.',
+    'change_pin' => 'PIN-kód módosítása',
+    'forgot_pin_link' => 'Elfelejtetted a PIN-kódot? Állítsd vissza a fiókjelszavaddal.',
+
+    'biometric_enrolled_description' => 'Ez az eszköz regisztrálva van a biometrikus feloldáshoz.',
+    'biometric_enroll_description' => 'Regisztráld ezt az eszközt a biometrikus feloldáshoz.',
+    'remove' => 'Eltávolítás',
+    'enroll' => 'Regisztrálás',
+    'biometric_unavailable' => 'A biometrikus feloldás nem érhető el ezen az eszközön.',
+
+    'deenroll_modal_heading' => 'Biometrikus feloldás eltávolítása — erősítsd meg PIN-kóddal',
+    'current_pin_label' => 'Jelenlegi PIN-kód',
+    'remove_biometric' => 'Biometria eltávolítása',
+    'keep_biometric' => 'Biometria megtartása',
+
+    'auto_lock' => 'Automatikus zárolás ennyi után',
+    'idle_1' => '1 perc',
+    'idle_5' => '5 perc',
+    'idle_15' => '15 perc',
+    'idle_30' => '30 perc',
+
+    'disable_modal_heading' => 'Alkalmazászár kikapcsolása — erősítsd meg PIN-kóddal',
+    'disable_lock' => 'Zárolás kikapcsolása',
+    'keep_lock' => 'Alkalmazászár megtartása',
+
+    'forgot_modal_heading' => 'PIN-kód visszaállítása — erősítsd meg a fiókjelszavaddal',
+    'forgot_modal_body' => 'A fiókjelszavad visszaállítja a zárolási kulcsot, így a PIN-kód visszaállításakor soha nem vész el adat.',
+    'confirm_new_pin_label' => 'Új PIN-kód megerősítése',
+    'reset_pin' => 'PIN-kód visszaállítása',
+    'cancel' => 'Mégse',
+
+    'change_modal_heading' => 'PIN-kód módosítása — erősítsd meg a jelenlegi PIN-kóddal',
+    'keep_pin' => 'PIN-kód megtartása',
+
+    'error_pin_too_short' => 'A PIN-kódnak legalább 4 számjegyűnek kell lennie.',
+    'error_pin_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
+    'error_pin_incorrect' => 'Hibás PIN-kód.',
+    'error_account_password' => 'Hibás fiókjelszó.',
+    'change_pin_success' => 'A titkosítási kulcsodat az új PIN-kód védi mostantól.',
+    'error_forgot_failed' => 'A PIN-kód visszaállítása sikertelen — a helyreállítási kulcs nem érhető el.',
+    'error_enable_first' => 'Előbb kapcsold be a PIN-zárat, mielőtt biometriát regisztrálsz.',
+];

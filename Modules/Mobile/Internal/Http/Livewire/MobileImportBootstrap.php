@@ -12,6 +12,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
@@ -36,6 +37,34 @@ final class MobileImportBootstrap extends Component
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
     public string $step = 'collect_pin';
+
+    // True when this device already has an account: the signup form is then
+    // an offer the user cannot take, so the view points at pairing instead.
+    public bool $alreadyProvisioned = false;
+
+    // Resumes the ceremony instead of restarting it. The step is a public
+    // property, so any fresh mount — a back navigation, or the reload that
+    // follows an expired page — dropped an already-registered user back on
+    // the signup form with no way forward.
+    public function mount(CurrentUser $currentUser, Session $session): void
+    {
+        if (! $currentUser->isAuthenticated()) {
+            return;
+        }
+
+        // Codes still in the session means signup just happened and the
+        // one-time display is still owed.
+        if ($this->recoveryCodesFromSession($session) !== []) {
+            $this->step = 'recovery_codes';
+
+            return;
+        }
+
+        // Otherwise the account exists. Flag it rather than redirecting: a
+        // failed provisioning leaves an authenticated user with no codes too,
+        // and that retry screen must stay reachable.
+        $this->alreadyProvisioned = true;
+    }
 
     public string $username = '';
 
@@ -75,7 +104,10 @@ final class MobileImportBootstrap extends Component
         }
 
         try {
-            $userId = $signup->__invoke($this->username, $this->password)['user']->id;
+            // This screen exists to JOIN a desktop's account: its starter
+            // rules arrive over sync, and seeding a local set first would
+            // collide id-for-id with the ones about to be delivered.
+            $userId = $signup->__invoke($this->username, $this->password, seedsStarterData: false)['user']->id;
         } catch (ValidationException $e) {
             $this->flashMessage = self::firstErrorMessage($e);
             $this->password = '';
@@ -181,10 +213,27 @@ final class MobileImportBootstrap extends Component
         $this->redirect($urls->route('mobile.pair', ['mode' => 'import']), navigate: false);
     }
 
-    public function render(ViewFactory $views, Session $session): View
-    {
+    public function render(
+        ViewFactory $views,
+        Session $session,
+        UrlGenerator $urls,
+        CurrentUser $currentUser,
+        RecoveryCodeFormatter $formatter,
+    ): View {
+        // Only the recovery step has an authenticated user: every earlier step
+        // renders before signup completes, so resolving the user up front
+        // threw "No authenticated user is bound to the current guard".
+        $showingCodes = $this->step === 'recovery_codes';
+
         $view = $views->make('mobile::livewire.mobile-import-bootstrap', [
-            'codes' => $this->step === 'recovery_codes' ? $this->recoveryCodesFromSession($session) : [],
+            'codes' => $showingCodes ? $this->recoveryCodesFromSession($session) : [],
+            // The browser saves the file itself and navigates by link, so the
+            // one-shot recovery screen needs no Livewire round-trip at all —
+            // on device those returned 419 and took the codes with them.
+            'downloadFilename' => $showingCodes
+                ? $formatter->filenameFor($currentUser->user()->username)
+                : '',
+            'pairingUrl' => $urls->route('mobile.pair', ['mode' => 'import']),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

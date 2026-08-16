@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'País fiscal',
+    'country_desc' => 'Define quais as categorias de dedução disponíveis.',
+    'country_choose' => 'Escolhe um país…',
+    'country_switch_warning' => 'Mudar de país acrescenta novas categorias — as etiquetas existentes nunca são alteradas.',
+
+    'countries' => [
+        'at' => 'Áustria',
+        'be' => 'Bélgica',
+        'bg' => 'Bulgária',
+        'ca' => 'Canadá',
+        'ch' => 'Suíça',
+        'cy' => 'Chipre',
+        'cz' => 'Chéquia',
+        'de' => 'Alemanha',
+        'dk' => 'Dinamarca',
+        'ee' => 'Estónia',
+        'es' => 'Espanha',
+        'fi' => 'Finlândia',
+        'fr' => 'França',
+        'gb' => 'Reino Unido',
+        'gr' => 'Grécia',
+        'hr' => 'Croácia',
+        'hu' => 'Hungria',
+        'ie' => 'Irlanda',
+        'is' => 'Islândia',
+        'it' => 'Itália',
+        'lt' => 'Lituânia',
+        'lu' => 'Luxemburgo',
+        'lv' => 'Letónia',
+        'mt' => 'Malta',
+        'nl' => 'Países Baixos',
+        'no' => 'Noruega',
+        'pl' => 'Polónia',
+        'pt' => 'Portugal',
+        'ro' => 'Roménia',
+        'se' => 'Suécia',
+        'si' => 'Eslovénia',
+        'sk' => 'Eslováquia',
+        'us' => 'Estados Unidos',
+    ],
+
+    'categories_label' => 'Categorias de dedução',
+    'categories_desc' => 'Personaliza os grupos que usas para etiquetar.',
+    'categories_empty' => 'Ainda não há categorias. Adiciona a tua primeira categoria ou muda de país para carregar as predefinições.',
+
+    'from_corpus' => 'do corpus',
+    'rename_input_aria' => 'Novo nome para :name',
+    'rename' => 'Mudar o nome',
+    'rename_aria' => 'Mudar o nome de :name',
+    'rename_save_aria' => 'Guardar o novo nome de :name',
+    'save' => 'Guardar',
+    'archive' => 'Arquivar',
+    'archive_aria' => 'Arquivar :name',
+
+    'new_category_label' => 'Nome da nova categoria',
+    'new_category_placeholder' => 'Nome da nova categoria…',
+    'add_category' => 'Adicionar categoria',
+    'category_added' => 'Categoria adicionada.',
+
+    'archived_count' => 'Arquivadas (:count)',
+    'restore' => 'Restaurar',
+    'restore_aria' => 'Restaurar :name',
+];

@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Editar regla',
+    'heading_new' => 'Nueva regla',
+
+    'combinator_aria' => 'Combinación de condiciones',
+    'match_all' => 'Cumplir todas las condiciones',
+    'match_any' => 'Cumplir cualquier condición',
+
+    'condition_label' => 'Condición :number',
+    'condition_field_aria' => 'Campo de la condición :number',
+    'condition_operator_aria' => 'Operador de la condición :number',
+    'condition_value_aria' => 'Valor de la condición :number',
+    'condition_value_from_aria' => 'Valor de la condición :number (desde)',
+    'condition_value_to_aria' => 'Valor de la condición :number (hasta)',
+    'to' => 'hasta',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'p. ej. SPOTIFY',
+    'remove_condition' => 'Quitar condición',
+    'add_condition' => '+ Añadir condición',
+
+    'then' => 'Entonces',
+    'action_label' => 'Acción :number',
+    'action_type_aria' => 'Tipo de la acción :number',
+    'action_category' => 'Categoría',
+    'action_counterparty' => 'Contraparte',
+    'action_note' => 'Nota',
+    'action_tax_tag' => 'Etiqueta fiscal',
+    'assign_category_aria' => 'Asignar categoría a la acción :number',
+    'reassign_counterparty_aria' => 'Reasignar a otra contraparte para la acción :number',
+    'note_text_aria' => 'Texto de la nota para la acción :number',
+    'note_placeholder' => 'Texto de la nota…',
+    'note_mode_aria' => 'Modo de la nota para la acción :number',
+    'note_set' => 'Sustituir',
+    'note_append' => 'Añadir al final',
+    'deduction_category_aria' => 'Categoría de deducción para la acción :number',
+    'remove_action' => 'Quitar acción',
+    'add_action' => '+ Añadir acción',
+
+    'this_year_only' => 'Solo este año ▾',
+    'override_tax_year' => 'Forzar el año fiscal',
+    'tax_year_override_aria' => 'Año fiscal forzado para la acción :number',
+    'tax_tag_note' => 'Las acciones de etiqueta fiscal se aplican en la próxima reaplicación, no en la importación actual.',
+
+    'priority' => 'Prioridad',
+    'priority_help' => 'Los números más bajos se ejecutan primero. Las reglas sin campos en común nunca entran en conflicto.',
+
+    'cancel' => 'Cancelar',
+    'save_changes' => 'Guardar cambios',
+    'save_rule' => 'Guardar regla',
+    'saving' => 'Guardando…',
+
+    'error_rule_unavailable' => 'Esa regla ya no está disponible.',
+    'error_invalid_data' => 'Datos de regla no válidos — elige en los desplegables e inténtalo de nuevo.',
+    'error_duplicate' => 'Ya existe una regla con este campo, esta coincidencia y este valor. Edita la regla existente en su lugar.',
+    'error_priority_whole' => 'La prioridad debe ser un número entero.',
+    'error_add_condition' => 'Añade al menos una condición.',
+    'error_add_action' => 'Añade al menos una acción.',
+    'condition_value_required' => 'Introduce un valor para la condición :position.',
+    'condition_bounds_required' => 'Elige un límite inferior y otro superior para la condición :position.',
+    'condition_amount_invalid' => 'Introduce un importe válido para la condición :position.',
+    'action_pick_category' => 'Elige una categoría para esta acción.',
+    'action_pick_counterparty' => 'Elige la contraparte a la que reasignar.',
+    'action_note_required' => 'Introduce el texto de la nota.',
+    'action_pick_deduction' => 'Elige una categoría de deducción para la etiqueta fiscal.',
+];

@@ -1,0 +1,34 @@
+# Bank-fee classification rules — Lithuania (Lithuanian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The bare "MOKESTIS" is never used on its own: it means both "fee" and
+# "tax", so it would fire on tax payments and on ordinary merchant text —
+# each entry keeps the word that says what is being charged for.
+# `\bKOMISIN` uses `regex:` with a LEADING \b on the stem so it covers
+# "komisinis", "komisiniai" and "komisinį" while the boundary keeps it off
+# longer tokens. Lithuanian diacritics stay out of `regex:` bodies — the
+# matcher runs PCRE without /u, so `#i` case-folds ASCII only and \b never
+# sees "Ū" as a word character; "PALŪKAN" is therefore a plain substring,
+# matched case-insensitively and multibyte-aware, left as a stem so it
+# covers "palūkanos" and "palūkanų". Regex bodies must be SINGLE-quoted in
+# YAML so the backslash reaches the matcher instead of being read as a YAML
+# escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "TVARKYMO MOKESTIS"
+    name: "Sąskaitos tvarkymo mokestis"
+  - pattern: "APTARNAVIMO MOKESTIS"
+    name: "Aptarnavimo mokestis"
+  - pattern: "ADMINISTRAVIMO MOKESTIS"
+    name: "Administravimo mokestis"
+  - pattern: 'regex:\bKOMISIN'
+    name: "Komisinis mokestis"
+  - pattern: "PALŪKAN"
+    name: "Palūkanos"

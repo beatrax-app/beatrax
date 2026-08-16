@@ -3,7 +3,7 @@
     <div class="w-full max-w-md mx-auto px-6 space-y-6">
 
         {{-- ===== Step: collect_pin ===== --}}
-        @if ($step === 'collect_pin')
+        @if ($step === 'collect_pin' && ! $alreadyProvisioned)
             <header class="space-y-1">
                 <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.heading') }}</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -109,23 +109,87 @@
             </div>
         @endif
 
-        {{-- ===== Step: recovery_codes ===== --}}
+        {{-- Already registered on this device: the signup form below would
+         fail on a duplicate account, and a back navigation used to land here
+         showing it as though nothing had happened. --}}
+    @if ($alreadyProvisioned && $step === 'collect_pin')
+        <div class="space-y-4" data-testid="import-already-provisioned">
+            <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.already_heading') }}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.already_body') }}</p>
+
+            <a
+                href="{{ route('mobile.pair', ['mode' => 'import']) }}"
+                class="flex w-full min-h-[44px] items-center justify-center rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+            >{{ Lang::get('mobile::import.continue_to_pairing') }}</a>
+        </div>
+    @endif
+
+    {{-- ===== Step: recovery_codes ===== --}}
         @if ($step === 'recovery_codes')
             <div
                 class="space-y-6"
-                x-data="{ confirmed: false }"
+                x-data="{
+                    confirmed: false,
+                    copied: false,
+                    saved: false,
+                    codes: @js($codes),
+                    copy() {
+                        if (! navigator.clipboard) { return; }
+                        navigator.clipboard.writeText(this.codes.join('\n')).then(() => {
+                            this.copied = true;
+                            setTimeout(() => { this.copied = false; }, 2500);
+                        });
+                    },
+                    save() {
+                        const url = URL.createObjectURL(new Blob([this.codes.join('\n')], { type: 'text/plain' }));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = @js($downloadFilename);
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        this.saved = true;
+                    },
+                }"
             >
                 <header class="space-y-1">
                     <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('mobile::import.recovery_heading') }}</h1>
                     <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.recovery_body') }}</p>
                 </header>
 
-                <div aria-live="polite" class="grid grid-cols-2 gap-3">
+                {{-- Denser than the desktop card: a 24-character code at text-lg
+                     with wide tracking wrapped to three lines, so ten of them
+                     pushed Save and Continue below the fold on a phone. --}}
+                <div aria-live="polite" class="grid grid-cols-2 gap-2">
                     @foreach ($codes as $code)
-                        <div class="bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-lg font-semibold font-mono tabular-nums tracking-wider text-slate-900 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
+                        <div class="bg-slate-50 border border-slate-200 rounded-md px-2 py-2 text-xs font-semibold font-mono tabular-nums tracking-tight text-slate-900 break-all dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
                             {{ $code }}
                         </div>
                     @endforeach
+                </div>
+
+                {{-- Save/Copy are pure client-side: these codes are shown once
+                     and a Livewire round-trip here can 419, which would take
+                     them with it. A Blob download needs no server at all. --}}
+                <div class="space-y-2">
+                    <div class="flex flex-col gap-2">
+                        <button
+                            type="button"
+                            x-on:click="save()"
+                            data-testid="mobile-recovery-download"
+                            class="min-h-[44px] rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                        >{{ Lang::get('mobile::import.recovery_download') }}</button>
+
+                        <button
+                            type="button"
+                            x-on:click="copy()"
+                            class="min-h-[44px] rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                            x-text="copied ? @js(Lang::get('mobile::import.recovery_copied')) : @js(Lang::get('mobile::import.recovery_copy'))"
+                        >{{ Lang::get('mobile::import.recovery_copy') }}</button>
+                    </div>
+
+                    <p x-show="saved" x-cloak aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('mobile::import.recovery_saved') }}</p>
                 </div>
 
                 <label class="flex items-start gap-2">
@@ -133,18 +197,23 @@
                     <span class="text-sm text-slate-700 dark:text-slate-300">{{ Lang::get('mobile::import.recovery_confirm') }}</span>
                 </label>
 
-                <button
-                    type="button"
-                    wire:click="continueToPairing"
-                    x-bind:disabled="! confirmed"
+                {{-- A plain link, not wire:click. The Livewire round-trip this
+                     replaced returned 419 on device, and the reload that
+                     followed re-mounted the component at step one — landing
+                     the user back on signup with the codes already gone. A GET
+                     carries no CSRF token, so it cannot fail that way. --}}
+                <a
+                    href="{{ $pairingUrl }}"
                     x-bind:aria-disabled="confirmed ? 'false' : 'true'"
+                    x-bind:tabindex="confirmed ? '0' : '-1'"
+                    x-on:click="if (! confirmed) { $event.preventDefault(); }"
                     :class="confirmed
                         ? 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400'
                         : 'bg-emerald-600/50 cursor-not-allowed dark:bg-emerald-500/40'"
-                    class="w-full min-h-[44px] rounded-md py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-500"
+                    class="flex w-full min-h-[44px] items-center justify-center rounded-md py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-emerald-500"
                 >
                     {{ Lang::get('mobile::import.continue_to_pairing') }}
-                </button>
+                </a>
             </div>
         @endif
 

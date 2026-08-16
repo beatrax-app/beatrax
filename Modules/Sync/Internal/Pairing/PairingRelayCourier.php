@@ -18,6 +18,10 @@ use Throwable;
  */
 final class PairingRelayCourier
 {
+    // Mirrors GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP — that class belongs
+    // to the crypto transport, so this is the wire string, not a reference.
+    private const FOREIGN_FRAME_TYPES = 'GDK_EPOCH_WRAP';
+
     public function __construct(
         private readonly RelayClient $relayClient,
         private readonly RelayConfig $relayConfig,
@@ -41,8 +45,15 @@ final class PairingRelayCourier
         string $tokenHash,
         string $responderEd25519Hex,
         string $responderX25519Hex,
+        string $responderName = '',
     ): void {
-        $frame = PairingFrame::buildResponderAccept($tokenHash, $senderDid, $responderEd25519Hex, $responderX25519Hex);
+        $frame = PairingFrame::buildResponderAccept(
+            $tokenHash,
+            $senderDid,
+            $responderEd25519Hex,
+            $responderX25519Hex,
+            $responderName,
+        );
 
         $this->relayClient->deliver($senderDid, $recipientDesktopDid, json_encode($frame, JSON_THROW_ON_ERROR));
     }
@@ -87,6 +98,7 @@ final class PairingRelayCourier
                 $this->logger?->warning('PairingRelayCourier: failed to apply a drained pairing frame.', [
                     'user_id' => $userId,
                     'exception' => $e::class,
+                    'message' => $e->getMessage(),
                 ]);
             }
         }
@@ -130,12 +142,16 @@ final class PairingRelayCourier
             $this->logger?->warning('PairingRelayCourier: drain failed.', [
                 'user_id' => $userId,
                 'exception' => $e::class,
+                'message' => $e->getMessage(),
             ]);
 
             return null;
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     /**
      * @param  array<string, mixed>  $row
      */
@@ -171,6 +187,11 @@ final class PairingRelayCourier
         $terminal = match ($decoded['type']) {
             PairingFrame::TYPE_RESPONDER_ACCEPT => $this->applyResponderAcceptFrame($userId, $decoded),
             PairingFrame::TYPE_CONFIRM => $this->applyConfirmFrame($userId, $decoded),
+            // Another transport's frame. Confirming it here DELETED it: GDK
+            // epoch wraps wait in this same mailbox for the authenticated
+            // sync session to carry them, and a pairing poll that ate one
+            // left the peer permanently without that epoch's key.
+            self::FOREIGN_FRAME_TYPES => false,
             default => true,
         };
 
@@ -205,7 +226,11 @@ final class PairingRelayCourier
         // applyResponderAccept() never defers — it either binds (or
         // idempotently no-ops) or fails closed (false). Either outcome is
         // terminal for this frame.
-        $this->tokenService->applyResponderAccept($userId, $tokenHash, $responderDeviceId, $responderEd, $responderKx);
+        $responderName = isset($frame['responder_name']) && is_string($frame['responder_name'])
+            ? $frame['responder_name']
+            : '';
+
+        $this->tokenService->applyResponderAccept($userId, $tokenHash, $responderDeviceId, $responderEd, $responderKx, $responderName);
 
         return true;
     }

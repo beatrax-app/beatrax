@@ -55,6 +55,17 @@ function failingEncryptor(): FileEncryptor
             throw new SodiumException('encrypt refused');
         }
 
+        public function encryptWithKey(string $plainPath, string $encPath, string $key): void
+        {
+            throw new SodiumException('encrypt refused');
+        }
+
+        /** @return array{0: int, 1: int} */
+        public function kdfParams(string $encPath): array
+        {
+            return [1, 8192];
+        }
+
         public function decrypt(string $encPath, string $plainPath, string $passphrase): void
         {
             throw new SodiumException('decrypt refused');

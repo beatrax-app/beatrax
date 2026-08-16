@@ -1,0 +1,73 @@
+# Tax deduction categories — Denmark
+# Mirrors the deduction rubrikker on the DK årsopgørelse / oplysningsskema.
+# Source: Skattestyrelsen (skat.dk), oplysningsskema blanket 04.009, indkomstår 2025.
+# Automatically granted items (personfradrag, beskæftigelsesfradrag, jobfradrag,
+# ekstra pensionsfradrag) are omitted — they are not claimed by the taxpayer.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "dk_befordringsfradrag"
+    name: "Kørselsfradrag (befordringsfradrag)"
+    short_name: "Kørsel"
+    hint: "Transport mellem hjem og arbejde eller mellem flere arbejdspladser"
+  - key: "dk_haandvaerkerfradrag"
+    name: "Håndværkerfradrag"
+    short_name: "Håndværker"
+    hint: "Lønudgifter til håndværksarbejde som isolering og udskiftning af ruder"
+  - key: "dk_servicefradrag"
+    name: "Servicefradrag"
+    short_name: "Service"
+    hint: "Lønudgifter til serviceydelser i hjemmet som rengøring og havearbejde"
+  - key: "dk_renteudgifter"
+    name: "Renteudgifter"
+    short_name: "Renter"
+    hint: "Renter af gæld til realkreditinstitutter, pengeinstitutter og anden gæld"
+  - key: "dk_fagligt_kontingent"
+    name: "Fagligt kontingent"
+    short_name: "Fagforening"
+    hint: "Kontingent til din fagforening"
+  - key: "dk_akassebidrag"
+    name: "A-kassebidrag, efterløn og fleksydelse"
+    short_name: "A-kasse"
+    hint: "Bidrag til a-kasse, efterlønsordning og fleksydelse"
+  - key: "dk_kost_og_logi"
+    name: "Rejseudgifter til kost og logi"
+    short_name: "Kost og logi"
+    hint: "Kost og logi når du arbejder på en midlertidig arbejdsplads langt fra hjemmet"
+  - key: "dk_dobbelt_husfoerelse"
+    name: "Dobbelt husførelse"
+    short_name: "Dobbelt hus"
+    hint: "Merudgifter når midlertidigt arbejde gør, at du må opretholde to husstande"
+  - key: "dk_oevrige_loenmodtagerudgifter"
+    name: "Øvrige lønmodtagerudgifter"
+    short_name: "Lønmod.udg."
+    hint: "Nødvendige arbejdsudgifter som faglitteratur og kurser ud over bundgrænsen"
+  - key: "dk_boernebidrag"
+    name: "Fradrag for børnebidrag"
+    short_name: "Børnebidrag"
+    hint: "Børnebidrag du betaler til børn under 18 år, som du ikke bor sammen med"
+  - key: "dk_aegtefaellebidrag"
+    name: "Fradrag for ægtefællebidrag"
+    short_name: "Ægtefællebid"
+    hint: "Underholdsbidrag du betaler til din tidligere ægtefælle"
+  - key: "dk_gaver_velgoerende"
+    name: "Gaver og bidrag til velgørende foreninger"
+    short_name: "Gaver"
+    hint: "Pengegaver til foreninger, der er godkendt af Skattestyrelsen"
+  - key: "dk_ratepension"
+    name: "Indbetaling til ratepension og ophørende livrente"
+    short_name: "Ratepension"
+    hint: "Dine private indbetalinger til ratepension og ophørende livrente"
+  - key: "dk_livsvarig_livrente"
+    name: "Indbetaling til livsvarig livrente"
+    short_name: "Livrente"
+    hint: "Indbetalinger til livsvarig livrente; fradraget afhænger af, hvem der indbetaler"
+  - key: "dk_fredede_bygninger"
+    name: "Udgifter til fredede bygninger"
+    short_name: "Fredet bygn."
+    hint: "Vedligeholdelsesudgifter på en fredet bygning"

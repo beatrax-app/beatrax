@@ -1,0 +1,114 @@
+# Support-resource corpus — Italy (IT merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: TIM
+    type: merchant
+    cancel_url: "https://www.tim.it/assistenza/per-la-tua-linea/cessazione-fisso"
+    support_url: "https://www.tim.it/assistenza"
+    notes: "La disdetta della linea fissa si chiede al 187, con il modulo online in area MyTIM, nei negozi abilitati, via PEC a disattivazioni_clientiprivati@pec.telecomitalia.it oppure con raccomandata A/R alla casella postale 111, 00054 Fiumicino (RM). TIM si impegna a gestire la richiesta entro 30 giorni e l'operazione ha un costo previsto dalla Carta dei Servizi."
+  - name: Vodafone Italia
+    type: merchant
+    cancel_url: "https://www.vodafone.it/privati/area-supporto/attivazioni-cambi-linea/disdetta.html"
+    support_url: "https://www.vodafone.it/privati/area-supporto.html"
+    notes: "Si recede con il form online, chiamando il servizio clienti 190, in punto vendita, con raccomandata A/R al Servizio Clienti Vodafone, casella postale 190, 10015 Ivrea (TO) o via PEC a servizioclienti@vodafone.pec.it, allegando documento d'identità e codice fiscale. Serve un preavviso di 30 giorni e possono essere addebitati corrispettivi di recesso anticipato, rate residue del dispositivo e un costo di disattivazione se il fisso viene cessato prima di 24 mesi."
+  - name: WindTre
+    type: merchant
+    cancel_url: "https://www.windtre.it/moduli-utili/form-recesso-mobile"
+    support_url: "https://www.windtre.it/supporto"
+    notes: "Il recesso si richiede compilando il form online: 'Form recesso Mobile' per la linea mobile e 'Form recesso Fisso' su windtre.it/moduli-utili/form-recesso-fisso per la rete fissa. Il diritto di recesso ai sensi dell'art. 52 del Codice del consumo vale invece entro 14 giorni dall'attivazione per i contratti conclusi fuori dai locali commerciali."
+  - name: Iliad Italia
+    type: merchant
+    cancel_url: "https://www.iliad.it/modulistica-mobile.html"
+    support_url: "https://www.iliad.it/contact.html"
+    notes: "Non c'è un pulsante di disdetta: va compilato e firmato il modulo 'Comunicazione di recesso' e inviato con copia del documento d'identità per posta a Iliad Italia S.p.A., CP 14106, 20146 Milano, oppure caricato nella sezione Modulistica dell'Area Personale. Il recesso è efficace decorsi 30 giorni dalla ricezione della comunicazione valida e gli apparati in comodato vanno restituiti entro 30 giorni dalla disattivazione."
+  - name: Sky Italia
+    type: merchant
+    cancel_url: "https://assistenza.sky.it/abbonamento/guida-info-disdetta-sky"
+    support_url: "https://assistenza.sky.it/"
+    notes: "Disdetta alla scadenza naturale o recesso anticipato con preavviso di 30 giorni: per telefono allo 02 917171 (170 per Sky WiFi e Sky Glass, servizio 8:30-22:30), in punto vendita, con il percorso online del fai da te oppure inviando la comunicazione via PEC o raccomandata A/R con i moduli predisposti da Sky. Il recesso anticipato può comportare costi di uscita."
+  - name: Enel Energia
+    type: merchant
+    cancel_url: "https://www.enel.it/it/app/hub-digital-app/prodotti-e-servizi-post/modalita-e-tempi-per-esercitare-il-diritto-di-recesso-per-ripensamento"
+    support_url: "https://www.enel.it/it-it/assistenza/contatti"
+    notes: "La pagina spiega solo il ripensamento: si può recedere senza oneri entro e non oltre 14 giorni dall'adesione al contratto. Per la cessazione vera e propria della fornitura non c'è un modulo online dedicato, va chiesta al servizio clienti al numero verde 800 069 419 (tutti i giorni 9:00-22:00) o all'800.069.850."
+  - name: Eni Plenitude
+    type: merchant
+    cancel_url: "https://eniplenitude.com/info/disdetta-contratto"
+    notes: "Dall'area personale si seleziona la fornitura da disattivare, si clicca su 'Gestisci' e poi su 'Disdici contratto'; in alternativa si va in un Eni Plenitude Store o si chiama il numero verde 800.900.700 (02.444141 da cellulare). La cessazione comporta la chiusura del contatore, che per il gas richiede l'uscita di un incaricato per la sigillatura."
+  - name: Hera
+    type: merchant
+    cancel_url: "https://www.gruppohera.it/assistenza/casa/contratto"
+    support_url: "https://www.gruppohera.it/assistenza/casa"
+    notes: "La cessazione è la disdetta del contratto con chiusura del contatore: alla richiesta Hera fissa un appuntamento e il cliente deve essere presente, tranne che per i contatori teleletti. Servizio clienti famiglie al numero verde 800.999.500, lun-ven 8:00-22:00 e sab 8:00-18:00, gratuito da fisso e cellulare."
+  - name: A2A Energia
+    type: merchant
+    cancel_url: "https://www.a2a.it/assistenza/faq/contratti/cessazione"
+    support_url: "https://www.a2a.it/assistenza/contatti"
+    notes: "Le FAQ 'Contratti - Cessazione' raccolgono le istruzioni per chiudere la fornitura luce e gas di casa. Le pratiche commerciali dei clienti domestici in mercato libero passano dal numero verde 800 199 955 (lun-ven 8.30-17.00) o dagli sportelli A2A."
+  - name: Telepass
+    type: merchant
+    cancel_url: "https://www.telepass.com/it/privati/supporto/domande-frequenti/assistenza/disdetta"
+    support_url: "https://www.telepass.com/it/privati/supporto"
+    notes: "Per chiudere il contratto si invia la comunicazione di recesso con copia del documento d'identità via PEC ad assistenza@pec.telepass.com o per raccomandata a Telepass S.p.A., via del Serafico 49, 00142 Roma, oppure si riconsegna il dispositivo in un Telepass Store. Prima conviene chiamare il numero verde 800 697787 (lun-ven 9:00-17:30, sab 9:00-14:00) per farsi dare il PIN di restituzione."
+  - name: McFIT Italia
+    type: merchant
+    cancel_url: "https://www.mcfit.com/it/diritto-di-recesso"
+    notes: "In assenza di disdetta tramite l'area riservata almeno 15 giorni prima della scadenza il contratto si rinnova automaticamente di 6 mesi in 6 mesi al prezzo a regime. Per i contratti conclusi online resta il diritto di recesso entro 14 giorni, da comunicare per iscritto a RSG Group Italia S.r.l., viale Fulvio Testi 29, 20162 Milano, o via e-mail a promozioni@mcfit.com."
+  - name: Verisure Italia
+    type: merchant
+    support_url: "https://www.verisure.it/contatti"
+    notes: "Non esiste una pagina online per disdire: il recesso va comunicato al servizio clienti dalla sezione Aiuto dell'app My Verisure Italia, al numero verde 800.999.848 (lun-ven 7:00-23:00, sabato, domenica e festivi 9:00-21:00) o via e-mail. Il contratto prevede un preavviso di 30 giorni e un corrispettivo di recesso anticipato di 300€ entro i primi 12 mesi, poi a costo zero."
+  - name: AIRC
+    type: merchant
+    support_url: "https://www.airc.it/faq"
+    notes: "Le richieste dei donatori (variazione di indirizzo, invii doppi del notiziario, verifiche sui versamenti) si fanno al numero verde 800 350 350, attivo dal lunedì al sabato dalle 8.30 alle 19.30. Sul sito non è pubblicata una procedura online per sospendere o revocare la donazione continuativa: va chiesta a questi recapiti."
+
+  # --- Government ---
+  - name: Agenzia delle Entrate
+    type: government
+    help_url: "https://www.agenziaentrate.gov.it/portale/contatta"
+    apply_url: "https://www.agenziaentrate.gov.it/portale/area-riservata"
+    rights_url: "https://www.agenziaentrate.gov.it/portale/contatta/reclami-elogi-e-suggerimenti"
+    phone: "800.90.96.96"
+    notes: "Call center al numero verde 800.90.96.96 da rete fissa, 06.97617689 da cellulare e 0039 06.45470468 dall'estero; il servizio con operatore è attivo dal lunedì al venerdì dalle ore 9 alle 17, escluse le festività nazionali. Per l'assistenza in ufficio, in videochiamata o al telefono bisogna prenotare un appuntamento; reclami, elogi e suggerimenti hanno un canale dedicato."
+  - name: INPS
+    type: government
+    help_url: "https://www.inps.it/it/it/sedi-e-contatti/contatti/contact-center-multicanale.html"
+    apply_url: "https://www.inps.it/it/it/dettaglio-scheda.it.schede-servizio-strumento.schede-servizi.myinps.html"
+    rights_url: "https://www.inps.it/it/it/inps-comunica/dossier/la-naspi.html"
+    phone: "803 164"
+    notes: "Contact Center Multicanale al 803 164 da rete fissa e 06 164 164 da cellulare; le domande si presentano online da MyINPS con SPID, CIE o CNS, oppure tramite patronato. La NASpI spetta dall'ottavo giorno successivo alla data di cessazione del rapporto di lavoro."
+  - name: Agenzia delle Entrate-Riscossione
+    type: government
+    help_url: "https://www.agenziaentrateriscossione.gov.it/it/Contatti/"
+    apply_url: "https://www.agenziaentrateriscossione.gov.it/it/"
+    rights_url: "https://www.agenziaentrateriscossione.gov.it/it/cittadini/Rateizzazione/"
+    phone: "06 01 01"
+    notes: "Per informazioni e assistenza su cartelle e procedure di riscossione c'è il numero unico 06 01 01, attivo tutti i giorni 24 ore su 24 e con operatore dal lunedì al venerdì dalle 8.00 alle 18.00. Dall'area riservata si consultano la situazione debitoria e si chiedono rateizzazione, sospensione o annullamento del debito; la PEC è protocollo@pec.agenziariscossione.gov.it."
+  - name: INAIL
+    type: government
+    help_url: "https://www.inail.it/portale/it/supporto.html"
+    apply_url: "https://www.inail.it/portale/it/accedi-ai-servizi-online.html"
+    phone: "06.6001"
+    notes: "Contact Center INAIL al numero (+39) 06.6001, attivo dal lunedì al venerdì dalle 9.00 alle 18.00, per ricevere informazioni da operatori specializzati. Denunce e pratiche si gestiscono dai servizi online del portale, con accesso tramite identità digitale."
+  - name: Sistema Tessera Sanitaria
+    type: government
+    help_url: "https://sistemats1.sanita.finanze.it/portale/contatti"
+    apply_url: "https://sistemats1.sanita.finanze.it/portale/home"
+    notes: "Il portale gestisce tessera sanitaria, spese sanitarie e assistenza SSN; il servizio di assistenza di primo livello è raggiungibile tramite numero verde attivo dal lunedì al sabato dalle 8:00 alle 20:00. Per i neomaggiorenni l'assistenza resta attiva nei 30 giorni successivi al compimento della maggiore età."
+  - name: ACI - PRA e bollo auto
+    type: government
+    help_url: "https://aci.gov.it/urp-e-assistenza/"
+    apply_url: "https://aci.gov.it/servizi/bollo-auto/"
+    rights_url: "https://aci.gov.it/servizi/tutti-i-servizi-online/"
+    notes: "ACI eroga i servizi su bollo auto e pratiche auto del PRA presso le proprie sedi, online e tramite app dedicate; la sezione 'Tutti i servizi online' li raccoglie per cittadini, imprese e PA. Per informazioni, reclami e recapiti PEC si passa dall'URP nella sezione Sedi e contatti."
+  - name: SPID
+    type: government
+    help_url: "https://www.spid.gov.it/ottieni-assistenza-dagli-identity-provider/"
+    apply_url: "https://www.spid.gov.it/cos-e-spid/come-attivare-spid/"
+    notes: "SPID si attiva presso uno degli Identity Provider accreditati e l'assistenza va chiesta al gestore scelto: la pagina raccoglie i contatti di ciascuno, per esempio il numero verde 800.77.90.77 di LepidaID (lun-ven 8:30-18:00, sab 8:30-13:00). Molti gestori rispondono solo tramite form online."

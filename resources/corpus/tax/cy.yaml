@@ -1,0 +1,82 @@
+# Tax deduction categories — Cyprus
+# Mirrors ΜΕΡΟΣ 5 (Εκπτώσεις / Απαλλαγές) of the CY Δήλωση Εισοδήματος Ατόμου
+# (form T.D.1 / Ε.Πρ.1), plus the deductible items named in the filing guide.
+#
+# Authority: Τμήμα Φορολογίας (Cyprus Tax Department), „Οδηγός Συμπλήρωσης
+# Δήλωσης Εισοδήματος Ατόμου 2025" (published June 2026), and the Department's
+# „Φορολογική Μεταρρύθμιση 2026" explanatory material for individuals.
+# Tax year 2025, plus the new personal deductions that start in tax year 2026.
+#
+# Names are in Greek, the language of the Cypriot return.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "cy_syndromi_syntechnias"
+    name: "Συνδρομή σε συντεχνία"
+    short_name: "Συντεχνία"
+    hint: "Συνδρομές σε συντεχνία, π.χ. ΠΑΣΥΔΥ, ΣΕΚ, ΠΕΟ"
+  - key: "cy_epaggelmatiki_syndromi"
+    name: "Επαγγελματική συνδρομή"
+    short_name: "Επαγγ.συνδρ"
+    hint: "Συνδρομή σε επαγγελματικό σώμα, αναγκαία για την κτήση εισοδήματος"
+  - key: "cy_dorees"
+    name: "Δωρεές σε εγκεκριμένους φιλανθρωπικούς σκοπούς"
+    short_name: "Δωρεές"
+    hint: "Δωρεές με απόδειξη σε εγκεκριμένους φιλανθρωπικούς οργανισμούς"
+  - key: "cy_politika_kommata"
+    name: "Εισφορές σε πολιτικά κόμματα"
+    short_name: "Κόμματα"
+    hint: "Εισφορές σε πολιτικά κόμματα, με απόδειξη"
+  - key: "cy_asfalistra_zois"
+    name: "Ασφάλιστρα ζωής"
+    short_name: "Ασφάλ.ζωής"
+    hint: "Ασφάλιστρα ζωής, μέχρι 7% του ασφαλιζόμενου ποσού"
+  - key: "cy_tameia_syntaxis"
+    name: "Εγκεκριμένα ταμεία και σχέδια συντάξεων"
+    short_name: "Ταμ.σύνταξης"
+    hint: "Εισφορές σε ταμείο προνοίας και εγκεκριμένα σχέδια συντάξεων"
+  - key: "cy_koinonikes_asfaliseis"
+    name: "Εισφορές Κοινωνικών Ασφαλίσεων"
+    short_name: "Κοιν.ασφαλ."
+    hint: "Εισφορές στο Ταμείο Κοινωνικών Ασφαλίσεων"
+  - key: "cy_gesy"
+    name: "Εισφορές ΓεΣΥ"
+    short_name: "ΓεΣΥ"
+    hint: "Εισφορές στο Γενικό Σύστημα Υγείας"
+  - key: "cy_tameia_ygeias"
+    name: "Ταμεία υγείας και ιδιωτικές ασφάλειες υγείας"
+    short_name: "Ταμ.υγείας"
+    hint: "Ταμεία υγείας εκτός ΓεΣΥ και ιδιωτικές ασφάλειες υγείας"
+  - key: "cy_asfaleia_epaggelmatikis_efthynis"
+    name: "Ασφάλεια επαγγελματικής ευθύνης"
+    short_name: "Επαγγ.ευθύνη"
+    hint: "Ασφάλιστρα επαγγελματικής ευθύνης μισθωτών"
+  - key: "cy_stegasi"
+    name: "Ενοίκιο ή τόκοι στεγαστικού δανείου κύριας κατοικίας"
+    short_name: "Στέγαση"
+    hint: "Νέα προσωπική έκπτωση στέγασης από το φορολογικό έτος 2026"
+  - key: "cy_prasini_metavasi"
+    name: "Ενεργειακή αναβάθμιση κατοικίας και ηλεκτρικό όχημα"
+    short_name: "Πράσινη μετ."
+    hint: "Νέα έκπτωση πράσινης μετάβασης από το φορολογικό έτος 2026"
+  - key: "cy_asfalisi_katastrofon"
+    name: "Ασφάλιση κατοικίας έναντι φυσικών καταστροφών"
+    short_name: "Ασφ.κατοικ."
+    hint: "Νέα έκπτωση χωρίς εισοδηματικά κριτήρια, από το φορολογικό έτος 2026"
+  - key: "cy_asfalisi_anikanotitas"
+    name: "Ασφάλιση έναντι ανικανότητας"
+    short_name: "Ανικανότητα"
+    hint: "Ασφάλιστρα έναντι μόνιμης ή πρόσκαιρης, ολικής ή μερικής ανικανότητας"
+  - key: "cy_tokoi_enoikiazomenou"
+    name: "Τόκοι δανείου για ενοικιαζόμενο υποστατικό"
+    short_name: "Τόκοι ενοικ."
+    hint: "Τόκοι δανείου για αγορά ή ανέγερση ενοικιαζόμενου υποστατικού"
+  - key: "cy_epicheirimatikes_dapanes"
+    name: "Εκπιπτόμενες επιχειρηματικές δαπάνες"
+    short_name: "Επαγγ.έξοδα"
+    hint: "Δαπάνες εξ ολοκλήρου για την απόκτηση φορολογητέου εισοδήματος"

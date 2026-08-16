@@ -1,0 +1,54 @@
+# Tax deduction categories — Lithuania
+# Mirrors the lengvatos of the LT metinė pajamų mokesčio deklaracija (GPM311),
+# priedas GPM311G "Išlaidos, mažinančios pajamas".
+# Source: Valstybinė mokesčių inspekcija (vmi.lt), 2025 m. mokestiniai metai.
+# Lithuania's set is genuinely small: the 2019–2023 temporary reliefs for building
+# repair, car repair and childcare all expired and are not claimable.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "lt_npd"
+    name: "Metinis neapmokestinamasis pajamų dydis (NPD)"
+    short_name: "NPD"
+    hint: "Neapmokestinama metinių su darbo santykiais susijusių pajamų dalis"
+  - key: "lt_npd_negalia"
+    name: "Padidintas NPD asmenims, kuriems nustatytas dalyvumo lygis"
+    short_name: "NPD negalia"
+    hint: "Didesnis NPD gyventojams, kuriems nustatytas dalyvumo ar neįgalumo lygis"
+  - key: "lt_gyvybes_draudimas"
+    name: "Gyvybės draudimo įmokos"
+    short_name: "Gyv. draud."
+    hint: "Įmokos pagal iki 2024 m. gruodžio 31 d. sudarytą gyvybės draudimo sutartį"
+  - key: "lt_pensiju_iii_pakopa"
+    name: "Pensijų įmokos į III pakopos pensijų fondus"
+    short_name: "III pakopa"
+    hint: "Įmokos pagal iki 2024 m. gruodžio 31 d. sudarytą pensijų kaupimo sutartį"
+  - key: "lt_pensiju_ii_pakopa_papildomos"
+    name: "Papildomos kaupiamosios pensijų įmokos į II pakopos fondus"
+    short_name: "II pakopa"
+    hint: "Savo lėšomis mokamos II pakopos įmokos, viršijančios privalomą dalį"
+  - key: "lt_studijos_profesinis_mokymas"
+    name: "Įmokos už studijas ar profesinį mokymą"
+    short_name: "Studijos"
+    hint: "Mokestis už aukštojo mokslo studijas ar formalųjį profesinį mokymą"
+  - key: "lt_busto_kredito_palukanos"
+    name: "Palūkanos už kreditą būstui įsigyti ar statyti"
+    short_name: "Palūkanos"
+    hint: "Palūkanos už vieną iki 2008 m. gruodžio 31 d. paimtą kreditą vienam būstui"
+  - key: "lt_parama_1_2_proc"
+    name: "Pajamų mokesčio dalies skyrimas paramos gavėjams"
+    short_name: "Parama 1,2%"
+    hint: "Pajamų mokesčio dalies skyrimas paramos gavėjo statusą turinčioms organizacijoms"
+  - key: "lt_parama_politinems_organizacijoms"
+    name: "Pajamų mokesčio dalies skyrimas politinėms organizacijoms"
+    short_name: "Politinėms"
+    hint: "Pajamų mokesčio dalies skyrimas registruotai politinei partijai ar komitetui"
+  - key: "lt_parama_profsajungoms"
+    name: "Pajamų mokesčio dalies skyrimas profesinėms sąjungoms"
+    short_name: "Profsąjunga"
+    hint: "Pajamų mokesčio dalies skyrimas paramos gavėjomis įregistruotoms profesinėms sąjungoms"
