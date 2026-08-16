@@ -19,6 +19,13 @@ class SecureStorageKeyCustodian implements KeyCustodian
     // appended.
     private const SLOT_PREFIX = 'beatrax.session.data_key.';
 
+    // Slot name => the key last read out of it. SensitiveColumnCodec resolves
+    // the KEK once per decrypted VALUE, reaching release() before
+    // GdkKeyringService can consult a memo keyed on a fingerprint OF that KEK
+    // — so a 140-row page made 140 Keystore round trips through JNI.
+    /** @var array<string, string> */
+    private array $keyCache = [];
+
     public function __construct(
         private readonly CurrentUser $currentUser,
     ) {}
@@ -41,6 +48,8 @@ class SecureStorageKeyCustodian implements KeyCustodian
             return $rawKey;
         }
 
+        $this->keyCache[$slot] = $rawKey;
+
         return $slot;
     }
 
@@ -50,6 +59,10 @@ class SecureStorageKeyCustodian implements KeyCustodian
             // Not on device, or the handle is a pass-through raw key from a
             // store() that ran while unavailable / failed — return unchanged.
             return $handle;
+        }
+
+        if (isset($this->keyCache[$handle])) {
+            return $this->keyCache[$handle];
         }
 
         $stored = $this->nativeGet($handle);
@@ -62,11 +75,18 @@ class SecureStorageKeyCustodian implements KeyCustodian
 
         $decoded = base64_decode($stored, strict: true);
 
-        return $decoded === false ? null : $decoded;
+        // A failure is deliberately not cached: an unreadable entry must stay
+        // retryable rather than become sticky for the life of the process.
+        return $decoded === false ? null : $this->keyCache[$handle] = $decoded;
     }
 
     public function forget(string $handle): void
     {
+        // Dropped first and unconditionally: this instance is a singleton and
+        // the persistent mobile runtime keeps it alive between requests, so a
+        // cached key that outlived the lock would outlive it for good.
+        unset($this->keyCache[$handle]);
+
         if (! $this->runtimeAvailable() || ! str_starts_with($handle, self::SLOT_PREFIX)) {
             return;
         }
