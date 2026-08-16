@@ -80,6 +80,46 @@ handles the rest. A local *distribution* build additionally needs
 `IOS_DISTRIBUTION_CERTIFICATE_PATH` and `_PASSWORD`. Quote the password in
 `.env` — an unquoted `#` truncates it silently.
 
+## Bifrost credentials — what must be uploaded
+
+Bifrost signs from credentials held in its own panel, not from this repository
+or from GitHub secrets. Nothing here can verify that panel, so this is the
+checklist to work through in its UI. Every source below is in the Beatrax
+1Password vault.
+
+**Android** — Credentials → Android:
+
+| Field | 1Password source |
+|---|---|
+| Keystore file | `beatrax Android release keystore (app-release-key.jks)` |
+| Keystore password | `beatrax Android release keystore — signing config` → `password` |
+| Key alias | same item → `key alias` |
+| Key password | same item → `key password (keypass)` |
+
+The keystore must be the one whose SHA-256 matches the fingerprint on that
+item — a different key means existing installs cannot upgrade, and there is no
+recovering from having shipped one.
+
+**iOS** — Credentials → iOS:
+
+| Field | 1Password source |
+|---|---|
+| Distribution `.p12` | `beatrax iOS distribution .p12 (com.beatrax.mobile)` |
+| `.p12` password | `beatrax iOS distribution .p12 — export password` |
+| Provisioning profile | `Beatrax signing cer + mobileprovision` → `AppStore_com.beatrax.mobile.mobileprovision` |
+| App Store Connect key | `Key beatrax iOS signing config` → `AuthKey_M6KAC397L3.p8` |
+| Key ID / Issuer ID | `beatrax iOS signing config (com.beatrax.mobile)` |
+
+The `.p12` contains only the Apple Distribution identity. A keychain export
+(`security export -t identities`) emits every identity on the machine,
+including the Developer ID key used for the desktop app; that one belongs
+nowhere near a mobile build service.
+
+Note `Beatrax signing cer + mobileprovision` also holds `2GDW586LZ6.cer` — the
+public half only, and a different team id from the `NV5645J73B` on the
+certificates actually in use. Confirm which team the App Store app is
+registered under before relying on it.
+
 ## After a release
 
 Confirm the APK on the Release page is signed by the expected key:
