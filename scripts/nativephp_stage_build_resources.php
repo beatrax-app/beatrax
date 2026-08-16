@@ -86,6 +86,9 @@ $sources = [
     $projectRoot.'/public/icon.icns' => 'icon.icns',
     $projectRoot.'/public/icon.ico' => 'icon.ico',
     $projectRoot.'/build/entitlements.mac.plist' => 'entitlements.mac.plist',
+    // Overrides the published hook, which swallows a notarisation rejection
+    // and reports success regardless.
+    $projectRoot.'/build/notarize.js' => 'notarize.js',
     $projectRoot.'/resources/brand/tray-icon.png' => 'tray-icon.png',
     $projectRoot.'/resources/brand/tray-icon@2x.png' => 'tray-icon@2x.png',
 ];
