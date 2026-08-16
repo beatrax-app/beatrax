@@ -80,7 +80,10 @@ final class SensitiveColumnCodec
     {
         $keyring = $this->tryLoadKeyring($userId, $session);
         if ($keyring === null) {
-            return ['value' => $value, 'decrypted' => false];
+            // No keyring is the ordinary state for a user without encryption
+            // (values are plaintext) but ALSO for a phone holding synced rows
+            // it has no key for. Shape separates the two.
+            return self::safeUndecrypted($value);
         }
 
         return $this->decryptWithKeyring($table, $field, $value, $keyring);
@@ -95,9 +98,6 @@ final class SensitiveColumnCodec
     public function decryptRow(string $table, array $row, int $userId, Session $session): array
     {
         $keyring = $this->tryLoadKeyring($userId, $session);
-        if ($keyring === null) {
-            return $row;
-        }
 
         foreach ($row as $field => $value) {
             if (! is_string($value)) {
@@ -106,7 +106,12 @@ final class SensitiveColumnCodec
             if (! $this->registry->isSensitive($table, $field)) {
                 continue;
             }
-            $row[$field] = $this->decryptWithKeyring($table, $field, $value, $keyring)['value'];
+            // Same treatment with or without a keyring: without one, a
+            // sensitive column holding ciphertext is unreadable here too, and
+            // returning the row untouched put base64 straight on the screen.
+            $row[$field] = $keyring === null
+                ? self::safeUndecrypted($value)['value']
+                : $this->decryptWithKeyring($table, $field, $value, $keyring)['value'];
         }
 
         return $row;
@@ -153,9 +158,40 @@ final class SensitiveColumnCodec
             }
         }
 
-        // No epoch verified: return the raw stored value untouched, flagged
-        // — never a thrown exception.
-        return ['value' => $value, 'decrypted' => false];
+        // A keyring exists and nothing opened this value: either a pre-
+        // encryption row (plaintext) or ciphertext whose epoch this device
+        // lacks. Passing it through is right for the first, wrong for the
+        // second — a phone that lost its keyring rendered base64 as names.
+
+        // Shape decides: ciphertext is base64(nonce||ct), so at least 40 bytes
+        // and no spaces. "ALBERT HEIJN 1234" fails on the space alone.
+        return self::safeUndecrypted($value);
+    }
+
+    // One place decides what an unreadable value looks like to a caller, so
+    // the no-keyring and no-matching-epoch paths can never drift apart.
+    /**
+     * @return array{value: string, decrypted: bool}
+     */
+    private static function safeUndecrypted(string $value): array
+    {
+        return [
+            'value' => self::looksLikeCiphertext($value) ? '' : $value,
+            'decrypted' => false,
+        ];
+    }
+
+    // Deliberately conservative: it must never blank a real description, so
+    // anything that could plausibly be human text passes through untouched.
+    private static function looksLikeCiphertext(string $value): bool
+    {
+        if (preg_match('/^[A-Za-z0-9+\/]+={0,2}$/', $value) !== 1) {
+            return false;
+        }
+
+        $decoded = base64_decode($value, true);
+
+        return $decoded !== false && strlen($decoded) >= 40;
     }
 
     private function tryCurrentEpoch(int $userId, Session $session): ?GdkEpoch

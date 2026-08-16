@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+use Modules\Sync\Public\Services\SensitiveColumnCodec;
+
+/*
+ * A device that holds encrypted rows but not the key that opens them must show
+ * the user nothing rather than base64. This happened for real: a phone synced
+ * 124 transactions encrypted under the desktop's epoch, lost its keyring to an
+ * app update, and rendered every description as a blob.
+ *
+ * The path fix (durable storage for the keyring) stops it recurring; this is
+ * the belt to that pair of braces, and it must never blank real text.
+ */
+
+function codecLooksLikeCiphertext(string $value): bool
+{
+    $method = new ReflectionMethod(SensitiveColumnCodec::class, 'looksLikeCiphertext');
+    $method->setAccessible(true);
+
+    return (bool) $method->invoke(null, $value);
+}
+
+it('treats a real ciphertext envelope as unreadable', function (): void {
+    // 24-byte nonce + 32 bytes of body, the shape OpLogFieldCrypto emits.
+    $envelope = base64_encode(random_bytes(24).random_bytes(32));
+
+    expect(codecLooksLikeCiphertext($envelope))->toBeTrue();
+});
+
+it('never blanks a bank descriptor', function (string $description): void {
+    expect(codecLooksLikeCiphertext($description))->toBeFalse();
+})->with([
+    'plain merchant' => 'ALBERT HEIJN 1234 EINDHOVEN',
+    'with punctuation' => 'SEPA iDEAL BOL.COM B.V.',
+    'accented' => 'CAFÉ ZURICH',
+    'single word' => 'SPOTIFY',
+    'iban-like' => 'NL91ABNA0417164300',
+    'short base64-ish word' => 'Netflix',
+    'digits only' => '1234567890',
+    'cyrillic' => 'ОЩАДБАНК',
+]);
+
+it('leaves a short base64-looking token alone', function (): void {
+    // Strict base64 by charset, but far too short to be nonce + MAC — so it
+    // is far likelier to be a real reference than an envelope.
+    expect(codecLooksLikeCiphertext('AB12cd'))->toBeFalse();
+});
