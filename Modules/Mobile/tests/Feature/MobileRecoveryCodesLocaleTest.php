@@ -46,16 +46,32 @@ it('serves the mobile import surface in the language stored on the user', functi
 
 it('applies the guest session language on the pre-account import surface', function (): void {
     // The import path runs BEFORE an account exists, so the only record of the
-    // welcome-screen choice is the session.
-    // A device with no account yet is redirected on to the welcome gate, but
-    // the locale must already be resolved by then — the redirect target is
-    // itself a screen the user reads.
+    // welcome-screen choice is the session. True under either root, which is
+    // why the status code is deliberately not asserted here — the two roots
+    // answer this request differently and only the locale is common to both.
+    $this->withSession(['locale' => 'nl'])->get(route('mobile.import'));
+
+    expect(app('translator')->getLocale())->toBe('nl');
+});
+
+it('resolves the locale before the desktop database gate redirects', function (): void {
+    // The regression: SetLocale used to run AFTER EnsureDatabaseReady. A
+    // redirect short-circuits the rest of the stack, so every screen a fresh
+    // install saw before signing up rendered in English whatever it had picked
+    // on the welcome page. The redirect TARGET is a screen the user reads, so
+    // the language has to be resolved before the gate can send them there.
+    //
+    // ->group('repo-root-only'): the redirect is the DESKTOP root's gate. The
+    // mobile-app root runs MobileEnsureDatabaseReady instead, which exempts
+    // `mobile.import` on purpose — a fresh device has to be able to reach the
+    // import bootstrap — so there is no redirect there to pin. Ordering on
+    // that root is covered by the assertion above.
     $this->withSession(['locale' => 'nl'])
         ->get(route('mobile.import'))
         ->assertRedirect();
 
     expect(app('translator')->getLocale())->toBe('nl');
-});
+})->group('repo-root-only');
 
 it('renders the recovery heading from the mobile keys, not the auth ones', function (): void {
     // Mobile has its OWN recovery screen on mobile::import.recovery_*. Fixing
