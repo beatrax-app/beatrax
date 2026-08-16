@@ -111,7 +111,11 @@ final readonly class DesktopColdStartVault implements ColdStartVault
     {
         $directory = dirname($path);
 
-        if (! is_dir($directory) && ! mkdir($directory, 0700, true) && ! is_dir($directory)) {
+        // Suppressed so the guard can decide: unsuppressed, Laravel's error
+        // handler turns the E_WARNING into an ErrorException before mkdir()
+        // returns, and enroll() throws out of a method whose contract is to
+        // answer false. No directory, no enrollment — never a key elsewhere.
+        if (! is_dir($directory) && ! @mkdir($directory, 0700, true) && ! is_dir($directory)) {
             return false;
         }
 

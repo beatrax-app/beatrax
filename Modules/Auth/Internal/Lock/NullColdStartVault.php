@@ -34,5 +34,11 @@ final class NullColdStartVault implements ColdStartVault
         return null;
     }
 
-    public function forget(int $userId): void {}
+    public function forget(int $userId): void
+    {
+        // Nothing was ever stored, so there is nothing to clear. Disabling
+        // cold-start unlock calls this on every platform, and a throw here
+        // would turn "the feature is absent" into an error the settings
+        // screen has to handle.
+    }
 }
