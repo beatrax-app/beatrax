@@ -1,0 +1,98 @@
+# Support-resource corpus — Switzerland (CH merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Swisscom
+    type: merchant
+    cancel_url: "https://www.swisscom.ch/de/privatkunden/hilfe/daten-und-rechnungen/anschluss-kuendigen-pausieren.html"
+    support_url: "https://www.swisscom.ch/de/privatkunden/hilfe.html"
+    notes: "Die Kündigungsfrist für die meisten Swisscom Abos beträgt 60 Tage — die Kündigung muss also mindestens 60 Tage vor dem gewünschten Vertragsende eintreffen; wer ausserhalb der Frist oder innerhalb der 12-monatigen Mindestvertragsdauer kündigt, zahlt die restlichen Gebühren. Statt zu kündigen lässt sich das Mobile-Abo einmal pro Mindestvertragsdauer für einmalig CHF 25.– pausieren, wobei sich die Mindestvertragsdauer um die Pausenmonate verlängert."
+  - name: Sunrise
+    type: merchant
+    cancel_url: "https://www.sunrise.ch/de/support/vertraege-und-kundendaten/kuendigung"
+    support_url: "https://www.sunrise.ch/de/support/kontakt"
+    notes: "Sunrise nimmt Kündigungen für Mobile, Festnetz, TV und Internet nur per Telefon oder Live-Chat entgegen (Hotline Mo–Fr 08:00–19:00, Chat Mo–Fr 09:00–18:00) — ein Online-Kündigungsformular gibt es nicht. Frist: zwei Monate per Monatsende, frühestens per Ablauf der Mindestvertragsdauer; früher oder ausserhalb der Frist nur unter Kostenfolgen."
+  - name: Salt
+    type: merchant
+    cancel_url: "https://www.salt.ch/de/help/mobile/vertragskuendigung"
+    support_url: "https://www.salt.ch/de/help"
+    notes: "Die Kündigungsfrist beträgt in der Regel 60 Tage vor Vertragsende; die genauen Angaben stehen im Vertrag und im My Account. Die schriftliche Kündigung geht an Salt Mobile SA, Avenue de Malley 2, 1008 Prilly, Schweiz."
+  - name: Wingo
+    type: merchant
+    cancel_url: "https://www.wingo.ch/de/hilfe/konto-einstellungen/kuendigen"
+    notes: "Die Hilfeseite «Bei Wingo kündigen» führt die verschiedenen Kündigungswege für Mobile, Internet und TV auf. Für Fragen erreicht man Wingo über das Hilfe-Center, WhatsApp und Social Media oder unter 0800 409 409 (Beratung und Bestellung, Mo–Fr 8–18 Uhr, Sa 8.30–16.30 Uhr)."
+  - name: yallo
+    type: merchant
+    support_url: "https://www.yallo.ch/de/contact"
+    notes: "yallo hat keine Online-Kündigungsseite für das eigene Abo: Support, Abrechnung und allgemeine Anliegen laufen über die kostenpflichtige Kundendienst-Hotline 0900 00 44 88 (CHF 1.50 pro Anruf, Mo–Fr 08:00–20:00, Sa/So 10:00–19:00), aus dem Ausland +41 44 525 01 20, oder über den Live-Chat. Die Seite «cancel-home-internet» betrifft nur die Kündigung beim bisherigen Anbieter beim Wechsel zu yallo."
+  - name: Helsana
+    type: merchant
+    cancel_url: "https://www.helsana.ch/de/private/services/versicherung/kuendigen.html"
+    support_url: "https://www.helsana.ch/de/private/services.html"
+    notes: "Grundversicherung: Kündigungstermin per 31. Dezember, Frist 1 Monat — die Kündigung muss spätestens am letzten Arbeitstag im November während der Öffnungszeiten eintreffen, es genügt nicht, den eingeschriebenen Brief am letzten Tag aufzugeben. Zusatzversicherungen sind freiwillig und haben eine Frist von 3 Monaten, also spätestens letzter Arbeitstag im September."
+  - name: Assura
+    type: merchant
+    support_url: "https://www.assura.ch/de/kontaktaufnahme"
+    notes: "Assura bietet keine eigene Online-Kündigungsseite: Kündigung und Widerruf laufen über das Kontaktformular unter «Kontaktaufnahme», per E-Mail an kuendigung-widerruf.zusatzversicherungen@assura.ch oder per SMS. Anzugeben sind Name, Vorname, Policennummer, vollständige Adresse, Geburtsdatum, die betroffene Zusatzversicherung und das gewünschte Kündigungsdatum — bei unvollständigen Angaben wird die Anfrage nicht bearbeitet."
+  - name: Zurich Schweiz
+    type: merchant
+    cancel_url: "https://www.zurich.ch/de/services/kuendigung"
+    notes: "Auto-, Hausrat- und weitere Versicherungen werden über das Kündigungsformular auf zurich.ch gekündigt. Für die Lebensversicherung gibt es einen eigenen Weg mit separaten Informationen und Kontaktmöglichkeiten."
+  - name: TCS
+    type: merchant
+    cancel_url: "https://www.tcs.ch/de/wGlobal/content/kontaktcenter/formular-kuendigung.php"
+    support_url: "https://www.tcs.ch/de/kontakt-fragen/contactcenter.php"
+    notes: "Gemäss Statuten verlängert sich die Mitgliedschaft automatisch um ein Jahr, wenn die schriftliche Austrittserklärung nicht spätestens drei Monate vor Ablauf der Jahresmitgliedschaft eintrifft; alternativ telefonisch unter 058 827 27 27. Vor der Kündigung prüfen, ob Zusatzprodukte betroffen sind — der ETI-Schutzbrief etwa setzt eine aktive Mitgliedschaft voraus."
+  - name: PostFinance
+    type: merchant
+    cancel_url: "https://www.postfinance.ch/de/support/konten/konto-kuendigen.html"
+    support_url: "https://www.postfinance.ch/de/support.html"
+    notes: "Das Konto lässt sich kostenlos und in der Regel innerhalb von zwei Arbeitstagen im E-Finance oder in der PostFinance App auflösen. Die Kreditkarte wird separat gekündigt — per Nachricht via E-Finance oder mit dem ausgefüllten und unterschriebenen Formular."
+  - name: PureGym Swiss
+    type: merchant
+    cancel_url: "https://www.puregym.swiss/faqs/"
+    notes: "basefit.ch leitet heute auf puregym.swiss um. Alle Mitgliedschaften haben eine Kündigungsfrist von 10 Tagen vor Ende der Laufzeit, ältere Unlimited- und Premium-Jahresabos von vor Juni 2024 nur 1 Tag; ohne Kündigung verlängert sich das Abo automatisch. Gekündigt wird in der App oder im Mitgliederportal, bei Login-Problemen per E-Mail an swiss.info@puregym.com — mündliche Kündigungen sind ungültig, und erst die Bestätigungs-E-Mail macht die Kündigung gültig."
+  - name: Schweizerisches Rotes Kreuz
+    type: merchant
+    cancel_url: "https://www.redcross.ch/de/stornierung-ihrer-regelmaessigen-spende"
+    notes: "Wer per Kreditkarte oder PayPal spendet, findet im Bestätigungs-E-Mail den Link «Ihre regelmässige Zahlung anpassen» und storniert dort selbst. Bei allen anderen Zahlungsmitteln — etwa Dauerauftrag oder Einzahlungsschein — muss der Gönnerservice kontaktiert und ausdrücklich mitgeteilt werden, dass die regelmässigen Spenden eingestellt werden sollen."
+  - name: ewz
+    type: merchant
+    support_url: "https://www.ewz.ch/de/services/umzug.html"
+    notes: "Strom in der Stadt Zürich wird nicht «gekündigt», sondern beim Auszug abgemeldet: ewz will die Umzugsmeldung mindestens 10 Tage vor der Schlüsselübergabe haben, damit der Zählerstand korrekt abgerechnet werden kann. Ein Online-Kündigungsformular gibt es entsprechend nicht."
+
+  # --- Government ---
+  - name: Eidgenössische Steuerverwaltung
+    type: government
+    help_url: "https://www.estv.admin.ch/de/kontakt-direkte-bundessteuer"
+    notes: "Die ESTV ist für die direkte Bundessteuer, die Verrechnungssteuer und die Stempelabgaben zuständig; Kontakt schriftlich an Eidgenössische Steuerverwaltung ESTV, Eigerstrasse 65, 3003 Bern oder über das Kontaktformular DBST. Die Steuererklärung selbst wird nicht bei der ESTV, sondern beim kantonalen Steueramt eingereicht."
+  - name: AHV/IV
+    type: government
+    help_url: "https://www.ahv-iv.ch/de/Kontakte"
+    apply_url: "https://www.ahv-iv.ch/de/Kontakte/Kantonale-Ausgleichskassen"
+    notes: "Die Informationsstelle AHV/IV führt die Adressen aller Anlaufstellen: kantonale Ausgleichskassen, Verbandsausgleichskassen, Eidgenössische Ausgleichskasse EAK, Schweizerische Ausgleichskasse SAK und IV-Stellen. Beiträge und Rentenanmeldungen laufen über die zuständige Ausgleichskasse, nicht über eine zentrale Bundesstelle."
+  - name: RAV / Arbeitslosenversicherung
+    type: government
+    help_url: "https://www.arbeit.swiss/de/kontakt"
+    apply_url: "https://www.arbeit.swiss/de/stellensuchende/anmeldung-und-registrierung"
+    rights_url: "https://www.arbeit.swiss/de/stellensuchende/faq-zur-arbeitslosenentschaedigung"
+    notes: "Arbeitslosenversicherung und öffentliche Arbeitsvermittlung werden kantonal geführt — man meldet sich beim regionalen Arbeitsvermittlungszentrum (RAV) an und anschliessend bei einer Arbeitslosenkasse. Die FAQ zur Arbeitslosenentschädigung erklärt Anspruch und Ausnahmen, etwa dass Selbstständigerwerbende nicht versichert sind."
+  - name: Prämienverbilligung
+    type: government
+    help_url: "https://www.priminfo.admin.ch/de/versicherungen/verbilligung"
+    apply_url: "https://www.priminfo.admin.ch/de/versicherungen/verbilligung"
+    notes: "Für die Prämienverbilligung sind die Kantone zuständig: man muss sich selbst beim Wohnkanton melden, der dann prüft, ob ein Anspruch besteht. Auf der Priminfo-Seite lässt sich der Kanton auswählen; dort stehen Adresse, Telefonnummer und Website der zuständigen Stelle, etwa SVA Aargau, Kyburgerstrasse 15, 5001 Aarau, T 062 836 81 81."
+  - name: Serafe
+    type: government
+    help_url: "https://www.serafe.ch/de/kontakt/"
+    rights_url: "https://www.serafe.ch/de/abgabebefreiung/grundsatz/"
+    phone: "058 201 31 67"
+    notes: "Seit dem Wechsel zur geräteunabhängigen Haushaltabgabe sind grundsätzlich alle Haushalte in der Schweiz abgabepflichtig; die Daten kommen aus dem Einwohnerregister der Gemeinde, und alle volljährigen Personen des Haushalts haften solidarisch — die Abgabe von CHF 335.00 pro Jahr lässt sich also nicht kündigen. Eine Befreiung gibt es nur in engen Fällen (Ergänzungsleistungen, Sozialhilfe, Taubblinden- und Diplomatenhaushalte). Kundendienst Mo–Fr 07:30–18:00 unter 058 201 31 67."
+  - name: Strassenverkehrsamt
+    type: government
+    help_url: "https://www.ch.ch/de/fahrzeuge-und-verkehr/autos-und-andere-fahrzeuge/fahrzeug-einlosen/"
+    notes: "Fahrzeugausweis und Nummernschilder beantragt man beim kantonalen Strassenverkehrsamt. Nötig sind unter anderem eine Haftpflichtversicherung und, wer erstmals ein Fahrzeug anmeldet, eine Wohnsitzbestätigung oder ein Schriftenempfangsschein von der Einwohnerkontrolle der Gemeinde."

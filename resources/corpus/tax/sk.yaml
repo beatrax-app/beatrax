@@ -1,0 +1,44 @@
+# Tax deduction categories — Slovakia
+# Mirrors the nezdaniteľné časti základu dane and daňové bonusy of the SK
+# daňové priznanie k dani z príjmov fyzickej osoby.
+# Source: Finančná správa SR (financnasprava.sk), "Uplatňovanie daňových zvýhodnení",
+# zdaňovacie obdobie 2026; zákon č. 595/2003 Z. z. o dani z príjmov (§ 11, § 33,
+# § 33a, § 50, § 50aa) v znení k 1. 1. 2025, Zbierka zákonov / Slov-Lex.
+# Slovakia's claimable set is genuinely narrow; the nezdaniteľná časť na kúpeľnú
+# starostlivosť was abolished and is deliberately absent.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "sk_nezdanitelna_cast_na_danovnika"
+    name: "Nezdaniteľná časť základu dane na daňovníka"
+    short_name: "Na daňovníka"
+    hint: "Základná nezdaniteľná časť, ktorá sa znižuje pri vyššom základe dane"
+  - key: "sk_nezdanitelna_cast_na_manzela"
+    name: "Nezdaniteľná časť základu dane na manželku alebo manžela"
+    short_name: "Na manželku"
+    hint: "Nezdaniteľná časť podľa vlastných príjmov manželky alebo manžela"
+  - key: "sk_prispevky_na_dds"
+    name: "Príspevky na doplnkové dôchodkové sporenie"
+    short_name: "III. pilier"
+    hint: "Vlastné príspevky zaplatené na doplnkové dôchodkové sporenie v treťom pilieri"
+  - key: "sk_danovy_bonus_na_dieta"
+    name: "Daňový bonus na vyživované dieťa"
+    short_name: "Bonus dieťa"
+    hint: "Bonus na každé vyživované dieťa žijúce s daňovníkom v domácnosti"
+  - key: "sk_danovy_bonus_na_zaplatene_uroky"
+    name: "Daňový bonus na zaplatené úroky"
+    short_name: "Bonus úroky"
+    hint: "Bonus z úrokov zaplatených z úveru na bývanie pre mladých"
+  - key: "sk_podiel_zaplatenej_dane"
+    name: "Použitie podielu zaplatenej dane na osobitné účely"
+    short_name: "Podiel dane"
+    hint: "Poukázanie 2 % zaplatenej dane určenému prijímateľovi, 3 % pri dobrovoľníckej činnosti"
+  - key: "sk_podiel_zaplatenej_dane_rodicovi"
+    name: "Použitie podielu zaplatenej dane pre rodiča"
+    short_name: "Pre rodiča"
+    hint: "Poukázanie 2 % zaplatenej dane každému určenému rodičovi poberajúcemu dôchodok"

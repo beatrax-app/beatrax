@@ -1,0 +1,40 @@
+# Bank-fee classification rules — Greece (Greek).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# No `regex:` entries here: the matcher runs PCRE without /u, so \b only
+# recognises ASCII word characters and `#i` never case-folds Greek — a
+# Greek regex would match a single casing at best. Plain substrings are used
+# instead, which are matched case-insensitively and multibyte-aware. Case
+# folding still does not strip accents, so each term is listed twice: once
+# in the unaccented UPPERCASE form the statement lines print
+# ("ΠΡΟΜΗΘΕΙΑ") and once in the accented form of the e-banking exports
+# ("προμήθεια"), because neither matches the other. The terms stay as fixed
+# phrases rather than single words — "ΧΡΕΩΣΤΙΚ" alone would fire on
+# "ΧΡΕΩΣΤΙΚΗ ΚΑΡΤΑ" (debit card) on every card purchase. Any regex body
+# added later must be SINGLE-quoted in YAML so the backslash reaches the
+# matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "ΠΡΟΜΗΘΕΙΑ"
+    name: "Προμήθεια"
+  - pattern: "προμήθεια"
+    name: "Προμήθεια"
+  - pattern: "ΕΞΟΔΑ ΚΙΝΗΣΗΣ"
+    name: "Έξοδα κίνησης λογαριασμού"
+  - pattern: "έξοδα κίνησης"
+    name: "Έξοδα κίνησης λογαριασμού"
+  - pattern: "ΧΡΕΩΣΤΙΚΟΙ ΤΟΚΟΙ"
+    name: "Χρεωστικοί τόκοι"
+  - pattern: "χρεωστικοί τόκοι"
+    name: "Χρεωστικοί τόκοι"
+  - pattern: "ΣΥΝΔΡΟΜΗ ΚΑΡΤΑΣ"
+    name: "Συνδρομή κάρτας"
+  - pattern: "συνδρομή κάρτας"
+    name: "Συνδρομή κάρτας"

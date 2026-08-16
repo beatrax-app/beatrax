@@ -1,0 +1,110 @@
+# Support-resource corpus — Portugal (PT merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: MEO
+    type: merchant
+    cancel_url: "https://www.meo.pt/suporte/cancelamento-antecipado-contrato"
+    support_url: "https://www.meo.pt/ajuda-e-suporte"
+    notes: "A página 'Cancelar contrato antes do fim da fidelização' explica em que situações pode cancelar o contrato antes do fim da fidelização sem penalização e que documentos são necessários. Há ainda uma página própria para suspender o contrato temporariamente, em vez de o cancelar."
+  - name: NOS
+    type: merchant
+    cancel_url: "https://www.nos.pt/ajuda/a-minha-conta/gerir-o-contrato/cancelar-o-contrato/como-cancelar-servico"
+    support_url: "https://www.nos.pt/ajuda"
+    cheaper_url: "https://www.nos.pt/ajuda/a-minha-conta/apoio-em-dificuldade-economica"
+    notes: "O cancelamento pede-se por telefone (931 699 000 ou 16990, opção 'desativação') e tem depois de ser formalizado por escrito; em alternativa pode ser entregue pessoalmente ou por correio com o formulário de pedido de cessação do contrato assinado. Se cancelar a menos de 10 dias do fim do período de faturação mantém os serviços mais um mês, e tem 30 dias após a desativação para devolver os equipamentos da NOS."
+  - name: Vodafone Portugal
+    type: merchant
+    cancel_url: "https://ajuda.vodafone.pt/adesao-e-contrato/cancelar-ou-terminar-contrato"
+    support_url: "https://ajuda.vodafone.pt/perguntas-frequentes/contactos"
+    notes: "Na cessação antecipada de um contrato fixo o valor a pagar não pode exceder o menor de dois valores: a vantagem conferida na fidelização, proporcional ao período remanescente, ou uma percentagem das mensalidades vincendas — 50% se a cessação ocorrer no primeiro ano de vigência e 30% se ocorrer no segundo. O valor da penalização por incumprimento contratual pode ser consultado na página de detalhes da fatura."
+  - name: DIGI Portugal
+    type: merchant
+    support_url: "https://www.digi.pt/apoio-ao-cliente"
+    cheaper_url: "https://www.digi.pt/tarifa-social-de-internet"
+    notes: "Os tarifários móveis DIGI não têm qualquer período de fidelização; só a net de fibra ótica pede 3 meses de fidelização. Existe também a Tarifa Social de Internet, criada pelo Decreto-Lei n.º 66/2021, de 30 de julho, para quem reúne os requisitos de atribuição."
+  - name: NOWO
+    type: merchant
+    support_url: "https://www.nowo.pt/contactos/"
+    notes: "O apoio a cliente atende pelo 210850083 (chamada para a rede fixa nacional) ou pelo 16800 a partir de números NOWO, 24 horas por dia, 7 dias por semana. A gestão dos serviços faz-se na área de cliente; para adesões e alterações há a linha gratuita 16805, das 8h às 22h."
+  - name: EDP Comercial
+    type: merchant
+    cancel_url: "https://www.edp.pt/particulares/apoio-cliente/perguntas-frequentes/pt/contratos/gestao-de-contrato-e-dados/quero-cancelar-o-contrato/faq-2337"
+    support_url: "https://www.edp.pt/particulares/apoio-cliente/contactos/"
+    notes: "A rescisão do contrato de eletricidade e/ou gás natural implica a interrupção definitiva do fornecimento e pode ser pedida na área de cliente EDP, pelo formulário do site ou pela linha 213 53 53 53 (dias úteis das 9h às 20h). O pedido tem de ser feito pelo titular do contrato de energia ou pelo seu representante legal."
+  - name: Fidelidade
+    type: merchant
+    support_url: "https://www.fidelidade.pt/PT/ajuda/Paginas/contactos.aspx"
+    notes: "O apoio a clientes atende pelo 217 948 800 (chamada para a rede fixa nacional), nos dias úteis das 9h às 20h, encerrado ao fim de semana. Pelo site pode agendar um contacto telefónico em vez de ligar; não há anulação de apólices online."
+  - name: Generali Tranquilidade
+    type: merchant
+    support_url: "https://www.generalitranquilidade.pt/contactos"
+    notes: "A Linha de Clientes (informações, simulações, sinistros e gestão de contratos) atende pelo 211 520 310, dias úteis das 09h às 19h; há ainda o e-mail clientes@tranquilidade.pt e o Apartado 8201, 1803-001 Lisboa. A anulação de um seguro automóvel exige pedido assinado pelo tomador acompanhado de comprovativo — por exemplo da venda ou abate do veículo — e, se houve sinistros na anuidade, não há lugar a estorno."
+  - name: Médis
+    type: merchant
+    support_url: "https://www.medis.pt/informacao-util/contactos/"
+    notes: "A Linha Médis atende pelo 218 458 888: triagem clínica por enfermeiros 24 horas e assuntos administrativos de 2.ª a 6.ª feira das 8h00 às 20h00. A Médis indica que o meio de contacto preferencial é o e-mail e pede que confirme ou atualize os seus dados na área de cliente."
+  - name: Solinca
+    type: merchant
+    support_url: "https://www.solinca.pt/solinca/solinca-faq/"
+    notes: "Não há cancelamento online: para cancelar a inscrição tem de preencher o formulário disponível na receção do seu ginásio Solinca, com o comprovativo da condição invocada, ou enviar esses dados por e-mail para o endereço do próprio ginásio. Os motivos previstos são motivos de saúde, profissionais, mudança de residência ou o término do período de duração contratualizado, dentro do prazo estabelecido."
+  - name: ACP - Automóvel Club de Portugal
+    type: merchant
+    support_url: "https://www.acp.pt/o-clube/sobre-o-acp/contactos"
+    notes: "Não existe botão de cancelamento: os Estatutos do ACP dão ao sócio o direito de 'pedir a exoneração de sócio mediante comunicação por escrito'. Os Estatutos preveem ainda a perda da qualidade de sócio por não pagamento de quotas, tratada como mero ato de gestão da direção e não como sanção disciplinar."
+  - name: Sport TV
+    type: merchant
+    support_url: "https://www.sporttv.pt/perguntas-frequentes/"
+    notes: "A subscrição dos canais Sport TV é feita através dos operadores MEO, NOS ou Vodafone, pelo que o cancelamento tem de ser pedido ao operador e não à Sport TV. A linha de apoio 800 10 10 08 (diariamente das 11h00 às 22h00) destina-se sobretudo a questões de multiscreen, dúvidas ou sugestões, e há o e-mail apoiocliente@sporttv.pt."
+  - name: Caixa Geral de Depósitos
+    type: merchant
+    support_url: "https://www.cgd.pt/Ajuda/Contactos/Pages/Contactos.aspx"
+    notes: "A linha de apoio a clientes particulares é o 217 900 790, com apoio personalizado 24 horas por dia, todos os dias do ano (chamada para a rede fixa nacional); as empresas usam o 217 900 791, das 8h às 22h, 7 dias por semana. O site não disponibiliza encerramento de conta online — a área de Ajuda encaminha para a linha de apoio ou para o contacto on-line."
+  - name: Cruz Vermelha Portuguesa
+    type: merchant
+    support_url: "https://www.cruzvermelha.pt/contactos-cvp/"
+    notes: "O donativo pode ser mensal ou pontual e é subscrito por formulário no site, com escolha entre 50€, 30€, 15€ ou outro montante — o mesmo formulário serve para se tornar sócio. Para assuntos de doador existe o endereço consigo.mais@cruzvermelha.org.pt e a sede nacional atende pelo +351 213 913 900."
+
+  # --- Government ---
+  - name: Autoridade Tributária e Aduaneira
+    type: government
+    help_url: "https://info.portaldasfinancas.gov.pt/pt/apoio_ao_contribuinte/Atendimento/CAT"
+    apply_url: "https://www.portaldasfinancas.gov.pt/at/html/index.html"
+    rights_url: "https://info.portaldasfinancas.gov.pt/pt/apoio_ao_contribuinte/Atendimento/ebalcao"
+    phone: "217 206 707"
+    notes: "O Centro de Atendimento Telefónico atende pelo 217 206 707 nos dias úteis das 09:00 às 19:00, com atendimento automatizado 24 horas por dia sobre o estado dos reembolsos de IRS e IVA; do estrangeiro marque 00 351 antes do número. Em matérias sujeitas a confidencialidade é preciso o NIF e o código de acesso telefónico; para questões complexas ou processos pendentes use o e-balcão."
+  - name: Segurança Social
+    type: government
+    help_url: "https://www.seg-social.pt/ptss/pssd/menu/ajuda/contactos-canais-atendimento"
+    apply_url: "https://www.seg-social.pt/ptss/pssd/home"
+    rights_url: "https://www.seg-social.pt/ptss/pssd/menu/trabalho/desemprego/subsidio-desemprego"
+    notes: "Praticamente tudo se trata na Segurança Social Direta, com autenticação; o menu Ajuda > Contactos e canais de atendimento reúne os serviços de atendimento, o Balcão e-Clic, o canal telefónico, o canal vídeo e o atendimento SIGA. As prestações de desemprego, incluindo o subsídio de desemprego e o subsídio social de desemprego, têm páginas próprias no menu Trabalho > Desemprego."
+  - name: SNS 24
+    type: government
+    help_url: "https://www.sns.gov.pt/quando-ligar-sns-24-ou-inem/"
+    apply_url: "https://www.sns24.gov.pt/"
+    phone: "808 24 24 24"
+    notes: "A campanha da SPMS e do INEM 'Quando ligar SNS 24 ou INEM?' distingue as duas linhas: o 808 24 24 24 para problemas de saúde não emergentes e o 112 para situações que possam envolver risco de vida. No portal SNS 24 inicia sessão na área pessoal e acede à triagem digital, teleconsulta, registos de saúde, receituário e lista de espera para cirurgia."
+  - name: IEFP
+    type: government
+    help_url: "https://www.iefp.pt/contactos"
+    apply_url: "https://iefponline.iefp.pt/"
+    rights_url: "https://www.iefp.pt/apoios"
+    phone: "(351) 215 803 555"
+    notes: "O centro de contacto do IEFP atende pelo 215 803 555, das 9:00 às 19:00 horas em dias úteis, e existe um canal digital onde faz o contacto e acompanha o pedido. A inscrição e o acesso online aos serviços de emprego fazem-se no iefponline."
+  - name: DGES
+    type: government
+    help_url: "https://www.dges.gov.pt/pt/pagina/contactos-dges"
+    apply_url: "https://www.dges.gov.pt/wwwBeOn/"
+    rights_url: "https://www.dges.gov.pt/pt/pagina/bolsas-de-estudo"
+    notes: "As candidaturas a bolsas de estudo do ensino superior fazem-se na área reservada do estudante da plataforma BeOn; atenção que as credenciais de acesso à bolsa são diferentes das que usou no Concurso Nacional de Acesso. A área de bolsas reúne informações, simulador de bolsa, prazos de candidatura, pagamentos e FAQ."
+  - name: IMT
+    type: government
+    help_url: "https://www.imt-ip.pt/contactos/"
+    apply_url: "https://servicos.imt-ip.pt/"
+    phone: "210 488 488"
+    notes: "O call center do IMT atende pelo 210 488 488 das 9:00 às 17:00, para chamadas nacionais e internacionais; fora do horário ouve uma gravação com as informações de funcionamento. Os assuntos de veículos e cartas de condução tratam-se no IMT Online, com autenticação por número de contribuinte, Cartão de Cidadão ou Chave Móvel Digital."

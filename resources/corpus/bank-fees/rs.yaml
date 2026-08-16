@@ -1,0 +1,54 @@
+# Bank-fee classification rules — Serbia (Serbian, Cyrillic and Latin).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Serbian banks really do print both scripts, so both are listed: Banca
+# Intesa's tariff for individuals is Latin, Banka Poštanska štedionica's is
+# Cyrillic, and the National Bank's consumer site describes the same
+# services in Cyrillic. The Cyrillic terms are plain substrings, never a
+# `regex:`: the matcher runs PCRE without /u, so \b only recognises ASCII
+# word characters and a Cyrillic word can never be fenced by one, while the
+# literal path goes through mb_stripos and folds multibyte case correctly.
+#
+# The trap on the Latin side is the stem: a bare "NAKNAD" also starts
+# "NAKNADNO" and "NAKNADNI" (subsequently, later), so `\bNAKNAD[AEIU]\b`
+# spells out the case endings the statement lines use — "naknada",
+# "naknade", "naknadi", "naknadu" — inside both boundaries. `\bKAMAT[AEIU]\b`
+# is fenced the same way so it stays off "kamatna stopa", the interest RATE.
+#
+# The trap on the Cyrillic side is different and cannot be fixed with a
+# boundary: "накнада" is also the ordinary word for compensation, as in
+# "накнада зараде" (wage compensation) and "накнада штете" (damage
+# compensation) — both INCOMING payments. The Cyrillic entry is therefore
+# anchored to what the bank is charging for ("НАКНАДА ЗА ВОЂЕЊЕ") rather
+# than left bare. Regex bodies must be SINGLE-quoted in YAML so the
+# backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Worked from: Banca Intesa ad Beograd "Tarifa naknada za usluge ... za
+# fizička lica" (in force 08.05.2024), Banka Poštanska štedionica "ТАРИФА
+# НАКНАДА ЗА УСЛУГЕ ..." (version 27.04.2026), and the National Bank of
+# Serbia consumer site "Твој новац" (текући/платни рачун).
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bNAKNAD[AEIU]\b'
+    name: "Naknada"
+  - pattern: "VOĐENJE PLATNOG RAČUNA"
+    name: "Naknada za vođenje računa"
+  - pattern: "VODJENJE PLATNOG RACUNA"
+    name: "Naknada za vođenje računa"
+  - pattern: 'regex:\bPROVIZIJ[AEU]\b'
+    name: "Provizija"
+  - pattern: 'regex:\bKAMAT[AEIU]\b'
+    name: "Kamata"
+  - pattern: "НАКНАДА ЗА ВОЂЕЊЕ"
+    name: "Накнада за вођење рачуна"
+  - pattern: "ПРОВИЗИЈА"
+    name: "Провизија"
+  - pattern: "КАМАТА"
+    name: "Камата"

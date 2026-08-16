@@ -1,7 +1,242 @@
 # Government / public-agency classification rules — Greece.
+# (Bare "ΔΟΥ" and "ΙΚΑ" are three-letter Greek tokens that collide inside
+# ordinary words and are deliberately omitted. The ΕΡΤ levy and the
+# municipal δημοτικά τέλη ride on the electricity bill rather than appearing
+# as their own counterparty, so neither is listed.)
+#
+# Sources: aade.gr, gsis.gr (TAXISnet), efka.gov.gr, keao.gov.gr,
+# opeka.gr, dypa.gov.gr, eopyy.gov.gr, eody.gov.gr, ktimatologio.gr,
+# gsis.gr/e-paravolo, hellenicpolice.gr, fireservice.gr, hcg.gr,
+# minedu.gov.gr, iky.gr, uoa.gr, auth.gr, ntua.gr, eap.gr, eydap.gr,
+# eyath.gr, businessportal.gr (ΓΕΜΗ), tee.gr, opekepe.gr, elga.gr,
+# kep.gov.gr, gov.gr service directory.
+#
+# Script: every Greek term is a plain substring — never a `regex:` — because
+# the matcher delimits regex bodies without /u, so Greek case folding and
+# \b would both misbehave inside one. Only the ASCII transliterations that
+# Greek banks genuinely print (AADE, EFKA, EYDAP, EYATH, EOPYY, KEAO, DYPA,
+# ENFIA) use the regex path.
+#
+# Accents: Greek upper-case drops accents, which is what a descriptor
+# normally carries — but a mixed-case creditor name ("Δήμος Αθηναίων") keeps
+# them, and mb_stripos folds case only, not accents, so "ΔΗΜΟΣ" would miss
+# it. The highest-value single-word terms are therefore listed a second
+# time in their accented form.
+#
+# Rejected as too collision-prone: bare "ΔΟΥ", "ΙΚΑ", "ΤΑΠ", "ΕΡΤ", "ΤΕΕ",
+# "ΕΣΥ", "ΦΠΑ" and every other three-letter Greek token; "ΚΤΕΟ" (it is a
+# substring of the private "ΙΚΤΕΟ" chains); "ΠΡΟΣΤΙΜΟ" on its own; the
+# Latin "OPEKA" (it is the ordinary word for "brick" in the Balkans); and
+# "ΠΑΙΔΙΚΟΣ ΣΤΑΘΜΟΣ" (private nurseries use the identical words).
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "regex:\\bAADE\\b"
     name: "ΑΑΔΕ (AADE)"
   - pattern: "regex:\\bEFKA\\b"
     name: "e-EFKA"
+  - pattern: "ΑΑΔΕ"
+    name: "ΑΑΔΕ (AADE)"
+  - pattern: "ΕΦΚΑ"
+    name: "e-ΕΦΚΑ"
+  - pattern: "ΕΦΟΡΙΑ"
+    name: "Εφορία"
+  - pattern: "TAXISNET"
+    name: "TAXISnet"
+  - pattern: "ΕΝΦΙΑ"
+    name: "ΕΝΦΙΑ"
+  - pattern: "ΤΕΛΗ ΚΥΚΛΟΦΟΡΙΑΣ"
+    name: "Τέλη κυκλοφορίας"
+  # Municipalities bill water, cemetery and permit charges directly.
+  - pattern: "ΔΗΜΟΣ"
+  - pattern: "ΟΠΕΚΑ"
+    name: "ΟΠΕΚΑ"
+  # ΟΑΕΔ was renamed ΔΥΠΑ in 2022; both still appear.
+  - pattern: "ΔΥΠΑ"
+    name: "ΔΥΠΑ"
+  - pattern: "ΟΑΕΔ"
+    name: "ΔΥΠΑ (πρώην ΟΑΕΔ)"
+  - pattern: "ΚΤΗΜΑΤΟΛΟΓΙΟ"
+    name: "Κτηματολόγιο"
+  - pattern: "ΠΑΡΑΒΟΛΟ"
+    name: "e-Παράβολο"
+  # --- Tax, customs and treasury ---------------------------------------------
+  - pattern: "ΑΝΕΞΑΡΤΗΤΗ ΑΡΧΗ ΔΗΜΟΣΙΩΝ ΕΣΟΔΩΝ"
+    name: "ΑΑΔΕ"
+  - pattern: "ΤΕΛΩΝΕΙΟ"
+    name: "Τελωνείο"
+  - pattern: "Τελωνείο"
+    name: "Τελωνείο"
+  - pattern: "ΦΟΡΟΣ ΕΙΣΟΔΗΜΑΤΟΣ"
+    name: "Φόρος εισοδήματος"
+  - pattern: "ΦΟΡΟΣ ΠΡΟΣΤΙΘΕΜΕΝΗΣ ΑΞΙΑΣ"
+    name: "ΦΠΑ"
+  - pattern: "ΤΑΥΤΟΤΗΤΑ ΟΦΕΙΛΗΣ"
+    name: "Ταυτότητα Οφειλής (ΑΑΔΕ)"
+  - pattern: "ΥΠΟΥΡΓΕΙΟ ΟΙΚΟΝΟΜΙΚΩΝ"
+    name: "Υπουργείο Οικονομικών"
+  - pattern: "ΓΕΝΙΚΟ ΛΟΓΙΣΤΗΡΙΟ ΤΟΥ ΚΡΑΤΟΥΣ"
+    name: "Γενικό Λογιστήριο του Κράτους"
+  - pattern: "Εφορία"
+    name: "Εφορία"
+  # --- Social insurance and contribution collection ----------------------------
+  - pattern: "ΕΝΙΑΙΟΣ ΦΟΡΕΑΣ ΚΟΙΝΩΝΙΚΗΣ ΑΣΦΑΛΙΣΗΣ"
+    name: "e-ΕΦΚΑ"
+  - pattern: "ΚΕΝΤΡΟ ΕΙΣΠΡΑΞΗΣ ΑΣΦΑΛΙΣΤΙΚΩΝ ΟΦΕΙΛΩΝ"
+    name: "ΚΕΑΟ"
+  - pattern: "ΚΕΑΟ"
+    name: "ΚΕΑΟ"
+  - pattern: 'regex:\bKEAO\b'
+    name: "ΚΕΑΟ"
+  - pattern: "ΑΣΦΑΛΙΣΤΙΚΕΣ ΕΙΣΦΟΡΕΣ"
+    name: "Ασφαλιστικές εισφορές"
+  - pattern: "ΕΤΕΑΕΠ"
+    name: "ΕΤΕΑΕΠ"
+  - pattern: "ΤΑΜΕΙΟ ΕΠΙΚΟΥΡΙΚΗΣ ΚΕΦΑΛΑΙΟΠΟΙΗΤΙΚΗΣ ΑΣΦΑΛΙΣΗΣ"
+    name: "ΤΕΚΑ"
+  - pattern: "ΤΣΜΕΔΕ"
+    name: "ΤΣΜΕΔΕ (e-ΕΦΚΑ)"
+  # --- Benefits, family allowance and unemployment ------------------------------
+  - pattern: "ΟΡΓΑΝΙΣΜΟΣ ΠΡΟΝΟΙΑΚΩΝ ΕΠΙΔΟΜΑΤΩΝ"
+    name: "ΟΠΕΚΑ"
+  - pattern: "ΔΗΜΟΣΙΑ ΥΠΗΡΕΣΙΑ ΑΠΑΣΧΟΛΗΣΗΣ"
+    name: "ΔΥΠΑ"
+  - pattern: 'regex:\bDYPA\b'
+    name: "ΔΥΠΑ"
+  - pattern: "ΕΠΙΔΟΜΑ ΠΑΙΔΙΟΥ"
+    name: "Επίδομα παιδιού"
+  - pattern: "ΕΛΑΧΙΣΤΟ ΕΓΓΥΗΜΕΝΟ ΕΙΣΟΔΗΜΑ"
+    name: "Ελάχιστο Εγγυημένο Εισόδημα"
+  - pattern: "ΕΠΙΔΟΜΑ ΑΝΕΡΓΙΑΣ"
+    name: "Επίδομα ανεργίας"
+  # --- Public health --------------------------------------------------------------
+  - pattern: "ΕΟΠΥΥ"
+    name: "ΕΟΠΥΥ"
+  - pattern: "ΕΘΝΙΚΟΣ ΟΡΓΑΝΙΣΜΟΣ ΠΑΡΟΧΗΣ ΥΠΗΡΕΣΙΩΝ ΥΓΕΙΑΣ"
+    name: "ΕΟΠΥΥ"
+  - pattern: 'regex:\bEOPYY\b'
+    name: "ΕΟΠΥΥ"
+  - pattern: "ΝΟΣΟΚΟΜΕΙΟ"
+    name: "Νοσοκομείο"
+  - pattern: "Νοσοκομείο"
+    name: "Νοσοκομείο"
+  - pattern: "ΚΕΝΤΡΟ ΥΓΕΙΑΣ"
+    name: "Κέντρο Υγείας"
+  - pattern: "ΕΘΝΙΚΟΣ ΟΡΓΑΝΙΣΜΟΣ ΔΗΜΟΣΙΑΣ ΥΓΕΙΑΣ"
+    name: "ΕΟΔΥ"
+  - pattern: "ΥΠΟΥΡΓΕΙΟ ΥΓΕΙΑΣ"
+    name: "Υπουργείο Υγείας"
+  # --- Local government and public water utilities ----------------------------------
+  - pattern: "Δήμος"
+    name: "Δήμος"
+  - pattern: "ΠΕΡΙΦΕΡΕΙΑ"
+    name: "Περιφέρεια"
+  - pattern: "Περιφέρεια"
+    name: "Περιφέρεια"
+  - pattern: "ΔΗΜΟΤΙΚΗ ΕΠΙΧΕΙΡΗΣΗ ΥΔΡΕΥΣΗΣ"
+    name: "ΔΕΥΑ"
+  - pattern: "ΚΟΙΝΩΦΕΛΗΣ ΕΠΙΧΕΙΡΗΣΗ"
+    name: "Κοινωφελής Επιχείρηση Δήμου"
+  - pattern: "ΕΥΔΑΠ"
+    name: "ΕΥΔΑΠ"
+  - pattern: 'regex:\bEYDAP\b'
+    name: "ΕΥΔΑΠ"
+  - pattern: "ΕΥΑΘ"
+    name: "ΕΥΑΘ"
+  - pattern: 'regex:\bEYATH\b'
+    name: "ΕΥΑΘ"
+  - pattern: 'regex:\bENFIA\b'
+    name: "ΕΝΦΙΑ"
+  # --- Vehicles and transport ----------------------------------------------------------
+  - pattern: "ΥΠΟΥΡΓΕΙΟ ΥΠΟΔΟΜΩΝ ΚΑΙ ΜΕΤΑΦΟΡΩΝ"
+    name: "Υπουργείο Υποδομών και Μεταφορών"
+  - pattern: "ΔΙΕΥΘΥΝΣΗ ΜΕΤΑΦΟΡΩΝ"
+    name: "Διεύθυνση Μεταφορών"
+  - pattern: "ΑΔΕΙΑ ΟΔΗΓΗΣΗΣ"
+    name: "Άδεια οδήγησης"
+  # --- Police, fines and the courts -------------------------------------------------------
+  - pattern: "ΕΛΛΗΝΙΚΗ ΑΣΤΥΝΟΜΙΑ"
+    name: "Ελληνική Αστυνομία"
+  - pattern: "ΤΡΟΧΑΙΑ"
+    name: "Τροχαία"
+  - pattern: "ΚΛΗΣΗ ΤΡΟΧΑΙΑΣ"
+    name: "Κλήση Τροχαίας"
+  - pattern: "ΔΙΟΙΚΗΤΙΚΟ ΠΡΟΣΤΙΜΟ"
+    name: "Διοικητικό πρόστιμο"
+  - pattern: "ΛΙΜΕΝΙΚΟ ΣΩΜΑ"
+    name: "Λιμενικό Σώμα"
+  - pattern: "ΠΥΡΟΣΒΕΣΤΙΚΗ"
+    name: "Πυροσβεστική"
+  - pattern: "ΥΠΟΥΡΓΕΙΟ ΠΡΟΣΤΑΣΙΑΣ ΤΟΥ ΠΟΛΙΤΗ"
+    name: "Υπουργείο Προστασίας του Πολίτη"
+  - pattern: "ΔΙΚΑΣΤΗΡΙΟ"
+    name: "Δικαστήριο"
+  - pattern: "Δικαστήριο"
+    name: "Δικαστήριο"
+  - pattern: "ΕΙΡΗΝΟΔΙΚΕΙΟ"
+    name: "Ειρηνοδικείο"
+  - pattern: "ΠΡΩΤΟΔΙΚΕΙΟ"
+    name: "Πρωτοδικείο"
+  - pattern: "ΕΙΣΑΓΓΕΛΙΑ"
+    name: "Εισαγγελία"
+  - pattern: "ΤΑΧΔΙΚ"
+    name: "ΤΑΧΔΙΚ"
+  - pattern: "ΔΙΚΑΣΤΙΚΟ ΕΝΣΗΜΟ"
+    name: "Δικαστικό ένσημο"
+  # --- Land registry, business register and chambers -----------------------------------------
+  - pattern: "Κτηματολόγιο"
+    name: "Κτηματολόγιο"
+  - pattern: "ΥΠΟΘΗΚΟΦΥΛΑΚΕΙΟ"
+    name: "Υποθηκοφυλακείο"
+  - pattern: "ΓΕΝΙΚΟ ΕΜΠΟΡΙΚΟ ΜΗΤΡΩΟ"
+    name: "ΓΕΜΗ"
+  - pattern: "ΕΠΙΜΕΛΗΤΗΡΙΟ"
+    name: "Επιμελητήριο"
+  - pattern: "Επιμελητήριο"
+    name: "Επιμελητήριο"
+  - pattern: "ΤΕΧΝΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ ΕΛΛΑΔΑΣ"
+    name: "ΤΕΕ"
+  - pattern: "ΟΙΚΟΝΟΜΙΚΟ ΕΠΙΜΕΛΗΤΗΡΙΟ"
+    name: "Οικονομικό Επιμελητήριο"
+  - pattern: "ΔΙΚΗΓΟΡΙΚΟΣ ΣΥΛΛΟΓΟΣ"
+    name: "Δικηγορικός Σύλλογος"
+  # --- Civil registry, identity documents and citizen service centres ---------------------------
+  - pattern: "ΚΕΝΤΡΟ ΕΞΥΠΗΡΕΤΗΣΗΣ ΠΟΛΙΤΩΝ"
+    name: "ΚΕΠ"
+  - pattern: "ΛΗΞΙΑΡΧΕΙΟ"
+    name: "Ληξιαρχείο"
+  - pattern: "ΔΗΜΟΤΟΛΟΓΙΟ"
+    name: "Δημοτολόγιο"
+  - pattern: "ΔΙΑΒΑΤΗΡΙΟ"
+    name: "Διαβατήριο"
+  - pattern: "ΑΔΕΙΑ ΔΙΑΜΟΝΗΣ"
+    name: "Άδεια διαμονής"
+  # --- Education and student support ----------------------------------------------------------------
+  - pattern: "ΥΠΟΥΡΓΕΙΟ ΠΑΙΔΕΙΑΣ"
+    name: "Υπουργείο Παιδείας"
+  - pattern: "ΙΔΡΥΜΑ ΚΡΑΤΙΚΩΝ ΥΠΟΤΡΟΦΙΩΝ"
+    name: "ΙΚΥ"
+  - pattern: "ΠΑΝΕΠΙΣΤΗΜΙΟ"
+    name: "Πανεπιστήμιο"
+  - pattern: "Πανεπιστήμιο"
+    name: "Πανεπιστήμιο"
+  - pattern: "ΠΟΛΥΤΕΧΝΕΙΟ"
+    name: "Πολυτεχνείο"
+  - pattern: "ΕΘΝΙΚΟ ΚΑΙ ΚΑΠΟΔΙΣΤΡΙΑΚΟ ΠΑΝΕΠΙΣΤΗΜΙΟ"
+    name: "ΕΚΠΑ"
+  - pattern: "ΑΡΙΣΤΟΤΕΛΕΙΟ ΠΑΝΕΠΙΣΤΗΜΙΟ"
+    name: "ΑΠΘ"
+  - pattern: "ΕΛΛΗΝΙΚΟ ΑΝΟΙΚΤΟ ΠΑΝΕΠΙΣΤΗΜΙΟ"
+    name: "ΕΑΠ"
+  # --- Agriculture and generic state prefixes -------------------------------------------------------
+  - pattern: "ΟΠΕΚΕΠΕ"
+    name: "ΟΠΕΚΕΠΕ"
+  - pattern: "ΟΡΓΑΝΙΣΜΟΣ ΕΛΛΗΝΙΚΩΝ ΓΕΩΡΓΙΚΩΝ ΑΣΦΑΛΙΣΕΩΝ"
+    name: "ΕΛΓΑ"
+  - pattern: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"
+    name: "Ελληνική Δημοκρατία"
+  - pattern: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ"
+    name: "Γενική Γραμματεία"
+  - pattern: "ΥΠΟΥΡΓΕΙΟ"
+    name: "Υπουργείο"
+  - pattern: "Υπουργείο"
+    name: "Υπουργείο"

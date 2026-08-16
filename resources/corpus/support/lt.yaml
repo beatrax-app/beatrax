@@ -1,0 +1,101 @@
+# Support-resource corpus — Lithuania (LT merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Bitė
+    type: merchant
+    cancel_url: "https://www.bite.lt/pagalba/sutarties-nutraukimo-procedura"
+    support_url: "https://www.bite.lt/pagalba"
+    notes: "Internetu sutarties nutraukti negalima – „sutartį galite nutraukti: – užsukę į bet kurį Bitės saloną; – kreipiantis į Bitės pokalbių skiltį“, o mirusio artimojo sutartį – salone arba paskambinus tel. 1501. Reikia asmens dokumento, o jei kreipiasi ne sutartį sudaręs asmuo – notaro patvirtinto įgaliojimo. Nutraukus nepraėjus minimaliam naudojimosi terminui Bitė prašo grąžinti faktiškai suteiktas nuolaidas, o už išsimokėtinai įsigytą telefoną ar modemą – iš karto sumokėti visas likusias įmokas; sutartis nutraukiama per penkias dienas nuo prašymo gavimo."
+  - name: Tele2 Lietuva
+    type: merchant
+    support_url: "https://tele2.lt/kontaktai"
+    cheaper_url: "https://tele2.lt/sutarties-pratesimas"
+    notes: "Sutartį pratęsti ir planą pasikeisti galima pačiam savitarnoje mano.tele2.lt (mygtukas „Planai ir pasiūlymai“) arba programėlėje „Mano Tele2“, tačiau atskiro sutarties nutraukimo puslapio pagalbos skiltyje „Sutartis“ Tele2 neskelbia – ten yra tik sutarties sudarymas ir sutarties keitimas. Klausimams dėl sąskaitos, ryšio sutrikimų ar sutarties – tel. 117 (iš Tele2 tinklo nemokamai) arba +370 684 00117, darbo dienomis 8.00–19.00, šeštadieniais 9.00–16.00; dėl sutarties pratęsimo – 1885."
+  - name: Ignitis
+    type: merchant
+    cancel_url: "https://ignitis.lt/pagalbos-centras/pagalba-el-pastu/noriu-nutraukti-vt-elektros-sutarti"
+    support_url: "https://ignitis.lt/pagalbos-centras"
+    notes: "Elektros sutartis nutraukiama užpildant prašymo formą svetainėje: nurodomas sutarties savininko vardas, pavardė, paskutiniai 3 asmens kodo skaitmenys, objekto adresas ir kliento kodas, prisegamas pasirašytas nutraukimo prašymas bei rodmenų suderinimo aktas ar pirkimo–pardavimo (nuomos) sutartis. Dujų sutartį reikia nutraukti atskirai: „jei šiame objekte jūsų ar bendrasavininko vardu yra sudaryta gamtinių dujų tiekimo sutartis, nepamirškite jos nutraukti“. Konsultacija tel. +370 611 21802 (laukimas iki 5 min.), elektros gedimai – 1852, dujų avarinė tarnyba – 1804."
+  - name: Elektrum Lietuva
+    type: merchant
+    support_url: "https://www.elektrum.lt/lt/namams/kontaktai"
+    notes: "Atskiro nutraukimo puslapio nėra – pagal Sutarties bendrąsias sąlygas „Vartotojas turi teisę nutraukti Sutartį bet kuriuo metu, įspėjęs apie tai Tiekėją 4.4.3 punkte numatytu terminu be jokių Sutarties nutraukimo mokesčių“, t. y. pranešus raštu arba elektroninių ryšių priemonėmis ne vėliau kaip prieš 2 savaites iki numatomos nutraukimo dienos. Likus ne mažiau kaip 30 kalendorinių dienų iki tarifo plano termino pabaigos Elektrum privalo atsiųsti naują pasiūlymą, ir jei per 30 dienų raštu nepareiškiate nesutikimo, pasibaigus planui automatiškai pradedama taikyti pasiūlyme nurodyta kaina. Bendrasis telefonas +370 700 77 000, el. paštas info@elektrum.lt."
+  - name: If draudimas
+    type: merchant
+    cancel_url: "https://www.if.lt/privatiems/kontaktai/sutarties-nutraukimas"
+    support_url: "https://www.if.lt/privatiems/kontaktai"
+    notes: "Draudimo sutartis nutraukiama užpildant prašymo formą internetu: „Jums nebūtina vykti į mūsų biurą – užpildę formą ją atspausdinkite, pasirašykite ir nuskenavę ar nufotografavę atsiųskite mums adresu draudimas@if.lt“; formą galima atsisiųsti ir PDF formatu. Prašyme prašoma nurodyti nutraukimo priežastį. Tel. +370 5 210 8800 – visą parą veikiantis numeris pagalbai draudimo klausimais, klientų aptarnavimas I–IV 8.00–17.00, V 8.00–15.45."
+  - name: ERGO Lietuva
+    type: merchant
+    cancel_url: "https://ergo.lt/teisine-informacija/pranesimas-apie-draudimo-sutarties-atsisakyma"
+    support_url: "https://ergo.lt/kontaktai-ir-rekvizitai"
+    notes: "Svetainėje skelbiama tik atsisakymo teisė nuotoliniu būdu sudarytoms sutartims: „Jūs (draudėjas, kuris yra fizinis asmuo) turite teisę per 14 dienų nuo sutarties sudarymo dienos atsisakyti šios draudimo sutarties, jeigu ją sudarėte naudodamiesi ryšio priemonėmis (internetu, telefonu, el. paštu ir kt.)“, iš čia atsisiunčiama atsisakymo forma. Netaikoma sutartims, trumpesnėms nei 1 mėnuo, ir toms, pagal kurias jau gautas pranešimas apie draudžiamąjį įvykį; kitais atvejais reikia rašyti el. paštu info@ergo.lt."
+  - name: Impuls
+    type: merchant
+    cancel_url: "https://www.impuls.lt/sutarties-nutraukimo-prasymas/"
+    support_url: "https://www.impuls.lt/kontaktai/"
+    notes: "Narystė nutraukiama užpildant sutarties nutraukimo prašymą svetainėje: „jei jūsų sutarties įsipareigojimo laikotarpis dar nesibaigė, sutartį nutraukti galite ne anksčiau nei po 14 d., jei įsipareigojimo laikotarpis netaikomas – ne anksčiau nei po 3 d.“, o nutraukus nepraėjus įsipareigojimo terminui „gali būti taikomas mokestis lygus suteiktų nuolaidų dydžiui“. El. paštas info@impuls.lt, tel. 19192 arba (0-41) 383036; skambučių centras dirba I–IV 9–18 val., V 9–17 val., savaitgaliais ir švenčių dienomis reikia kreiptis į savo klubo registratūrą."
+  - name: Lietuvos Raudonasis Kryžius
+    type: merchant
+    cancel_url: "https://redcross.lt/aukojimo-salygos/"
+    support_url: "https://redcross.lt/kontaktai/"
+    notes: "Periodinis aukojimas – auka, skiriama vieną kartą per mėnesį; nuskaitymo diena laikoma ta diena, kurią buvo įvykdytas pirmasis aukojimas. „Periodiniai aukojimai yra neterminuoti“, o „Jūs turite teisę bet kada nutraukti periodinius aukojimus, kreipdamiesi į draugiją“ bendraisiais kontaktais – savitarnos mygtuko nėra, rašoma el. paštu parama@redcross.lt. Gautos aukos negrąžinamos, išskyrus teisės aktuose imperatyviai nustatytus atvejus."
+  - name: Maisto bankas
+    type: merchant
+    cancel_url: "https://www.maistobankas.lt/periodiniu-aukojimu-salygos"
+    support_url: "https://www.maistobankas.lt/paremk/"
+    notes: "Periodinio aukojimo sutartis „yra neterminuota ir nutrūksta tada, kai klientas ar „Maisto bankas“ vienašališkai arba abi šalys bendru sutarimu nusprendžia sutartį nutraukti“; ji „gali būti nutraukta vienašaliu kliento pareiškimu (el. paštu parama@maistobankas.lt, telefonu (8 5) 262 7675 arba raštu (Vytenio g. 54, 03229 Vilnius))“ – atšaukimo mygtuko internete nėra. Auka nuskaitoma nuo mokėjimo kortelės tą mėnesio dieną, kurią buvo sudaryta sutartis, o jei ta diena nedarbo – artimiausią darbo dieną."
+  - name: SEB
+    type: merchant
+    support_url: "https://www.seb.lt/kontaktai"
+    cheaper_url: "https://www.seb.lt/privatiems/kasdiene-bankininkyste/atnaujinti-paslaugu-planai-privatiems-klientams"
+    notes: "Mėnesinis paslaugų planas keičiamas pačiam interneto banke: „Papildomos paslaugos“ → „Paslaugų planai“ → mygtukas „Keisti planą“; kortelė uždaroma per „Kortelės“ → „Mano kortelės“ → „Blokuoti/uždaryti kortelę“ → „Kortelės uždarymas“. Pigiausias yra paslaugų planas Minimalus, atitinkantis Lietuvos banko patvirtintą pagrindinės mokėjimo sąskaitos paslaugų rinkinį (socialiai remtiniems asmenims – 0,50 Eur/mėn.), o minimalus pagrindinių banko paslaugų mokestis 1 Eur/mėn. apima sąskaitos atidarymą, tvarkymą ir uždarymą. Dėl sąlygų ir įkainių – tel. +370 5 268 2800 arba banko skyrius."
+
+  # --- Government ---
+  - name: VMI
+    type: government
+    help_url: "https://www.vmi.lt/evmi/mic"
+    apply_url: "https://deklaravimas.vmi.lt/"
+    rights_url: "https://www.vmi.lt/evmi/deklaruoti-pajamas"
+    phone: "+370 5 260 5060"
+    notes: "Konsultacijas teikia Mokesčių informacijos centras tel. +370 5 260 5060 – gyventojams spausti 3, informacijai apie mokėtiną sumą ar permoką spausti 6; darbo laikas I–IV 8.00–17.00, V 8.00–15.45, kiekvieno mėnesio antrą penktadienį 8.00–12.00. „Telefonu suteikta konsultacija yra lygiavertė rašytinei, nes pokalbiai yra įrašomi bei saugomi 5 metus.“ Pajamas deklaruoti reikia iki gegužės 4 d. (deklaruojantiems investicinę sąskaitą – iki birželio 1 d.), o „GPM permokos grąžinamos iki liepos 31 d. visiems teisingai ir laiku deklaravusiems pajamas“."
+  - name: Sodra
+    type: government
+    phone: "+370 5 250 0883"
+    notes: "Visa informacija telefonu +370 5 250 0883 – „Tinka ir skambinant iš užsienio“; ligos, motinystės ir tėvystės išmokoms spausti 2, pensijoms ir šalpos išmokoms – 3, nedarbo išmokoms bedarbiams – 4. Informacijos centras dirba pirmadieniais–ketvirtadieniais 8:00–17:00, penktadieniais 9:00–15:45. Asmeninę informaciją apie išmokas gausite tik atpažinti pagal KID arba pagal telefono numerį, kurį reikia iš anksto užsisakyti savo „Sodros“ paskyroje („Mano nustatymai“ → „Kontaktinė informacija“); į paklausimą per paskyrą atsakoma per 20 darbo dienų."
+  - name: Užimtumo tarnyba
+    type: government
+    phone: "+370 5 250 0883"
+    notes: "Netekus darbo pirmas žingsnis – registracija Užimtumo tarnyboje, ją galima atlikti elektroninėmis paslaugomis arba atvykus į gyvenamosios vietos teritorinį skyrių, nes „Registracijos telefonu paslauga nėra teikiama“. Atvykstant būtinas pasas ar tapatybės kortelė (trečiųjų šalių piliečiams – leidimas gyventi), taip pat prašoma pateikti išsilavinimą ir kvalifikaciją patvirtinančius dokumentus lietuvių kalba. Bendrasis konsultacijų telefonas +370 5 250 0883; klientų aptarnavimo skyriai dirba Pr–Kt 8.00–17.00, Pn 8.00–15.45, pietų pertrauka 12.00–12.45."
+  - name: Valstybinė ligonių kasa
+    type: government
+    phone: "+370 5 232 2222"
+    notes: "Gyventojams informacija teikiama vienu telefono numeriu +370 5 232 2222 ir vienu el. pašto adresu info@vlk.lt; konsultacijos telefonu teikiamos be pietų pertraukos – pirmadieniais, antradieniais ir ketvirtadieniais 8.00–17.00, trečiadieniais 9:00–17.00, penktadieniais 8.00–15.45. Visi privalomojo sveikatos draudimo dalyviai nuo draudžiamojo statuso įgijimo dienos privalo kas mėnesį mokėti PSD įmokas, o „nedirbantiems gyventojams, kurie išvyksta iš Lietuvos, prievolė mokėti įmokas galioja iki jų išvykimo iš šalies deklaravimo“."
+  - name: Elektroniniai valdžios vartai
+    type: government
+    phone: "+370 5 259 5581"
+    notes: "Klausimais apie pačią paslaugą (kaip užpildyti paraišką, kokie dokumentai reikalingi, kokioje stadijoje užsakymas, ką daryti gavus netikslų sprendimą) reikia kreiptis į paslaugą teikiančią instituciją – „Primename: VIISP neteikia konsultacijų apie pačias paslaugas.“ Dėl portalo, prisijungimo, paskyros, autentifikacijos ar įgaliojimų – VIISP pagalbos centras tel. +370 5 259 5581 darbo dienomis 8:00–20:00 (prieššventinėmis 8:00–18:00), ne darbo metu – prisijungus prie portalo „Savitarna → Pagalbos užklausos“."
+  - name: Regitra
+    type: government
+    help_url: "https://www.regitra.lt/kontaktai/klientu-informacijos-centras/"
+    apply_url: "https://www.regitra.lt/kontaktai/e-paslaugos/"
+    rights_url: "https://www.regitra.lt/paslaugos/transporto-priemones/"
+    phone: "+370 700 55 151"
+    notes: "Klientų informacijos centras – tel. +370 700 55 151 arba +370 5 210 5164 (šiuo numeriu ir skambinant iš užsienio), el. paštas info@regitra.lt; darbo laikas I–IV 8.00–18.15 (ketvirtadieniais nuo 9 val.), V 8.00–15.15, valstybinių švenčių dienomis padaliniai nedirba. „Daugelį paslaugų galite gauti tiesiog internetu“, o padaliniuose klientai aptarnaujami su išankstine registracija arba be jos; registracijos vietų grafikas sudaromas dviem mėnesiams ir papildomas kasdien."
+  - name: Valstybinis studijų fondas
+    type: government
+    apply_url: "https://parama.vsf.lt/"
+    phone: "+370 5 263 9152"
+    notes: "Socialinė stipendija yra 6,5 BSI dydžio, t. y. 481,00 Eur per mėnesį; prašymai teikiami tik internetu, prisijungus prie fondo informacinės sistemos „Parama“, ir „Kiekvieną semestrą reikia pateikti naują prašymą“ – pavasario semestrą nuo sausio 20 d. iki vasario 20 d., rudens semestrą nuo rugsėjo 15 d. iki spalio 15 d. Fondas taip pat administruoja valstybės remiamas paskolas, jų grąžinimo atidėjimą ir atleidimą nuo grąžinimo. Bendras telefonas +370 5 263 9152, el. paštas fondas@vsf.lt."
+  - name: Ryšių reguliavimo tarnyba
+    type: government
+    help_url: "https://rrt.lt/apie-rrt/kontaktai-ir-struktura"
+    apply_url: "https://rrt.lt/veiklos-sritys/vartotoju-teisiu-apsauga/informacija-del-ginco-nagrinejimo"
+    rights_url: "https://rrt.lt/veiklos-sritys/vartotoju-teisiu-apsauga/vartotoju-teises-ir-pareigos"
+    phone: "+370 800 20030"
+    notes: "RRT nagrinėja vartotojų ginčus su ryšių, interneto ir pašto paslaugų teikėjais; nemokamas informacijos telefonas +370 800 20030, prašymai ir skundai teikiami el. paštu rrt@rrt.lt arba per užklausos formą. Svarbiausia taisyklė: sutartyje numatytas minimalus naudojimosi paslaugomis terminas „savaime nereiškia, kad terminui praėjus, sutarties galiojimas, įsipareigojimas naudotis paslaugomis, pasibaigs“ – toliau paslaugos teikiamos aptartomis sąlygomis, „kol šalys (ar viena iš šalių) nenusprendžia sutarties nutraukti ar ją pakeisti“, ir „neterminuota sutartis turi būti nutraukiama per 5 darbo dienas nuo prašymo pateikimo dienos“. Grąžintinų nuolaidų mokestis imamas „ne dėl to, kad buvo nutraukta paslaugų teikimo sutartis, bet dėl to, kad sutartis nutraukta nepasibaigus laikotarpiui, kuriam paslaugos gavėjas buvo įsipareigojęs naudotis paslaugomis“, ir negali viršyti sumos, kurią būtumėte sumokėję iki sutarties pabaigos pagal mėnesinius įkainius; be šio mokesčio nutraukti galima, kai teikėjas iš esmės pažeidžia sutartį arba blogina paslaugų teikimo sąlygas."

@@ -1,0 +1,53 @@
+# Tax deduction categories — Estonia
+# Mirrors the mahaarvamised of the EE tuludeklaratsioon.
+# Source: Maksu- ja Tolliamet (emta.ee), maksusoodustused — 2025 ja 2026.
+# Estonia's set is deliberately short: housing-loan interest, the spouse basic
+# exemption and the child basic exemption were all abolished from the 2024 return.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "ee_maksuvaba_tulu"
+    name: "Üldine maksuvaba tulu"
+    short_name: "Maksuvaba"
+    hint: "Residendist füüsilisele isikule kohaldatav maksuvaba tulu"
+  - key: "ee_pensioniea_maksuvaba_tulu"
+    name: "Vanaduspensionieas isiku maksuvaba tulu"
+    short_name: "Pensioni MVT"
+    hint: "Vanaduspensioniikka jõudnud isiku kõrgem maksuvaba tulu"
+  - key: "ee_kohustuslik_kogumispension"
+    name: "Kohustusliku kogumispensioni maksed"
+    short_name: "II sammas"
+    hint: "Teise samba kohustusliku kogumispensioni maksed"
+  - key: "ee_tootuskindlustusmakse"
+    name: "Töötuskindlustusmaksed"
+    short_name: "Töötuskindl."
+    hint: "Töötaja töötuskindlustusmaksed"
+  - key: "ee_vabatahtlik_kogumispension"
+    name: "Vabatahtliku kogumispensioni maksed"
+    short_name: "III sammas"
+    hint: "Kolmanda samba vabatahtliku kogumispensioni maksed"
+  - key: "ee_valisriigi_sotsiaalkindlustusmaksed"
+    name: "Välisriigi kohustuslikud sotsiaalkindlustusmaksed"
+    short_name: "Välisriigi"
+    hint: "Välisriigis makstud kohustuslikud sotsiaalkindlustusmaksed"
+  - key: "ee_koolituskulud"
+    name: "Koolituskulud"
+    short_name: "Koolitus"
+    hint: "Enda ja alla 26-aastase lapse, lapselapse, õe või venna koolituskulud"
+  - key: "ee_kingitused_annetused"
+    name: "Kingitused ja annetused"
+    short_name: "Annetused"
+    hint: "Kingitused ja annetused tulumaksusoodustusega ühingute nimekirja kantud ühingutele"
+  - key: "ee_metsamaterjali_tulu"
+    name: "Täiendav maksuvaba tulu metsamaterjali ja raieõiguse võõrandamisest"
+    short_name: "Metsatulu"
+    hint: "Metsamaterjali ja raieõiguse võõrandamise tulu täiendav maksuvabastus"
+  - key: "ee_eluruumi_uur"
+    name: "Eluruumi üürile andmine"
+    short_name: "Eluruumi üür"
+    hint: "Eluruumi üürile andmisel arvatakse üüritulust maha osa eluasemekulude katteks"

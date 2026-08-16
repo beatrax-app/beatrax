@@ -1,0 +1,135 @@
+# Merchant corpus — Montenegro. region defaults to ME.
+# Schema: see merchants/nl.yaml. Descriptors printed in Latin transliteration.
+entries:
+  - pattern: "CRNOGORSKI TELEKOM"
+    name: "Crnogorski Telekom"
+    category: "Internet & Phone"
+    website: "https://telekom.me/"
+    support_url: "https://telekom.me/privatni-korisnici/korisnicka-zona/podrska"
+  - pattern: "MTEL CRNA GORA"
+    name: "m:tel Crna Gora"
+    category: "Internet & Phone"
+    website: "https://mtel.me/"
+    support_url: "https://mtel.me/Privatni/Korisnicka-zona/Kontakt/Kontaktirajte-nas"
+    support_phone: "0800 50 000"
+    support_email: "korisnicki.servis@mtel.me"
+  - pattern: "ONE CRNA GORA"
+    name: "One Crna Gora"
+    category: "Internet & Phone"
+    website: "https://1.me/"
+    support_url: "https://1.me/cg/privatni/podrska/"
+  - pattern: "EPCG"
+    name: "Elektroprivreda Crne Gore"
+    category: "Utilities"
+    website: "https://epcg.com/"
+  - pattern: "ELEKTROPRIVREDA CRNE GORE"
+    name: "Elektroprivreda Crne Gore"
+    category: "Utilities"
+    website: "https://epcg.com/"
+  - pattern: "CEDIS"
+    name: "CEDIS — Crnogorski elektrodistributivni sistem"
+    category: "Utilities"
+    website: "https://cedis.me/"
+    support_email: "korisnik@cedis.me"
+  - pattern: "VIKPG"
+    name: "Vodovod i kanalizacija Podgorica"
+    category: "Utilities"
+    website: "https://vikpg.me/"
+  - pattern: "CISTOCA PODGORICA"
+    name: "Čistoća Podgorica"
+    category: "Utilities"
+    website: "https://www.cistoca.me/"
+  - pattern: "ZPCG"
+    name: "Željeznički prevoz Crne Gore"
+    category: "Public transport"
+    website: "https://www.zpcg.me/"
+    support_email: "info@zpcg.me"
+  - pattern: "MONTEPUT"
+    name: "Monteput"
+    category: "Transport"
+    website: "https://monteput.me/"
+  - { pattern: "AIR MONTENEGRO", name: "Air Montenegro", category: "Transport" }
+  - pattern: "VOLI TRADE"
+    name: "Voli"
+    category: "Groceries"
+    website: "https://kompanija.voli.me/"
+  - { pattern: "regex:\\bFRANCA\\b", name: "Franca", category: "Groceries" }
+  - { pattern: "AROMA MARKET", name: "Aroma", category: "Groceries" }
+  - pattern: "MONTEFARM"
+    name: "Montefarm"
+    category: "Health"
+    website: "https://montefarm.co.me/"
+  - pattern: "LOVCEN OSIGURANJE"
+    name: "Lovćen osiguranje"
+    category: "Insurance"
+    website: "https://www.lovcen-osiguranje.me/"
+  - pattern: "SAVA OSIGURANJE"
+    name: "Sava osiguranje"
+    category: "Insurance"
+    website: "https://www.sava.co.me/"
+    support_email: "info@sava.co.me"
+  - pattern: "VIJESTI"
+    name: "Vijesti"
+    category: "Subscriptions"
+    website: "https://www.vijesti.me/"
+  - pattern: "POBJEDA"
+    name: "Pobjeda"
+    category: "Subscriptions"
+    website: "https://www.pobjeda.me/"
+  - pattern: "RTCG"
+    name: "RTCG — Radio Televizija Crne Gore"
+    category: "Subscriptions"
+    website: "https://rtcg.me/"
+  - pattern: "CRVENI KRST CRNE GORE"
+    name: "Crveni krst Crne Gore"
+    category: "Donations"
+    website: "https://ckcg.me/"
+  - { pattern: "CKB BANKA", name: "Crnogorska komercijalna banka", category: "Fees & charges", website: "https://www.ckb.me/" }
+  - { pattern: "NLB BANKA PODGORICA", name: "NLB Banka Podgorica", category: "Fees & charges", website: "https://www.nlb.me/" }
+  - { pattern: "ERSTE BANKA PODGORICA", name: "Erste Banka Crna Gora", category: "Fees & charges", website: "https://www.erstebank.me/" }
+  - { pattern: "HIPOTEKARNA BANKA", name: "Hipotekarna banka", category: "Fees & charges", website: "https://hipotekarnabanka.com/" }
+  - { pattern: "PRVA BANKA CRNE GORE", name: "Prva banka Crne Gore", category: "Fees & charges", website: "https://www.prvabankacg.com/" }
+  - { pattern: "LOVCEN BANKA", name: "Lovćen Banka", category: "Fees & charges", website: "https://www.lovcenbanka.me/" }
+  - { pattern: "ADRIATIC BANK", name: "Adriatic Bank", category: "Fees & charges", website: "https://www.adriaticbank.com/" }
+  - { pattern: "ADDIKO BANK CRNA GORA", name: "Addiko Bank Crna Gora", category: "Fees & charges", website: "https://www.addiko.me/" }
+  - { pattern: "UNIQA OSIGURANJE CG", name: "UNIQA osiguranje", category: "Insurance", website: "https://www.uniqa.me/" }
+  - { pattern: "GRAWE OSIGURANJE CG", name: "GRAWE osiguranje Montenegro", category: "Insurance", website: "https://www.grawe.me/" }
+  - { pattern: "SWISS OSIGURANJE", name: "Swiss osiguranje", category: "Insurance" }
+  - { pattern: "DEPONIJA PODGORICA", name: "Deponija d.o.o. Podgorica", category: "Utilities", website: "https://deponija.me/" }
+  - { pattern: "VODOVOD NIKSIC", name: "Vodovod Nikšić", category: "Utilities", website: "https://vodovodnk.me/" }
+  - { pattern: "KOMUNALNO NIKSIC", name: "Komunalno Nikšić", category: "Utilities" }
+  - { pattern: "TOPLANA PLJEVLJA", name: "Toplana Pljevlja", category: "Utilities" }
+  - { pattern: "ELEKTRODISTRIBUTIVNI SISTEM", name: "CEDIS", category: "Utilities", website: "https://cedis.me/" }
+  - { pattern: "VODOVOD I KANALIZACIJA PODGORICA", name: "Vodovod i kanalizacija Podgorica", category: "Utilities", website: "https://vikpg.me/" }
+  - { pattern: "CODRA HOSPITAL", name: "Codra Hospital", category: "Healthcare", website: "https://www.codra.me/" }
+  - { pattern: "TEA MEDICA", name: "Tea Medica", category: "Health", website: "https://www.teamedica.me/" }
+  - { pattern: "JUGOPETROL", name: "Jugopetrol", category: "Fuel", website: "https://www.jugopetrol.co.me/" }
+  - { pattern: "POSTA CRNE GORE", name: "Pošta Crne Gore", category: "Other", website: "https://www.postacg.me/" }
+  - { pattern: "MONTECARGO", name: "Montecargo", category: "Transport", website: "https://www.montecargo.me/" }
+  - { pattern: "PORTO MONTENEGRO", name: "Porto Montenegro", category: "Other", website: "https://portomontenegro.com/" }
+  - { pattern: "PARKING SERVIS PODGORICA", name: "Parking servis Podgorica", category: "Transport" }
+  - { pattern: "ANTENA M", name: "Antena M", category: "Subscriptions", website: "https://www.antenam.net/" }
+  - { pattern: "DNEVNE NOVINE DAN", name: "Dan", category: "Subscriptions" }
+  - { pattern: "CDM PORTAL", name: "CdM", category: "Subscriptions" }
+  - { pattern: "HD LAKOVIC", name: "HD Laković", category: "Groceries" }
+  - { pattern: "MEGA MARKET", name: "Mega Market", category: "Groceries" }
+  - { pattern: "TELEKOM CRNE GORE", name: "Crnogorski Telekom", category: "Internet & Phone", website: "https://telekom.me/" }
+  - { pattern: "ONE MONTENEGRO", name: "One Crna Gora", category: "Internet & Phone", website: "https://1.me/" }
+  - { pattern: "BANKA HRANE", name: "Banka hrane", category: "Donations" }
+  - { pattern: "ZAPAD BANKA", name: "Zapad Banka", category: "Fees & charges", website: "https://www.zapadbanka.me/" }
+  - { pattern: "UNIVERSAL CAPITAL BANK", name: "Universal Capital Bank", category: "Fees & charges" }
+  - { pattern: "AERODROMI CRNE GORE", name: "Aerodromi Crne Gore", category: "Transport", website: "https://montenegroairports.com/" }
+  - { pattern: "SKIJALISTA CRNE GORE", name: "Skijališta Crne Gore", category: "Other", website: "https://skijalista.me/" }
+  - { pattern: "LUKA BAR", name: "Luka Bar", category: "Other", website: "https://lukabar.me/" }
+  - { pattern: "FOND ZA ZDRAVSTVENO OSIGURANJE", name: "Fond za zdravstveno osiguranje Crne Gore", category: "Insurance", website: "https://fzocg.me/" }
+  - { pattern: "VODOVOD BAR", name: "Vodovod Bar", category: "Utilities" }
+  - { pattern: "VODOVOD BUDVA", name: "Vodovod Budva", category: "Utilities" }
+  - { pattern: "KOMUNALNO BUDVA", name: "Komunalno Budva", category: "Utilities" }
+  - { pattern: "PLANTAZE", name: "13. jul Plantaže", category: "Other" }
+  - { pattern: "TREBJESA", name: "Pivara Trebjesa", category: "Other" }
+  - { pattern: "VOLI DOO", name: "Voli", category: "Groceries", website: "https://kompanija.voli.me/" }
+  - { pattern: "M:TEL", name: "m:tel", category: "Internet & Phone", website: "https://mtel.me/" }
+  - { pattern: "EPCG NIKSIC", name: "Elektroprivreda Crne Gore", category: "Utilities", website: "https://epcg.com/" }
+  - { pattern: "RADIO TELEVIZIJA CRNE GORE", name: "RTCG", category: "Subscriptions", website: "https://rtcg.me/" }
+  - { pattern: "CRNOGORSKI ELEKTRODISTRIBUTIVNI", name: "CEDIS", category: "Utilities", website: "https://cedis.me/" }
+  - { pattern: "JP MORSKO DOBRO", name: "Morsko dobro Crne Gore", category: "Other" }

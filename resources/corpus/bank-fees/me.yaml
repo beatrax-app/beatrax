@@ -1,0 +1,56 @@
+# Bank-fee classification rules — Montenegro (Montenegrin, Latin).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Montenegro is officially bi-script, but its banks are not: CKB,
+# Hipotekarna banka, Universal Capital Bank and Lovćen banka publish and
+# print in Latin only, and so does the Central Bank of Montenegro. That was
+# checked rather than assumed — none of those sites carries a single
+# Cyrillic character — so unlike the Serbian and Bosnian files this one has
+# no Cyrillic entries.
+#
+# The trap is "ODRŽAVANJE". It is the word Hipotekarna banka's tariff uses
+# for the account fee, but it is equally the word for maintaining anything
+# else — the same tariff charges a "naknada za održavanje internet prodajnog
+# mjesta", and on a household statement the bare word is building or vehicle
+# upkeep. It is therefore anchored to "ODRŽAVANJE RAČUNA". The two `regex:`
+# entries take the other shape of the same problem: a bare "NAKNAD" stem
+# would start "NAKNADNO" (subsequently) and a bare "KAMAT" stem would start
+# "KAMATNA STOPA" (the interest RATE, a property of the product rather than
+# a charge), so both spell out the case endings inside \b on each side.
+#
+# Diacritics stay out of `regex:` bodies — the matcher runs PCRE without /u,
+# so `#i` case-folds ASCII only and \b never sees "Đ", "Č" or "Ž" as a word
+# character. The account phrases are therefore plain substrings, matched
+# case-insensitively and multibyte-aware, each listed alongside the ASCII
+# transliteration the region's payment systems fall back to. Regex bodies
+# must be SINGLE-quoted in YAML so the backslash reaches the matcher instead
+# of being read as a YAML escape.
+#
+# Worked from: Crnogorska komercijalna banka (CKB) "Informativni dokument o
+# naknadama" for the transakcioni račun (1.12.2025) and Hipotekarna banka
+# "Izvod iz Odluke o Tarifi naknada" (Jul 2026).
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bNAKNAD[AEIU]\b'
+    name: "Naknada"
+  - pattern: "VOĐENJE TRANSAKCIONOG RAČUNA"
+    name: "Naknada za vođenje računa"
+  - pattern: "VODJENJE TRANSAKCIONOG RACUNA"
+    name: "Naknada za vođenje računa"
+  - pattern: "ODRŽAVANJE RAČUNA"
+    name: "Naknada za održavanje računa"
+  - pattern: "ODRZAVANJE RACUNA"
+    name: "Naknada za održavanje računa"
+  - pattern: "DOZVOLJENO PREKORAČENJE"
+    name: "Kamata na prekoračenje"
+  - pattern: 'regex:\bPROVIZIJ[AEU]\b'
+    name: "Provizija"
+  - pattern: 'regex:\bKAMAT[AEIU]\b'
+    name: "Kamata"

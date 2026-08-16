@@ -1,0 +1,106 @@
+# Support-resource corpus — Romania (RO merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Orange România
+    type: merchant
+    cancel_url: "https://www.orange.ro/termeni-si-conditii/"
+    support_url: "https://www.orange.ro/contact/"
+    notes: "Pagina Termeni și condiții găzduiește Formularul de încetare contract și Formularul de renunțare la cererea de încetare; solicitarea de încetare prin acordul părților se poate depune în magazinele Orange, prin apel la 300 sau prin cerere scrisă la Clădirea Tandem, str. Matei Millo nr. 5, sector 1, București. Pentru rezilierea motivată de viteza de internet sub parametri, notificarea scrisă trebuie transmisă cu cel puțin 30 de zile calendaristice înainte de data rezilierii."
+  - name: Engie România
+    type: merchant
+    cancel_url: "https://www.engie.ro/retragere-din-contract/"
+    support_url: "https://www.engie.ro/contact/"
+    notes: "Retragerea din contract este posibilă doar în primele 14 zile calendaristice de la semnare și numai pentru contractele încheiate la distanță sau în afara spațiilor comerciale (online, telefonic sau prin consilier de vânzare); cererea se transmite din contul MyENGIE sau prin formularul de contact. După cele 14 zile opțiunea nu mai este disponibilă, iar contractul se încheie pe alte căi; call center 021.9366, luni-vineri 08:00-20:00."
+  - name: PPC România
+    type: merchant
+    cancel_url: "https://www.ppcenergy.ro/info-utile/schimbare-furnizor-de-energie-electrica/"
+    support_url: "https://www.ppcenergy.ro/contact/"
+    notes: "PPC nu publică un formular online de reziliere; ieșirea practică din contract se face prin schimbarea furnizorului, iar dacă te răzgândești poți renunța la procesul de schimbare în maximum 14 zile de la inițierea lui. Call center 021 9977, luni-vineri 08.00-20.00, sau programare online într-un magazin PPC."
+  - name: Generali România
+    type: merchant
+    cancel_url: "https://www.generali.ro/asigurari/persoane-fizice/auto/rca/"
+    support_url: "https://www.generali.ro/contact/faq/"
+    notes: "Secțiunea Procedură de reziliere RCA din pagina RCA cere cerere de restituire a primei de asigurare (formular în anexă) plus extras de cont dacă vrei plata în cont, împreună cu certificatul de radiere emis de poliție sau documentul de la administrația financiară care arată data scoaterii vehiculului din evidență. Contact asigurări 021 312 36 35, info.ro@generali.ro."
+  - name: Allianz-Țiriac
+    type: merchant
+    support_url: "https://www.allianztiriac.ro/ro_RO/persoane-fizice/despre-noi/contact.html"
+    notes: "Allianz-Țiriac nu publică un formular online de reziliere a poliței; solicitările se fac pe infoline 021 20 19 100 (luni-vineri 08:00-20:00) sau pe e-mail la info@allianztiriac.ro, iar nemulțumirile la reclamatii.clienti@allianztiriac.ro. Pentru daune se sună la 021 20 19 180 sau 021 20 19 181, iar pentru asistență rutieră de urgență la 021 312 22 39."
+  - name: Groupama
+    type: merchant
+    support_url: "https://www.groupama.ro/contact"
+    notes: "Nu există buton online de reziliere; solicitările și petițiile se transmit prin call center la 0374 110 110 (luni-vineri 8:00-18:00), pe office@groupama.ro sau în rețeaua de agenții, iar procedura de petiții și reclamații este descrisă separat în secțiunea Utile."
+  - name: World Class România
+    type: merchant
+    support_url: "https://www.worldclass.ro/termeni-si-conditii/"
+    cheaper_url: "https://www.worldclass.ro/reguli-de-intrerupere-temporara-a-abonamentului/"
+    notes: "World Class nu publică un formular online de reziliere; abonamentul anual poate fi doar întrerupt temporar din contul de membru sau din aplicația mobilă, de două ori, pentru maximum 30 de zile, iar valabilitatea se prelungește cu numărul de zile întrerupte. Întreruperea nu se poate face retroactiv, voucherele nu pot fi întrerupte, iar întreruperea medicală se cere la medical@worldclass.ro cu certificat medical."
+  - name: Voyo
+    type: merchant
+    cancel_url: "https://voyo.protv.ro/abonamentele-mele"
+    support_url: "https://voyo.protv.ro/formular-contact"
+    notes: "La plata cu cardul, renunțarea la abonament și la plata recurentă se face oricând apăsând butonul Anulați abonamentul din secțiunea Abonamentele mele din contul Voyo; renunțarea produce efecte la sfârșitul perioadei deja plătite. Perioada de probă este de 7 zile și se poate anula oricând."
+  - name: ACR
+    type: merchant
+    support_url: "https://www.acr.ro/contact"
+    notes: "Calitatea de membru ACR se gestionează prin sucursale, nu online: pagina Devino membru trimite la contactarea uneia dintre sucursalele Automobil Clubului Român, iar site-ul nu publică niciun formular de reziliere. Număr afișat pe site: +4 021 222 22 22."
+  - name: BCR
+    type: merchant
+    support_url: "https://www.bcr.ro/ro/contact/sesizari-si-reclamatii"
+    notes: "Închiderea de cont și orice altă solicitare se depun personal într-o sucursală, în scris la Direcția Canale Alternative și Parteneriate, Biroul Management Reclamații, șos. Orhideelor nr. 15D, sector 6, București, sau telefonic la *2227, respectiv +4021.407.42.00 din orice rețea. Dacă răspunsul BCR nu te mulțumește, te poți adresa CSALB la 021.9414 sau office@csalb.ro."
+  - name: BRD
+    type: merchant
+    support_url: "https://www.brd.ro/contacteaza-ne"
+    notes: "BRD nu publică un flux online de închidere a contului; contactul oficial este telefonul +4 021 302 6161, apelabil din orice rețea, și TelVerde 0800 803 803, gratuit doar din rețelele naționale, plus consilierul din agenție."
+  - name: Crucea Roșie Română
+    type: merchant
+    support_url: "https://crucearosie.ro/cine-suntem/contact-sediul-central/"
+    notes: "Donațiile lunare nu se administrează pe crucearosie.ro, ci pe platforma externă donate.redcrossredcrescent.org, așa că oprirea reînnoirii se face acolo sau prin bancă, nu dintr-un cont pe site. Sediul central: str. Pictor Daniel Rosenthal nr. 36, sector 1, București, telefon +40 21 317 60 06, e-mail crr@crucearosie.ro."
+
+  # --- Government ---
+  - name: ANAF
+    type: government
+    help_url: "https://static.anaf.ro/static/10/SPV/info_spv.htm"
+    apply_url: "https://www.anaf.ro/anaf/internet/ANAF/servicii_online/inreg_inrol_pf_pj_spv"
+    notes: "Spațiul Privat Virtual (SPV) este un serviciu gratuit, accesibil permanent, prin care primești acte administrative fiscale, informații despre obligațiile de plată și despre contribuțiile sociale; înregistrarea/înrolarea se face separat pentru persoane fizice și pentru persoane juridice. Tot din SPV se depune declarația unică (formular 212) și alte formulare."
+  - name: Casa Națională de Pensii Publice
+    type: government
+    help_url: "https://www.cnpp.ro/ro/contact"
+    rights_url: "https://www.cnpp.ro/ro/pensii"
+    phone: "031.828.88.00"
+    notes: "Dreptul la pensie (limită de vârstă, anticipată, de invaliditate, de urmaș) se acordă numai la cerere, în condițiile legii. Sediul CNPP este în str. Latină nr. 8, sector 2, București; petițiile și sesizările se pot trimite online sau la petitii.sesizari@cnpp.ro și trebuie să conțină obligatoriu CNP-ul."
+  - name: ANOFM
+    type: government
+    help_url: "https://www.anofm.ro/contact/"
+    apply_url: "https://www.anofm.ro/servicii-de-inregistrare/"
+    rights_url: "https://www.anofm.ro/indemnizatie-de-somaj-pentru-persoanele-cu-experienta-in-munca/"
+    phone: "021.303.98.32"
+    notes: "Indemnizația de șomaj cere un stagiu de cotizare de minimum 12 luni în ultimele 24 de luni premergătoare datei înregistrării cererii și lipsa veniturilor peste indicatorul social de referință. Se acordă 6 luni la un stagiu de cel puțin un an, 9 luni la cel puțin 5 ani și 12 luni la peste 10 ani de stagiu; înregistrarea ca șomer se face la agenția județeană."
+  - name: ANPC
+    type: government
+    help_url: "https://anpc.ro/contact/"
+    apply_url: "https://eservicii.anpc.ro/"
+    phone: "021 9551"
+    notes: "021 9551 este Telefonul consumatorului, tarifat ca apel normal conform rețelei și abonamentului tău. Reclamațiile se depun online prin portalul eServicii ANPC, iar litigiile cu un comerciant pot fi duse și pe calea SAL, la reclamatiisal.anpc.ro; program cu publicul luni-joi 8:00-16:00."
+  - name: ANCOM
+    type: government
+    help_url: "https://www.ancom.ro/category/contact/"
+    phone: "0800 855 855"
+    notes: "ANCOM primește reclamații privind telefonia, internetul și televiziunea, inclusiv un formular separat pentru reclamație anulare portare; petițiile anonime sau fără datele de identificare ale petiționarului nu se iau în considerare și se clasează. Înainte de a reclama, verifică dacă solicitarea trimisă furnizorului conținea datele titularului de contract, numărul de telefon și codul de abonat."
+  - name: ANRE
+    type: government
+    help_url: "https://anre.ro/contact/"
+    apply_url: "https://spv.anre.ro/depune-petitie"
+    rights_url: "https://anre.ro/consumatori/energie-electrica/"
+    phone: "021.9782"
+    notes: "021.9782 este linia telefonică dedicată informării consumatorilor de energie. ANRE publică drepturile și obligațiile clienților finali, iar procesul tehnic de schimbare a furnizorului se desfășoară în 24 de ore prin POSF; petițiile se depun online prin portalul SPV ANRE."
+  - name: Ministerul Educației
+    type: government
+    help_url: "https://www.edu.ro/contact"
+    rights_url: "https://www.edu.ro/facilitati-studenti"
+    phone: "021/405.62.00"
+    notes: "Bursele și celelalte forme de sprijin material pentru studenții din învățământul superior de stat se acordă conform Legii învățământului superior nr. 199/2023, cu modificările ulterioare. Registratura generală funcționează în str. Spiru Haret nr. 12, sector 1, cu depunere luni-joi 9:00-11:00 și 14:00-16:00, vineri 9:00-11:00; statusul petițiilor se poate afla la 021/405.56.73 sau pe registratura@edu.gov.ro."

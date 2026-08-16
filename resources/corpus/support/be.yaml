@@ -1,0 +1,93 @@
+# Support-resource corpus — Belgium (BE merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Proximus
+    type: merchant
+    cancel_url: "https://www.proximus.be/support/nl/id_sfaqr_change_cancel/particulieren/support/klantenzone/verhuizen-wijzigen-of-opzeggen/contract-wijzigen/je-abonnement-wijzigen-of-opzeggen.html"
+    support_url: "https://www.proximus.be/support/nl/id_cr_contact/particulieren/support/contacteer-proximus-klantendienst.html"
+    notes: "Opzeggen loopt via de supportpagina 'Je abonnement wijzigen of opzeggen', die je stap voor stap door MyProximus of de Proximus Assistant leidt. Stap je over naar een andere operator, dan regel je de opzeg via Easy Switch bij je nieuwe operator."
+  - name: Telenet
+    type: merchant
+    cancel_url: "https://www2.telenet.be/residential/nl/contact/abonnement-opzeggen.html"
+    support_url: "https://www2.telenet.be/residential/nl/contact.html"
+    notes: "Er is geen opzegknop: je belt de klantendienst (ma-vr 8-20u, za 9-18u) of vult het terugbelformulier in — via die weg duurt het 2 dagen voor je opzeg volledig geregeld is. Ga je naar een andere operator, gebruik dan Easy Switch."
+  - name: Orange Belgium
+    type: merchant
+    cancel_url: "https://www.orange.be/nl/hulp/mijn-producten-en-diensten-beheren/wijzigen-verhuizen-opzeggen/ik-wil-mijn-abonnementen"
+    support_url: "https://www.orange.be/nl/contact"
+    notes: "Opzeggen kan niet online: je neemt contact op met de klantendienst, of je zegt op via Easy Switch bij je nieuwe operator. Bij vroegtijdige stopzetting wordt de restwaarde van je toestel of Flybox aangerekend, en niet-ingeleverd materiaal kost 200 € per decoder, 60 € voor de modem en 40 € per wifi booster."
+  - name: BASE
+    type: merchant
+    cancel_url: "https://www.base.be/nl/diensten/base-stopzetten.html"
+    support_url: "https://www.base.be/nl/support.html"
+    notes: "Via 'Base stopzetten' kies je eerst je reden en krijg je telkens een alternatief aangeboden (goedkoper abonnement, overdracht, Base 0 bij verhuis naar het buitenland); onderaan elke stap kan je alsnog effectief opzeggen."
+  - name: Luminus
+    type: merchant
+    cancel_url: "https://www.luminus.be/nl/prive/hulp-en-contact/mijn-contract-nl/hoe-kan-je-je-energiecontract-stopzetten-bij-luminus-nl/"
+    support_url: "https://www.luminus.be/nl/prive/hulp-en-contact/"
+    cheaper_url: "https://www.luminus.be/nl/prive/hulp-en-contact/mijn-contract-nl/"
+    notes: "Je contract stopzetten doe je zelf online in je My Luminus-klantenzone, of telefonisch bij de klantendienst op 078 150 210 (ma-vr 8-18u). Wil je een meter laten afsluiten, dan moet dat wel via de klantendienst. Doe eerst de online tarief check-up — vaak volstaat overstappen naar een goedkoper Luminus-tarief."
+  - name: Touring
+    type: merchant
+    cancel_url: "https://www.touring.be/nl/contact-ondersteuning/mijn-contracten/opzegging-annulering"
+    support_url: "https://www.touring.be/nl/faqs/mijn-contract-opzeggen"
+    notes: "Opzeggen gebeurt met een online formulier waarin je je polisnummer en een IBAN voor een eventuele terugbetaling invult; met een MyTouring-account worden je gegevens vooraf ingevuld. Telefonisch bereikbaar op +32 2 286 33 32, ma-vr 8u-18u."
+  - name: VAB
+    type: merchant
+    cancel_url: "https://vab.be/nl/over-vab/wijziging-opzegregels"
+    support_url: "https://vab.be/nl/over-vab/contact"
+    notes: "Sinds 1 oktober 2024 kan je je niet-levencontract vanaf het tweede verzekeringsjaar op elk moment opzeggen, met uitwerking 2 maanden na je aangetekende zending; de premie van de niet-genoten periode wordt terugbetaald. Opzeggen tegen de vervaldag kan tot 2 maanden ervoor. VAB stelt een voorbeeld-opzegbrief ter beschikking; sturen kan naar contact@vab.be of 03 253 61 30."
+  - name: Rode Kruis
+    type: merchant
+    support_url: "https://www.rodekruis.be/contact/"
+    cheaper_url: "https://www.rodekruis.be/wat-kan-jij-doen/steun-financieel/"
+    notes: "Een maandelijkse schenking kan je niet online stopzetten: je aanpassing of opzegging gaat via de schenkersdienst, per e-mail naar schenken@rodekruis.be of telefonisch op 015/443.443. Verlagen in plaats van stoppen kan via diezelfde dienst."
+
+  # --- Government ---
+  - name: FOD Financiën
+    type: government
+    help_url: "https://fin.belgium.be/nl/themas/over-fod-financien/contact"
+    apply_url: "https://fin.belgium.be/nl/e-loket"
+    rights_url: "https://fin.belgium.be/nl/particulieren/belastingaangifte/na-aangifte"
+    phone: "+32 2 572 57 57"
+    notes: "Aangifte, aanslagbiljet en betalingen regel je in MyMinfin via het e-loket. Ontdek je pas na je aanslagbiljet een fout, dan moet je een bezwaar indienen. Algemeen nummer + 32 2 572 57 57 (normaal tarief), elke werkdag van 9 tot 17 uur; via de contactpagina krijg je de directe oproepcode voor jouw onderwerp."
+  - name: RVA
+    type: government
+    help_url: "https://www.rva.be/contact"
+    apply_url: "https://www.rva.be/burgers"
+    rights_url: "https://www.rva.be/burgers/volledige-werkloosheid"
+    phone: "02 515 44 44"
+    notes: "Het contactcenter is bereikbaar op werkdagen van 8u30 tot 12u30 en van 13u30 tot 16u op 02 515 44 44; de Duitstalige lijn enkel in de voormiddag. Loopt een online aanvraag vast, dan kan je via datzelfde nummer een afspraak met een digicoach maken."
+  - name: Federale Pensioendienst
+    type: government
+    rights_url: "https://www.socialsecurity.be/citizen/nl/pensioenen"
+    notes: "Via mypension.be raadpleeg je je loopbaan en je geraamde pensioendatum, vraag je je pensioen online aan en volg je die aanvraag op; je kan er ook je contactgegevens beheren en je post digitaal ontvangen. Werknemers, ambtenaren en zelfstandigen bouwen elk in hun eigen stelsel rechten op, maar krijgen alles in één bedrag uitbetaald."
+  - name: RIZIV
+    type: government
+    help_url: "https://www.riziv.fgov.be/nl/contact"
+    rights_url: "https://www.riziv.fgov.be/nl/thema-s/verzorging-kosten-en-terugbetaling/wat-het-ziekenfonds-terugbetaalt"
+    phone: "+32(0)2 524 97 97"
+    notes: "Voor je persoonlijk dossier neem je contact op met je ziekenfonds; voor algemene vragen is er het Service Center Gezondheid op +32(0)2 524 97 97, van maandag tot vrijdag van 9u30 tot 12 uur en van 14u tot 15u30. Onderaan elke themapagina staan de rechtstreekse contactgegevens van de bevoegde dienst."
+  - name: Kind en Gezin
+    type: government
+    help_url: "https://www.kindengezin.be/nl/contact"
+    phone: "078 150 100"
+    notes: "De Kind en Gezin-lijn beantwoordt vragen over opvoeding, opvang en gezinsondersteuning op 078 150 100, van maandag tot en met vrijdag van 8u tot 20u; chatten kan van 9u tot 16u30. Voor een klacht of een ervaring is er het Opgroeipunt op 078 170 000."
+  - name: Vlaamse Belastingdienst
+    type: government
+    help_url: "https://www.vlaanderen.be/vlaamse-belastingdienst/contactmogelijkheden-vlaamse-belastingdienst"
+    apply_url: "https://www.vlaanderen.be/vlaamse-belastingdienst/mijn-vlabel"
+    rights_url: "https://www.vlaanderen.be/vlaamse-belastingdienst/formulieren"
+    phone: "1700"
+    notes: "In MijnVlabel simuleer je de verkeersbelasting of onroerende voorheffing, dien je een bezwaar in en vraag je uitstel voor een aangifte van nalatenschap aan. Bellen doe je gratis naar 1700, elke werkdag van 9 tot 19 uur; voor verkeersbelastingen kan je ook op afspraak aan een loket terecht."
+  - name: eBox
+    type: government
+    help_url: "https://myebox.be/nl/webform/contact"
+    apply_url: "https://myebox.be/nl"
+    phone: "02 740 74 74"
+    notes: "In je eBox ontvang je de officiële post van de Belgische overheidsdiensten digitaal; aanmelden gebeurt met eID, token of itsme. Hulp krijg je via het contactformulier of telefonisch op werkdagen tussen 8.30 en 17.00 uur via 02 740 74 74, keuze 4 in het menu."

@@ -1,4 +1,60 @@
 # Government / public-agency classification rules — Spain.
+# (Bare "IBI" and "IVTM" are too collision-prone — the spelled-out tax names
+# are used instead.)
+#
+# Sources: sede.agenciatributaria.gob.es, hacienda.gob.es, inclusion.gob.es
+# (which lists TGSS, INSS and ISM as its dependent bodies), sepe.es,
+# imserso.es, muface.es, mugeju.es, atc.gencat.cat, atriga.gal,
+# agenciatributaria.carm.es, atib.es, juntadeandalucia.es, navarra.es,
+# gobiernodecanarias.org, and each autonomous community's own portal;
+# dgt.es, policia.es, web.guardiacivil.es, interior.gob.es, mjusticia.gob.es,
+# catastro.hacienda.gob.es, registradores.org, fnmt.es, boe.es, tesoro.es,
+# puertos.es, suma.es, canaldeisabelsegunda.es/accionistas and
+# emasesa.com/accionistas (both checked for 100% public ownership), and the
+# consolidated TRLRHL at boe.es/buscar/act.php?id=BOE-A-2004-4214 for the
+# statutory names of the local taxes; a second pass added bizkaia.eus,
+# gipuzkoa.eus, web.araba.eus, ovhacienda.cantabria.es, tributasenasturias
+# .es, hisenda.gva.es, portaltributario.juntaex.es, suma.es, regtsa.es,
+# gestrisam.malaga.eu, xalocgirona.cat, base.cat, oar.dip-badajoz.es,
+# lanbide.euskadi.eus, serveiocupacio.gencat.cat, sefcarm.es,
+# ingesa.sanidad.gob.es, aca.gencat.cat, epsar.gva.es, esamur.com,
+# nilsa.com, augasdegalicia.xunta.gal, emaya.es, patrimonionacional.es and
+# cervantes.es, plus Ley 7/2022 art. 11.3 and RDL 1/2015 on BOE.
+#
+# Ownership checks that changed the outcome: EMIVASA is 80% private (Global
+# Omnium) and EMUASA/Aguas de Murcia is 49% Veolia, so neither is listed;
+# Canal de Isabel II, EMASESA, EMASA and EMAYA were each confirmed wholly
+# municipal or regional and are. Renfe, Adif, Correos, AENA and SELAE bill
+# commercially and stay out.
+#
+# Diacritics: Spanish descriptors reach the bank ASCII-folded and
+# upper-cased (Ñ→N, á→a, Catalan d'→d), so every pattern below is the
+# folded form and only the display name keeps its accents.
+#
+# Rejected as too collision-prone — each is an ordinary word or a private
+# business name, so only the qualified form is used:
+#   JUNTA          "junta de propietarios" is a homeowners' association, one
+#                  of the most frequent recurring debits in Spain — only the
+#                  exact "JUNTA DE <comunidad>" bigrams are listed.
+#   HACIENDA       also "estate/ranch"; hotels and venues trade under it.
+#   SUMA           an ordinary noun and a Spanish supermarket banner — only
+#                  "SUMA GESTION TRIBUTARIA" is used.
+#   AGUAS / CANAL  private concessionaires (Aqualia, Hidraqua, Global
+#                  Omnium) all trade as "Aguas de X"; only the operators
+#                  verified as fully public are listed.
+#   MUTUA          dominated by private insurers; only MUFACE, ISFAS and
+#                  MUGEJU qualify.
+#   CAMARA, TASA, MULTA, PATRONATO, REGISTRO, SERVICIO, INSTITUTO, AGENCIA,
+#   GOBIERNO, CONSELL, COMARCA, VADO, PLUSVALIA, CORREOS — all require a
+#   qualifier and are only ever listed inside one.
+#   SAS, SMS, SCS, SES, ATC, ISM, IMV, TIE, BOE, SALUD — acronyms that
+#   collide with SAS Institute, text messages, satellite operators, air
+#   traffic control and the ordinary noun "salud"; the spelled-out service
+#   names are used instead.
+# RTVE is deliberately absent: Spain abolished the household TV licence in
+# 2009 (Ley 8/2009), so no consumer debit to RTVE is a public levy.
+# Correos, Loterias y Apuestas del Estado and AENA are state-owned but bill
+# commercially, not as a levy, so they are out of scope too.
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "AGENCIA TRIBUTARIA"
@@ -7,3 +63,417 @@ entries:
     name: "Agencia Tributaria"
   - pattern: "SEGURIDAD SOCIAL"
     name: "Seguridad Social"
+  - pattern: "regex:\\bTGSS\\b"
+    name: "Tesorería General de la Seguridad Social"
+  - pattern: "regex:\\bINSS\\b"
+    name: "INSS"
+  - pattern: "regex:\\bSEPE\\b"
+    name: "SEPE"
+  - pattern: "HACIENDA FORAL"
+    name: "Hacienda Foral"
+  # Ayuntamientos bill the IBI, the vehicle tax and waste charges — the
+  # single highest-value local entry in Spain.
+  - pattern: "AYUNTAMIENTO"
+  - pattern: "DIPUTACION"
+  - pattern: "IMPUESTO SOBRE BIENES INMUEBLES"
+    name: "IBI"
+  - pattern: "IMPUESTO DE VEHICULOS"
+    name: "IVTM"
+  - pattern: "regex:\\bDGT\\b|DIRECCION GENERAL DE TRAFICO"
+    name: "DGT"
+  - pattern: "CATASTRO"
+    name: "Catastro"
+  - pattern: "REGISTRO DE LA PROPIEDAD"
+    name: "Registro de la Propiedad"
+  - pattern: "TESORO PUBLICO"
+    name: "Tesoro Público"
+  - pattern: "GENERALITAT"
+  - pattern: "JUNTA DE ANDALUCIA"
+    name: "Junta de Andalucía"
+  - pattern: "XUNTA DE GALICIA"
+    name: "Xunta de Galicia"
+  - pattern: "CONFEDERACION HIDROGRAFICA"
+    name: "Confederación Hidrográfica"
+  # Model 790 covers passport, ID and residence-permit state fees.
+  - pattern: "MODELO 790"
+    name: "Tasa modelo 790"
+  # --- State tax and customs ----------------------------------------------
+  - pattern: "AGENCIA ESTATAL DE ADMINISTRACION TRIBUTARIA"
+    name: "Agencia Tributaria"
+  - pattern: "MINISTERIO DE HACIENDA"
+    name: "Ministerio de Hacienda"
+  - pattern: "ADUANAS E IMPUESTOS ESPECIALES"
+    name: "Aduanas e Impuestos Especiales"
+  - pattern: "MODELO 100"
+    name: "Modelo 100 (IRPF anual)"
+  - pattern: "MODELO 130"
+    name: "Modelo 130 (IRPF fraccionado)"
+  - pattern: "MODELO 303"
+    name: "Modelo 303 (IVA)"
+  - pattern: "MODELO 210"
+    name: "Modelo 210 (IRNR)"
+  - pattern: "TASA 790 012"
+    name: "Tasa 790 código 012"
+  - pattern: "MODELO 600"
+    name: "Modelo 600 (ITP y AJD)"
+  - pattern: "MODELO 620"
+    name: "Modelo 620 (transmisión de vehículos)"
+  - pattern: "IMPUESTO SOBRE SUCESIONES Y DONACIONES"
+    name: "Impuesto sobre Sucesiones y Donaciones"
+  # --- Foral and regional tax agencies --------------------------------------
+  - pattern: "HACIENDA FORAL DE BIZKAIA"
+    name: "Hacienda Foral de Bizkaia"
+  - pattern: "HACIENDA FORAL DE GIPUZKOA"
+    name: "Hacienda Foral de Gipuzkoa"
+  - pattern: "HACIENDA FORAL DE ALAVA"
+    name: "Hacienda Foral de Álava"
+  - pattern: "HACIENDA FORAL DE NAVARRA"
+    name: "Hacienda Foral de Navarra"
+  - pattern: "FORU OGASUNA"
+    name: "Foru Ogasuna (hacienda foral)"
+  - pattern: "AGENCIA TRIBUTARIA DE CATALUNYA"
+    name: "Agència Tributària de Catalunya"
+  - pattern: "AGENCIA TRIBUTARIA DE ANDALUCIA"
+    name: "Agencia Tributaria de Andalucía"
+  - pattern: "AXENCIA TRIBUTARIA DE GALICIA"
+    name: "ATRIGA"
+  - pattern: 'regex:\bATRIGA\b'
+    name: "ATRIGA"
+  - pattern: "AGENCIA TRIBUTARIA DE LA REGION DE MURCIA"
+    name: "ATRM"
+  - pattern: 'regex:\bATIB\b'
+    name: "ATIB (Illes Balears)"
+  - pattern: "AGENCIA TRIBUTARIA CANARIA"
+    name: "Agencia Tributaria Canaria"
+  - pattern: 'regex:\bIGIC\b'
+    name: "IGIC"
+  # --- Social security, pensions and benefits ---------------------------------
+  - pattern: "TESORERIA GENERAL DE LA SEGURIDAD SOCIAL"
+    name: "Tesorería General de la Seguridad Social"
+  - pattern: "INSTITUTO NACIONAL DE LA SEGURIDAD SOCIAL"
+    name: "INSS"
+  - pattern: "INSTITUTO SOCIAL DE LA MARINA"
+    name: "Instituto Social de la Marina"
+  - pattern: "IMPORTASS"
+    name: "Importass (TGSS)"
+  - pattern: "REGIMEN ESPECIAL DE TRABAJADORES AUTONOMOS"
+    name: "RETA"
+  - pattern: "MINISTERIO DE INCLUSION"
+    name: "Ministerio de Inclusión, Seguridad Social y Migraciones"
+  - pattern: "SERVICIO PUBLICO DE EMPLEO ESTATAL"
+    name: "SEPE"
+  - pattern: 'regex:\bFOGASA\b'
+    name: "FOGASA"
+  - pattern: "IMSERSO"
+    name: "IMSERSO"
+  - pattern: "INGRESO MINIMO VITAL"
+    name: "Ingreso Mínimo Vital"
+  # --- Regional health services and state mutualities ---------------------------
+  - pattern: "SERVICIO ANDALUZ DE SALUD"
+    name: "Servicio Andaluz de Salud"
+  - pattern: "SERVICIO MADRILENO DE SALUD"
+    name: "SERMAS"
+  - pattern: 'regex:\bSERMAS\b'
+    name: "SERMAS"
+  - pattern: "SERGAS"
+    name: "SERGAS"
+  - pattern: "OSAKIDETZA"
+    name: "Osakidetza"
+  - pattern: "SESCAM"
+    name: "SESCAM"
+  - pattern: "SACYL"
+    name: "Sacyl"
+  - pattern: "SESPA"
+    name: "SESPA"
+  - pattern: "SERVICIO CANTABRO DE SALUD"
+    name: "Servicio Cántabro de Salud"
+  - pattern: "SERVICIO CANARIO DE LA SALUD"
+    name: "Servicio Canario de la Salud"
+  - pattern: "SERVICIO MURCIANO DE SALUD"
+    name: "Servicio Murciano de Salud"
+  - pattern: "SERVICIO EXTREMENO DE SALUD"
+    name: "Servicio Extremeño de Salud"
+  - pattern: "IB-SALUT"
+    name: "IB-Salut"
+  - pattern: "SERVICIO RIOJANO DE SALUD"
+    name: "Servicio Riojano de Salud"
+  - pattern: "SERVICIO ARAGONES DE SALUD"
+    name: "Servicio Aragonés de Salud"
+  - pattern: "OSASUNBIDEA"
+    name: "Osasunbidea"
+  - pattern: "CATSALUT"
+    name: "CatSalut"
+  - pattern: "MUFACE"
+    name: "MUFACE"
+  - pattern: "MUGEJU"
+    name: "MUGEJU"
+  - pattern: 'regex:\bISFAS\b'
+    name: "ISFAS"
+  # --- Autonomous-community governments -------------------------------------------
+  - pattern: "JUNTA DE CASTILLA Y LEON"
+    name: "Junta de Castilla y León"
+  - pattern: "JUNTA DE COMUNIDADES DE CASTILLA-LA MANCHA"
+    name: "Junta de Comunidades de Castilla-La Mancha"
+  - pattern: "GOBIERNO DE CASTILLA-LA MANCHA"
+    name: "Gobierno de Castilla-La Mancha"
+  - pattern: "JUNTA DE EXTREMADURA"
+    name: "Junta de Extremadura"
+  - pattern: "EUSKO JAURLARITZA"
+    name: "Eusko Jaurlaritza"
+  - pattern: "GOBIERNO VASCO"
+    name: "Gobierno Vasco"
+  - pattern: "GOBIERNO DE ARAGON"
+    name: "Gobierno de Aragón"
+  - pattern: "GOBIERNO DE CANARIAS"
+    name: "Gobierno de Canarias"
+  - pattern: "GOBIERNO DE NAVARRA"
+    name: "Gobierno de Navarra"
+  - pattern: "GOBIERNO DE CANTABRIA"
+    name: "Gobierno de Cantabria"
+  - pattern: "GOBIERNO DE LA RIOJA"
+    name: "Gobierno de La Rioja"
+  - pattern: "PRINCIPADO DE ASTURIAS"
+    name: "Principado de Asturias"
+  - pattern: "COMUNIDAD DE MADRID"
+    name: "Comunidad de Madrid"
+  - pattern: "REGION DE MURCIA"
+    name: "Región de Murcia"
+  - pattern: "GOVERN DE LES ILLES BALEARS"
+    name: "Govern de les Illes Balears"
+  - pattern: "CIUDAD AUTONOMA DE CEUTA"
+    name: "Ciudad Autónoma de Ceuta"
+  - pattern: "CIUDAD AUTONOMA DE MELILLA"
+    name: "Ciudad Autónoma de Melilla"
+  # --- Local entities ---------------------------------------------------------------
+  - pattern: "AJUNTAMENT DE"
+    name: "Ajuntament"
+  - pattern: "CONCELLO DE"
+    name: "Concello"
+  - pattern: 'regex:\bUDALA\b'
+    name: "Udala (ayuntamiento)"
+  - pattern: "DIPUTACION FORAL"
+    name: "Diputación Foral"
+  - pattern: "FORU ALDUNDIA"
+    name: "Foru Aldundia (diputación foral)"
+  - pattern: "CABILDO INSULAR"
+    name: "Cabildo Insular"
+  - pattern: "CONSELL INSULAR"
+    name: "Consell Insular"
+  - pattern: "CONSELL DE MALLORCA"
+    name: "Consell de Mallorca"
+  - pattern: "CONSELL COMARCAL"
+    name: "Consell Comarcal"
+  - pattern: "MANCOMUNIDAD"
+    name: "Mancomunidad"
+  # --- Municipal and provincial tax-collection agencies -----------------------------
+  - pattern: "SUMA GESTION TRIBUTARIA"
+    name: "Suma Gestión Tributaria"
+  - pattern: "ORGANISME DE GESTIO TRIBUTARIA"
+    name: "ORGT (Diputació de Barcelona)"
+  - pattern: 'regex:\bORGT\b'
+    name: "ORGT (Diputació de Barcelona)"
+  - pattern: "PATRONATO DE RECAUDACION PROVINCIAL"
+    name: "Patronato de Recaudación Provincial"
+  - pattern: "AGENCIA TRIBUTARIA DE SEVILLA"
+    name: "Agencia Tributaria de Sevilla"
+  - pattern: "AGENCIA TRIBUTARIA MADRID"
+    name: "Agencia Tributaria Madrid"
+  - pattern: "INSTITUT MUNICIPAL D HISENDA"
+    name: "Institut Municipal d'Hisenda"
+  - pattern: "INSTITUT MUNICIPAL D'HISENDA"
+    name: "Institut Municipal d'Hisenda"
+  # --- Local taxes, spelled out (statutory names, TRLRHL) ----------------------------
+  - pattern: "IMPUESTO SOBRE VEHICULOS DE TRACCION MECANICA"
+    name: "IVTM"
+  - pattern: "IMPUESTO DE CIRCULACION"
+    name: "IVTM (impuesto de circulación)"
+  - pattern: "IMPUESTO SOBRE EL INCREMENTO DEL VALOR DE LOS TERRENOS"
+    name: "IIVTNU (plusvalía municipal)"
+  - pattern: "PLUSVALIA MUNICIPAL"
+    name: "Plusvalía municipal"
+  - pattern: "IMPUESTO SOBRE ACTIVIDADES ECONOMICAS"
+    name: "IAE"
+  - pattern: "IMPUESTO SOBRE CONSTRUCCIONES INSTALACIONES Y OBRAS"
+    name: "ICIO"
+  - pattern: "TASA DE BASURAS"
+    name: "Tasa de basuras"
+  - pattern: "TASA DE RESIDUOS"
+    name: "Tasa de residuos"
+  - pattern: "TASA DE ALCANTARILLADO"
+    name: "Tasa de alcantarillado"
+  - pattern: "VADO PERMANENTE"
+    name: "Tasa de vado"
+  # --- Public water bodies (ownership checked; mixed operators excluded) --------------
+  - pattern: "CANAL DE ISABEL II"
+    name: "Canal de Isabel II"
+  - pattern: "EMASESA"
+    name: "EMASESA"
+  - pattern: 'regex:\bEMASA\b'
+    name: "EMASA (Málaga)"
+  - pattern: "EMACSA"
+    name: "EMACSA (Córdoba)"
+  - pattern: "AGENCIA CATALANA DEL AGUA"
+    name: "Agència Catalana de l'Aigua"
+  - pattern: "AGENCIA CATALANA DE L'AIGUA"
+    name: "Agència Catalana de l'Aigua"
+  - pattern: "CANON DEL AGUA"
+    name: "Canon del agua"
+  - pattern: "CANON DE SANEAMIENTO"
+    name: "Canon de saneamiento"
+  # --- Traffic, police and justice -------------------------------------------------------
+  - pattern: "JEFATURA PROVINCIAL DE TRAFICO"
+    name: "Jefatura Provincial de Tráfico"
+  - pattern: "MINISTERIO DEL INTERIOR"
+    name: "Ministerio del Interior"
+  - pattern: "POLICIA NACIONAL"
+    name: "Policía Nacional"
+  - pattern: "DIRECCION GENERAL DE LA POLICIA"
+    name: "Dirección General de la Policía"
+  - pattern: "GUARDIA CIVIL"
+    name: "Guardia Civil"
+  - pattern: "MOSSOS D ESQUADRA"
+    name: "Mossos d'Esquadra"
+  - pattern: "MOSSOS D'ESQUADRA"
+    name: "Mossos d'Esquadra"
+  - pattern: "ERTZAINTZA"
+    name: "Ertzaintza"
+  - pattern: "POLICIA FORAL"
+    name: "Policía Foral de Navarra"
+  - pattern: "POLICIA LOCAL"
+    name: "Policía Local"
+  - pattern: "POLICIA MUNICIPAL"
+    name: "Policía Municipal"
+  - pattern: "GUARDIA URBANA"
+    name: "Guàrdia Urbana"
+  - pattern: "MINISTERIO DE JUSTICIA"
+    name: "Ministerio de Justicia"
+  - pattern: "ADMINISTRACION DE JUSTICIA"
+    name: "Administración de Justicia"
+  - pattern: "JUZGADO DE"
+    name: "Juzgado"
+  - pattern: "REGISTRO CIVIL"
+    name: "Registro Civil"
+  # --- Registries, chambers, immigration and education -------------------------------------
+  - pattern: "DIRECCION GENERAL DEL CATASTRO"
+    name: "Dirección General del Catastro"
+  - pattern: "COLEGIO DE REGISTRADORES"
+    name: "Colegio de Registradores"
+  - pattern: "REGISTRO MERCANTIL"
+    name: "Registro Mercantil"
+  - pattern: "REGISTRO DE BIENES MUEBLES"
+    name: "Registro de Bienes Muebles"
+  - pattern: "CAMARA DE COMERCIO"
+    name: "Cámara de Comercio"
+  - pattern: "COLEGIO OFICIAL DE"
+    name: "Colegio Oficial"
+  - pattern: "ILUSTRE COLEGIO DE ABOGADOS"
+    name: "Ilustre Colegio de la Abogacía"
+  - pattern: "OFICINA DE EXTRANJERIA"
+    name: "Oficina de Extranjería"
+  - pattern: "EXTRANJERIA"
+    name: "Extranjería"
+  - pattern: "MINISTERIO DE EDUCACION"
+    name: "Ministerio de Educación"
+  - pattern: 'regex:\bUNED\b'
+    name: "UNED"
+  # Most Spanish universities are public; a handful (Navarra, Europea, CEU)
+  # are not, so this prefix is a school marker rather than a strict one.
+  - pattern: "UNIVERSIDAD DE"
+    name: "Universidad"
+  - pattern: "UNIVERSITAT DE"
+    name: "Universitat"
+  - pattern: "UNIVERSIDADE DE"
+    name: "Universidade"
+  # --- Treasury and other state bodies -----------------------------------------------------
+  - pattern: 'regex:\bFNMT\b'
+    name: "FNMT-RCM"
+  - pattern: "FABRICA NACIONAL DE MONEDA Y TIMBRE"
+    name: "FNMT-RCM"
+  - pattern: "BOLETIN OFICIAL DEL ESTADO"
+    name: "BOE"
+  - pattern: "DIRECCION GENERAL DEL TESORO"
+    name: "Dirección General del Tesoro"
+  - pattern: "AUTORIDAD PORTUARIA DE"
+    name: "Autoridad Portuaria"
+  # --- Second verification pass: forms confirmed on the bodies' own sites ------
+  # bizkaia.eus self-names "Hacienda de Bizkaia", not "Hacienda Foral de
+  # Bizkaia", and navarra.es carries both "Hacienda Foral" and "Hacienda
+  # Tributaria" — so both live forms are listed.
+  - pattern: "HACIENDA DE BIZKAIA"
+    name: "Hacienda de Bizkaia"
+  - pattern: "HACIENDA TRIBUTARIA DE NAVARRA"
+    name: "Hacienda Tributaria de Navarra"
+  - pattern: "AGENCIA CANTABRA DE ADMINISTRACION TRIBUTARIA"
+    name: "ACAT (Cantabria)"
+  - pattern: "SERVICIOS TRIBUTARIOS DEL PRINCIPADO DE ASTURIAS"
+    name: "Servicios Tributarios del Principado de Asturias"
+  - pattern: "AGENCIA TRIBUTARIA VALENCIANA"
+    name: "Agència Tributària Valenciana"
+  - pattern: "DIRECCION GENERAL DE TRIBUTOS"
+    name: "Dirección General de Tributos"
+  - pattern: 'regex:\bIPSI\b'
+    name: "IPSI (Ceuta y Melilla)"
+  # Provincial and municipal collectors verified this pass. Badajoz is OAR
+  # (not "ORAL") and the Málaga city body is GESTRISAM.
+  - pattern: "REGTSA"
+    name: "REGTSA (Salamanca)"
+  - pattern: "GESTRISAM"
+    name: "Gestrisam (Málaga)"
+  - pattern: "XALOC"
+    name: "XALOC (Girona)"
+  - pattern: "BASE GESTIO D INGRESSOS"
+    name: "BASE (Tarragona)"
+  - pattern: "BASE - GESTIO D'INGRESSOS"
+    name: "BASE (Tarragona)"
+  # Regional employment services pay unemployment and minimum-income benefits.
+  - pattern: "LANBIDE"
+    name: "Lanbide"
+  - pattern: "SERVEI PUBLIC D OCUPACIO"
+    name: "SOC (Catalunya)"
+  - pattern: "SERVEI PUBLIC D'OCUPACIO"
+    name: "SOC (Catalunya)"
+  - pattern: "SERVICIO ANDALUZ DE EMPLEO"
+    name: "Servicio Andaluz de Empleo"
+  - pattern: "SERVICIO REGIONAL DE EMPLEO Y FORMACION"
+    name: "SEF (Murcia)"
+  - pattern: "INSTITUTO NACIONAL DE GESTION SANITARIA"
+    name: "INGESA (Ceuta y Melilla)"
+  # Cabildos are inconsistent about the word "Insular", so both forms run.
+  - pattern: "CABILDO DE"
+    name: "Cabildo"
+  # Regional sanitation bodies that levy the canon de saneamiento.
+  - pattern: 'regex:\bEPSAR\b'
+    name: "EPSAR (Comunitat Valenciana)"
+  - pattern: "ESAMUR"
+    name: "ESAMUR (Murcia)"
+  - pattern: 'regex:\bNILSA\b'
+    name: "NILSA (Navarra)"
+  - pattern: "AUGAS DE GALICIA"
+    name: "Augas de Galicia"
+  - pattern: "INSTITUTO ARAGONES DEL AGUA"
+    name: "Instituto Aragonés del Agua"
+  - pattern: "EMAYA"
+    name: "EMAYA (Palma)"
+  - pattern: "CANON DE REGULACION"
+    name: "Canon de regulación"
+  - pattern: "CANON DE CONTROL DE VERTIDOS"
+    name: "Canon de control de vertidos"
+  # The TRLRHL wording is "de Valor", not "del Valor" — both are printed.
+  - pattern: "IMPUESTO SOBRE EL INCREMENTO DE VALOR DE LOS TERRENOS"
+    name: "IIVTNU (plusvalía municipal)"
+  # Ley 7/2022 art. 11.3 forced every municipality to bill waste separately
+  # from April 2025; some label it a PPCPNT rather than a tasa.
+  - pattern: "PRESTACION PATRIMONIAL DE CARACTER PUBLICO NO TRIBUTARIA"
+    name: "Prestación patrimonial (residuos)"
+  - pattern: "SECRETARIA GENERAL DEL TESORO"
+    name: "Secretaría General del Tesoro"
+  - pattern: "CERTIFICADO DE ANTECEDENTES PENALES"
+    name: "Certificado de antecedentes penales"
+  - pattern: "NOTA SIMPLE"
+    name: "Nota simple registral"
+  - pattern: "PATRIMONIO NACIONAL"
+    name: "Patrimonio Nacional"
+  - pattern: "INSTITUTO CERVANTES"
+    name: "Instituto Cervantes"
+  - pattern: "EUSKAL HERRIKO UNIBERTSITATEA"
+    name: "UPV/EHU"

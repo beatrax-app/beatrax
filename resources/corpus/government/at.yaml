@@ -1,4 +1,7 @@
 # Government / public-agency classification rules — Austria.
+# (Bare "AMS" is too collision-prone — the spelled-out Arbeitsmarktservice
+# is used instead. Vehicle registration runs through insurers' Zulassungs-
+# stellen and is not a public counterparty, so it is not listed.)
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "FINANZAMT"
@@ -9,3 +12,212 @@ entries:
     name: "ORF-Beitrag"
   - pattern: "RENTENVERSICHERUNG"
     name: "Pensionsversicherung"
+  - pattern: "FINANZONLINE"
+    name: "FinanzOnline"
+  # The regional health insurance funds merged into the ÖGK in 2020.
+  - pattern: "GESUNDHEITSKASSE"
+    name: "Österreichische Gesundheitskasse (ÖGK)"
+  - pattern: "PENSIONSVERSICHERUNGSANSTALT"
+    name: "Pensionsversicherungsanstalt (PVA)"
+  - pattern: "ARBEITSMARKTSERVICE"
+    name: "AMS"
+  - pattern: "FAMILIENBEIHILFE"
+    name: "Familienbeihilfe"
+  - pattern: "STUDIENBEIHILFE"
+    name: "Studienbeihilfe"
+  # Austrian municipalities bill Grundsteuer, waste and water directly.
+  - pattern: "MAGISTRAT"
+  - pattern: "GEMEINDEAMT"
+  - pattern: "regex:(STADT|MARKT)GEMEINDE"
+  - pattern: "LANDESREGIERUNG"
+  # District authorities issue administrative fines and permits.
+  - pattern: "BEZIRKSHAUPTMANNSCHAFT"
+    name: "Bezirkshauptmannschaft"
+  - pattern: "VERWALTUNGSSTRAFE"
+    name: "Verwaltungsstrafe"
+  - pattern: "BEZIRKSGERICHT"
+    name: "Bezirksgericht"
+  - pattern: "ASFINAG"
+    name: "ASFINAG (Vignette/Maut)"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: bmf.gv.at and oesterreich.gv.at (Abgaben, Zollamt
+  # Österreich, FinanzOnline), sozialversicherung.at and the carrier sites
+  # for ÖGK / PVA / SVS / AUVA / BVAEB, wko.at and arbeiterkammer.at (both
+  # memberships are compulsory by law), oeh.ac.at (ÖH-Beitrag),
+  # stipendium.at, wien.gv.at (Magistratsabteilungen, Gebrauchsabgabe,
+  # Parkometerabgabe), help.gv.at (Anonymverfügung / Organmandat) and
+  # justiz.gv.at (Gerichtsgebühren, Firmenbuch, Eintragungsgebühr).
+  #
+  # Terms Austria shares verbatim with Germany are left in de.yaml rather
+  # than duplicated here; this file carries the Austrian-only vocabulary.
+  # Umlauts appear both verbatim and transliterated on statements, so a
+  # regex body uses the ASCII (A|AE)/(O|OE)/(U|UE) alternation and the
+  # umlaut spelling is a separate plain-substring entry. Rejected as too
+  # ambiguous: bare \bGIS\b for the pre-2024 broadcasting fee (geographic
+  # information systems), bare \bPVA\b, "VIGNETTE" (sold at filling
+  # stations), "WIENER WOHNEN" (municipal landlord, but the payment is
+  # ordinary rent) and "KIRCHENBEITRAG" (a church levy, not a state one).
+  # ---------------------------------------------------------------------
+
+  # Social insurance carriers.
+  - pattern: "FINANZAMT ÖSTERREICH"
+    name: "Finanzamt Österreich"
+  - pattern: "ÖSTERREICHISCHE GESUNDHEITSKASSE"
+    name: "Österreichische Gesundheitskasse (ÖGK)"
+  - pattern: 'regex:\bOEGK\b'
+    name: "Österreichische Gesundheitskasse (ÖGK)"
+  - pattern: 'regex:\bSVS\b'
+    name: "Sozialversicherung der Selbständigen (SVS)"
+  - pattern: "SOZIALVERSICHERUNG DER SELBSTÄNDIGEN"
+    name: "Sozialversicherung der Selbständigen (SVS)"
+  - pattern: 'regex:\bBVAEB\b'
+    name: "BVAEB"
+  - pattern: "VERSICHERUNGSANSTALT ÖFFENTLICH BEDIENSTETER"
+    name: "BVAEB"
+  - pattern: 'regex:\bAUVA\b'
+    name: "AUVA"
+  - pattern: "ALLGEMEINE UNFALLVERSICHERUNGSANSTALT"
+    name: "AUVA"
+  - pattern: "GEBIETSKRANKENKASSE"
+    name: "Gebietskrankenkasse (bis 2020, jetzt ÖGK)"
+  - pattern: 'regex:KRANKENF(U|UE)RSORGE'
+    name: "Krankenfürsorgeanstalt"
+  - pattern: "KRANKENFÜRSORGE"
+    name: "Krankenfürsorgeanstalt"
+
+  # Benefits and social transfers.
+  - pattern: "KINDERBETREUUNGSGELD"
+    name: "Kinderbetreuungsgeld"
+  - pattern: "PFLEGEGELD"
+    name: "Pflegegeld"
+  - pattern: "SOZIALMINISTERIUMSERVICE"
+    name: "Sozialministeriumservice"
+  - pattern: "MINDESTSICHERUNG"
+    name: "Mindestsicherung"
+  - pattern: "SOZIALHILFE"
+    name: "Sozialhilfe"
+  - pattern: "WOHNBEIHILFE"
+    name: "Wohnbeihilfe"
+  - pattern: "HEIZKOSTENZUSCHUSS"
+    name: "Heizkostenzuschuss"
+  - pattern: 'regex:WOHNBAUF(O|OE)RDERUNG'
+    name: "Wohnbauförderung"
+  - pattern: "WOHNBAUFÖRDERUNG"
+    name: "Wohnbauförderung"
+  - pattern: "NOTSTANDSHILFE"
+    name: "Notstandshilfe"
+  - pattern: "ARBEITSLOSENGELD"
+    name: "Arbeitslosengeld"
+
+  # Compulsory chambers.
+  - pattern: "WIRTSCHAFTSKAMMER"
+    name: "Wirtschaftskammer Österreich"
+  - pattern: 'regex:\bWKO\b'
+    name: "Wirtschaftskammer Österreich"
+  - pattern: "ARBEITERKAMMER"
+    name: "Arbeiterkammer"
+  - pattern: "KAMMERUMLAGE"
+    name: "Kammerumlage"
+  - pattern: "APOTHEKERKAMMER"
+    name: "Österreichische Apothekerkammer"
+
+  # Students and schools.
+  - pattern: 'regex:\bOEH[- ]BEITRAG'
+    name: "ÖH-Beitrag"
+  - pattern: "ÖH-BEITRAG"
+    name: "ÖH-Beitrag"
+  - pattern: 'regex:HOCHSCH(U|UE)LERSCHAFT'
+    name: "Österreichische Hochschülerschaft"
+  - pattern: "HOCHSCHÜLERSCHAFT"
+    name: "Österreichische Hochschülerschaft"
+  - pattern: 'regex:STUDIENBEIHILFENBEH(O|OE)RDE'
+    name: "Studienbeihilfenbehörde"
+  - pattern: "STUDIENBEIHILFENBEHÖRDE"
+    name: "Studienbeihilfenbehörde"
+  - pattern: "BILDUNGSDIREKTION"
+    name: "Bildungsdirektion"
+  - pattern: "KINDERGARTENBEITRAG"
+    name: "Kindergartenbeitrag"
+
+  # Municipal offices and communal charges.
+  - pattern: "MAGISTRATSABTEILUNG"
+    name: "Magistratsabteilung"
+  - pattern: "MAGISTRATISCHES BEZIRKSAMT"
+    name: "Magistratisches Bezirksamt"
+  - pattern: "STADTAMT"
+    name: "Stadtamt"
+  - pattern: "GEMEINDEABGABEN"
+    name: "Gemeindeabgaben"
+  - pattern: "KOMMUNALSTEUER"
+    name: "Kommunalsteuer"
+  - pattern: "ORTSTAXE"
+    name: "Ortstaxe"
+  - pattern: "HUNDEABGABE"
+    name: "Hundeabgabe"
+  - pattern: "GEBRAUCHSABGABE"
+    name: "Gebrauchsabgabe"
+  - pattern: "PARKOMETERABGABE"
+    name: "Parkometerabgabe"
+  - pattern: 'regex:M(U|UE)LLABFUHR'
+    name: "Müllabfuhr"
+  - pattern: "MÜLLABFUHR"
+    name: "Müllabfuhr"
+  - pattern: 'regex:KANALGEB(U|UE)HR'
+    name: "Kanalgebühr"
+  - pattern: "KANALGEBÜHR"
+    name: "Kanalgebühr"
+  - pattern: 'regex:WASSERGEB(U|UE)HR'
+    name: "Wassergebühr"
+  - pattern: "WASSERGEBÜHR"
+    name: "Wassergebühr"
+  - pattern: "REINHALTEVERBAND"
+    name: "Reinhalteverband (Abwasser)"
+  - pattern: "ABFALLWIRTSCHAFTSVERBAND"
+    name: "Abfallwirtschaftsverband"
+
+  # Tax and customs.
+  # Guarded: a bare "ZOLLAMT" would also swallow the German HAUPTZOLLAMT.
+  - pattern: "ZOLLAMT ÖSTERREICH"
+    name: "Zollamt Österreich"
+  - pattern: 'regex:ZOLLAMT OESTERREICH'
+    name: "Zollamt Österreich"
+  - pattern: "IMMOBILIENERTRAGSTEUER"
+    name: "Immobilienertragsteuer"
+  - pattern: "NORMVERBRAUCHSABGABE"
+    name: "Normverbrauchsabgabe (NoVA)"
+  - pattern: 'regex:BUNDESMINISTERIUM F(U|UE)R'
+    name: "Bundesministerium"
+
+  # Administrative fines, courts and registers.
+  - pattern: 'regex:ANONYMVERF(U|UE)GUNG'
+    name: "Anonymverfügung"
+  - pattern: "ANONYMVERFÜGUNG"
+    name: "Anonymverfügung"
+  - pattern: 'regex:ORGANSTRAFVERF(U|UE)GUNG'
+    name: "Organstrafverfügung"
+  - pattern: "ORGANMANDAT"
+    name: "Organmandat"
+  - pattern: 'regex:STRAFVERF(U|UE)GUNG'
+    name: "Strafverfügung"
+  # \b so the German OBERLANDESGERICHT keeps its own rule in de.yaml.
+  - pattern: 'regex:\bLANDESGERICHT\b'
+    name: "Landesgericht"
+  - pattern: "LANDESVERWALTUNGSGERICHT"
+    name: "Landesverwaltungsgericht"
+  - pattern: 'regex:GERICHTSGEB(U|UE)HR'
+    name: "Gerichtsgebühr"
+  - pattern: "GERICHTSGEBÜHR"
+    name: "Gerichtsgebühr"
+  - pattern: 'regex:EINTRAGUNGSGEB(U|UE)HR'
+    name: "Eintragungsgebühr (Grundbuch)"
+  - pattern: "FIRMENBUCH"
+    name: "Firmenbuch"
+  - pattern: 'regex:BUNDESAMT F(U|UE)R EICH'
+    name: "Bundesamt für Eich- und Vermessungswesen"
+
+  # Police.
+  - pattern: "LANDESPOLIZEIDIREKTION"
+    name: "Landespolizeidirektion"
+  - pattern: "POLIZEIINSPEKTION"
+    name: "Polizeiinspektion"

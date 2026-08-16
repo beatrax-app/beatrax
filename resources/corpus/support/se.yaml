@@ -1,0 +1,101 @@
+# Support-resource corpus — Sweden (SE merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Telia
+    type: merchant
+    cancel_url: "https://www.telia.se/kontakt/stall-en-fraga/avsluta-abonnemang"
+    support_url: "https://www.telia.se/support/avsluta-och-andra"
+    notes: "Abonnemanget går inte att säga upp med en knapp i Mitt Telia – Telia skriver 'För bästa hjälp med uppsägning, ring oss gärna på 020-711 710'. På supportsidan Hantera abonnemang finns i stället vägarna ändra abonnemang via Mitt Telia och överlåt abonnemang."
+  - name: Tele2
+    type: merchant
+    cancel_url: "https://www.tele2.se/support/avsluta/avsluta-abonnemang"
+    support_url: "https://www.tele2.se/support"
+    notes: "'Avslut görs enklast genom att kontakta kundservice' – bindningstid och uppsägningstid gäller enligt avtalsvillkoren, du kan behöva betala kvarstående avgifter om bindningstid finns kvar och uppsägningstiden påverkar när avslutet träder i kraft. Vill du slippa avgifterna går abonnemanget att överlåta kostnadsfritt, även under bindningstid."
+  - name: Telenor Sverige
+    type: merchant
+    cancel_url: "https://www.telenor.se/support/mobiltelefoni/abonnemang/avsluta-abonnemang"
+    support_url: "https://www.telenor.se/support/mobiltelefoni/abonnemang/bindningstid-uppsagningstid"
+    notes: "'Om du vill ändra eller säga upp något av dina abonnemang behöver du prata med oss' – uppsägning görs alltså via kundservice, inte i självbetjäning. Uppsägningstiden för mobilabonnemang är en månad; din eventuella bindningstid ser du i Mitt Telenor och olika användare i abonnemanget kan ha olika bindningstid."
+  - name: Comviq
+    type: merchant
+    cancel_url: "https://www.comviq.se/hjalp/avtal-och-villkor/uppsagning-av-abonnemang"
+    notes: "'Hos Comviq har vi ingen uppsägningstid på våra mobilabonnemang, du betalar bara för den innevarande fakturaperioden om du säger upp.' Har du delbetalat en mobil tillsammans med abonnemanget gäller däremot 24 månaders bindningstid. Uppsägningen sköts av kundservice och bekräftas via mejl."
+  - name: Bahnhof
+    type: merchant
+    support_url: "https://bahnhof.se/privat/kundservice/"
+    notes: "Ingen uppsägningsknapp på webben: 'För att ångra eller säga upp din tjänst kan du chatta med oss via Mina sidor, ringa 010-510 00 00 eller mejla kundservice@bahnhof.net.' Vid uppsägning gäller normalt en månads uppsägningstid efter eventuell bindningstid, och har du bindningstid kvar kan uppsägning göras tidigast en månad innan den löper ut."
+  - name: Folksam
+    type: merchant
+    cancel_url: "https://www.folksam.se/kundservice/sjalvhjalp/saga-upp-forsakring"
+    support_url: "https://www.folksam.se/kundservice"
+    notes: "Vill du byta försäkringsbolag kan du göra det vid försäkringens huvudförfallodag, dagen då försäkringen förnyas en gång per år. Sjuk- och olycksfallsförsäkring, livförsäkring och barnförsäkring kan du däremot avsluta när som helst under året. Tänk på att en uppsagd personförsäkring kan kräva ny hälsoprövning om du ångrar dig."
+  - name: Länsförsäkringar
+    type: merchant
+    cancel_url: "https://www.lansforsakringar.se/privat/forsakring/saga-upp-forsakring/"
+    notes: "'Som regel gäller din försäkring i ett år i taget. Det innebär att du kan säga upp din försäkring en gång om året, på försäkringens huvudförfallodag.' Personförsäkringar kan du säga upp när du vill. Länken skickar dig vidare till ditt eget länsbolag – uppsägningen hanteras lokalt, inte centralt."
+  - name: If Skadeförsäkring
+    type: merchant
+    cancel_url: "https://www.if.se/privat/kundservice/guider/saga-upp-forsakringen"
+    support_url: "https://www.if.se/privat/kundservice"
+    notes: "Uppsägningen skickas in via funktionen 'Skicka in uppsägning' på if.se, och sidan listar vad som gäller för olika försäkringstyper. Byter du bolag – vänta med uppsägningen tills den nya försäkringen är klar så du inte står oförsäkrad."
+  - name: SATS
+    type: merchant
+    cancel_url: "https://www.sats.se/kundservice/medlemskap/administrera-medlemskap/avsluta-medlemskap"
+    support_url: "https://www.sats.se/kundservice"
+    notes: "'Du kan enkelt avsluta ditt medlemskap genom att logga in på Min sida' – men det går inte att registrera en uppsägning medan medlemskapet är fryst. Bindningstid innebär att du måste betala minst 12 månatliga medlemsavgifter innan medlemskapet kan avslutas, och uppsägningstiden gör att medlemskapet löper vidare till och med månaden efter att uppsägningen mottagits."
+  - name: Nordic Wellness
+    type: merchant
+    support_url: "https://www.nordicwellness.se/policy/medlemsvillkor/"
+    notes: "Uppsägning görs inte på webben: 'Nordic Wellness rekommenderar att uppsägning sker på moderklubben, alternativt via telefon eller mail.' Alla avtal har en obligatorisk uppsägningstid på två månader (avvikelser kan förekomma vid avtal med bindningstid), och frysning går inte att kombinera med uppsägningstid."
+  - name: Fitness24Seven
+    type: merchant
+    support_url: "https://portal.fitness24seven.com/faq"
+    notes: "Enligt medlemsvillkorens punkt 10 upphör ett löpande autogiro-/kortavtal vid det kalendermånadsskifte som inträffar efter två månader från uppsägningen. Uppsägning kan göras via Mina Sidor, via e-post till info@f24s.com eller per post – spara kvittensen. Förskottsbetalade medlemskap har fast löptid och kan inte sägas upp i förtid."
+  - name: Röda Korset
+    type: merchant
+    cancel_url: "https://www.rodakorset.se/skank-pengar/bli-manadsgivare/andra-manadsgava/"
+    support_url: "https://www.rodakorset.se/om-oss/kontakta-oss/"
+    notes: "Självbetjäningen med BankID på sidan höjer bara månadsgåvan. 'Vill du ändra bank- eller kontouppgifter? Avsluta ditt månadsgivande? Välkommen då att kontakta vår infoservice' – pausa, sänka eller avsluta kräver alltså kontakt med infoservice (telefon 08-452 46 00, info@redcross.se)."
+
+  # --- Government ---
+  - name: Skatteverket
+    type: government
+    help_url: "https://www.skatteverket.se/omoss/kontaktaoss.4.71004e4c133e23bf6db800079651.html"
+    apply_url: "https://www.skatteverket.se/privat/etjansterochblanketter/allaetjanster.4.18e1b10334ebe8bc80009.html"
+    phone: "0771-567 567"
+    notes: "Ring Skatteupplysningen på 0771-567 567 för allmänna frågor om skatt, deklaration och folkbokföring, vardagar klockan 8–16; från utlandet +46 8 564 851 60. Har du frågor om ett pågående ärende kan du i stället ringa din handläggare direkt."
+  - name: Försäkringskassan
+    type: government
+    help_url: "https://www.forsakringskassan.se/kontakta-forsakringskassan"
+    apply_url: "https://www.forsakringskassan.se/logga-in"
+    phone: "0771-524 524"
+    notes: "Kundcenter för privatperson har telefon 0771-524 524 med öppettider måndag–fredag 8–15; lördag, söndag och helgdag är stängt. Ansökningar, intyg och beslut hanteras när du loggar in med e-legitimation."
+  - name: Arbetsförmedlingen
+    type: government
+    help_url: "https://arbetsformedlingen.se/kontakt/for-arbetssokande"
+    apply_url: "https://arbetsformedlingen.se/for-arbetssokande/mina-sidor"
+    rights_url: "https://arbetsformedlingen.se/kontakt/omprova-beslut"
+    phone: "0771-416 416"
+    notes: "Telefon 0771-416 416 för arbetssökande, öppet måndag–fredag 8–15 – säg ditt ärende och identifiera dig med Bank-ID så kopplas du rätt snabbare. Är du missnöjd med ett beslut kan du begära omprövning; omprövningsenheten har telefontid helgfria vardagar 8–16, säg 'omprövning' i talsvaret."
+  - name: Pensionsmyndigheten
+    type: government
+    help_url: "https://www.pensionsmyndigheten.se/kontakta-oss/kontakta-oss"
+    apply_url: "https://www.pensionsmyndigheten.se/ga-i-pension/ansok-om-pension/ansok-om-allman-pension"
+    phone: "0771-776 776"
+    notes: "Kundservice på 0771-776 776, öppet måndag–fredag klockan 8–15. Inför ansökan om allmän pension behöver du personuppgifter, telefonnummer, bankkonto och civilstånd samt personnummer för maka/make/partner/sambo."
+  - name: CSN
+    type: government
+    help_url: "https://www.csn.se/kontakta-oss.html"
+    apply_url: "https://www.csn.se/mina-sidor.html"
+    notes: "Ansökan om studiemedel, omställningsstudiestöd och 'betala mindre' görs i Mina sidor, där du också läser meddelanden och beslut. Räkna med cirka 2–5 veckors handläggning för bidrag och lån och 6–7 veckor för studiemedel utomlands."
+  - name: 1177 Vårdguiden
+    type: government
+    help_url: "https://www.1177.se/kontakt/"
+    apply_url: "https://www.1177.se/om-1177/nar-du-loggar-in-pa-1177.se/"
+    phone: "1177"
+    notes: "'1177 är ett nationellt telefonnummer för sjukvårdsrådgivning. Du kan ringa dygnet runt.' E-tjänsterna – förnya recept, läsa journal, kontakta mottagningar – kräver e-legitimation, och du behöver välja region överst på sidan eftersom utbudet skiljer sig åt."

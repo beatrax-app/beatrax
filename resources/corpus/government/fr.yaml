@@ -1,4 +1,5 @@
 # Government / public-agency classification rules — France.
+# (The redevance audiovisuelle was abolished in 2022 — no licence-fee rule.)
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "DGFIP"
@@ -13,3 +14,272 @@ entries:
     name: "Trésor Public"
   - pattern: "AMELI"
     name: "Assurance Maladie (Ameli)"
+  - pattern: "CENTRE DES FINANCES PUBLIQUES"
+    name: "Centre des Finances Publiques"
+  - pattern: "TAXE FONCIERE"
+    name: "Taxe foncière"
+  - pattern: "regex:\\bCAF\\b"
+    name: "CAF (Allocations Familiales)"
+  - pattern: "regex:\\bCPAM\\b"
+    name: "CPAM"
+  - pattern: "regex:\\bCARSAT\\b|\\bCNAV\\b"
+    name: "Assurance Retraite (CARSAT/CNAV)"
+  - pattern: "regex:\\bMSA\\b"
+    name: "MSA"
+  # Pôle emploi became France Travail on 1 January 2024; both names are
+  # still printed on standing orders.
+  - pattern: "FRANCE TRAVAIL"
+    name: "France Travail"
+  - pattern: "POLE EMPLOI"
+    name: "France Travail (ex-Pôle emploi)"
+  # Communes bill the taxe d'habitation on second homes, waste and school
+  # charges — the mairie is the highest-value local entry.
+  - pattern: "MAIRIE"
+  - pattern: "COMMUNE DE"
+  - pattern: "PREFECTURE"
+  # Automated traffic fines and secure vehicle/identity documents.
+  - pattern: "regex:\\bANTAI\\b"
+    name: "ANTAI (amendes)"
+  - pattern: "AMENDES.GOUV"
+    name: "ANTAI (amendes)"
+  - pattern: "regex:\\bANTS\\b"
+    name: "ANTS"
+  - pattern: "regex:\\bCROUS\\b"
+    name: "CROUS"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: impots.gouv.fr (noms des impôts et des services),
+  # service-public.fr, urssaf.fr, ameli.fr, caf.fr, lassuranceretraite.fr,
+  # agirc-arrco.fr, msa.fr, francetravail.fr, antai.gouv.fr, ants.gouv.fr,
+  # douane.gouv.fr, collectivites-locales.gouv.fr, lesagencesdeleau.fr,
+  # etudiant.gouv.fr (CVEC), cci.fr and artisanat.fr (chambres consulaires).
+  #
+  # Bank libellés are usually uppercase-unaccented, so the unaccented form
+  # is the primary entry; the accented spelling is added separately only
+  # where SEPA creditor names commonly carry it. Rejected as too ambiguous:
+  # bare TRESORERIE, TAXE, CAISSE, REGIE, SERVICE, ECOLE, and the acronyms
+  # \bRSA\b (a security vendor), \bCFE\b, \bIFI\b, \bFPS\b and \bCCI\b.
+  # La Poste and EDF are commercial companies and are NOT listed. There is
+  # no licence-fee rule: the redevance audiovisuelle was abolished in 2022.
+  # ---------------------------------------------------------------------
+
+  # DGFiP offices and the accented spellings of the existing entries.
+  - pattern: "SERVICE DES IMPOTS DES PARTICULIERS"
+    name: "Service des impôts des particuliers"
+  - pattern: "SERVICE DES IMPOTS DES ENTREPRISES"
+    name: "Service des impôts des entreprises"
+  - pattern: "DIRECTION DEPARTEMENTALE DES FINANCES PUBLIQUES"
+    name: "DDFiP"
+  - pattern: "DIRECTION REGIONALE DES FINANCES PUBLIQUES"
+    name: "DRFiP"
+  - pattern: "IMPÔTS"
+    name: "Impôts"
+  - pattern: "TRÉSOR PUBLIC"
+    name: "Trésor Public"
+  - pattern: "TAXE FONCIÈRE"
+    name: "Taxe foncière"
+
+  # The named taxes people pay by prélèvement.
+  - pattern: "IMPOT SUR LE REVENU"
+    name: "Impôt sur le revenu"
+  - pattern: "PRELEVEMENT A LA SOURCE"
+    name: "Prélèvement à la source"
+  - pattern: "TAXE D'HABITATION"
+    name: "Taxe d'habitation"
+  - pattern: "TAXE D'AMENAGEMENT"
+    name: "Taxe d'aménagement"
+  - pattern: "TAXE DE SEJOUR"
+    name: "Taxe de séjour"
+  - pattern: "TAXE SUR LES LOGEMENTS VACANTS"
+    name: "Taxe sur les logements vacants"
+  - pattern: "COTISATION FONCIERE DES ENTREPRISES"
+    name: "Cotisation foncière des entreprises"
+  - pattern: "IMPOT SUR LA FORTUNE IMMOBILIERE"
+    name: "Impôt sur la fortune immobilière"
+  - pattern: "ORDURES MENAGERES"
+    name: "Taxe d'enlèvement des ordures ménagères"
+  - pattern: "REDEVANCE ASSAINISSEMENT"
+    name: "Redevance assainissement"
+  - pattern: "TIMBRE FISCAL"
+    name: "Timbre fiscal"
+
+  # Customs.
+  - pattern: "DOUANES ET DROITS INDIRECTS"
+    name: "DGDDI (douane)"
+  - pattern: "SERVICE DES DOUANES"
+    name: "Service des douanes"
+
+  # Social security, health and family branches.
+  - pattern: "SECURITE SOCIALE"
+    name: "Sécurité sociale"
+  - pattern: "ASSURANCE MALADIE"
+    name: "Assurance Maladie"
+  - pattern: "ASSURANCE RETRAITE"
+    name: "Assurance Retraite"
+  - pattern: "CAISSE PRIMAIRE D'ASSURANCE MALADIE"
+    name: "CPAM"
+  - pattern: "CAISSE D'ALLOCATIONS FAMILIALES"
+    name: "CAF"
+  - pattern: "ALLOCATIONS FAMILIALES"
+    name: "Allocations familiales"
+  - pattern: "COMPLEMENTAIRE SANTE SOLIDAIRE"
+    name: "Complémentaire santé solidaire"
+  - pattern: "PRIME D'ACTIVITE"
+    name: "Prime d'activité"
+  - pattern: "ALLOCATION LOGEMENT"
+    name: "Allocation logement"
+  - pattern: "MUTUALITE SOCIALE AGRICOLE"
+    name: "MSA"
+
+  # Compulsory supplementary and professional pension schemes.
+  - pattern: "AGIRC-ARRCO"
+    name: "Agirc-Arrco"
+  - pattern: 'regex:\bARRCO\b'
+    name: "Agirc-Arrco"
+  - pattern: 'regex:\bAGIRC\b'
+    name: "Agirc-Arrco"
+  - pattern: 'regex:\bIRCANTEC\b'
+    name: "Ircantec"
+  - pattern: 'regex:\bCNRACL\b'
+    name: "CNRACL"
+  - pattern: 'regex:\bCIPAV\b'
+    name: "CIPAV"
+  - pattern: 'regex:\bCARMF\b'
+    name: "CARMF"
+  - pattern: 'regex:\bCARPIMKO\b'
+    name: "CARPIMKO"
+  - pattern: "CAISSE DES DEPOTS"
+    name: "Caisse des Dépôts"
+
+  # Local and regional government.
+  - pattern: "SOUS-PREFECTURE"
+    name: "Sous-préfecture"
+  - pattern: "CONSEIL DEPARTEMENTAL"
+    name: "Conseil départemental"
+  - pattern: "CONSEIL REGIONAL"
+    name: "Conseil régional"
+  - pattern: "COMMUNAUTE DE COMMUNES"
+    name: "Communauté de communes"
+  - pattern: "COMMUNAUTE D'AGGLOMERATION"
+    name: "Communauté d'agglomération"
+  - pattern: "SYNDICAT INTERCOMMUNAL"
+    name: "Syndicat intercommunal"
+  - pattern: "REGIE MUNICIPALE"
+    name: "Régie municipale"
+  - pattern: 'regex:\bCCAS\b'
+    name: "CCAS"
+  - pattern: "CENTRE COMMUNAL D'ACTION SOCIALE"
+    name: "CCAS"
+  - pattern: "RESTAURATION SCOLAIRE"
+    name: "Restauration scolaire"
+  - pattern: "CANTINE SCOLAIRE"
+    name: "Cantine scolaire"
+
+  # Public water bodies.
+  - pattern: "AGENCE DE L'EAU"
+    name: "Agence de l'eau"
+  - pattern: "SYNDICAT DES EAUX"
+    name: "Syndicat des eaux"
+  - pattern: "REGIE DES EAUX"
+    name: "Régie des eaux"
+  - pattern: "EAU DE PARIS"
+    name: "Eau de Paris"
+
+  # Fines, courts and legal aid.
+  - pattern: "AMENDE FORFAITAIRE"
+    name: "Amende forfaitaire"
+  - pattern: "FORFAIT POST-STATIONNEMENT"
+    name: "Forfait post-stationnement"
+  - pattern: "TRIBUNAL JUDICIAIRE"
+    name: "Tribunal judiciaire"
+  - pattern: "TRIBUNAL ADMINISTRATIF"
+    name: "Tribunal administratif"
+  - pattern: "COUR D'APPEL"
+    name: "Cour d'appel"
+  - pattern: "GREFFE DU TRIBUNAL"
+    name: "Greffe du tribunal"
+  - pattern: "AIDE JURIDICTIONNELLE"
+    name: "Aide juridictionnelle"
+  - pattern: "GENDARMERIE"
+    name: "Gendarmerie nationale"
+  - pattern: "POLICE NATIONALE"
+    name: "Police nationale"
+  - pattern: "POLICE MUNICIPALE"
+    name: "Police municipale"
+
+  # Vehicles and identity documents.
+  - pattern: "CERTIFICAT D'IMMATRICULATION"
+    name: "Certificat d'immatriculation"
+  # "CARTE GRISE" is dropped: private habilitated agencies trade under
+  # exactly that phrase, so the state channel is matched via ANTS instead.
+  - pattern: "PREFECTURE DE POLICE"
+    name: "Préfecture de police"
+  - pattern: 'regex:\bOFII\b'
+    name: "OFII"
+
+  # Land registry and cadastre.
+  - pattern: "SERVICE DE LA PUBLICITE FONCIERE"
+    name: "Service de la publicité foncière"
+  - pattern: "CADASTRE"
+    name: "Cadastre"
+
+  # Consular chambers — membership is compulsory for the trades concerned.
+  - pattern: "CHAMBRE DE COMMERCE"
+    name: "Chambre de commerce et d'industrie"
+  - pattern: "CHAMBRE DE METIERS"
+    name: "Chambre de métiers et de l'artisanat"
+  - pattern: "CHAMBRE D'AGRICULTURE"
+    name: "Chambre d'agriculture"
+  - pattern: 'regex:\bINPI\b'
+    name: "INPI"
+
+  # Education and students.
+  - pattern: 'regex:\bCVEC\b'
+    name: "CVEC"
+  - pattern: "UNIVERSITE"
+    name: "Université"
+  - pattern: "UNIVERSITÉ"
+    name: "Université"
+  - pattern: "RECTORAT"
+    name: "Rectorat"
+  - pattern: "EDUCATION NATIONALE"
+    name: "Éducation nationale"
+  - pattern: 'regex:\bCNED\b'
+    name: "CNED"
+
+  # Housing and energy-transition agencies that bill or refund directly.
+  - pattern: "AGENCE NATIONALE DE L'HABITAT"
+    name: "Anah"
+  - pattern: 'regex:\bANAH\b'
+    name: "Anah"
+  - pattern: 'regex:\bADEME\b'
+    name: "ADEME"
+
+  # Spelled-out forms of bodies already carried as acronyms, plus the
+  # remaining offices that bill or pay an individual directly.
+  - pattern: "DIRECTION GENERALE DES DOUANES"
+    name: "DGDDI (douane)"
+  - pattern: "CENTRE DES IMPOTS"
+    name: "Centre des impôts"
+  - pattern: "DIRECTION DES FINANCES PUBLIQUES"
+    name: "Direction des Finances publiques"
+  - pattern: "AGENCE NATIONALE DES TITRES SECURISES"
+    name: "ANTS"
+  - pattern: "OFFICE FRANCAIS DE L'IMMIGRATION"
+    name: "OFII"
+  - pattern: "CAISSE NATIONALE D'ASSURANCE VIEILLESSE"
+    name: "CNAV"
+  - pattern: "CAISSE NATIONALE DES ALLOCATIONS FAMILIALES"
+    name: "CNAF"
+  - pattern: "AGENCE REGIONALE DE SANTE"
+    name: "Agence régionale de santé"
+  - pattern: "TAXE D'ENLEVEMENT DES ORDURES"
+    name: "TEOM"
+  - pattern: "REDEVANCE D'ENLEVEMENT DES ORDURES"
+    name: "REOM"
+  - pattern: "TRIBUNAL DE PROXIMITE"
+    name: "Tribunal de proximité"
+  - pattern: "CONSEIL DE PRUD'HOMMES"
+    name: "Conseil de prud'hommes"
+  - pattern: "COMMISSARIAT DE POLICE"
+    name: "Commissariat de police"

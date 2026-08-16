@@ -1,0 +1,71 @@
+# Tax deduction categories — Portugal
+# Mirrors the deduções à coleta of the PT declaração de IRS (Modelo 3) and the
+# e-fatura expense categories that feed them.
+#
+# Authority: Autoridade Tributária e Aduaneira — Portal das Finanças,
+# „Deduções à coleta" e „Despesas dedutíveis à coleta", e o portal e-fatura.
+# Ano fiscal de 2025 (declaração entregue em 2026).
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "pt_despesas_gerais_familiares"
+    name: "Despesas gerais familiares"
+    short_name: "Gerais famil"
+    hint: "Faturas de setores sem regras próprias, comunicadas à AT"
+  - key: "pt_despesas_saude"
+    name: "Despesas de saúde e com seguros de saúde"
+    short_name: "Saúde"
+    hint: "Consultas, medicamentos, exames e prémios de seguros de saúde"
+  - key: "pt_despesas_educacao"
+    name: "Despesas de educação e formação"
+    short_name: "Educação"
+    hint: "Creches, escolas, propinas, manuais e formação profissional"
+  - key: "pt_encargos_imoveis"
+    name: "Encargos com rendas de habitação ou juros"
+    short_name: "Habitação"
+    hint: "Rendas de habitação permanente ou juros de crédito à habitação"
+  - key: "pt_encargos_lares"
+    name: "Encargos com lares"
+    short_name: "Lares"
+    hint: "Apoio domiciliário, lares e instituições de apoio à terceira idade"
+  - key: "pt_pensoes_alimentos"
+    name: "Pensões de alimentos"
+    short_name: "Alimentos"
+    hint: "Pensões de alimentos fixadas por sentença ou acordo homologado"
+  - key: "pt_iva_faturas"
+    name: "IVA suportado em faturas"
+    short_name: "IVA faturas"
+    hint: "IVA de restauração, cabeleireiros, oficinas, veterinários e ginásios"
+  - key: "pt_donativos"
+    name: "Donativos em dinheiro"
+    short_name: "Donativos"
+    hint: "Donativos a entidades beneficiárias do regime do mecenato"
+  - key: "pt_ppr"
+    name: "Planos poupança-reforma (PPR)"
+    short_name: "PPR"
+    hint: "Entregas em planos poupança-reforma"
+  - key: "pt_regime_publico_capitalizacao"
+    name: "Regime público de capitalização"
+    short_name: "Cap. público"
+    hint: "Entregas para certificados de reforma do regime público"
+  - key: "pt_encargos_trabalho_domestico"
+    name: "Encargos com trabalho doméstico"
+    short_name: "Trab.domést."
+    hint: "Contribuições para a segurança social do pessoal doméstico"
+  - key: "pt_reabilitacao_imoveis"
+    name: "Encargos com recuperação e reabilitação de imóveis"
+    short_name: "Reabilitação"
+    hint: "Obras em imóveis situados em áreas de reabilitação urbana"
+  - key: "pt_deficiencia"
+    name: "Despesas de educação e reabilitação de pessoas com deficiência"
+    short_name: "Deficiência"
+    hint: "Despesas de educação e reabilitação por incapacidade permanente"
+  - key: "pt_seguros_vida"
+    name: "Prémios de seguros de vida ou contribuições para mutualistas"
+    short_name: "Seguro vida"
+    hint: "Prémios de seguros de vida e contribuições para mutualistas"

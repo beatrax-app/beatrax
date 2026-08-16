@@ -1,9 +1,25 @@
 # Bank-fee classification rules — Germany. Schema: see bank-fees/nl.yaml.
+#
+# "ENTGELT" may only match as a whole word (plus its -E/-S inflections):
+# a bare substring also hits ENTGELTFORTZAHLUNG (statutory sick pay) and
+# ENTGELTUMWANDLUNG (salary sacrifice), turning incoming salary lines into
+# bank fees. Regex bodies are SINGLE-quoted so the backslash reaches the
+# matcher instead of being read as a YAML escape.
+#
+# Umlaut terms are listed as literal substrings, never inside a `regex:`:
+# CorpusPatternMatcher compiles `#...#i` without the /u modifier, so `\b`
+# and case-folding are ASCII-only there, while the literal path uses
+# mb_stripos and folds Ü/ü correctly. Both the umlaut and the transliterated
+# spelling appear, since German banks print either.
 entries:
-  - pattern: "ENTGELT"
+  - pattern: 'regex:ENTGELT(E|S)?\b'
     name: "Bankgebühr"
-  - pattern: "KONTOFUHRUNG"
+  - pattern: "KONTOFÜHRUNG"
     name: "Kontoführungsgebühr"
+  - pattern: "KONTOFUEHRUNG"
+    name: "Kontoführungsgebühr"
+  - pattern: "GEBÜHREN"
+    name: "Bankgebühr"
   - pattern: "GEBUEHREN"
     name: "Bankgebühr"
   - pattern: "ZINSEN"

@@ -1,0 +1,57 @@
+# Bank-fee classification rules — Moldova (Romanian and Russian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Moldovan banks publish the same tariff in both languages — maib issues a
+# "Registrul tarifelor şi comisioanelor" and a "Реестр тарифов и комиссий",
+# and Energbank labels its cost lines "Комиссия за обслуживание" — so both
+# are listed. The Russian terms are plain substrings, never a `regex:`: the
+# matcher runs PCRE without /u, so \b only recognises ASCII word characters
+# and a Cyrillic word can never be fenced by one, while the literal path
+# goes through mb_stripos and folds multibyte case correctly.
+#
+# The Romanian entries stay ASCII for a reason peculiar to this market. A
+# single maib tariff mixes both Unicode spellings of the same letters: 232
+# occurrences of "ţ" (U+0163, cedilla) against 70 of "ț" (U+021B, comma
+# below), and 68 of "ş" against 103 of "ș". A literal pattern containing
+# either of those two letters silently matches only half the corpus, so
+# every Romanian rule here is built from letters that have one encoding —
+# "COMISIO", "DESERVIREA CONTULUI", "PENALITAT", "DOBANDA" — with `\b` doing
+# the fencing. "DOBÂNDĂ" is the exception and is safe as a literal: "â" and
+# "ă" have no competing codepoint, and it is listed beside the ASCII
+# `\bDOBANDA\b` because Moldovan core banking prints the word both ways.
+#
+# The trap on the Russian side is "КОМИССИЯ", which cannot be used bare: it
+# is also the ordinary word for a committee or medical board, and Moldovan
+# banks advertise "Без комиссии" (no fee) all over their product pages. The
+# entry is therefore anchored as "КОМИССИЯ ЗА", the form the tariffs use for
+# what is actually being charged. On the Romanian side the excluded word is
+# "TAXĂ": maib does charge a "taxa" for certificates, but in Moldovan data
+# the word overwhelmingly means a state, road or notary fee, which is
+# government spending rather than a bank charge. Regex bodies must be
+# SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Worked from: BC "MAIB" S.A. "Registrul tarifelor şi comisioanelor aplicate
+# ... la serviciile prestate clienţilor retail" (in force 01.07.2026) and
+# its Russian counterpart, plus Energbank's Russian retail pages.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bCOMISIO'
+    name: "Comision bancar"
+  - pattern: "DESERVIREA CONTULUI"
+    name: "Comision de deservire a contului"
+  - pattern: 'regex:\bPENALITAT'
+    name: "Penalitate"
+  - pattern: 'regex:\bDOBANDA\b'
+    name: "Dobândă"
+  - pattern: "DOBÂNDĂ"
+    name: "Dobândă"
+  - pattern: "КОМИССИЯ ЗА"
+    name: "Комиссия"

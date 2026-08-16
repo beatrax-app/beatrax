@@ -1,0 +1,160 @@
+# Merchant corpus — North Macedonia. region defaults to MK.
+# Schema: see merchants/nl.yaml. Cyrillic market — descriptors are normally
+# printed in Latin transliteration, so patterns use the Latin form.
+entries:
+  - pattern: "MAKEDONSKI TELEKOM"
+    name: "Makedonski Telekom"
+    category: "Internet & Phone"
+    website: "https://www.telekom.mk/"
+    support_url: "https://www.telekom.mk/kontakt-privatni"
+  - pattern: "A1 MAKEDONIJA"
+    name: "A1 Makedonija"
+    category: "Internet & Phone"
+    website: "https://www.a1.mk/"
+  - pattern: "NEOTEL"
+    name: "Neotel"
+    category: "Internet & Phone"
+    website: "https://neotel.mk/"
+  - pattern: "TELEKABEL"
+    name: "Telekabel"
+    category: "Internet & Phone"
+    website: "https://telekabel.com.mk/"
+  - pattern: "EVN MAKEDONIJA"
+    name: "EVN Makedonija"
+    category: "Utilities"
+    website: "https://www.evn.mk/"
+    support_phone: "023205000"
+  - { pattern: "EVN HOME", name: "EVN Home", category: "Utilities" }
+  - pattern: "BEG SNABDUVANJE"
+    name: "Snabduvanje so toplina BEG"
+    category: "Utilities"
+    website: "https://beg-snabduvanje.com.mk/"
+  - { pattern: "TOPLIFIKACIJA", name: "Toplifikacija Skopje", category: "Utilities" }
+  - pattern: "VODOVOD SKOPJE"
+    name: "JP Vodovod i kanalizacija Skopje"
+    category: "Utilities"
+    website: "https://www.vodovod-skopje.com.mk/"
+  - { pattern: "KOMUNALNA HIGIENA", name: "JP Komunalna higiena Skopje", category: "Utilities" }
+  - pattern: "MAKPETROL"
+    name: "Makpetrol"
+    category: "Fuel"
+    website: "https://www.makpetrol.com.mk/"
+    support_email: "contact@makpetrol.com.mk"
+  - { pattern: "JSP SKOPJE", name: "JSP Skopje", category: "Public transport" }
+  - pattern: "MAKEDONSKI ZELEZNICI"
+    name: "Makedonski Železnici Transport"
+    category: "Public transport"
+    website: "https://mzt.mk/"
+  - pattern: "TRIGLAV OSIGURUVANJE"
+    name: "Triglav Osiguruvanje"
+    category: "Insurance"
+    website: "https://www.triglav.mk/"
+    support_phone: "0800 02222"
+    support_email: "contact@triglav.mk"
+  - pattern: "SAVA OSIGURUVANJE"
+    name: "Sava Osiguruvanje"
+    category: "Insurance"
+    website: "https://mk.sava.insure/"
+  - pattern: "EUROLINK"
+    name: "Eurolink Osiguruvanje"
+    category: "Insurance"
+    website: "https://eurolink.com.mk/"
+    support_email: "eurolink@eurolink.com.mk"
+  - { pattern: "TINEKS", name: "Tinex", category: "Groceries" }
+  - pattern: "KAM MARKET"
+    name: "KAM Market"
+    category: "Groceries"
+    website: "https://www.kam.com.mk/"
+  - pattern: "STOKOMAK"
+    name: "Stokomak"
+    category: "Groceries"
+    website: "https://stokomak.com.mk/"
+  - pattern: "VERO MARKETI"
+    name: "Vero"
+    category: "Groceries"
+    website: "https://vero.com.mk/"
+  - pattern: "ZEGIN"
+    name: "Zegin"
+    category: "Health"
+    website: "https://www.zegin.com.mk/"
+  - pattern: "REPLEK"
+    name: "Replek"
+    category: "Health"
+    website: "https://replek.mk/"
+  - pattern: "NOVA MAKEDONIJA"
+    name: "Nova Makedonija"
+    category: "Subscriptions"
+    website: "https://novamakedonija.com.mk/"
+  - pattern: "SLOBODEN PECAT"
+    name: "Sloboden Pečat"
+    category: "Subscriptions"
+    website: "https://www.slobodenpecat.mk/"
+  - pattern: "MKHOST"
+    name: "MKhost"
+    category: "Cloud / Software"
+    website: "https://mkhost.com/"
+  - pattern: "UNET"
+    name: "Unet"
+    category: "Cloud / Software"
+    website: "https://unet.com.mk/"
+    support_email: "info@unet.com.mk"
+  - pattern: "MARNET"
+    name: "MARnet (.mk registry)"
+    category: "Cloud / Software"
+    website: "https://marnet.mk/"
+  - pattern: "CRVEN KRST"
+    name: "Crven Krst na Severna Makedonija"
+    category: "Donations"
+    website: "https://ckrm.org.mk/"
+  - { pattern: "KOMERCIJALNA BANKA SKOPJE", name: "Komercijalna banka Skopje", category: "Fees & charges", website: "https://www.kb.mk/" }
+  - { pattern: "STOPANSKA BANKA", name: "Stopanska banka", category: "Fees & charges", website: "https://www.stb.com.mk/" }
+  - { pattern: "NLB BANKA", name: "NLB Banka Skopje", category: "Fees & charges", website: "https://www.nlb.mk/" }
+  - { pattern: "HALKBANK SKOPJE", name: "Halkbank AD Skopje", category: "Fees & charges", website: "https://www.halkbank.mk/" }
+  - { pattern: "SPARKASSE BANK MAKEDONIJA", name: "Sparkasse Bank Makedonija", category: "Fees & charges", website: "https://www.sparkasse.mk/" }
+  - { pattern: "PROCREDIT BANK SKOPJE", name: "ProCredit Bank Skopje", category: "Fees & charges", website: "https://www.pcb.mk/" }
+  - { pattern: "TTK BANKA", name: "TTK Banka", category: "Fees & charges", website: "https://www.ttk.com.mk/" }
+  - { pattern: "UNIBANKA", name: "UNIBank", category: "Fees & charges" }
+  - { pattern: "SAVA PENZISKO", name: "Sava penzisko društvo", category: "Insurance", website: "https://www.sava-penzisko.mk/" }
+  - { pattern: "TRIGLAV PENZISKO", name: "Triglav penzisko društvo", category: "Insurance", website: "https://www.triglavpenzisko.mk/" }
+  - { pattern: "KB PRVO PENZISKO", name: "KB Prvo penzisko društvo", category: "Insurance" }
+  - { pattern: "CROATIA OSIGURUVANJE", name: "Croatia Osiguruvanje", category: "Insurance" }
+  - { pattern: "MAKEDONIJA OSIGURUVANJE", name: "Makedonija Osiguruvanje", category: "Insurance" }
+  - { pattern: "HALK OSIGURUVANJE", name: "Halk Osiguruvanje", category: "Insurance" }
+  - { pattern: "WINNER OSIGURUVANJE", name: "Winner Osiguruvanje", category: "Insurance" }
+  - { pattern: "REMEDIKA", name: "Re-Medika", category: "Healthcare", website: "https://remedika.com.mk/" }
+  - { pattern: "ACIBADEM SISTINA", name: "Acibadem Sistina", category: "Healthcare", website: "https://acibademsistina.mk/" }
+  - { pattern: "ZAN MITREV", name: "Zan Mitrev Clinic", category: "Healthcare", website: "https://www.zanmitrev.com/" }
+  - { pattern: "EVROPA LEK", name: "Evropa", category: "Health", website: "https://evropa.com.mk/" }
+  - { pattern: "ALKALOID", name: "Alkaloid", category: "Health", website: "https://alkaloid.com.mk/" }
+  - { pattern: "DRISLA", name: "Drisla Skopje", category: "Utilities", website: "https://drisla.mk/" }
+  - { pattern: "EVN ELEKTRODISTRIBUCIJA", name: "EVN Elektrodistribucija", category: "Utilities", website: "https://www.evn.mk/" }
+  - { pattern: "MAKPETROL GAS", name: "Makpetrol", category: "Fuel", website: "https://www.makpetrol.com.mk/" }
+  - { pattern: "OKTA SKOPJE", name: "OKTA", category: "Fuel" }
+  - { pattern: "RAMSTORE", name: "Ramstore", category: "Groceries", website: "https://ramstore.com.mk/" }
+  - { pattern: "ZITO LUKS", name: "Žito Luks", category: "Groceries", website: "https://zitoluks.com.mk/" }
+  - { pattern: "REPTIL MARKETI", name: "Reptil Marketi", category: "Groceries" }
+  - { pattern: "VECER SKOPJE", name: "Večer", category: "Subscriptions", website: "https://vecer.mk/" }
+  - { pattern: "KANAL 77", name: "Kanal 77", category: "Subscriptions", website: "https://kanal77.mk/" }
+  - { pattern: "POSTA NA SEVERNA MAKEDONIJA", name: "Pošta na Severna Makedonija", category: "Other", website: "https://www.posta.com.mk/" }
+  - { pattern: "NEPTUN", name: "Neptun", category: "Other", website: "https://www.neptun.mk/" }
+  - { pattern: "SETEC", name: "Setec", category: "Other", website: "https://www.setec.mk/" }
+  - { pattern: "TEHNOMARKET", name: "Tehnomarket", category: "Other", website: "https://www.tehnomarket.com.mk/" }
+  - { pattern: "SPORT VISION MK", name: "Sport Vision", category: "Other", website: "https://www.sportvision.mk/" }
+  - { pattern: "CINEPLEXX SKOPJE", name: "Cineplexx", category: "Other", website: "https://www.cineplexx.mk/" }
+  - { pattern: "ANHOCH", name: "Anhoch", category: "Other" }
+  - { pattern: "MAKTEL", name: "Makedonski Telekom", category: "Internet & Phone", website: "https://www.telekom.mk/" }
+  - { pattern: "ONE.VIP", name: "A1 Makedonija", category: "Internet & Phone", website: "https://www.a1.mk/" }
+  - { pattern: "SILK ROAD BANK", name: "Silk Road Bank", category: "Fees & charges", website: "https://www.silkroadbank.com.mk/" }
+  - { pattern: "CENTRALNA KOOPERATIVNA BANKA", name: "Centralna Kooperativna Banka Skopje", category: "Fees & charges", website: "https://www.ccbank.mk/" }
+  - { pattern: "MBANK SKOPJE", name: "mBank", category: "Fees & charges", website: "https://mbank.mk/" }
+  - { pattern: "GRAWE MAKEDONIJA", name: "GRAWE Makedonija", category: "Insurance", website: "https://www.grawe.mk/" }
+  - { pattern: "SIGAL UNIQA", name: "Sigal UNIQA", category: "Insurance", website: "https://sigal.com.mk/" }
+  - { pattern: "INEL SKOPJE", name: "Inel", category: "Internet & Phone", website: "https://www.inel.mk/" }
+  - { pattern: "VITAMINKA", name: "Vitaminka", category: "Groceries", website: "https://vitaminka.company/" }
+  - { pattern: "PIVARA SKOPJE", name: "Pivara Skopje", category: "Other" }
+  - { pattern: "KOMFI ANGEL", name: "Komfi Angel", category: "Other" }
+  - { pattern: "SKOPJE CITY MALL", name: "Skopje City Mall", category: "Other" }
+  - { pattern: "DINERS CLUB MAKEDONIJA", name: "Diners Club Makedonija", category: "Fees & charges" }
+  - { pattern: "MAKEDONSKI TELEKOM AD", name: "Makedonski Telekom", category: "Internet & Phone", website: "https://www.telekom.mk/" }
+  - { pattern: "EVN HOME DOOEL", name: "EVN Home", category: "Utilities" }
+  - { pattern: "A1 MAKEDONIJA DOOEL", name: "A1 Makedonija", category: "Internet & Phone", website: "https://www.a1.mk/" }

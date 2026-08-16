@@ -1,15 +1,519 @@
 # Merchant corpus — Sweden. region defaults to SE. Schema: see merchants/nl.yaml.
 entries:
-  - { pattern: 'regex:\bICA\b', name: "ICA", category: "Groceries" }
-  - { pattern: "COOP", name: "Coop", category: "Groceries" }
-  - { pattern: "WILLYS", name: "Willys", category: "Groceries" }
-  - { pattern: "HEMKOP", name: "Hemköp", category: "Groceries" }
-  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
-  - { pattern: "OKQ8", name: "OKQ8", category: "Fuel" }
-  - { pattern: "PREEM", name: "Preem", category: "Fuel" }
-  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
-  - { pattern: "TELE2", name: "Tele2", category: "Internet & Phone" }
-  - { pattern: "TELENOR", name: "Telenor", category: "Internet & Phone" }
-  - { pattern: "VIAPLAY", name: "Viaplay", category: "Streaming" }
-  - { pattern: "SL ACCESS", name: "SL", category: "Public transport" }
-  - { pattern: "FOODORA", name: "Foodora", category: "Eating out" }
+  - pattern: "ACTIC"
+    name: "Actic"
+    category: "Memberships"
+    website: "https://www.actic.se"
+    support_url: "https://www.actic.se/kontakt/"
+  - pattern: "AFTONBLADET"
+    name: "Aftonbladet"
+    category: "Subscriptions"
+    website: "https://www.aftonbladet.se"
+  - pattern: "AGRIA"
+    name: "Agria Djurförsäkring"
+    category: "Insurance"
+    website: "https://www.agria.se"
+    cancel_url: "https://www.agria.se/forsakring/avsluta-forsakringen/"
+    support_url: "https://www.agria.se/kontakta-oss"
+    support_phone: "0775-88 88 88"
+  - pattern: "AIMO PARK"
+    name: "Aimo Park"
+    category: "Transport"
+    website: "https://www.aimopark.se"
+  - { pattern: "APOTEA", name: "Apotea", category: "Health" }
+  - pattern: "APOTEK HJARTAT"
+    name: "Apotek Hjärtat"
+    category: "Health"
+    website: "https://www.apotekhjartat.se"
+  - pattern: "APOTEKET"
+    name: "Apoteket"
+    category: "Health"
+    website: "https://www.apoteket.se"
+    support_url: "https://www.apoteket.se/kundservice"
+    support_phone: "0771-450 450"
+    support_email: "kundservice@apoteket.se"
+  - pattern: "BAHNHOF"
+    name: "Bahnhof"
+    category: "Internet & Phone"
+    website: "https://bahnhof.se"
+  - pattern: "BARNCANCERFONDEN"
+    name: "Barncancerfonden"
+    category: "Donations"
+    website: "https://www.barncancerfonden.se"
+  - pattern: "BILPROVNINGEN"
+    name: "Bilprovningen"
+    category: "Car maintenance"
+    website: "https://www.bilprovningen.se"
+  - pattern: "BIXIA"
+    name: "Bixia"
+    category: "Utilities"
+    website: "https://bixia.se"
+    cancel_url: "https://bixia.se/kundservice/villkor-blanketter-och-rattigheter/uppsagning"
+  - pattern: "BONNIER NEWS"
+    name: "Bonnier News"
+    category: "Subscriptions"
+    website: "https://www.bonniernews.se"
+    support_url: "https://konto.bonniernews.se"
+  - pattern: "BOOKBEAT"
+    name: "BookBeat"
+    category: "Streaming"
+    website: "https://www.bookbeat.com/se"
+  - pattern: "BOXER TV"
+    name: "Boxer"
+    category: "Streaming"
+    website: "https://www.boxer.se"
+    cancel_url: "https://www.boxer.se/support/abonnemang/uppsagning"
+    support_url: "https://www.boxer.se/support"
+  - pattern: "BREDBAND2"
+    name: "Bredband2"
+    category: "Internet & Phone"
+    website: "https://www.bredband2.com"
+    cancel_url: "https://www.bredband2.com/privat/kundservice/uppsagning/"
+    support_url: "https://www.bredband2.com/privat/kundservice"
+  - pattern: "CANCERFONDEN"
+    name: "Cancerfonden"
+    category: "Donations"
+    website: "https://www.cancerfonden.se"
+  - pattern: "CITY GROSS"
+    name: "City Gross"
+    category: "Groceries"
+    website: "https://www.citygross.se"
+    support_url: "https://www.citygross.se/kundservice"
+  - pattern: "COMVIQ"
+    name: "Comviq"
+    category: "Internet & Phone"
+    website: "https://www.comviq.se"
+    cancel_url: "https://www.comviq.se/hjalp/avtal-och-villkor/uppsagning-av-abonnemang"
+    support_url: "https://www.comviq.se/hjalp/kontakta-oss"
+  - pattern: "DAGENS INDUSTRI"
+    name: "Dagens industri"
+    category: "Subscriptions"
+    website: "https://www.di.se"
+  - pattern: "DAGENS NYHETER"
+    name: "Dagens Nyheter"
+    category: "Subscriptions"
+    website: "https://www.dn.se"
+  - pattern: "DINA FORSAKRINGAR"
+    name: "Dina Försäkringar"
+    category: "Insurance"
+    website: "https://www.dina.se"
+    support_url: "https://www.dina.se/kundservice"
+  - pattern: "EASYPARK"
+    name: "EasyPark"
+    category: "Transport"
+    website: "https://www.easypark.com/sv-se"
+  - pattern: "ELLEVIO"
+    name: "Ellevio"
+    category: "Utilities"
+    website: "https://www.ellevio.se"
+    support_url: "https://www.ellevio.se/kundservice"
+  - pattern: "EXPRESSEN"
+    name: "Expressen"
+    category: "Subscriptions"
+    website: "https://www.expressen.se"
+  - pattern: "FITNESS24SEVEN"
+    name: "Fitness24Seven"
+    category: "Memberships"
+    website: "https://www.fitness24seven.com"
+  - pattern: "FOLKSAM"
+    name: "Folksam"
+    category: "Insurance"
+    website: "https://www.folksam.se"
+    cancel_url: "https://www.folksam.se/kundservice/sjalvhjalp/saga-upp-forsakring"
+    support_url: "https://www.folksam.se/kundservice"
+    support_phone: "0771-950 950"
+  - pattern: "FOODORA"
+    name: "Foodora"
+    category: "Eating out"
+    website: "https://www.foodora.se"
+  - pattern: "FORTNOX"
+    name: "Fortnox"
+    category: "Cloud / Software"
+    website: "https://www.fortnox.se"
+  - pattern: "FORTUM"
+    name: "Fortum"
+    category: "Utilities"
+    website: "https://www.fortum.se"
+    cancel_url: "https://www.fortum.com/se/el/kundservice/kontakta-oss/saga-upp-elavtal"
+  - pattern: "FRISKIS"
+    name: "Friskis&Svettis"
+    category: "Memberships"
+    website: "https://www.friskis.com/sv-se"
+  - pattern: "GOTEBORG ENERGI"
+    name: "Göteborg Energi"
+    category: "Utilities"
+    website: "https://www.goteborgenergi.se"
+    cancel_url: "https://www.goteborgenergi.se/kundservice/flytta/teckna-sag-upp-elnat"
+    support_url: "https://www.goteborgenergi.se/kundservice"
+  - pattern: "GREENELY"
+    name: "Greenely"
+    category: "Utilities"
+    website: "https://www.greenely.com"
+  - pattern: "HALEBOP"
+    name: "Halebop"
+    category: "Internet & Phone"
+    website: "https://www.halebop.se"
+  - pattern: "HALLON"
+    name: "Hallon"
+    category: "Internet & Phone"
+    website: "https://www.hallon.se"
+    cancel_url: "https://www.hallon.se/support/abonnemang/avsluta-abonnemang"
+    support_url: "https://www.hallon.se/support"
+  - pattern: "HEDVIG"
+    name: "Hedvig"
+    category: "Insurance"
+    website: "https://www.hedvig.com"
+    cancel_url: "https://www.hedvig.com/se/hjalp/saga-upp"
+  - pattern: "HEMKOP"
+    name: "Hemköp"
+    category: "Groceries"
+    website: "https://www.hemkop.se"
+  - pattern: "HI3G ACCESS"
+    name: "Tre (3)"
+    category: "Internet & Phone"
+    website: "https://www.tre.se"
+    support_url: "https://www.tre.se/support"
+  - pattern: "HJART-LUNGFONDEN"
+    name: "Hjärt-Lungfonden"
+    category: "Donations"
+    website: "https://www.hjart-lungfonden.se"
+  - pattern: "HYRESGASTFORENINGEN"
+    name: "Hyresgästföreningen"
+    category: "Housing"
+    website: "https://www.hyresgastforeningen.se"
+  - pattern: "IF SKADEFORSAKRING"
+    name: "If"
+    category: "Insurance"
+    website: "https://www.if.se"
+    support_url: "https://www.if.se/privat/kundservice"
+  - pattern: "JAMTKRAFT"
+    name: "Jämtkraft"
+    category: "Utilities"
+    website: "https://www.jamtkraft.se"
+    cancel_url: "https://www.jamtkraft.se/kundservice/flyttanmalan/uppsagning/"
+  - pattern: "KRAFTRINGEN"
+    name: "Kraftringen"
+    category: "Utilities"
+    website: "https://www.kraftringen.se"
+  - pattern: "KRONANS APOTEK"
+    name: "Kronans Apotek"
+    category: "Health"
+    website: "https://www.kronansapotek.se"
+  - pattern: "LAKARE UTAN GRANSER"
+    name: "Läkare Utan Gränser"
+    category: "Donations"
+    website: "https://lakareutangranser.se"
+  - pattern: "LANSFORSAKRINGAR"
+    name: "Länsförsäkringar"
+    category: "Insurance"
+    website: "https://www.lansforsakringar.se"
+    cancel_url: "https://www.lansforsakringar.se/privat/forsakring/saga-upp-forsakring/"
+  - pattern: "LINAS MATKASSE"
+    name: "Linas Matkasse"
+    category: "Groceries"
+    website: "https://www.linasmatkasse.se"
+    support_url: "https://www.linasmatkasse.se/kontaktuppgifter"
+  - pattern: "LOOPIA"
+    name: "Loopia"
+    category: "Cloud / Software"
+    website: "https://www.loopia.se"
+    support_url: "https://www.loopia.se/support/"
+  - pattern: "MALARENERGI"
+    name: "Mälarenergi"
+    category: "Utilities"
+    website: "https://www.malarenergi.se"
+    cancel_url: "https://www.malarenergi.se/kunskapsbanken/el/saga-upp-elavtal/"
+  - pattern: "MATHEM"
+    name: "Mathem"
+    category: "Groceries"
+    website: "https://www.mathem.se"
+    support_url: "https://www.mathem.se/se/about/kundtjanst/"
+  - pattern: "MODERNA FORSAKRINGAR"
+    name: "Moderna Försäkringar"
+    category: "Insurance"
+    website: "https://www.modernaforsakringar.se"
+  - pattern: "NATURSKYDDSFORENINGEN"
+    name: "Naturskyddsföreningen"
+    category: "Donations"
+    website: "https://www.naturskyddsforeningen.se"
+  - pattern: "NEXTORY"
+    name: "Nextory"
+    category: "Streaming"
+    website: "https://nextory.com/se"
+  - pattern: "NORDIC WELLNESS"
+    name: "Nordic Wellness"
+    category: "Memberships"
+    website: "https://nordicwellness.se"
+    support_url: "https://nordicwellness.se/kundservice"
+  - pattern: "OKQ8"
+    name: "OKQ8"
+    category: "Fuel"
+    website: "https://www.okq8.se"
+  - pattern: "ORESUNDSKRAFT"
+    name: "Öresundskraft"
+    category: "Utilities"
+    website: "https://www.oresundskraft.se"
+  - pattern: "OWNIT"
+    name: "Ownit"
+    category: "Internet & Phone"
+    website: "https://www.ownit.se"
+    support_url: "https://www.ownit.se/kundservice/privat"
+  - pattern: "PARKSTER"
+    name: "Parkster"
+    category: "Transport"
+    website: "https://www.parkster.com"
+  - pattern: "PREEM"
+    name: "Preem"
+    category: "Fuel"
+    website: "https://www.preem.se"
+  - pattern: "RADDA BARNEN"
+    name: "Rädda Barnen"
+    category: "Donations"
+    website: "https://www.raddabarnen.se"
+    support_url: "https://www.raddabarnen.se/om-oss/kontakta-oss/"
+  - pattern: "RIKSBYGGEN"
+    name: "Riksbyggen"
+    category: "Housing"
+    website: "https://www.riksbyggen.se"
+  - pattern: "RODA KORSET"
+    name: "Svenska Röda Korset"
+    category: "Donations"
+    website: "https://www.rodakorset.se"
+    support_url: "https://www.rodakorset.se/om-oss/kontakta-oss/"
+  - pattern: "SECTOR ALARM"
+    name: "Sector Alarm"
+    category: "Memberships"
+    website: "https://www.sectoralarm.se"
+    support_url: "https://www.sectoralarm.se/kundservice/"
+  - pattern: "SJ AB"
+    name: "SJ"
+    category: "Public transport"
+    website: "https://www.sj.se"
+  - pattern: "SKANDIA"
+    name: "Skandia"
+    category: "Insurance"
+    website: "https://www.skandia.se"
+    support_url: "https://www.skandia.se/kundservice"
+  - pattern: "SKANETRAFIKEN"
+    name: "Skånetrafiken"
+    category: "Public transport"
+    website: "https://www.skanetrafiken.se"
+  - pattern: "SKELLEFTEA KRAFT"
+    name: "Skellefteå Kraft"
+    category: "Utilities"
+    website: "https://www.skekraft.se"
+    cancel_url: "https://www.skekraft.se/sv/faq/jag-vill-saga-upp-mitt-elavtal-hur-gor-jag/"
+  - pattern: "SL ACCESS"
+    name: "SL"
+    category: "Public transport"
+    website: "https://sl.se"
+  - pattern: "SNALLTAGET"
+    name: "Snälltåget"
+    category: "Public transport"
+    website: "https://www.snalltaget.se"
+  - pattern: "STOCKHOLM EXERGI"
+    name: "Stockholm Exergi"
+    category: "Utilities"
+    website: "https://www.stockholmexergi.se"
+    cancel_url: "https://www.stockholmexergi.se/kundservice/uppsagningsblanketter/"
+  - pattern: "SVENSKA DAGBLADET"
+    name: "Svenska Dagbladet"
+    category: "Subscriptions"
+    website: "https://www.svd.se"
+    support_url: "https://support.svd.se/s/"
+  - pattern: "SVENSKA SPEL"
+    name: "Svenska Spel"
+    category: "Other"
+    website: "https://www.svenskaspel.se"
+  - pattern: "SYSTEMBOLAGET"
+    name: "Systembolaget"
+    category: "Groceries"
+    website: "https://www.systembolaget.se"
+  - pattern: "TRYGG HANSA"
+    name: "Trygg-Hansa"
+    category: "Insurance"
+    website: "https://www.trygghansa.se"
+    cancel_url: "https://www.trygghansa.se/kundservice/avsluta"
+  - pattern: "TRYGG-HANSA"
+    name: "Trygg-Hansa"
+    category: "Insurance"
+    website: "https://www.trygghansa.se"
+    cancel_url: "https://www.trygghansa.se/kundservice/avsluta"
+    support_url: "https://www.trygghansa.se/kundservice"
+    support_phone: "0771-111 110"
+  - pattern: "TV4 PLAY"
+    name: "TV4 Play"
+    category: "Streaming"
+    website: "https://www.tv4play.se"
+  - pattern: "UNICEF SVERIGE"
+    name: "UNICEF Sverige"
+    category: "Donations"
+    website: "https://unicef.se"
+  - pattern: "VASTTRAFIK"
+    name: "Västtrafik"
+    category: "Public transport"
+    website: "https://www.vasttrafik.se"
+  - pattern: "VIAPLAY"
+    name: "Viaplay"
+    category: "Streaming"
+    website: "https://viaplay.se"
+  - pattern: "VIMLA"
+    name: "Vimla"
+    category: "Internet & Phone"
+    website: "https://vimla.se"
+  - pattern: "VISMA"
+    name: "Visma"
+    category: "Cloud / Software"
+    website: "https://www.visma.com"
+  - pattern: "VOI TECHNOLOGY"
+    name: "Voi"
+    category: "Transport"
+    website: "https://www.voi.com/sv"
+  - pattern: "WILLYS"
+    name: "Willys"
+    category: "Groceries"
+    website: "https://www.willys.se"
+  - pattern: "regex:\\bICA\\b"
+    name: "ICA"
+    category: "Groceries"
+    website: "https://www.ica.se"
+  # --- Banks, savings and investment platforms (recurring fees) ---
+  - { pattern: "SWEDBANK SVERIGE", name: "Swedbank", category: "Fees & charges", website: "https://www.swedbank.se" }
+  - { pattern: "SEB SVERIGE", name: "SEB", category: "Fees & charges", website: "https://seb.se" }
+  - { pattern: "HANDELSBANKEN", name: "Handelsbanken", category: "Fees & charges", website: "https://www.handelsbanken.se/sv/" }
+  - { pattern: "NORDEA", name: "Nordea", category: "Fees & charges", website: "https://www.nordea.se" }
+  - { pattern: "ICA BANKEN", name: "ICA Banken", category: "Fees & charges" }
+  - { pattern: "AVANZA", name: "Avanza", category: "Fees & charges", website: "https://www.avanza.se/start" }
+  - { pattern: "NORDNET SVERIGE", name: "Nordnet", category: "Fees & charges", website: "https://www.nordnet.se" }
+  - { pattern: "RESURS BANK", name: "Resurs Bank", category: "Fees & charges", website: "https://www.resursbank.se" }
+  - { pattern: "MARGINALEN", name: "Marginalen Bank", category: "Fees & charges", website: "https://www.marginalen.se/privat/" }
+  - { pattern: "LYSA", name: "Lysa", category: "Fees & charges", website: "https://www.lysa.se" }
+  - { pattern: "regex:\\bAMF\\b", name: "AMF", category: "Insurance", website: "https://www.amf.se" }
+  - { pattern: "ALECTA", name: "Alecta", category: "Insurance", website: "https://www.alecta.se" }
+  - { pattern: "SPP PENSION", name: "SPP", category: "Insurance", website: "https://www.spp.se" }
+  # --- More insurance ---
+  - { pattern: "SVEDEA", name: "Svedea", category: "Insurance", website: "https://www.svedea.se" }
+  - { pattern: "SVELAND", name: "Sveland Djurförsäkringar", category: "Insurance", website: "https://sveland.se" }
+  - { pattern: "TRAFIKFORSAKRINGSFORENINGEN", name: "Trafikförsäkringsföreningen", category: "Insurance", website: "https://www.tff.se" }
+  # --- More energy, water and waste ---
+  - { pattern: "UMEA ENERGI", name: "Umeå Energi", category: "Utilities", website: "https://www.umeaenergi.se" }
+  - { pattern: "LULEA ENERGI", name: "Luleå Energi", category: "Utilities", website: "https://www.luleaenergi.se" }
+  - { pattern: "KARLSTADS ENERGI", name: "Karlstads Energi", category: "Utilities", website: "https://karlstadsenergi.se" }
+  - { pattern: "BORAS ENERGI", name: "Borås Energi och Miljö", category: "Utilities", website: "https://borasem.se" }
+  - { pattern: "ESKILSTUNA ENERGI", name: "Eskilstuna Energi och Miljö", category: "Utilities", website: "https://www.eem.se/privat" }
+  - { pattern: "VARBERG ENERGI", name: "Varberg Energi", category: "Utilities", website: "https://www.varbergenergi.se" }
+  - { pattern: "DALAKRAFT", name: "Dala Kraft", category: "Utilities", website: "https://www.dalakraft.se" }
+  - { pattern: "GODEL", name: "GodEl", category: "Utilities", website: "https://godel.se" }
+  - { pattern: "STOCKHOLM VATTEN", name: "Stockholm Vatten och Avfall", category: "Utilities", website: "https://www.stockholmvattenochavfall.se" }
+  - { pattern: "SYSAV", name: "Sysav", category: "Utilities", website: "https://www.sysav.se" }
+  - { pattern: "RENOVA", name: "Renova", category: "Utilities", website: "https://www.renova.se" }
+  # --- More telecom / ISP / TV ---
+  - { pattern: "FELLO", name: "Fello", category: "Internet & Phone", website: "https://www.fello.se" }
+  - { pattern: "TELNESS", name: "Telness", category: "Internet & Phone", website: "https://www.telness.se" }
+  - { pattern: "SAPPA", name: "Sappa", category: "Internet & Phone", website: "https://sappa.se" }
+  - { pattern: "SF ANYTIME", name: "SF Anytime", category: "Streaming", website: "https://www.sfanytime.com/sv" }
+  - { pattern: "FILMSTADEN", name: "Filmstaden", category: "Other" }
+  # --- More newspapers / magazines ---
+  - { pattern: "SYDSVENSKAN", name: "Sydsvenskan", category: "Subscriptions", website: "https://www.sydsvenskan.se" }
+  - { pattern: "GOTEBORGS-POSTEN", name: "Göteborgs-Posten", category: "Subscriptions", website: "https://www.gp.se" }
+  - { pattern: "UPSALA NYA TIDNING", name: "Upsala Nya Tidning", category: "Subscriptions", website: "https://www.unt.se" }
+  - { pattern: "HELSINGBORGS DAGBLAD", name: "Helsingborgs Dagblad", category: "Subscriptions", website: "https://www.hd.se" }
+  - { pattern: "NORRKOPINGS TIDNINGAR", name: "Norrköpings Tidningar", category: "Subscriptions", website: "https://www.nt.se" }
+  - { pattern: "CORREN", name: "Corren", category: "Subscriptions", website: "https://www.corren.se" }
+  - { pattern: "TIDNINGEN FOKUS", name: "Fokus", category: "Subscriptions", website: "https://www.fokus.se" }
+  # --- Unions, a-kassa and professional bodies (monthly dues) ---
+  - { pattern: "UNIONEN", name: "Unionen", category: "Memberships", website: "https://www.unionen.se" }
+  - { pattern: "IF METALL", name: "IF Metall", category: "Memberships", website: "https://www.ifmetall.se" }
+  - { pattern: "KOMMUNAL", name: "Kommunal", category: "Memberships", website: "https://www.kommunal.se" }
+  - { pattern: "FACKFORBUNDET VISION", name: "Vision", category: "Memberships", website: "https://vision.se" }
+  - { pattern: "AKADEMIKERFORBUNDET SSR", name: "Akademikerförbundet SSR", category: "Memberships", website: "https://akademssr.se" }
+  - { pattern: "SVERIGES INGENJORER", name: "Sveriges Ingenjörer", category: "Memberships", website: "https://www.sverigesingenjorer.se" }
+  - { pattern: "VARDFORBUNDET", name: "Vårdförbundet", category: "Memberships", website: "https://www.vardforbundet.se" }
+  - { pattern: "HANDELSANSTALLDAS", name: "Handels", category: "Memberships", website: "https://www.handels.se" }
+  - { pattern: "BYGGNADS", name: "Byggnads", category: "Memberships", website: "https://www.byggnads.se" }
+  - { pattern: "regex:\\bSEKO\\b", name: "Seko", category: "Memberships", website: "https://www.seko.se" }
+  - { pattern: "FACKFORBUNDET ST", name: "Fackförbundet ST", category: "Memberships", website: "https://www.st.org" }
+  - { pattern: "AKAVIA", name: "Akavia", category: "Memberships", website: "https://www.akavia.se" }
+  - { pattern: "AKADEMIKERNAS A-KASSA", name: "Akademikernas a-kassa", category: "Memberships", website: "https://www.akademikernasakassa.se" }
+  - { pattern: "ALFAKASSAN", name: "Alfakassan", category: "Memberships", website: "https://alfakassan.se" }
+  - { pattern: "VILLAAGARNA", name: "Villaägarna", category: "Memberships", website: "https://www.villaagarna.se" }
+  - { pattern: "FASTIGHETSAGARNA", name: "Fastighetsägarna", category: "Memberships", website: "https://www.fastighetsagarna.se" }
+  # --- More charities ---
+  - { pattern: "AMNESTY SVERIGE", name: "Amnesty Sverige", category: "Donations", website: "https://www.amnesty.se" }
+  - { pattern: "PLAN INTERNATIONAL SVERIGE", name: "Plan International Sverige", category: "Donations", website: "https://plansverige.org" }
+  - { pattern: "SOS BARNBYAR", name: "SOS Barnbyar", category: "Donations", website: "https://sos-barnbyar.se" }
+  - { pattern: "ERIKSHJALPEN", name: "Erikshjälpen", category: "Donations", website: "https://erikshjalpen.se" }
+  - { pattern: "STADSMISSIONEN", name: "Stadsmissionen", category: "Donations", website: "https://www.stadsmissionen.se" }
+  - { pattern: "DJURENS RATT", name: "Djurens Rätt", category: "Donations", website: "https://djurensratt.se" }
+  - { pattern: "LAKARMISSIONEN", name: "Läkarmissionen", category: "Donations", website: "https://www.lakarmissionen.se" }
+  - { pattern: "ACTIONAID", name: "ActionAid", category: "Donations", website: "https://actionaid.se" }
+  # --- Regional public transport ---
+  - { pattern: "UPPLANDS LOKALTRAFIK", name: "UL", category: "Public transport", website: "https://www.ul.se" }
+  - { pattern: "OSTGOTATRAFIKEN", name: "Östgötatrafiken", category: "Public transport", website: "https://www.ostgotatrafiken.se" }
+  - { pattern: "VARMLANDSTRAFIK", name: "Värmlandstrafik", category: "Public transport", website: "https://www.varmlandstrafik.se" }
+  - { pattern: "JONKOPINGS LANSTRAFIK", name: "Jönköpings Länstrafik", category: "Public transport", website: "https://www.jlt.se" }
+  - { pattern: "BLEKINGETRAFIKEN", name: "Blekingetrafiken", category: "Public transport", website: "https://www.blekingetrafiken.se" }
+  - { pattern: "HALLANDSTRAFIKEN", name: "Hallandstrafiken", category: "Public transport", website: "https://www.hallandstrafiken.se" }
+  - { pattern: "KALMAR LANSTRAFIK", name: "Kalmar Länstrafik", category: "Public transport", website: "https://www.klt.se" }
+  - { pattern: "SORMLANDSTRAFIKEN", name: "Sörmlandstrafiken", category: "Public transport", website: "https://sormlandstrafiken.se" }
+  - { pattern: "X-TRAFIK", name: "X-trafik", category: "Public transport", website: "https://xtrafik.se" }
+  - { pattern: "DALATRAFIK", name: "Dalatrafik", category: "Public transport", website: "https://www.dalatrafik.se" }
+  - { pattern: "NORRTAG", name: "Norrtåg", category: "Public transport", website: "https://norrtag.se" }
+  - { pattern: "MALARDALSTRAFIK", name: "Mälartåg", category: "Public transport", website: "https://www.malardalstrafik.se" }
+  - { pattern: "ORESUNDSTAG", name: "Öresundståg", category: "Public transport", website: "https://www.oresundstag.se" }
+  - { pattern: "FLYGBUSSARNA", name: "Flygbussarna", category: "Public transport" }
+  # --- Air, sea and EV charging ---
+  - { pattern: "SAS SCANDINAVIAN", name: "SAS", category: "Transport" }
+  - { pattern: "BRAATHENS", name: "BRA — Braathens Regional Airlines", category: "Transport", website: "https://www.braathens.com" }
+  - { pattern: "STENA LINE SVERIGE", name: "Stena Line", category: "Transport", website: "https://www.stenaline.se" }
+  - { pattern: "DESTINATION GOTLAND", name: "Destination Gotland", category: "Transport", website: "https://www.destinationgotland.se" }
+  - { pattern: "ORESUNDSLINJEN", name: "ForSea / Öresundslinjen", category: "Transport", website: "https://www.oresundslinjen.se" }
+  - { pattern: "MER SVERIGE", name: "Mer", category: "Transport", website: "https://mer.eco" }
+  - { pattern: "RECHARGE", name: "Recharge", category: "Transport", website: "https://rechargeinfra.com" }
+  # --- Fuel ---
+  - { pattern: "ST1", name: "St1", category: "Fuel", website: "https://st1.se" }
+  - { pattern: "regex:\\bINGO\\b", name: "Ingo", category: "Fuel", website: "https://www.ingo.se" }
+  - { pattern: "QSTAR", name: "Qstar", category: "Fuel", website: "https://qstar.se" }
+  - { pattern: "TANKA", name: "Tanka", category: "Fuel", website: "https://www.tanka.se" }
+  # --- High-frequency retail ---
+  - { pattern: "AHLENS", name: "Åhléns", category: "Other", website: "https://www.ahlens.se" }
+  - { pattern: "CLAS OHLSON", name: "Clas Ohlson", category: "Other", website: "https://www.clasohlson.com/se/" }
+  - { pattern: "JULA", name: "Jula", category: "Housing" }
+  - { pattern: "BILTEMA", name: "Biltema", category: "Car maintenance", website: "https://www.biltema.se" }
+  - { pattern: "RUSTA", name: "Rusta", category: "Other", website: "https://www.rusta.com/sv-se" }
+  - { pattern: "ELGIGANTEN", name: "Elgiganten", category: "Other" }
+  - { pattern: "NETONNET", name: "NetOnNet", category: "Other", website: "https://www.netonnet.se" }
+  - { pattern: "KJELL & COMPANY", name: "Kjell & Company", category: "Other", website: "https://www.kjell.com/se" }
+  - { pattern: "BAUHAUS SVERIGE", name: "Bauhaus", category: "Housing", website: "https://www.bauhaus.se" }
+  - { pattern: "BYGGMAX", name: "Byggmax", category: "Housing", website: "https://www.byggmax.se" }
+  - { pattern: "HORNBACH SVERIGE", name: "Hornbach", category: "Housing", website: "https://www.hornbach.se" }
+  - { pattern: "GRANNGARDEN", name: "Granngården", category: "Other", website: "https://www.granngarden.se" }
+  - { pattern: "BLOMSTERLANDET", name: "Blomsterlandet", category: "Other", website: "https://www.blomsterlandet.se" }
+  - { pattern: "PLANTAGEN", name: "Plantagen", category: "Other", website: "https://plantagen.se/se" }
+  - { pattern: "STADIUM", name: "Stadium", category: "Other", website: "https://www.stadium.se" }
+  - { pattern: "regex:\\bXXL\\b", name: "XXL", category: "Other", website: "https://www.xxl.se" }
+  - { pattern: "INTERSPORT SVERIGE", name: "Intersport", category: "Other", website: "https://www.intersport.se" }
+  - { pattern: "LINDEX", name: "Lindex", category: "Other" }
+  - { pattern: "KAPPAHL", name: "KappAhl", category: "Other", website: "https://www.kappahl.com/en-us" }
+  - { pattern: "GINA TRICOT", name: "Gina Tricot", category: "Other" }
+  - { pattern: "ELLOS", name: "Ellos", category: "Other", website: "https://www.ellos.se" }
+  - { pattern: "BOOZT", name: "Boozt", category: "Other" }
+  - { pattern: "ARKEN ZOO", name: "Arken Zoo", category: "Other", website: "https://www.arkenzoo.se" }
+  - { pattern: "MUSTI", name: "Musti", category: "Other", website: "https://www.mustigroup.com" }
+  - { pattern: "MATSMART", name: "Matsmart", category: "Groceries", website: "https://www.matsmart.se" }
+  - { pattern: "ADLIBRIS", name: "Adlibris", category: "Other" }
+  - { pattern: "BOKUS", name: "Bokus", category: "Other" }
+  # --- Restaurants, coffee and convenience ---
+  - { pattern: "MAX BURGERS", name: "Max Burgers", category: "Eating out", website: "https://www.maxburgers.com" }
+  - { pattern: "ESPRESSO HOUSE", name: "Espresso House", category: "Eating out", website: "https://espressohouse.com" }
+  - { pattern: "WAYNES COFFEE", name: "Wayne's Coffee", category: "Eating out", website: "https://www.waynescoffee.se" }
+  - { pattern: "O'LEARYS", name: "O'Learys", category: "Eating out", website: "https://olearys.com/sv-se/" }
+  - { pattern: "PRESSBYRAN", name: "Pressbyrån", category: "Groceries", website: "https://www.pressbyran.se" }
+  - { pattern: "7-ELEVEN SVERIGE", name: "7-Eleven", category: "Groceries", website: "https://7-eleven.se" }
+  # --- Post and delivery ---
+  - { pattern: "POSTNORD", name: "PostNord", category: "Fees & charges" }
+  - { pattern: "BUDBEE", name: "Budbee", category: "Fees & charges", website: "https://budbee.com" }
+  - { pattern: "INSTABOX", name: "Instabox", category: "Fees & charges", website: "https://instabox.com" }
+  # --- Government / fees ---
+  - { pattern: "SKATTEVERKET", name: "Skatteverket", category: "Fees & charges", website: "https://www.skatteverket.se" }
+  - { pattern: "KRONOFOGDEN", name: "Kronofogden", category: "Fees & charges", website: "https://www.kronofogden.se" }

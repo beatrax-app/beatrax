@@ -1,0 +1,53 @@
+# Bank-fee classification rules — Monaco (French).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Monaco has no separate retail banking vocabulary. Its banks sit inside the
+# French banking framework — CFM Indosuez Wealth (Monaco) hands its
+# depositors the French Fonds de Garantie des Dépôts et de Résolution fact
+# sheet — and the branches that do the Principality's day-to-day retail
+# banking are French, so they print the French standardised fee labels. That
+# was checked rather than assumed: the Monegasque institutions themselves
+# are private banks that publish no retail tariff brochure.
+#
+# All bodies are ASCII, so no accented letter reaches a regex — the matcher
+# runs PCRE without /u and `#i` case-folds ASCII only, which is also why the
+# interest entry is the accent-free "INTERETS" that core banking prints
+# rather than "intérêts".
+#
+# Two traps. "COTISATION" is NOT used bare, unlike fr.yaml: in French
+# household data a "cotisation mutuelle", "cotisation syndicale" or
+# "cotisation" to an association is an ordinary outgoing subscription, so
+# the entry is anchored to the card ("COTISATION CARTE", the form the tariff
+# brochures use for "Cotisation carte Visa ..."). "FRAIS" is not used bare
+# either — "frais de port", "frais de dossier" and "frais de livraison" ride
+# along on ordinary invoices — so it survives only in the full phrases.
+# `\bAGIOS\b` and `\bCOMMISSION\b` are fenced on both sides so neither can
+# fire inside a longer token. Regex bodies must be SINGLE-quoted in YAML so
+# the backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Worked from: BRED Banque Populaire "Conditions et tarifs applicables aux
+# particuliers" 2026 — the standardised French extrait des tarifs wording
+# ("Frais de tenue de compte", "Commission d'intervention", "Cotisation
+# carte ...", "Intérêts débiteurs", "agios") — and CFM Indosuez Wealth
+# (Monaco) client documentation.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "FRAIS DE TENUE DE COMPTE"
+    name: "Frais de tenue de compte"
+  - pattern: "FRAIS BANCAIRES"
+    name: "Frais bancaires"
+  - pattern: "COTISATION CARTE"
+    name: "Cotisation carte bancaire"
+  - pattern: 'regex:\bCOMMISSION\b'
+    name: "Commission"
+  - pattern: 'regex:\bAGIOS\b'
+    name: "Agios"
+  - pattern: 'regex:\bINTERETS\b'
+    name: "Intérêts"

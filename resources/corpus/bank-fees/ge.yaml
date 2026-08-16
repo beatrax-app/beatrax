@@ -1,0 +1,44 @@
+# Bank-fee classification rules — Georgia (Georgian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# No `regex:` entries here: the matcher runs PCRE without /u, so \b only
+# recognises ASCII word characters and a Georgian word can never be fenced
+# by one. Georgian terms are plain substrings instead — those go through
+# mb_stripos, which is multibyte-aware, and Georgian has no letter case for
+# the folding to get wrong. Nothing English is added even though Georgian
+# banks label some card lines in English: these rules are matched against
+# EVERY user's descriptions regardless of country, so a bare "COMMISSION"
+# or "SERVICE FEE" here would be a worldwide rule, and cy.yaml already
+# carries the fenced English form.
+#
+# Georgian suffixes attach to the end of the stem, so a substring is the
+# right shape: "საკომისიო" also covers "საკომისიოს" and "საკომისიოში". The
+# trap is the other two candidates. "მომსახურება" (service) can never be
+# used alone — Terabank's own tariff talks about paying a "სამედიცინო
+# მომსახურების გადასახადი", a medical service bill, which is ordinary
+# spending — so it appears only anchored to the account. "საფასური"
+# (charge) is left out entirely for the same reason: the same document uses
+# it for "სწავლების საფასური", a tuition fee. "ჯარიმა" (fine) is left out
+# because a Georgian traffic fine belongs to the government rules, not here.
+#
+# Any regex body added later must be SINGLE-quoted in YAML so the backslash
+# reaches the matcher instead of being read as a YAML escape.
+#
+# Worked from: Terabank "მომსახურების ტარიფები" (retail service tariffs,
+# ფიზიკური პირები) and the National Bank of Georgia "საგადახდო
+# მომსახურების ტარიფები" tariff-comparison service list.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "საკომისიო"
+    name: "საკომისიო"
+  - pattern: "ანგარიშის მომსახურება"
+    name: "ანგარიშის მომსახურების საკომისიო"
+  - pattern: "ვალუტის კონვერტაცია"
+    name: "კონვერტაციის საკომისიო"

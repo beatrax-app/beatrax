@@ -1,0 +1,114 @@
+# Support-resource corpus — Türkiye (TR merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Turkcell
+    type: merchant
+    cancel_url: "https://www.turkcell.com.tr/destek/hattiniz/abonelik-islemleri/hattimi-nasil-iptal-ettirebilirim"
+    support_url: "https://www.turkcell.com.tr/hakkimizda/iletisim/bize-ulasin/detay"
+    notes: "Hat iptali Turkcell İletişim Merkezleri'nden, 532 müşteri hizmetlerinden (diğer operatörlerden 0532 532 0000), 0216 633 07 27 faksına kimlik görseli göndererek, Turkcell uygulamasında Yardım > Evraklı Talepler > Hat İptali adımından veya kayıtlı e-postadan hatiptal@turkcell.com.tr adresine yapılıyor; aynı talep e-Devlet'teki Turkcell Abonelik Fesih Başvurusu hizmetinden de iletilebiliyor."
+  - name: Türk Telekom
+    type: merchant
+    cancel_url: "https://www.turktelekom.com.tr/yardim/bireysel-mobil/faturali-hat-islemleri"
+    support_url: "https://www.turktelekom.com.tr/destek/iletisim/bireysel-musteriler-bize-ulasin"
+    notes: "Online İşlem Merkezi'nden hat iptali için yalnızca ön başvuru yapılabiliyor; talebi 444 1 444'ü arayarak ya da yazılı olarak Türk Telekom ofis/mağaza, e-posta, faks, KEP veya turkiye.gov.tr kanallarından biriyle iletmek gerekiyor ve yazılı talep şirkete ulaştığı tarihten itibaren 7 gün içinde hat iptal ediliyor."
+  - name: Vodafone Türkiye
+    type: merchant
+    cancel_url: "https://www.vodafone.com.tr/yardim/ayarlar/hat-islemleri/hattimi-nasil-iptal-ettirebilirim"
+    support_url: "https://www.vodafone.com.tr/yardim"
+    cheaper_url: "https://www.vodafone.com.tr/yardim/diger/online-islemler/online-islemler-uzerinden-tarifemi-degistirebilir-miyim"
+    notes: "Hat iptal talebi müşteri hizmetleri, Vodafone mağazaları, e-Devlet, web sitesine giriş veya TOBi asistanı üzerinden iletilebiliyor ve ayrıntı için e-Devlet'teki Vodafone Net Abonelik Fesih Başvurusu sayfası gösteriliyor; yardım sayfasına göre hat iptali 24 saatte çözüm hedefinin kapsamı dışında tutuluyor."
+  - name: Turkcell Superonline
+    type: merchant
+    support_url: "https://www.superonline.net/yardim/musteri-islemleri"
+    notes: "Yardım > Müşteri İşlemleri altında Müşterinin El Kitabı, Abonelik ve Kurulum, Hizmet Dondurma, Taşınma, Devir ve Fesih İşlemleri başlıkları toplanıyor; tek başına bir iptal sayfası yayımlanmıyor, buna karşılık e-Devlet'te Superonline Abonelik Fesih Başvurusu hizmeti bulunuyor."
+  - name: TurkNet
+    type: merchant
+    cancel_url: "https://www.turk.net/iptal"
+    support_url: "https://www.turk.net/destek/category/abonelik-islemleri-ve-teknik-destek"
+    cheaper_url: "https://www.turk.net/ogrencilere-internet-paketleri"
+    notes: "İptal başvurusu Online İşlemler, mobil uygulama, e-Devlet (TurkNet Abonelik Fesih Başvurusu), kayıtlı e-postadan iptal-faks@turknet.net.tr, 0212 216 55 60 faksı veya 444 88 75 sesli yanıt üzerinden yapılabiliyor; talep teyit edildikten sonra faturalandırma 24 saat içinde duruyor, hizmet 5 gün sonra sonlanıyor ve TurkNet cayma bedeli almadığını belirtiyor."
+  - name: Enerjisa
+    type: merchant
+    cancel_url: "https://www.enerjisa.com.tr/tr/musteri-islemleri/abonelik-sonlandirma/eviniz"
+    support_url: "https://www.enerjisa.com.tr/tr/enerjisa-hakkinda/iletisim/cagri-merkezimiz"
+    notes: "Elektrik aboneliğini sonlandırma eviniz, iş yeriniz ve aydınlatma için ayrı sayfalarda anlatılıyor, sitenin popüler aramalarında abonelik iptali ile itiraz ve şikayet başvurusu bağlantıları veriliyor; e-Devlet'te Enerjisa Başkent ve Enerjisa İstanbul Anadolu için Bireysel Abonelik Fesih Başvurusu hizmeti de var."
+  - name: TV+
+    type: merchant
+    support_url: "https://tvplus.com.tr/destek/sss"
+    notes: "TV+ paketi satın alındığı kanaldan iptal ediliyor: iOS cihazla alınan abonelik App Store'un Abonelikler bölümünden, Android cihazla alınan ise Google Play üzerinden iptal edilmeli; destek için destek@tvplus.com.tr ve 0850 808 0 808 veriliyor."
+  - name: Anadolu Sigorta
+    type: merchant
+    support_url: "https://www.anadolusigorta.com.tr/iletisim"
+    notes: "Poliçe iptali için sitede ayrı bir çevrimiçi sayfa yayımlanmıyor; şikayet, öneri, KVKK kapsamındaki talepler ve diğer istekler iletişim sayfasındaki form, acente ve bölge müdürlüğü bulma araçları ile 0850 724 0850 numarası üzerinden iletiliyor."
+  - name: Axa Sigorta
+    type: merchant
+    support_url: "https://www.axasigorta.com.tr/iletisim"
+    notes: "Çözüm Merkezi'ne iletişim formu doldurularak veya 0850 250 99 99 numarasından ulaşılıyor; poliçe iptali için ayrı bir çevrimiçi akış yayımlanmıyor, sıkça sorulan sorularda ise poliçeye eş ve 24 yaş altı çocukların eklenmesiyle aile indirimi kazanıldığı belirtiliyor."
+  - name: Türkiye Sigorta
+    type: merchant
+    support_url: "https://www.turkiyesigorta.com.tr/yardim-merkezi/iletisim/musteri-hizmetleri"
+    notes: "İstek, öneri ve şikayetler için +90 (850) 202 20 20 ile +90 (850) 402 20 20 numaraları, sigorta faksı (0212) 355 64 64, emeklilik faksı (0212) 310 39 99, KEP adresleri ve online iletişim formu veriliyor; poliçe iptali için sitede ayrı bir sayfa bulunmuyor."
+  - name: AKUT
+    type: merchant
+    cancel_url: "https://www.akut.org.tr/duzenli-bagis-iletisim"
+    support_url: "https://www.akut.org.tr/bagisci-haklari-beyannamesi"
+    notes: "Düzenli bağışı görüşmek, tutarı artırmak, desteği geçici olarak durdurmak ya da tamamen iptal etmek için AKUT'un düzenli bağış e-posta adresine yazmak veya 0 (549) 812 40 90 ile 0 (549) 812 40 91 numaralarını aramak gerekiyor; sitede kendi kendine iptal edilebilen bir ekran yok."
+  - name: LÖSEV
+    type: merchant
+    support_url: "https://www.losev.org.tr/tr/iletisim"
+    notes: "Bağış yöntemleri EFT/IBAN, PTT, SMS ve online bağış olarak sıralanıyor; düzenli bağışı çevrimiçi durdurmak için bir ekran yayımlanmıyor, talepler için +90 312 447 06 60, +90 312 666 00 20, WhatsApp hattı +90 549 761 10 10 ve iletişim formu veriliyor."
+  - name: Garanti BBVA
+    type: merchant
+    support_url: "https://www.garantibbva.com.tr/dijital-bankacilik/musteri-iletisim-merkezi"
+    notes: "Müşteri İletişim Merkezi 444 0 333, yurt dışından +90 212 444 0 333 numarasından aranıyor ve sesle işlem özelliğiyle menüye girmeden temsilciye ulaşılabiliyor; hesap kapatma için sitede ayrı bir çevrimiçi sayfa yayımlanmıyor."
+
+  # --- Government ---
+  - name: e-Devlet Kapısı
+    type: government
+    help_url: "https://www.turkiye.gov.tr/iletisim?genel=Bilgiler"
+    apply_url: "https://www.turkiye.gov.tr/hizmetler"
+    rights_url: "https://www.turkiye.gov.tr/bilgilendirme?konu=sikcaSorulanlar"
+    phone: "160"
+    notes: "e-Devlet Kapısı Çağrı Merkezi 160 (yurt dışından +90 312 509 00 00), Cumhurbaşkanlığı CİMER 150 numarasından aranıyor ve işaret dili bilen temsilcilerle görüntülü görüşme sunuluyor; elektrik, doğal gaz ve internet aboneliklerinin feshi de bu portaldaki Abonelik Fesih Başvurusu hizmetleriyle yapılıyor."
+  - name: Gelir İdaresi Başkanlığı
+    type: government
+    apply_url: "https://dijital.gib.gov.tr/"
+    phone: "189"
+    notes: "Vergi işlemleri Dijital Vergi Dairesi üzerinden yürütülüyor; MTV ve trafik para cezası, tapu harcı, cep telefonu harcı, pasaport harcı, sürücü belgesi harcı ve yurt dışına çıkış harcı ödemeleri buradan yapılabiliyor, soru ve şikayetler için VİMER 189 Vergi İletişim Merkezi aranıyor."
+  - name: Sosyal Güvenlik Kurumu
+    type: government
+    help_url: "https://www.sgk.gov.tr/iletisim/alo170form"
+    apply_url: "https://www.turkiye.gov.tr/sgk-tescil-ve-hizmet-dokumu"
+    rights_url: "https://www.sgk.gov.tr/content/post/B8664248-0ED2-4D28-AE80-89DF691FD21D/Ilave-Ucret-2022-05-14-09-21-06"
+    phone: "170"
+    notes: "Çalışma Hayatı İletişim Merkezi ALO 170, çalışma hayatı ve sosyal güvenlik hakkındaki soru, öneri, eleştiri, ihbar, şikayet ve başvurular için 7 gün 24 saat aranabiliyor; ilk görüşmede cevaplanamayan talepler kurumlarla iletişime geçilerek en geç 72 saat içinde sonuçlandırılıyor, genel merkez santralı 0 (312) 207 80 00."
+  - name: Türkiye İş Kurumu
+    type: government
+    help_url: "https://www.iskur.gov.tr/iletisim/?q=66"
+    apply_url: "https://www.turkiye.gov.tr/issizlik-odenegi-basvurusu"
+    rights_url: "https://www.iskur.gov.tr/is-arayan/issizlik-sigortasi/issizlik-odenegi/"
+    phone: "444 75 87"
+    notes: "İşsizlik ödeneği için hizmet akdinin feshinden sonraki 30 gün içinde en yakın İŞKUR birimine şahsen ya da iskur.gov.tr, e-Devlet veya İŞKUR mobil üzerinden başvurmak gerekiyor, gecikilen süre toplam hak sahipliği süresinden düşülüyor; şart olarak fesihten önceki son 120 gün hizmet akdine tabi olmak ve son üç yılda en az 600 gün işsizlik sigortası primi ödemiş olmak aranıyor."
+  - name: MHRS
+    type: government
+    help_url: "https://www.turkiye.gov.tr/saglik-bakanligi"
+    apply_url: "https://www.turkiye.gov.tr/saglik-bakanligi-merkezi-hekim-randevu-sistemi"
+    notes: "Hastane ve aile hekimi randevuları Sağlık Bakanlığı'nın Merkezi Hekim Randevu Sistemi'nden alınıyor ve hizmete e-Devlet kimlik doğrulamasıyla giriliyor; aile hekimi bilgisi sorgulama ile aile hekimi değiştirme de aynı portalda sunuluyor."
+  - name: Nüfus ve Vatandaşlık İşleri Genel Müdürlüğü
+    type: government
+    help_url: "https://www.nvi.gov.tr/sss-kimlik-karti"
+    apply_url: "https://www.turkiye.gov.tr/nufus-ve-vatandaslik-isleri-genel-mudurlugu"
+    phone: "199"
+    notes: "Genel Müdürlüğe Alo 199 Çağrı Merkezi'nden ulaşılıyor ve randevu işlemleri ile sıkça sorulan sorular nvi.gov.tr'de konu başlıklarına ayrılmış durumda; adres değişikliği bildirimi, kimlik kartı başvurusu ve nüfus kayıt örneği gibi işlemler e-Devlet'ten yapılıyor, KVKK başvuruları ise en geç otuz gün içinde ücretsiz sonuçlandırılıyor."
+  - name: KYK
+    type: government
+    help_url: "https://www.gsb.gov.tr/tr/sayfa/39-iletisim"
+    apply_url: "https://www.turkiye.gov.tr/kyk-burs-kredi-onay-islemleri"
+    rights_url: "https://www.turkiye.gov.tr/kyk-geri-odeme-erteleme-basvuru"
+    phone: "444 0 472"
+    notes: "Burs/kredi taahhütnamesi onayı, öğrenim ve katkı kredisi ile burs sorgulama, nakil ve iptal başvuruları ile yurt işlemleri e-Devlet'teki KYK hizmetlerinden yürütülüyor; kredi geri ödemesi için erteleme başvurusu da aynı yerden yapılıyor, Gençlik ve Spor Bakanlığı santralı 444 0 472."

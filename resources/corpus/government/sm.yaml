@@ -1,0 +1,80 @@
+# Government / public-agency classification rules — San Marino.
+# A microstate: the distinct public-body set is small and is not padded.
+# Patterns stay San Marino-specific — generic Italian public-sector words
+# would collide with ordinary Italian counterparties.
+#
+# Sources: gov.sm (Congresso di Stato and the Segreterie di Stato), the
+# Ufficio Tributario and Ufficio Attività Economiche pages on gov.sm,
+# iss.sm (Istituto per la Sicurezza Sociale and the Ospedale di Stato),
+# aass.sm, aasfn.sm, tribunale.sm, bcsm.sm, unirsm.sm, gendarmeria.sm.
+#
+# The honest list stays short: San Marino has one tax office, one social
+# security institute, one court, one central bank, one university and nine
+# Castelli. Nothing here is a generic Italian public-sector word, because
+# those would fire on ordinary Italian counterparties.
+# Rejected as too collision-prone: bare "ISS" (also the space station and a
+# facilities-management group), "IGR", "MONOFASE" on its own (it is the
+# electrical term for single-phase), and "CAMERA DI COMMERCIO".
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "UFFICIO TRIBUTARIO"
+    name: "Ufficio Tributario"
+  - pattern: "regex:ISTITUTO (PER LA|DI) SICUREZZA SOCIALE"
+    name: "Istituto per la Sicurezza Sociale (ISS)"
+  - pattern: "REPUBBLICA DI SAN MARINO"
+    name: "Repubblica di San Marino"
+  - pattern: "SEGRETERIA DI STATO"
+    name: "Segreteria di Stato"
+  # The nine Castelli are San Marino's local government.
+  - pattern: "GIUNTA DI CASTELLO"
+    name: "Giunta di Castello"
+  - pattern: "UFFICIO REGISTRO AUTOMEZZI"
+    name: "Ufficio Registro Automezzi"
+  # AASS is the state-owned utility and bills households directly.
+  - pattern: "AZIENDA AUTONOMA DI STATO"
+    name: "AASS"
+  - pattern: 'regex:\bAASS\b'
+    name: "AASS"
+  - pattern: 'regex:\bAASFN\b'
+    name: "AASFN (filatelica e numismatica)"
+  # --- Government and treasury ------------------------------------------------
+  - pattern: "CONGRESSO DI STATO"
+    name: "Congresso di Stato"
+  # The Eccellentissima Camera is the historic name of the state treasury.
+  - pattern: "ECCELLENTISSIMA CAMERA"
+    name: "Eccellentissima Camera"
+  - pattern: "IMPOSTA MONOFASE"
+    name: "Imposta monofase"
+  - pattern: "IMPOSTA GENERALE SUI REDDITI"
+    name: "Imposta Generale sui Redditi"
+  - pattern: 'regex:\bSMAC\b'
+    name: "SMaC (carta di stato)"
+  # --- Social security, health and labour --------------------------------------
+  - pattern: "OSPEDALE DI STATO"
+    name: "Ospedale di Stato (ISS)"
+  - pattern: "UFFICIO DEL LAVORO"
+    name: "Ufficio del Lavoro"
+  # --- Courts and police ----------------------------------------------------------
+  - pattern: "TRIBUNALE UNICO"
+    name: "Tribunale Unico"
+  - pattern: "GENDARMERIA"
+    name: "Gendarmeria"
+  - pattern: "POLIZIA CIVILE"
+    name: "Polizia Civile"
+  - pattern: "GUARDIA DI ROCCA"
+    name: "Guardia di Rocca"
+  # --- Registries, central bank and university --------------------------------------
+  - pattern: "UFFICIO ATTIVITA ECONOMICHE"
+    name: "Ufficio Attività Economiche"
+  - pattern: "UFFICIO ATTIVITÀ ECONOMICHE"
+    name: "Ufficio Attività Economiche"
+  - pattern: "UFFICIO TECNICO DEL CATASTO"
+    name: "Ufficio Tecnico del Catasto"
+  - pattern: "BANCA CENTRALE DELLA REPUBBLICA DI SAN MARINO"
+    name: "Banca Centrale della Repubblica di San Marino"
+  - pattern: 'regex:\bBCSM\b'
+    name: "Banca Centrale della Repubblica di San Marino"
+  - pattern: "UNIVERSITA DEGLI STUDI DELLA REPUBBLICA DI SAN MARINO"
+    name: "Università degli Studi della Repubblica di San Marino"
+  - pattern: "UNIVERSITÀ DEGLI STUDI DELLA REPUBBLICA DI SAN MARINO"
+    name: "Università degli Studi della Repubblica di San Marino"

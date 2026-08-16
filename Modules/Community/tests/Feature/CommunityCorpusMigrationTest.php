@@ -16,6 +16,34 @@ it('creates the community_merchant_mappings table with the documented schema', f
     ]))->toBeTrue();
 });
 
+it('carries the optional per-merchant contact columns', function (): void {
+    expect(Schema::hasColumns('community_merchant_mappings', [
+        'website', 'cancel_url', 'support_url', 'support_phone', 'support_email',
+    ]))->toBeTrue();
+});
+
+it('accepts a corpus row that carries no contact data at all', function (): void {
+    DB::table('community_merchant_mappings')->insert([
+        'user_id' => null,
+        'pattern' => 'NO-CONTACT-PATTERN',
+        'generalized_pattern' => 'no contact pattern',
+        'name' => 'Merchant Without Contact Data',
+        'category' => null,
+        'region' => 'NL',
+        'contributor' => 'beatrax-bot',
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $row = DB::table('community_merchant_mappings')->where('pattern', 'NO-CONTACT-PATTERN')->first();
+
+    expect($row?->website)->toBeNull();
+    expect($row?->cancel_url)->toBeNull();
+    expect($row?->support_url)->toBeNull();
+    expect($row?->support_phone)->toBeNull();
+    expect($row?->support_email)->toBeNull();
+});
+
 it('accepts a global corpus row with user_id null', function (): void {
     DB::table('community_merchant_mappings')->insert([
         'user_id' => null,

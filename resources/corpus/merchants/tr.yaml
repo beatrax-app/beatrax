@@ -1,0 +1,315 @@
+# Merchant corpus — Turkey. region defaults to TR. Schema: see merchants/nl.yaml.
+# Descriptors printed without Turkish diacritics (ASCII forms preferred).
+entries:
+  - pattern: "TURKCELL"
+    name: "Turkcell"
+    category: "Internet & Phone"
+    website: "https://www.turkcell.com.tr/"
+    support_url: "https://www.turkcell.com.tr/destek"
+  - pattern: "SUPERONLINE"
+    name: "Turkcell Superonline"
+    category: "Internet & Phone"
+    website: "https://www.superonline.net/"
+  - pattern: "TURK TELEKOM"
+    name: "Türk Telekom"
+    category: "Internet & Phone"
+    website: "https://www.turktelekom.com.tr/"
+    support_url: "https://www.turktelekom.com.tr/yardim"
+    support_phone: "444 1 444"
+  - pattern: "TURKNET"
+    name: "TurkNet"
+    category: "Internet & Phone"
+    website: "https://www.turk.net/"
+    support_url: "https://www.turk.net/destek"
+    support_phone: "0850 288 80 81"
+  - pattern: "TIVIBU"
+    name: "Tivibu"
+    category: "Streaming"
+    website: "https://www.tivibu.com.tr/"
+    support_url: "https://www.tivibu.com.tr/iletisim"
+    support_phone: "444 5 375"
+  - pattern: "D-SMART"
+    name: "D-Smart"
+    category: "Streaming"
+    website: "https://www.dsmart.com.tr/"
+  - { pattern: "DIGITURK", name: "Digiturk", category: "Streaming" }
+  - pattern: "EXXEN"
+    name: "Exxen"
+    category: "Streaming"
+    website: "https://www.exxen.com/"
+  - pattern: "FIZY"
+    name: "fizy"
+    category: "Music"
+    website: "https://fizy.com/"
+  - pattern: "ENERJISA"
+    name: "Enerjisa"
+    category: "Utilities"
+    website: "https://www.enerjisa.com.tr/"
+    support_phone: "444 4 372"
+  - pattern: "AYEDAS"
+    name: "AYEDAŞ"
+    category: "Utilities"
+    website: "https://www.ayedas.com.tr/"
+  - { pattern: "BEDAS", name: "BEDAŞ", category: "Utilities" }
+  - pattern: "CK ENERJI"
+    name: "CK Enerji"
+    category: "Utilities"
+    website: "https://www.ckenerji.com.tr/"
+  - pattern: "AKSA DOGALGAZ"
+    name: "Aksa Doğalgaz"
+    category: "Utilities"
+    website: "https://www.aksadogalgaz.com.tr/"
+  - { pattern: "IGDAS", name: "İGDAŞ", category: "Utilities" }
+  - pattern: "IZGAZ"
+    name: "İzgaz"
+    category: "Utilities"
+    website: "https://www.izgaz.com.tr/"
+  - { pattern: "regex:\\bISKI\\b", name: "İSKİ", category: "Utilities" }
+  - pattern: "regex:\\bIZSU\\b"
+    name: "İZSU"
+    category: "Utilities"
+    website: "https://izsu.gov.tr/"
+  - pattern: "ISTANBULKART"
+    name: "İstanbulkart"
+    category: "Public transport"
+    website: "https://www.istanbulkart.istanbul/"
+  - pattern: "METRO ISTANBUL"
+    name: "Metro İstanbul"
+    category: "Public transport"
+    website: "https://www.metro.istanbul/"
+  - pattern: "TCDD"
+    name: "TCDD Taşımacılık"
+    category: "Public transport"
+    website: "https://www.tcddtasimacilik.gov.tr/"
+  - pattern: "BITAKSI"
+    name: "BiTaksi"
+    category: "Transport"
+    website: "https://bitaksi.com/"
+  - pattern: "regex:\\bMARTI\\b"
+    name: "Martı"
+    category: "Transport"
+    website: "https://www.marti.tech/"
+  - pattern: "MIGROS TICARET"
+    name: "Migros Türkiye"
+    category: "Groceries"
+    website: "https://www.migros.com.tr/"
+  - pattern: "regex:\\bBIM\\b"
+    name: "BİM"
+    category: "Groceries"
+    website: "https://www.bim.com.tr/"
+  - { pattern: "CARREFOURSA", name: "CarrefourSA", category: "Groceries" }
+  - { pattern: "A101", name: "A101", category: "Groceries" }
+  - { pattern: "SOK MARKETLER", name: "ŞOK Marketler", category: "Groceries" }
+  - { pattern: "GETIR", name: "Getir", category: "Groceries" }
+  - { pattern: "YEMEKSEPETI", name: "Yemeksepeti", category: "Eating out" }
+  - pattern: "OPET"
+    name: "Opet"
+    category: "Fuel"
+    website: "https://www.opet.com.tr/"
+    support_url: "https://www.opet.com.tr/bize-ulasin"
+  - pattern: "PETROL OFISI"
+    name: "Petrol Ofisi"
+    category: "Fuel"
+    website: "https://www.petrolofisi.com.tr/"
+    support_url: "https://www.petrolofisi.com.tr/iletisim"
+  - pattern: "AYTEMIZ"
+    name: "Aytemiz"
+    category: "Fuel"
+    website: "https://www.aytemiz.com.tr/"
+  - { pattern: "MACFIT", name: "MACFit", category: "Memberships" }
+  - pattern: "B-FIT"
+    name: "b-fit"
+    category: "Memberships"
+    website: "https://www.bfit.com.tr/"
+  - pattern: "ANADOLU SIGORTA"
+    name: "Anadolu Sigorta"
+    category: "Insurance"
+    website: "https://www.anadolusigorta.com.tr/"
+    support_url: "https://www.anadolusigorta.com.tr/iletisim/adresler"
+    support_phone: "0850 724 0850"
+  - pattern: "AKSIGORTA"
+    name: "Aksigorta"
+    category: "Insurance"
+    website: "https://www.aksigorta.com.tr/"
+    support_url: "https://www.aksigorta.com.tr/iletisim"
+    support_phone: "444 27 27"
+  - pattern: "TURKIYE SIGORTA"
+    name: "Türkiye Sigorta"
+    category: "Insurance"
+    website: "https://www.turkiyesigorta.com.tr/"
+  - pattern: "ACIBADEM"
+    name: "Acıbadem Sağlık Grubu"
+    category: "Healthcare"
+    website: "https://www.acibadem.com.tr/"
+  - pattern: "TURHOST"
+    name: "Turhost"
+    category: "Cloud / Software"
+    website: "https://www.turhost.com/"
+  - pattern: "ISIMTESCIL"
+    name: "İsimtescil"
+    category: "Cloud / Software"
+    website: "https://www.isimtescil.net/"
+  - pattern: "HURRIYET"
+    name: "Hürriyet"
+    category: "Subscriptions"
+    website: "https://www.hurriyet.com.tr/"
+  - pattern: "CUMHURIYET"
+    name: "Cumhuriyet"
+    category: "Subscriptions"
+    website: "https://www.cumhuriyet.com.tr/"
+  - { pattern: "AHBAP", name: "Ahbap", category: "Donations" }
+  - pattern: "TEMA VAKFI"
+    name: "TEMA Vakfı"
+    category: "Donations"
+    website: "https://www.tema.org.tr/"
+  - pattern: "LOSEV"
+    name: "LÖSEV"
+    category: "Donations"
+    website: "https://www.losev.org.tr/"
+  - pattern: "KIZILAY"
+    name: "Türk Kızılay"
+    category: "Donations"
+    website: "https://www.kizilay.org.tr/"
+  - { pattern: "AYDEM", name: "Aydem Perakende", category: "Utilities", website: "https://www.aydemperakende.com.tr/" }
+  - { pattern: "GDZ ELEKTRIK", name: "Gdz Elektrik", category: "Utilities", website: "https://www.gdzelektrik.com.tr/" }
+  - { pattern: "UEDAS", name: "UEDAŞ — Uludağ Elektrik", category: "Utilities", website: "https://www.uedas.com.tr/" }
+  - { pattern: "TOROSLAR EDAS", name: "Toroslar EDAŞ", category: "Utilities", website: "https://www.toroslaredas.com.tr/" }
+  - { pattern: "SEDAS", name: "SEDAŞ — Sakarya Elektrik", category: "Utilities", website: "https://www.sedas.com/" }
+  - { pattern: "OSMANGAZI ELEKTRIK", name: "Osmangazi Elektrik", category: "Utilities" }
+  - { pattern: "MERAM EDAS", name: "Meram EDAŞ", category: "Utilities" }
+  - { pattern: "ARAS EDAS", name: "Aras EDAŞ", category: "Utilities" }
+  - { pattern: "DICLE ELEKTRIK", name: "Dicle Elektrik", category: "Utilities" }
+  - { pattern: "PALGAZ", name: "Palgaz", category: "Utilities", website: "https://www.palgaz.com.tr/" }
+  - { pattern: "IZMIRGAZ", name: "İzmirgaz", category: "Utilities" }
+  - { pattern: "ESGAZ", name: "Esgaz", category: "Utilities" }
+  - { pattern: "KAYSERIGAZ", name: "Kayserigaz", category: "Utilities" }
+  - { pattern: "GAZDAS", name: "Gazdaş", category: "Utilities" }
+  - { pattern: "BASKENTGAZ", name: "Başkentgaz", category: "Utilities" }
+  - { pattern: "BUSKI", name: "BUSKİ — Bursa Su", category: "Utilities", website: "https://www.buski.gov.tr/" }
+  - { pattern: "KOSKI", name: "KOSKİ — Konya Su", category: "Utilities", website: "https://www.koski.gov.tr/" }
+  - { pattern: "SASKI", name: "SASKİ — Samsun Su", category: "Utilities", website: "https://www.saski.gov.tr/" }
+  - { pattern: "MESKI", name: "MESKİ — Mersin Su", category: "Utilities", website: "https://www.meski.gov.tr/" }
+  - { pattern: "GASKI", name: "GASKİ — Gaziantep Su", category: "Utilities", website: "https://gaski.gov.tr/" }
+  - { pattern: 'regex:\bASKI\b', name: "ASKİ — Ankara Su", category: "Utilities", website: "https://www.aski.gov.tr/" }
+  - { pattern: 'regex:\bASAT\b', name: "ASAT — Antalya Su", category: "Utilities", website: "https://www.asat.gov.tr/" }
+  - { pattern: "SOMPO SIGORTA", name: "Sompo Sigorta", category: "Insurance", website: "https://www.somposigorta.com.tr/" }
+  - { pattern: "HDI SIGORTA", name: "HDI Sigorta", category: "Insurance", website: "https://www.hdisigorta.com.tr/" }
+  - { pattern: "RAY SIGORTA", name: "Ray Sigorta", category: "Insurance", website: "https://www.raysigorta.com.tr/" }
+  - { pattern: "QUICK SIGORTA", name: "Quick Sigorta", category: "Insurance", website: "https://www.quicksigorta.com/" }
+  - { pattern: "ZURICH SIGORTA", name: "Zurich Sigorta", category: "Insurance", website: "https://zurichsigorta.com.tr/" }
+  - { pattern: "DOGA SIGORTA", name: "Doğa Sigorta", category: "Insurance", website: "https://www.dogasigorta.com/" }
+  - { pattern: "GROUPAMA SIGORTA", name: "Groupama Sigorta", category: "Insurance" }
+  - { pattern: "NEOVA SIGORTA", name: "Neova Sigorta", category: "Insurance" }
+  - { pattern: "ANADOLU HAYAT", name: "Anadolu Hayat Emeklilik", category: "Insurance", website: "https://www.anadoluhayat.com.tr/" }
+  - { pattern: "AGESA", name: "AgeSA Emeklilik", category: "Insurance", website: "https://www.agesa.com.tr/" }
+  - { pattern: "GARANTI BBVA", name: "Garanti BBVA", category: "Fees & charges", website: "https://www.garantibbva.com.tr/" }
+  - { pattern: "IS BANKASI", name: "Türkiye İş Bankası", category: "Fees & charges", website: "https://www.isbank.com.tr/" }
+  - { pattern: "YAPI KREDI", name: "Yapı Kredi", category: "Fees & charges", website: "https://www.yapikredi.com.tr/" }
+  - { pattern: "AKBANK", name: "Akbank", category: "Fees & charges", website: "https://www.akbank.com/" }
+  - { pattern: "ZIRAAT BANKASI", name: "Ziraat Bankası", category: "Fees & charges", website: "https://www.ziraatbank.com.tr/" }
+  - { pattern: "DENIZBANK", name: "DenizBank", category: "Fees & charges", website: "https://www.denizbank.com/" }
+  - { pattern: "HALKBANK", name: "Halkbank", category: "Fees & charges", website: "https://www.halkbank.com.tr/" }
+  - { pattern: "TURK EKONOMI BANKASI", name: "TEB", category: "Fees & charges", website: "https://www.teb.com.tr/" }
+  - { pattern: "VAKIFBANK", name: "VakıfBank", category: "Fees & charges" }
+  - { pattern: "ENPARA", name: "Enpara", category: "Fees & charges", website: "https://www.enpara.com/" }
+  - { pattern: "PAPARA", name: "Papara", category: "Fees & charges" }
+  - { pattern: "MIDAS", name: "Midas", category: "Fees & charges", website: "https://www.getmidas.com/" }
+  - { pattern: "PARIBU", name: "Paribu", category: "Fees & charges", website: "https://www.paribu.com/" }
+  - { pattern: "BTCTURK", name: "BtcTurk", category: "Fees & charges" }
+  - { pattern: "MEDICANA", name: "Medicana Sağlık Grubu", category: "Healthcare", website: "https://www.medicana.com.tr/" }
+  - { pattern: "LIV HOSPITAL", name: "Liv Hospital", category: "Healthcare", website: "https://www.livhospital.com/" }
+  - { pattern: "MEMORIAL", name: "Memorial Sağlık Grubu", category: "Healthcare" }
+  - { pattern: "MEDICAL PARK", name: "Medical Park", category: "Healthcare" }
+  - { pattern: "DUNYAGOZ", name: "Dünyagöz", category: "Healthcare" }
+  - { pattern: "SABAH GAZETESI", name: "Sabah", category: "Subscriptions", website: "https://www.sabah.com.tr/" }
+  - { pattern: "MILLIYET", name: "Milliyet", category: "Subscriptions", website: "https://www.milliyet.com.tr/" }
+  - { pattern: "HABERTURK", name: "Habertürk", category: "Subscriptions", website: "https://www.haberturk.com/" }
+  - { pattern: "SOZCU", name: "Sözcü", category: "Subscriptions", website: "https://www.sozcu.com.tr/" }
+  - { pattern: "BIRGUN", name: "BirGün", category: "Subscriptions", website: "https://www.birgun.net/" }
+  - { pattern: "MEDYASCOPE", name: "Medyascope", category: "Subscriptions", website: "https://medyascope.tv/" }
+  - { pattern: "GAZETE DUVAR", name: "Gazete Duvar", category: "Subscriptions" }
+  - { pattern: "TABII", name: "tabii", category: "Streaming", website: "https://www.tabii.com/" }
+  - { pattern: "TURKSAT", name: "Türksat", category: "Internet & Phone", website: "https://www.turksat.com.tr/" }
+  - { pattern: "PTTCELL", name: "Pttcell", category: "Internet & Phone", website: "https://www.pttcell.com.tr/" }
+  - { pattern: "TOD TV", name: "TOD", category: "Streaming", website: "https://www.todtv.com.tr/" }
+  - { pattern: "PUHUTV", name: "puhutv", category: "Streaming", website: "https://puhutv.com/" }
+  - { pattern: "LOGO YAZILIM", name: "Logo Yazılım", category: "Cloud / Software", website: "https://www.logo.com.tr/" }
+  - { pattern: "NETGSM", name: "Netgsm", category: "Cloud / Software", website: "https://www.netgsm.com.tr/" }
+  - { pattern: "IYZICO", name: "iyzico", category: "Cloud / Software", website: "https://www.iyzico.com/" }
+  - { pattern: "MIKRO YAZILIM", name: "Mikro Yazılım", category: "Cloud / Software" }
+  - { pattern: "PARASUT", name: "Paraşüt", category: "Cloud / Software" }
+  - { pattern: "PRONET", name: "Pronet", category: "Memberships", website: "https://www.pronet.com.tr/" }
+  - { pattern: "KALE ALARM", name: "Kale Alarm", category: "Memberships", website: "https://www.kalealarm.com.tr/" }
+  - { pattern: "SPORTS INTERNATIONAL", name: "Sports International", category: "Memberships", website: "https://www.sportsinternational.com.tr/" }
+  - { pattern: "HILLSIDE CITY CLUB", name: "Hillside City Club", category: "Memberships" }
+  - { pattern: "MARS ATHLETIC", name: "Mars Athletic", category: "Memberships" }
+  - { pattern: "FILE MARKET", name: "File Market", category: "Groceries", website: "https://www.file.com.tr/" }
+  - { pattern: "HAKMAR", name: "Hakmar", category: "Groceries", website: "https://hakmar.com.tr/" }
+  - { pattern: "TARIM KREDI", name: "Tarım Kredi Kooperatif Market", category: "Groceries", website: "https://tarimkredi.org.tr/" }
+  - { pattern: "ONUR MARKET", name: "Onur Market", category: "Groceries" }
+  - { pattern: "MACROCENTER", name: "Macrocenter", category: "Groceries", website: "https://www.macrocenter.com.tr/" }
+  - { pattern: "GRATIS", name: "Gratis", category: "Personal care", website: "https://www.gratis.com/" }
+  - { pattern: "WATSONS", name: "Watsons", category: "Personal care" }
+  - { pattern: "ALPET", name: "Alpet", category: "Fuel", website: "https://www.alpet.com.tr/" }
+  - { pattern: "M OIL", name: "M Oil", category: "Fuel", website: "https://www.moil.com.tr/" }
+  - { pattern: "ESARJ", name: "Eşarj", category: "Fuel", website: "https://esarj.com/" }
+  - { pattern: 'regex:\bZES\b', name: "ZES", category: "Fuel", website: "https://zes.net/" }
+  - { pattern: "SHARZ", name: "Sharz", category: "Fuel" }
+  - { pattern: "VOLTRUN", name: "Voltrun", category: "Fuel" }
+  - { pattern: "KAHVE DUNYASI", name: "Kahve Dünyası", category: "Eating out", website: "https://www.kahvedunyasi.com/" }
+  - { pattern: "SIMIT SARAYI", name: "Simit Sarayı", category: "Eating out", website: "https://www.simitsarayi.com/" }
+  - { pattern: "KOMAGENE", name: "Komagene", category: "Eating out", website: "https://www.komagene.com.tr/" }
+  - { pattern: "TAVUK DUNYASI", name: "Tavuk Dünyası", category: "Eating out", website: "https://www.tavukdunyasi.com/" }
+  - { pattern: "ESPRESSOLAB", name: "EspressoLab", category: "Eating out" }
+  - { pattern: "MADO", name: "Mado", category: "Eating out", website: "https://mado.com.tr/" }
+  - { pattern: "LC WAIKIKI", name: "LC Waikiki", category: "Other", website: "https://www.lcw.com/" }
+  - { pattern: "KOTON", name: "Koton", category: "Other", website: "https://www.koton.com/" }
+  - { pattern: "BEYMEN", name: "Beymen", category: "Other", website: "https://www.beymen.com/" }
+  - { pattern: "DEFACTO", name: "DeFacto", category: "Other" }
+  - { pattern: "BOYNER", name: "Boyner", category: "Other" }
+  - { pattern: "VAKKO", name: "Vakko", category: "Other" }
+  - { pattern: 'regex:\bFLO\b', name: "FLO", category: "Other" }
+  - { pattern: "MADAME COCO", name: "Madame Coco", category: "Other", website: "https://www.madamecoco.com/" }
+  - { pattern: "BAUHAUS", name: "Bauhaus", category: "Other", website: "https://www.bauhaus.com.tr/" }
+  - { pattern: "BELLONA", name: "Bellona", category: "Other", website: "https://www.bellona.com.tr/" }
+  - { pattern: "DOGTAS", name: "Doğtaş", category: "Other", website: "https://www.dogtas.com/" }
+  - { pattern: "ENGLISH HOME", name: "English Home", category: "Other" }
+  - { pattern: "KOCTAS", name: "Koçtaş", category: "Other" }
+  - { pattern: "TEKZEN", name: "Tekzen", category: "Other" }
+  - { pattern: "ISTIKBAL", name: "İstikbal", category: "Other" }
+  - { pattern: "TEPE HOME", name: "Tepe Home", category: "Other" }
+  - { pattern: "VESTEL", name: "Vestel", category: "Other", website: "https://www.vestel.com.tr/" }
+  - { pattern: "TEKNOSA", name: "Teknosa", category: "Other" }
+  - { pattern: "VATAN BILGISAYAR", name: "Vatan Bilgisayar", category: "Other" }
+  - { pattern: "ARCELIK", name: "Arçelik", category: "Other" }
+  - { pattern: "D&R", name: "D&R", category: "Other", website: "https://www.dr.com.tr/" }
+  - { pattern: "IDEFIX", name: "idefix", category: "Other", website: "https://www.idefix.com/" }
+  - { pattern: "BILETINIAL", name: "Biletinial", category: "Other", website: "https://biletinial.com/" }
+  - { pattern: "KITAPYURDU", name: "Kitapyurdu", category: "Other" }
+  - { pattern: "CINEMAXIMUM", name: "Cinemaximum", category: "Other" }
+  - { pattern: "BILETIX", name: "Biletix", category: "Other" }
+  - { pattern: "PASSO", name: "Passo", category: "Other" }
+  - { pattern: "TURKISH AIRLINES", name: "Turkish Airlines", category: "Transport" }
+  - { pattern: "PEGASUS", name: "Pegasus Airlines", category: "Transport" }
+  - { pattern: "SUNEXPRESS", name: "SunExpress", category: "Transport" }
+  - { pattern: "OBILET", name: "obilet", category: "Transport" }
+  - { pattern: "ENUYGUN", name: "Enuygun", category: "Transport" }
+  - { pattern: "ETSTUR", name: "ETS Tur", category: "Transport" }
+  - { pattern: 'regex:\bPTT\b', name: "PTT", category: "Other", website: "https://www.ptt.gov.tr/" }
+  - { pattern: "YURTICI KARGO", name: "Yurtiçi Kargo", category: "Other", website: "https://www.yurticikargo.com/" }
+  - { pattern: "ARAS KARGO", name: "Aras Kargo", category: "Other", website: "https://www.araskargo.com.tr/" }
+  - { pattern: "MNG KARGO", name: "MNG Kargo", category: "Other" }
+  - { pattern: "SURAT KARGO", name: "Sürat Kargo", category: "Other" }
+  - { pattern: "HEPSIJET", name: "HepsiJET", category: "Other" }
+  - { pattern: "ISPARK", name: "İSPARK", category: "Transport" }
+  - { pattern: "ANKARAKART", name: "Ankarakart", category: "Public transport" }
+  - { pattern: "BELBIM", name: "Belbim", category: "Public transport", website: "https://www.belbim.istanbul/" }
+  - { pattern: "TEV VAKFI", name: "Türk Eğitim Vakfı", category: "Donations", website: "https://www.tev.org.tr/" }
+  - { pattern: "TEGV", name: "TEGV", category: "Donations", website: "https://tegv.org/" }
+  - { pattern: "KACUV", name: "KAÇUV", category: "Donations", website: "https://www.kacuv.org/" }
+  - { pattern: "DENIZ FENERI", name: "Deniz Feneri Derneği", category: "Donations", website: "https://www.denizfeneri.org.tr/" }
+  - { pattern: "TURMEPA", name: "TURMEPA", category: "Donations", website: "https://www.turmepa.org.tr/" }
+  - { pattern: 'regex:\bAKUT\b', name: "AKUT", category: "Donations", website: "https://www.akut.org.tr/" }
+  - { pattern: 'regex:\bIHH\b', name: "İHH", category: "Donations", website: "https://ihh.org.tr/" }
+  - { pattern: "TOPLUM GONULLULERI", name: "Toplum Gönüllüleri Vakfı", category: "Donations", website: "https://www.tog.org.tr/" }
+  - { pattern: "DARUSSAFAKA", name: "Darüşşafaka", category: "Donations" }

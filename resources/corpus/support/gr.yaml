@@ -1,0 +1,106 @@
+# Support-resource corpus — Greece (GR merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Nova
+    type: merchant
+    cancel_url: "https://www.nova.gr/eksipiretisi-pelatwn/simvolea-ipiresies/pos-kano-ipanachorisi-apo-ena-simvoleo"
+    support_url: "https://www.nova.gr/eksipiretisi-pelatwn/epikoinonia"
+    notes: "Δωρεάν αίτημα υπαναχώρησης εντός 14 ημερών από την αποδοχή, μόνο για εξ αποστάσεως συμβόλαια και εφόσον δεν έχεις ζητήσει άμεση ενεργοποίηση· υποβάλλεται μέσω live chat με το έντυπο υπαναχώρησης και ένα έγγραφο ταυτοποίησης. Μετά την προθεσμία χρειάζεται έγγραφη καταγγελία προς την εταιρεία με καταβολή του τέλους διακοπής (Γενικοί Όροι, άρθρο 10.1)· τηλεφωνική εξυπηρέτηση οικιακών πελατών στο 13800."
+  - name: ΔΕΗ
+    type: merchant
+    cancel_url: "https://www.dei.gr/el/gia-to-spiti/ypostiriksi-epikoinonia/xrisima-entypa-revma/"
+    support_url: "https://www.dei.gr/el/gia-to-spiti/ypostiriksi-epikoinonia/"
+    cheaper_url: "https://www.dei.gr/el/gia-to-spiti/revma/myhome-4students/"
+    notes: "Η λύση της σύμβασης γίνεται με το έντυπο «Αίτηση καταγγελίας σύμβασης προμήθειας» από τα Χρήσιμα έντυπα· εναλλακτικά διαλέγεις «Λύση σύμβασης» ή «Αίτηση υπαναχώρησης» στη φόρμα «Νέα σύμβαση & αλλαγή προμηθευτή», όπου ζητείται ο 12ψήφιος λογαριασμός συμβολαίου από την πίσω όψη του λογαριασμού. Τηλεφωνικό κέντρο 800 900 1000."
+  - name: Protergia
+    type: merchant
+    cancel_url: "https://www.protergia.gr/eksuphrethsh-pelatwn/aitisi-diakopis-ilektrodotisis/"
+    support_url: "https://www.protergia.gr/eksuphrethsh-pelatwn/epikoinwnia/"
+    notes: "Η διακοπή ηλεκτροδότησης δηλώνεται online — για την άμεση εξυπηρέτηση χρειάζεται να έχεις διαθέσιμα το ΑΦΜ και τον αριθμό παροχής σου. Τηλεφωνική επικοινωνία στο 18311 ή στο +30 210 3448500, Δευτέρα με Σάββατο 08:00-21:00 και Κυριακή & αργίες 09:00-19:00."
+  - name: ΗΡΩΝ
+    type: merchant
+    support_url: "https://heron.gr/customercare/"
+    notes: "Δεν υπάρχει online φόρμα καταγγελίας σύμβασης· η σελίδα εξυπηρέτησης δίνει τα «Χρήσιμα έντυπα» και το click2call για να σε καλέσει εκπρόσωπος. Άμεση εξυπηρέτηση στο 18228 ή στο 213 033 3000, Δευτέρα-Παρασκευή 08:00-21:00 και Σάββατο 09:00-17:00 εκτός επίσημων αργιών."
+  - name: nrg
+    type: merchant
+    cancel_url: "https://www.nrg.gr/el/eksypiretisi-pelaton/hrisimo-yliko"
+    support_url: "https://www.nrg.gr/el/eksypiretisi-pelaton/epikoinonia"
+    notes: "Η καταγγελία γίνεται με έντυπο: στο Χρήσιμο Υλικό υπάρχουν το «Έντυπο καταγγελίας σύμβασης προμήθειας ηλεκτρικής ενέργειας», το αντίστοιχο για φυσικό αέριο και το «Έντυπο δήλωσης υπαναχώρησης» για τις πρώτες ημέρες. Στην αλλαγή προμηθευτή δεν υπάρχει καμία διακοπή ρεύματος, καθώς η αλλαγή είναι καθαρά λογιστική."
+  - name: Εθνική Ασφαλιστική
+    type: merchant
+    support_url: "https://www.ethnikiasfalistiki.gr/support"
+    notes: "Στα «Χρήσιμα έγγραφα» της σελίδας εξυπηρέτησης υπάρχει «Έντυπο ακύρωσης πάγιας εντολής», ώστε να σταματήσει η αυτόματη χρέωση των ασφαλίστρων. Επικοινωνία στο 210 90 99 000 και στο contact@ethnikiasfalistiki.gr, ενώ τα ασφαλιστήριά σου τα βλέπεις στο myethniki."
+  - name: Generali Hellas
+    type: merchant
+    support_url: "https://www.generali.gr/el/epikoinwnia/"
+    notes: "Δεν υπάρχει online ακύρωση ασφαλιστηρίου στο generali.gr· το κέντρο εξυπηρέτησης πελατών απαντά στο 210 8096100 ή στο 18112 και στο info@generali.gr. Τα κεντρικά γραφεία είναι στη Λ. Συγγρού & Λαγουμιτζή 40, Αθήνα 11745."
+  - name: Eurolife FFH
+    type: merchant
+    support_url: "https://www.eurolife.gr/el-GR/ekdilosi-endiaferontos?form-type=contact"
+    notes: "Δεν υπάρχει online διακοπή συμβολαίου· οι τρόποι επικοινωνίας είναι η φόρμα της σελίδας, το τηλέφωνο 210 9303800, το email info@eurolife.gr και ραντεβού στα γραφεία μέσω της εφαρμογής book your visit."
+  - name: INTERAMERICAN
+    type: merchant
+    support_url: "https://www.interamerican.gr/driveon"
+    notes: "Το Driveon είναι η πλατφόρμα άμεσης οδικής βοήθειας: αντί να καλέσεις το τηλεφωνικό κέντρο 1158, δηλώνεις online τα στοιχεία σου, την πινακίδα του οχήματος και το περιστατικό. Η τηλεφωνική αναγγελία στο 1158 παραμένει διαθέσιμη."
+  - name: Holmes Place Greece
+    type: merchant
+    support_url: "https://www.holmesplace.gr/el/contact-us"
+    notes: "Δεν υπάρχει φόρμα διακοπής συνδρομής στο holmesplace.gr — η σελίδα επικοινωνίας παραπέμπει σε τηλέφωνο ή email του συγκεκριμένου club, οπότε εκεί πάει και το αίτημα διακοπής. Οι «Όροι και Προϋποθέσεις Χρήσης» του site καλύπτουν μόνο τη χρήση της ιστοσελίδας, όχι τη συνδρομή."
+  - name: Γιατροί Χωρίς Σύνορα
+    type: merchant
+    support_url: "https://msf.gr/donate/"
+    notes: "Η μηνιαία δωρεά δεν διακόπτεται με κουμπί στον ιστότοπο — επικοινώνησε με το Τμήμα Υποστηρικτών στο (+30) 210 520 0500 ή στο donors@msf.gr. Η ίδια σελίδα δέχεται εφάπαξ ή μηνιαία δωρεά και δίνει IBAN σε Εθνική, Alpha Bank και Τράπεζα Πειραιώς."
+  - name: Το Χαμόγελο του Παιδιού
+    type: merchant
+    support_url: "https://www.hamogelo.gr/gr/el/pou-eimaste/"
+    notes: "Ο ιστότοπος προσφέρει μόνο φόρμες για νέα δωρεά, οπότε για αλλαγή ή διακοπή τακτικής δωρεάς απευθύνεσαι στα κεντρικά γραφεία: Γαρυττού 80, Αγία Παρασκευή 15343, τηλ. 11040, info@hamogelo.gr."
+  - name: Εθνική Τράπεζα
+    type: merchant
+    support_url: "https://www.nbg.gr/el/footer/epikoinwnia"
+    notes: "Δεν υπάρχει σελίδα κλεισίματος λογαριασμού στο nbg.gr· το αίτημα υποβάλλεται με τη φόρμα επικοινωνίας, όπου δηλώνεις αν είσαι ήδη πελάτης και αν έχει προηγηθεί επικοινωνία με την τράπεζα. Το τηλεφωνικό κέντρο είναι το 210 484 8484, ο ίδιος αριθμός και για περιστατικά απάτης."
+  - name: Τράπεζα Πειραιώς
+    type: merchant
+    support_url: "https://www.piraeusbank.gr/el/support/tropoi-epikoinwnias"
+    notes: "Τηλεφωνική εξυπηρέτηση για όλες τις υπηρεσίες στο +30 210 328 8000, Δευτέρα-Παρασκευή 08:00-18:00 εκτός αργιών· οι κάτοικοι εξωτερικού καλούν στο +30 210 3288400 ή γράφουν στο livingabroad@piraeusbank.gr. Η ίδια σελίδα περιγράφει και τη διαδικασία υποβολής παραπόνου."
+
+  # --- Government ---
+  - name: ΑΑΔΕ
+    type: government
+    help_url: "https://www.aade.gr/epikoinonia"
+    apply_url: "https://www1.aade.gr/aadeapps3/myaade"
+    rights_url: "https://www.aade.gr/omogeneis-katoikoi-exoterikoy/dikaiomata-forologoymenon/dikaioma-endikofanoys-kai-dikastikis-prosfygis"
+    phone: "1521"
+    notes: "Η τηλεφωνική εξυπηρέτηση φορολογουμένων my1521 απαντά στο 1521 χωρίς χρέωση για κλήσεις εσωτερικού, εργάσιμες ημέρες 07:00-20:00, ενώ το ερώτημα υποβάλλεται και ψηφιακά στο my1521. Κατά πράξης της φορολογικής αρχής ασκείται ενδικοφανής προσφυγή στη Διεύθυνση Επίλυσης Διαφορών (άρθρο 63 ΚΦΔ, ν.4987/2022)."
+  - name: e-ΕΦΚΑ
+    type: government
+    help_url: "https://www.e-efka.gov.gr/el/epikoinonia"
+    apply_url: "https://www.e-efka.gov.gr/el/ilektronikes-ypiresies-%CE%BF"
+    phone: "1555"
+    notes: "Το τηλεφωνικό κέντρο εξυπηρέτησης πολιτών 1555 απαντά χωρίς χρέωση 24 ώρες το 24ωρο, 7 ημέρες την εβδομάδα, 365 ημέρες τον χρόνο, ενώ γραπτό ερώτημα υποβάλλεται στο 1555.gov.gr. Ραντεβού και ηλεκτρονικό αίτημα εξυπηρέτησης κλείνονται από τις ηλεκτρονικές υπηρεσίες του e-ΕΦΚΑ."
+  - name: ΔΥΠΑ
+    type: government
+    help_url: "https://www.dypa.gov.gr/epikoinonia"
+    apply_url: "https://www.dypa.gov.gr/eggrafh-sto-mhtroo-anergon-deltia-anergias"
+    rights_url: "https://www.dypa.gov.gr/el/anergia-kai-paroxes-asfalishs-misthwtwn"
+    phone: "1555"
+    notes: "Η εγγραφή στο ψηφιακό μητρώο ανέργων και το δελτίο ανεργίας γίνονται ηλεκτρονικά και από εκεί ξεκινά η τακτική επιδότηση ανεργίας· κατά την εγγραφή δηλώνεις προστατευόμενα μέλη και επικαιροποιείς τηλέφωνο και email. Κλήση στο 1555 χωρίς χρέωση, ενώ τα τηλέφωνα του ΚΠΑ2 της περιοχής σου είναι στο dypa.gov.gr/epikoinonia/phone."
+  - name: ΕΟΠΥΥ
+    type: government
+    help_url: "https://www.eopyy.gov.gr/el/epikoinonia/"
+    notes: "Τα αιτήματα ασφαλισμένων υποβάλλονται στο Helpdesk (φόρμα επικοινωνίας) της σελίδας επικοινωνίας, ενώ τα κατά τόπους τηλέφωνα βρίσκονται στα «Χρήσιμα τηλέφωνα». Η προσέλευση στις υπηρεσίες γίνεται μόνο κατόπιν ραντεβού και εφόσον το αίτημα δεν μπορεί να ικανοποιηθεί τηλεπικοινωνιακά."
+  - name: gov.gr
+    type: government
+    help_url: "https://www.gov.gr/el/contact"
+    apply_url: "https://www.gov.gr/el/categories"
+    rights_url: "https://www.gov.gr/el/sdg"
+    notes: "Η Ενιαία Ψηφιακή Πύλη συγκεντρώνει όλες τις δημόσιες υπηρεσίες ανά κατηγορία και σου λέει πού υποβάλλεται η κάθε αίτηση. Ο «Οδηγός για την Ελλάδα» (SDG) εξηγεί δικαιώματα σε εργασία και σύνταξη, καταναλωτή, διαμονή και οχήματα, ενώ η σελίδα «Καταθέστε μια πρόταση» είναι το κανάλι επικοινωνίας με την πύλη."
+  - name: Φοιτητικό στεγαστικό επίδομα
+    type: government
+    apply_url: "https://stegastiko.minedu.gov.gr/"
+    rights_url: "https://www.gov.gr/el/services/1000570/phoitetiko-stegastiko-epidoma"
+    notes: "Οι ηλεκτρονικές αιτήσεις για το στεγαστικό επίδομα φοιτητών ΑΕΙ και καταρτιζόμενων δημόσιων ΙΕΚ υποβάλλονται στο portal.stegastiko.minedu.gov.gr, με πιστοποίηση μέσω TAXIS της ΓΓΠΣΨΔ. Οι αιτήσεις ανοίγουν για ορισμένη περίοδο κάθε ακαδημαϊκό έτος και μετά η υποβολή κλείνει."

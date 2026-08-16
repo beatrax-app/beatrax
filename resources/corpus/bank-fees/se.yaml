@@ -1,0 +1,32 @@
+# Bank-fee classification rules — Sweden (Swedish).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Swedish compounds the fee word onto the service, so `AVGIFT(EN|ER)?\b` is
+# open on the left — it matches "avgift", "avgiften", "avgifter",
+# "årsavgift", "uttagsavgift" and "kontoavgift" — while the trailing \b
+# keeps it off "AVGIFTSFRI" (fee-free). Swedish letters stay out of `regex:`
+# bodies — the matcher runs PCRE without /u, so `#i` case-folds ASCII only
+# and \b never sees "Ä", "Ö" or "Å" as a word character; "RÄNTA" and
+# "RÄNTOR" are therefore plain substrings, which are matched
+# case-insensitively and multibyte-aware, and both forms are listed because
+# neither contains the other. Regex bodies must be SINGLE-quoted in YAML so
+# the backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:AVGIFT(EN|ER)?\b'
+    name: "Avgift"
+  - pattern: "ÖVERTRASSERING"
+    name: "Övertrasseringsavgift"
+  - pattern: "VALUTAPÅSLAG"
+    name: "Valutapåslag"
+  - pattern: "RÄNTA"
+    name: "Ränta"
+  - pattern: "RÄNTOR"
+    name: "Räntor"

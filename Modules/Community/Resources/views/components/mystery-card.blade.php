@@ -17,7 +17,7 @@
         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.card.likely') }}</p>
     </div>
     <div class="text-sm text-slate-700 dark:text-slate-300">
-        <p>{{ Lang::get('community::mystery.card.seen') }} <span style="font-variant-numeric: tabular-nums;">{{ $count }}</span> {{ Lang::get('community::mystery.card.'.($count === 1 ? 'time_one' : 'time_other')) }}</p>
+        <p>{{ Lang::get('community::mystery.card.seen') }} <span style="font-variant-numeric: tabular-nums;">{{ $count }}</span> {{ Lang::choice('community::mystery.card.time', $count) }}</p>
         @if ($lastSeen !== null)
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('community::mystery.card.last_seen', ['date' => \Illuminate\Support\Carbon::parse($lastSeen)->format('d-m-Y')]) }}</p>
         @endif

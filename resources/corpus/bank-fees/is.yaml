@@ -1,0 +1,36 @@
+# Bank-fee classification rules — Iceland (Icelandic).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Icelandic compounds the fee word onto the service, and the bare "GJALD"
+# means "charge" or "currency" in general, so only the full compounds are
+# listed. `VEXTIR\b` is the one `regex:` entry: it is open on the left so it
+# also matches "yfirdráttarvextir" and "dráttarvextir", while the trailing
+# \b keeps it off "VEXTIRNIR" in running text. Icelandic letters stay out of
+# `regex:` bodies — the matcher runs PCRE without /u, so `#i` case-folds
+# ASCII only and \b never sees "Þ", "Ð" or "Æ" as a word character; those
+# terms are plain substrings, which are matched case-insensitively and
+# multibyte-aware. The more specific "YFIRDRÁTTARVEXTIR" is listed before
+# the generic entry so the fee row gets the better display name. Regex
+# bodies must be SINGLE-quoted in YAML so the backslash reaches the matcher
+# instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "ÞJÓNUSTUGJALD"
+    name: "Þjónustugjald"
+  - pattern: "FÆRSLUGJALD"
+    name: "Færslugjald"
+  - pattern: "ÚTTEKTARGJALD"
+    name: "Úttektargjald"
+  - pattern: "ÁRGJALD"
+    name: "Árgjald"
+  - pattern: "YFIRDRÁTTARVEXTIR"
+    name: "Yfirdráttarvextir"
+  - pattern: 'regex:VEXTIR\b'
+    name: "Vextir"

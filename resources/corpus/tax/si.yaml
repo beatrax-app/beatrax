@@ -1,0 +1,57 @@
+# Tax deduction categories — Slovenia
+# Mirrors the davčne olajšave of the SI informativni izračun dohodnine /
+# napoved za odmero dohodnine.
+# Source: Finančna uprava RS (fu.gov.si), "Obvestilo o lestvici za odmero dohodnine
+# in olajšave za leto 2026" (ZDoh-2), davčno leto 2026.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "si_splosna_olajsava"
+    name: "Splošna olajšava"
+    short_name: "Splošna"
+    hint: "Osnovna olajšava za vse rezidente, katere višina je odvisna od skupnega dohodka"
+  - key: "si_osebna_olajsava_invalid"
+    name: "Osebna olajšava za invalida s 100 % telesno okvaro"
+    short_name: "Invalid"
+    hint: "Olajšava za zavezanca s 100-odstotno telesno okvaro"
+  - key: "si_seniorska_olajsava"
+    name: "Osebna olajšava po dopolnjenem 70. letu starosti"
+    short_name: "Seniorska"
+    hint: "Olajšava za zavezanca, ki je v davčnem letu dopolnil 70 let"
+  - key: "si_olajsava_zascita_resevanje"
+    name: "Osebna olajšava za prostovoljno opravljanje nalog zaščite in reševanja"
+    short_name: "Zaščita"
+    hint: "Olajšava za neprekinjeno vsaj desetletno prostovoljno in nepoklicno opravljanje operativnih nalog"
+  - key: "si_posebna_osebna_olajsava_dijak_student"
+    name: "Posebna osebna olajšava za dijaka ali študenta"
+    short_name: "Dijak/štud."
+    hint: "Olajšava za rezidenta, ki se izobražuje in ima status dijaka ali študenta"
+  - key: "si_olajsava_za_mlade"
+    name: "Posebna osebna olajšava do dopolnjenega 29. leta starosti"
+    short_name: "Za mlade"
+    hint: "Olajšava za prejemnika dohodka iz delovnega razmerja do dopolnjenega 29. leta"
+  - key: "si_olajsava_vzdrzevani_otroci"
+    name: "Posebna olajšava za vzdrževane otroke"
+    short_name: "Otroci"
+    hint: "Olajšava, ki narašča z zaporednim številom vzdrževanih otrok"
+  - key: "si_olajsava_vzdrzevani_druzinski_clani"
+    name: "Posebna olajšava za druge vzdrževane družinske člane"
+    short_name: "Vzdrževani"
+    hint: "Olajšava za vsakega drugega vzdrževanega družinskega člana"
+  - key: "si_olajsava_pokojninsko_zavarovanje"
+    name: "Olajšava za prostovoljno dodatno pokojninsko zavarovanje"
+    short_name: "Pokojninska"
+    hint: "Vplačane premije prostovoljnega dodatnega pokojninskega zavarovanja"
+  - key: "si_dejanski_stroski"
+    name: "Dejanski stroški prevoza na delo in prehrane med delom"
+    short_name: "Dej. stroški"
+    hint: "Uveljavljanje dejanskih stroškov namesto priznanih pavšalnih zneskov"
+  - key: "si_namenitev_dohodnine"
+    name: "Namenitev dela dohodnine za donacije"
+    short_name: "Donacije"
+    hint: "Do 1 % odmerjene dohodnine nevladnim organizacijam, sindikatom, cerkvam ter šolskim in vrtčevskim skladom"

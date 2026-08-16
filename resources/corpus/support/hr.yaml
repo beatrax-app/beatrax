@@ -1,0 +1,118 @@
+# Support-resource corpus — Croatia (HR merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Hrvatski Telekom
+    type: merchant
+    cancel_url: "https://www.hrvatskitelekom.hr/raskid-ugovora"
+    support_url: "https://www.hrvatskitelekom.hr/podrska"
+    notes: "Obrazac na toj stranici pokriva samo jednostrani raskid u roku od 14 dana od sklapanja za usluge zatražene digitalnim kanalima; redovni raskid se prema Općim uvjetima za mobilne usluge (t. 97.) podnosi poštom, potpisom zahtjeva na prodajnom mjestu, elektroničkim putem, obrascem na Moj T Portalu, telefonom ili podnošenjem zahtjeva za promjenu operatora drugom operatoru, a posljedice nastupaju u roku od jednog radnog dana. Pretplatnički ugovor zasniva se na neodređeno vrijeme (t. 16.), obvezno trajanje ne može biti dulje od dvije godine i njegovim istekom ugovor ne prestaje nego se nastavlja na neodređeno; raskid prije isteka obveznog trajanja znači plaćanje mjesečne naknade za ostatak razdoblja ili naknade u visini ostvarenih popusta, ovisno o tome što je povoljnije."
+  - name: A1 Hrvatska
+    type: merchant
+    cancel_url: "https://www.a1.hr/procedura-za-raskid-ugovora-i-povrat-uredaja"
+    support_url: "https://www.a1.hr/podrska"
+    cheaper_url: "https://www.a1.hr/privatni/mobiteli/produljenje-ugovora"
+    notes: "Zahtjev za raskid predaje se na prodajnom mjestu, e-poštom na zahtjev.za.raskid-privatni@A1.hr ili poštom na A1 Hrvatska d.o.o., Vrtni put 1, 10000 Zagreb, uz vlastoručni potpis ako je u pisanom obliku, i mora sadržavati ime, prezime, adresu, OIB te uslugu koja se raskida; ugovor se smatra raskinutim u trenutku kad A1 zaprimi zahtjev, a služba za korisnike je 0800 091 091. Prema Općim uvjetima (t. 13.1.) ugovor u pokretnoj mreži raskida se u roku od jednog radnog dana, a u nepokretnoj u roku od pet radnih dana; ugovor je na neodređeno vrijeme, obvezno trajanje najviše dvije godine, a A1 nastavlja pružati usluge i nakon njegova isteka."
+  - name: Telemach Hrvatska
+    type: merchant
+    cancel_url: "https://telemach.hr/podrska/webshop/raskid-ugovora"
+    support_url: "https://telemach.hr/podrska/kontakt"
+    notes: "Objavljena stranica o raskidu pokriva samo pravo na raskid kupoprodajnog ugovora sklopljenog na daljinu, u roku od 14 kalendarskih dana od preuzimanja uređaja; raskid pretplatničkog ugovora nema online gumb i traži se preko kontakt kanala ili narudžbom poziva. Pazite na adresu: poveznice s www.telemach.hr preusmjeravaju na naslovnicu, pa se stranice podrške otvaraju samo s telemach.hr bez www."
+  - name: Optima Telekom
+    type: merchant
+    support_url: "https://telemach.hr/podrska/optima-dokumentacija-sve"
+    notes: "Optima više nema vlastite mrežne stranice — sve adrese na optima.hr, uključujući naslovnicu i /podrska, preusmjeravaju na telemach.hr jer je Optima pripojena Telemachu, pa se i računi i raskid rješavaju preko Telemachove podrške. Cjenici i uvjeti za stare Optima ugovore stoje pod Optima dokumentacija u Telemachovoj sekciji Podrška."
+  - name: Iskon
+    type: merchant
+    cancel_url: "https://iskon.hr/pomoc/baza-znanja/izmjene-na-usluzi/raskid-pretplatnickog-ugovora"
+    support_url: "https://iskon.hr/kontakti"
+    notes: "Nema gumba za raskid: ugovor se raskida e-poštom na iskonovac@iskon.hr, poštom na Hrvatski Telekom d.d. za Iskon, Radnička cesta 21, 10000 Zagreb, ili pozivom na 0800 1000 gdje zahtjev ispunjavaju s vama. Zahtjev mora sadržavati ime i prezime, adresu, broj telefona ili e-mail te presliku osobne iskaznice ako se šalje poštom, a rok za deaktivaciju usluge je 5 radnih dana od zaprimanja ispravno popunjenog zahtjeva."
+  - name: HEP Elektra
+    type: merchant
+    cancel_url: "https://www.hep.hr/elektra/trziste-elektricne-energije/propisi-i-obrasci/1542"
+    support_url: "https://www.hep.hr/kontakt/hep-kontakt-telefoni-za-kupce/113"
+    notes: "Raskid se ne obavlja online — sa stranice Propisi i obrasci preuzima se PDF Zahtjev za raskid ugovora i predaje HEP Elektri; besplatni info telefon je 0800 300 303, a za pozive iz inozemstva +385 1 6472 368. Ako samo mijenjate opskrbljivača, ne morate sami ništa raskidati: postupak promjene opskrbljivača provodi se bez naknade i pokreće ga novi opskrbljivač, a svi kupci imaju pravo na opskrbu u sustavu javne usluge kod HEP Elektre."
+  - name: GEN-I Hrvatska
+    type: merchant
+    support_url: "https://gen-i.hr/podrska/"
+    notes: "GEN-I nema stranicu za raskid — promjenu opskrbljivača pokreće sam kod HEP operatora distribucijskog sustava čim zaprimi ugovor potpisan jednim klikom, promjena je besplatna i ne uzrokuje prekid opskrbe ni zahvat na mreži. Pravnim osobama stranica izričito poručuje da same provjere uvjete raskida ugovora s trenutačnim opskrbljivačem; kontakt je 01 641 9600 i info@gen-i.hr."
+  - name: Croatia osiguranje
+    type: merchant
+    cancel_url: "https://www.crosig.hr/raskid-ugovora/"
+    support_url: "https://www.crosig.hr/kontakti/"
+    notes: "Raskid se pokreće online obrascem u četiri koraka bez registracije i prijave — trebaju ime i prezime, OIB, broj police, e-mail i broj mobitela, a potvrda o zaprimanju i status stižu na e-mail iz zahtjeva. Ugovor sklopljen sredstvom daljinske komunikacije može se prema čl. 93. Zakona o zaštiti potrošača raskinuti bez navođenja razloga u roku od 14 dana (30 dana za dobrovoljni mirovinski fond), a preostali dio premije vraća se najkasnije u roku od 30 dana od raskida; upiti na info@crosig.hr ili 072 00 1884."
+  - name: Allianz Hrvatska
+    type: merchant
+    cancel_url: "https://www.allianz.hr/hr_HR/privatni-korisnici/stete-i-info/online-zahtjevi/prekid-police-nezivotnog-osiguranja-novo.html"
+    support_url: "https://www.allianz.hr/hr_HR/privatni-korisnici/o-s/kontaktirajte-nas.html"
+    notes: "Prekid ugovora o neživotnom osiguranju podnosi se online zahtjevom za koji treba pripremiti osobne podatke i podatke o polici; ista rubrika Online zahtjevi pokriva i promjene, plaćanja i račune. Za police koje ne pokriva osnovni obrazac postoji zasebni obrazac Prekid police neživotnog osiguranja ostalo, a inače se ide preko portala Moj Allianz ili kontakt centra."
+  - name: Wiener osiguranje Vienna Insurance Group
+    type: merchant
+    cancel_url: "https://www.wiener.hr/raskid-ugovora.aspx"
+    support_url: "https://www.wiener.hr/kontakti.aspx"
+    notes: "Zahtjev za raskid predaje se online u četiri koraka (moji podaci, detalji zahtjeva, prilaganje dokumentacije, provjera), podnositelj je uvijek ugovaratelj osiguranja osim u slučaju smrti kad je to zakonski nasljednik, a tko nema vlastitu e-mail adresu mora se javiti u prodajno mjesto. Polica dopunskog zdravstvenog osiguranja ugovorena do otkaza obnavlja se automatski svake godine, pa treba poslati pisani zahtjev za raskid — u pravilu 3 mjeseca prije isteka osigurateljne godine, dok je kod Wienera rok samo mjesec dana; kod HZZO-a je otkazni rok unutar osigurateljne godine tri mjeseca uz mogući obračun penala."
+  - name: HAK
+    type: merchant
+    support_url: "https://www.hak.hr/kontakt/"
+    notes: "Članstvo se ne može otkazati online: prema Općim uvjetima članstva (t. 16.) otkaz je moguć isključivo pisanim putem prije isteka članske godine i vrijedi od datuma zaprimanja pisanog podneska u HAK, a HAK nema obvezu povrata bilo kojeg dijela godišnje članarine. Članska godina traje 12 mjeseci i članarina se plaća unaprijed, pa neplaćanjem sljedeće članarine članske pogodnosti jednostavno prestaju; služba članstva je 0800 9987, pomoć na cesti 1987, stanje na cestama 072 777 777."
+  - name: HRT pristojba
+    type: merchant
+    cancel_url: "https://o-nama.hrt.hr/pristojba/kako-odjaviti-placanje-pristojbe-5670"
+    support_url: "https://o-nama.hrt.hr/hrt/kontakti-hrt-a-7672"
+    notes: "Odjava mjesečne pristojbe nije samodeklarativna — sukladno čl. 36. st. 1. Zakona o HRT-u HRT sam određuje način odjave prijamnika, pa za svaki razlog (odlazak u dom umirovljenika, smrt obveznika, prestanak rada obrta ili pravne osobe) traži propisani dokument koji se dostavlja poštom ili drugim navedenim kanalima. Suglasnost za izravno terećenje daje se, mijenja i opoziva zasebno preko SEPA stranice, što nije isto što i odjava pristojbe."
+  - name: Erste banka Hrvatska
+    type: merchant
+    cancel_url: "https://www.erstebank.hr/hr/pomoc/help-center/racuni-i-kartice/trajni-nalog/kako-mogu-zatvoriti-odnosno-otkazati-trajni-nalog"
+    support_url: "https://www.erstebank.hr/hr/pomoc"
+    notes: "Izvršenje trajnog naloga možete otkazati sami u online bankarstvu George ili u najbližoj poslovnici Erste banke, a opoziv pojedinog platnog naloga ne znači i ukidanje ugovorene usluge terećenja računa. Help centar ima zasebne upute i za otkazivanje debitne i kreditne kartice, usluge Erste SMS i zatvaranje dopuštenog prekoračenja, dok se zatvaranje samog tekućeg računa i dalje rješava u poslovnici."
+  - name: Hrvatski Crveni križ
+    type: merchant
+    support_url: "https://www.hck.hr/kontakt/9"
+    notes: "Stranica o mjesečnom doniranju objašnjava samo kako pokrenuti redovite uplate i nema obrasca za prekid, pa se donacija zaustavlja izravnim javljanjem na telefon +385 1 4655 814 ili redcross@hck.hr, odnosno ukidanjem trajnog naloga u vlastitoj banci. Adresa za pisane podneske je Ulica Crvenog križa 14/1, 10000 Zagreb, a pisarnica prima na pisarnica@hck.hr."
+
+  # --- Government ---
+  - name: Porezna uprava
+    type: government
+    help_url: "https://porezna-uprava.gov.hr/hr/kontakt-80/80"
+    apply_url: "https://e-porezna.porezna-uprava.hr/"
+    notes: "ePorezna je jedinstveni portal Porezne uprave preko kojeg se podnose obrasci i pregledava porezno stanje; ulaz ide prijavom AKD ili FINA certifikatom, a na istom je mjestu i odregistracija korisnika. Portal ne radi ispravno bez uključenog JavaScripta, pa se prijava ne može dovršiti u pojednostavljenom pregledniku."
+  - name: Hrvatski zavod za mirovinsko osiguranje
+    type: government
+    help_url: "https://www.mirovinsko.hr/hr/kontakti-212/212"
+    apply_url: "https://www.mirovinsko.hr/hr/podnosenje-zahtjeva/180"
+    rights_url: "https://www.mirovinsko.hr/hr/pregled-prava/28"
+    notes: "Pregled prava objašnjava vrste mirovina, način izračuna te doplatak za djecu, a zahtjevi za mirovinu i doplatak podnose se preko stranice Podnošenje zahtjeva ili u e-Uslugama HZMO-a. Za pojedinačna pitanja postoji rubrika Postavite pitanje i kontakti područnih službi na stranici Kontakti."
+  - name: Hrvatski zavod za zdravstveno osiguranje
+    type: government
+    help_url: "https://hzzo.hr/kontakt"
+    apply_url: "https://hzzo.hr/obvezno-zdravstveno-osiguranje-0/prijava-promjena-i-odjava-u-obveznom-zdravstvenom-osiguranju"
+    rights_url: "https://hzzo.hr/zdravstvena-zastita/opseg-prava-iz-obveznog-zdravstvenog-osiguranja"
+    notes: "Prijava, promjena i odjava u obveznom zdravstvenom osiguranju rješavaju se u područnim uredima i ispostavama navedenima na stranici Kontakt, a status osiguranja i saldo dopunskog provjeravaju se na ezdravstveno.hzzo.hr. Dopunsko zdravstveno osiguranje vodi se odvojeno na dzo.hzzo.hr, gdje pod Obrasci stoje Zahtjev za otkazom ugovora o DZO, Zahtjev za odustanak od ugovora i Zahtjev za raskid ugovora; prava i obveze iz ugovora o dopunskom počinju vrijediti 15 dana od sklapanja."
+  - name: Hrvatski zavod za zapošljavanje
+    type: government
+    help_url: "https://www.hzz.hr/kontakti/"
+    apply_url: "https://www.hzz.hr/usluge/prijava-u-evidenciju-nezaposlenih/"
+    rights_url: "https://www.hzz.hr/novcana-naknada-za-vrijeme-nezaposlenosti/"
+    notes: "Za novčanu naknadu prema Zakonu o tržištu rada treba imati najmanje 9 mjeseci rada u posljednja 24 mjeseca, radni odnos ne smije prestati vašom krivnjom ili voljom, i morate se prijaviti HZZ-u te podnijeti zahtjev u roku od 30 dana od prestanka radnog odnosa. Prijava u evidenciju nezaposlenih od nedavno se može obaviti i online preko portala Burza rada, a kontakti područnih službi, ureda i CISOK centara su na stranici Kontakti."
+  - name: e-Građani
+    type: government
+    help_url: "https://gov.hr/hr/pomoc/22"
+    apply_url: "https://gov.hr/hr/postanite-e-gradjanin/2090"
+    phone: "072 200 027"
+    notes: "Pomoć oko prijave i korištenja portala dobiva se na pomoc@e-gradjani.gov.hr ili telefonom 072 200 027 (iz inozemstva +385 72 200 027), radnim danom od 8:00 do 20:00 i subotom od 8:00 do 13:00. Za pristup treba vjerodajnica s liste prihvaćenih; ako je nemate, možete besplatno zatražiti mToken značajne razine ili ePass niske razine sigurnosti."
+  - name: MUP
+    type: government
+    help_url: "https://mup.gov.hr/kontakti-281975/281975"
+    apply_url: "https://mup.gov.hr/gradjani-281562/e-usluge-mup-a-rh/283289"
+    rights_url: "https://mup.gov.hr/gradjani-281562/moji-dokumenti-281563/281563"
+    phone: "01 6122 111"
+    notes: "Rubrika Moji dokumenti pokriva osobnu iskaznicu (eOI), registraciju vozila i vozačke dokumente, a e-Usluge MUP-a koriste se prijavom u sustav e-Građani. Uredovno vrijeme za građane u prijemnom uredu je radnim danom od 8:00 do 16:00, pismena se predaju osobno, poštom ili elektronički, a upiti građana idu na pitanja@mup.hr odnosno policija@mup.hr."
+  - name: Državne stipendije
+    type: government
+    help_url: "https://mzom.gov.hr/kontakti/177"
+    apply_url: "https://mzom.gov.hr/istaknute-teme/odgoj-i-obrazovanje/visoko-obrazovanje/drzavne-stipendije/162"
+    notes: "Ministarstvo dodjeljuje dvije vrste stipendija za redovite studente: STEM stipendije (600 eura za STEM nastavničke studije, 300 eura za ostale STEM studije) i stipendije na temelju socio-ekonomskoga statusa (200 eura), a obje se isplaćuju u devet mjesečnih rata. Javni poziv za STEM raspisuje se do 25. listopada i prijave idu u sustavu državnih stipendija, natječaj za socio-ekonomske do 15. listopada uz elektronički obrazac, liste se objavljuju najkasnije 60 dana od zatvaranja poziva, a rokovi za prigovor na rezultate objavljuju se uz svaku rang-listu."
