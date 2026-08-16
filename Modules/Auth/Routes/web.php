@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Internal\Http\Controllers\LockEngageController;
+use Modules\Auth\Internal\Http\Controllers\LockLifecycleController;
 use Modules\Auth\Internal\Http\Controllers\WebAuthnBiometricController;
 use Modules\Auth\Internal\Http\Livewire\AddUserPage;
 use Modules\Auth\Internal\Http\Livewire\ChangePasswordPage;
@@ -49,6 +50,16 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
     // request -- Livewire/wire:poll traffic deliberately does not count.
     Route::post('/lock/activity', static fn (): Response => new Response('', 204))
         ->name('auth.lock.activity');
+
+    // Deliberately NOT in AppLockMiddleware's allow-list: `resume` has to be
+    // able to receive the redirect to the lock screen, since that redirect is
+    // exactly what tells lock.js the grace window closed while the app was
+    // suspended.
+    Route::post('/lock/background', [LockLifecycleController::class, 'background'])
+        ->name('auth.lock.background');
+
+    Route::post('/lock/resume', [LockLifecycleController::class, 'resume'])
+        ->name('auth.lock.resume');
 
     Route::post('/lock/biometric/challenge', [WebAuthnBiometricController::class, 'challenge'])
         ->name('auth.lock.biometric.challenge');
