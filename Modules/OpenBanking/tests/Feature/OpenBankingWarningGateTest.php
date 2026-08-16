@@ -390,7 +390,10 @@ it('Surface A status row renders the correct one-line status for each state', fu
     $this->actingAs($off);
     Livewire::test(OpenBankingStatusRow::class)
         ->assertSet('expired', false)
-        ->assertSee('Not connected. Import ICS/ASN statements manually, or connect a bank automatically.');
+        // The row no longer explains that statements can be imported by hand:
+        // it sits on Data & Devices beside the import controls themselves, so
+        // the sentence was telling the user about a thing already on screen.
+        ->assertSee('No bank connected. Connect one to import transactions automatically.');
 
     $connected = owgUser('owg-status-connected');
     $this->actingAs($connected);

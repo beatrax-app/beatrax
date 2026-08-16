@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Modules\Core\Public\Enums\Locale')
 @use('Modules\Core\Public\Enums\Theme')
 @php
     // Shared card chrome for the grouped settings sections. The redesign only
@@ -6,6 +7,10 @@
     // block and copy string below is preserved verbatim from the flat layout.
     $card = 'rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950';
     $cardHead = 'text-xs uppercase tracking-wide text-[var(--color-text-faint)]';
+    // Group heading: the page is ~20 unrelated sections, and a flat stack of
+    // them gives no sense of where anything lives. The existing order already
+    // clusters, so these only name the clusters — nothing moves.
+    $groupHead = 'pt-4 text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100';
 @endphp
 
 {{--
@@ -21,6 +26,8 @@
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.title') }}</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.subtitle') }}</p>
     </header>
+
+    <h2 class="{{ $groupHead }}">{{ Lang::get('core::settings.groups.display') }}</h2>
 
     {{-- ===== Appearance ===== --}}
     <div class="{{ $card }}">
@@ -60,23 +67,23 @@
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.language.heading') }}</h2>
             <div class="space-y-1">
                 <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.language.label') }}</span>
-                <div role="radiogroup" aria-label="{{ Lang::get('core::settings.language.heading') }}" class="inline-flex rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    @foreach (['auto' => Lang::get('core::settings.language.system'), 'en' => 'English', 'nl' => 'Nederlands'] as $value => $label)
-                        <button
-                            type="button"
-                            role="radio"
-                            aria-checked="{{ $locale === $value ? 'true' : 'false' }}"
-                            wire:click="setLocale('{{ $value }}')"
-                            @class([
-                                'px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100',
-                                'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' => $locale === $value,
-                                'bg-white text-slate-900 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900' => $locale !== $value,
-                            ])
-                        >
-                            {{ $label }}
-                        </button>
+                {{-- A select, not a button per language: the segmented row only
+                     works while there are two or three, and the list is meant
+                     to grow. Auto is last here and in the theme switcher. --}}
+                <select
+                    wire:change="setLocale($event.target.value)"
+                    aria-label="{{ Lang::get('core::settings.language.heading') }}"
+                    class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
+                >
+                    @foreach (Locale::cases() as $localeOption)
+                        <option
+                            value="{{ $localeOption->value }}"
+                            lang="{{ $localeOption->value }}"
+                            @selected($locale === $localeOption->value)
+                        >{{ $localeOption->flag() }} {{ $localeOption->label() }}</option>
                     @endforeach
-                </div>
+                    <option value="auto" @selected($locale === 'auto')>{{ Lang::get('core::settings.language.system') }}</option>
+                </select>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
                 @error('locale')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
@@ -84,6 +91,8 @@
             </div>
         </section>
     </div>
+
+    <h2 class="{{ $groupHead }}">{{ Lang::get('core::settings.groups.money') }}</h2>
 
     {{-- ===== Preferences (batch save) ===== --}}
     <form wire:submit="save" class="{{ $card }} space-y-8">
@@ -270,6 +279,8 @@
         </div>
     </form>
 
+    <h2 class="{{ $groupHead }}">{{ Lang::get('core::settings.groups.insights') }}</h2>
+
     {{-- ===== Anomaly detection (sensitivity, floor, suppression rules) ===== --}}
     <div class="{{ $card }}">
         <section class="space-y-2" id="anomaly-detection">
@@ -313,66 +324,11 @@
         </section>
     </div>
 
-    {{-- ===== App lock (PIN-based session lock, plan 05-04) ===== --}}
+    {{-- Open banking, auto-import and backup/restore used to sit here. They
+         answer "where does my data come from and where does it go", which is
+         the Data & Devices page, not a preference screen. Aliases stays: it
+         is about how descriptors are *named*, which is a preference. --}}
     <div class="{{ $card }}">
-        <section id="app-lock">
-            @livewire('auth.app-lock-settings-section')
-        </section>
-    </div>
-
-    {{-- ===== Devices & Sync — link-out (the surface itself lives on /sync) =====
-         Moved rather than duplicated: pairing, device naming and the
-         encryption toggle all describe the sync relationship, so they belong
-         with the sync status and the manual-sync action instead of being a
-         second place to look. The row stays because Settings is where people
-         had learned to find it — the Aliases link-out shape, same as open
-         banking below. --}}
-    <div class="{{ $card }}">
-        <section id="devices-sync" class="space-y-2" data-testid="devices-sync-link-out">
-            <h2 class="text-xs uppercase tracking-wide text-[var(--color-text-faint)]">{{ Lang::get('sync::devices.heading') }}</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('sync::devices.moved_help') }}</p>
-            <a
-                href="{{ route('sync.index') }}"
-                class="inline-flex min-h-[44px] items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >{{ Lang::get('sync::devices.moved_cta') }} &rarr;</a>
-        </section>
-    </div>
-
-    {{-- ===== Open banking (Phase 19) — Aliases link-out shape, Surface A ===== --}}
-    <div class="{{ $card }}">
-        <section id="open-banking">
-            @livewire('openbanking.open-banking-status-row')
-        </section>
-    </div>
-
-    {{-- ===== Importing (auto-import + aliases) ===== --}}
-    <div class="{{ $card }} space-y-8">
-        <section class="space-y-2">
-            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.auto_import.heading') }}</h2>
-            <div class="space-y-2">
-                <label for="auto-import-toggle" class="flex items-start gap-3 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        id="auto-import-toggle"
-                        @checked($autoImportFromDropFolder)
-                        wire:change="toggleAutoImport"
-                        aria-describedby="auto-import-help"
-                        class="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 dark:border-slate-600 dark:text-emerald-500 dark:focus:ring-emerald-500"
-                    />
-                    <div class="flex-1">
-                        <span class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::settings.auto_import.label') }}</span>
-                        <p id="auto-import-help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            @if ($autoImportFromDropFolder)
-                                {!! Lang::get('core::settings.auto_import.active_html', ['userId' => $userId]) !!}
-                            @else
-                                {!! Lang::get('core::settings.auto_import.inactive_html', ['userId' => $userId]) !!}
-                            @endif
-                        </p>
-                    </div>
-                </label>
-            </div>
-        </section>
-
         <section class="space-y-2" id="aliases">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.aliases.heading') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -393,32 +349,7 @@
         </section>
     </div>
 
-    {{-- ===== Shared merchant list ===== --}}
-    <div class="{{ $card }}">
-        <section class="space-y-2" id="shared-merchant-list">
-            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.shared_merchant_heading') }}</h2>
-            @livewire('community.shared-list-settings-panel')
-        </section>
-    </div>
-
-    {{-- ===== Data & backup ===== --}}
-    <div class="{{ $card }}">
-        <section class="space-y-2" id="data-backup">
-            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.data_backup_heading') }}</h2>
-            @livewire('core.encrypted-backup-download')
-            @livewire('core.encrypted-backup-restore')
-        </section>
-    </div>
-
-    {{-- ===== Install (D-22 placement b) ===== --}}
-    {{-- Standing install row: "Install Beatrax as an app" — copy and CTA
-         logic owned by the x-core::install-hint component. --}}
-    <div class="{{ $card }}">
-        <section class="space-y-2" id="install-app">
-            <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.install_heading') }}</h2>
-            <x-core::install-hint />
-        </section>
-    </div>
+    <h2 class="{{ $groupHead }}">{{ Lang::get('core::settings.groups.app') }}</h2>
 
     {{-- ===== Help & about ===== --}}
     <div class="{{ $card }} space-y-8">

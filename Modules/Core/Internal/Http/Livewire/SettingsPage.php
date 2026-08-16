@@ -32,8 +32,6 @@ final class SettingsPage extends Component
     #[Validate('required|integer|min:1|max:28')]
     public int $periodStartDay = 1;
 
-    public bool $autoImportFromDropFolder = false;
-
     #[Validate('required|integer|min:2|max:60')]
     public int $recurringDetectionWindowMonths = 2;
 
@@ -49,7 +47,10 @@ final class SettingsPage extends Component
     // concrete value to bind; setLocale() maps it back to null on write.
     private const string LOCALE_AUTO = 'auto';
 
-    #[Validate('required|in:auto,en,nl')]
+    // The allow-list is built in rules() from Locale::codes() rather than
+    // written out in a #[Validate] attribute: an attribute argument has to be
+    // a constant expression, which would freeze the shipped locales into a
+    // second list that drifts the moment a language is added.
     public string $locale = self::LOCALE_AUTO;
 
     #[Validate('boolean')]
@@ -71,7 +72,6 @@ final class SettingsPage extends Component
         $user = $currentUser->user();
         $this->defaultCurrencyView = $user->default_currency_view;
         $this->periodStartDay = $user->period_start_day;
-        $this->autoImportFromDropFolder = (bool) $user->auto_import_drop_folder;
         $this->recurringDetectionWindowMonths = $user->recurring_detection_window_months;
         $this->recurringIncomeMinAmountMinor = $user->recurring_income_min_amount_minor;
         $this->driftAlertThresholdPercent = $user->drift_alert_threshold_percent;
@@ -103,7 +103,7 @@ final class SettingsPage extends Component
         ($writeUserPreference)($currentUser->user()->id, ['theme' => $this->theme]);
     }
 
-    // Validates against the auto,en,nl allow-list before the preference
+    // Validates against the supported-locale allow-list before the preference
     // write, so an out-of-enum value never reaches the users row. "auto" persists as NULL
     // (no override → browser detection). The translator is retargeted in the
     // same request too, so the page re-renders in the new language at once.
@@ -130,16 +130,6 @@ final class SettingsPage extends Component
 
         $user = $currentUser->user();
         $user->fill(['is_developer' => $value])->save();
-    }
-
-    // The Blade view binds the checkbox via wire:change only (no
-    // wire:model.live), so this single round-trip covers both the property
-    // update and the DB write, avoiding a double round-trip.
-    public function toggleAutoImport(CurrentUser $currentUser, WriteUserPreference $writeUserPreference): void
-    {
-        $this->autoImportFromDropFolder = ! $this->autoImportFromDropFolder;
-
-        ($writeUserPreference)($currentUser->user()->id, ['auto_import_drop_folder' => $this->autoImportFromDropFolder]);
     }
 
     // Fallback for users who want to grab an installer manually (first
@@ -279,6 +269,7 @@ final class SettingsPage extends Component
     {
         return [
             'theme' => 'required|in:'.implode(',', Theme::values()),
+            'locale' => 'required|in:'.self::LOCALE_AUTO.','.implode(',', Locale::codes()),
             'driftAlertThresholdPercent' => 'required|integer|in:'.implode(',', DriftThresholdOptions::PERCENTS),
         ];
     }

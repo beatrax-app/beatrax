@@ -32,14 +32,18 @@ Route::middleware(['web'])->group(static function (): void {
 });
 
 Route::middleware(['web', 'auth'])->group(static function (): void {
-    // Sync-status surface; the sidebar/drawer entry links here by
-    // name.
-    Route::get('/sync', static function () {
+    // Data & Devices: everything about where this user's data comes from,
+    // where it goes, and which devices hold it — bank connections, folder
+    // auto-import, backup and restore, pairing, app lock, network.
+
+    // It began as a sync-status surface, which is why the component is still
+    // named SyncScreen; sync is one section of it now, not the whole page.
+    Route::get('/data-devices', static function () {
         $component = 'Modules\Mobile\Internal\Http\Livewire\SyncScreen';
         abort_unless(class_exists($component), 404);
 
         return app($component)();
-    })->name('sync.index');
+    })->name('data-devices.index');
 
     Route::get('/mobile/lock', static function () {
         $component = 'Modules\Mobile\Internal\Http\Livewire\MobileLockScreen';
@@ -63,6 +67,17 @@ Route::middleware(['web', 'auth'])->group(static function (): void {
 
         return app($component)();
     })->name('mobile.setup');
+
+    // Where the setup gate hands off once parity is reached. Named under the
+    // `mobile.setup` prefix on purpose: MobileEnsureImportCompleted exempts
+    // that prefix, so the confirmation cannot be bounced back into the gate
+    // it was just released from.
+    Route::get('/mobile/setup/done', static function () {
+        $component = 'Modules\Mobile\Internal\Http\Livewire\SyncCompleteScreen';
+        abort_unless(class_exists($component), 404);
+
+        return app($component)();
+    })->name('mobile.setup.done');
 });
 
 // Native screens (SuperNative / EDGE). Guarded on the macro rather than
