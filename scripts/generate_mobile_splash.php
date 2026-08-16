@@ -17,7 +17,7 @@ declare(strict_types=1);
  * then white. Both themes are emitted because the composable picks the
  * variant from the system dark-mode setting.
  *
- * Committed as PNGs rather than generated during the build: the build already
+ * Committed as image files rather than generated during the build: it already
  * runs the icon pipeline, and a splash that silently fails to render is worse
  * than one checked in and reviewable. Re-run this after changing the icon or
  * either background colour.

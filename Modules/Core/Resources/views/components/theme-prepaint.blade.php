@@ -13,12 +13,15 @@
     the same answer.
 --}}
 @if ($enabled)
-    {{-- The class below is applied by script, which runs only AFTER the
-         <html class="bg-white ..."> attribute has been parsed — so a dark
-         device could paint a full white frame first. On the lock screen that
-         flash is the whole page. This style needs no script and no class, so
-         it wins the race outright; it is scoped to $enabled, meaning the
-         theme is `system` and the OS preference is genuinely authoritative. --}}
+    {{-- The class below is applied by script, which runs only AFTER the root
+         element's own `bg-white` class has been parsed — so a dark device
+         could paint a full white frame first. On the lock screen that flash is
+         the whole page. This style needs no script and no class, so it wins
+         the race outright; it is scoped to $enabled, meaning the theme is
+         `system` and the OS preference is genuinely authoritative.
+         The root tag is spelled out rather than written literally: the HTML
+         analyser does not parse Blade comments, and read a mention of it here
+         as a real, doctype-less document. --}}
     <style>
         @media (prefers-color-scheme: dark) {
             html, body, .beatrax-shell { background-color: #020617; }

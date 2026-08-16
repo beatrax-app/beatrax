@@ -15,8 +15,10 @@
     The submit handler exists because a native form POST does not survive the
     mobile shell: NativePHP intercepts WebView requests, replays them into the
     embedded runtime, and loses the POST method, so Laravel answered 405 and
-    the app sat in a redirect loop. `code` now lives on a <select>, so it is
-    part of FormData and no longer depends on the submitter surviving.
+    the app sat in a redirect loop. `code` now lives on the select element
+    below, so it is part of FormData and no longer depends on the submitter
+    surviving. (Named rather than written as a tag: the HTML analyser does not
+    parse Blade comments, and read a mention here as a real, unlabelled input.)
 
     fetch() IS intercepted reliably — it is the path every Livewire round-trip
     already takes — so submitting through it sidesteps both defects without
