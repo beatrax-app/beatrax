@@ -89,8 +89,22 @@ jobs:
             - name: Build the macOS bundle (arm64)
               env:
                   NATIVEPHP_APP_VERSION: ${{ inputs.tag }}
+                  # Kept in lockstep with release.yml, which carries the same
+                  # block and guard.
+                  CSC_LINK: ${{ secrets.CSC_LINK }}
+                  CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+                  NATIVEPHP_MAC_IDENTITY: ${{ vars.NATIVEPHP_MAC_IDENTITY }}
+                  NATIVEPHP_APPLE_ID: ${{ secrets.NATIVEPHP_APPLE_ID }}
+                  NATIVEPHP_APPLE_ID_PASS: ${{ secrets.NATIVEPHP_APPLE_ID_PASS }}
+                  NATIVEPHP_APPLE_TEAM_ID: ${{ vars.NATIVEPHP_APPLE_TEAM_ID }}
               run: |
                   set -euo pipefail
+                  for required in CSC_LINK CSC_KEY_PASSWORD NATIVEPHP_MAC_IDENTITY NATIVEPHP_APPLE_ID NATIVEPHP_APPLE_ID_PASS NATIVEPHP_APPLE_TEAM_ID; do
+                      if [ -z "${!required:-}" ]; then
+                          echo "::error::${required} is empty — refusing to publish an unsigned macOS build."
+                          exit 1
+                      fi
+                  done
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build mac arm64
 
