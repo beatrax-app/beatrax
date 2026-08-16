@@ -43,13 +43,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // middleware itself exempts setup / welcome / signup so the
         // redirect cannot loop. Once a user exists it is a pass-through.
         $middleware->web(append: [
-            EnsureDatabaseReady::class,
             // Appended to `web` (not global) so it runs after StartSession
             // and the auth guard are available — both are signals it reads.
             // Resolves the per-request UI language (user override → session
             // → Accept-Language → English) onto the translator before any
             // route renders.
+            //
+            // BEFORE EnsureDatabaseReady, deliberately. That gate redirects a
+            // device with no account yet, and a redirect short-circuits the
+            // rest of the stack — so with SetLocale behind it, every screen a
+            // fresh install sees before signing up rendered in English no
+            // matter which language was picked on the welcome page. The
+            // redirect TARGET is a screen the user reads, so the language has
+            // to be resolved before the gate can send them there.
             SetLocale::class,
+            EnsureDatabaseReady::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
