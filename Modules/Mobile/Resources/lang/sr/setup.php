@@ -28,6 +28,6 @@ return [
     'resuming' => 'Nastavak podešavanja…',
     'setting_up' => 'Podešavanje ovog uređaja…',
     'progress_aria' => 'Napredak podešavanja',
-    'records' => ':applied od :expected zapisa',
+    'records' => 'Zapisa: :count',
     'records_preparing' => 'Čeka se drugi uređaj…',
 ];

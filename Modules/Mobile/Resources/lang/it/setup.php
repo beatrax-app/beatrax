@@ -28,6 +28,6 @@ return [
     'resuming' => 'Ripresa della configurazione…',
     'setting_up' => 'Configurazione di questo dispositivo…',
     'progress_aria' => 'Avanzamento della configurazione',
-    'records' => ':applied di :expected record',
+    'records' => ':count record',
     'records_preparing' => "In attesa dell'altro dispositivo…",
 ];

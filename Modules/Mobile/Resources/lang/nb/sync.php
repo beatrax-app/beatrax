@@ -7,7 +7,7 @@ return [
     'heading' => 'Data og enheter',
     'sync_status' => 'Synkroniseringsstatus',
     'your_devices' => 'Enhetene dine',
-    'syncing_progress' => 'Synkroniserer… :applied av :expected oppføringer',
+    'syncing_progress' => 'Synkroniserer… :count oppføringer',
     'initial_sync_aria' => 'Fremdrift for den første synkroniseringen',
     'no_peers' => 'Par en annen enhet for å begynne å synkronisere.',
     'sync_now' => 'Synkroniser nå',

@@ -28,6 +28,6 @@ return [
     'resuming' => 'Jätkan seadistamist…',
     'setting_up' => 'Seadistan seda seadet…',
     'progress_aria' => 'Seadistamise edenemine',
-    'records' => ':applied kirjet :expected-st',
+    'records' => ':count kirjet',
     'records_preparing' => 'Ootan teist seadet…',
 ];

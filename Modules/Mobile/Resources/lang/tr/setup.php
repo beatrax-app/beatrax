@@ -28,6 +28,6 @@ return [
     'resuming' => 'Kuruluma devam ediliyor…',
     'setting_up' => 'Bu cihaz kuruluyor…',
     'progress_aria' => 'Kurulum ilerlemesi',
-    'records' => ':expected kayıttan :applied tanesi',
+    'records' => ':count kayıt',
     'records_preparing' => 'Diğer cihaz bekleniyor…',
 ];

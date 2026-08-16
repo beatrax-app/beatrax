@@ -71,11 +71,12 @@
         </div>
 
         {{-- The count only. The step list already says WHICH stage is
-             running, so repeating that in prose underneath was noise — but
-             how much has moved is the one thing it cannot show. --}}
+             running, and the cursor's expected figure only ever equals what
+             has been applied — the same reason stepPercent() will not draw a
+             determinate bar from it — so a ratio here read as "x of x". --}}
         @if ($recordsApplied > 0)
             <p aria-live="polite" class="text-sm text-slate-500 dark:text-slate-400">
-                {{ Lang::get('mobile::setup.records', ['applied' => $recordsApplied, 'expected' => $recordsExpected ?? $recordsApplied]) }}
+                {{ Lang::get('mobile::setup.records', ['count' => $recordsApplied]) }}
             </p>
         @endif
 

@@ -28,6 +28,6 @@ return [
     'resuming' => 'Resuming setup…',
     'setting_up' => 'Setting up this device…',
     'progress_aria' => 'Setup progress',
-    'records' => ':applied of :expected records',
+    'records' => ':count records',
     'records_preparing' => 'Waiting for the other device…',
 ];

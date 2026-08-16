@@ -7,7 +7,7 @@ return [
     'heading' => 'Andmed ja seadmed',
     'sync_status' => 'Sünkroonimise olek',
     'your_devices' => 'Sinu seadmed',
-    'syncing_progress' => 'Sünkroonin… :applied kirjet :expected-st',
+    'syncing_progress' => 'Sünkroonin… :count kirjet',
     'initial_sync_aria' => 'Esmase sünkroonimise edenemine',
     'no_peers' => 'Sünkroonimise alustamiseks seo teine seade.',
     'sync_now' => 'Sünkrooni kohe',
