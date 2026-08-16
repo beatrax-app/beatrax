@@ -1115,8 +1115,8 @@ it('does not bleed the owner initial-sync progress cursor into the partner /mobi
     $this->actingAs($this->partner)
         ->get('/mobile/setup')
         ->assertOk()
-        ->assertSee('12 of 40 records')
-        ->assertDontSee('77 of 100 records');
+        ->assertSee('12 records')
+        ->assertDontSee('77 records');
 });
 
 it('does not bleed the owner peer device name or record count into the partner /mobile/setup/done screen', function (): void {

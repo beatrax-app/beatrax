@@ -49,6 +49,7 @@ final class LockScreen extends Component
         PlatformDetector $detector,
         Request $request,
         ColdStartVault $vault,
+        MobileLockGateway $gateway,
     ): void {
         $user = $currentUser->user();
         $ua = $request->userAgent() ?? '';
@@ -60,7 +61,13 @@ final class LockScreen extends Component
             fn (object $cred): bool => $biometricStore->isArmed($cred)
         );
 
-        $this->nativeUnlockAvailable = $vault->isAvailable() && $vault->isEnrolled($user->id);
+        // The stored flag as well as the vault's own answer. The desktop vault
+        // reports enrolment from a file keyed on nothing but the user id, so a
+        // database reset behind it offered the next account to take that id an
+        // enrolment it never made. The mobile vault already reads this flag.
+        $this->nativeUnlockAvailable = $vault->isAvailable()
+            && $vault->isEnrolled($user->id)
+            && $gateway->isColdStartEnrolled($user->id);
     }
 
     // -------------------------------------------------------------------------
@@ -77,6 +84,7 @@ final class LockScreen extends Component
         DatabaseManager $db,
         Clock $clock,
         ColdStartVault $vault,
+        MobileLockGateway $gateway,
     ): void {
         if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
             $this->flashMessage = Lang::get('auth::lock_screen.error_too_short');
@@ -108,9 +116,11 @@ final class LockScreen extends Component
         }
 
         // Enrol on the way through: this is the only moment the raw data key
-        // is in hand, and the vault re-protects it under the OS gate.
-        if ($vault->isAvailable() && ! $vault->isEnrolled($user->id)) {
-            $vault->enroll($user->id, $dataKey);
+        // is in hand, and the vault re-protects it under the OS gate. The flag
+        // is written with it, so the enrolment dies with the account row
+        // instead of surviving as a file that outlives the user it was for.
+        if ($vault->isAvailable() && ! $vault->isEnrolled($user->id) && $vault->enroll($user->id, $dataKey)) {
+            $gateway->markColdStartEnrolled($user->id, true);
         }
 
         $this->redirect($this->intendedUrl($session, $urls), navigate: false);

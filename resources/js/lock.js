@@ -47,6 +47,26 @@ function _lockEnabled() {
 // genuine interaction on Livewire-heavy pages must be reported explicitly.
 const HEARTBEAT_MS = 60000;
 
+/**
+ * POST to a lock endpoint with the CSRF header and keepalive.
+ *
+ * keepalive so a request fired as the app leaves the foreground still lands;
+ * the header because VerifyCsrfToken accepts the token only from `_token`,
+ * `X-CSRF-TOKEN` or `X-XSRF-TOKEN`, never the cookie alone.
+ */
+function _lockPost(path) {
+    return fetch(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': _getCsrfToken(),
+        },
+        body: JSON.stringify({}),
+        keepalive: true,
+    });
+}
+
 document.addEventListener('alpine:init', () => {
     if (!window.Alpine) {
         return;
@@ -176,6 +196,42 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * Stamp the moment we left the foreground, server-side.
+         *
+         * The grace timer above cannot be trusted on mobile: an Android
+         * WebView is suspended while backgrounded, so the timeout does not
+         * fire, and _clearGrace() on return then cancelled it outright — the
+         * app came back unlocked no matter how long it had been away.
+         * AppLockMiddleware judges the elapsed time from this marker instead,
+         * against a clock that suspension cannot stop.
+         */
+        _markBackgrounded() {
+            return _lockPost('/lock/background').catch(() => {
+                // Swallow — the idle check in AppLockMiddleware still applies.
+            });
+        },
+
+        /**
+         * Ask the server whether the grace window closed while we were away.
+         *
+         * The answer is a redirect, not a body: an expired marker makes
+         * AppLockMiddleware lock and bounce this POST to the lock screen, so
+         * `redirected` is the signal. Reloading then lands on the lock screen
+         * without waiting for the user to touch anything.
+         */
+        _checkResume() {
+            return _lockPost('/lock/resume')
+                .then((response) => {
+                    if (response && response.redirected) {
+                        window.location.reload();
+                    }
+                })
+                .catch(() => {
+                    // Swallow — the next navigation is gated the same way.
+                });
+        },
+
         // -----------------------------------------------------------------------
         // BroadcastChannel — D-05 cross-tab coordination
         // -----------------------------------------------------------------------
@@ -196,16 +252,7 @@ document.addEventListener('alpine:init', () => {
          *   2. The idle ticker detects inactivity >= idle_timeout_minutes.
          */
         _serverLock() {
-            return fetch('/lock/engage', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-XSRF-TOKEN': _getCsrfToken(),
-                },
-                body: JSON.stringify({}),
-                keepalive: true,
-            }).catch(() => {
+            return _lockPost('/lock/engage').catch(() => {
                 // Swallow — if the request fails the server-side idle check
                 // in AppLockMiddleware will catch it on the next request.
             });
@@ -340,6 +387,9 @@ document.addEventListener('alpine:init', () => {
                 if (document.visibilityState === 'hidden') {
                     this.showVeil();
 
+                    // Both: the timer is the fast path where it genuinely
+                    // runs, the marker is what survives a suspended WebView.
+                    this._markBackgrounded();
                     this._startGrace();
                 } else {
                     // Returned to foreground: ALWAYS lift the veil.
@@ -353,6 +403,11 @@ document.addEventListener('alpine:init', () => {
                     // only a privacy screen, so failing open here is right.
                     this._clearGrace();
                     this.hideVeil();
+                    // Cancelling the timer above is no longer the whole
+                    // decision — the server still holds the marker, and this
+                    // is what asks it whether the grace closed while we were
+                    // suspended.
+                    this._checkResume();
                 }
             });
 

@@ -28,6 +28,6 @@ return [
     'resuming' => 'Återupptar konfigurationen…',
     'setting_up' => 'Konfigurerar den här enheten…',
     'progress_aria' => 'Förlopp för konfigurationen',
-    'records' => ':applied av :expected poster',
+    'records' => ':count poster',
     'records_preparing' => 'Väntar på den andra enheten…',
 ];

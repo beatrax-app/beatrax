@@ -34,9 +34,9 @@ afterEach(function (): void {
  *   - idle: the embedded sync.sync-status-section's "All devices up to
  *     date · synced Nm ago" banner (SyncStatusService, unchanged), with a
  *     correct relative timestamp.
- *   - active + N-of-M progress: this screen's OWN "{n} of {m} records"
- *     line, sourced from the own-module mobile_sync_progress durable
- *     cursor (phase='pulling') — independent of sync_sessions.
+ *   - active progress: this screen's OWN "{n} records" line, sourced from
+ *     the own-module mobile_sync_progress durable cursor (phase='pulling')
+ *     — independent of sync_sessions.
  *   - offline/not-connected: the embedded component's "Devices offline"
  *     banner.
  *   - per-device list: the embedded component's per-peer rows (device id
@@ -140,7 +140,7 @@ it('resolves the active state with N-of-M progress from the mobile_sync_progress
         ->assertSet('progressExpected', 100)
         ->assertSet('progressPercent', 40)
         ->assertSee('Syncing')
-        ->assertSee('40 of 100 records');
+        ->assertSee('40 records');
 });
 
 it('resolves the offline / not-connected state', function (): void {

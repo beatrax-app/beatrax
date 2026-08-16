@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Exceptions\BackupDecryptionException;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
 use Modules\Sync\Internal\Exceptions\KeyringStateException;
@@ -147,6 +148,7 @@ final class GdkKeyringService
 
     /**
      * @throws \LogicException when the app-lock KEK is unavailable.
+     * @throws BackupDecryptionException when the held KEK does not open the file.
      */
     public function loadKeyring(int $userId, Session $session): GdkKeyring
     {
@@ -322,12 +324,12 @@ final class GdkKeyringService
         return UserDataPathService::appPath("sync/gdk/{$userId}.enc");
     }
 
+    // Declared, not swallowed: leaving the encryptor's own type off the
+    // signature is how a wrong KEK escaped as far as the dashboard, since
+    // nothing downstream could see that it was reachable.
     /**
      * @throws KeyringStateException when the decrypted payload will not parse.
-     *
-     * The file encryptor raises its own type when $kek cannot decrypt the
-     * file — wrong key, tampering, or truncation. Not re-declared here
-     * because this method does not translate it.
+     * @throws BackupDecryptionException when $kek cannot decrypt the file.
      */
     private function readKeyringFile(int $userId, string $kek): GdkKeyring
     {

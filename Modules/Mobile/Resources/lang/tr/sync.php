@@ -7,7 +7,7 @@ return [
     'heading' => 'Veriler ve cihazlar',
     'sync_status' => 'Senkronizasyon durumu',
     'your_devices' => 'Cihazların',
-    'syncing_progress' => 'Senkronize ediliyor… :expected kayıttan :applied tanesi',
+    'syncing_progress' => 'Senkronize ediliyor… :count kayıt',
     'initial_sync_aria' => 'İlk senkronizasyon ilerlemesi',
     'no_peers' => 'Senkronizasyona başlamak için başka bir cihaz eşleştir.',
     'sync_now' => 'Şimdi senkronize et',

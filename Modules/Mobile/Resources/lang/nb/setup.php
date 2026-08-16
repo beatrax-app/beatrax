@@ -28,6 +28,6 @@ return [
     'resuming' => 'Gjenopptar oppsettet…',
     'setting_up' => 'Setter opp denne enheten…',
     'progress_aria' => 'Fremdrift for oppsettet',
-    'records' => ':applied av :expected oppføringer',
+    'records' => ':count oppføringer',
     'records_preparing' => 'Venter på den andre enheten…',
 ];
