@@ -123,12 +123,15 @@
                             data-testid="tx-card-{{ $row['id'] }}"
                             style="display: flex; align-items: center;"
                         >
+                            {{-- Full width below sm so the counterparty gets a line of
+                                 its own: sharing the row with the badges and the amount
+                                 left it 28px of the 324. Kept outside the tag — a
+                                 comment between attributes reads to the HTML analyser
+                                 as attributes, and this one declared a deprecated
+                                 one. --}}
                             <a
                                 href="{{ route('transactions.show', ['transactionId' => $row['id']]) }}"
                                 wire:navigate
-                                {{-- Full width below sm so the counterparty name gets a
-                                     line of its own: sharing the row with the badges and
-                                     the amount left it 28px of the 324. --}}
                                 class="block min-w-0 w-full sm:w-auto sm:flex-1"
                             >
                                 <div class="min-w-0 flex-1">
