@@ -40,6 +40,8 @@ final readonly class OpLogReplayer
 
     private OpLogEntryApplier $applier;
 
+    private SearchIndexRefresher $searchRefresher;
+
     /**
      * @param  DatabaseManager  $db  Raw DB access (bypasses Eloquent model events).
      * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
@@ -77,8 +79,9 @@ final readonly class OpLogReplayer
         $session = $crypto->session ?? $this->resolveFromContainer(Session::class);
 
         // The verify half owns the device-key map and signature gate; the
-        // apply half owns the merge strategies and FTS writer; both share
-        // one quarantine sink. The host stays a thin replay orchestrator.
+        // apply half owns the merge strategies; both share one quarantine sink.
+        // Row ownership, deferred self-references and the search index are
+        // their own collaborators — each a question the merge needs answered.
         $quarantine = new OpLogQuarantine($db);
         $this->projector = new OpLogValueProjector($rules, $sensitiveFields, $columnCodec, $session);
         $this->verifier = new OpLogEntryVerifier(
@@ -92,7 +95,16 @@ final readonly class OpLogReplayer
             $session,
             $quarantine,
         );
-        $this->applier = new OpLogEntryApplier($db, $rules, $this->projector, $quarantine, $searchWriter);
+        $ownership = new RowOwnership($db);
+        $this->applier = new OpLogEntryApplier(
+            $db,
+            $rules,
+            $this->projector,
+            $quarantine,
+            $ownership,
+            new SelfReferenceDeferral($db, $ownership),
+        );
+        $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);
     }
 
     // Creates arrive grouped by table in HLC order, which says nothing about
@@ -240,6 +252,6 @@ final readonly class OpLogReplayer
         );
 
         $this->applier->applyPairCascades($pairCascades, $userId, $now, $touchedTransactionIds);
-        $this->applier->refreshSearchIndex($touchedTransactionIds, $tombstonedTransactionIds, $userId, $now);
+        $this->searchRefresher->refresh($touchedTransactionIds, $tombstonedTransactionIds, $userId, $now);
     }
 }
