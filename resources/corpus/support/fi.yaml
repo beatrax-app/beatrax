@@ -44,7 +44,7 @@ entries:
     type: merchant
     support_url: "https://www.easyfit.fi/sopimusehdot/"
     notes: "Toistaiseksi voimassa olevan jäsenyyden irtisanomisaika on yksi asiakkuuskuukausi ja irtisanominen tehdään EasyFit-asiakastilillä; päättymispäivä määräytyy henkilökohtaisen laskutuseräpäivän mukaan ja vahvistus tulee sähköpostitse. Kertaluonteista aloitusmaksua ei palauteta irtisanomisen yhteydessä."
-  - name: Verisure Suomi
+  - name: Verisure
     type: merchant
     support_url: "https://www.verisure.fi/asiakaspalvelu"
     notes: "Verisurella ei ole verkossa irtisanomislomaketta: toistaiseksi voimassa oleva sopimus päätetään soittamalla asiakaspalveluun numeroon 010 217 9000 (arkisin klo 8–17) tai omien sivujen chatissa. Kuluttajan irtisanomisaika on yksi täysi kalenterikuukausi, ja Verisure varmistaa erikseen valtuutesi sopimuksen irtisanomiseen."

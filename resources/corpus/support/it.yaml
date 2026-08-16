@@ -59,7 +59,7 @@ entries:
     type: merchant
     cancel_url: "https://www.mcfit.com/it/diritto-di-recesso"
     notes: "In assenza di disdetta tramite l'area riservata almeno 15 giorni prima della scadenza il contratto si rinnova automaticamente di 6 mesi in 6 mesi al prezzo a regime. Per i contratti conclusi online resta il diritto di recesso entro 14 giorni, da comunicare per iscritto a RSG Group Italia S.r.l., viale Fulvio Testi 29, 20162 Milano, o via e-mail a promozioni@mcfit.com."
-  - name: Verisure Italia
+  - name: Verisure
     type: merchant
     support_url: "https://www.verisure.it/contatti"
     notes: "Non esiste una pagina online per disdire: il recesso va comunicato al servizio clienti dalla sezione Aiuto dell'app My Verisure Italia, al numero verde 800.999.848 (lun-ven 7:00-23:00, sabato, domenica e festivi 9:00-21:00) o via e-mail. Il contratto prevede un preavviso di 30 giorni e un corrispettivo di recesso anticipato di 300€ entro i primi 12 mesi, poi a costo zero."

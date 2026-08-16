@@ -50,6 +50,10 @@ entries:
     cancel_url: "https://www.nordea.dk/privat/produkter/konti-og-betalinger/luk-konto.html"
     support_url: "https://www.nordea.dk/privat/find-hjaelp/konti-oprettelse-og-lukning.html"
     notes: "Almindelige hverdagskonti lukker du selv i mobilbanken under 'Indstillinger' eller i netbanken under 'Kontooplysninger' → 'Luk konto'; du vælger den konto, restsaldoen og betalingsserviceaftaler skal flyttes til, og underskriver med MitID. Andre kontotyper, fællesejede konti og din sidste konto i Nordea kræver, at du sender en besked via mobilbank eller netbank."
+  - name: Verisure
+    type: merchant
+    support_url: "https://www.verisure.dk/om-verisure/kontakt"
+    notes: "Der er ingen opsigelsesside online: kundeservice tages på 70 24 73 65, og de fulde vilkår ligger som PDF under abonnementsbetingelser — læs bindingsperioden og opsigelsesvarslet dér, for de står ikke på selve siden. Efter dansk forbrugerret kan en løbende aftale højst binde dig i seks måneder. Bed om skriftlig bekræftelse på opsigelsen."
   - name: Røde Kors
     type: merchant
     cancel_url: "https://www.rodekors.dk/faq"

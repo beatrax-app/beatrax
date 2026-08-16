@@ -56,6 +56,10 @@ entries:
     type: merchant
     support_url: "https://portal.fitness24seven.com/faq"
     notes: "Enligt medlemsvillkorens punkt 10 upphör ett löpande autogiro-/kortavtal vid det kalendermånadsskifte som inträffar efter två månader från uppsägningen. Uppsägning kan göras via Mina Sidor, via e-post till info@f24s.com eller per post – spara kvittensen. Förskottsbetalade medlemskap har fast löptid och kan inte sägas upp i förtid."
+  - name: Verisure
+    type: merchant
+    support_url: "https://www.verisure.se/faq-tjanster-och-avtal"
+    notes: "Avtalet är löpande med tre månaders uppsägningstid, och i vissa fall gäller en bindningstid på upp till 24 månader som då står uttryckligt i avtalet. Det finns inget uppsägningsformulär på webben: uppsägningen görs på 020-7 24 365, via kundservice@verisure.se, i chatten på Mina sidor eller per brev till Box 2511, 580 02 Linköping. Verisure kan behöva styrka din identitet först."
   - name: Röda Korset
     type: merchant
     cancel_url: "https://www.rodakorset.se/skank-pengar/bli-manadsgivare/andra-manadsgava/"

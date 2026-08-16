@@ -38,6 +38,10 @@ entries:
     type: merchant
     support_url: "https://www.assura.ch/de/kontaktaufnahme"
     notes: "Assura bietet keine eigene Online-Kündigungsseite: Kündigung und Widerruf laufen über das Kontaktformular unter «Kontaktaufnahme», per E-Mail an kuendigung-widerruf.zusatzversicherungen@assura.ch oder per SMS. Anzugeben sind Name, Vorname, Policennummer, vollständige Adresse, Geburtsdatum, die betroffene Zusatzversicherung und das gewünschte Kündigungsdatum — bei unvollständigen Angaben wird die Anfrage nicht bearbeitet."
+  - name: Sanitas
+    type: merchant
+    support_url: "https://www.sanitas.com/de/privatkunden/services/hilfe.html"
+    notes: "Sanitas stellt kein Kündigungsformular online: der Kundendienst ist unter +41 844 150 150 erreichbar (Mo–Fr 8–17 Uhr), gekündigt wird schriftlich. Die Grundversicherung lässt sich auf Jahresende kündigen, wenn die Kündigung bis Ende November bei Sanitas eintrifft; Zusatzversicherungen laufen nach eigenen Fristen und der neue Versicherer darf sie ablehnen. Kündigen Sie die Grundversicherung erst, wenn die Aufnahme beim neuen Versicherer bestätigt ist — die Versicherung ist obligatorisch."
   - name: Zurich Schweiz
     type: merchant
     cancel_url: "https://www.zurich.ch/de/services/kuendigung"

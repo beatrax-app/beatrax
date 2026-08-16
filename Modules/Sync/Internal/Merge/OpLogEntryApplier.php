@@ -6,7 +6,6 @@ namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
-use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
@@ -25,6 +24,7 @@ final readonly class OpLogEntryApplier
         private OpLogQuarantine $quarantine,
         private RowOwnership $ownership,
         private SelfReferenceDeferral $selfReferences,
+        private TransferPairCascade $pairCascade,
     ) {}
 
     /**
@@ -338,7 +338,7 @@ final readonly class OpLogEntryApplier
                 $tomb = $tombstones[$table][$pk] ?? null;
 
                 if ($tomb !== null && $this->tombstoneWins($tomb, $fields)) {
-                    $this->collectPairCascade($table, $pk, $tomb, $userId, $pairCascades);
+                    $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
                     $this->deleteRow($table, $pk, $userId);
                     $this->trackTransaction($table, $pk, $tombstonedTransactionIds);
 
@@ -411,48 +411,10 @@ final readonly class OpLogEntryApplier
                     continue;
                 }
 
-                $this->collectPairCascade($table, $pk, $tomb, $userId, $pairCascades);
+                $this->pairCascade->collect($table, $pk, $tomb, $userId, $pairCascades);
                 $this->deleteRow($table, $pk, $userId);
                 $this->trackTransaction($table, $pk, $tombstonedTransactionIds);
             }
-        }
-    }
-
-    // Before deleting a transfer transaction, capture its surviving pair
-    // partner: ON DELETE SET NULL on pair_transaction_id leaves the partner
-    // with a NULL link, reclassified AFTER commit. Non-transfer or unpaired
-    // rows collect nothing.
-    /**
-     * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
-     */
-    private function collectPairCascade(string $table, int|string $pk, OpLogEntry $tomb, int $userId, array &$pairCascades): void
-    {
-        if ($table !== 'transactions') {
-            return;
-        }
-
-        $txRow = $this->db->connection()
-            ->table('transactions')
-            ->where('id', $pk)
-            ->where('user_id', $userId)
-            ->first();
-
-        if ($txRow === null) {
-            return;
-        }
-
-        $txType = is_string($txRow->type ?? null) ? $txRow->type : null;
-        $pairId = is_numeric($txRow->pair_transaction_id ?? null)
-            ? (int) $txRow->pair_transaction_id
-            : null;
-
-        if ($pairId !== null && in_array($txType, TransactionType::transferValues(), true)) {
-            $pairCascades[] = [
-                'partnerId' => $pairId,
-                'deletedType' => $txType,
-                'tombHlcL' => $tomb->hlcL,
-                'tombHlcC' => $tomb->hlcC,
-            ];
         }
     }
 
@@ -484,77 +446,6 @@ final readonly class OpLogEntryApplier
         if ($table === 'transactions' && is_int($pk)) {
             $ids[] = $pk;
         }
-    }
-
-    // After the merge transaction, orphaned transfer partners (pair link now
-    // NULL) are reclassified, and each compensating op is persisted with a
-    // monotonic HLC so a later rebuild reproduces the reclassification.
-    /**
-     * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
-     * @param  list<int>  $touchedTransactionIds
-     */
-    public function applyPairCascades(array $pairCascades, int $userId, string $now, array &$touchedTransactionIds): void
-    {
-        foreach ($pairCascades as $cascade) {
-            $newType = match ($cascade['deletedType']) {
-                'transfer_out' => 'income',
-                'transfer_in' => 'expense',
-                default => null,
-            };
-
-            if ($newType === null) {
-                continue;
-            }
-
-            $partnerId = $cascade['partnerId'];
-
-            $partnerRow = $this->db->connection()
-                ->table('transactions')
-                ->where('id', $partnerId)
-                ->where('user_id', $userId)
-                ->first();
-
-            if ($partnerRow === null || $partnerRow->pair_transaction_id !== null) {
-                continue;
-            }
-
-            $this->db->connection()
-                ->table('transactions')
-                ->where('id', $partnerId)
-                ->where('user_id', $userId)
-                ->update(['type' => $newType]);
-
-            $this->persistCascadeOp($partnerId, $newType, $cascade, $userId, $now);
-            $touchedTransactionIds[] = $partnerId;
-        }
-    }
-
-    // The compensating op is stored with a REAL monotonic HLC (tombstone HLC,
-    // counter + 1) so it sorts deterministically AFTER the tombstone — an HLC
-    // of [0,0] would sort FIRST and a rebuild would revert the
-    // reclassification.
-    /**
-     * @param  array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}  $cascade
-     */
-    private function persistCascadeOp(int $partnerId, string $newType, array $cascade, int $userId, string $now): void
-    {
-        $this->db->connection()->table('op_log_entries')->updateOrInsert(
-            [
-                'user_id' => $userId,
-                'device_id' => OpLogReplayer::SYSTEM_CASCADE_DEVICE_ID,
-                'table_name' => 'transactions',
-                'pk' => (string) $partnerId,
-                'field' => 'type',
-                'hlc_l' => $cascade['tombHlcL'],
-                'hlc_c' => $cascade['tombHlcC'] + 1,
-            ],
-            [
-                'op_type' => OpType::Set->value,
-                'value' => json_encode($newType, JSON_THROW_ON_ERROR),
-                'signature' => '',
-                'recorded_at' => $now,
-            ],
-        );
     }
 
     // FTS5 freshness runs OUTSIDE the merge transaction (shadow-table writes
