@@ -70,6 +70,15 @@ return [
         'submit' => 'Priskirti iš naujo',
     ],
 
+    'goal' => [
+        'heading' => 'Taupymo tikslas',
+        'help' => 'Įskaityk šią operaciją į vieną iš savo taupymo tikslų.',
+        'choose_aria' => 'Pasirink taupymo tikslą',
+        'choose_option' => 'Pasirink tikslą…',
+        'submit' => 'Pridėti prie tikslo',
+        'remove_aria' => 'Pašalinti :name',
+    ],
+
     'delete' => [
         'heading' => 'Ištrinti operaciją',
         'help' => 'Visam laikui pašalina šią operaciją. Šio veiksmo atšaukti negalima.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Pastaba išsaugota',
         'unreconciled' => 'Suderinimas panaikintas — šią operaciją vėl gali redaguoti.',
         'counterparty_updated' => 'Kita šalis atnaujinta',
+        'goal_attributed' => 'Įskaityta į šį tikslą',
+        'goal_attribution_removed' => 'Nebeįskaitoma į šį tikslą',
         'split_saved' => 'Padalijimas išsaugotas',
         'removed_one_remains' => 'Pašalinta — liko viena kategorija',
         'unsplit_restored' => 'Padalijimas panaikintas — atkurta viena kategorija',

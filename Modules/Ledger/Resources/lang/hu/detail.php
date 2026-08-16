@@ -70,6 +70,15 @@ return [
         'submit' => 'Hozzárendelés',
     ],
 
+    'goal' => [
+        'heading' => 'Megtakarítási cél',
+        'help' => 'Számítsd bele ezt a tranzakciót valamelyik megtakarítási célodba.',
+        'choose_aria' => 'Válassz megtakarítási célt',
+        'choose_option' => 'Válassz célt…',
+        'submit' => 'Hozzáadás a célhoz',
+        'remove_aria' => ':name eltávolítása',
+    ],
+
     'delete' => [
         'heading' => 'Tranzakció törlése',
         'help' => 'Véglegesen eltávolítja ezt a tranzakciót. A művelet nem vonható vissza.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Megjegyzés mentve',
         'unreconciled' => 'Egyeztetés megszüntetve — újra szerkesztheted ezt a tranzakciót.',
         'counterparty_updated' => 'Partner frissítve',
+        'goal_attributed' => 'Beleszámít ebbe a célba',
+        'goal_attribution_removed' => 'Már nem számít bele ebbe a célba',
         'split_saved' => 'Felosztás mentve',
         'removed_one_remains' => 'Eltávolítva — egy kategória maradt',
         'unsplit_restored' => 'Felosztás megszüntetve — visszaállítva egyetlen kategóriára',

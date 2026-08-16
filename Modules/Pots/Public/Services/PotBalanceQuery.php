@@ -159,7 +159,7 @@ final class PotBalanceQuery
     }
 
     /**
-     * @return array<int, array{balance: int, currency: string}> goal_id => pot balance + currency
+     * @return array<int, array{balance: int, currency: string, potId: int}> goal_id => pot balance, currency, pot id
      */
     public function linkedPotBalancesForUser(User $user): array
     {
@@ -172,13 +172,28 @@ final class PotBalanceQuery
 
         $result = [];
         foreach ($rows as $row) {
+            $potId = self::toInt($row->id);
             $result[self::toInt($row->goal_id)] = [
-                'balance' => $this->balanceForPot(self::toInt($row->id), $user),
+                'balance' => $this->balanceForPot($potId, $user),
                 'currency' => self::toString($row->currency),
+                'potId' => $potId,
             ];
         }
 
         return $result;
+    }
+
+    // Net allocation into a pot on or after $since ('Y-m-d'), signed the same
+    // way as the movement rows themselves. A goal reading its progress from a
+    // pot balance measures its run-rate from the movements behind it.
+    public function netMovementForPotSince(int $potId, string $since, User $user): int
+    {
+        return (int) $this->db->connection()
+            ->table('pot_movements')
+            ->where('user_id', $user->id)
+            ->where('pot_id', $potId)
+            ->where('created_at', '>=', $since)
+            ->sum('amount_minor');
     }
 
     public function linkedPotIdForGoal(int $goalId, User $user): ?int

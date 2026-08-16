@@ -25,7 +25,6 @@ final class GoalFactory extends Factory
     {
         return [
             'user_id' => null,
-            'account_id' => null,
             'name' => $this->faker->word(),
             'target_minor' => 100000,
             'target_currency' => 'EUR',

@@ -153,11 +153,6 @@
                         </div>
                     </div>
 
-                    {{-- Account link chip (omit row entirely when unlinked) --}}
-                    @if ($row->accountName !== null)
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ $row->accountName }}</p>
-                    @endif
-
                     {{-- Progress bar --}}
                     @if (! $isCompleted)
                         <div class="mt-3">
@@ -274,9 +269,6 @@
                                 <p class="min-w-0 truncate text-sm font-semibold text-slate-500 dark:text-slate-400">{{ $row->name }}</p>
                                 <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-[3px] text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">{{ Lang::get('goals::messages.status.archived') }}</span>
                             </div>
-                            @if ($row->accountName !== null)
-                                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">{{ $row->accountName }}</p>
-                            @endif
                             <div class="mt-3 flex items-baseline justify-between gap-4">
                                 <p class="text-sm" style="font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums;">
                                     {{ $fmt($row->contributedMinor, $row->currency) }}
@@ -368,21 +360,6 @@
                 @if ($errorDate !== '')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
                 @endif
-            </div>
-
-            <div>
-                <label for="goal-account-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.savings_account') }}</label>
-                <select
-                    id="goal-account-sheet"
-                    wire:model.live="accountId"
-                    style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                >
-                    <option value="">{{ Lang::get('goals::messages.form.no_account') }}</option>
-                    @foreach ($accounts as $account)
-                        <option value="{{ $account->id }}">{{ $account->name }}</option>
-                    @endforeach
-                </select>
             </div>
 
             <div class="flex gap-3 pt-2">
@@ -479,38 +456,18 @@
                     @endif
                 </div>
 
-                {{-- Savings account (optional) --}}
-                <div>
-                    <label for="goal-account" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.savings_account') }}</label>
-                    <select
-                        id="goal-account"
-                        wire:model.live="accountId"
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
-                    >
-                        <option value="">{{ Lang::get('goals::messages.form.no_account') }}</option>
-                        @foreach ($accounts as $account)
-                            <option value="{{ $account->id }}">{{ $account->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Linked pot (optional) — D-11; settable from goal side --}}
+                {{-- Linked pot (optional); settable from the goal side --}}
                 <div>
                     <label for="goal-pot" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.linked_pot') }}</label>
                     <select
                         id="goal-pot"
                         wire:model="linkedPotId"
-                        @if ($accountId === '') disabled @endif
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 disabled:opacity-50 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                     >
-                        @if ($accountId === '')
-                            <option value="" disabled>{{ Lang::get('goals::messages.form.select_account_first') }}</option>
-                        @else
-                            <option value="">{{ Lang::get('goals::messages.form.no_pot') }}</option>
-                            @foreach ($pots as $pot)
-                                <option value="{{ $pot->id }}">{{ $pot->name }}</option>
-                            @endforeach
-                        @endif
+                        <option value="">{{ Lang::get('goals::messages.form.no_pot') }}</option>
+                        @foreach ($pots as $pot)
+                            <option value="{{ $pot->id }}">{{ $pot->name }}</option>
+                        @endforeach
                     </select>
                     @if ($errorLinkedPot !== '')
                         <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorLinkedPot }}</p>

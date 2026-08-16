@@ -5,31 +5,34 @@ declare(strict_types=1);
 namespace Modules\Goals\Database\Seeders\Demo;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Goals\Public\Services\GoalWriter;
-use Modules\Ledger\Models\Account;
-use Modules\Ledger\Public\Enums\AccountKind;
 
-// Savings goals for the demo install, anchored to the demo ASN current
-// account so the projected finish date has real cash-flow behind it. The
-// linked demo pots supply the contributed-so-far figure, so this seeder
-// must run before DemoPotsSeeder, which resolves goals by name.
+// Savings goals for the demo install. Three draw their progress from a demo
+// pot (DemoPotsSeeder runs after this one and resolves goals by name); the
+// fourth has no pot and shows the other source — the demo credits the user
+// explicitly attributed to it.
 final class DemoGoalsSeeder
 {
-    // monthsOut drives target_date relative to the seed run so the demo
-    // never ships a goal whose deadline has already passed. `complete`
-    // exercises the finished-goal rendering path alongside active rows.
-    /** @var list<array{name: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool}> */
+    // monthsOut drives target_date relative to the seed run so the demo never
+    // ships a goal whose deadline has already passed, and `complete` exercises
+    // the finished-goal rendering path. `fundedBy` picks the attributed credits
+    // by (type, amount) — description is ciphertext at rest under encryption.
+    /** @var list<array{name: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool, fundedBy: ?array{type: string, amountMinor: int}}> */
     private const GOALS = [
-        ['name' => 'Emergency fund', 'amount' => '5000,00', 'monthsOut' => 18, 'startedDaysAgo' => 80, 'complete' => false],
-        ['name' => 'Japan trip', 'amount' => '4500,00', 'monthsOut' => 14, 'startedDaysAgo' => 62, 'complete' => false],
-        ['name' => 'Replace the laptop', 'amount' => '1800,00', 'monthsOut' => 8, 'startedDaysAgo' => 45, 'complete' => false],
-        ['name' => 'Winter tyres', 'amount' => '600,00', 'monthsOut' => 3, 'startedDaysAgo' => 30, 'complete' => true],
+        ['name' => 'Emergency fund', 'amount' => '5000,00', 'monthsOut' => 18, 'startedDaysAgo' => 80, 'complete' => false, 'fundedBy' => null],
+        ['name' => 'Japan trip', 'amount' => '4500,00', 'monthsOut' => 14, 'startedDaysAgo' => 62, 'complete' => false, 'fundedBy' => null],
+        ['name' => 'Replace the laptop', 'amount' => '1800,00', 'monthsOut' => 8, 'startedDaysAgo' => 45, 'complete' => false, 'fundedBy' => null],
+        ['name' => 'Winter tyres', 'amount' => '600,00', 'monthsOut' => 3, 'startedDaysAgo' => 30, 'complete' => true, 'fundedBy' => ['type' => 'transfer_in', 'amountMinor' => 10000]],
     ];
 
     public function __construct(
         private readonly GoalWriter $writer,
+        private readonly GoalContributionWriter $contributions,
+        private readonly DatabaseManager $db,
     ) {}
 
     /**
@@ -39,10 +42,8 @@ final class DemoGoalsSeeder
     {
         $primary = $users['demo-1@beatrax.local'] ?? null;
         if ($primary !== null) {
-            $accountId = $this->currentAccountId($primary);
-
             foreach (self::GOALS as $row) {
-                $this->upsertGoal($primary, $row, $accountId);
+                $this->upsertGoal($primary, $row);
             }
         }
 
@@ -52,9 +53,9 @@ final class DemoGoalsSeeder
     }
 
     /**
-     * @param  array{name: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool}  $row
+     * @param  array{name: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool, fundedBy: ?array{type: string, amountMinor: int}}  $row
      */
-    private function upsertGoal(User $user, array $row, ?int $accountId): void
+    private function upsertGoal(User $user, array $row): void
     {
         $existing = Goal::query()
             ->where('user_id', $user->id)
@@ -70,29 +71,43 @@ final class DemoGoalsSeeder
             $row['name'],
             $row['amount'],
             CarbonImmutable::today()->addMonths($row['monthsOut'])->toDateString(),
-            $accountId,
         );
 
         // The writer stamps start_date as today, which leaves every seeded
         // goal inside the projector's minimum observation window and stuck
         // on "building a projection". Backdating gives the run-rate a real
-        // window of demo transactions to measure.
+        // window of demo contributions to measure.
         $goal->start_date = CarbonImmutable::today()->subDays($row['startedDaysAgo']);
         $goal->save();
+
+        if ($row['fundedBy'] !== null) {
+            $this->attributeCredits($user, $goal->id, $row['fundedBy']);
+        }
 
         if ($row['complete']) {
             $this->writer->markComplete($user, $goal->id);
         }
     }
 
-    private function currentAccountId(User $user): ?int
+    /**
+     * @param  array{type: string, amountMinor: int}  $criteria
+     */
+    private function attributeCredits(User $user, int $goalId, array $criteria): void
     {
-        $account = Account::query()
+        $transactionIds = $this->db->connection()
+            ->table('transactions')
             ->where('user_id', $user->id)
-            ->where('kind', AccountKind::Bank->value)
-            ->orderBy('id')
-            ->first();
+            ->where('source_format', 'demo')
+            ->where('type', $criteria['type'])
+            ->where('amount_minor', $criteria['amountMinor'])
+            ->orderBy('posted_at')
+            ->pluck('id')
+            ->all();
 
-        return $account?->id;
+        foreach ($transactionIds as $transactionId) {
+            if (is_numeric($transactionId)) {
+                $this->contributions->attribute($user, $goalId, (int) $transactionId);
+            }
+        }
     }
 }

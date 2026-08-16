@@ -70,6 +70,15 @@ return [
         'submit' => 'Zmień',
     ],
 
+    'goal' => [
+        'heading' => 'Cel oszczędnościowy',
+        'help' => 'Zalicz tę transakcję do jednego ze swoich celów oszczędnościowych.',
+        'choose_aria' => 'Wybierz cel oszczędnościowy',
+        'choose_option' => 'Wybierz cel…',
+        'submit' => 'Dodaj do celu',
+        'remove_aria' => 'Usuń :name',
+    ],
+
     'delete' => [
         'heading' => 'Usuń transakcję',
         'help' => 'Trwale usuwa tę transakcję. Tej operacji nie można cofnąć.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Notatka zapisana',
         'unreconciled' => 'Uzgodnienie cofnięte — możesz znowu edytować tę transakcję.',
         'counterparty_updated' => 'Kontrahent zaktualizowany',
+        'goal_attributed' => 'Zaliczono do tego celu',
+        'goal_attribution_removed' => 'Nie jest już zaliczana do tego celu',
         'split_saved' => 'Podział zapisany',
         'removed_one_remains' => 'Usunięto — została jedna kategoria',
         'unsplit_restored' => 'Podział cofnięty — przywrócono jedną kategorię',

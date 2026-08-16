@@ -222,7 +222,6 @@ it('unallocated is derived and never read from a stored column (D-01)', function
 it('reports the balance and currency of every goal-linked pot', function (): void {
     $goal = DB::table('goals')->insertGetId([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'name' => 'Holiday',
         'target_minor' => 100000,
         'target_currency' => 'EUR',
@@ -258,13 +257,13 @@ it('reports the balance and currency of every goal-linked pot', function (): voi
 
     expect($balances)->toHaveCount(1)
         ->and($balances[$goal]['balance'])->toBe(7500)
-        ->and($balances[$goal]['currency'])->toBe('EUR');
+        ->and($balances[$goal]['currency'])->toBe('EUR')
+        ->and($balances[$goal]['potId'])->toBe($linked->id);
 });
 
 it('finds the pot linked to a goal, and reports none when the link is gone', function (): void {
     $goal = DB::table('goals')->insertGetId([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'name' => 'Holiday',
         'target_minor' => 100000,
         'target_currency' => 'EUR',
@@ -295,7 +294,6 @@ it('finds the pot linked to a goal, and reports none when the link is gone', fun
 it('treats an archived pot as no longer holding its goal', function (): void {
     $goal = DB::table('goals')->insertGetId([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'name' => 'Holiday',
         'target_minor' => 100000,
         'target_currency' => 'EUR',

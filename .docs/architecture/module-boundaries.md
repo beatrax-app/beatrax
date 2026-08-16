@@ -32,7 +32,7 @@ two decisions produced.
 | `EmailScan` | Gmail + Microsoft Graph OAuth, per-inbox UID-resume scan state, the inbox-scan state machine, `.eml`/`.mbox` drop-in |
 | `Forecasting` | 30/60/90-day cash-flow projections, scenario mutations (non-persistent), R-7 percentile bands, shortfall windows |
 | `FX` | Multi-currency exchange-rate infrastructure and base-currency conversion |
-| `Goals` | Savings goals with linked-account contribution tracking and projected finish dates |
+| `Goals` | Savings goals funded by a linked pot or explicitly attributed transactions, with projected finish dates |
 | `Import` | The ImportPipeline orchestrator + per-format adapters (ASN CSV/CAMT/MT940, ICS PDF, PayPal CSV), the preview wizard |
 | `Ingestion` | The canonical-transaction DTO + source-adapter registry + statement-summary writer + account-resolver contract |
 | `Ledger` | Transactions, accounts, categories, merchants, import runs, currencies, statement summaries — the canonical store |

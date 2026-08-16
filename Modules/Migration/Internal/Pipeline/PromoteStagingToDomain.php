@@ -800,7 +800,6 @@ final class PromoteStagingToDomain
                 $name,
                 self::minorToDecimalString(self::toInt($row->target_minor)),
                 $targetDate,
-                null,
             );
 
             $this->sourceMapWriter->record(

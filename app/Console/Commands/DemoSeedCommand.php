@@ -333,6 +333,7 @@ final class DemoSeedCommand extends Command
         // pointing at a deleted goal.
         $connection->table('pot_movements')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('pots')->whereIn('user_id', $demoUserIds)->delete();
+        $connection->table('goal_contributions')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('goals')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('tax_transaction_tags')->whereIn('user_id', $demoUserIds)->delete();
         $connection->table('tax_deduction_categories')->whereIn('user_id', $demoUserIds)->delete();

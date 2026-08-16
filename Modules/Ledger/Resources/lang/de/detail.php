@@ -70,6 +70,15 @@ return [
         'submit' => 'Neu zuordnen',
     ],
 
+    'goal' => [
+        'heading' => 'Sparziel',
+        'help' => 'Diese Transaktion auf eines deiner Sparziele anrechnen.',
+        'choose_aria' => 'Sparziel wählen',
+        'choose_option' => 'Ziel wählen…',
+        'submit' => 'Zum Ziel hinzufügen',
+        'remove_aria' => ':name entfernen',
+    ],
+
     'delete' => [
         'heading' => 'Transaktion löschen',
         'help' => 'Entfernt diese Transaktion dauerhaft. Diese Aktion lässt sich nicht rückgängig machen.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Notiz gespeichert',
         'unreconciled' => 'Abgleich aufgehoben — du kannst diese Transaktion wieder bearbeiten.',
         'counterparty_updated' => 'Zahlungspartner aktualisiert',
+        'goal_attributed' => 'Wird auf dieses Ziel angerechnet',
+        'goal_attribution_removed' => 'Wird nicht mehr auf dieses Ziel angerechnet',
         'split_saved' => 'Aufteilung gespeichert',
         'removed_one_remains' => 'Entfernt — eine Kategorie bleibt übrig',
         'unsplit_restored' => 'Aufteilung aufgehoben — auf eine einzelne Kategorie zurückgesetzt',

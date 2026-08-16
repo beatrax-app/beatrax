@@ -4,30 +4,24 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
-use Modules\Forecasting\Database\Factories\ForecastRunFactory;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
 use Modules\Ledger\Models\Transaction;
+use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
-/**
- * Wave 0 RED stubs for GOAL-04.
- *
- * These tests reference GoalProgressQuery (Plan 02) and the GoalProgressRow DTO
- * (Plan 02). They will error with "class not found" until Plan 02 lands — that
- * is correct Wave 0 RED behaviour.
- *
- * Covers:
- *   GOAL-04: Projected finish date via run-rate over trailing window;
- *            in-horizon (≤90d) vs beyond-90d confidence flag;
- *            no-contribution-history → null projectedFinishDate;
- *            already-reached → "reached" sentinel (progressState=reached);
- *            ForecastDto.isComputing → run-rate-only fallback (projection still
- *            returned but projectionBeyondHorizon reflects only the run-rate).
+/*
+ * The projected finish date: a run-rate over the trailing window, measured
+ * against whichever source the goal's progress comes from. Covers the
+ * in-horizon vs beyond-90-days confidence flag, the minimum observation
+ * window, and the no-history and already-reached cases that suppress a
+ * projection entirely.
  */
 beforeEach(function (): void {
     $this->user = User::create([
@@ -56,14 +50,14 @@ beforeEach(function (): void {
     ]);
 });
 
-/** Persist a contribution transaction for projection tests. */
-function projTx(int $userId, int $accountId, int $runId, int $amountMinor, string $postedAt): void
+/** Persist a credit and attribute it to $goal, the way the detail screen does. */
+function projContribution(User $user, int $accountId, int $runId, int $goalId, int $amountMinor, string $postedAt): void
 {
     static $i = 0;
     $i++;
 
-    Transaction::create([
-        'user_id' => $userId,
+    $tx = Transaction::create([
+        'user_id' => $user->id,
         'account_id' => $accountId,
         'type' => 'transfer_in',
         'posted_at' => $postedAt,
@@ -83,6 +77,8 @@ function projTx(int $userId, int $accountId, int $runId, int $amountMinor, strin
         'fingerprint' => str_pad('p'.$i, 64, '0', STR_PAD_LEFT),
         'fingerprint_version' => 1,
     ]);
+
+    app(GoalContributionWriter::class)->attribute($user, $goalId, $tx->id);
 }
 
 // ---------------------------------------------------------------------------
@@ -90,25 +86,18 @@ function projTx(int $userId, int $accountId, int $runId, int $amountMinor, strin
 // ---------------------------------------------------------------------------
 
 it('returns a projected finish date when there is a contribution history', function (): void {
-    // Seed 3 monthly contributions of 20 000 over 90 days.
     $startDate = CarbonImmutable::now()->subDays(90)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 300000,
         'start_date' => $startDate,
         'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
         'status' => 'active',
     ]);
 
-    // Seed forecast_runs for the baseline horizons (30, 60, 90 — scenario_id null).
-    ForecastRunFactory::new()->complete()->create(['user_id' => $this->user->id, 'horizon_days' => 30, 'scenario_id' => null]);
-    ForecastRunFactory::new()->complete()->create(['user_id' => $this->user->id, 'horizon_days' => 60, 'scenario_id' => null]);
-    ForecastRunFactory::new()->complete()->create(['user_id' => $this->user->id, 'horizon_days' => 90, 'scenario_id' => null]);
-
-    projTx($this->user->id, $this->account->id, $this->run->id, 20000, CarbonImmutable::now()->subDays(90)->toDateString());
-    projTx($this->user->id, $this->account->id, $this->run->id, 20000, CarbonImmutable::now()->subDays(60)->toDateString());
-    projTx($this->user->id, $this->account->id, $this->run->id, 20000, CarbonImmutable::now()->subDays(30)->toDateString());
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 20000, CarbonImmutable::now()->subDays(90)->toDateString());
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 20000, CarbonImmutable::now()->subDays(60)->toDateString());
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 20000, CarbonImmutable::now()->subDays(30)->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
@@ -116,16 +105,14 @@ it('returns a projected finish date when there is a contribution history', funct
     expect($rows[0]->contributedMinor)->toBe(60000);
 });
 
-// WR-06 follow-up: a goal younger than the minimum observation window must NOT
-// project a finish date. One large early deposit divided by a 1-3 day window
-// would otherwise extrapolate a misleadingly-soon finish; the card shows the
-// "building a projection" copy until enough history accrues.
+// A goal younger than the minimum observation window must NOT project a finish
+// date. One large early deposit divided by a 1-3 day window would otherwise
+// extrapolate a misleadingly-soon finish; the card shows the "building a
+// projection" copy until enough history accrues.
 it('suppresses the projected date until the minimum observation window has elapsed', function (): void {
-    // Goal created 3 days ago (< 7-day minimum) with a single large deposit.
     $startDate = CarbonImmutable::now()->subDays(3)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 500000,
         'start_date' => $startDate,
         'target_date' => CarbonImmutable::now()->addDays(60)->toDateString(),
@@ -134,23 +121,19 @@ it('suppresses the projected date until the minimum observation window has elaps
 
     // A big day-2 deposit that, divided by the tiny window, would project a
     // finish only days out.
-    projTx($this->user->id, $this->account->id, $this->run->id, 200000, CarbonImmutable::now()->subDays(1)->toDateString());
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 200000, CarbonImmutable::now()->subDays(1)->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
-    // Contributions still count (200 000 < 500 000 → in_progress) but no
-    // projected date is offered yet.
     expect($rows[0]->contributedMinor)->toBe(200000);
     expect($rows[0]->projectedFinishDate)->toBeNull();
     expect($rows[0]->progressState)->toBe('in_progress');
 });
 
 it('sets projectionBeyondHorizon to false when projected finish is within 90 days', function (): void {
-    // High daily contribution rate → finish date very soon (within horizon).
     $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 50000,
         'start_date' => $startDate,
         'target_date' => CarbonImmutable::now()->addDays(20)->toDateString(),
@@ -158,7 +141,7 @@ it('sets projectionBeyondHorizon to false when projected finish is within 90 day
     ]);
 
     // 40 000 contributed over 10 days = 4 000/day rate → 10 days to finish remaining 10 000.
-    projTx($this->user->id, $this->account->id, $this->run->id, 40000, CarbonImmutable::now()->subDays(5)->toDateString());
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 40000, CarbonImmutable::now()->subDays(5)->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
@@ -166,11 +149,9 @@ it('sets projectionBeyondHorizon to false when projected finish is within 90 day
 });
 
 it('sets projectionBeyondHorizon to true when projected finish exceeds 90 days', function (): void {
-    // Low daily contribution rate → finish date well beyond 90-day horizon.
     $startDate = CarbonImmutable::now()->subDays(30)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 1000000, // 10 000 EUR — large target
         'start_date' => $startDate,
         'target_date' => CarbonImmutable::now()->addYears(3)->toDateString(),
@@ -178,11 +159,47 @@ it('sets projectionBeyondHorizon to true when projected finish exceeds 90 days',
     ]);
 
     // Only 1 000 minor contributed over 30 days = 33 minor/day → ~30 000 days to finish.
-    projTx($this->user->id, $this->account->id, $this->run->id, 1000, CarbonImmutable::now()->subDays(15)->toDateString());
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 1000, CarbonImmutable::now()->subDays(15)->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
     expect($rows[0]->projectionBeyondHorizon)->toBeTrue();
+});
+
+// A pot-linked goal reads its progress from the pot balance, so its run-rate
+// has to come from the pot's own movements — an attributed transaction would
+// measure money the progress figure never counted.
+it('derives the run-rate from pot movements for a pot-linked goal', function (): void {
+    $goal = Goal::factory()->create([
+        'user_id' => $this->user->id,
+        'target_minor' => 100000,
+        'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
+        'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
+        'status' => 'active',
+    ]);
+
+    $pot = Pot::factory()->create([
+        'user_id' => $this->user->id,
+        'account_id' => $this->account->id,
+        'goal_id' => $goal->id,
+    ]);
+
+    DB::table('pot_movements')->insert([
+        'user_id' => $this->user->id,
+        'pot_id' => $pot->id,
+        'counterpart_pot_id' => null,
+        'amount_minor' => 30000,
+        'currency' => 'EUR',
+        'kind' => 'fund',
+        'memo' => null,
+        'created_at' => CarbonImmutable::now()->subDays(10),
+        'updated_at' => CarbonImmutable::now()->subDays(10),
+    ]);
+
+    $rows = app(GoalProgressQuery::class)->forUser($this->user);
+
+    expect($rows[0]->contributedMinor)->toBe(30000);
+    expect($rows[0]->projectedFinishDate)->not->toBeNull();
 });
 
 // ---------------------------------------------------------------------------
@@ -192,14 +209,12 @@ it('sets projectionBeyondHorizon to true when projected finish exceeds 90 days',
 it('returns null projectedFinishDate when there is no contribution history', function (): void {
     Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 100000,
         'start_date' => CarbonImmutable::now()->subDays(30)->toDateString(),
         'target_date' => CarbonImmutable::now()->addYear()->toDateString(),
         'status' => 'active',
     ]);
 
-    // No transactions seeded — no contribution history.
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
     expect($rows[0]->projectedFinishDate)->toBeNull();
@@ -207,26 +222,24 @@ it('returns null projectedFinishDate when there is no contribution history', fun
 });
 
 it('marks progressState as reached when contributions meet the target', function (): void {
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 50000,
         'start_date' => CarbonImmutable::now()->subDays(10)->toDateString(),
         'target_date' => CarbonImmutable::now()->addDays(60)->toDateString(),
         'status' => 'active',
     ]);
 
-    projTx($this->user->id, $this->account->id, $this->run->id, 50000, CarbonImmutable::now()->subDays(5)->toDateString());
+    projContribution($this->user, $this->account->id, $this->run->id, $goal->id, 50000, CarbonImmutable::now()->subDays(5)->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
     expect($rows[0]->progressState)->toBe('reached');
 });
 
-it('returns null projectedFinishDate for an unlinked goal', function (): void {
+it('returns null projectedFinishDate for a goal with nothing attributed and no pot', function (): void {
     Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => null, // unlinked
         'target_minor' => 100000,
         'start_date' => CarbonImmutable::now()->subDays(10)->toDateString(),
         'status' => 'active',

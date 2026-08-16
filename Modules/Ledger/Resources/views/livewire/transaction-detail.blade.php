@@ -524,6 +524,74 @@
                 </section>
             @endif
 
+            {{-- Savings-goal attribution: the transaction detail screen is the
+                 one place a transaction is assigned to anything, so goal
+                 attribution sits alongside the category, split and
+                 counterparty pickers rather than on the goals page. --}}
+            @if (! empty($goalOptions) || ! empty($attributedGoals))
+                <section
+                    aria-labelledby="goal-attribution-heading"
+                    class="border-t border-slate-200 pt-6 space-y-3 dark:border-slate-700"
+                    data-testid="goal-attribution"
+                    x-data="{ selectedGoal: '' }"
+                >
+                    <div class="space-y-1">
+                        <h2 id="goal-attribution-heading" class="text-base font-medium text-slate-900 dark:text-slate-100">
+                            {{ Lang::get('ledger::detail.goal.heading') }}
+                        </h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">
+                            {{ Lang::get('ledger::detail.goal.help') }}
+                        </p>
+                    </div>
+
+                    @if (! empty($attributedGoals))
+                        <ul class="flex flex-wrap gap-2" data-testid="goal-attribution-list">
+                            @foreach ($attributedGoals as $attributed)
+                                <li class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                    <span>{{ $attributed->goalName }}</span>
+                                    <button
+                                        type="button"
+                                        wire:click="removeGoalAttribution({{ $attributed->goalId }})"
+                                        aria-label="{{ Lang::get('ledger::detail.goal.remove_aria', ['name' => $attributed->goalName]) }}"
+                                        class="rounded-full px-1.5 text-slate-400 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:hover:text-slate-100"
+                                        data-testid="goal-attribution-remove"
+                                    >
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if (! empty($goalOptions))
+                        <div class="flex items-center gap-3">
+                            <label class="sr-only" for="goal-attribution-select">{{ Lang::get('ledger::detail.goal.choose_aria') }}</label>
+                            <select
+                                id="goal-attribution-select"
+                                x-model="selectedGoal"
+                                class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700"
+                                data-testid="goal-attribution-select"
+                            >
+                                <option value="">{{ Lang::get('ledger::detail.goal.choose_option') }}</option>
+                                @foreach ($goalOptions as $goalOption)
+                                    <option value="{{ $goalOption->goalId }}">{{ $goalOption->goalName }}</option>
+                                @endforeach
+                            </select>
+
+                            <button
+                                type="button"
+                                :disabled="!selectedGoal"
+                                @click="$wire.attributeToGoal(Number(selectedGoal)); selectedGoal = ''"
+                                class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900"
+                                data-testid="goal-attribution-submit"
+                            >
+                                {{ Lang::get('ledger::detail.goal.submit') }}
+                            </button>
+                        </div>
+                    @endif
+                </section>
+            @endif
+
             {{-- Delete affordance: confirm-guarded delete with a danger-tone button. --}}
             <section
                 aria-labelledby="delete-heading"
