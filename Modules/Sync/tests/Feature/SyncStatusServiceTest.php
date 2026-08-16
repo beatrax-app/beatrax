@@ -95,8 +95,10 @@ it('has no last-synced time before any peer has been seen', function (): void {
     expect(sssService()->lastSyncedHuman(CarbonImmutable::parse('2026-07-19 06:00:00'), 1))->toBeNull();
 });
 
-// Each magnitude, and each boundary between them. The buckets truncate rather
-// than round, so 119 seconds is one minute and not two.
+// Each magnitude, and each boundary between them. Carbon truncates rather than
+// rounds, so 119 seconds is one minute and not two. The strings come from its
+// short forms, which is what makes them translate — the ladder these replaced
+// returned English literals whatever the locale.
 it('renders the gap since the newest last_seen_at', function (string $seenAt, ?string $expected): void {
     sssSeed(1, [['status' => 'closed', 'last_seen_at' => $seenAt]]);
 
@@ -105,14 +107,14 @@ it('renders the gap since the newest last_seen_at', function (string $seenAt, ?s
     expect(sssService()->lastSyncedHuman($now, 1))->toBe($expected);
 })->with([
     'same instant' => ['2026-07-19 12:00:00', 'just now'],
-    'a second short of a minute' => ['2026-07-19 11:59:01', 'just now'],
+    'a second short of a minute' => ['2026-07-19 11:59:01', '59s ago'],
     'exactly a minute' => ['2026-07-19 11:59:00', '1m ago'],
     'truncates rather than rounds' => ['2026-07-19 11:58:01', '1m ago'],
     'a minute short of an hour' => ['2026-07-19 11:01:00', '59m ago'],
     'exactly an hour' => ['2026-07-19 11:00:00', '1h ago'],
     'a day short of counting days' => ['2026-07-18 13:00:00', '23h ago'],
-    'exactly a day' => ['2026-07-18 12:00:00', '1 day ago'],
-    'two days, pluralised' => ['2026-07-17 12:00:00', '2 days ago'],
+    'exactly a day' => ['2026-07-18 12:00:00', '1d ago'],
+    'two days' => ['2026-07-17 12:00:00', '2d ago'],
 ]);
 
 // The newest wins regardless of the order rows come back in, which is the

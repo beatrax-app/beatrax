@@ -338,15 +338,13 @@ jobs:
               # hook runs `artisan package:discover`, which boots the framework
               # — and a boot with no .env and no writable framework directories
               # fails resolving `request`. A fresh clone has neither, because
-              # mobile-app/.env is gitignored (machine-local, mirroring the
-              # developer's own setup) and there is no mobile-app/.env.example:
-              # the repo-root one is the single source of truth for the keys.
+              # mobile-app/.env is gitignored.
               #
               # Nothing here needs the framework, so it can run before Composer
               # has put one there.
               working-directory: mobile-app
               run: |
-                  cp ../.env.example .env
+                  cp .env.example .env
                   mkdir -p database storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   touch database/database.sqlite
                   chmod -R u+rwX storage bootstrap/cache
