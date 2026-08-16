@@ -3,6 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'groups' => [
+        'display' => 'Display',
+        'money' => 'Money',
+        'insights' => 'Insights & alerts',
+        'security' => 'Security & devices',
+        'data' => 'Imports & data',
+        'app' => 'App',
+    ],
+
     'title' => 'Settings',
     'subtitle' => 'Preferences for how your finances appear in the app.',
 
@@ -16,6 +25,7 @@ return [
     ],
 
     'language' => [
+        'apply' => 'Apply',
         'heading' => 'Language',
         'label' => 'Display language',
 

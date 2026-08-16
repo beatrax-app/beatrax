@@ -14,6 +14,7 @@ return [
         'page_title' => 'Bezig met instellen…',
         'pending_heading' => 'Bezig met instellen…',
         'pending_body' => 'Beatrax bereidt je gegevens voor. Dit duurt maar even.',
+        'failed_body' => 'Installatie kon niet worden voltooid. Herstart Beatrax; blijft dit gebeuren, dan staat de reden in het log.',
         'ready_heading' => 'Klaar',
         'ready_body' => 'Instellen voltooid. Bezig met doorgaan…',
     ],

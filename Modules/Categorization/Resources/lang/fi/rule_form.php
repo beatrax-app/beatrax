@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Muokkaa sääntöä',
+    'heading_new' => 'Uusi sääntö',
+
+    'combinator_aria' => 'Ehtojen yhdistin',
+    'match_all' => 'Täsmää kaikkiin ehtoihin',
+    'match_any' => 'Täsmää mihin tahansa ehtoon',
+
+    'condition_label' => 'Ehto :number',
+    'condition_field_aria' => 'Ehdon :number kenttä',
+    'condition_operator_aria' => 'Ehdon :number operaattori',
+    'condition_value_aria' => 'Ehdon :number arvo',
+    'condition_value_from_aria' => 'Ehdon :number arvo (alkaen)',
+    'condition_value_to_aria' => 'Ehdon :number arvo (asti)',
+    'to' => 'ja',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'esim. SPOTIFY',
+    'remove_condition' => 'Poista ehto',
+    'add_condition' => '+ Lisää ehto',
+
+    'then' => 'Sitten',
+    'action_label' => 'Toiminto :number',
+    'action_type_aria' => 'Toiminnon :number tyyppi',
+    'action_category' => 'Kategoria',
+    'action_counterparty' => 'Vastapuoli',
+    'action_note' => 'Muistiinpano',
+    'action_tax_tag' => 'Verotunniste',
+    'assign_category_aria' => 'Määritä kategoria toiminnolle :number',
+    'reassign_counterparty_aria' => 'Siirrä toisen vastapuolen alle toiminnossa :number',
+    'note_text_aria' => 'Muistiinpanon teksti toiminnolle :number',
+    'note_placeholder' => 'Muistiinpanon teksti…',
+    'note_mode_aria' => 'Muistiinpanon tila toiminnolle :number',
+    'note_set' => 'Aseta',
+    'note_append' => 'Lisää perään',
+    'deduction_category_aria' => 'Vähennyskategoria toiminnolle :number',
+    'remove_action' => 'Poista toiminto',
+    'add_action' => '+ Lisää toiminto',
+
+    'this_year_only' => 'Vain tämä vuosi ▾',
+    'override_tax_year' => 'Ohita verovuosi',
+    'tax_year_override_aria' => 'Verovuoden ohitus toiminnolle :number',
+    'tax_tag_note' => 'Verotunnistetoiminnot tulevat voimaan seuraavalla uudelleenkäytöllä, eivät nykyisessä tuonnissa.',
+
+    'priority' => 'Prioriteetti',
+    'priority_help' => 'Pienemmät numerot ajetaan ensin. Säännöt, joilla ei ole yhteisiä kenttiä, eivät koskaan ole ristiriidassa.',
+
+    'cancel' => 'Peruuta',
+    'save_changes' => 'Tallenna muutokset',
+    'save_rule' => 'Tallenna sääntö',
+    'saving' => 'Tallennetaan…',
+
+    'error_rule_unavailable' => 'Sääntö ei ole enää käytettävissä.',
+    'error_invalid_data' => 'Virheelliset sääntötiedot — valitse arvot valikoista ja yritä uudelleen.',
+    'error_duplicate' => 'Sääntö, jolla on tämä kenttä, ehto ja arvo, on jo olemassa. Muokkaa olemassa olevaa sääntöä.',
+    'error_priority_whole' => 'Prioriteetin on oltava kokonaisluku.',
+    'error_add_condition' => 'Lisää vähintään yksi ehto.',
+    'error_add_action' => 'Lisää vähintään yksi toiminto.',
+    'condition_value_required' => 'Anna arvo ehdolle :position.',
+    'condition_bounds_required' => 'Valitse ala- ja yläraja ehdolle :position.',
+    'condition_amount_invalid' => 'Anna kelvollinen summa ehdolle :position.',
+    'action_pick_category' => 'Valitse kategoria tälle toiminnolle.',
+    'action_pick_counterparty' => 'Valitse vastapuoli, jonka alle tapahtuma siirretään.',
+    'action_note_required' => 'Anna muistiinpanon teksti.',
+    'action_pick_deduction' => 'Valitse vähennyskategoria verotunnisteelle.',
+];

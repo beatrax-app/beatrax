@@ -1,0 +1,74 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'primary_nav' => 'Pagrindinis',
+    'search_placeholder' => 'Ieškoti…',
+    'search_aria' => 'Atverti paieškos paletę',
+
+    'section_overview' => 'APŽVALGA',
+    'section_recurring' => 'ĮSIPAREIGOJIMAI',
+    'section_planning' => 'PLANAVIMAS',
+    'section_insights' => 'ĮŽVALGOS',
+    'section_ingestion' => 'DUOMENŲ ĮVESTIS',
+    'section_organise' => 'TVARKYMAS',
+    'section_settings' => 'NUSTATYMAI',
+
+    'nav' => [
+        'community' => 'Bendruomenė',
+        'dashboard' => 'Apžvalga',
+        'transactions' => 'Operacijos',
+        'forecasts' => 'Prognozės',
+        'calendar' => 'Kalendorius',
+        'recurring' => 'Pasikartojantys mokėjimai',
+        'counterparties' => 'Kitos šalys',
+        'triage' => 'Rūšiavimas',
+        'chains' => 'Grandinės',
+        'drift_alerts' => 'Pokyčio įspėjimai',
+        'unusual_charges' => 'Neįprasti mokėjimai',
+        'notifications' => 'Pranešimai',
+        'budgets' => 'Biudžetai',
+        'tax' => 'Mokesčiai',
+        'goals' => 'Tikslai',
+        'pots' => 'Taupyklės',
+        'reports' => 'Ataskaitos',
+        'reconcile' => 'Suderinimas',
+        'subscriptions' => 'Prenumeratos',
+        'imports' => 'Importai',
+        'migrations' => 'Importuoti iš YNAB / Actual',
+        'receipts' => 'Kvitai',
+        'cashbook' => 'Kasos knyga',
+        'email' => 'El. paštas',
+        'categorization' => 'Kategorijų priskyrimas',
+        'data_devices' => 'Duomenys ir įrenginiai',
+        'settings' => 'Nustatymai',
+    ],
+
+    'badge' => [
+        'transactions' => 'Operacijų: :count',
+        'recurring' => 'Pasikartojančių serijų: :count',
+        'counterparties' => 'Kitų šalių: :count',
+        'triage' => 'Nežinomų kitų šalių, laukiančių rūšiavimo: :count',
+        'drift' => 'Neperžiūrėtų pokyčio įspėjimų: :count',
+        'anomaly' => 'Neperžiūrėtų neįprastų mokėjimų: :count',
+        'notifications' => 'Neperskaitytų pranešimų: :count',
+        'budgets' => 'Biudžetų: :count',
+        'tax' => 'Įrašų, pažymėtų kaip svarbių mokesčiams: :count',
+        'subscriptions' => 'Prenumeratų: :count',
+        'imports' => 'Importų: :count',
+    ],
+
+    'dev' => [
+        'heading' => 'Kūrėjas',
+        'open_console' => 'Atverti kūrėjo pultą',
+        'pulse' => 'Eilė :queue · Vykdytojas :worker',
+    ],
+
+    'account' => [
+        'developer_local' => 'kūrėjas · vietinis',
+        'local' => 'vietinis',
+    ],
+
+    'sign_out' => 'Atsijungti',
+];

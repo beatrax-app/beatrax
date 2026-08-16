@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Davčna država',
+    'country_desc' => 'Določa, katere kategorije olajšav so na voljo.',
+    'country_choose' => 'Izberi državo…',
+    'country_switch_warning' => 'Zamenjava doda nove kategorije — obstoječe oznake se nikoli ne spremenijo.',
+
+    'countries' => [
+        'at' => 'Avstrija',
+        'be' => 'Belgija',
+        'bg' => 'Bolgarija',
+        'ca' => 'Kanada',
+        'ch' => 'Švica',
+        'cy' => 'Ciper',
+        'cz' => 'Češka',
+        'de' => 'Nemčija',
+        'dk' => 'Danska',
+        'ee' => 'Estonija',
+        'es' => 'Španija',
+        'fi' => 'Finska',
+        'fr' => 'Francija',
+        'gb' => 'Združeno kraljestvo',
+        'gr' => 'Grčija',
+        'hr' => 'Hrvaška',
+        'hu' => 'Madžarska',
+        'ie' => 'Irska',
+        'is' => 'Islandija',
+        'it' => 'Italija',
+        'lt' => 'Litva',
+        'lu' => 'Luksemburg',
+        'lv' => 'Latvija',
+        'mt' => 'Malta',
+        'nl' => 'Nizozemska',
+        'no' => 'Norveška',
+        'pl' => 'Poljska',
+        'pt' => 'Portugalska',
+        'ro' => 'Romunija',
+        'se' => 'Švedska',
+        'si' => 'Slovenija',
+        'sk' => 'Slovaška',
+        'us' => 'Združene države Amerike',
+    ],
+
+    'categories_label' => 'Kategorije olajšav',
+    'categories_desc' => 'Prilagodi skupine, ki jih uporabljaš za označevanje.',
+    'categories_empty' => 'Kategorij še ni. Dodaj prvo kategorijo ali zamenjaj državo, da naložiš privzete.',
+
+    'from_corpus' => 'iz korpusa',
+    'rename_input_aria' => 'Novo ime za :name',
+    'rename' => 'Preimenuj',
+    'rename_aria' => 'Preimenuj :name',
+    'rename_save_aria' => 'Shrani novo ime za :name',
+    'save' => 'Shrani',
+    'archive' => 'Arhiviraj',
+    'archive_aria' => 'Arhiviraj :name',
+
+    'new_category_label' => 'Ime nove kategorije',
+    'new_category_placeholder' => 'Ime nove kategorije…',
+    'add_category' => 'Dodaj kategorijo',
+    'category_added' => 'Kategorija dodana.',
+
+    'archived_count' => 'Arhivirano (:count)',
+    'restore' => 'Obnovi',
+    'restore_aria' => 'Obnovi :name',
+];

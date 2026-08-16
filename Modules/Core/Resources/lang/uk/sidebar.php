@@ -1,0 +1,74 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'primary_nav' => 'Основне',
+    'search_placeholder' => 'Пошук…',
+    'search_aria' => 'Відкрити панель пошуку',
+
+    'section_overview' => 'ОГЛЯД',
+    'section_recurring' => 'ЗОБОВ’ЯЗАННЯ',
+    'section_planning' => 'ПЛАНУВАННЯ',
+    'section_insights' => 'АНАЛІТИКА',
+    'section_ingestion' => 'НАДХОДЖЕННЯ ДАНИХ',
+    'section_organise' => 'ВПОРЯДКУВАННЯ',
+    'section_settings' => 'НАЛАШТУВАННЯ',
+
+    'nav' => [
+        'community' => 'Спільнота',
+        'dashboard' => 'Панель',
+        'transactions' => 'Транзакції',
+        'forecasts' => 'Прогнози',
+        'calendar' => 'Календар',
+        'recurring' => 'Регулярні',
+        'counterparties' => 'Контрагенти',
+        'triage' => 'Сортування',
+        'chains' => 'Ланцюги',
+        'drift_alerts' => 'Сповіщення про відхилення',
+        'unusual_charges' => 'Незвичні списання',
+        'notifications' => 'Сповіщення',
+        'budgets' => 'Бюджети',
+        'tax' => 'Податки',
+        'goals' => 'Цілі',
+        'pots' => 'Скарбнички',
+        'reports' => 'Звіти',
+        'reconcile' => 'Звірка',
+        'subscriptions' => 'Підписки',
+        'imports' => 'Імпорти',
+        'migrations' => 'Імпорт із YNAB / Actual',
+        'receipts' => 'Чеки',
+        'cashbook' => 'Касова книга',
+        'email' => 'Пошта',
+        'categorization' => 'Категоризація',
+        'data_devices' => 'Дані та пристрої',
+        'settings' => 'Налаштування',
+    ],
+
+    'badge' => [
+        'transactions' => 'Транзакції: :count',
+        'recurring' => 'Регулярні серії: :count',
+        'counterparties' => 'Контрагенти: :count',
+        'triage' => 'Невідомі контрагенти в черзі на сортування: :count',
+        'drift' => 'Відкриті сповіщення про відхилення: :count',
+        'anomaly' => 'Відкриті незвичні списання: :count',
+        'notifications' => 'Непрочитані сповіщення: :count',
+        'budgets' => 'Бюджети: :count',
+        'tax' => 'Позиції, позначені як податково значущі: :count',
+        'subscriptions' => 'Підписки: :count',
+        'imports' => 'Імпорти: :count',
+    ],
+
+    'dev' => [
+        'heading' => 'Розробник',
+        'open_console' => 'Відкрити консоль розробника',
+        'pulse' => 'Queue :queue · Worker :worker',
+    ],
+
+    'account' => [
+        'developer_local' => 'розробник · локально',
+        'local' => 'локально',
+    ],
+
+    'sign_out' => 'Вийти',
+];

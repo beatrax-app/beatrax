@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'search_placeholder' => 'Tippe, um Ansichten, Befehle und Aktionen zu suchen. Esc zum Schließen.',
+    'search_aria' => 'Tippe, um Ansichten, Befehle und Aktionen zu suchen',
+    'dialog_aria' => 'Befehlspalette',
+    'token_suggest_aria' => 'Token-Vorschläge',
+    'rail_view' => 'Ansicht',
+    'rail_dev' => 'Dev',
+    'rail_action' => 'Aktion',
+    'rail_recent' => 'Zuletzt',
+    'no_recent' => 'Noch keine zuletzt verwendeten Einträge.',
+    'section_transactions' => 'Transaktionen',
+    'section_counterparties' => 'Zahlungspartner',
+    'section_categories' => 'Kategorien',
+    'section_goals_recurring' => 'Ziele & Wiederkehrendes',
+    'no_name' => '(kein Name)',
+    'see_all_prefix' => 'Alle ',
+    'see_all_suffix' => ' Ergebnisse anzeigen →',
+    'no_transactions_prefix' => 'Keine Transaktionen passen zu "',
+    'no_transactions_suffix' => '"',
+    'source_txn' => 'txn',
+    'source_counterparty' => 'Zahlungspartner',
+    'source_category' => 'Kategorie',
+    'no_results' => 'Keine Ergebnisse.',
+    'foot_navigate' => 'navigieren',
+    'foot_select' => 'auswählen',
+    'foot_close' => 'schließen',
+    'foot_try' => 'Versuche',
+    'results_suffix' => ' Ergebnisse',
+];

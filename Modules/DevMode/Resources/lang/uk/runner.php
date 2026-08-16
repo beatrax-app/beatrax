@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading' => 'Artisan runner',
+    'subtitle' => 'Команди SAFE запускай одним кліком; команди DESTRUCTIVE — за потрійним бар’єром.',
+    'run_a_command' => 'Запустити команду',
+    'filter_aria' => 'Фільтр запусків',
+    'filter' => [
+        'all' => 'Усі',
+        'running' => 'Виконуються',
+        'failed' => 'Невдалі',
+        'destructive' => 'Деструктивні',
+    ],
+    'worker_running' => 'Обробник черги: ПРАЦЮЄ',
+    'worker_not_running' => 'Обробник черги: НЕ ПРАЦЮЄ',
+    'no_runs' => 'Запусків ще немає. Натисни «Запустити команду» або скористайся палітрою команд (⌘K).',
+    'recent_runs_aria' => 'Останні запуски',
+    'modal_heading' => 'Запустити команду SAFE',
+    'modal_intro' => 'Обери команду рівня SAFE, щоб виконати її одразу. Команд DESTRUCTIVE тут немає — скористайся повторним запуском на стрічці подій або палітрою ⌘K.',
+    'args_badge' => 'args',
+    'args_badge_title' => 'Відкриває форму аргументів',
+
+    'status' => [
+        'running' => 'Виконується',
+        'done' => 'Готово',
+        'failed' => 'Не вдалося',
+        'cancelled' => 'Скасовано',
+    ],
+    'cancel' => 'Скасувати',
+    'rerun' => 'Запустити знову',
+    'started' => 'Розпочато :when',
+    'exit' => 'код виходу',
+
+    'toast' => [
+        'unknown_command' => 'Невідома команда: :command',
+        'missing_args' => 'Не можна виконати :command — бракує :noun: :list',
+        'arg_singular' => 'аргумента',
+        'arg_plural' => 'аргументів',
+        'started' => 'Запущено :command (запуск :runId)',
+        'run_expired' => 'Запис про запуск застарів — повторний запуск неможливий.',
+        'reran' => 'Повторно запущено :command (запуск :runId)',
+    ],
+];

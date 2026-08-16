@@ -114,20 +114,17 @@ return [
 
     'filter' => [
         'account' => 'Rekening',
-        'account_one' => ':count rekening',
-        'account_other' => ':count rekeningen',
+        'account_count' => ':count rekening|:count rekeningen',
         'remove_account' => 'Rekeningfilter verwijderen',
         'account_dialog' => 'Rekeningfilter',
 
         'category' => 'Categorie',
-        'category_one' => ':count categorie',
-        'category_other' => ':count categorieën',
+        'category_count' => ':count categorie|:count categorieën',
         'remove_category' => 'Categoriefilter verwijderen',
         'category_dialog' => 'Categoriefilter',
 
         'counterparty' => 'Tegenpartij',
-        'counterparty_one' => ':count tegenpartij',
-        'counterparty_other' => ':count tegenpartijen',
+        'counterparty_count' => ':count tegenpartij|:count tegenpartijen',
         'remove_counterparty' => 'Tegenpartijfilter verwijderen',
         'counterparty_dialog' => 'Tegenpartijfilter',
 

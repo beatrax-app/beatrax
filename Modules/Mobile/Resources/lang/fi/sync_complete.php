@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Tämä laite on synkronoitu',
+    'heading' => 'Tämä laite on synkronoitu',
+    'records' => 'Kopioitiin :count tietuetta. Lähde: :peer.',
+    'records_none' => 'Ei uutta kopioitavaa — kaikki on jo ajan tasalla. Lähde: :peer.',
+    'how_it_works' => 'Tästä eteenpäin',
+    'automatic_title' => 'Se pysyy itse ajan tasalla',
+    'automatic_body' => 'Kaikki, mitä muutat kummalla tahansa laitteella, näkyy toisella. Synkronointipainiketta ei tarvitse painaa.',
+    'lan_title' => 'Samassa verkossa',
+    'lan_body' => 'Kun molemmat laitteet ovat kotiverkossasi, ne keskustelevat suoraan keskenään ilman mitään välissä.',
+    'relay_title' => 'Kun olet poissa',
+    'relay_body' => 'Muutokset odottavat salattuina välityspalvelimellasi, kunnes toinen laite palaa verkkoon, ja siirtyvät sitten automaattisesti perille.',
+    'no_relay_title' => 'Kun olet poissa',
+    'no_relay_body' => 'Muutokset odottavat tällä laitteella ja synkronoituvat, kun molemmat ovat taas yhtä aikaa kotiverkossasi.',
+    'encrypted_title' => 'Vain laitteesi voivat lukea sen',
+    'encrypted_body' => 'Kaikki salataan ennen kuin se poistuu laitteelta, ja vain paritetuilla laitteillasi on avaimet.',
+    'continue' => 'Aloita Beatraxin käyttö',
+    'peer_fallback' => 'toinen laitteesi',
+];

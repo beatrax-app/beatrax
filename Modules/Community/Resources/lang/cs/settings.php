@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'about_heading' => 'O sdíleném seznamu',
+    'about_body' => 'Přibalený soubor YAML, který přiřazuje kryptickým kódům z bankovních výpisů srozumitelná jména obchodníků. Po zapnutí může Beatrax seznam číst při importu; odeslání návrhu otevře GitHub v prohlížeči.',
+
+    'mappings' => 'Přiřazení',
+    'contributors' => 'Přispěvatelé',
+
+    'use_shared_list' => [
+        'title' => 'Používat sdílený seznam obchodníků',
+        'help' => 'Beatrax bude číst přibalený seznam a doplní srozumitelná jména u obchodníků, kteří vlastní název nemají.',
+    ],
+
+    'offer_to_contribute' => [
+        'title' => 'Nabízet přispění',
+        'help' => 'Zobrazovat v řádku třídění výzvu „Pomoz to rozpoznat ostatním“, aby šlo návrh do sdíleného seznamu odeslat jedním kliknutím.',
+    ],
+
+    'update_on_updates' => [
+        'title' => 'Aktualizovat sdílený seznam s aktualizacemi aplikace',
+        'help' => 'Obnovovat přibalený seznam při každé aktualizaci aplikace Beatrax.',
+        'note' => 'Začne fungovat s budoucí aktualizací aplikace — aktuální verzi najdeš v Nastavení → O aplikaci.',
+    ],
+];

@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'search_placeholder' => 'Escribe para buscar vistas, comandos y acciones. Pulsa Esc para cerrar.',
+    'search_aria' => 'Escribe para buscar vistas, comandos y acciones',
+    'dialog_aria' => 'Paleta de comandos',
+    'token_suggest_aria' => 'Sugerencias de tokens',
+    'rail_view' => 'Vista',
+    'rail_dev' => 'Dev',
+    'rail_action' => 'Acción',
+    'rail_recent' => 'Reciente',
+    'no_recent' => 'Aún no hay selecciones recientes.',
+    'section_transactions' => 'Transacciones',
+    'section_counterparties' => 'Contrapartes',
+    'section_categories' => 'Categorías',
+    'section_goals_recurring' => 'Objetivos y recurrentes',
+    'no_name' => '(sin nombre)',
+    'see_all_prefix' => 'Ver los ',
+    'see_all_suffix' => ' resultados →',
+    'no_transactions_prefix' => 'Ninguna transacción coincide con "',
+    'no_transactions_suffix' => '"',
+    'source_txn' => 'txn',
+    'source_counterparty' => 'contraparte',
+    'source_category' => 'categoría',
+    'no_results' => 'Sin resultados.',
+    'foot_navigate' => 'navegar',
+    'foot_select' => 'seleccionar',
+    'foot_close' => 'cerrar',
+    'foot_try' => 'Prueba',
+    'results_suffix' => ' resultados',
+];

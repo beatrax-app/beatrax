@@ -24,9 +24,10 @@ return [
     // Settings keeps a pointer to the moved surface; the section
     // itself now lives on /sync with the status and sync action.
     'moved_help' => 'Koppelen, apparaatnamen en versleuteling staan nu bij je synchronisatiestatus.',
-    'moved_cta' => 'Synchronisatie openen',
+    'moved_cta' => 'Synchronisatie & apparaat openen',
     'device_name' => 'Apparaatnaam',
     'save' => 'Opslaan',
+    'peer_default_name' => 'Gekoppeld apparaat',
     'rename_device' => 'Apparaat hernoemen',
     'this_device' => 'Dit apparaat',
     'removed' => 'Verwijderd',

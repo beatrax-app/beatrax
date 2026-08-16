@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Pays fiscal',
+    'country_desc' => 'Détermine les catégories de déduction disponibles.',
+    'country_choose' => 'Choisis un pays…',
+    'country_switch_warning' => 'Changer de pays ajoute de nouvelles catégories — les marquages existants ne sont jamais modifiés.',
+
+    'countries' => [
+        'at' => 'Autriche',
+        'be' => 'Belgique',
+        'bg' => 'Bulgarie',
+        'ca' => 'Canada',
+        'ch' => 'Suisse',
+        'cy' => 'Chypre',
+        'cz' => 'Tchéquie',
+        'de' => 'Allemagne',
+        'dk' => 'Danemark',
+        'ee' => 'Estonie',
+        'es' => 'Espagne',
+        'fi' => 'Finlande',
+        'fr' => 'France',
+        'gb' => 'Royaume-Uni',
+        'gr' => 'Grèce',
+        'hr' => 'Croatie',
+        'hu' => 'Hongrie',
+        'ie' => 'Irlande',
+        'is' => 'Islande',
+        'it' => 'Italie',
+        'lt' => 'Lituanie',
+        'lu' => 'Luxembourg',
+        'lv' => 'Lettonie',
+        'mt' => 'Malte',
+        'nl' => 'Pays-Bas',
+        'no' => 'Norvège',
+        'pl' => 'Pologne',
+        'pt' => 'Portugal',
+        'ro' => 'Roumanie',
+        'se' => 'Suède',
+        'si' => 'Slovénie',
+        'sk' => 'Slovaquie',
+        'us' => 'États-Unis',
+    ],
+
+    'categories_label' => 'Catégories de déduction',
+    'categories_desc' => 'Personnalise les postes que tu utilises pour marquer.',
+    'categories_empty' => 'Pas encore de catégories. Ajoute ta première catégorie ou change de pays pour charger les valeurs par défaut.',
+
+    'from_corpus' => 'du corpus',
+    'rename_input_aria' => 'Nouveau nom pour :name',
+    'rename' => 'Renommer',
+    'rename_aria' => 'Renommer :name',
+    'rename_save_aria' => 'Enregistrer le nouveau nom de :name',
+    'save' => 'Enregistrer',
+    'archive' => 'Archiver',
+    'archive_aria' => 'Archiver :name',
+
+    'new_category_label' => 'Nom de la nouvelle catégorie',
+    'new_category_placeholder' => 'Nom de la nouvelle catégorie…',
+    'add_category' => 'Ajouter la catégorie',
+    'category_added' => 'Catégorie ajoutée.',
+
+    'archived_count' => 'Archivées (:count)',
+    'restore' => 'Restaurer',
+    'restore_aria' => 'Restaurer :name',
+];

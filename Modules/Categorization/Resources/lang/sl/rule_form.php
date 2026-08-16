@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Uredi pravilo',
+    'heading_new' => 'Novo pravilo',
+
+    'combinator_aria' => 'Kombinator pogojev',
+    'match_all' => 'Ujemanje z vsemi pogoji',
+    'match_any' => 'Ujemanje s katerim koli pogojem',
+
+    'condition_label' => 'Pogoj :number',
+    'condition_field_aria' => 'Polje pogoja :number',
+    'condition_operator_aria' => 'Operator pogoja :number',
+    'condition_value_aria' => 'Vrednost pogoja :number',
+    'condition_value_from_aria' => 'Vrednost pogoja :number (od)',
+    'condition_value_to_aria' => 'Vrednost pogoja :number (do)',
+    'to' => 'do',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'npr. SPOTIFY',
+    'remove_condition' => 'Odstrani pogoj',
+    'add_condition' => '+ Dodaj pogoj',
+
+    'then' => 'Potem',
+    'action_label' => 'Dejanje :number',
+    'action_type_aria' => 'Vrsta dejanja :number',
+    'action_category' => 'Kategorija',
+    'action_counterparty' => 'Nasprotna stranka',
+    'action_note' => 'Opomba',
+    'action_tax_tag' => 'Davčna oznaka',
+    'assign_category_aria' => 'Dodeli kategorijo za dejanje :number',
+    'reassign_counterparty_aria' => 'Spremeni nasprotno stranko za dejanje :number',
+    'note_text_aria' => 'Besedilo opombe za dejanje :number',
+    'note_placeholder' => 'Besedilo opombe…',
+    'note_mode_aria' => 'Način opombe za dejanje :number',
+    'note_set' => 'Nastavi',
+    'note_append' => 'Pripni',
+    'deduction_category_aria' => 'Kategorija olajšave za dejanje :number',
+    'remove_action' => 'Odstrani dejanje',
+    'add_action' => '+ Dodaj dejanje',
+
+    'this_year_only' => 'Samo to leto ▾',
+    'override_tax_year' => 'Nastavi drugo davčno leto',
+    'tax_year_override_aria' => 'Drugo davčno leto za dejanje :number',
+    'tax_tag_note' => 'Dejanja davčne oznake se uveljavijo ob naslednji ponovni uporabi, ne pri trenutnem uvozu.',
+
+    'priority' => 'Prioriteta',
+    'priority_help' => 'Manjše številke se izvedejo prve. Pravila brez skupnih polj nikoli niso v sporu.',
+
+    'cancel' => 'Prekliči',
+    'save_changes' => 'Shrani spremembe',
+    'save_rule' => 'Shrani pravilo',
+    'saving' => 'Shranjevanje…',
+
+    'error_rule_unavailable' => 'To pravilo ni več na voljo.',
+    'error_invalid_data' => 'Neveljavni podatki pravila — izberi vrednosti s spustnih seznamov in poskusi znova.',
+    'error_duplicate' => 'Pravilo s tem poljem, ujemanjem in vrednostjo že obstaja. Namesto tega uredi obstoječe pravilo.',
+    'error_priority_whole' => 'Prioriteta mora biti celo število.',
+    'error_add_condition' => 'Dodaj vsaj en pogoj.',
+    'error_add_action' => 'Dodaj vsaj eno dejanje.',
+    'condition_value_required' => 'Vnesi vrednost za pogoj :position.',
+    'condition_bounds_required' => 'Izberi spodnjo in zgornjo mejo za pogoj :position.',
+    'condition_amount_invalid' => 'Vnesi veljaven znesek za pogoj :position.',
+    'action_pick_category' => 'Izberi kategorijo za to dejanje.',
+    'action_pick_counterparty' => 'Izberi nasprotno stranko, na katero naj se prenese.',
+    'action_note_required' => 'Vnesi besedilo opombe.',
+    'action_pick_deduction' => 'Izberi kategorijo olajšave za davčno oznako.',
+];

@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Skatteland',
+    'country_desc' => 'Bestemmer, hvilke fradragskategorier der er tilgængelige.',
+    'country_choose' => 'Vælg et land…',
+    'country_switch_warning' => 'Et skift tilføjer nye kategorier — eksisterende markeringer ændres aldrig.',
+
+    'countries' => [
+        'at' => 'Østrig',
+        'be' => 'Belgien',
+        'bg' => 'Bulgarien',
+        'ca' => 'Canada',
+        'ch' => 'Schweiz',
+        'cy' => 'Cypern',
+        'cz' => 'Tjekkiet',
+        'de' => 'Tyskland',
+        'dk' => 'Danmark',
+        'ee' => 'Estland',
+        'es' => 'Spanien',
+        'fi' => 'Finland',
+        'fr' => 'Frankrig',
+        'gb' => 'Storbritannien',
+        'gr' => 'Grækenland',
+        'hr' => 'Kroatien',
+        'hu' => 'Ungarn',
+        'ie' => 'Irland',
+        'is' => 'Island',
+        'it' => 'Italien',
+        'lt' => 'Litauen',
+        'lu' => 'Luxembourg',
+        'lv' => 'Letland',
+        'mt' => 'Malta',
+        'nl' => 'Nederlandene',
+        'no' => 'Norge',
+        'pl' => 'Polen',
+        'pt' => 'Portugal',
+        'ro' => 'Rumænien',
+        'se' => 'Sverige',
+        'si' => 'Slovenien',
+        'sk' => 'Slovakiet',
+        'us' => 'USA',
+    ],
+
+    'categories_label' => 'Fradragskategorier',
+    'categories_desc' => 'Tilpas de kategorier, du bruger, når du markerer.',
+    'categories_empty' => 'Ingen kategorier endnu. Tilføj din første kategori, eller skift land for at indlæse standardværdier.',
+
+    'from_corpus' => 'fra korpus',
+    'rename_input_aria' => 'Nyt navn til :name',
+    'rename' => 'Omdøb',
+    'rename_aria' => 'Omdøb :name',
+    'rename_save_aria' => 'Gem nyt navn til :name',
+    'save' => 'Gem',
+    'archive' => 'Arkivér',
+    'archive_aria' => 'Arkivér :name',
+
+    'new_category_label' => 'Navn på ny kategori',
+    'new_category_placeholder' => 'Navn på ny kategori…',
+    'add_category' => 'Tilføj kategori',
+    'category_added' => 'Kategorien er tilføjet.',
+
+    'archived_count' => 'Arkiverede (:count)',
+    'restore' => 'Gendan',
+    'restore_aria' => 'Gendan :name',
+];

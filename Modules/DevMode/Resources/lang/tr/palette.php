@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'search_placeholder' => 'Görünümleri, komutları ve eylemleri aramak için yaz. Kapatmak için Esc tuşuna bas.',
+    'search_aria' => 'Görünümleri, komutları ve eylemleri aramak için yaz',
+    'dialog_aria' => 'Komut paleti',
+    'token_suggest_aria' => 'Token önerileri',
+    'rail_view' => 'Görünüm',
+    'rail_dev' => 'Dev',
+    'rail_action' => 'Eylem',
+    'rail_recent' => 'Son kullanılan',
+    'no_recent' => 'Henüz son seçim yok.',
+    'section_transactions' => 'İşlemler',
+    'section_counterparties' => 'Karşı taraflar',
+    'section_categories' => 'Kategoriler',
+    'section_goals_recurring' => 'Hedefler ve düzenli işlemler',
+    'no_name' => '(adsız)',
+    'see_all_prefix' => 'Tümünü gör: ',
+    'see_all_suffix' => ' sonuç →',
+    'no_transactions_prefix' => 'Şununla eşleşen işlem yok: "',
+    'no_transactions_suffix' => '"',
+    'source_txn' => 'işlem',
+    'source_counterparty' => 'karşı taraf',
+    'source_category' => 'kategori',
+    'no_results' => 'Sonuç yok.',
+    'foot_navigate' => 'gezin',
+    'foot_select' => 'seç',
+    'foot_close' => 'kapat',
+    'foot_try' => 'Dene',
+    'results_suffix' => ' sonuç',
+];

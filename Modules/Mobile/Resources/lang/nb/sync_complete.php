@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Denne enheten er synkronisert',
+    'heading' => 'Denne enheten er synkronisert',
+    'records' => 'Kopierte :count oppføringer fra :peer.',
+    'records_none' => 'Oppdatert mot :peer. Det var ikke noe nytt å kopiere.',
+    'how_it_works' => 'Herfra og fremover',
+    'automatic_title' => 'Den holder seg oppdatert selv',
+    'automatic_body' => 'Alt du endrer på den ene enheten, dukker opp på den andre. Det finnes ingen synkroniseringsknapp å trykke på.',
+    'lan_title' => 'På samme nettverk',
+    'lan_body' => 'Når begge enhetene er på hjemmenettverket ditt, snakker de direkte med hverandre, uten noe imellom.',
+    'relay_title' => 'Når du er ute',
+    'relay_body' => 'Endringer venter kryptert på relayet ditt til den andre enheten er på nett igjen, og lander så automatisk.',
+    'no_relay_title' => 'Når du er ute',
+    'no_relay_body' => 'Endringer venter på denne enheten og synkroniseres neste gang begge er på hjemmenettverket ditt samtidig.',
+    'encrypted_title' => 'Bare enhetene dine kan lese det',
+    'encrypted_body' => 'Alt krypteres før det forlater en enhet, og bare de parede enhetene dine har nøklene.',
+    'continue' => 'Begynn å bruke Beatrax',
+    'peer_fallback' => 'den andre enheten din',
+];

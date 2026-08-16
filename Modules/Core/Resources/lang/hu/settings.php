@@ -1,0 +1,148 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'groups' => [
+        'display' => 'Megjelenítés',
+        'money' => 'Pénz',
+        'insights' => 'Elemzések és riasztások',
+        'security' => 'Biztonság és eszközök',
+        'data' => 'Importok és adatok',
+        'app' => 'Alkalmazás',
+    ],
+
+    'title' => 'Beállítások',
+    'subtitle' => 'Beállítások arról, hogyan jelenjenek meg a pénzügyeid az alkalmazásban.',
+
+    'appearance' => [
+        'heading' => 'Megjelenés',
+        'theme' => 'Téma',
+        'theme_light' => 'Világos',
+        'theme_dark' => 'Sötét',
+        'theme_system' => 'Rendszer',
+        'theme_help' => 'A Rendszer az operációs rendszered világos vagy sötét beállítását követi.',
+    ],
+
+    'language' => [
+        'apply' => 'Alkalmaz',
+        'heading' => 'Nyelv',
+        'label' => 'Megjelenítés nyelve',
+
+        'system' => 'Rendszer',
+        'help' => 'A Rendszer a böngésződ vagy az operációs rendszered nyelvét követi, alapértelmezésben az angolt.',
+    ],
+
+    'currency_display' => [
+        'heading' => 'Pénznem megjelenítése',
+        'label' => 'Alapértelmezett nézet a tranzakciólistán',
+        'eur_only' => 'Csak EUR',
+        'original' => 'Eredeti pénznem',
+        'help' => 'A tranzakciólistán oldalanként továbbra is válthatsz.',
+    ],
+
+    'base_currency' => [
+        'heading' => 'Jelentések alapdevizája',
+        'label' => 'Jelentési pénznem',
+        'help' => 'Minden összeg és összesítés erre a pénznemre vált át. Minden számla mellett továbbra is látszik a saját eredeti pénzneme.',
+    ],
+
+    'exchange_rates' => [
+        'heading' => 'Árfolyamok',
+        'fetch_online' => 'Aktuális árfolyamok letöltése online',
+        'online_on' => 'Az árfolyamok naponta az ECB-től érkeznek. Csak devizapár-lekérdezés — személyes adat nélkül.',
+        'last_updated' => 'Utoljára frissítve: :date.',
+        'online_off' => 'A csomagolt árfolyamok vannak használatban. Semmilyen adat nem hagyja el ezt az eszközt.',
+        'fetch_aria' => 'Aktuális árfolyamok letöltése online',
+        'refreshing' => 'Frissítés…',
+        'next_refresh' => 'Következő automatikus frissítés: naponta 09:00-kor',
+        'refresh_now' => 'Frissítés most',
+    ],
+
+    'period' => [
+        'heading' => 'Időszak',
+        'label' => 'Az időszak kezdőnapja',
+        'help' => '1-től 28-ig számozva. A legtöbben az 1-en hagyják (naptári hónap). Használd a 25-öt, ha a fizetésed 25-én érkezik, és onnantól számítod „a saját hónapodat”.',
+    ],
+
+    'recurring' => [
+        'heading' => 'Ismétlődések felismerése',
+        'window_label' => 'Felismerési ablak (hónap)',
+        'window_help' => 'Hány hónapnyi előzményt vizsgáljon a rendszer, amikor a tranzakciókat ismétlődő mintákba csoportosítja.',
+        'income_label' => 'Bevételi minimum (cent)',
+        'income_help' => 'Az e küszöbérték alatti bevételek nem kerülnek automatikus csoportba. Centben tárolva — a 200000 azt jelenti: €2,000.00. A küszöb kikapcsolásához állítsd 0-ra.',
+    ],
+
+    'drift' => [
+        'heading' => 'Eltérésriasztások',
+        'label' => 'Alapértelmezett eltérésriasztási küszöb',
+        'help' => 'A riasztás akkor szólal meg, ha egy ismétlődő terhelés legutóbbi összege ennél nagyobb százalékkal tér el az előzőtől. A sorozatonkénti egyedi beállítás elsőbbséget élvez.',
+        'options' => [
+            '1' => '±1%',
+            '2' => '±2%',
+            '5' => '±5% (alapértelmezett)',
+            '10' => '±10%',
+            '25' => '±25%',
+            '50' => '±50%',
+        ],
+    ],
+
+    'save' => 'Beállítások mentése',
+    'saved' => 'Mentve.',
+
+    'anomaly_heading' => 'Anomáliafelismerés',
+    'notifications_heading' => 'Értesítések',
+
+    'forecasting' => [
+        'heading' => 'Előrejelzés',
+        'intro' => 'A Beatrax a számláid jelenlegi állapotából vetíti előre az egyenlegedet. Azoknál a számláknál, amelyekhez nincs kivonategyenleg (PayPal, régi CSV-importok), itt add meg a nyitó egyenleget, hogy az előrejelzés ismert pontról induljon.',
+        'no_accounts' => 'Még nincs számla — importálj egy számlakivonatot, hogy legyen.',
+    ],
+
+    'auto_import' => [
+        'heading' => 'Automatikus import',
+        'label' => 'Automatikus import a ledobó mappából',
+
+        'active_html' => 'A ledobó mappa aktív. A Beatrax 5 percenként átvizsgálja a <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> mappát új fájlokért.',
+        'inactive_html' => 'Bekapcsolva a Beatrax 5 percenként átvizsgálja a <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> mappát <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> és <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> fájlokért, és ugyanazon az illesztési folyamaton importálja őket, mint a varázsló. A feldolgozott fájlok a <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code> mappába kerülnek, így soha nem importálódnak kétszer.',
+    ],
+
+    'aliases' => [
+        'heading' => 'Álnevek',
+        'intro' => 'Nézd át és szerkeszd a beszédes neveket, amelyeket a rejtélyes kivonatleírásokhoz tanítottál a Beatraxnak.',
+        'manage' => 'Álnevek kezelése →',
+    ],
+
+    'tax_heading' => 'Adó',
+    'shared_merchant_heading' => 'Közös kereskedőlista',
+    'data_backup_heading' => 'Adatok és biztonsági mentés',
+    'install_heading' => 'Telepítés',
+
+    'about_updates' => [
+        'heading' => 'A frissítésekről',
+        'body' => 'A Beatrax telepítés után automatikusan frissíti magát. A legelső verzió telepítése után a további verziók alkalmazáson belüli sávban érkeznek — nem kell visszatérned a GitHubra. Ha egy későbbi frissítés mégsem alkalmazható, a legfrissebb telepítőt bármikor letöltheted kézzel a kiadások oldaláról.',
+        'open_releases' => 'Kiadások oldalának megnyitása →',
+    ],
+
+    'first_run_tour' => [
+        'heading' => 'Első indítás bemutatója',
+        'body' => 'Indítsd újra a beállítási varázslót, ha újra végig szeretnél menni a bevezető folyamaton.',
+        'run_again' => 'Beállítási varázsló újbóli futtatása',
+    ],
+
+    'developer' => [
+        'heading' => 'Fejlesztő',
+        'label' => 'Beépített fejlesztői konzol',
+        'help' => 'A fejlesztői konzol megjelenítése a /dev címen. Minden bejelentkezéskor visszaállítja a Haladó kapcsolót.',
+        'aria' => 'Fejlesztői mód',
+    ],
+
+    'errors' => [
+        'currency_required' => 'Válassz pénznemet.',
+        'window_months' => 'Válassz 2 és 60 hónap között.',
+        'threshold' => 'Válassz küszöbértéket: 1%, 2%, 5%, 10%, 25% vagy 50%.',
+        'amount' => 'Adj meg egy összeget €0-tól felfelé.',
+        'period_day' => 'Válassz egy napot 1 és 28 között.',
+        'currency_view' => 'Válassz az elérhető lehetőségek közül.',
+    ],
+];

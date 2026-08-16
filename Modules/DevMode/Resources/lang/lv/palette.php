@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'search_placeholder' => 'Rakstiet, lai meklētu skatus, komandas un darbības. Nospiediet Esc, lai aizvērtu.',
+    'search_aria' => 'Rakstiet, lai meklētu skatus, komandas un darbības',
+    'dialog_aria' => 'Komandu palete',
+    'token_suggest_aria' => 'Marķieru ieteikumi',
+    'rail_view' => 'Skats',
+    'rail_dev' => 'Izstrāde',
+    'rail_action' => 'Darbība',
+    'rail_recent' => 'Nesenie',
+    'no_recent' => 'Vēl nav neseno izvēļu.',
+    'section_transactions' => 'Darījumi',
+    'section_counterparties' => 'Darījuma partneri',
+    'section_categories' => 'Kategorijas',
+    'section_goals_recurring' => 'Mērķi un regulārie maksājumi',
+    'no_name' => '(bez nosaukuma)',
+    'see_all_prefix' => 'Skatīt visus ',
+    'see_all_suffix' => ' rezultātus →',
+    'no_transactions_prefix' => 'Neviens darījums neatbilst „',
+    'no_transactions_suffix' => '”',
+    'source_txn' => 'darījums',
+    'source_counterparty' => 'partneris',
+    'source_category' => 'kategorija',
+    'no_results' => 'Nav rezultātu.',
+    'foot_navigate' => 'pārvietoties',
+    'foot_select' => 'izvēlēties',
+    'foot_close' => 'aizvērt',
+    'foot_try' => 'Mēģiniet',
+    'results_suffix' => ' rezultāti',
+];

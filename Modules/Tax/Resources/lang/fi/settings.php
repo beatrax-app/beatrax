@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Verotusmaa',
+    'country_desc' => 'Määrää, mitkä vähennyskategoriat ovat käytettävissä.',
+    'country_choose' => 'Valitse maa…',
+    'country_switch_warning' => 'Vaihtaminen lisää uusia kategorioita — olemassa olevia merkintöjä ei muuteta.',
+
+    'countries' => [
+        'at' => 'Itävalta',
+        'be' => 'Belgia',
+        'bg' => 'Bulgaria',
+        'ca' => 'Kanada',
+        'ch' => 'Sveitsi',
+        'cy' => 'Kypros',
+        'cz' => 'Tšekki',
+        'de' => 'Saksa',
+        'dk' => 'Tanska',
+        'ee' => 'Viro',
+        'es' => 'Espanja',
+        'fi' => 'Suomi',
+        'fr' => 'Ranska',
+        'gb' => 'Yhdistynyt kuningaskunta',
+        'gr' => 'Kreikka',
+        'hr' => 'Kroatia',
+        'hu' => 'Unkari',
+        'ie' => 'Irlanti',
+        'is' => 'Islanti',
+        'it' => 'Italia',
+        'lt' => 'Liettua',
+        'lu' => 'Luxemburg',
+        'lv' => 'Latvia',
+        'mt' => 'Malta',
+        'nl' => 'Alankomaat',
+        'no' => 'Norja',
+        'pl' => 'Puola',
+        'pt' => 'Portugali',
+        'ro' => 'Romania',
+        'se' => 'Ruotsi',
+        'si' => 'Slovenia',
+        'sk' => 'Slovakia',
+        'us' => 'Yhdysvallat',
+    ],
+
+    'categories_label' => 'Vähennyskategoriat',
+    'categories_desc' => 'Muokkaa merkitsemisessä käyttämiäsi kategorioita.',
+    'categories_empty' => 'Ei vielä kategorioita. Lisää ensimmäinen kategoria tai vaihda maata, niin oletukset latautuvat.',
+
+    'from_corpus' => 'korpuksesta',
+    'rename_input_aria' => 'Uusi nimi kohteelle :name',
+    'rename' => 'Nimeä uudelleen',
+    'rename_aria' => 'Nimeä :name uudelleen',
+    'rename_save_aria' => 'Tallenna kohteen :name uusi nimi',
+    'save' => 'Tallenna',
+    'archive' => 'Arkistoi',
+    'archive_aria' => 'Arkistoi :name',
+
+    'new_category_label' => 'Uuden kategorian nimi',
+    'new_category_placeholder' => 'Uuden kategorian nimi…',
+    'add_category' => 'Lisää kategoria',
+    'category_added' => 'Kategoria lisätty.',
+
+    'archived_count' => 'Arkistoidut (:count)',
+    'restore' => 'Palauta',
+    'restore_aria' => 'Palauta :name',
+];

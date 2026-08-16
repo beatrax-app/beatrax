@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Skatteland',
+    'country_desc' => 'Avgör vilka avdragskategorier som är tillgängliga.',
+    'country_choose' => 'Välj ett land…',
+    'country_switch_warning' => 'Att byta lägger till nya kategorier — befintliga märkningar ändras aldrig.',
+
+    'countries' => [
+        'at' => 'Österrike',
+        'be' => 'Belgien',
+        'bg' => 'Bulgarien',
+        'ca' => 'Kanada',
+        'ch' => 'Schweiz',
+        'cy' => 'Cypern',
+        'cz' => 'Tjeckien',
+        'de' => 'Tyskland',
+        'dk' => 'Danmark',
+        'ee' => 'Estland',
+        'es' => 'Spanien',
+        'fi' => 'Finland',
+        'fr' => 'Frankrike',
+        'gb' => 'Storbritannien',
+        'gr' => 'Grekland',
+        'hr' => 'Kroatien',
+        'hu' => 'Ungern',
+        'ie' => 'Irland',
+        'is' => 'Island',
+        'it' => 'Italien',
+        'lt' => 'Litauen',
+        'lu' => 'Luxemburg',
+        'lv' => 'Lettland',
+        'mt' => 'Malta',
+        'nl' => 'Nederländerna',
+        'no' => 'Norge',
+        'pl' => 'Polen',
+        'pt' => 'Portugal',
+        'ro' => 'Rumänien',
+        'se' => 'Sverige',
+        'si' => 'Slovenien',
+        'sk' => 'Slovakien',
+        'us' => 'USA',
+    ],
+
+    'categories_label' => 'Avdragskategorier',
+    'categories_desc' => 'Anpassa de kategorier du använder när du märker.',
+    'categories_empty' => 'Inga kategorier än. Lägg till din första kategori eller byt land för att läsa in standardvärden.',
+
+    'from_corpus' => 'från korpus',
+    'rename_input_aria' => 'Nytt namn för :name',
+    'rename' => 'Byt namn',
+    'rename_aria' => 'Byt namn på :name',
+    'rename_save_aria' => 'Spara nytt namn för :name',
+    'save' => 'Spara',
+    'archive' => 'Arkivera',
+    'archive_aria' => 'Arkivera :name',
+
+    'new_category_label' => 'Namn på ny kategori',
+    'new_category_placeholder' => 'Namn på ny kategori…',
+    'add_category' => 'Lägg till kategori',
+    'category_added' => 'Kategorin lades till.',
+
+    'archived_count' => 'Arkiverade (:count)',
+    'restore' => 'Återställ',
+    'restore_aria' => 'Återställ :name',
+];

@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+
+    'reconciled_lock' => 'Ta transakcija je usklajena. Prekliči uskladitev, če jo želiš spremeniti.',
+    'tagged' => 'Označeno kot davčna olajšava.',
+    'untagged' => 'Davčna oznaka je odstranjena.',
+    'batch_none_reconciled' => 'Nič ni označeno — te transakcije so usklajene. Prekliči uskladitev, če jih želiš spremeniti.',
+    'batch_tagged' => 'Označenih je še :count transakcij.',
+
+    'errors' => [
+        'name_empty' => 'Ime kategorije ne sme biti prazno.',
+        'name_duplicate' => 'Kategorija s tem imenom že obstaja.',
+    ],
+];

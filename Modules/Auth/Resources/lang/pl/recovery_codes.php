@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Zapisz te kody odzyskiwania · Beatrax',
+    'title' => 'Zapisz te kody odzyskiwania',
+    'subtitle' => 'Wydrukuj je lub zapisz w bezpiecznym miejscu. Nie zostaną pokazane ponownie.',
+    'copy' => 'Kopiuj kody',
+    'copied' => 'Skopiowano',
+    'download' => 'Pobierz jako .txt',
+
+    'saved_as' => 'Zapisano jako beatrax-recovery-codes-:username.txt',
+    'confirm' => 'Mam te kody zapisane w bezpiecznym miejscu.',
+    'continue' => 'Przejdź do Beatrax',
+];

@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Adóország',
+    'country_desc' => 'Meghatározza, mely levonási kategóriák érhetők el.',
+    'country_choose' => 'Válassz országot…',
+    'country_switch_warning' => 'A váltás új kategóriákat ad hozzá — a meglévő címkék soha nem változnak.',
+
+    'countries' => [
+        'at' => 'Ausztria',
+        'be' => 'Belgium',
+        'bg' => 'Bulgária',
+        'ca' => 'Kanada',
+        'ch' => 'Svájc',
+        'cy' => 'Ciprus',
+        'cz' => 'Csehország',
+        'de' => 'Németország',
+        'dk' => 'Dánia',
+        'ee' => 'Észtország',
+        'es' => 'Spanyolország',
+        'fi' => 'Finnország',
+        'fr' => 'Franciaország',
+        'gb' => 'Egyesült Királyság',
+        'gr' => 'Görögország',
+        'hr' => 'Horvátország',
+        'hu' => 'Magyarország',
+        'ie' => 'Írország',
+        'is' => 'Izland',
+        'it' => 'Olaszország',
+        'lt' => 'Litvánia',
+        'lu' => 'Luxemburg',
+        'lv' => 'Lettország',
+        'mt' => 'Málta',
+        'nl' => 'Hollandia',
+        'no' => 'Norvégia',
+        'pl' => 'Lengyelország',
+        'pt' => 'Portugália',
+        'ro' => 'Románia',
+        'se' => 'Svédország',
+        'si' => 'Szlovénia',
+        'sk' => 'Szlovákia',
+        'us' => 'Amerikai Egyesült Államok',
+    ],
+
+    'categories_label' => 'Levonási kategóriák',
+    'categories_desc' => 'Szabd testre a megjelöléshez használt kategóriákat.',
+    'categories_empty' => 'Még nincs kategória. Add hozzá az elsőt, vagy válts országot az alapértelmezettek betöltéséhez.',
+
+    'from_corpus' => 'a korpuszból',
+    'rename_input_aria' => 'A(z) :name új neve',
+    'rename' => 'Átnevezés',
+    'rename_aria' => 'A(z) :name átnevezése',
+    'rename_save_aria' => 'A(z) :name új nevének mentése',
+    'save' => 'Mentés',
+    'archive' => 'Archiválás',
+    'archive_aria' => 'A(z) :name archiválása',
+
+    'new_category_label' => 'Új kategória neve',
+    'new_category_placeholder' => 'Új kategória neve…',
+    'add_category' => 'Kategória hozzáadása',
+    'category_added' => 'Kategória hozzáadva.',
+
+    'archived_count' => 'Archiválva (:count)',
+    'restore' => 'Visszaállítás',
+    'restore_aria' => 'A(z) :name visszaállítása',
+];

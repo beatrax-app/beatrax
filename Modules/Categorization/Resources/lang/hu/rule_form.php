@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Szabály szerkesztése',
+    'heading_new' => 'Új szabály',
+
+    'combinator_aria' => 'Feltételek összekapcsolása',
+    'match_all' => 'Minden feltétel teljesül',
+    'match_any' => 'Bármelyik feltétel teljesül',
+
+    'condition_label' => ':number. feltétel',
+    'condition_field_aria' => ':number. feltétel mezője',
+    'condition_operator_aria' => ':number. feltétel operátora',
+    'condition_value_aria' => ':number. feltétel értéke',
+    'condition_value_from_aria' => ':number. feltétel értéke (ettől)',
+    'condition_value_to_aria' => ':number. feltétel értéke (eddig)',
+    'to' => 'eddig',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'pl. SPOTIFY',
+    'remove_condition' => 'Feltétel eltávolítása',
+    'add_condition' => '+ Feltétel hozzáadása',
+
+    'then' => 'Akkor',
+    'action_label' => ':number. művelet',
+    'action_type_aria' => ':number. művelet típusa',
+    'action_category' => 'Kategória',
+    'action_counterparty' => 'Partner',
+    'action_note' => 'Megjegyzés',
+    'action_tax_tag' => 'Adócímke',
+    'assign_category_aria' => 'Kategória hozzárendelése a(z) :number. művelethez',
+    'reassign_counterparty_aria' => 'Új partner hozzárendelése a(z) :number. művelethez',
+    'note_text_aria' => 'A(z) :number. művelet megjegyzésszövege',
+    'note_placeholder' => 'Megjegyzés szövege…',
+    'note_mode_aria' => 'A(z) :number. művelet megjegyzésmódja',
+    'note_set' => 'Beállítás',
+    'note_append' => 'Hozzáfűzés',
+    'deduction_category_aria' => 'Adókedvezmény-kategória a(z) :number. művelethez',
+    'remove_action' => 'Művelet eltávolítása',
+    'add_action' => '+ Művelet hozzáadása',
+
+    'this_year_only' => 'Csak ez az év ▾',
+    'override_tax_year' => 'Adóév felülírása',
+    'tax_year_override_aria' => 'Adóév felülírása a(z) :number. művelethez',
+    'tax_tag_note' => 'Az adócímke-műveletek a következő újraalkalmazáskor lépnek életbe, nem a jelenlegi importnál.',
+
+    'priority' => 'Prioritás',
+    'priority_help' => 'A kisebb számok futnak előbb. A közös mezők nélküli szabályok soha nem ütköznek.',
+
+    'cancel' => 'Mégse',
+    'save_changes' => 'Módosítások mentése',
+    'save_rule' => 'Szabály mentése',
+    'saving' => 'Mentés…',
+
+    'error_rule_unavailable' => 'Ez a szabály már nem érhető el.',
+    'error_invalid_data' => 'Érvénytelen szabályadatok — válassz a legördülő listákból, és próbáld újra.',
+    'error_duplicate' => 'Ilyen mezővel, illesztéssel és értékkel már létezik szabály. Inkább a meglévőt szerkeszd.',
+    'error_priority_whole' => 'A prioritásnak egész számnak kell lennie.',
+    'error_add_condition' => 'Adj hozzá legalább egy feltételt.',
+    'error_add_action' => 'Adj hozzá legalább egy műveletet.',
+    'condition_value_required' => 'Adj meg értéket a(z) :position. feltételhez.',
+    'condition_bounds_required' => 'Válassz alsó és felső határt a(z) :position. feltételhez.',
+    'condition_amount_invalid' => 'Adj meg érvényes összeget a(z) :position. feltételhez.',
+    'action_pick_category' => 'Válassz kategóriát ehhez a művelethez.',
+    'action_pick_counterparty' => 'Válaszd ki, melyik partnerhez rendeljük át.',
+    'action_note_required' => 'Add meg a megjegyzés szövegét.',
+    'action_pick_deduction' => 'Válassz adókedvezmény-kategóriát az adócímkéhez.',
+];

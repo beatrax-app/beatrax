@@ -9,11 +9,9 @@ return [
     'rate_details' => 'Rate details',
     'rate_details_for' => 'Rate details for :name',
 
-    'across_one' => 'across :count account',
-    'across_many' => 'across :count accounts',
+    'across' => 'across :count account|across :count accounts',
 
-    'not_converted_one' => '· :count account not converted — no rate available',
-    'not_converted_many' => '· :count accounts not converted — no rate available',
+    'not_converted' => '· :count account not converted — no rate available|· :count accounts not converted — no rate available',
     'no_rate_available' => '· no rate available',
 
     'toggle_hide' => 'Hide',

@@ -18,7 +18,7 @@ return [
     'status_row' => [
         'heading' => 'Open banking',
         'manage' => 'Manage open banking',
-        'not_connected' => 'Not connected. Import ICS/ASN statements manually, or connect a bank automatically.',
+        'not_connected' => 'No bank connected. Connect one to import transactions automatically.',
         'expired' => 'Consent expired — reconnect needed.',
         'connected' => 'Connected to :bank via Enable Banking. Last synced :when.',
         'never' => 'never',
