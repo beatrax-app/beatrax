@@ -6,6 +6,8 @@ namespace Modules\Ledger\Public\ValueObjects;
 
 use Brick\Money\Money as BrickMoney;
 use IntlException;
+use Modules\Core\Public\Enums\Locale;
+use Modules\Ledger\Public\Enums\Currency;
 use Stringable;
 use ValueError;
 
@@ -20,6 +22,16 @@ final class Money implements Stringable
     // format boundaries scale by this factor; a future non-2-decimal currency
     // (e.g. JPY) would have to make it per-currency rather than a constant.
     public const int MINOR_UNITS_PER_MAJOR = 100;
+
+    // Only reached when ICU is unavailable. A currency with no entry here
+    // renders as its code, which is what ICU itself does for a currency the
+    // locale has no symbol for.
+    private const array SYMBOLS = [
+        'EUR' => '€',
+        'USD' => '$',
+        'GBP' => '£',
+        'JPY' => '¥',
+    ];
 
     private function __construct(private readonly BrickMoney $inner) {}
 
@@ -73,17 +85,39 @@ final class Money implements Stringable
             // for these locales, and reports that two ways — IntlException
             // with intl error-exceptions on, ValueError from the constructor.
             // Every amount funnels here, so an uncaught one 500s every page.
-            return $this->formatWithoutIcu();
+            return $this->formatWithoutIcu($resolved);
         }
     }
 
-    // Deliberately plain: currency code, then the amount at a fixed scale with
-    // no grouping. A legibility floor for a runtime that cannot do locale
-    // formatting, not an imitation of one — guessing separators per currency is
-    // how a Dutch reader ends up seeing a point where they expect a comma.
-    private function formatWithoutIcu(): string
+    // Renders the two conventions this class anchors on — Dutch for EUR, US
+    // English otherwise — from marks the repo carries itself, so a runtime
+    // with no locale data still reads € 1.234,50 rather than a bare code and
+    // an ungrouped number. Any other locale resolves to one of those two.
+    private function formatWithoutIcu(string $locale): string
     {
-        return $this->currency().' '.$this->inner->getAmount()->toScale(2);
+        $language = Locale::tryFrom((string) strtok(strtolower($locale), '_-'));
+        $amount = (string) $this->inner->getAmount();
+
+        if ($language !== Locale::Nl && $language !== Locale::En) {
+            $language = $this->currency() === Currency::Eur->value ? Locale::Nl : Locale::En;
+        }
+
+        $negative = str_starts_with($amount, '-');
+        [$whole, $fraction] = array_pad(explode('.', ltrim($amount, '-')), 2, '');
+        $grouped = strrev(implode($language->groupMark(), str_split(strrev($whole), 3)));
+        $sign = $negative ? '-' : '';
+
+        if ($fraction !== '') {
+            $grouped .= $language->decimalMark().$fraction;
+        }
+
+        $symbol = self::SYMBOLS[$this->currency()] ?? $this->currency()."\u{00A0}";
+
+        // Dutch writes the symbol first and the sign against the digits
+        // (€ -1.234,50); US English signs the whole amount (-$1,234.50).
+        return $language === Locale::Nl
+            ? $symbol."\u{00A0}".$sign.$grouped
+            : $sign.$symbol.$grouped;
     }
 
     public function __toString(): string
