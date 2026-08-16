@@ -135,6 +135,7 @@ final readonly class SyncStatusService
             $now,
             syntax: CarbonInterface::DIFF_RELATIVE_TO_NOW,
             short: true,
+            options: CarbonInterface::JUST_NOW,
         );
     }
 
