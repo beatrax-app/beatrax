@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Modules\Sync\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager;
-use Modules\Core\Public\Enums\Duration;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
@@ -118,8 +118,7 @@ final readonly class SyncStatusService
     }
 
     // Shared with SyncStatusSection, which renders the same phrasing for each
-    // peer rather than for the newest one. It was a second copy of the ladder
-    // below until now, identical down to the pluralisation that did nothing.
+    // peer rather than for the newest one.
     public static function relativeTime(CarbonImmutable $now, string $timestamp): ?string
     {
         try {
@@ -128,7 +127,16 @@ final readonly class SyncStatusService
             return null;
         }
 
-        return self::humanizeGap(abs((int) $now->diffInSeconds($past, false)));
+        // Carbon rather than a hand-rolled ladder: SetLocale already gives it
+        // the request's language, so this renders in all 26 of them. The
+        // ladder it replaces returned English literals, which is why a Dutch
+        // phone read "gesynchroniseerd 1h ago".
+        return $past->diffForHumans(
+            $now,
+            syntax: CarbonInterface::DIFF_RELATIVE_TO_NOW,
+            short: true,
+            options: CarbonInterface::JUST_NOW,
+        );
     }
 
     // Timestamps are compared as strings rather than parsed: they are stored
@@ -149,21 +157,5 @@ final readonly class SyncStatusService
         }
 
         return $latest;
-    }
-
-    // One row per magnitude. Only the day arm pluralises: "1m ago" and
-    // "{$minutes}m ago" render identically at one minute, so the ternaries
-    // that used to guard the minute and hour arms decided nothing.
-    private static function humanizeGap(int $seconds): string
-    {
-        $days = (int) floor($seconds / Duration::Day->seconds());
-
-        return match (true) {
-            $seconds < Duration::Minute->seconds() => 'just now',
-            $seconds < Duration::Hour->seconds() => ((int) floor($seconds / Duration::Minute->seconds())).'m ago',
-            $seconds < Duration::Day->seconds() => ((int) floor($seconds / Duration::Hour->seconds())).'h ago',
-            $days === 1 => '1 day ago',
-            default => "{$days} days ago",
-        };
     }
 }
