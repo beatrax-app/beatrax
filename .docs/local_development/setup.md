@@ -153,10 +153,15 @@ php artisan native:prebuild
 php artisan native:build mac
 ```
 
-The resulting `.dmg` lands under `build/`. The bundle is ad-hoc-signed (no paid Apple
-Developer ID is used for local builds), so launching it requires a one-time
-right-click → Open → "Open Anyway" — the same friction end users will see on the
-first install of a published release.
+The resulting `.dmg` lands under `build/`. A LOCAL build is ad-hoc-signed — the
+Developer ID credentials live in CI, not on a developer machine — so launching it
+requires a one-time right-click → Open → "Open Anyway".
+
+That friction is local only. Released macOS builds are Developer ID signed and
+notarised by the release workflow, so end users do not see it. If you need a signed
+bundle locally, set `NATIVEPHP_MAC_IDENTITY` to the Developer ID identity in your
+keychain before building; see
+[`../runbooks/repo-security-setup.md`](../runbooks/repo-security-setup.md#release-signing).
 
 For Windows and Linux targets, run `php artisan native:build win` or `native:build
 linux` on the corresponding OS. Cross-platform builds from macOS are not supported by

@@ -126,8 +126,12 @@ and the in-manifest SHA-512 gives you the binary's match to that manifest.
 | Manifest signature passes, in-manifest SHA-512 mismatches | The binary you have does not match the signed manifest. Re-download from the same Release page; if the second download also mismatches, do not run the installer. |
 
 The combination of an in-bundle public key, an Ed25519-signed manifest, and a SHA-512
-chain through to the binary is the project's sole binary-integrity signal in the
-absence of paid OS-level signing. See
+chain through to the binary is the project's own binary-integrity signal, independent
+of the platform's. Released macOS and Windows binaries now also carry real OS-level
+signatures — Developer ID with notarisation, and Azure Trusted Signing respectively —
+so a downloader has two unrelated checks available rather than one. The Ed25519 chain
+remains the authoritative one here because it covers Linux too, and because it is what
+the auto-updater verifies on every poll. See
 [`../legal/license-rationale.md#no-paid-signing`](https://github.com/beatrax-app/spec/blob/main/90-appendix/license-rationale.md#no-paid-signing)
 for the trade-off and
 [`../cicd/release-workflow.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md) for how the manifest gets
