@@ -94,15 +94,12 @@
                         @endif
                     </p>
 
+                    @php($accountCount = count($netWorth->accounts))
                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {{ count($netWorth->accounts) === 1
-                            ? Lang::get('core::net_worth.across_one', ['count' => count($netWorth->accounts)])
-                            : Lang::get('core::net_worth.across_many', ['count' => count($netWorth->accounts)]) }}
+                        {{ Lang::choice('core::net_worth.across', $accountCount, ['count' => $accountCount]) }}
                         @if ($netWorth->accountsWithoutRate > 0)
                             {{-- No-rate fallback (§7.4 UI-SPEC) — replaces old "excludes non-EUR balances" span --}}
-                            <span style="color: var(--color-amber);">{{ $netWorth->accountsWithoutRate === 1
-                                ? Lang::get('core::net_worth.not_converted_one', ['count' => $netWorth->accountsWithoutRate])
-                                : Lang::get('core::net_worth.not_converted_many', ['count' => $netWorth->accountsWithoutRate]) }}</span>
+                            <span style="color: var(--color-amber);">{{ Lang::choice('core::net_worth.not_converted', $netWorth->accountsWithoutRate, ['count' => $netWorth->accountsWithoutRate]) }}</span>
                         @endif
                     </p>
 

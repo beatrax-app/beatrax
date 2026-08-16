@@ -1,0 +1,106 @@
+# Support-resource corpus — Spain (ES merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Movistar
+    type: merchant
+    cancel_url: "https://www.movistar.es/atencion-cliente/baja-linea-servicio"
+    support_url: "https://www.movistar.es/atencion-cliente/permanencia"
+    notes: "La baja no se tramita online: el titular de la línea debe llamar al teléfono gratuito 1004, y se puede pedir en cualquier momento porque los importes se prorratean, pero no puede haber facturas pendientes de pago. Si devuelves router o descodificador tienes 15 días naturales desde la tramitación de la baja para entregarlos en tienda o pedir recogida a domicilio, o se cobran los equipos."
+  - name: Orange España
+    type: merchant
+    cancel_url: "https://ayuda.orange.es/particulares/gestiones-y-tramitaciones/737-darte-de-baja-en-orange"
+    support_url: "https://ayuda.orange.es/particulares/gestiones-y-tramitaciones/600-compromiso-de-permanencia-y-penalizacion"
+    notes: "No existe baja online: hay que llamar gratis al 1470 (o al +34 656 00 14 70 desde el extranjero) y después completar un formulario que llega por correo electrónico adjuntando el DNI del titular por ambas caras. Aunque el 1470 atiende 24 horas, las gestiones de baja solo se tramitan de lunes a viernes de 9:00 a 21:00; como alternativa Orange ofrece la suspensión temporal del servicio, que no rompe el contrato."
+  - name: Vodafone España
+    type: merchant
+    support_url: "https://ayudacliente.vodafone.es/particulares/detalles-de-tu-contrato/tus-contratos/que-compromisos-de-permanencia-existen/"
+    notes: "Vodafone no publica ninguna página de baja: en su web de ayuda solo hay artículos de permanencia y de cancelación de servicios sueltos, así que la baja se pide por teléfono, WhatsApp, la app o el chat de Tobi. Las tarifas móviles con descuento o con móvil subvencionado llevan 24 meses de permanencia y la fibra con instalación 12 meses; darse de baja antes conlleva penalización, más un cargo de instalación de fibra de hasta 314 € decreciente durante los 12 primeros meses."
+  - name: Digi
+    type: merchant
+    cancel_url: "https://www.digimobil.es/preguntas-frecuentes/mis-servicios-contratados/como-puedo-dar-de-baja-mis-servicios-contratados"
+    support_url: "https://www.digimobil.es/preguntas-frecuentes/producto/tengo-compromiso-de-permanencia-en-digi"
+    notes: "Puedes darte de baja en cualquier momento comunicándolo con dos días de antelación, por la web, escribiendo a atencionalcliente@digimobil.es, por correo postal, llamando al 1200 (desde Digi) o al 919 120 120, o en una Digi Store; guarda el número de referencia de la baja, que se tramita en un máximo de dos días. El móvil no tiene permanencia y la fibra tiene tres meses de compromiso."
+  - name: Endesa
+    type: merchant
+    cancel_url: "https://www.endesa.com/es/te-ayudamos/gestiones-contratos/solicitar-baja-endesa"
+    notes: "Si te mudas, Endesa desaconseja pedir la baja: la baja implica el cese del suministro y quien llegue después se quedará unos días sin luz o gas, y volver a dar de alta cuesta dinero. Lo recomendable es el cambio de titular, que es gratuito y lo puede solicitar tanto quien se va como quien llega; existe una página aparte para la baja por defunción."
+  - name: Naturgy
+    type: merchant
+    cancel_url: "https://www.naturgy.es/ayuda/preguntas_gestiones_frecuentes/como_pido_baja_energia"
+    notes: "Si cambias de comercializadora no necesitas contactar con Naturgy: la nueva comercializadora envía la petición de baja a través de la distribuidora de tu zona y el suministro tiene continuidad total. La factura de cierre, con lo pendiente hasta la fecha de baja, llega unos días más tarde; la baja de los servicios de mantenimiento se pide por separado."
+  - name: Sanitas
+    type: merchant
+    cancel_url: "https://www.sanitas.es/biblioteca-de-salud/elegir-seguro/seguro-salud/como-darse-de-baja-de-un-seguro-de-salud-5-cosas-a-tener-en-cuenta"
+    notes: "El seguro de salud dura normalmente 12 meses y se prorroga tácitamente por anualidades salvo que te opongas a la prórroga comunicándolo con un mes de antelación (la aseguradora necesita avisar con dos meses). Una vez efectuada la renovación ya no se puede rescindir el contrato, así que la cancelación tiene que hacerse antes de esa fecha."
+  - name: Mapfre
+    type: merchant
+    cancel_url: "https://www.mapfre.es/particulares/seguros-de-salud/articulos/cancelar-ampliar-o-reducir-tu-cobertura-de-salud/"
+    notes: "Para dar de baja el seguro médico hay que cumplimentar la solicitud de cancelación prevista en el contrato y notificar la no prórroga por escrito certificado con acuse de recibo, un mes antes de que finalice la vigencia de la póliza. Pasado ese plazo es bastante complicado que se acepte la solicitud."
+  - name: HelloFresh España
+    type: merchant
+    cancel_url: "https://www.hellofresh.es/about/como-cancelar-hellofresh"
+    notes: "La cancelación es online: inicia sesión, entra en «Ajustes de cuenta», baja a «Ajustes de plan» y pulsa «Cancelar plan»; recibirás un mensaje de confirmación. Hay que hacerlo antes de las 23:59 del miércoles anterior a la siguiente entrega programada, porque después no se pueden procesar cancelaciones; también puedes saltarte una semana o pausar la suscripción en lugar de cancelar."
+  - name: VivaGym
+    type: merchant
+    cancel_url: "https://www.vivagym.com/es-es/preguntas-frecuentes/"
+    notes: "La baja se gestiona desde el área de cliente (web o app): «Mi perfil» → «Suscripciones» → «Gestionar mi suscripción» → «Cancelar definitivamente», y siempre queda confirmada con un email. Hay que hacerlo antes del día 20 del mes (día 15 en una lista concreta de clubes) y sigues entrenando hasta el último día de ese mes; si tienes un recibo devuelto, debes pagarlo antes de poder tramitar la baja."
+  - name: Basic-Fit España
+    type: merchant
+    support_url: "https://www.basic-fit.com/es-es/servicio-al-cliente"
+    cheaper_url: "https://www.basic-fit.com/es-es/membership-freeze"
+    notes: "Basic-Fit no publica una página de baja: toda la suscripción se gestiona en el portal My Basic-Fit, con la chatbot Ruby 24/7, live chat de lunes a viernes de 8:00 a 20:00 y respuesta por email en unos 3 días. Antes de cancelar existe la congelación, que pausa el contrato hasta 4 semanas dos veces al año: es gratuita para los socios Ultimate y cuesta 2,99 € cada 4 semanas como extra para el resto."
+  - name: Verisure
+    type: merchant
+    support_url: "https://www.verisure.es/telefono-gratuito"
+    notes: "En las páginas de atención al cliente de Verisure no hay ningún formulario ni página de baja: los únicos canales que publica son el área de cliente y los teléfonos gratuitos 900 909 139 y 900 903 703, así que la cancelación del contrato de alarma hay que pedirla por esa vía. Conviene guardar constancia escrita de la solicitud."
+  - name: RACE
+    type: merchant
+    support_url: "https://www.race.es/contacto"
+    notes: "La atención al socio para altas, contrataciones y gestiones es el 900 100 992, de lunes a viernes de 9 a 21 horas; la asistencia mecánica y en viaje es el 900 112 222 las 24 horas y el (34) 915 948 943 desde el extranjero. No hay un botón de baja online: la gestión pasa por ese teléfono o por una de las oficinas de atención al socio que el propio directorio lista por provincia."
+  - name: Cruz Roja Española
+    type: merchant
+    support_url: "https://www2.cruzroja.es/contacto"
+    notes: "Cruz Roja no publica un formulario para dar de baja o modificar la cuota de socio: el canal es el teléfono gratuito 900 22 11 22 (de 9:00 a 20:00 excepto festivos), el correo informa@cruzroja.es o el formulario de quejas y sugerencias de la página de contacto. La oficina central está en Avenida Reina Victoria, 26-28, 28003 Madrid."
+
+  # --- Government ---
+  - name: Agencia Tributaria
+    type: government
+    help_url: "https://sede.agenciatributaria.gob.es/Sede/contacta-nosotros.html"
+    apply_url: "https://sede.agenciatributaria.gob.es/Sede/Renta.html"
+    phone: "91 554 87 70"
+    notes: "La Agencia Tributaria atiende por teléfono (inmediatamente si es posible, o con cita), en oficinas y por chat y asistentes virtuales. El 91 554 87 70 es el de información tributaria básica y el 91 333 5 333 el de información, asistencia y cita; la declaración de la Renta se presenta desde la sede electrónica, donde también se contesta un requerimiento o se pide un certificado."
+  - name: Seguridad Social
+    type: government
+    help_url: "https://portal.seg-social.gob.es/wps/portal/importass/importass/contacto"
+    apply_url: "https://portal.seg-social.gob.es/wps/portal/importass/importass/ayuda"
+    phone: "901 50 20 50"
+    notes: "En Import@ss puedes identificarte por SMS (si tu móvil consta en la base de datos), con Cl@ve o con certificado electrónico, y consultar la vida laboral, altas, bajas y modificaciones. Para consultas de afiliación, cotización o pago de deudas, el 901 50 20 50 y el 91 541 02 91; para la regularización anual de cuotas de autónomos, el 91 908 70 67 y el 901 203 040, de lunes a viernes de 9:00 a 15:00."
+  - name: SEPE
+    type: government
+    help_url: "https://www.sepe.es/HomeSepe/prestaciones-desempleo/quiero-cobrar-prestacion-subsidio-desempleo.html"
+    apply_url: "https://www.sepe.es/HomeSepe/prestaciones-desempleo.html"
+    notes: "La prestación por desempleo se solicita a través de la sede electrónica, y desde ahí se consulta el estado con un SMS de un solo uso y se descarga el certificado de situación, prestación e importe. Recuerda que también hay que dar de baja la prestación por colocación, maternidad/paternidad o jubilación; la atención presencial en la oficina exige cita previa."
+  - name: DGT
+    type: government
+    help_url: "https://www.dgt.es/nuestros-servicios/conoce-todos-los-tramites/"
+    apply_url: "https://sede.dgt.gob.es/es/"
+    rights_url: "https://www.dgt.es/nuestros-servicios/multas-y-sanciones/que-hacer-si-has-recibido-una-multa/"
+    notes: "Desde que recibes la notificación tienes un plazo voluntario de 20 días naturales para pagar la multa con una reducción del 50% o para recurrirla. Si presentas alegaciones pierdes el derecho a ese descuento y, si te las desestiman, pagarás el 100%; una multa no se puede fraccionar ni aplazar, y cualquier recurso presentado después de pagar en periodo voluntario no tiene efecto."
+  - name: Punto de Acceso General y Carpeta Ciudadana
+    type: government
+    help_url: "https://administracion.gob.es/pag_Home/contacto/telefono-060.html"
+    apply_url: "https://administracion.gob.es/pag_Home/Tramites.html"
+    rights_url: "https://administracion.gob.es/pag_Home/Tramites/Notificaciones.html"
+    phone: "060"
+    notes: "El 060 es el servicio de información administrativa general de la Administración General del Estado sobre servicios públicos y trámites, con buzón de atención, webchat y buscador de oficinas. Puedes elegir recibir las notificaciones en papel o por vía electrónica y cambiar de medio en cualquier momento, salvo que estés obligado a relacionarte electrónicamente; las notificaciones electrónicas se consultan en la Dirección Electrónica Habilitada única (DEHú) con certificado o Cl@ve."
+  - name: Becas del Ministerio de Educación
+    type: government
+    help_url: "https://www.becaseducacion.gob.es/becas-y-ayudas.html"
+    apply_url: "https://www.becaseducacion.gob.es/becas-y-ayudas/universidad-grado-master/como-solicitarla.html"
+    rights_url: "https://www.becaseducacion.gob.es/becas-y-ayudas/universidad-grado-master/tus-obligaciones.html"
+    notes: "Todo el proceso de solicitud se hace en la sede electrónica del Ministerio de Educación, Formación Profesional y Deportes: te registras con usuario y contraseña, o entras con Cl@ve o certificado electrónico, y rellenas el formulario online. Normalmente no hay que aportar documentación porque las unidades de becas consultan los datos directamente; conviene no dejarlo para el último día del plazo."

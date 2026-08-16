@@ -1,0 +1,36 @@
+# Bank-fee classification rules — Norway (Norwegian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Norwegian compounds the fee word onto the service, so `GEBYR(ER)?\b` is
+# open on the left — it matches "gebyr", "gebyrer", "kortgebyr" and
+# "uttaksgebyr" — while the trailing \b keeps it off "GEBYRFRI" (fee-free).
+# `\bRENTER\b` is fenced on BOTH sides on purpose: rules are matched across
+# every region file, and a left-open "RENTE" would fire on the German
+# "RENTE"/"ALTERSRENTE" (a pension credit, not a fee), so the compounds that
+# really are fees are listed literally instead. Norwegian letters stay out
+# of `regex:` bodies — the matcher runs PCRE without /u, so `#i` case-folds
+# ASCII only and \b never sees "Å" as a word character; "ÅRSAVGIFT" and
+# "VALUTAPÅSLAG" are plain substrings, matched case-insensitively and
+# multibyte-aware. Regex bodies must be SINGLE-quoted in YAML so the
+# backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:GEBYR(ER)?\b'
+    name: "Gebyr"
+  - pattern: "ÅRSAVGIFT"
+    name: "Årsavgift"
+  - pattern: "VALUTAPÅSLAG"
+    name: "Valutapåslag"
+  - pattern: "OVERTREKKSRENTE"
+    name: "Overtrekksrente"
+  - pattern: "DEBETRENTE"
+    name: "Debetrente"
+  - pattern: 'regex:\bRENTER\b'
+    name: "Renter"

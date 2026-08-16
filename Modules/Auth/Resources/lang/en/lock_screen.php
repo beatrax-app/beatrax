@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'native_unlock_reason' => 'Unlock Beatrax',
+    'native_unlock_failed' => 'Could not unlock. Enter your PIN instead.',
     'page_title' => 'Unlock · Beatrax',
     'sign_out' => 'Sign out',
 

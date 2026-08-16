@@ -1,0 +1,97 @@
+# Support-resource corpus — Hungary (HU merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Magyar Telekom
+    type: merchant
+    support_url: "https://www.telekom.hu/lakossagi/ugyintezes/elerhetosegek"
+    notes: "A telekom.hu online ügyintézésében egyenleg, számlabefizetés, díjcsomag-módosítás és hűségidő-hosszabbítás intézhető, felmondás nem szerepel a felsorolt ügyek között — a szerződés megszüntetését a 1414-es ügyfélszolgálaton, chaten vagy Telekom üzletben kell kezdeményezni. A határozott idejű előfizetői szerződés lejártakor az Eht. 134. §-a szerint határozatlan idejűvé alakul, amit az előfizető ezt követően azonnali hatállyal, bármikor, további jogkövetkezmények nélkül felmondhat."
+  - name: Yettel
+    type: merchant
+    cancel_url: "https://www.yettel.hu/elallas-szerzodestol"
+    support_url: "https://www.yettel.hu/ugyfelszolgalat/elerhetoseg"
+    notes: "Távollévők között vagy üzlethelyiségen kívül kötött szerződéstől a szerződéskötéstől számított 14 napon belül indokolás nélkül el lehet állni, illetve — ha a szolgáltatás már elindult — fel lehet mondani. Az igény bejelenthető a honlap kapcsolatfelvételi űrlapján, a 1220-as (+36 20 200 0000) telefonos ügyfélszolgálaton munkanapokon 9-17 óra között, üzletben, ajánlott levélben, vagy aláírt nyilatkozat beszkennelt másolatával e-mailben."
+  - name: One
+    type: merchant
+    cancel_url: "https://www.one.hu/ugyintezes/kapcsolat/irj-nekunk"
+    support_url: "https://www.one.hu/ugyintezes/kapcsolat/elerhetosegeink"
+    notes: "A One saját oldalán az 'Írj nekünk' űrlaphoz a 'Kérd a szolgáltatásod lemondását online' hivatkozás vezet; a telefonos ügyfélszolgálat a 1270-es számon (külföldről 1270 vagy +36 70 700 1270) a hét minden napján 0-24 óráig hívható. Az Eht. szerint a határozott idő letelte előtti 90 napban a szolgáltatónak három alkalommal, tartós adathordozón kell tájékoztatnia az előfizetőt a szerződés határozatlan idejűvé alakulásáról, a megszüntetés lehetséges módjairól és a legkedvezőbb díjszabásról."
+  - name: MVM Next
+    type: merchant
+    cancel_url: "https://www.mvmnext.hu/foldgaz/Egyetemes-Szolgaltatas/Ugyintezes/Tovabbi-ugyek/Gazszolgaltatas-vegleges-megszuntetese"
+    support_url: "https://www.mvmnext.hu/foldgaz/Egyetemes-Szolgaltatas/Ugyintezes"
+    notes: "A lakossági áram- és gázügyek a kibővült online ügyfélszolgálaton (onlineugyintezes.mvmnext.hu) intézhetők, a korábbi, csak földgázra szolgáló felület 2023. április 26-tól lakossági ügyfeleknek már nem elérhető. Költözéskor az 'Átírás, költözés', végleges leszereléskor a 'Gázszolgáltatás végleges megszüntetése' ügytípust kell indítani."
+  - name: E.ON Hungária
+    type: merchant
+    support_url: "https://www.eon.hu/hu/lakossagi/ugyintezes.html"
+    notes: "Szolgáltatóváltozás miatt 2024. július 1-jétől a lakossági egyetemes villamosenergia-szolgáltató az MVM Next Energiakereskedelmi Zrt., ezért a szerződés felmondását és a számlázási ügyeket ott kell intézni, nem az E.ON-nál. Az eon.hu lakossági ügyintézésében a mérőállás-leolvasás, a műszaki ügyek és a hálózati bekapcsolás maradt."
+  - name: Generali Biztosító
+    type: merchant
+    cancel_url: "https://www.generali.hu/ugyfelszolgalat/informaciok/szemelyes-szerzodeskotes-szerzodesmodositas.aspx"
+    support_url: "https://www.generali.hu/ugyfelszolgalat/kapcsolatfelvetel"
+    notes: "A nyomtatványtárban külön pont a '7.2 Megszüntetés, reaktiválás' (személybiztosítási szerződések megszüntetése és reaktiválása), valamint a kötelező gépjármű-felelősségbiztosítás évfordulós felmondása. Konkrét kérdésekkel a +36 1 452 3333-as telefonos ügyfélszolgálat hívható."
+  - name: Allianz Hungária
+    type: merchant
+    cancel_url: "https://www.allianz.hu/hu_HU/lakossagi/karbejelentes-es-ugyintezes/online-ugyintezes.html"
+    support_url: "https://www.allianz.hu/hu_HU/lakossagi/karbejelentes-es-ugyintezes/ugyfelkapcsolati-pontok.html"
+    notes: "A kötéstől számított 14 napon belül indokolás nélkül el lehet állni a szerződéstől; azon túl az online ügyintézés felületének felmondás blokkjában lehet felmondani. Ugyanitt intézhető a díjfizetés, az igazolás- és dokumentumigény, valamint az adatváltozás bejelentése."
+  - name: Groupama Biztosító
+    type: merchant
+    cancel_url: "https://www.groupama.hu/hu/magan/ugyintezes/szerzodesmodositas/szerzodes-megszuntetese"
+    support_url: "https://www.groupama.hu/hu/magan/ugyintezes"
+    notes: "A 'Szerződés megszüntetése' menüpont saját megfogalmazása szerint 'ha a felmondás mellett döntesz, igényedet online is jelezheted nekünk' — külön űrlapon, bejelentkezés nélkül is. Telefonos elérhetőség: +36 1 467 3500."
+  - name: Magyar Autóklub
+    type: merchant
+    support_url: "https://www.autoklub.hu/kapcsolat/"
+    notes: "A klubtagság megszüntetését a tagnyilvántartásnál kell kezdeményezni, online felmondó űrlap nincs a honlapon. A központi számon (1/345-1800) az Autóklub kiírása szerint ügyintézés nem történik; írásban a web@mmak.hu vagy az info@mmak.hu címre, illetve az 1043 Budapest, Berda József u. 15. címre lehet fordulni."
+  - name: RTL+
+    type: merchant
+    support_url: "https://rtl.hu/ugyfelszolgalat/elofizetes-segitunk"
+    notes: "Az ügyfélszolgálat 'Előfizetés' témái között külön pont az 'RTL+ Premium lemondása' és az 'RTL+ fiók törlése', valamint a fizetési probléma kezelése és a csomagváltás. Ha az RTL+ hozzáférés One TV-előfizetéshez jár, azt a 'One előfizető vagyok' rész kezeli, tehát a lemondás a One-nál történik."
+  - name: Life1 Fitness
+    type: merchant
+    support_url: "https://life1.hu/gyakori-kerdesek/"
+    notes: "A Life1 bérletalapú, a gyakori kérdések között nincs szerződésfelmondás — csak a csoportos óra lemondása szerepel, amit legalább 60 perccel az óra kezdete előtt lehet megtenni. Minden egyéb ügyben a sales@life1.hu címre kell írni, ahonnan átlagosan 2-3 munkanapon belül válaszolnak."
+  - name: OTP Bank
+    type: merchant
+    support_url: "https://www.otpbank.hu/portal/hu/kapcsolat"
+    notes: "A fizetési számla megszüntetésére nincs szabad online űrlap: a bank külön hirdetményben szabályozza a számla VideóBankon keresztüli felmondását, és letölthető 'Fizetési számla megszüntetés' meghatalmazásmintát ad — egyébként bankfiókban kell eljárni. A bankváltás és a hagyatéki ügyintézés a 'Már van bankszámlám' rovatban található."
+  - name: Ökumenikus Segélyszervezet
+    type: merchant
+    support_url: "https://segelyszervezet.hu/kapcsolat/"
+    notes: "A rendszeres adományozás egyszeri regisztrációval és banki megbízással működik, és a Segélyszervezet kiírása szerint 'semmilyen kötöttség nincs, bármikor felmondható a megbízás'; a rendszeres átutalási megbízás a saját banknál is beállítható és leállítható. Kérdésekkel az Országos Koordinációs Központ hívható a +36-1 382-0700 számon."
+
+  # --- Government ---
+  - name: Magyar Államkincstár
+    type: government
+    help_url: "https://www.allamkincstar.gov.hu/header-tartalmak/kapcsolat/call-center"
+    rights_url: "https://www.allamkincstar.gov.hu/csaladok-tamogatasa/Csalad_gyermek/csaladi-potlek"
+    phone: "1811"
+    notes: "A Kincstár telefonos ügyfélszolgálata Magyarországról a 1811-es, külföldről a +36 1 327-3308-as számon érhető el; a hívás költsége a normál vezetékes hívással egyezik. A családtámogatási ellátások (családi pótlék, anyasági támogatás, CSED, GYES) jogosultsági feltételei és a kérelemhez szükséges nyomtatványok a családtámogatás rovatban vannak."
+  - name: NEAK
+    type: government
+    help_url: "https://www.neak.gov.hu/felso_menu/rolunk/elerhetoseg"
+    rights_url: "https://www.neak.gov.hu/felso_menu/lakossagnak/ellatas_magyarorszagon/jogosultsag_az_ellatasra/jogosultsag_az_ellatasra"
+    notes: "A NEAK lakossági oldalain szerepel, ki jogosult az egészségbiztosítási ellátásra, mit fedez a gyógyszer-, segédeszköz- és gyógyfürdőtámogatás, valamint a közgyógyellátás. Az elérhetőség oldalon a szervezeti egységek címei, a hivatali kapu fiókok és a telefonos menürendszer található; külföldi ellátáshoz az Európai Egészségbiztosítási Kártya rovat ad útmutatót."
+  - name: Nemzeti Foglalkoztatási Szolgálat
+    type: government
+    help_url: "https://nfsz.munka.hu/tart/kapcsolat/nfsz"
+    rights_url: "https://nfsz.munka.hu/tart/allaskeresok"
+    phone: "+36 (1) 795 5010"
+    notes: "Az álláskeresési ellátásokat a lakóhely szerint illetékes kormányhivatalnál kell igényelni, ehhez az oldalon 'Illetékesség kereső' és városra szűrhető ügyfélszolgálat-kereső segít. Központi elérhetőség: 1051 Budapest, József nádor tér 2-4., telefon +36 (1) 795 5010, e-mail ugyfelszolgalat@pm.gov.hu."
+  - name: Ügyfélkapu
+    type: government
+    help_url: "https://ugyfelkapu.gov.hu/kapcsolat"
+    apply_url: "https://ugyfelkapu.gov.hu/azonositasok"
+    phone: "1818"
+    notes: "A Kormányzati Ügyfélvonal az év bármely napján, 0-24 órában elérhető telefonon (1818, külföldről +36 1 550 1858), e-mailben és chatroboton. A súgó az Ügyfélkapu+ kétlépcsős azonosítás beállítását, az elveszett vagy törölt hitelesítő alkalmazás teendőit és a Hitelesítős Ügyfélkapu+ megszüntetését is leírja."
+  - name: Diákhitel Központ
+    type: government
+    help_url: "https://diakhitel.hu/elerhetoseg/"
+    rights_url: "https://diakhitel.hu/felvettem-diakhitel1/"
+    phone: "+36 1 999 99 44"
+    notes: "Az élő hangos telefonos ügyfélszolgálat munkanapokon 8:00-16:00 óra között hívható a +36 1 999 99 44 számon. A jövedelemarányos törlesztési időszakban (a törlesztés harmadik naptári évétől) a szerződés fennállása alatt összesen 36 hónapra kérhető, hogy a törlesztőrészlet a minimálbérhez igazodjon."

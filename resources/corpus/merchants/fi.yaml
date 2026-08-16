@@ -1,15 +1,420 @@
 # Merchant corpus — Finland. region defaults to FI. Schema: see merchants/nl.yaml.
 entries:
-  - { pattern: "K-MARKET", name: "K-Group", category: "Groceries" }
-  - { pattern: "K-CITYMARKET", name: "K-Group", category: "Groceries" }
-  - { pattern: "S-MARKET", name: "S-Group", category: "Groceries" }
-  - { pattern: "PRISMA", name: "Prisma", category: "Groceries" }
-  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
-  - { pattern: "ALEPA", name: "Alepa", category: "Groceries" }
-  - { pattern: "NESTE", name: "Neste", category: "Fuel" }
-  - { pattern: "ELISA", name: "Elisa", category: "Internet & Phone" }
-  - { pattern: 'regex:\bDNA\b', name: "DNA", category: "Internet & Phone" }
-  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
-  - { pattern: 'regex:\bVR\b', name: "VR", category: "Public transport" }
-  - { pattern: 'regex:\bHSL\b', name: "HSL", category: "Public transport" }
-  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
+  - pattern: "AAMULEHTI"
+    name: "Aamulehti"
+    category: "Subscriptions"
+    website: "https://www.aamulehti.fi"
+  - pattern: "ALEPA"
+    name: "Alepa"
+    category: "Groceries"
+    website: "https://s-ryhma.fi"
+  - pattern: "CARUNA"
+    name: "Caruna"
+    category: "Utilities"
+    website: "https://caruna.fi"
+  - pattern: "EASYFIT"
+    name: "EasyFit"
+    category: "Memberships"
+    website: "https://www.easyfit.fi"
+    cancel_url: "https://www.easyfit.fi/tilauksen-peruutus/"
+  - pattern: "ELENIA"
+    name: "Elenia"
+    category: "Utilities"
+    website: "https://www.elenia.fi"
+  - pattern: "ELISA VIIHDE"
+    name: "Elisa Viihde"
+    category: "Streaming"
+    website: "https://elisaviihde.fi"
+  - pattern: "FENNIA"
+    name: "Fennia"
+    category: "Insurance"
+    website: "https://www.fennia.fi"
+    support_url: "https://www.fennia.fi/asiakaspalvelu-henkiloasiakkaat"
+  - pattern: "FIKSURUOKA"
+    name: "Fiksuruoka"
+    category: "Groceries"
+    website: "https://www.fiksuruoka.fi"
+  - pattern: "FRESSI"
+    name: "Fressi"
+    category: "Memberships"
+    website: "https://www.fressi.fi"
+    support_url: "https://www.fressi.fi/palvelut/asiakaspalvelu/"
+  - pattern: "HAMEEN SANOMAT"
+    name: "Hämeen Sanomat"
+    category: "Subscriptions"
+    website: "https://www.hameensanomat.fi"
+  - pattern: "HELEN OY"
+    name: "Helen"
+    category: "Utilities"
+    website: "https://www.helen.fi"
+    support_url: "https://www.helen.fi/asiakastuki"
+    support_phone: "0800 160 602"
+  - pattern: "HELSINGIN SANOMAT"
+    name: "Helsingin Sanomat"
+    category: "Subscriptions"
+    website: "https://www.hs.fi"
+  - pattern: "HOSTINGPALVELU"
+    name: "Hostingpalvelu"
+    category: "Cloud / Software"
+    website: "https://www.hostingpalvelu.fi"
+  - pattern: "IF VAHINKOVAKUUTUS"
+    name: "If"
+    category: "Insurance"
+    website: "https://www.if.fi"
+    support_url: "https://www.if.fi/henkiloasiakkaat/asiakaspalvelu"
+    support_phone: "010 19 19 19"
+  - pattern: "ILMARINEN"
+    name: "Ilmarinen"
+    category: "Insurance"
+    website: "https://www.ilmarinen.fi"
+  - pattern: "ILTA-SANOMAT"
+    name: "Ilta-Sanomat"
+    category: "Subscriptions"
+    website: "https://www.is.fi"
+  - pattern: "ILTALEHTI"
+    name: "Iltalehti"
+    category: "Subscriptions"
+    website: "https://www.iltalehti.fi"
+  - pattern: "K-CITYMARKET"
+    name: "K-Group"
+    category: "Groceries"
+    website: "https://www.kesko.fi"
+  - pattern: "K-MARKET"
+    name: "K-Group"
+    category: "Groceries"
+    website: "https://www.kesko.fi"
+  - { pattern: "K-RUOKA", name: "K-Ruoka", category: "Groceries" }
+  - pattern: "KALEVA MEDIA"
+    name: "Kaleva"
+    category: "Subscriptions"
+    website: "https://www.kaleva.fi"
+  - pattern: "KAUPPALEHTI"
+    name: "Kauppalehti"
+    category: "Subscriptions"
+    website: "https://www.kauppalehti.fi"
+  - pattern: "KESKISUOMALAINEN"
+    name: "Keskisuomalainen"
+    category: "Subscriptions"
+    website: "https://www.ksml.fi"
+  - pattern: "KIRKON ULKOMAANAPU"
+    name: "Kirkon Ulkomaanapu"
+    category: "Donations"
+    website: "https://www.kirkonulkomaanapu.fi"
+  - pattern: "KOTIPIZZA"
+    name: "Kotipizza"
+    category: "Eating out"
+    website: "https://www.kotipizza.fi"
+  - pattern: "LAHITAPIOLA"
+    name: "LähiTapiola"
+    category: "Insurance"
+    website: "https://www.lahitapiola.fi"
+    support_url: "https://www.lahitapiola.fi/henkilo/asiakkaalle/"
+  - pattern: "LOUHI NET"
+    name: "Louhi"
+    category: "Cloud / Software"
+    website: "https://www.louhi.fi"
+  - pattern: "LOUNEA"
+    name: "Lounea"
+    category: "Internet & Phone"
+    website: "https://lounea.fi/fi/"
+  - pattern: "LUMME ENERGIA"
+    name: "Lumme Energia"
+    category: "Utilities"
+    website: "https://www.lumme-energia.fi"
+    cancel_url: "https://www.lumme-energia.fi/sopimuksen-peruutus"
+  - pattern: "MANDATUM"
+    name: "Mandatum"
+    category: "Insurance"
+    website: "https://www.mandatum.fi"
+  - pattern: "MATKAHUOLTO"
+    name: "Matkahuolto"
+    category: "Public transport"
+    website: "https://www.matkahuolto.fi"
+    support_url: "https://www.matkahuolto.fi/asiakaspalvelu"
+  - { pattern: "MEHILAINEN", name: "Mehiläinen", category: "Healthcare" }
+  - pattern: "MOI MOBIILI"
+    name: "Moi Mobiili"
+    category: "Internet & Phone"
+    website: "https://www.moi.fi"
+  - pattern: "MTV KATSOMO"
+    name: "MTV Katsomo"
+    category: "Streaming"
+    website: "https://www.mtv.fi"
+  - pattern: "NORDIC GREEN ENERGY"
+    name: "Nordic Green Energy"
+    category: "Utilities"
+    website: "https://www.nordicgreen.fi"
+  - pattern: "NYSSE"
+    name: "Nysse (Tampere)"
+    category: "Public transport"
+    website: "https://www.nysse.fi"
+  - { pattern: "ONNIBUS", name: "OnniBus", category: "Public transport" }
+  - pattern: "OOMI"
+    name: "Oomi Energia"
+    category: "Utilities"
+    website: "https://oomi.fi"
+    cancel_url: "https://oomi.fi/sahko/sahkosopimuksen-irtisanominen/"
+    support_url: "https://oomi.fi/asiakaspalvelu/"
+  - pattern: "PELASTAKAA LAPSET"
+    name: "Pelastakaa Lapset"
+    category: "Donations"
+    website: "https://www.pelastakaalapset.fi"
+  - pattern: "PIHLAJALINNA"
+    name: "Pihlajalinna"
+    category: "Healthcare"
+    website: "https://www.pihlajalinna.fi"
+  - pattern: "PLAN INTERNATIONAL SUOMI"
+    name: "Plan International Suomi"
+    category: "Donations"
+    website: "https://plan.fi"
+  - pattern: "POHJANTAHTI"
+    name: "Pohjantähti"
+    category: "Insurance"
+    website: "https://www.pohjantahti.fi"
+  - pattern: "POHJOLA VAKUUTUS"
+    name: "Pohjola Vakuutus (OP)"
+    category: "Insurance"
+    website: "https://www.op.fi/henkiloasiakkaat/vakuutukset"
+    support_url: "https://www.op.fi/henkiloasiakkaat/asiakaspalvelu"
+  - pattern: "PUNAINEN RISTI"
+    name: "Suomen Punainen Risti"
+    category: "Donations"
+    website: "https://www.punainenristi.fi"
+  - pattern: "R-KIOSKI"
+    name: "R-kioski"
+    category: "Groceries"
+    website: "https://www.r-kioski.fi"
+  - pattern: "RUUTU"
+    name: "Ruutu"
+    category: "Streaming"
+    website: "https://www.ruutu.fi"
+  - { pattern: "S-KAUPAT", name: "S-kaupat", category: "Groceries" }
+  - pattern: "S-MARKET"
+    name: "S-Group"
+    category: "Groceries"
+    website: "https://s-ryhma.fi"
+  - pattern: "SAVON SANOMAT"
+    name: "Savon Sanomat"
+    category: "Subscriptions"
+    website: "https://www.savonsanomat.fi"
+  - pattern: "SUOMEN KUVALEHTI"
+    name: "Suomen Kuvalehti"
+    category: "Subscriptions"
+    website: "https://suomenkuvalehti.fi"
+  - pattern: "TALOUSELAMA"
+    name: "Talouselämä"
+    category: "Subscriptions"
+    website: "https://www.talouselama.fi"
+  - pattern: "TAMPEREEN ENERGIA"
+    name: "Tampereen Energia"
+    category: "Utilities"
+    website: "https://www.tampereenenergia.fi"
+  - pattern: "TERVEYSTALO"
+    name: "Terveystalo"
+    category: "Healthcare"
+    website: "https://www.terveystalo.com"
+  - pattern: "TOKMANNI"
+    name: "Tokmanni"
+    category: "Groceries"
+    website: "https://www.tokmanni.fi"
+    support_url: "https://www.tokmanni.fi/asiakaspalvelu"
+    support_phone: "020 33 1415"
+    support_email: "asiakaspalvelu@tokmanni.fi"
+  - pattern: "TURKU ENERGIA"
+    name: "Turku Energia"
+    category: "Utilities"
+    website: "https://www.turkuenergia.fi"
+    cancel_url: "https://www.turkuenergia.fi/ukk/miten-voin-irtisanoa-sahkosopimukseni"
+    support_url: "https://www.turkuenergia.fi/ukk"
+  - pattern: "TURUN SANOMAT"
+    name: "Turun Sanomat"
+    category: "Subscriptions"
+    website: "https://www.ts.fi"
+  - pattern: "UNICEF SUOMI"
+    name: "UNICEF Suomi"
+    category: "Donations"
+    website: "https://www.unicef.fi"
+  - pattern: "VARE OY"
+    name: "Väre"
+    category: "Utilities"
+    website: "https://vare.fi"
+    cancel_url: "https://vare.fi/sahkosopimus/irtisanominen/"
+    support_url: "https://vare.fi/asiakaspalvelu/"
+  - pattern: "VEIKKAUS"
+    name: "Veikkaus"
+    category: "Other"
+    website: "https://www.veikkaus.fi"
+  - pattern: "WALTTI"
+    name: "Waltti"
+    category: "Public transport"
+    website: "https://waltti.fi"
+  - pattern: "WWF SUOMI"
+    name: "WWF Suomi"
+    category: "Donations"
+    website: "https://wwf.fi"
+  - pattern: "YLIOPISTON APTEEKKI"
+    name: "Yliopiston Apteekki"
+    category: "Health"
+    website: "https://www.yliopistonapteekki.fi"
+    support_url: "https://www.yliopistonapteekki.fi/asiakaspalvelu"
+  - pattern: "ZONER OY"
+    name: "Zoner"
+    category: "Cloud / Software"
+    website: "https://www.zoner.fi"
+  - pattern: "regex:\\bDNA\\b"
+    name: "DNA"
+    category: "Internet & Phone"
+    website: "https://www.dna.fi"
+    cancel_url: "https://www.dna.fi/tuki/asiakkuus/peruuttaminen-ja-irtisanominen"
+    support_url: "https://www.dna.fi/tuki"
+  - { pattern: "regex:\\bHSL\\b", name: "HSL", category: "Public transport" }
+  - pattern: "regex:\\bHSY\\b"
+    name: "HSY (Helsinki region water & waste)"
+    category: "Utilities"
+    website: "https://www.hsy.fi"
+  - pattern: "regex:\\bPOSTI OY\\b"
+    name: "Posti"
+    category: "Fees & charges"
+    website: "https://www.posti.fi"
+  - pattern: "regex:\\bTURVA\\b"
+    name: "Turva"
+    category: "Insurance"
+    website: "https://www.turva.fi"
+    cancel_url: "https://www.turva.fi/henkilo/asiakaspalvelu/ota-yhteytta/vakuutuksen-irtisanominen/"
+    support_url: "https://www.turva.fi/henkilo/asiakaspalvelu/"
+  - pattern: "regex:\\bVARMA\\b"
+    name: "Varma"
+    category: "Insurance"
+    website: "https://www.varma.fi"
+  - pattern: "regex:\\bVR\\b"
+    name: "VR"
+    category: "Public transport"
+    website: "https://www.vr.fi"
+    support_url: "https://www.vr.fi/asiakaspalvelu"
+  # --- Banks (recurring account and card fees) ---
+  - { pattern: "NORDEA SUOMI", name: "Nordea", category: "Fees & charges", website: "https://www.nordea.fi" }
+  - { pattern: "DANSKE BANK SUOMI", name: "Danske Bank", category: "Fees & charges", website: "https://danskebank.fi/sinulle" }
+  - { pattern: "S-PANKKI", name: "S-Pankki", category: "Fees & charges", website: "https://www.s-pankki.fi" }
+  - { pattern: "AKTIA", name: "Aktia", category: "Fees & charges", website: "https://www.aktia.fi" }
+  - { pattern: "POP PANKKI", name: "POP Pankki", category: "Fees & charges", website: "https://www.poppankki.fi" }
+  - { pattern: "SAASTOPANKKI", name: "Säästöpankki", category: "Fees & charges", website: "https://www.saastopankki.fi" }
+  - { pattern: "OMA SAASTOPANKKI", name: "Oma Säästöpankki", category: "Fees & charges", website: "https://www.omasp.fi" }
+  - { pattern: "HANDELSBANKEN SUOMI", name: "Handelsbanken", category: "Fees & charges", website: "https://www.handelsbanken.fi/fi/" }
+  - { pattern: "ALANDSBANKEN", name: "Ålandsbanken", category: "Fees & charges", website: "https://www.alandsbanken.fi" }
+  # --- More insurance / pensions ---
+  - { pattern: "regex:\\bELO\\b", name: "Elo", category: "Insurance", website: "https://www.elo.fi" }
+  - { pattern: "VERITAS", name: "Veritas", category: "Insurance", website: "https://veritas.fi" }
+  - { pattern: "ALANDIA", name: "Alandia", category: "Insurance", website: "https://alandia.fi" }
+  # --- More energy, heating, water, waste ---
+  - { pattern: "KYMENLAAKSON SAHKO", name: "Kymenlaakson Sähkö", category: "Utilities", website: "https://www.ksoy.fi" }
+  - { pattern: "VANTAAN ENERGIA", name: "Vantaan Energia", category: "Utilities", website: "https://www.vantaanenergia.fi" }
+  - { pattern: "regex:\\bALVA\\b", name: "Alva (Jyväskylän Energia)", category: "Utilities", website: "https://www.alva.fi" }
+  - { pattern: "KUOPION ENERGIA", name: "Kuopion Energia", category: "Utilities", website: "https://www.kuopionenergia.fi" }
+  - { pattern: "LAHTI ENERGIA", name: "Lahti Energia", category: "Utilities", website: "https://www.lahtienergia.fi" }
+  - { pattern: "PORI ENERGIA", name: "Pori Energia", category: "Utilities", website: "https://porienergia.fi" }
+  - { pattern: "SAVON VOIMA", name: "Savon Voima", category: "Utilities", website: "https://savonvoima.fi" }
+  - { pattern: "HERRFORS", name: "Herrfors", category: "Utilities", website: "https://www.herrfors.fi" }
+  - { pattern: "LOISTE", name: "Loiste", category: "Utilities", website: "https://www.loiste.fi" }
+  - { pattern: "SEINAJOEN ENERGIA", name: "Seinäjoen Energia", category: "Utilities", website: "https://www.seinajoenenergia.fi" }
+  - { pattern: "TAMPEREEN VESI", name: "Tampereen Vesi", category: "Utilities", website: "https://www.tampereenvesi.fi" }
+  - { pattern: "LASSILA & TIKANOJA", name: "Lassila & Tikanoja", category: "Utilities", website: "https://www.lt.fi" }
+  - { pattern: "REMEO", name: "Remeo", category: "Utilities", website: "https://www.remeo.fi" }
+  # --- More telecom ---
+  - { pattern: "KAISANET", name: "Kaisanet", category: "Internet & Phone", website: "https://www.kaisanet.fi" }
+  - { pattern: "regex:\\bMPY\\b", name: "MPY", category: "Internet & Phone", website: "https://mpy.fi" }
+  - { pattern: "ALCOM", name: "Ålcom", category: "Internet & Phone", website: "https://www.alcom.ax" }
+  - { pattern: "SAUNALAHTI", name: "Saunalahti", category: "Internet & Phone" }
+  # --- More newspapers ---
+  - { pattern: "ETELA-SUOMEN SANOMAT", name: "Etelä-Suomen Sanomat", category: "Subscriptions", website: "https://www.ess.fi" }
+  - { pattern: "SATAKUNNAN KANSA", name: "Satakunnan Kansa", category: "Subscriptions", website: "https://www.satakunnankansa.fi" }
+  - { pattern: "LAPIN KANSA", name: "Lapin Kansa", category: "Subscriptions", website: "https://www.lapinkansa.fi" }
+  - { pattern: "KARJALAINEN", name: "Karjalainen", category: "Subscriptions", website: "https://www.karjalainen.fi" }
+  - { pattern: "ILKKA-POHJALAINEN", name: "Ilkka-Pohjalainen", category: "Subscriptions", website: "https://www.ilkkapohjalainen.fi" }
+  - { pattern: "LANSI-SAVO", name: "Länsi-Savo", category: "Subscriptions", website: "https://www.lansi-savo.fi" }
+  - { pattern: "MAASEUDUN TULEVAISUUS", name: "Maaseudun Tulevaisuus", category: "Subscriptions", website: "https://www.maaseuduntulevaisuus.fi" }
+  - { pattern: "HUFVUDSTADSBLADET", name: "Hufvudstadsbladet", category: "Subscriptions", website: "https://www.hbl.fi" }
+  # --- Unions and unemployment funds (monthly dues) ---
+  - { pattern: "TEOLLISUUSLIITTO", name: "Teollisuusliitto", category: "Memberships", website: "https://www.teollisuusliitto.fi" }
+  - { pattern: "PALVELUALOJEN AMMATTILIITTO", name: "PAM", category: "Memberships", website: "https://www.pam.fi" }
+  - { pattern: "regex:\\bJHL\\b", name: "JHL", category: "Memberships", website: "https://www.jhl.fi" }
+  - { pattern: "TEHY", name: "Tehy", category: "Memberships", website: "https://www.tehy.fi/fi" }
+  - { pattern: "regex:\\bOAJ\\b", name: "OAJ", category: "Memberships", website: "https://www.oaj.fi" }
+  - { pattern: "AMMATTILIITTO PRO", name: "Ammattiliitto Pro", category: "Memberships", website: "https://proliitto.fi/fi" }
+  - { pattern: "regex:\\bYTK\\b", name: "YTK", category: "Memberships", website: "https://www.ytkpalvelut.fi" }
+  - { pattern: "regex:\\bERTO\\b", name: "ERTO", category: "Memberships", website: "https://www.erto.fi" }
+  - { pattern: "INSINOORILIITTO", name: "Insinööriliitto", category: "Memberships", website: "https://www.ilry.fi" }
+  - { pattern: "SUPER LIITTO", name: "SuPer", category: "Memberships", website: "https://www.superliitto.fi" }
+  # --- More charities ---
+  - { pattern: "MANNERHEIMIN LASTENSUOJELULIITTO", name: "Mannerheimin Lastensuojeluliitto", category: "Donations", website: "https://www.mll.fi" }
+  - { pattern: "SYOPAJARJESTOT", name: "Syöpäjärjestöt", category: "Donations", website: "https://www.syopajarjestot.fi" }
+  - { pattern: "SYDANLIITTO", name: "Sydänliitto", category: "Donations", website: "https://sydan.fi" }
+  - { pattern: "LUONNONSUOJELULIITTO", name: "Suomen Luonnonsuojeluliitto", category: "Donations", website: "https://www.sll.fi" }
+  - { pattern: "AMNESTY SUOMI", name: "Amnesty Suomi", category: "Donations", website: "https://www.amnesty.fi" }
+  # --- Retail, DIY, furniture, electronics ---
+  - { pattern: "SOKOS", name: "Sokos", category: "Other", website: "https://www.sokos.fi" }
+  - { pattern: "STOCKMANN SUOMI", name: "Stockmann", category: "Other", website: "https://www.stockmann.com" }
+  - { pattern: "GIGANTTI", name: "Gigantti", category: "Other" }
+  - { pattern: "POWER SUOMI", name: "Power", category: "Other", website: "https://www.power.fi" }
+  - { pattern: "VERKKOKAUPPA.COM", name: "Verkkokauppa.com", category: "Other", website: "https://www.verkkokauppa.com/fi/etusivu" }
+  - { pattern: "PUUILO", name: "Puuilo", category: "Other", website: "https://www.puuilo.fi" }
+  - { pattern: "MOTONET", name: "Motonet", category: "Car maintenance", website: "https://www.motonet.fi" }
+  - { pattern: "BILTEMA SUOMI", name: "Biltema", category: "Car maintenance", website: "https://www.biltema.fi" }
+  - { pattern: "K-RAUTA SUOMI", name: "K-Rauta", category: "Housing", website: "https://www.k-rauta.fi" }
+  - { pattern: "BAUHAUS SUOMI", name: "Bauhaus", category: "Housing" }
+  - { pattern: "STARKKI", name: "Starkki", category: "Housing", website: "https://www.stark-suomi.fi" }
+  - { pattern: "CLAS OHLSON SUOMI", name: "Clas Ohlson", category: "Other", website: "https://www.clasohlson.com/fi" }
+  - { pattern: "JYSK SUOMI", name: "JYSK", category: "Housing", website: "https://jysk.fi" }
+  - { pattern: "SOTKA", name: "Sotka", category: "Housing", website: "https://www.sotka.fi" }
+  - { pattern: "ASKO", name: "Asko", category: "Housing", website: "https://www.asko.fi" }
+  - { pattern: "MASKU", name: "Masku", category: "Housing" }
+  - { pattern: "regex:\\bISKU\\b", name: "Isku", category: "Housing", website: "https://isku.com/fi/" }
+  - { pattern: "MUSTI JA MIRRI", name: "Musti ja Mirri", category: "Other", website: "https://www.mustijamirri.fi" }
+  - { pattern: "XXL SUOMI", name: "XXL", category: "Other", website: "https://www.xxl.fi" }
+  - { pattern: "INTERSPORT SUOMI", name: "Intersport", category: "Other", website: "https://www.intersport.fi/fi/" }
+  - { pattern: "BUDGET SPORT", name: "Budget Sport", category: "Other", website: "https://www.budgetsport.fi" }
+  - { pattern: "ALKO", name: "Alko", category: "Groceries", website: "https://www.alko.fi/fi" }
+  # --- Fuel and EV charging ---
+  - { pattern: "ABC-ASEMA", name: "ABC", category: "Fuel", website: "https://www.abcasemat.fi" }
+  - { pattern: "TEBOIL", name: "Teboil", category: "Fuel", website: "https://www.teboil.fi" }
+  - { pattern: "ST1 SUOMI", name: "St1", category: "Fuel", website: "https://st1.fi" }
+  - { pattern: "regex:\\bSEO\\b", name: "SEO", category: "Fuel", website: "https://seo.fi" }
+  - { pattern: "VIRTA GLOBAL", name: "Virta", category: "Transport", website: "https://www.virta.global" }
+  # --- Travel, ferries ---
+  - { pattern: "FINNAIR", name: "Finnair", category: "Transport" }
+  - { pattern: "VIKING LINE SUOMI", name: "Viking Line", category: "Transport", website: "https://www.vikingline.fi" }
+  - { pattern: "ECKERO LINE", name: "Eckerö Line", category: "Transport", website: "https://www.eckeroline.fi" }
+  # --- Healthcare ---
+  - { pattern: "LAAKARIKESKUS AAVA", name: "Lääkärikeskus Aava", category: "Healthcare", website: "https://www.aava.fi" }
+  - { pattern: "ORAL HAMMASLAAKARIT", name: "Oral Hammaslääkärit", category: "Healthcare", website: "https://www.oral.fi" }
+  - { pattern: "CORONARIA", name: "Coronaria", category: "Healthcare", website: "https://www.coronaria.fi" }
+  - { pattern: "FIMLAB", name: "Fimlab", category: "Healthcare", website: "https://fimlab.fi" }
+  # --- Housing / rental ---
+  - { pattern: "regex:\\bLUMO\\b", name: "Lumo (Kojamo)", category: "Housing", website: "https://lumo.fi" }
+  - { pattern: "regex:\\bSATO\\b", name: "SATO", category: "Housing", website: "https://www.sato.fi/fi" }
+  # --- Eating out ---
+  - { pattern: "ROBERTS COFFEE", name: "Robert's Coffee", category: "Eating out", website: "https://robertscoffee.com" }
+  - { pattern: "FAFAS", name: "Fafa's", category: "Eating out", website: "https://www.fafas.fi" }
+  - { pattern: "RAFLAAMO", name: "Raflaamo (S-Group restaurants)", category: "Eating out", website: "https://www.raflaamo.fi" }
+  - { pattern: "HESBURGER SUOMI", name: "Hesburger", category: "Eating out" }
+  # --- Media publishers, government and other recurring billers ---
+  - { pattern: "OTAVAMEDIA", name: "Otavamedia", category: "Subscriptions", website: "https://otavamedia.fi" }
+  - { pattern: "SANOMA MEDIA", name: "Sanoma", category: "Subscriptions", website: "https://www.sanoma.fi" }
+  - { pattern: "ALMA MEDIA", name: "Alma Media", category: "Subscriptions", website: "https://www.almamedia.fi" }
+  - { pattern: "A-LEHDET", name: "A-lehdet", category: "Subscriptions", website: "https://www.a-lehdet.fi" }
+  - { pattern: "SUOMALAINEN KIRJAKAUPPA", name: "Suomalainen Kirjakauppa", category: "Other", website: "https://www.suomalainen.com" }
+  - { pattern: "FINNKINO", name: "Finnkino", category: "Other" }
+  - { pattern: "AUTOLIITTO", name: "Autoliitto", category: "Memberships", website: "https://www.autoliitto.fi" }
+  - { pattern: "TRAFICOM", name: "Traficom", category: "Fees & charges", website: "https://www.traficom.fi/fi" }
+  - { pattern: "VEROHALLINTO", name: "Verohallinto", category: "Fees & charges", website: "https://www.vero.fi/henkiloasiakkaat/" }
+  - { pattern: "regex:\\bKELA\\b", name: "Kela", category: "Fees & charges", website: "https://www.kela.fi/henkiloasiakkaat" }
+  - { pattern: "SCANDIC HOTELS", name: "Scandic Hotels", category: "Transport", website: "https://www.scandichotels.com/fi" }
+  - { pattern: "SOKOS HOTELS", name: "Sokos Hotels", category: "Transport", website: "https://www.sokoshotels.fi" }
+  - { pattern: "HOK-ELANTO", name: "HOK-Elanto", category: "Groceries", website: "https://hok-elanto.fi" }
+  - { pattern: "LADY LINE", name: "LadyLine", category: "Memberships", website: "https://ladyline.fi" }
+  - { pattern: "SECURITAS SUOMI", name: "Securitas", category: "Memberships", website: "https://www.securitas.fi" }
+  - { pattern: "NETTIAUTO", name: "Nettiauto", category: "Car maintenance", website: "https://www.nettiauto.com" }
+  - { pattern: "VAASAN SAHKO", name: "Vaasan Sähkö", category: "Utilities", website: "https://www.vaasansahko.fi" }
+  - { pattern: "KERAVAN ENERGIA", name: "Keravan Energia", category: "Utilities", website: "https://www.keravanenergia.fi" }
+  - { pattern: "KOKKOLAN ENERGIA", name: "Kokkolan Energia", category: "Utilities", website: "https://www.kokkolanenergia.fi" }
+  - { pattern: "LEPPAKOSKI", name: "Leppäkosken Sähkö", category: "Utilities", website: "https://leppakoski.fi" }
+  - { pattern: "FITNESS24SEVEN SUOMI", name: "Fitness24Seven", category: "Memberships" }

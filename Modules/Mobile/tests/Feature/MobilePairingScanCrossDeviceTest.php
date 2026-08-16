@@ -18,6 +18,7 @@ use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
+use Modules\Sync\Internal\Pairing\RelayBootstrap;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Modules\Sync\Tests\Support\CrossDevicePairingHarness;
@@ -81,8 +82,7 @@ it('submitCode() import branch sends PAIR_RESPONDER_ACCEPT to the desktop\'s own
         $desktopIdentity->ed25519PublicKeyHex,
         $desktopIdentity->x25519PublicKeyHex,
         $issuedToken,
-        relayEndpoint: 'https://relay.test',
-        relayAuthToken: 'cross-device-harness-relay-secret',
+        relay: new RelayBootstrap('https://relay.test', 'cross-device-harness-relay-secret'),
     );
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));
@@ -146,8 +146,7 @@ it('the full happy path reaches CONFIRMED on both databases AND epoch delivery â
         $desktopIdentity->ed25519PublicKeyHex,
         $desktopIdentity->x25519PublicKeyHex,
         $issuedToken,
-        relayEndpoint: 'https://relay.test',
-        relayAuthToken: 'cross-device-harness-relay-secret',
+        relay: new RelayBootstrap('https://relay.test', 'cross-device-harness-relay-secret'),
     );
 
     app()->instance(Request::class, Request::create('/mobile/pair', 'GET', ['mode' => 'import']));

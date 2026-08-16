@@ -100,9 +100,14 @@ final class WebAuthnBiometricService
                 PublicKeyCredentialParameters::createPk(-7),   // ES256
                 PublicKeyCredentialParameters::createPk(-257), // RS256
             ],
+            // residentKey defaults to null, which serialises as an explicit
+            // null the browser API rejects ("Ignoring unknown
+            // publicKey.authenticatorSelection.residentKey value"). This
+            // credential always accompanies a known account.
             authenticatorSelection: new AuthenticatorSelectionCriteria(
                 authenticatorAttachment: 'platform',
                 userVerification: 'required',
+                residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_DISCOURAGED,
             ),
             excludeCredentials: $excludeCredentials,
         );

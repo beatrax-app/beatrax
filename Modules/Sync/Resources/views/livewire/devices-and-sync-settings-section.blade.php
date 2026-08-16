@@ -293,8 +293,11 @@
                 {{ Lang::get('sync::devices.pair_new_device') }}
             </button>
 
-            {{-- ===== D-06 (Phase 13): per-peer sync status surface ===== --}}
-            @livewire('sync.sync-status-section', key('sync-status-section'))
+            {{-- The per-peer status surface (D-06) used to render here as well
+                 as at the top of the Data & Devices page, so that page carried
+                 two identical status banners and two peer lists. This section
+                 is only ever mounted there, so the copy above it is the one
+                 that survives — status at the top, management here. --}}
 
             {{-- ===== D-01 (Phase 13): relay endpoint URL (default none) ===== --}}
             <div class="space-y-3 pt-2">

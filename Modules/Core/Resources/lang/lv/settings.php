@@ -1,0 +1,148 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'groups' => [
+        'display' => 'Attēlojums',
+        'money' => 'Nauda',
+        'insights' => 'Ieskati un brīdinājumi',
+        'security' => 'Drošība un ierīces',
+        'data' => 'Imports un dati',
+        'app' => 'Lietotne',
+    ],
+
+    'title' => 'Iestatījumi',
+    'subtitle' => 'Preferences tam, kā jūsu finanses tiek rādītas lietotnē.',
+
+    'appearance' => [
+        'heading' => 'Izskats',
+        'theme' => 'Motīvs',
+        'theme_light' => 'Gaišs',
+        'theme_dark' => 'Tumšs',
+        'theme_system' => 'Sistēmas',
+        'theme_help' => 'Sistēmas motīvs seko operētājsistēmas gaišajam vai tumšajam iestatījumam.',
+    ],
+
+    'language' => [
+        'apply' => 'Lietot',
+        'heading' => 'Valoda',
+        'label' => 'Saskarnes valoda',
+
+        'system' => 'Sistēmas',
+        'help' => 'Sistēmas iestatījums seko pārlūka vai operētājsistēmas valodai, pēc noklusējuma izmantojot angļu valodu.',
+    ],
+
+    'currency_display' => [
+        'heading' => 'Valūtas attēlojums',
+        'label' => 'Noklusējuma skats darījumu sarakstā',
+        'eur_only' => 'Tikai EUR',
+        'original' => 'Sākotnējā valūta',
+        'help' => 'Katrā lapā to joprojām varat pārslēgt darījumu sarakstā.',
+    ],
+
+    'base_currency' => [
+        'heading' => 'Pārskata valūta',
+        'label' => 'Pārskata valūta',
+        'help' => 'Visas kopsummas un apkopojumi tiek konvertēti šajā valūtā. Katram kontam blakus joprojām tiek rādīta tā sākotnējā valūta.',
+    ],
+
+    'exchange_rates' => [
+        'heading' => 'Valūtas kursi',
+        'fetch_online' => 'Iegūt aktuālos kursus tiešsaistē',
+        'online_on' => 'Kursi katru dienu tiek iegūti no ECB. Tikai valūtu pāru pieprasījumi — nekādu personas datu.',
+        'last_updated' => 'Pēdējoreiz atjaunināts: :date.',
+        'online_off' => 'Tiek izmantoti komplektā iekļautie kursi. Nekādi dati šo ierīci nepamet.',
+        'fetch_aria' => 'Iegūt aktuālos valūtas kursus tiešsaistē',
+        'refreshing' => 'Atsvaidzina…',
+        'next_refresh' => 'Nākamā automātiskā atsvaidzināšana: katru dienu plkst. 09:00',
+        'refresh_now' => 'Atsvaidzināt tagad',
+    ],
+
+    'period' => [
+        'heading' => 'Periods',
+        'label' => 'Perioda sākuma diena',
+        'help' => 'No 1 līdz 28. Lielākā daļa lietotāju atstāj 1 (kalendārais mēnesis). Izvēlieties 25, ja alga pienāk 25. datumā un „jūsu mēnesis” sākas tieši tad.',
+    ],
+
+    'recurring' => [
+        'heading' => 'Regulāro maksājumu atpazīšana',
+        'window_label' => 'Atpazīšanas logs (mēneši)',
+        'window_help' => 'Cik mēnešu vēstures skenēt, grupējot darījumus regulāros modeļos.',
+        'income_label' => 'Ieņēmumu minimums (centos)',
+        'income_help' => 'Ieņēmumi zem šī sliekšņa netiek automātiski grupēti. Glabā centos — 200000 nozīmē 2000,00 €. Iestatiet 0, lai slieksni izslēgtu.',
+    ],
+
+    'drift' => [
+        'heading' => 'Izmaiņu brīdinājumi',
+        'label' => 'Noklusējuma izmaiņu brīdinājuma slieksnis',
+        'help' => 'Brīdinājumi tiek nosūtīti, kad regulārā maksājuma jaunākā summa no iepriekšējās atšķiras vairāk par šo procentu. Atsevišķām sērijām norādītie iestatījumi ir noteicošie.',
+        'options' => [
+            '1' => '±1%',
+            '2' => '±2%',
+            '5' => '±5% (noklusējums)',
+            '10' => '±10%',
+            '25' => '±25%',
+            '50' => '±50%',
+        ],
+    ],
+
+    'save' => 'Saglabāt iestatījumus',
+    'saved' => 'Saglabāts.',
+
+    'anomaly_heading' => 'Noviržu atpazīšana',
+    'notifications_heading' => 'Paziņojumi',
+
+    'forecasting' => [
+        'heading' => 'Prognozēšana',
+        'intro' => 'Beatrax prognozē jūsu atlikumu, balstoties uz kontu pašreizējo stāvokli. Kontiem bez konta izraksta atlikumiem (PayPal, vecie CSV importi) šeit norādiet sākuma atlikumu, lai prognozes sāktos no zināma punkta.',
+        'no_accounts' => 'Vēl nav neviena konta — importējiet konta izrakstu, lai to pievienotu.',
+    ],
+
+    'auto_import' => [
+        'heading' => 'Automātiskais imports',
+        'label' => 'Automātiski importēt no nomešanas mapes',
+
+        'active_html' => 'Nomešanas mape ir aktīva. Beatrax ik pēc 5 minūtēm pārbauda <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, meklējot jaunus failus.',
+        'inactive_html' => 'Kad ieslēgts, Beatrax ik pēc 5 minūtēm pārbauda <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code>, meklējot <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code> un <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code> failus, un importē tos pa to pašu apstrādes ķēdi, ko vednis. Apstrādātie faili tiek pārvietoti uz <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, lai tie nekad netiktu importēti divreiz.',
+    ],
+
+    'aliases' => [
+        'heading' => 'Aizstājvārdi',
+        'intro' => 'Pārskatiet un rediģējiet saprotamos nosaukumus, kas Beatrax iemācīti neskaidriem konta izraksta aprakstiem.',
+        'manage' => 'Pārvaldīt aizstājvārdus →',
+    ],
+
+    'tax_heading' => 'Nodokļi',
+    'shared_merchant_heading' => 'Kopīgotais tirgotāju saraksts',
+    'data_backup_heading' => 'Dati un dublējumi',
+    'install_heading' => 'Instalēšana',
+
+    'about_updates' => [
+        'heading' => 'Par atjauninājumiem',
+        'body' => 'Pēc instalēšanas Beatrax atjaunina sevi automātiski. Kad ir uzstādīta pati pirmā versija, nākamās pienāk ar paziņojumu lietotnē — GitHub vairs nav jāapmeklē. Ja kāds atjauninājums neizdotos, jaunāko instalētāju vienmēr varat lejupielādēt manuāli laidienu lapā.',
+        'open_releases' => 'Atvērt laidienu lapu →',
+    ],
+
+    'first_run_tour' => [
+        'heading' => 'Pirmās palaišanas ievads',
+        'body' => 'Palaidiet iestatīšanas vedni vēlreiz, ja vēlaties atkārtoti iziet ievada soļus.',
+        'run_again' => 'Palaist iestatīšanas vedni vēlreiz',
+    ],
+
+    'developer' => [
+        'heading' => 'Izstrādātājam',
+        'label' => 'Izstrādes konsole lietotnē',
+        'help' => 'Rādīt izstrādes konsoli adresē /dev. Katrā pieteikšanās reizē atiestata paplašināto iestatījumu slēdzi.',
+        'aria' => 'Izstrādes režīms',
+    ],
+
+    'errors' => [
+        'currency_required' => 'Izvēlieties valūtu.',
+        'window_months' => 'Izvēlieties no 2 līdz 60 mēnešiem.',
+        'threshold' => 'Izvēlieties slieksni no 1%, 2%, 5%, 10%, 25% vai 50%.',
+        'amount' => 'Ievadiet summu no 0 € un vairāk.',
+        'period_day' => 'Izvēlieties dienu no 1 līdz 28.',
+        'currency_view' => 'Izvēlieties vienu no pieejamajām iespējām.',
+    ],
+];

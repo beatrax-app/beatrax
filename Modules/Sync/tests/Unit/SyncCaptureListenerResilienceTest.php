@@ -24,6 +24,11 @@ use Psr\Log\LoggerInterface;
  * is half-finished — would fail the user's edit rather than simply not
  * replicating it. Capture is best-effort by design, and these tests pin that:
  * every failure has to end in a log line, never a throw.
+ *
+ * They also pin WHICH line. "Sync is off" is the resting state of most
+ * installs, not a fault, and reporting it at error level once per mutation is
+ * what filled a real user's log with 120k entries and hid the failures that
+ * did matter.
  */
 function capturingLogger(array &$calls): LoggerInterface
 {
@@ -105,7 +110,7 @@ it('does not fail the user\'s save when the device cannot capture yet', function
     ));
 
     expect($calls)->toHaveCount(1)
-        ->and($calls[0]['level'])->toBe('error')
+        ->and($calls[0]['level'])->toBe('debug')
         ->and($calls[0]['message'])->toContain('capture failed');
 });
 
@@ -122,8 +127,31 @@ it('does not fail a split save either', function (): void {
     ));
 
     expect($calls)->toHaveCount(1)
-        ->and($calls[0]['level'])->toBe('error')
+        ->and($calls[0]['level'])->toBe('debug')
         ->and($calls[0]['message'])->toContain('split capture failed');
+});
+
+// The other half of the contract: quiet about a device that simply has no
+// writer, loud about a writer that has one and still could not use it.
+it('still reports a genuine capture failure at error level', function (): void {
+    $calls = [];
+    $container = new IlluminateContainer;
+    $container->bind(OpLogWriter::class, function (): OpLogWriter {
+        throw new RuntimeException('the op-log write itself failed');
+    });
+
+    $listener = new SyncCaptureListener($container, capturingLogger($calls));
+
+    $listener->handle(new TransactionMutated(
+        transactionId: 42,
+        userId: 1,
+        mutationType: 'edit',
+        dirtyFields: ['amount_minor' => 1000],
+    ));
+
+    expect($calls)->toHaveCount(1)
+        ->and($calls[0]['level'])->toBe('error')
+        ->and($calls[0]['message'])->toContain('capture failed');
 });
 
 // Reaching the unknown-mutationType arm needs container->make(OpLogWriter)

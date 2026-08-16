@@ -20,9 +20,10 @@
                 @if (! empty($filterAccounts ?? []))
                     @php
                         $acctCount = count($filterAccounts);
+                        $acctCounted = Lang::choice('reports::builder.filter.account_count', $acctCount, ['count' => $acctCount]);
                         $acctLabel = $acctCount === 1
-                            ? (collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? Lang::get('reports::builder.filter.account_one', ['count' => $acctCount]))
-                            : Lang::get('reports::builder.filter.account_other', ['count' => $acctCount]);
+                            ? (collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? $acctCounted)
+                            : $acctCounted;
                     @endphp
                     {{ $acctLabel }}
                 @else
@@ -60,9 +61,10 @@
                 @if (! empty($filterCategories ?? []))
                     @php
                         $catCount = count($filterCategories);
+                        $catCounted = Lang::choice('reports::builder.filter.category_count', $catCount, ['count' => $catCount]);
                         $catLabel = $catCount === 1
-                            ? (collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? Lang::get('reports::builder.filter.category_one', ['count' => $catCount]))
-                            : Lang::get('reports::builder.filter.category_other', ['count' => $catCount]);
+                            ? (collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? $catCounted)
+                            : $catCounted;
                     @endphp
                     {{ $catLabel }}
                 @else
@@ -99,9 +101,10 @@
                 @if (! empty($filterCounterparties ?? []))
                     @php
                         $cpCount = count($filterCounterparties);
+                        $cpCounted = Lang::choice('reports::builder.filter.counterparty_count', $cpCount, ['count' => $cpCount]);
                         $cpLabel = $cpCount === 1
-                            ? (collect($availableCounterparties)->firstWhere('id', (int) $filterCounterparties[0])['name'] ?? Lang::get('reports::builder.filter.counterparty_one', ['count' => $cpCount]))
-                            : Lang::get('reports::builder.filter.counterparty_other', ['count' => $cpCount]);
+                            ? (collect($availableCounterparties)->firstWhere('id', (int) $filterCounterparties[0])['name'] ?? $cpCounted)
+                            : $cpCounted;
                     @endphp
                     {{ $cpLabel }}
                 @else

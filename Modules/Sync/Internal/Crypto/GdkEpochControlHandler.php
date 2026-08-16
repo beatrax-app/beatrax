@@ -27,6 +27,7 @@ final class GdkEpochControlHandler
         private readonly PeerCatchUpExchanger $catchUp,
         private readonly DeviceIdentityLoader $identityLoader,
         private readonly GdkKeyringService $keyringService,
+        private readonly GdkEpochUsageProbe $usageProbe,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -140,8 +141,9 @@ final class GdkEpochControlHandler
         return $identity;
     }
 
-    // Guards the keyring load and the epoch-already-present idempotency check
-    // before any decryption is attempted, so a duplicate wrap never re-opens.
+    // Loads the keyring first so the key already held for this epoch id, if
+    // any, travels into the open — the collision is settled by comparing
+    // keys, which needs the wrap decrypted.
     /**
      * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string}  $wrap
      */
@@ -157,20 +159,7 @@ final class GdkEpochControlHandler
             return;
         }
 
-        // An already-present epoch is never re-appended. This also covers a
-        // desktop ADD-device fan-out self-collision (a self-minting device
-        // already holding its own epoch 1 under a different key) — logged
-        // with device/epoch ids only, never key material.
-        if ($existing->keyFor($wrap['epochId']) !== null) {
-            $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP epoch_id already present locally — colliding delivery dropped (idempotency guard).', [
-                'epoch_id' => $wrap['epochId'],
-                'recipient_device_id' => $wrap['recipientDeviceId'],
-            ]);
-
-            return;
-        }
-
-        $this->decryptAndStore($wrap, $identity, $userId, $session);
+        $this->decryptAndStore($wrap, $identity, $userId, $existing->keyFor($wrap['epochId']), $session);
     }
 
     // Opens the sealed box under the local keypair and appends the recovered
@@ -178,9 +167,15 @@ final class GdkEpochControlHandler
     // Every branch zeroes the key material in the finally.
     /**
      * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string}  $wrap
+     * @param  string|null  $localKeyHex  The key already held for this epoch id, if any.
      */
-    private function decryptAndStore(array $wrap, DeviceIdentityDto $identity, int $userId, Session $session): void
-    {
+    private function decryptAndStore(
+        array $wrap,
+        DeviceIdentityDto $identity,
+        int $userId,
+        ?string $localKeyHex,
+        Session $session,
+    ): void {
         $localSecret = sodium_hex2bin($identity->x25519SecretKeyHex);
         $localPublic = sodium_hex2bin($identity->x25519PublicKeyHex);
         $localKeypair = sodium_crypto_box_keypair_from_secretkey_and_publickey($localSecret, $localPublic);
@@ -198,6 +193,13 @@ final class GdkEpochControlHandler
             }
 
             $epoch = new GdkEpoch(epochId: $wrap['epochId'], keyHex: sodium_bin2hex($rawKey));
+
+            if ($localKeyHex !== null) {
+                $this->reconcileCollision($epoch, $localKeyHex, $userId, $wrap['recipientDeviceId'], $session);
+
+                return;
+            }
+
             $this->keyringService->appendEpoch($userId, $epoch, $session);
         } catch (SodiumException $e) {
             $this->logger->warning('GdkEpochControlHandler: sodium error while opening GDK_EPOCH_WRAP.', [
@@ -215,5 +217,40 @@ final class GdkEpochControlHandler
             sodium_memzero($localPublic);
             sodium_memzero($localKeypair);
         }
+    }
+
+    // Settles an inbound epoch whose id this device already holds. An equal
+    // key is an ordinary duplicate. A DIFFERENT one means both sides minted
+    // the id independently: the peer's is the group's, and dropping it left
+    // every row encrypted under it permanently unreadable.
+    private function reconcileCollision(
+        GdkEpoch $epoch,
+        string $localKeyHex,
+        int $userId,
+        string $recipientDeviceId,
+        Session $session,
+    ): void {
+        if (hash_equals($localKeyHex, $epoch->keyHex)) {
+            return;
+        }
+
+        // Local rows encrypted under this id would become unreadable if the
+        // key went away, so the local key stays and the conflict is raised
+        // instead of being silently resolved either way.
+        if ($this->usageProbe->hasLocalEntriesAt($userId, $epoch->epochId)) {
+            $this->logger->error('GdkEpochControlHandler: GDK epoch id collides with a locally-USED epoch — keeping the local key; peer rows at this epoch cannot be decrypted.', [
+                'epoch_id' => $epoch->epochId,
+                'recipient_device_id' => $recipientDeviceId,
+            ]);
+
+            return;
+        }
+
+        $this->keyringService->replaceEpoch($userId, $epoch, $session);
+
+        $this->logger->warning('GdkEpochControlHandler: adopted the peer GDK epoch over an unused local key of the same id.', [
+            'epoch_id' => $epoch->epochId,
+            'recipient_device_id' => $recipientDeviceId,
+        ]);
     }
 }

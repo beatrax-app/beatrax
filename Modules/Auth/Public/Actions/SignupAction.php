@@ -8,6 +8,7 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Hashing\Hasher;
+use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -15,6 +16,7 @@ use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Models\UserRecoveryCode;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Enums\Locale;
 use Modules\Core\Public\Events\UserInstalled;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\Lang;
@@ -36,12 +38,13 @@ final class SignupAction
         private readonly Clock $clock,
         private readonly SessionFactory $session,
         private readonly Dispatcher $events,
+        private readonly Translator $translator,
     ) {}
 
     /**
      * @return array{user: User, codesPlain: list<string>}
      */
-    public function __invoke(string $usernameInput, string $password): array
+    public function __invoke(string $usernameInput, string $password, bool $seedsStarterData = true): array
     {
         $username = strtolower(trim($usernameInput));
 
@@ -76,6 +79,11 @@ final class SignupAction
                 'password' => $this->hasher->make($password),
                 'is_developer' => true,
                 'force_password_change_at_next_login' => false,
+                // The language the account was created in. SetLocale prefers
+                // the user's own setting, so leaving it null made a fresh
+                // account fall back to the browser's idea of the language and
+                // the screens right after signup switched back to English.
+                'locale' => $this->activeLocale(),
             ]);
 
             $now = $this->clock->now();
@@ -108,7 +116,7 @@ final class SignupAction
         // Dispatched after commit (never for a rolled-back user) and before
         // auto-login, so the listener chain runs in the same unauthenticated
         // context as the beatrax:install console path.
-        $this->events->dispatch(new UserInstalled($result['user']->id));
+        $this->events->dispatch(new UserInstalled($result['user']->id, $seedsStarterData));
 
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();
@@ -117,5 +125,19 @@ final class SignupAction
         ($this->session)()->put('auth.signup.recovery_codes_plain', $result['codesPlain']);
 
         return $result;
+    }
+
+    // Session choice first, translator only as fallback: the translator needs
+    // SetLocale to have run on THIS request, and signup submits through a
+    // Livewire round-trip — so it stored null for a user who had plainly
+    // picked Dutch, and the recovery codes came back English.
+    private function activeLocale(): ?string
+    {
+        $chosen = ($this->session)()->get('locale');
+        $locale = is_string($chosen) && Locale::isSupported($chosen)
+            ? $chosen
+            : $this->translator->getLocale();
+
+        return $locale === Locale::DEFAULT ? null : $locale;
     }
 }

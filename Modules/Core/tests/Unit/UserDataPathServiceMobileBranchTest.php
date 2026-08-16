@@ -77,7 +77,17 @@ it('storageBase() does not branch on NATIVEPHP_PLATFORM alone, but databaseFile(
         ->toBe(dirname(base_path()).DIRECTORY_SEPARATOR.'persisted_data'.DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'database.sqlite');
 });
 
-it('resolves databaseFile() under the sibling persisted-data root (not the bundle) while storage/secrets/backups stay bundle-rooted, under a relocated base_path() with NATIVEPHP_PLATFORM present and NATIVEPHP_STORAGE_PATH absent (the iOS reality)', function (): void {
+it('resolves databaseFile() AND storage/app (secrets, backups, keyring) under the sibling persisted-data root, while the disposable storage/ tree stays bundle-rooted, under a relocated base_path() with NATIVEPHP_PLATFORM present and NATIVEPHP_STORAGE_PATH absent (the iOS reality)', function (): void {
+    // secrets/backups moved to the persisted store for exactly the reason
+    // this file already gives for databaseFile(): the sandboxed base_path()
+    // IS the bundle, "wiped and re-shipped on every app update". Leaving
+    // storage/app there destroyed the GDK keyring on every install while the
+    // database it decrypts survived — confirmed on a real device, where 124
+    // synced transactions rendered as raw ciphertext because the keyring that
+    // opened them had been wiped by the reinstall.
+    //
+    // storageBase() still does NOT branch: storage/framework and storage/logs
+    // are disposable caches and may live in the bundle.
     $sandbox = sys_get_temp_dir().DIRECTORY_SEPARATOR.'beatrax-sandbox-'.bin2hex(random_bytes(8));
     mkdir($sandbox, 0700, true);
 
@@ -91,10 +101,12 @@ it('resolves databaseFile() under the sibling persisted-data root (not the bundl
             ->toBe(dirname($sandbox).DIRECTORY_SEPARATOR.'persisted_data'.DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'database.sqlite');
         expect(UserDataPathService::storageBase())
             ->toBe($sandbox.DIRECTORY_SEPARATOR.'storage');
+        $persistedApp = dirname($sandbox).DIRECTORY_SEPARATOR.'persisted_data'
+            .DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app';
         expect(UserDataPathService::secretsPath())
-            ->toBe($sandbox.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'secrets');
+            ->toBe($persistedApp.DIRECTORY_SEPARATOR.'secrets');
         expect(UserDataPathService::backupsPath())
-            ->toBe($sandbox.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app'.DIRECTORY_SEPARATOR.'backups');
+            ->toBe($persistedApp.DIRECTORY_SEPARATOR.'backups');
     } finally {
         $this->app->setBasePath($originalBasePath);
     }

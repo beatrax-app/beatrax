@@ -1,0 +1,129 @@
+# Government / public-agency classification rules — Andorra.
+# A microstate: the distinct public-body set is small and is not padded.
+# Local taxation sits with the seven parish comuns rather than the Govern.
+# (Bare "SAAS" is not used — it collides with the software acronym.)
+# Schema: see government/nl.yaml.
+entries:
+  - pattern: "DEPARTAMENT DE TRIBUTS"
+    name: "Departament de Tributs i de Fronteres"
+  - pattern: "CAIXA ANDORRANA DE SEGURETAT SOCIAL"
+    name: "CASS"
+  - pattern: "regex:\\bCASS\\b"
+    name: "CASS"
+  - pattern: "GOVERN D'ANDORRA"
+    name: "Govern d'Andorra"
+  # The parish councils bill the communal taxes.
+  - pattern: "regex:\\bCOMU D[E']"
+    name: "Comú"
+  - pattern: "IMPOST COMUNAL"
+    name: "Impost comunal"
+  # The "foc i lloc" residence tax is the classic communal charge.
+  - pattern: "FOC I LLOC"
+    name: "Impost de foc i lloc"
+  - pattern: "SERVEI ANDORRA D'ATENCIO SANITARIA"
+    name: "SAAS"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: the ministry/department tree published at
+  # govern.ad/ca/tematiques (Ministeri de Finances, Cos de Policia, Cos de
+  # Bombers, Cos de Banders, Departament d'Immigració, Registre Civil),
+  # the tax list at impostos.ad / govern.ad (IRPF, IGI, IS, IRNR) and the
+  # communal taxes described for the seven parishes.
+  #
+  # Catalan statements carry accents about as often as they strip them, so
+  # the unaccented spelling and the official accented one are listed as
+  # separate entries. This file is read first of all the country files, so
+  # nothing here may be short or generic. Rejected: bare \bIGI\b and
+  # \bSAAS\b (the software acronym), bare "DUANA", and the state-owned
+  # utilities FEDA and Andorra Telecom — their bills are ordinary
+  # electricity and telecoms spend, not a public levy.
+  # ---------------------------------------------------------------------
+
+  - pattern: "SERVEI ANDORRÀ D'ATENCIÓ SANITÀRIA"
+    name: "SAAS"
+
+  # The seven parish councils, which levy the communal taxes.
+  - pattern: "COMÚ D'ANDORRA LA VELLA"
+    name: "Comú d'Andorra la Vella"
+  - pattern: "COMÚ DE CANILLO"
+    name: "Comú de Canillo"
+  - pattern: "COMÚ D'ENCAMP"
+    name: "Comú d'Encamp"
+  - pattern: "COMÚ D'ORDINO"
+    name: "Comú d'Ordino"
+  - pattern: "COMÚ DE LA MASSANA"
+    name: "Comú de la Massana"
+  - pattern: "COMÚ DE SANT JULIÀ DE LÒRIA"
+    name: "Comú de Sant Julià de Lòria"
+  - pattern: "COMÚ D'ESCALDES-ENGORDANY"
+    name: "Comú d'Escaldes-Engordany"
+
+  # State taxes.
+  - pattern: "IMPOST SOBRE LA RENDA DE LES PERSONES FISIQUES"
+    name: "IRPF"
+  - pattern: "IMPOST SOBRE LA RENDA DE LES PERSONES FÍSIQUES"
+    name: "IRPF"
+  - pattern: 'regex:\bIRPF\b'
+    name: "IRPF"
+  - pattern: "IMPOST GENERAL INDIRECTE"
+    name: "IGI"
+  - pattern: "IMPOST SOBRE LES SOCIETATS"
+    name: "Impost sobre les societats"
+  - pattern: "IMPOST SOBRE LA RENDA DELS NO-RESIDENTS"
+    name: "IRNR"
+
+  # Communal taxes beyond foc i lloc.
+  - pattern: "IMPOST DE RADICACIO"
+    name: "Impost de radicació d'activitats comercials"
+  - pattern: "IMPOST DE RADICACIÓ"
+    name: "Impost de radicació d'activitats comercials"
+  - pattern: "IMPOST SOBRE LA PROPIETAT IMMOBILIARIA"
+    name: "Impost sobre la propietat immobiliària edificada"
+  - pattern: "IMPOST SOBRE LA PROPIETAT IMMOBILIÀRIA"
+    name: "Impost sobre la propietat immobiliària edificada"
+  - pattern: "TAXA TURISTICA"
+    name: "Taxa turística"
+  - pattern: "TAXA TURÍSTICA"
+    name: "Taxa turística"
+
+  # Uniformed corps.
+  - pattern: "COS DE POLICIA"
+    name: "Cos de Policia d'Andorra"
+  - pattern: "COS DE BOMBERS"
+    name: "Cos de Bombers"
+  - pattern: "COS DE BANDERS"
+    name: "Cos de Banders"
+
+  # Immigration, civil registry and one-stop shop.
+  - pattern: "DEPARTAMENT D'IMMIGRACIO"
+    name: "Departament d'Immigració"
+  - pattern: "DEPARTAMENT D'IMMIGRACIÓ"
+    name: "Departament d'Immigració"
+  - pattern: "SERVEI D'IMMIGRACIO"
+    name: "Servei d'Immigració"
+  - pattern: "SERVEI D'IMMIGRACIÓ"
+    name: "Servei d'Immigració"
+  - pattern: "REGISTRE CIVIL"
+    name: "Registre Civil"
+  - pattern: "SERVEI DE TRAMITS"
+    name: "Servei de Tràmits"
+  - pattern: "SERVEI DE TRÀMITS"
+    name: "Servei de Tràmits"
+
+  # Ministries, courts, chamber and public education.
+  - pattern: "MINISTERI DE FINANCES"
+    name: "Ministeri de Finances"
+  - pattern: "MINISTERI DE SALUT"
+    name: "Ministeri de Salut"
+  - pattern: "BATLLIA D'ANDORRA"
+    name: "Batllia d'Andorra"
+  - pattern: "TRIBUNAL DE CORTS"
+    name: "Tribunal de Corts"
+  - pattern: "CAMBRA DE COMERC"
+    name: "Cambra de Comerç, Indústria i Serveis d'Andorra"
+  - pattern: "CAMBRA DE COMERÇ"
+    name: "Cambra de Comerç, Indústria i Serveis d'Andorra"
+  - pattern: "UNIVERSITAT D'ANDORRA"
+    name: "Universitat d'Andorra"
+  - pattern: "ESCOLA ANDORRANA"
+    name: "Escola Andorrana"

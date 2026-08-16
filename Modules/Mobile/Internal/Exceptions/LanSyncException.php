@@ -15,9 +15,27 @@ use RuntimeException;
  */
 final class LanSyncException extends RuntimeException
 {
+    private bool $peerRevocation = false;
+
     public static function peerFailedConfirmedDeviceGate(): self
     {
         return new self('LanSyncClient: desktop peer failed the confirmed-device auth gate (T-13-13).');
+    }
+
+    // The peer told us, over its authenticated Noise session, that it no
+    // longer confirms this device. Distinct from every other failure here
+    // because retrying is pointless — the trust is gone, not the network.
+    public static function peerRevokedThisDevice(): self
+    {
+        $instance = new self('LanSyncClient: the peer no longer confirms this device.');
+        $instance->peerRevocation = true;
+
+        return $instance;
+    }
+
+    public function isPeerRevocation(): bool
+    {
+        return $this->peerRevocation;
     }
 
     public static function peerDisconnectedBeforeHandshakeMessage(string $message): self

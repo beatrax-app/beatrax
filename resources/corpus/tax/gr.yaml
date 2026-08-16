@@ -1,0 +1,52 @@
+# Tax deduction categories — Greece
+# Mirrors the spend-driven items of the GR δήλωση φορολογίας εισοδήματος
+# φυσικών προσώπων (Έντυπο Ε1).
+#
+# Authority: Κώδικας Φορολογίας Εισοδήματος (ν. 4172/2013), codified text as
+# in force in 2026 — άρθρα 15 (παρ. 6 και 7), 19, 22 και 39Β. AADE administers
+# the return. Tax year 2025 (δήλωση 2026).
+#
+# Greece has few classic deductible expenses: most relief is a μείωση φόρου or
+# a coverage threshold rather than a deduction from income. Άρθρο 18
+# (μειώσεις φόρου για ιατρικές δαπάνες) is repealed, and there is no relief for
+# ασφάλιστρα ζωής or τόκοι στεγαστικών δανείων, so none appear below.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "gr_ilektronikes_dapanes"
+    name: "Δαπάνες με ηλεκτρονικά μέσα πληρωμής"
+    short_name: "Ηλεκτρ.δαπ."
+    hint: "Δαπάνες που καλύπτουν το απαιτούμενο ποσοστό του εισοδήματος"
+  - key: "gr_dapanes_lipsis_ypiresion"
+    name: "Δαπάνες λήψης υπηρεσιών"
+    short_name: "Υπηρεσίες"
+    hint: "Αφαίρεση 30% για ορισμένες υπηρεσίες που πληρώνονται ηλεκτρονικά"
+  - key: "gr_dorees"
+    name: "Δωρεές σε αναγνωρισμένους φορείς"
+    short_name: "Δωρεές"
+    hint: "Μείωση φόρου για δωρεές άνω των 100 ευρώ σε αναγνωρισμένους φορείς"
+  - key: "gr_dorees_koinofelon"
+    name: "Δωρεές σε κοινωφελή ιδρύματα και Οργανώσεις Κοινωνίας Πολιτών"
+    short_name: "Κοινωφελή"
+    hint: "Δωρεές σε ειδικό τραπεζικό λογαριασμό του φορέα, με αυξημένο ποσοστό"
+  - key: "gr_dorees_politika_kommata"
+    name: "Δωρεές σε πολιτικά κόμματα"
+    short_name: "Κόμματα"
+    hint: "Δωρεές σε κόμματα, συνασπισμούς και υποψήφιους αντιπροσώπους"
+  - key: "gr_anavathmisi_ktirion"
+    name: "Ενεργειακή, λειτουργική και αισθητική αναβάθμιση κτιρίων"
+    short_name: "Αναβ.κτιρίων"
+    hint: "Μείωση φόρου κατανεμημένη σε πέντε έτη, με ηλεκτρονική πληρωμή"
+  - key: "gr_asfalistikes_eisfores"
+    name: "Ασφαλιστικές εισφορές"
+    short_name: "Εισφορές"
+    hint: "Υποχρεωτικές εισφορές που μειώνουν το φορολογητέο εισόδημα"
+  - key: "gr_epicheirimatikes_dapanes"
+    name: "Εκπιπτόμενες επιχειρηματικές δαπάνες"
+    short_name: "Επαγγ.δαπάν"
+    hint: "Δαπάνες ατομικής επιχείρησης ή ελεύθερου επαγγελματία"

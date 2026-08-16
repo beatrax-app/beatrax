@@ -26,10 +26,8 @@ return [
     // surrounding wording is translated here.
     'body' => [
         'budget_nudge' => ':category — :spent of :budget spent.',
-        'receipts_matched_one' => ':count receipt matched from your email.',
-        'receipts_matched_other' => ':count receipts matched from your email.',
-        'import_finished_one' => ':count transaction imported.',
-        'import_finished_other' => ':count transactions imported.',
+        'receipts_matched' => ':count receipt matched from your email.|:count receipts matched from your email.',
+        'import_finished' => ':count transaction imported.|:count transactions imported.',
         'drift' => 'A recurring charge moved :direction by :delta :currency.',
         'forecast' => 'Your projected balance dips below zero within the next 30 days.',
         'ics_statement_ready' => "Download it from the ICS portal and drop it into Beatrax to keep this card's spending up to date.",
@@ -51,8 +49,7 @@ return [
         'nothing_notable' => 'Nothing needs your attention.',
         'flow' => 'In :in, out :out, net :net.',
         'over_budget' => ':amount over budget so far.',
-        'payments_due_one' => '1 payment due this period.',
-        'payments_due_other' => ':count payments due this period.',
+        'payments_due' => '1 payment due this period.|:count payments due this period.',
         'shortfall' => 'A cash-flow shortfall is ahead.',
     ],
 ];

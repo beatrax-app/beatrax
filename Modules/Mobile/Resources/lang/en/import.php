@@ -23,6 +23,12 @@ return [
 
     'recovery_heading' => 'Save these recovery codes',
     'recovery_body' => 'Print these or save them somewhere safe. They will not be shown again.',
+    'already_heading' => 'This device is already set up',
+    'already_body' => 'Your account exists on this device. Continue to pairing to connect it to your other devices.',
+    'recovery_download' => 'Download as .txt',
+    'recovery_copy' => 'Copy codes',
+    'recovery_copied' => 'Copied',
+    'recovery_saved' => 'Saved to your downloads.',
     'recovery_confirm' => 'I have saved these codes somewhere safe.',
     'continue_to_pairing' => 'Continue to pairing',
 

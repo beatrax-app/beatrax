@@ -1,4 +1,8 @@
 # Government / public-agency classification rules — United Kingdom.
+# English-language patterns collide easily, so single common words are
+# avoided: the council rules are all two-token literals, and bare "NHS" and
+# "SAAS" are deliberately omitted (prescription charges are paid at the
+# pharmacy counter, and "SaaS" is an everyday acronym).
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "HMRC"
@@ -15,3 +19,288 @@ entries:
     name: "DWP"
   - pattern: "STUDENT LOANS COMPANY"
     name: "Student Loans Company"
+  - pattern: "regex:\\bDVSA\\b"
+    name: "DVSA"
+  # Local authorities under their several statutory styles.
+  - pattern: "BOROUGH COUNCIL"
+  - pattern: "COUNTY COUNCIL"
+  - pattern: "CITY COUNCIL"
+  - pattern: "DISTRICT COUNCIL"
+  - pattern: "LONDON BOROUGH"
+  - pattern: "HM PASSPORT"
+    name: "HM Passport Office"
+  - pattern: "regex:\\bHMCTS\\b|HM COURTS"
+    name: "HM Courts & Tribunals Service"
+  - pattern: "HM LAND REGISTRY"
+    name: "HM Land Registry"
+  - pattern: "CHILD BENEFIT"
+    name: "Child Benefit"
+  - pattern: "CHILD MAINTENANCE"
+    name: "Child Maintenance Service"
+  - pattern: "UNIVERSAL CREDIT"
+    name: "Universal Credit"
+  - pattern: "regex:\\bUKVI\\b|HOME OFFICE"
+    name: "Home Office / UKVI"
+  # Statutory road charging schemes run by TfL and National Highways.
+  - pattern: "CONGESTION CHARGE"
+    name: "Congestion Charge"
+  - pattern: "DART CHARGE"
+    name: "Dart Charge"
+  - pattern: "CLEAN AIR ZONE"
+    name: "Clean Air Zone"
+  - pattern: "PENALTY CHARGE NOTICE"
+    name: "Penalty Charge Notice"
+  - pattern: "REVENUE SCOTLAND"
+    name: "Revenue Scotland"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. Sources: gov.uk (HMRC payment references, DWP benefit
+  # names, DVLA vehicle tax, Companies House, HM Land Registry, Legal Aid
+  # Agency, Valuation Office Agency), tvlicensing.co.uk, nidirect.gov.uk
+  # (rates and Land & Property Services), mygov.scot and
+  # socialsecurity.gov.scot, gov.wales / llyw.cymru, tfl.gov.uk (road user
+  # charging), nationalhighways.co.uk (Dart Charge), scottishwater.co.uk,
+  # niwater.com, nhsbsa.nhs.uk, and the four statutory local-authority
+  # styles in the Local Government Act 1972 / 1994.
+  #
+  # English collides harder than any other language here, so every entry
+  # below is a multi-token literal or a \b-guarded acronym. Rejected as
+  # too ambiguous: bare COUNCIL, REVENUE, CUSTOMS, COURT, POLICE, RATES,
+  # LICENCE, PENSION, BENEFIT, "PARKING FINE" (private operators bill it
+  # under the same words), "GARDEN WASTE" (private subscriptions), \bPIP\b,
+  # \bSLC\b, \bSAAS\b, and "TRANSPORT FOR LONDON" (fares are ordinary
+  # travel spend, so only the statutory road charges are listed).
+  # English and Welsh water companies are private and are NOT listed;
+  # Scottish Water and NI Water are public and are.
+  # ---------------------------------------------------------------------
+
+  # HMRC-collected taxes, under the names that print on a payment.
+  - pattern: "SELF ASSESSMENT"
+    name: "HMRC (Self Assessment)"
+  - pattern: "NATIONAL INSURANCE"
+    name: "National Insurance"
+  - pattern: "CORPORATION TAX"
+    name: "HMRC (Corporation Tax)"
+  - pattern: "CAPITAL GAINS TAX"
+    name: "HMRC (Capital Gains Tax)"
+  - pattern: "INHERITANCE TAX"
+    name: "HMRC (Inheritance Tax)"
+  - pattern: "STAMP DUTY"
+    name: "Stamp Duty"
+  - pattern: "TAX CREDITS"
+    name: "HMRC (Tax Credits)"
+  - pattern: "HM TREASURY"
+    name: "HM Treasury"
+  - pattern: "HM GOVERNMENT"
+    name: "HM Government"
+  - pattern: "GOV.UK"
+    name: "GOV.UK"
+
+  # Local authorities — the remaining statutory styles and rates regimes.
+  - pattern: "METROPOLITAN BOROUGH"
+    name: "Metropolitan Borough Council"
+  - pattern: "PARISH COUNCIL"
+    name: "Parish Council"
+  - pattern: "TOWN COUNCIL"
+    name: "Town Council"
+  - pattern: "COMMUNITY COUNCIL"
+    name: "Community Council"
+  - pattern: "CITY OF EDINBURGH COUNCIL"
+    name: "City of Edinburgh Council"
+  - pattern: "CITY OF LONDON CORPORATION"
+    name: "City of London Corporation"
+  - pattern: "COMHAIRLE NAN EILEAN"
+    name: "Comhairle nan Eilean Siar"
+  - pattern: "BUSINESS RATES"
+    name: "Business Rates"
+  - pattern: "NON-DOMESTIC RATES"
+    name: "Non-Domestic Rates"
+  - pattern: "LAND & PROPERTY SERVICES"
+    name: "Land & Property Services (NI rates)"
+  - pattern: "LAND AND PROPERTY SERVICES"
+    name: "Land & Property Services (NI rates)"
+  - pattern: "NIDIRECT"
+    name: "nidirect"
+  - pattern: "VALUATION OFFICE AGENCY"
+    name: "Valuation Office Agency"
+
+  # Devolved administrations and their revenue bodies.
+  - pattern: "SCOTTISH GOVERNMENT"
+    name: "Scottish Government"
+  - pattern: "WELSH GOVERNMENT"
+    name: "Welsh Government"
+  - pattern: "LLYWODRAETH CYMRU"
+    name: "Llywodraeth Cymru"
+  - pattern: "WELSH REVENUE AUTHORITY"
+    name: "Welsh Revenue Authority"
+  - pattern: "SOCIAL SECURITY SCOTLAND"
+    name: "Social Security Scotland"
+  - pattern: "SCOTTISH CHILD PAYMENT"
+    name: "Scottish Child Payment"
+
+  # DWP payments under their published names.
+  - pattern: "DEPARTMENT FOR WORK"
+    name: "Department for Work and Pensions"
+  - pattern: "STATE PENSION"
+    name: "State Pension"
+  - pattern: "PENSION CREDIT"
+    name: "Pension Credit"
+  - pattern: "ATTENDANCE ALLOWANCE"
+    name: "Attendance Allowance"
+  - pattern: "CARERS ALLOWANCE"
+    name: "Carer's Allowance"
+  - pattern: "CARER'S ALLOWANCE"
+    name: "Carer's Allowance"
+  - pattern: "PERSONAL INDEPENDENCE PAYMENT"
+    name: "Personal Independence Payment"
+  - pattern: "EMPLOYMENT AND SUPPORT ALLOWANCE"
+    name: "Employment and Support Allowance"
+  - pattern: "JOBSEEKERS ALLOWANCE"
+    name: "Jobseeker's Allowance"
+  - pattern: "JOBSEEKER'S ALLOWANCE"
+    name: "Jobseeker's Allowance"
+  - pattern: "DISABILITY LIVING ALLOWANCE"
+    name: "Disability Living Allowance"
+  - pattern: "WINTER FUEL PAYMENT"
+    name: "Winter Fuel Payment"
+
+  # Vehicles, road charging and public tolls.
+  - pattern: "VEHICLE TAX"
+    name: "DVLA (vehicle tax)"
+  - pattern: "VEHICLE EXCISE DUTY"
+    name: "Vehicle Excise Duty"
+  - pattern: 'regex:\bULEZ\b'
+    name: "Ultra Low Emission Zone"
+  - pattern: "LOW EMISSION ZONE"
+    name: "Low Emission Zone"
+  - pattern: "ROAD USER CHARGING"
+    name: "TfL Road User Charging"
+  - pattern: "DARTFORD CROSSING"
+    name: "Dartford Crossing"
+  - pattern: "MERSEY GATEWAY"
+    name: "Mersey Gateway"
+  - pattern: "TYNE TUNNEL"
+    name: "Tyne Tunnel"
+  - pattern: "HUMBER BRIDGE"
+    name: "Humber Bridge"
+  - pattern: "NATIONAL HIGHWAYS"
+    name: "National Highways"
+  - pattern: "BLUE BADGE"
+    name: "Blue Badge"
+
+  # Fines, courts, prosecution and legal aid.
+  - pattern: "FIXED PENALTY NOTICE"
+    name: "Fixed Penalty Notice"
+  - pattern: "COURT FINE"
+    name: "Court fine"
+  - pattern: "MAGISTRATES COURT"
+    name: "Magistrates' Court"
+  - pattern: "CROWN COURT"
+    name: "Crown Court"
+  - pattern: "COUNTY COURT"
+    name: "County Court"
+  - pattern: "SHERIFF COURT"
+    name: "Sheriff Court"
+  - pattern: "LEGAL AID AGENCY"
+    name: "Legal Aid Agency"
+  - pattern: "CROWN PROSECUTION SERVICE"
+    name: "Crown Prosecution Service"
+  - pattern: "CROWN OFFICE"
+    name: "Crown Office (COPFS)"
+  - pattern: "MINISTRY OF JUSTICE"
+    name: "Ministry of Justice"
+  - pattern: "PROBATE REGISTRY"
+    name: "Probate Registry"
+
+  # Police forces that name themselves distinctively.
+  - pattern: "POLICE SCOTLAND"
+    name: "Police Scotland"
+  - pattern: 'regex:\bPSNI\b'
+    name: "Police Service of Northern Ireland"
+  - pattern: "METROPOLITAN POLICE"
+    name: "Metropolitan Police"
+
+  # Health bodies that actually bill an individual.
+  - pattern: "NHS BUSINESS SERVICES"
+    name: "NHS Business Services Authority"
+  - pattern: 'regex:\bNHSBSA\b'
+    name: "NHS Business Services Authority"
+  - pattern: "NHS PRESCRIPTION"
+    name: "NHS prescription charge"
+  - pattern: "NHS TRUST"
+    name: "NHS Trust"
+
+  # Immigration, identity and registration.
+  - pattern: "UK VISAS"
+    name: "UK Visas and Immigration"
+  - pattern: "IMMIGRATION HEALTH SURCHARGE"
+    name: "Immigration Health Surcharge"
+  - pattern: "GENERAL REGISTER OFFICE"
+    name: "General Register Office"
+  - pattern: "COMPANIES HOUSE"
+    name: "Companies House"
+  - pattern: "REGISTERS OF SCOTLAND"
+    name: "Registers of Scotland"
+
+  # Student finance across the four nations.
+  - pattern: "STUDENT FINANCE ENGLAND"
+    name: "Student Finance England"
+  - pattern: "STUDENT FINANCE WALES"
+    name: "Student Finance Wales"
+  - pattern: "STUDENT FINANCE NI"
+    name: "Student Finance NI"
+  - pattern: "STUDENT AWARDS AGENCY"
+    name: "Student Awards Agency for Scotland"
+  - pattern: "STUDENT LOAN REPAYMENT"
+    name: "Student loan repayment"
+  - pattern: "DEPARTMENT FOR EDUCATION"
+    name: "Department for Education"
+
+  # Public water undertakers (Scotland and Northern Ireland only) and the
+  # environmental regulators that charge licence fees.
+  - pattern: "SCOTTISH WATER"
+    name: "Scottish Water"
+  - pattern: "NORTHERN IRELAND WATER"
+    name: "NI Water"
+  - pattern: "ENVIRONMENT AGENCY"
+    name: "Environment Agency"
+  - pattern: "NATURAL RESOURCES WALES"
+    name: "Natural Resources Wales"
+  - pattern: "SCOTTISH ENVIRONMENT PROTECTION"
+    name: "SEPA (Scotland)"
+  - pattern: "CABINET OFFICE"
+    name: "Cabinet Office"
+
+  # Further departments, agencies and regulators that invoice individuals.
+  - pattern: "DEPARTMENT FOR TRANSPORT"
+    name: "Department for Transport"
+  - pattern: "DRIVER AND VEHICLE LICENSING"
+    name: "DVLA"
+  - pattern: "DRIVER AND VEHICLE AGENCY"
+    name: "Driver & Vehicle Agency (NI)"
+  - pattern: "TRANSPORT SCOTLAND"
+    name: "Transport Scotland"
+  - pattern: "INSOLVENCY SERVICE"
+    name: "Insolvency Service"
+  - pattern: "OFFICIAL RECEIVER"
+    name: "Official Receiver"
+  - pattern: "SCOTTISH COURTS AND TRIBUNALS"
+    name: "Scottish Courts and Tribunals Service"
+  - pattern: "INFORMATION COMMISSIONER"
+    name: "Information Commissioner's Office"
+  - pattern: "HEALTH AND SAFETY EXECUTIVE"
+    name: "Health and Safety Executive"
+  - pattern: "CIVIL AVIATION AUTHORITY"
+    name: "Civil Aviation Authority"
+  - pattern: "RURAL PAYMENTS AGENCY"
+    name: "Rural Payments Agency"
+  - pattern: "NHS ENGLAND"
+    name: "NHS England"
+  - pattern: "NHS SCOTLAND"
+    name: "NHS Scotland"
+  - pattern: "NHS WALES"
+    name: "NHS Wales"
+  # A government agency, so the counterparty is public even though the
+  # payment itself is savings rather than a levy.
+  - pattern: "NATIONAL SAVINGS AND INVESTMENTS"
+    name: "National Savings & Investments"

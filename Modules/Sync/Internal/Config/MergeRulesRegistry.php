@@ -42,6 +42,22 @@ final class MergeRulesRegistry
     private function transactionAndMerchantRules(): array
     {
         return [
+            // BEFORE transactions, which carry a NOT NULL import_run_id FK to
+            // it. Left uncovered, every synced transaction referenced a run
+            // the peer had never heard of and the insert failed the foreign
+            // key, aborting the entire catch-up.
+            'import_runs' => [
+                'status' => ['strategy' => 'lww', 'nullable' => false],
+                'confirmed_at' => ['strategy' => 'lww', 'nullable' => true],
+                'inserted_count' => ['strategy' => 'lww', 'nullable' => false],
+                'duplicate_count' => ['strategy' => 'lww', 'nullable' => false],
+                'error_count' => ['strategy' => 'lww', 'nullable' => false],
+                'enriched_count' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                // NOT NULL without a default; the counters and status all
+                // carry defaults and stay out of the required set.
+                '_create_required' => ['source_format', 'raw_file_path', 'sha256', 'uploaded_at'],
+            ],
             'transactions' => [
                 'category_id' => ['strategy' => 'lww', 'nullable' => true],
                 'note' => ['strategy' => 'lww', 'nullable' => true],
@@ -66,6 +82,16 @@ final class MergeRulesRegistry
                     'fingerprint',
                     'fingerprint_version',
                 ],
+            ],
+            // BEFORE merchant_memories, which holds a NOT NULL merchant_id FK
+            // to it. Uncovered, a synced memory pointed at a merchant the peer
+            // never received and the insert failed its foreign key.
+            'merchants' => [
+                'name' => ['strategy' => 'lww', 'nullable' => false],
+                'normalized_name' => ['strategy' => 'lww', 'nullable' => false],
+                'default_category_id' => ['strategy' => 'lww', 'nullable' => true],
+                '_delete_wins' => true,
+                '_create_required' => ['name', 'normalized_name'],
             ],
             // `merchant_id` is the NOT-NULL-without-default identity FK (user_id
             // is nullable per the multi-user convention; occurrence_count has a
@@ -197,6 +223,22 @@ final class MergeRulesRegistry
     private function taxAndSplitRules(): array
     {
         return [
+            // BEFORE tax_transaction_tags, which references it. These are the
+            // user's own deduction categories, not a seeded reference list, so
+            // a peer only has them if they are synced.
+            'tax_deduction_categories' => [
+                'name' => ['strategy' => 'lww', 'nullable' => false],
+                'short_name' => ['strategy' => 'lww', 'nullable' => true],
+                'hint' => ['strategy' => 'lww', 'nullable' => true],
+                'corpus_key' => ['strategy' => 'lww', 'nullable' => true],
+                'country_code' => ['strategy' => 'lww', 'nullable' => true],
+                'status' => ['strategy' => 'lww', 'nullable' => false],
+                'sort_order' => ['strategy' => 'lww', 'nullable' => false],
+                '_delete_wins' => true,
+                // status and sort_order both carry DB defaults, so neither
+                // belongs in the required set.
+                '_create_required' => ['name'],
+            ],
             // `transaction_split_id` replays so a leg-scoped tax tag carries
             // its leg scope on a peer — without it, a per-leg deduction would
             // collapse into a whole-transaction tag and corrupt exported tax

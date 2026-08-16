@@ -78,6 +78,8 @@
                 @php
                     $status        = is_string($peer['status'] ?? null) ? $peer['status'] : '';
                     $peerDeviceId  = is_string($peer['peer_device_id'] ?? null) ? $peer['peer_device_id'] : '';
+                    $displayName   = is_string($peer['display_name'] ?? null) ? $peer['display_name'] : $peerDeviceId;
+                    $isKnownPeer   = ($peer['is_known'] ?? false) === true;
                     $lastSeenHuman = is_string($peer['last_seen_human'] ?? null) ? $peer['last_seen_human'] : null;
                     $errorLabel    = is_string($peer['error_label'] ?? null) ? $peer['error_label'] : '';
                     $isActive      = in_array($status, ['active', 'connecting', 'handshaking'], true);
@@ -104,10 +106,17 @@
                         @endif
 
                         <div class="min-w-0">
-                            {{-- Device ID in monospace (matches safety-number presentation convention) --}}
+                            {{-- The name leads because that is what identifies the
+                                 machine to a person; the id stays underneath so
+                                 what the app is actually keyed on is never hidden. --}}
+                            <p @class([
+                                'truncate text-sm',
+                                'font-medium text-slate-900 dark:text-slate-100' => $isKnownPeer,
+                                'text-slate-500 italic dark:text-slate-400' => ! $isKnownPeer,
+                            ])>{{ $displayName }}</p>
                             <p
-                                class="truncate font-mono text-sm text-slate-700 dark:text-slate-300"
-                                style="font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 12px;"
+                                class="truncate font-mono text-slate-400 dark:text-slate-500"
+                                style="font-family: 'JetBrains Mono', 'Fira Mono', monospace; font-size: 11px;"
                                 data-testid="peer-device-id"
                             >{{ $peerDeviceId }}</p>
 
@@ -121,21 +130,49 @@
                         </div>
                     </div>
 
-                    {{-- Last-seen time --}}
-                    <div class="flex-shrink-0 text-right">
-                        @if ($lastSeenHuman !== null)
-                            <span
-                                class="text-xs tabular-nums text-slate-500 dark:text-slate-400"
-                                style="font-feature-settings: 'tnum';"
-                                data-testid="peer-last-seen"
-                            >{{ $lastSeenHuman }}</span>
-                        @else
-                            <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="peer-last-seen">{{ Lang::get('sync::status.never') }}</span>
-                        @endif
+                    {{-- Time and action as one trailing column: the dismiss
+                         control used to sit before the timestamp, so its
+                         position tracked the length of each device id and no
+                         two buttons lined up. --}}
+                    <div class="flex flex-shrink-0 items-center gap-1">
+                        <div class="text-right">
+                            @if ($lastSeenHuman !== null)
+                                <span
+                                    class="text-xs tabular-nums text-slate-500 dark:text-slate-400"
+                                    style="font-feature-settings: 'tnum';"
+                                    data-testid="peer-last-seen"
+                                >{{ $lastSeenHuman }}</span>
+                            @else
+                                <span class="text-xs text-slate-400 dark:text-slate-500" data-testid="peer-last-seen">{{ Lang::get('sync::status.never') }}</span>
+                            @endif
+                        </div>
+
+                        {{-- A bin, not a cross: this deletes a stored record
+                             rather than closing something. --}}
+                        <button
+                            type="button"
+                            wire:click="dismissPeer(@js($peerDeviceId))"
+                            class="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:hover:bg-slate-800 dark:hover:text-rose-400 dark:focus-visible:ring-slate-100"
+                            aria-label="{{ Lang::get('sync::status.dismiss_peer') }}"
+                            data-testid="peer-dismiss"
+                        >
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
                     </div>
                 </li>
             @endforeach
         </ul>
+
+        <button
+            type="button"
+            wire:click="dismissStale"
+            class="mt-3 text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            data-testid="dismiss-stale-sessions"
+        >
+            {{ Lang::get('sync::status.dismiss_stale') }}
+        </button>
     @endif
 
 </div>

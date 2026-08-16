@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Editează regula',
+    'heading_new' => 'Regulă nouă',
+
+    'combinator_aria' => 'Combinator de condiții',
+    'match_all' => 'Potrivește toate condițiile',
+    'match_any' => 'Potrivește orice condiție',
+
+    'condition_label' => 'Condiția :number',
+    'condition_field_aria' => 'Câmpul condiției :number',
+    'condition_operator_aria' => 'Operatorul condiției :number',
+    'condition_value_aria' => 'Valoarea condiției :number',
+    'condition_value_from_aria' => 'Valoarea condiției :number (de la)',
+    'condition_value_to_aria' => 'Valoarea condiției :number (până la)',
+    'to' => 'până la',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'de ex. SPOTIFY',
+    'remove_condition' => 'Elimină condiția',
+    'add_condition' => '+ Adaugă condiție',
+
+    'then' => 'Atunci',
+    'action_label' => 'Acțiunea :number',
+    'action_type_aria' => 'Tipul acțiunii :number',
+    'action_category' => 'Categorie',
+    'action_counterparty' => 'Contraparte',
+    'action_note' => 'Notă',
+    'action_tax_tag' => 'Etichetă fiscală',
+    'assign_category_aria' => 'Atribuie categoria pentru acțiunea :number',
+    'reassign_counterparty_aria' => 'Reatribuie contrapartea pentru acțiunea :number',
+    'note_text_aria' => 'Textul notei pentru acțiunea :number',
+    'note_placeholder' => 'Textul notei…',
+    'note_mode_aria' => 'Modul notei pentru acțiunea :number',
+    'note_set' => 'Setează',
+    'note_append' => 'Adaugă la final',
+    'deduction_category_aria' => 'Categoria de deducere pentru acțiunea :number',
+    'remove_action' => 'Elimină acțiunea',
+    'add_action' => '+ Adaugă acțiune',
+
+    'this_year_only' => 'Doar anul acesta ▾',
+    'override_tax_year' => 'Suprascrie anul fiscal',
+    'tax_year_override_aria' => 'Suprascrierea anului fiscal pentru acțiunea :number',
+    'tax_tag_note' => 'Acțiunile de etichetă fiscală se aplică la următoarea reaplicare, nu la importul curent.',
+
+    'priority' => 'Prioritate',
+    'priority_help' => 'Numerele mai mici rulează primele. Regulile fără câmpuri comune nu intră niciodată în conflict.',
+
+    'cancel' => 'Anulează',
+    'save_changes' => 'Salvează modificările',
+    'save_rule' => 'Salvează regula',
+    'saving' => 'Se salvează…',
+
+    'error_rule_unavailable' => 'Regula nu mai este disponibilă.',
+    'error_invalid_data' => 'Date de regulă invalide — alege din listele derulante și încearcă din nou.',
+    'error_duplicate' => 'Există deja o regulă cu acest câmp, această potrivire și această valoare. Editează în schimb regula existentă.',
+    'error_priority_whole' => 'Prioritatea trebuie să fie un număr întreg.',
+    'error_add_condition' => 'Adaugă cel puțin o condiție.',
+    'error_add_action' => 'Adaugă cel puțin o acțiune.',
+    'condition_value_required' => 'Introdu o valoare pentru condiția :position.',
+    'condition_bounds_required' => 'Alege o limită inferioară și una superioară pentru condiția :position.',
+    'condition_amount_invalid' => 'Introdu o sumă validă pentru condiția :position.',
+    'action_pick_category' => 'Alege o categorie pentru această acțiune.',
+    'action_pick_counterparty' => 'Alege contrapartea către care se face reatribuirea.',
+    'action_note_required' => 'Introdu textul notei.',
+    'action_pick_deduction' => 'Alege o categorie de deducere pentru eticheta fiscală.',
+];

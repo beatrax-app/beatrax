@@ -128,7 +128,7 @@
 
         {{-- ─── Control rail ──────────────────────────────────────────── --}}
         <aside
-            style="flex: 0 0 280px; min-width: 260px; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4);"
+            class="rpt-rail"
             aria-label="{{ Lang::get('reports::builder.controls_aria') }}"
         >
             {{-- Metric --}}
@@ -345,7 +345,11 @@
                 </div>
 
                 {{-- Always-on data table (Req 8) — same $displayRows as the chosen chart --}}
-                <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                {{-- overflow-x-auto, not overflow-hidden: this table is the only
+                 rendering of these rows at every width, and hidden CLIPPED the
+                 right-hand columns on a phone rather than letting them scroll —
+                 so the category picker and row actions were unreachable. --}}
+            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
                     <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead class="bg-slate-50 dark:bg-slate-900">
                             <tr>

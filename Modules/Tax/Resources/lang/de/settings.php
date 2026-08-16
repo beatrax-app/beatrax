@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Steuerland',
+    'country_desc' => 'Legt fest, welche Abzugskategorien verfügbar sind.',
+    'country_choose' => 'Land wählen…',
+    'country_switch_warning' => 'Ein Wechsel fügt neue Kategorien hinzu — bestehende Markierungen werden nie geändert.',
+
+    'countries' => [
+        'at' => 'Österreich',
+        'be' => 'Belgien',
+        'bg' => 'Bulgarien',
+        'ca' => 'Kanada',
+        'ch' => 'Schweiz',
+        'cy' => 'Zypern',
+        'cz' => 'Tschechien',
+        'de' => 'Deutschland',
+        'dk' => 'Dänemark',
+        'ee' => 'Estland',
+        'es' => 'Spanien',
+        'fi' => 'Finnland',
+        'fr' => 'Frankreich',
+        'gb' => 'Vereinigtes Königreich',
+        'gr' => 'Griechenland',
+        'hr' => 'Kroatien',
+        'hu' => 'Ungarn',
+        'ie' => 'Irland',
+        'is' => 'Island',
+        'it' => 'Italien',
+        'lt' => 'Litauen',
+        'lu' => 'Luxemburg',
+        'lv' => 'Lettland',
+        'mt' => 'Malta',
+        'nl' => 'Niederlande',
+        'no' => 'Norwegen',
+        'pl' => 'Polen',
+        'pt' => 'Portugal',
+        'ro' => 'Rumänien',
+        'se' => 'Schweden',
+        'si' => 'Slowenien',
+        'sk' => 'Slowakei',
+        'us' => 'Vereinigte Staaten',
+    ],
+
+    'categories_label' => 'Abzugskategorien',
+    'categories_desc' => 'Passe die Kategorien an, die du zum Markieren verwendest.',
+    'categories_empty' => 'Noch keine Kategorien. Füge deine erste Kategorie hinzu oder wechsle das Land, um Standardwerte zu laden.',
+
+    'from_corpus' => 'aus dem Corpus',
+    'rename_input_aria' => 'Neuer Name für :name',
+    'rename' => 'Umbenennen',
+    'rename_aria' => ':name umbenennen',
+    'rename_save_aria' => 'Neuen Namen für :name speichern',
+    'save' => 'Speichern',
+    'archive' => 'Archivieren',
+    'archive_aria' => ':name archivieren',
+
+    'new_category_label' => 'Name der neuen Kategorie',
+    'new_category_placeholder' => 'Name der neuen Kategorie…',
+    'add_category' => 'Kategorie hinzufügen',
+    'category_added' => 'Kategorie hinzugefügt.',
+
+    'archived_count' => 'Archiviert (:count)',
+    'restore' => 'Wiederherstellen',
+    'restore_aria' => ':name wiederherstellen',
+];

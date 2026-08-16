@@ -1,0 +1,33 @@
+# Bank-fee classification rules — United Kingdom (English).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# English carries its fee wording in multi-word phrases, so those do the
+# work here: the single words ("FEE", "CHARGE", "INTEREST") are far too
+# generic, and even "SERVICE CHARGE" is left out because a leasehold service
+# charge is an ordinary outgoing payment in UK data. The one `regex:` entry
+# anchors "OVERDRAFT" with a LEADING \b so it stays a standalone word — it
+# cannot fire inside a longer token, while the open right side still covers
+# "OVERDRAFTS" and "OVERDRAFT FEE". Regex bodies must be SINGLE-quoted in
+# YAML so the backslash reaches the matcher instead of being read as a YAML
+# escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bOVERDRAFT'
+    name: "Overdraft charge"
+  - pattern: "ACCOUNT FEE"
+    name: "Account fee"
+  - pattern: "DEBIT INTEREST"
+    name: "Debit interest"
+  - pattern: "UNPAID ITEM"
+    name: "Unpaid item fee"
+  - pattern: "NON-STERLING"
+    name: "Non-sterling transaction fee"
+  - pattern: "TRANSACTION FEE"
+    name: "Transaction fee"

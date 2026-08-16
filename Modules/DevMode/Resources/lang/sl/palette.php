@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'search_placeholder' => 'Tipkaj za iskanje pogledov, ukazov in dejanj. Za zapiranje pritisni Esc.',
+    'search_aria' => 'Tipkaj za iskanje pogledov, ukazov in dejanj',
+    'dialog_aria' => 'Ukazna paleta',
+    'token_suggest_aria' => 'Predlogi žetonov',
+    'rail_view' => 'Pogled',
+    'rail_dev' => 'Dev',
+    'rail_action' => 'Dejanje',
+    'rail_recent' => 'Nedavno',
+    'no_recent' => 'Nedavnih izbir še ni.',
+    'section_transactions' => 'Transakcije',
+    'section_counterparties' => 'Nasprotne stranke',
+    'section_categories' => 'Kategorije',
+    'section_goals_recurring' => 'Cilji in ponavljajoče',
+    'no_name' => '(brez imena)',
+    'see_all_prefix' => 'Prikaži vse ',
+    'see_all_suffix' => ' zadetke →',
+    'no_transactions_prefix' => 'Nobena transakcija se ne ujema z "',
+    'no_transactions_suffix' => '"',
+    'source_txn' => 'transakcija',
+    'source_counterparty' => 'nasprotna stranka',
+    'source_category' => 'kategorija',
+    'no_results' => 'Ni zadetkov.',
+    'foot_navigate' => 'premikanje',
+    'foot_select' => 'izbira',
+    'foot_close' => 'zapiranje',
+    'foot_try' => 'Poskusi',
+    'results_suffix' => ' zadetkov',
+];

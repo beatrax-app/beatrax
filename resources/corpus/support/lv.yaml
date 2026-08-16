@@ -1,0 +1,116 @@
+# Support-resource corpus — Latvia (LV merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Latvijas Mobilais Telefons
+    type: merchant
+    cancel_url: "https://www.lmt.lv/atteikums"
+    support_url: "https://www.lmt.lv/kontakti"
+    notes: "Atteikuma formā ir divi atsevišķi ceļi – 14 dienu atteikuma tiesības pirkumiem e-veikalā un 'pakalpojuma līguma izbeigšana un iekārtas atdošana', kur norādi 'vēlos anulēt pakalpojumu līgumu un atdot iekārtu LMT'. Klientu atbalsts strādā 24/7: 80768076 (bezmaksas zvani un īsziņas), +371 28076076, no ārvalstīm bez maksas +371 29319911."
+  - name: Tele2 Latvija
+    type: merchant
+    cancel_url: "https://www.tele2.lv/palidziba/par-pakalpojumiem-un-ligumiem/stridu-izskirsanas-kartiba/atteikuma-tiesibas/"
+    support_url: "https://www.tele2.lv/palidziba/"
+    notes: "Sadaļa 'Atteikuma tiesības' attiecas uz internetā iegādāta pakalpojuma vai preces atteikumu, bet līguma termiņu skaidro atsevišķa atbilde 'Kāds ir līguma termiņš?' palīdzības sadaļā 'Līgumu veidi un izmaiņas'. Zvani Tele2 diennakts informatīvajam dienestam 1600 (Tele2 klientiem), 80000600 bez maksas vai +371 29560600 no ārvalstīm un citu operatoru tīkliem."
+  - name: Bite Latvija
+    type: merchant
+    cancel_url: "https://www.bite.lv/lv/jurists-ludza-pateikt/ligumi"
+    support_url: "https://www.bite.lv/lv/kontakti"
+    notes: "Sadaļā 'Iesniegumi' ir veidlapa 'Līguma izbeigšanas pieteikums', un pēc Bites līguma noteikumiem (LIG-08) to var iesniegt jebkurā Bites salonā vai, parakstot ar drošu elektronisko parakstu, nosūtīt uz info@bite.lv – tiešsaistes pogas nav. Mobilais līgums beidzas 5 darbdienu laikā pēc iesnieguma saņemšanas, bet fiksētais internets un TV – ar mēneša pēdējo dienu, ja iesniegums saņemts vismaz 5 dienas pirms mēneša beigām, citādi ar nākamā mēneša pēdējo datumu. Pēc līguma minimālā termiņa beigām līgums paliek spēkā uz nenoteiktu laiku, bet, izbeidzot to pirms noteiktā termiņa, 'Abonents apņemas pēc Bites pieprasījuma veikt atlaides atmaksu vai līgumsoda samaksu' – līguma izbeigšana neatbrīvo no pienākuma atmaksāt piešķirto atlaidi; kontakttālrunis 1601, ārpus Latvijas +37125851601, katru dienu 8.00–20.00."
+  - name: Tet
+    type: merchant
+    cancel_url: "https://www.tet.lv/palidziba/izmainas-pakalpojumos-un-atteiksanas"
+    support_url: "https://www.tet.lv/par-mums/kontakti/privatpersonam"
+    notes: "Palīdzības sadaļa 'Izmaiņas pakalpojumos un atteikšanās' apvieno pakalpojumu maiņu, pārvietošanu, pārreģistrāciju un atteikšanos, bet līguma nosacījumiem ir atsevišķa apakšsadaļa 'Līgumi' un 'Nosacījumi un norēķini'. Saziņai: pašapkalpošanās portāls Mans Tet, e-pasts tet@tet.lv un tālrunis +371 67000177, zvanot no Tet vai citiem publiskajiem fiksētajiem un mobilajiem tīkliem Latvijā."
+  - name: Balticom
+    type: merchant
+    support_url: "https://balticom.lv/lv/kontakti"
+    notes: "Mājaslapā nav atteikšanās pogas – par samaksas, tarifa maiņas un atslēgšanas jautājumiem jāsazinās ar abonēšanas nodaļu pa 28-337-333 vai 67-112-697, e-pasts internet@balticom.info. Vispārīgais numurs ir 29-333-333; jaunajiem klientiem 29-333-333 un 67-333-337 (P–Pt 9:00–19:00, Se 9:00–17:00), korporatīvajiem 66-065-544."
+  - name: Elektrum
+    type: merchant
+    support_url: "https://www.elektrum.lv/lv/majai/par-mums/kontakti/"
+    notes: "Elektrības un dabasgāzes līgumu slēdz un maina portālā mans.elektrum.lv sadaļā 'Slēgt vai mainīt līgumu', bet līguma izbeigšanu kārto klientu serviss. Tālrunis informācijai 8400 (P–Pt 8.00–20.00, Se 9.00–18.00; maksa par zvanu atkarīga no mobilo sakaru operatora), no ārvalstīm 00371 67723511, e-pasts klientu.serviss@elektrum.lv."
+  - name: BALTA
+    type: merchant
+    cancel_url: "https://balta.lv/lv/par-mums/pirmsliguma-informacija"
+    support_url: "https://balta.lv/lv/klientu-apkalposanas-vietas"
+    notes: "Atteikuma tiesību termiņš ir 14 dienas, un atteikumu var iesniegt portālā Mana BALTA, BALTA mobilajā lietotnē, nosūtot elektroniski parakstītu iesniegumu pa e-pastu vai iesniedzot rakstisku iesniegumu AAS BALTA. Polišu iegādei un informācijai zvani +371 67522275, atlīdzības un palīdzības pieteikšanai +371 67533375."
+  - name: MyFitness Latvija
+    type: merchant
+    cancel_url: "https://www.myfitness.lv/dokumenti/myfitness-biedra-visparejie-liguma-noteikumi/"
+    notes: "Biedra līgums ir beztermiņa, un noteikumi paredz, ka 'līguma izbeigšana' tiek noslēgta klubā un parakstīta abpusēja vienošanās par biedra līguma pārtraukšanu – tiešsaistē to izbeigt nevar, jāiet uz klubu. Norēķinu periods ir viens kalendārais mēnesis un katrs iesāktais mēnesis skaitās pilns; ja klubs maina noteikumus vai maksājumu likmes, biedram ir tiesības lauzt līgumu 1 (viena) mēneša laikā kopš izmaiņu veikšanas."
+  - name: Lemon Gym
+    type: merchant
+    cancel_url: "https://www.lemongym.lv/noteikumi/"
+    support_url: "https://www.lemongym.lv/klientu-atbalsts/"
+    notes: "Dalību iegūst 'uz noteiktu vai nenoteiktu laiku vai periodu', un no tā atkarīgs, ko var atgūt: 'ja klients atsakās no pakalpojumiem un tajā nav sporta kluba vainas, klients ir tiesīgs pieprasīt atdot par dalību samaksātās maksas daļu, kas proporcionāla laikam līdz dalības termiņa beigām, tomēr, tikai sedzot sporta klubam tā rezultātā radušos tiešos zaudējumus'. Papildu pakalpojumu un administrēšanas maksu veidi ir uzskaitīti sadaļā Klientu atbalsts."
+  - name: Latvijas Automoto biedrība
+    type: merchant
+    support_url: "https://lamb.lv/kontakti/"
+    notes: "Autokluba LAMB klientu apkalpošanas centrs klātienē ir slēgts – biedrības un kartes jautājumus, tostarp izstāšanos, kārto tikai attālināti, rakstot uz lamb@lamb.lv vai zvanot +371 67566222. Juridiskā adrese: Raunas iela 16b, Rīga, LV-1039."
+  - name: Ziedot.lv
+    type: merchant
+    cancel_url: "https://www.ziedot.lv/par-ziedot-lv/ziedotaja-tiesibas"
+    support_url: "https://www.ziedot.lv/par-ziedot-lv/kontakti"
+    notes: "Regulārais ziedojums tiek noņemts reizi mēnesī, un 'nedēļu pirms katra nākamā ziedojuma jūs saņemsiet e-pastā ziņu ar iespēju pārtraukt automātisko ziedojumu'; tas paliek spēkā, līdz tiek sasniegts mērķis vai beidzas kartes derīguma termiņš. Fonda tālruņi +371 28808551 un +371 22322380 darba dienās 9:00–18:00; ziedoto summu var atskaitīt no apliekamā ienākuma, bet ne vairāk kā 20 % apmērā, iesniedzot gada ienākumu deklarāciju."
+  - name: Latvijas Sarkanais Krusts
+    type: merchant
+    support_url: "https://www.redcross.lv/kontakti/"
+    notes: "Tiešsaistes abonementa nav – ziedo, zvanot uz ziedojuma tālruni 90006880 (maksa par vienu zvanu EUR 1.42), ar bankas pārskaitījumu uz LSK kontu LV28HABA0140J04577004 (A/S Swedbank) vai ziedojumu kastēs, tāpēc regulārs ziedojums jāpārtrauc, atceļot maksājuma uzdevumu savā internetbankā. Sekretariāta tālrunis +371 67336651, e-pasts secretariat@redcross.lv, Šarlotes iela 1d, Rīga."
+
+  # --- Government ---
+  - name: Valsts ieņēmumu dienests
+    type: government
+    help_url: "https://www.vid.gov.lv/lv/kontakti"
+    apply_url: "https://eds.vid.gov.lv/login/"
+    rights_url: "https://www.vid.gov.lv/lv/iedzivotaju-ienakuma-nodokla-parmaksa"
+    phone: "+371 67120000"
+    notes: "Gada ienākumu deklarāciju, attaisnoto izdevumu dokumentus un iesniegumus iesniedz Elektroniskās deklarēšanas sistēmā (EDS), kurā pieslēdzas ar internetbanku vai eParakstu. Pārmaksāto iedzīvotāju ienākuma nodokli var atgūt arī vēlāk – VID uztur atsevišķu sadaļu 'Deklarācija par 3 iepriekšējiem gadiem'; kontakti: +371 67120000, vid@vid.gov.lv, Talejas iela 1, Rīga."
+  - name: Valsts sociālās apdrošināšanas aģentūra
+    type: government
+    help_url: "https://www.vsaa.gov.lv/lv/iestades-kontakti"
+    apply_url: "https://www.vsaa.gov.lv/lv/e-pakalpojumi"
+    rights_url: "https://www.vsaa.gov.lv/lv/pakalpojumi/vecuma-pensijas-pieskirsana-un-izmaksasana"
+    phone: "+371 64507020"
+    notes: "Pensiju vai pabalstu pieprasa ar noteiktas formas iesniegumu, ko var iesniegt portālā latvija.gov.lv, klātienē VSAA vai valsts un pašvaldību vienotajos klientu apkalpošanas centros, kur iesniegšanu var pilnvarot VPVKAC darbiniekam. 2026. gadā pensionēšanās vecums ir 65 gadi un tiesībām uz pensiju nepieciešams minimālais apdrošināšanas stāžs; VSAA konsultāciju centrs: +371 64507020, konsultacijas@vsaa.gov.lv."
+  - name: Nodarbinātības valsts aģentūra
+    type: government
+    help_url: "https://www.nva.gov.lv/lv/iestades-kontakti"
+    apply_url: "https://www.nva.gov.lv/lv/bezdarbnieka-statusa-iegusana"
+    rights_url: "https://www.nva.gov.lv/lv/tiesibas-un-pienakumi"
+    phone: "+371 80200206"
+    notes: "Bezdarbnieka statusam piesakās NVA (arī portālā latvija.lv), bet pašu bezdarbnieka pabalstu piešķir un izmaksā VSAA – tie ir divi atsevišķi iesniegumi, un, ja abus prasa vienlaikus, tie jāiesniedz vienā dienā atbilstošā secībā. VSAA norāda, ka pabalstu var saņemt ne ilgāk kā 8 mēnešus un ka iemaksām jābūt veiktām ne mazāk kā 12 mēnešus pēdējo 16 mēnešu periodā pirms statusa iegūšanas; NVA bezmaksas informatīvais tālrunis +371 80200206, pasts@nva.gov.lv."
+  - name: Nacionālais veselības dienests
+    type: government
+    help_url: "https://www.vmnvd.gov.lv/lv/kontakti-iedzivotajiem"
+    rights_url: "https://www.vmnvd.gov.lv/lv/valsts-apmaksati-veselibas-aprupes-pakalpojumi"
+    phone: "+371 80001234"
+    notes: "NVD administrē valsts apmaksātos veselības aprūpes pakalpojumus un pacienta līdzmaksājumus – tur meklē, kas pienākas bez maksas un par ko jāpiemaksā pašam. Bezmaksas informatīvais tālrunis +371 80001234, papildus +371 67045005, e-pasts nvd@vmnvd.gov.lv, Cēsu iela 31 k-3, Rīga."
+  - name: CSDD
+    type: government
+    help_url: "https://www.csdd.lv/par-csdd/kontakti-un-darba-laiki/"
+    apply_url: "https://e.csdd.lv/"
+    phone: "+371 67 025 777"
+    notes: "Transportlīdzekļu reģistrāciju, tehnisko apskati un citus pakalpojumus kārto tiešsaistē e-CSDD, kur jāautorizējas; rakstiskai saziņai csdd@csdd.gov.lv, oficiālai – e-adrese. Informācijas tālrunis saziņai ar CSDD operatoriem darba dienās plkst. 08.30–17.00 ir +371 67 025 777; klientu apkalpošana notiek arī Valmierā (Rīgas iela 3) un Ventspilī (Ganību iela 154a)."
+  - name: Patērētāju tiesību aizsardzības centrs
+    type: government
+    help_url: "https://www.ptac.gov.lv/lv/iestades-kontakti"
+    apply_url: "https://www.ptac.gov.lv/lv/sudzibu-asistents"
+    rights_url: "https://www.ptac.gov.lv/lv/par-elektronisko-sakaru-pakalpojumu-ligumu"
+    phone: "+371 65452554"
+    notes: "PTAC uzsver, ka pirms parakstīšanas jāpārliecinās, vai līgums ir terminēts vai beztermiņa, jo 'par tā izbeigšanu pirms līgumā noteiktā termiņa patērētājam var būt paredzēta kāda sankcija (līgumsods)', un ka līgumos parasti ir noteikts iesniegt rakstveida iesniegumu par izbeigšanu. Tāda pati brīdinājuma loģika attiecas uz sporta klubu abonementiem – pārbaudi, vai par pirmstermiņa pārtraukšanu jāmaksā līgumsods vai cita kompensācija; sūdzību sagatavo ar Sūdzību asistentu, tālrunis +371 65452554, pasts@ptac.gov.lv."
+  - name: Latvija.gov.lv
+    type: government
+    help_url: "https://www.vdaa.gov.lv/lv/klientu-atbalsts"
+    apply_url: "https://www.vdaa.gov.lv/lv/latvijagovlv"
+    phone: "67502757"
+    notes: "Valsts pārvaldes pakalpojumu portālu Latvija.gov.lv, e-adresi un e-rēķinus uztur Valsts digitālās attīstības aģentūra (bijusī VRAA). Klientu atbalsts portāla un e-pakalpojumu lietošanā: tālr. 67502757, portals@vdaa.gov.lv; e-adrese jeb oficiālā elektroniskā adrese ir personalizēta pastkastīte drošai saziņai ar iestādēm, un tieši tur nonāk VID, VSAA un NVA lēmumi."
+  - name: Studiju un studējošā kredīti
+    type: government
+    help_url: "https://www.altum.lv/sazinies/"
+    apply_url: "https://www.altum.lv/pakalpojumi/iedzivotajiem/studiju-un-studejoso-kreditesana/"
+    notes: "Valsts garantētam studiju kredītam (mācību maksai) un studējošā kredītam (ikdienas izdevumiem) piesakās nevis Altum, bet Altum sadarbības bankās, un esošie kredīti neierobežo kredīta saņemšanu studiju turpināšanai. Studiju kredīta procentus studiju laikā, ieskaitot studiju pārtraukumu līdz 731 dienai, kā arī 11 mēnešus pēc studiju pabeigšanas ar diplomu subsidē valsts – kredītņēmējs sāk maksāt procentus ar 12. mēnesi pēc programmas pabeigšanas."

@@ -160,6 +160,14 @@ function loaderWithDecrypt(mixed $app, User $user, Session $session, Closure $de
 
         public function encrypt(string $plainPath, string $encPath, string $passphrase): void {}
 
+        public function encryptWithKey(string $plainPath, string $encPath, string $key): void {}
+
+        /** @return array{0: int, 1: int} */
+        public function kdfParams(string $encPath): array
+        {
+            return [1, 8192];
+        }
+
         public function decrypt(string $encPath, string $plainPath, string $passphrase): void
         {
             ($this->decrypt)($plainPath);

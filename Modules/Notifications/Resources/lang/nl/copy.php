@@ -19,10 +19,8 @@ return [
 
     'body' => [
         'budget_nudge' => ':category — :spent van :budget besteed.',
-        'receipts_matched_one' => ':count bon gekoppeld uit je e-mail.',
-        'receipts_matched_other' => ':count bonnen gekoppeld uit je e-mail.',
-        'import_finished_one' => ':count transactie geïmporteerd.',
-        'import_finished_other' => ':count transacties geïmporteerd.',
+        'receipts_matched' => ':count bon gekoppeld uit je e-mail.|:count bonnen gekoppeld uit je e-mail.',
+        'import_finished' => ':count transactie geïmporteerd.|:count transacties geïmporteerd.',
         'drift' => 'Een terugkerende afschrijving ging :direction met :delta :currency.',
         'forecast' => 'Je verwachte saldo zakt binnen 30 dagen onder nul.',
         'ics_statement_ready' => 'Download het uit het ICS-portaal en zet het in Beatrax om de uitgaven van deze kaart bij te houden.',
@@ -40,8 +38,7 @@ return [
         'nothing_notable' => 'Er vraagt niets om je aandacht.',
         'flow' => 'In :in, uit :out, netto :net.',
         'over_budget' => ':amount over budget tot nu toe.',
-        'payments_due_one' => '1 betaling deze periode.',
-        'payments_due_other' => ':count betalingen deze periode.',
+        'payments_due' => '1 betaling deze periode.|:count betalingen deze periode.',
         'shortfall' => 'Er komt een kastekort aan.',
     ],
 ];

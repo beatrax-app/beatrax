@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Kases grāmata',
+    'heading' => 'Kases grāmata',
+    'intro' => 'Pierakstiet skaidras naudas un citus ārpusbankas tēriņus manuāli. Manuālie ieraksti nonāk tajā pašā virsgrāmatā, kur importētie — tie tiek kategorizēti, iekļauti regulāro maksājumu atpazīšanā un ieskaitīti mēneša kopsummā.',
+
+    'direction' => 'Virziens',
+    'expense' => 'Izdevumi',
+    'income' => 'Ieņēmumi',
+
+    'amount' => 'Summa (€)',
+    'date' => 'Datums',
+    'counterparty' => 'Darījuma partneris',
+    'counterparty_placeholder' => 'piem. Maiznīca',
+    'category' => 'Kategorija',
+    'optional' => '(neobligāti)',
+    'uncategorized' => 'Bez kategorijas',
+    'note' => 'Piezīme',
+
+    'add_entry' => 'Pievienot ierakstu',
+    'manual_entries' => 'Manuālie ieraksti',
+    'no_entries' => 'Vēl nav neviena manuāla ieraksta.',
+    'delete_entry' => 'Dzēst ierakstu',
+    'delete' => 'Dzēst',
+
+    'errors' => [
+        'amount_positive' => 'Ievadiet summu, kas lielāka par nulli.',
+        'invalid_date' => 'Ievadiet derīgu datumu.',
+    ],
+
+    'toast' => [
+        'added' => 'Skaidras naudas ieraksts pievienots.',
+        'removed' => 'Skaidras naudas ieraksts noņemts.',
+    ],
+];

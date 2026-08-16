@@ -82,9 +82,10 @@
                 @if (! empty($filterAccounts ?? []))
                     @php
                         $acctCount = count($filterAccounts);
+                        $acctCounted = Lang::choice('ledger::list.filter.acct', $acctCount, ['count' => $acctCount]);
                         $acctLabel = $acctCount === 1
-                            ? collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? Lang::get('ledger::list.filter.acct_one', ['count' => $acctCount])
-                            : Lang::get('ledger::list.filter.acct_many', ['count' => $acctCount]);
+                            ? collect($availableAccounts)->firstWhere('id', (int) $filterAccounts[0])['name'] ?? $acctCounted
+                            : $acctCounted;
                     @endphp
                     {{ $acctLabel }}
                 @else
@@ -214,9 +215,10 @@
                 @if (! empty($filterCategories ?? []))
                     @php
                         $catCount = count($filterCategories);
+                        $catCounted = Lang::choice('ledger::list.filter.cat', $catCount, ['count' => $catCount]);
                         $catLabel = $catCount === 1
-                            ? collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? Lang::get('ledger::list.filter.cat_one', ['count' => $catCount])
-                            : Lang::get('ledger::list.filter.cat_many', ['count' => $catCount]);
+                            ? collect($availableCategories)->firstWhere('id', (int) $filterCategories[0])['name'] ?? $catCounted
+                            : $catCounted;
                     @endphp
                     {{ $catLabel }}
                 @else

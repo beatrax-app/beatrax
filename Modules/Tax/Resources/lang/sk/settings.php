@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Daňová krajina',
+    'country_desc' => 'Určuje, ktoré kategórie odpočtov sú dostupné.',
+    'country_choose' => 'Vyber krajinu…',
+    'country_switch_warning' => 'Zmena pridá nové kategórie — existujúce značky sa nikdy nemenia.',
+
+    'countries' => [
+        'at' => 'Rakúsko',
+        'be' => 'Belgicko',
+        'bg' => 'Bulharsko',
+        'ca' => 'Kanada',
+        'ch' => 'Švajčiarsko',
+        'cy' => 'Cyprus',
+        'cz' => 'Česko',
+        'de' => 'Nemecko',
+        'dk' => 'Dánsko',
+        'ee' => 'Estónsko',
+        'es' => 'Španielsko',
+        'fi' => 'Fínsko',
+        'fr' => 'Francúzsko',
+        'gb' => 'Spojené kráľovstvo',
+        'gr' => 'Grécko',
+        'hr' => 'Chorvátsko',
+        'hu' => 'Maďarsko',
+        'ie' => 'Írsko',
+        'is' => 'Island',
+        'it' => 'Taliansko',
+        'lt' => 'Litva',
+        'lu' => 'Luxembursko',
+        'lv' => 'Lotyšsko',
+        'mt' => 'Malta',
+        'nl' => 'Holandsko',
+        'no' => 'Nórsko',
+        'pl' => 'Poľsko',
+        'pt' => 'Portugalsko',
+        'ro' => 'Rumunsko',
+        'se' => 'Švédsko',
+        'si' => 'Slovinsko',
+        'sk' => 'Slovensko',
+        'us' => 'Spojené štáty',
+    ],
+
+    'categories_label' => 'Kategórie odpočtov',
+    'categories_desc' => 'Prispôsob si kategórie, ktoré používaš na označovanie.',
+    'categories_empty' => 'Zatiaľ žiadne kategórie. Pridaj prvú kategóriu alebo zmeň krajinu a načítajú sa predvolené.',
+
+    'from_corpus' => 'z korpusu',
+    'rename_input_aria' => 'Nový názov pre: :name',
+    'rename' => 'Premenovať',
+    'rename_aria' => 'Premenovať: :name',
+    'rename_save_aria' => 'Uložiť nový názov pre: :name',
+    'save' => 'Uložiť',
+    'archive' => 'Archivovať',
+    'archive_aria' => 'Archivovať: :name',
+
+    'new_category_label' => 'Názov novej kategórie',
+    'new_category_placeholder' => 'Názov novej kategórie…',
+    'add_category' => 'Pridať kategóriu',
+    'category_added' => 'Kategória pridaná.',
+
+    'archived_count' => 'Archivované (:count)',
+    'restore' => 'Obnoviť',
+    'restore_aria' => 'Obnoviť: :name',
+];

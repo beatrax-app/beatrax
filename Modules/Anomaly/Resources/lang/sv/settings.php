@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'sensitivity_label' => 'Varningskänslighet',
+    'sensitivity_help' => 'Flagga debiteringar som ligger mer än :percent% över din typiska utgift hos den handlaren eller i den kategorin.',
+
+    'min_amount_label' => 'Minsta debiteringsbelopp',
+    'min_amount_help' => 'Ignorera anomalier för debiteringar under det här beloppet. Lagras i cent (€) — 1000 betyder €10.00.',
+
+    'save' => 'Spara anomaliinställningar',
+    'saved' => 'Sparat.',
+
+    'suppression' => [
+        'summary' => 'Undantagsregler',
+        'empty' => 'Inga undantagsregler än. När du markerar en debitering som förväntad visas en regel här.',
+        'remove' => 'Ta bort',
+        'remove_aria' => 'Ta bort undantagsregeln',
+        'removed_toast' => 'Regeln har tagits bort',
+    ],
+
+    'unknown_merchant' => 'Okänd handlare',
+
+    'detectors' => [
+        'large' => 'Stor debitering',
+        'first_time' => 'Första gången',
+        'duplicate' => 'Dubblett',
+    ],
+
+    'errors' => [
+        'sensitivity_range' => 'Känsligheten måste vara mellan 1 och 100.',
+        'min_amount_negative' => 'Minsta debiteringsbelopp kan inte vara negativt.',
+    ],
+];

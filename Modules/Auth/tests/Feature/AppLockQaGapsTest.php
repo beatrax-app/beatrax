@@ -282,7 +282,9 @@ it('POST /lock/engage locks the session and returns 204', function (): void {
         'lock_enabled' => true,
         'idle_timeout_minutes' => 5,
         'failed_attempts' => 0,
-        'last_activity_at' => CarbonImmutable::now()->toDateTimeString(),
+        // Genuinely idle: the client only engages after the idle or grace
+        // window has elapsed, so activity is never fresh at that moment.
+        'last_activity_at' => CarbonImmutable::now()->subMinutes(5)->toDateTimeString(),
         'created_at' => CarbonImmutable::now()->toDateTimeString(),
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
@@ -412,4 +414,32 @@ it('still redirects a locked session whose user has an enabled lock', function (
     $this->withSession([LockStateManager::SESSION_KEY => true])
         ->get('/help/data-locations')
         ->assertRedirect(route('auth.lock'));
+});
+
+it('POST /lock/engage does not undo an unlock that just happened', function (): void {
+    $user = User::query()->create([
+        'username' => 'engage-race-user',
+        'password' => bcrypt('engage-pass'),
+        'period_start_day' => 1,
+    ]);
+    $this->actingAs($user);
+
+    // The idle timer posts with keepalive and does not wait for a response,
+    // so an engage can land AFTER the user has already unlocked. Locking then
+    // demands a second PIN for presence they just proved.
+    DB::connection()->table('user_app_lock_configs')->insert([
+        'user_id' => $user->id,
+        'lock_enabled' => true,
+        'idle_timeout_minutes' => 5,
+        'failed_attempts' => 0,
+        'last_activity_at' => CarbonImmutable::now()->toDateTimeString(),
+        'created_at' => CarbonImmutable::now()->toDateTimeString(),
+        'updated_at' => CarbonImmutable::now()->toDateTimeString(),
+    ]);
+
+    $response = $this->withSession([LockStateManager::SESSION_KEY => false])
+        ->postJson(route('auth.lock.engage'));
+
+    $response->assertStatus(204);
+    expect(session(LockStateManager::SESSION_KEY))->toBeFalse();
 });

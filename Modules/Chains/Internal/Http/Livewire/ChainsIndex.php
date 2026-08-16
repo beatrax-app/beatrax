@@ -7,6 +7,7 @@ namespace Modules\Chains\Internal\Http\Livewire;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Modules\Chains\Internal\Presentation\SettlementGroup;
 use Modules\Chains\Public\Services\ChainLinkQuery;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
@@ -25,8 +26,11 @@ final class ChainsIndex extends Component
         $user = $currentUser->user();
         $chains = $query->allChainsForUser($user, limit: 100);
 
+        // Grouped by the charge each link settles into: a fan-in rendered as
+        // one flat row per link repeated the same settlement on every card,
+        // which hid the one thing a chain is.
         $view = $views->make('chains::livewire.chains-index', [
-            'chains' => $chains,
+            'settlements' => SettlementGroup::fromRows($chains),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

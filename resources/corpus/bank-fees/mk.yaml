@@ -1,0 +1,51 @@
+# Bank-fee classification rules — North Macedonia (Macedonian, Cyrillic).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# No `regex:` entries here: the matcher runs PCRE without /u, so \b only
+# recognises ASCII word characters and a Cyrillic word can never be fenced
+# by one. Cyrillic terms are plain substrings instead — those go through
+# mb_stripos and fold multibyte case correctly. Latin is deliberately
+# absent: Komercijalna banka, NLB Banka Skopje, Stopanska banka, Halkbank
+# and ProCredit all publish their tariff and their standardised
+# "Информативен документ за надоместоците" in Cyrillic, and the only Latin
+# fee words on those sites are URL slugs. (Card descriptors ARE Latin in
+# this market, but those are merchant names, handled by merchants/mk.yaml.)
+#
+# The trap is "НАДОМЕСТОК". It is the dominant fee word in Macedonian
+# tariffs, but on its own it is simply "compensation" or "allowance" — it is
+# what a payroll line calls a travel or meal allowance, which is money
+# coming IN. Every entry is therefore anchored to what the bank is charging
+# for ("МЕСЕЧЕН НАДОМЕСТОК", "НАДОМЕСТОК ЗА ОДРЖУВАЊЕ"), never left bare.
+# The same anchoring keeps the rules off "без надоместок" ("free of
+# charge"), the phrase the tariffs use for the services that cost nothing.
+# Komercijalna banka writes "Одржување платежна сметка" and NLB writes
+# "Одржување на платежна сметка", so both spellings are listed. Any regex
+# body added later must be SINGLE-quoted in YAML so the backslash reaches
+# the matcher instead of being read as a YAML escape.
+#
+# Worked from: Комерцијална банка АД Скопје "Информативен документ за
+# надоместоците" for the денарска платежна сметка (07.08.2026) and НЛБ Банка
+# АД Скопје "Извадок од Тарифа (физички лица)" (28.07.2026).
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "МЕСЕЧЕН НАДОМЕСТОК"
+    name: "Месечен надоместок"
+  - pattern: "НАДОМЕСТОК ЗА ОДРЖУВАЊЕ"
+    name: "Надоместок за одржување на сметка"
+  - pattern: "ОДРЖУВАЊЕ НА ПЛАТЕЖНА СМЕТКА"
+    name: "Надоместок за одржување на сметка"
+  - pattern: "ОДРЖУВАЊЕ ПЛАТЕЖНА СМЕТКА"
+    name: "Надоместок за одржување на сметка"
+  - pattern: "ПРОВИЗИЈА"
+    name: "Провизија"
+  - pattern: "ДОЗВОЛЕНО ПРЕЧЕКОРУВАЊЕ"
+    name: "Камата на пречекорување"
+  - pattern: "КАМАТА"
+    name: "Камата"

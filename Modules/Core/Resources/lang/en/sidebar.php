@@ -7,12 +7,16 @@ return [
     'search_placeholder' => 'Search…',
     'search_aria' => 'Open search palette',
 
-    'section_this_month' => 'THIS MONTH',
-    'section_money' => 'MONEY',
-    'section_ingestion' => 'INGESTION',
+    'section_overview' => 'OVERVIEW',
+    'section_recurring' => 'COMMITMENTS',
+    'section_planning' => 'PLANNING',
+    'section_insights' => 'INSIGHTS',
+    'section_ingestion' => 'DATA IN',
+    'section_organise' => 'ORGANISE',
     'section_settings' => 'SETTINGS',
 
     'nav' => [
+        'community' => 'Community',
         'dashboard' => 'Dashboard',
         'transactions' => 'Transactions',
         'forecasts' => 'Forecasts',
@@ -37,7 +41,7 @@ return [
         'cashbook' => 'Cash book',
         'email' => 'Email',
         'categorization' => 'Categorization',
-        'sync' => 'Sync',
+        'data_devices' => 'Data & Devices',
         'settings' => 'Settings',
     ],
 

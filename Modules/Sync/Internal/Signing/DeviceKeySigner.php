@@ -50,4 +50,22 @@ final class DeviceKeySigner
             return false;
         }
     }
+
+    // Accepts a signature matching ANY of the supplied payload shapes, so a
+    // signed field set can change without invalidating history. Every
+    // candidate is a distinct byte string, so widening the accepted set never
+    // widens WHO can sign — only which shape their key must have signed.
+    /**
+     * @param  list<string>  $payloads  Candidate payloads, newest shape first.
+     */
+    public function verifyAny(array $payloads, string $sigHex, string $publicKeyBin): bool
+    {
+        foreach ($payloads as $payload) {
+            if ($this->verify($payload, $sigHex, $publicKeyBin)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

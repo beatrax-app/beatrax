@@ -7,41 +7,39 @@ namespace Modules\Tax\Public\Services;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\WriteUserPreference;
+use Modules\Core\Public\Support\Lang;
 use Modules\Tax\Internal\Actions\TaxCategoryWriter;
+use Modules\Tax\Public\Enums\TaxCountry;
 
 /**
  * @link ../../../../.docs/features/tax/architecture.md
  */
 final class TaxCountrySetup
 {
-    // Same list and labels rendered by the settings-page country
-    // picker.
-    /**
-     * @var array<string, string>
-     */
-    private const COUNTRIES = [
-        'nl' => 'Netherlands',
-        'de' => 'Germany',
-        'be' => 'Belgium',
-        'fr' => 'France',
-        'gb' => 'United Kingdom',
-        'us' => 'United States',
-    ];
-
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly WriteUserPreference $writeUserPreference,
         private readonly TaxCategoryWriter $writer,
     ) {}
 
-    // Keyed by lowercase ISO 3166 alpha-2 code, in the canonical display
-    // order.
+    // Derived from TaxCountry, never a second hand-maintained list: the literal
+    // copy that used to live here disagreed with the enum the moment a
+    // country's corpus file landed, leaving onboarding on six countries while
+    // Settings offered twenty-six.
+
+    // Labels come from the same translation group the settings picker reads,
+    // so the two surfaces cannot drift apart again.
     /**
      * @return array<string, string> code => display label
      */
     public function availableCountries(): array
     {
-        return self::COUNTRIES;
+        $countries = [];
+        foreach (TaxCountry::cases() as $country) {
+            $countries[$country->value] = Lang::get('tax::settings.countries.'.$country->value);
+        }
+
+        return $countries;
     }
 
     public function currentCountry(int $userId): string
@@ -57,7 +55,7 @@ final class TaxCountrySetup
 
     public function selectCountry(int $userId, string $countryCode): void
     {
-        if (! array_key_exists($countryCode, self::COUNTRIES)) {
+        if (TaxCountry::tryFrom($countryCode) === null) {
             return;
         }
 

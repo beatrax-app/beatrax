@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
+use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 
 /*
  * Unit coverage for the recovery-code primitives: the phone-readable

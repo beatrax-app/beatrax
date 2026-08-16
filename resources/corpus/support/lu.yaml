@@ -1,0 +1,101 @@
+# Support-resource corpus — Luxembourg (LU merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: POST Luxembourg
+    type: merchant
+    cancel_url: "https://www.post.lu/fr/particuliers/support/internet/pop-internet/abonnement/resilier-le-service-pour-un-engage-plus-24-mois"
+    support_url: "https://www.post.lu/fr/particuliers/infos-aide/contactez-nous"
+    cheaper_url: "https://www.post.lu/fr/particuliers/support/telephonie-mobile/forfaits-mobiles/pop-mobile/modifier-contrat"
+    notes: "POST le formule ainsi : « Après la période d'engagement de 24 mois, votre abonnement est reconduit tacitement de mois en mois. Il vous est possible de demander sa résiliation à tout moment » ; à la fin de l'engagement, le forfait devient sans engagement. Avant ce terme, POST renvoie vers la modification du contrat en cours d'engagement, « avec ou sans frais et avec ou sans prolongation de votre durée d'engagement » — vérifiez donc d'abord s'il vaut mieux changer de forfait que résilier."
+  - name: Tango
+    type: merchant
+    cancel_url: "https://www.tango.lu/fr/changer-operateur"
+    support_url: "https://www.tango.lu/fr/aide-support"
+    notes: "Les conditions générales Tango (art. 10.2) prévoient que « le Client peut résilier son contrat à durée indéterminée à tout moment par lettre recommandée ou en contactant le Service Client » et que « la résiliation aura lieu au plus tard dans le mois suivant la réception de la demande ». Un contrat à durée déterminée est tacitement reconduit pour une durée indéterminée s'il n'a pas été dénoncé par lettre recommandée un mois avant l'échéance. Tango met en ligne un modèle de courrier de résiliation et un PDF « Procédures de résiliation des opérateurs luxembourgeois »."
+  - name: Orange Luxembourg
+    type: merchant
+    cancel_url: "https://www.orange.lu/fr/faq/forfaits-mobiles/comment-resilier-mon-forfait-contrat/"
+    support_url: "https://www.orange.lu/fr/nous-contacter/"
+    notes: "Pour un forfait mobile : e-mail à clients@orangeluxembourg.lu ou courrier recommandé à Orange Communications Luxembourg S.A., Service Clients, 8 rue des Mérovingiens, L-8070 Bertrange. Pour l'internet fixe, « seules les demandes de résiliation envoyées par courrier sont prises en compte ». La résiliation prend effet 1 mois après la date de réception du courrier, ou à une date ultérieure si vous l'indiquez ; l'ancienne box se rend en shop Orange."
+  - name: Eltrona
+    type: merchant
+    cancel_url: "https://eltrona.lu/selfcare/resilier-mon-contrat/"
+    support_url: "https://eltrona.lu/contact-et-shops/"
+    notes: "Il n'y a pas de bouton de résiliation en ligne : Eltrona demande de contacter le service clients au +352 499 466 888 ou d'envoyer un message (le formulaire propose « résiliation » comme motif). Les nouvelles offres n'ont plus de période d'engagement, mais sur un ancien contrat de 24 mois encore en cours il faut rembourser les avantages perçus (ex. 20 € de remise/mois résiliés au bout de 12 mois = 240 € dus), et le matériel prêté doit être restitué sous peine d'être facturé."
+  - name: Enovos
+    type: merchant
+    cancel_url: "https://www.enovos.lu/fr/support-et-contact/documents-et-formulaires/"
+    support_url: "https://www.enovos.lu/fr/support-et-contact/contact/"
+    notes: "La résiliation passe par un formulaire papier à télécharger dans « Documents et formulaires » : « Résiliation contrat de fourniture d'énergie électrique » ou « Résiliation contrat de fourniture de gaz naturel ». Le formulaire demande de relever l'index du compteur le jour du départ et de le renvoyer au plus tard dans les 3 jours. Serviceline : 8006 6000 (lu-ve 08h00-20h00, sa 09h00-18h00) ou +352 2737 6000 depuis l'étranger."
+  - name: Leo
+    type: merchant
+    cancel_url: "https://www.leoenergy.lu/fr/particuliers/documents-et-formulaires/"
+    support_url: "https://www.leoenergy.lu/fr/particuliers/contact/"
+    notes: "Comme chez Enovos, il n'existe pas de résiliation en ligne : les formulaires « Résiliation contrat de fourniture d'énergie électrique » et « Résiliation contrat de fourniture de gaz naturel » se téléchargent depuis la page Documents et formulaires, à côté des conditions générales. En cas de déménagement, Leo renvoie vers le formulaire dédié move.leoenergy.lu ou vers l'espace client my.leoenergy.lu."
+  - name: AXA Luxembourg
+    type: merchant
+    cancel_url: "https://axa.lu/fr/blog-resiliation-assurance-luxembourg"
+    support_url: "https://axa.lu/fr/a-propos/contact"
+    notes: "Pour résilier à l'échéance, AXA demande une lettre recommandée avec accusé de réception qui doit arriver au plus tard 30 jours avant la date anniversaire du contrat ; l'avis d'échéance vous parvient environ deux mois avant le renouvellement. Si vous quittez le Luxembourg, il s'agit d'une « résiliation de plein droit » sans délai à respecter, avec preuve du départ (certificat de changement de résidence). Si l'assureur résilie un de vos contrats, vous avez un mois pour résilier les autres."
+  - name: CMCM
+    type: merchant
+    cancel_url: "https://cmcm.lu/comment-annuler-mon-affiliation-ou-une-couverture-optionnelle"
+    support_url: "https://cmcm.lu/contact"
+    notes: "Toute annulation d'une affiliation ou des couvertures optionnelles Prestaplus et/ou Denta & Optiplus doit être motivée et envoyée par lettre recommandée avant le 31 décembre de l'année en cours. L'annulation vaut pour tous les membres d'une même affiliation, prend effet au 1er janvier suivant, et les cotisations échues restent dues."
+  - name: Factory 4
+    type: merchant
+    support_url: "https://www.factory4.lu/contact/"
+    notes: "Aucune résiliation en ligne : « la résiliation s'effectue uniquement en fin de mois » et la lettre recommandée ou le formulaire de résiliation rempli à la réception doivent parvenir au club avant la fin du mois précédent (par exemple le 31 août au plus tard pour une résiliation au 30 septembre). Une résiliation avant la fin de l'engagement n'est possible qu'avec un préavis d'1 mois et pour motif médical ou assimilé. Sur un contrat de 12 mois, le « time stop » permet de suspendre 1 à 4 semaines par année d'abonnement, sur demande à info@factory4.lu ou à la réception."
+  - name: ACL
+    type: merchant
+    support_url: "https://www.acl.lu/fr/contact/"
+    notes: "Il n'y a pas de formulaire de résiliation en ligne : les conditions générales prévoient que la carte de membre est valable jusqu'au 31 décembre et « est renouvelée automatiquement au 1er janvier de chaque année, sauf résiliation par le membre ou par l'ACL » — il faut donc écrire ou passer à l'agence avant le 31 décembre. À défaut de paiement de la cotisation au 1er février, l'affiliation est résiliée par l'ACL et l'historique ainsi que les avantages sont perdus. Espace membre de Bertrange : +352 450045-1, acl@acl.lu, du lundi au vendredi de 8h00 à 18h00."
+
+  # --- Government ---
+  - name: Guichet.lu / MyGuichet.lu
+    type: government
+    help_url: "https://guichet.public.lu/fr/citoyens/support/aide.html"
+    apply_url: "https://guichet.public.lu/fr/citoyens/myguichet.html"
+    rights_url: "https://guichet.public.lu/fr/citoyens/justice/voies-recours-reglement-litiges/recours-administratifs-judiciaires/recours-decision-administrative.html"
+    notes: "Guichet.lu est le portail informationnel de l'État ; MyGuichet.lu est l'espace privé authentifié où s'introduisent les démarches (déclaration d'impôt, indemnité de chômage, AideFi…). Accueil physique au 11, rue Notre-Dame, L-2240 Luxembourg, les jours ouvrables de 8h00 à 18h00. La rubrique « Contester une décision administrative » explique le recours gracieux et le recours devant les juridictions administratives."
+  - name: Administration des contributions directes
+    type: government
+    help_url: "https://impotsdirects.public.lu/fr/support/contact.html"
+    apply_url: "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/activite-professionnelle/declaration-revenus/declaration-impot-electronique.html"
+    rights_url: "https://guichet.public.lu/fr/citoyens/justice/voies-recours-reglement-litiges/recours-administratifs-judiciaires/contester-decision-acd.html"
+    notes: "La réclamation contre un bulletin d'impôt est écrite, motivée et adressée au directeur de l'ACD dans un délai de 3 mois à partir de la notification ; « un recours par téléphone ou par message électronique n'est pas admis ». Le directeur dispose de 6 mois pour répondre, après quoi un recours en réformation est possible devant le tribunal administratif. Attention : introduire une réclamation ne dispense pas de payer l'impôt contesté. Contact téléphonique du lundi au vendredi de 7h45 à 17h00."
+  - name: Centre commun de la sécurité sociale
+    type: government
+    help_url: "https://ccss.public.lu/fr/support/contact.html"
+    apply_url: "https://ccss.public.lu/fr/particuliers.html"
+    rights_url: "https://guichet.public.lu/fr/citoyens/justice/voies-recours-reglement-litiges/recours-administratifs-judiciaires/juridiction-recours-securite-sociale.html"
+    notes: "Le CCSS gère l'affiliation et les cotisations sociales ; la commande d'une carte de sécurité sociale, les certificats et le changement d'adresse passent par son site ou par le formulaire de contact. Courrier : L-2975 Luxembourg. Guichets : 4, rue Mercier, L-2144 Luxembourg, du lundi au vendredi de 8h00 à 16h00, uniquement sur rendez-vous. Les décisions se contestent devant les juridictions de la sécurité sociale."
+  - name: ADEM
+    type: government
+    help_url: "https://adem.public.lu/fr/support/contact.html"
+    apply_url: "https://adem.public.lu/fr/demandeurs-demploi/demander-indemnites-chomage.html"
+    rights_url: "https://guichet.public.lu/fr/citoyens/travail/chomage/indemnites-chomage/residents/salarie.html"
+    notes: "La demande d'indemnité de chômage complet s'introduit via l'espace privé MyGuichet.lu, au plus tard dans les 4 semaines qui suivent la perte d'emploi. L'indemnité correspond à 80 % du salaire brut antérieur, ou 85 % si vous avez un ou plusieurs enfants ouvrant droit à la modération d'impôt. Le contact center répond du lundi au vendredi de 8h00 à 12h30 et de 13h00 à 17h00 ; l'inscription en présentiel nécessite un rendez-vous pris par téléphone."
+  - name: Caisse nationale de santé
+    type: government
+    help_url: "https://cns.public.lu/fr/assure/contact-agences.html"
+    apply_url: "https://cns.public.lu/fr/assure.html"
+    rights_url: "https://cns.public.lu/fr/assure/droits-demarches/bases-bonnes-pratiques/reclamation-mediation-recours.html"
+    notes: "Les conseillers CNS sont joignables du lundi au vendredi de 08h à 16h30, par formulaire en ligne ou en agence (rendez-vous possible par appel vidéo). La page « Réclamation et recours » distingue deux situations : une réclamation quand le traitement reçu n'a pas été approprié, et, si votre démarche a abouti à une décision qui vous semble injustifiée, une opposition écrite ou un recours selon la rubrique « je conteste une décision »."
+  - name: SNCA
+    type: government
+    help_url: "https://snca.public.lu/fr/support/contact.html"
+    apply_url: "https://snca.public.lu/fr/vehicules/immatriculation.html"
+    rights_url: "https://guichet.public.lu/fr/citoyens/justice/voies-recours-reglement-litiges/recours-administratifs-judiciaires/recours-decision-administrative.html"
+    notes: "La SNCA gère le permis de conduire, l'immatriculation des véhicules et les plaques. Selon sa FAQ, vous disposez d'un délai de six mois à compter du jour d'établissement au Luxembourg pour immatriculer un véhicule importé. Contact center du lundi au vendredi de 7h30 à 16h30, info@snca.lu, et prise de rendez-vous en ligne."
+  - name: Service des aides financières
+    type: government
+    help_url: "https://mengstudien.public.lu/fr/support/contact.html"
+    apply_url: "https://guichet.public.lu/fr/citoyens/aides/famille-education/aides-etudes/aide-financiere.html"
+    rights_url: "https://mengstudien.public.lu/fr/support/voies-de-recours.html"
+    notes: "L'AideFi (aide financière de l'État pour études supérieures) se demande en ligne via MyGuichet.lu, au plus tard le 30 novembre pour le semestre d'hiver et le 31 mai pour le semestre d'été ; le dossier peut encore être complété après envoi, dans les délais. Le service aides financières du ministère de la Recherche et de l'Enseignement supérieur répond à aidefi@mesr.etat.lu, service téléphonique du lundi au vendredi de 8h à 12h et de 13h à 16h30."

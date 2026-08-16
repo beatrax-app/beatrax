@@ -30,6 +30,34 @@ final class UserDataPathService
             : self::projectRoot().DIRECTORY_SEPARATOR.'storage';
     }
 
+    // `storage/app` is DURABLE user data — GDK keyring, sync identity,
+    // secrets, backups — so on mobile it belongs beside the database in the
+    // persisted store, not under base_path().
+
+    // base_path() on mobile is the BUNDLE, wiped on every install. The db
+    // already branched; storage/app did not, so an update destroyed the
+    // keyring while the rows it decrypts survived. NativePHP leaves
+    // NATIVEPHP_STORAGE_PATH unset on device, so the env branch misses it.
+
+    // storageRoot() deliberately does NOT branch: storage/framework and
+    // storage/logs are disposable caches, and a test pins that.
+    private static function appRoot(): string
+    {
+        $native = getenv('NATIVEPHP_STORAGE_PATH');
+        if (is_string($native) && $native !== '') {
+            return rtrim($native, '/\\').DIRECTORY_SEPARATOR.'app';
+        }
+
+        if (self::isMobileRuntime()) {
+            return dirname(self::projectRoot())
+                .DIRECTORY_SEPARATOR.'persisted_data'
+                .DIRECTORY_SEPARATOR.'storage'
+                .DIRECTORY_SEPARATOR.'app';
+        }
+
+        return self::projectRoot().DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'app';
+    }
+
     public static function databaseFile(): string
     {
         // NativePHP mobile: base_path() is the wiped-and-reshipped app BUNDLE
@@ -93,7 +121,7 @@ final class UserDataPathService
      */
     public static function appPath(string $relative = ''): string
     {
-        $base = self::storageRoot().DIRECTORY_SEPARATOR.'app';
+        $base = self::appRoot();
 
         if ($relative === '') {
             return $base;

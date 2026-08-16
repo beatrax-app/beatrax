@@ -3,7 +3,15 @@
 declare(strict_types=1);
 
 return [
+    'error_enroll_unsupported' => 'Biometric unlock is not available on this device.',
+    'error_enroll_locked' => 'Unlock the app before enrolling.',
+    'error_enroll_failed' => 'Your device declined to store the key. Biometric unlock is unavailable.',
     'heading' => 'App lock',
+
+    // Settings keeps a pointer only; the controls themselves live on the
+    // sync surface at /sync#app-lock.
+    'moved_help' => "Your PIN, auto-lock timing and biometric unlock live with this device's sync settings.",
+    'moved_cta' => 'Open Sync & Device',
 
     'toggle_label' => 'Lock app with PIN',
     'toggle_description' => 'Replaces daily sign-in with a PIN. Sessions stay active for 30 days.',

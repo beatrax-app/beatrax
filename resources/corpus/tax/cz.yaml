@@ -1,0 +1,54 @@
+# Tax deduction categories — Czechia
+# Mirrors the nezdanitelné části základu daně (§ 15 ZDP), slevy na dani (§ 35ba ZDP)
+# and daňové zvýhodnění (§ 35c ZDP) of the CZ daňové přiznání k dani z příjmů FO.
+# Source: Finanční správa ČR (financnisprava.gov.cz), zdaňovací období 2025/2026.
+# The 2024 consolidation package abolished sleva na studenta, školkovné, členské
+# příspěvky odborům and úhrady za zkoušky — those are deliberately absent.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "cz_dary"
+    name: "Bezúplatná plnění (dary)"
+    short_name: "Dary"
+    hint: "Dary obcím, krajům a na veřejně prospěšné účely, včetně bezpříspěvkového darování krve"
+  - key: "cz_uroky_z_uveru_na_bydleni"
+    name: "Úroky z úvěru na bytovou potřebu"
+    short_name: "Úroky"
+    hint: "Úroky z hypotečního úvěru nebo úvěru ze stavebního spoření na obstarání bydlení"
+  - key: "cz_produkty_sporeni_na_stari"
+    name: "Příspěvky na produkty spoření na stáří"
+    short_name: "Spoření"
+    hint: "Doplňkové penzijní spoření, penzijní připojištění, životní pojištění a DIP"
+  - key: "cz_pojisteni_dlouhodobe_pece"
+    name: "Pojistné na pojištění dlouhodobé péče"
+    short_name: "Dlouh. péče"
+    hint: "Pojistné zaplacené na pojištění dlouhodobé péče"
+  - key: "cz_sleva_na_poplatnika"
+    name: "Základní sleva na poplatníka"
+    short_name: "Na poplatn."
+    hint: "Základní sleva, kterou uplatňuje každý poplatník daně z příjmů fyzických osob"
+  - key: "cz_sleva_na_manzela"
+    name: "Sleva na manžela nebo manželku"
+    short_name: "Na manžela"
+    hint: "Sleva při péči o dítě do 3 let, pokud příjem manžela nepřesáhne stanovenou hranici"
+  - key: "cz_zakladni_sleva_na_invaliditu"
+    name: "Základní sleva na invaliditu"
+    short_name: "Zákl. inval."
+    hint: "Sleva pro poplatníka pobírajícího invalidní důchod pro invaliditu prvního nebo druhého stupně"
+  - key: "cz_rozsirena_sleva_na_invaliditu"
+    name: "Rozšířená sleva na invaliditu"
+    short_name: "Rozš. inval."
+    hint: "Sleva pro poplatníka pobírajícího invalidní důchod pro invaliditu třetího stupně"
+  - key: "cz_sleva_ztpp"
+    name: "Sleva na držitele průkazu ZTP/P"
+    short_name: "ZTP/P"
+    hint: "Sleva pro poplatníka, kterému byl přiznán průkaz ZTP/P"
+  - key: "cz_danove_zvyhodneni_na_dite"
+    name: "Daňové zvýhodnění na vyživované dítě"
+    short_name: "Na dítě"
+    hint: "Zvýhodnění na vyživované dítě žijící ve společně hospodařící domácnosti"

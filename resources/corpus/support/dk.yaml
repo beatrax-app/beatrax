@@ -1,0 +1,101 @@
+# Support-resource corpus — Denmark (DK merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: YouSee
+    type: merchant
+    cancel_url: "https://yousee.dk/hjaelp/artikler/sadan-opsiger-du-et-abonnement"
+    support_url: "https://yousee.dk/hjaelp/kontakt"
+    notes: "Der er ingen opsigelsesknap online — YouSee beder dig ringe på 70 70 36 90. Der er højst 6 måneders binding, og dit opsigelsesvarsel står i ordrebekræftelsen; efter opsigelsen får du en slutopgørelse, som oftest er en kreditnota."
+  - name: Telenor Danmark
+    type: merchant
+    cancel_url: "https://www.telenor.dk/kundeservice/Mobilabonnementer-og-services/mit-abonnement/opsig-dit-abonnement/"
+    support_url: "https://www.telenor.dk/kundeservice/"
+    notes: "Opsigelse sker telefonisk på 72 100 100, i nærmeste Telenor-butik eller skriftligt — der er ingen selvbetjeningsknap. Du har 30 dages opsigelse og kan opsige, når du er ude af bindingsperioden; vent med at afmelde Betalingsservice, til den sidste regning er betalt, ellers koster girokortet 49 kr. i regningsgebyr."
+  - name: Norlys
+    type: merchant
+    cancel_url: "https://norlys.dk/kundeservice/fortrydelse-og-opsigelse/"
+    notes: "Norlys samler fortrydelse og opsigelse ét sted med hver sin vej for el, gas, internet, tv og opladning. Skal et abonnement opsiges på grund af dødsfald, skal du bruge Norlys' særskilte formular til netop det."
+  - name: Andel Energi
+    type: merchant
+    cancel_url: "https://andelenergi.dk/kundeservice/aftaler-og-priser/opsig-din-aftale-hos-andel-energi/"
+    notes: "Skifter du til et andet elselskab, skal du slet ikke opsige selv — Andel Energi får automatisk besked, og aftalen ophører. Vil du kun ud uden at skifte selskab, skal du ringe på 70 29 21 29, og er du stadig i bindingsperiode, bliver du opkrævet et gebyr. Ved flytning følger aftalen med, hvis du bare melder flytning."
+  - name: Falck
+    type: merchant
+    cancel_url: "https://www.falck.dk/kundeservice/skriv-til-os/aendre-eller-opsige-abonnoment/"
+    notes: "Privatkunder ændrer eller opsiger abonnementet ved at ringe på 70 10 20 31 eller udfylde formularen på siden. Henvender du dig på en andens vegne, skal der først være indsendt en fuldmagt underskrevet af begge parter."
+  - name: PureGym
+    type: merchant
+    cancel_url: "https://www.puregym.dk/kontakt"
+    notes: "Du opsiger selv på Mit PureGym under 'Medlemskab' på hjemmesiden — det kan ikke gøres i appen — og du skal huske at trykke 'Bekræft'. Opsigelsesperioden er løbende måned + én måned, og du kan ikke opsige, mens medlemskabet er sat på pause. Fitnessworld.com sender i dag videre til puregym.dk."
+  - name: Viaplay
+    type: merchant
+    cancel_url: "https://help.viaplay.com/da/cancel-package/"
+    cheaper_url: "https://help.viaplay.com/da/downgrade-package/"
+    notes: "Opsig i en webbrowser under Min konto → Pakkeoplysninger → 'Opsig pakke' og gå de fem trin igennem til 'Bekræft opsigelse' — bekræftelsesmailen er din dokumentation. Opsigelsen træder i kraft sidste dag i den nuværende betalingsperiode eller bindingsperiode. Har du Viaplay via Apple eller en tv-udbyder som Telia eller Telenor, skal du opsige hos dem."
+  - name: HelloFresh Danmark
+    type: merchant
+    support_url: "https://www.hellofresh.dk/about/faq"
+    notes: "Måltidskassen kan pauses eller opsiges når som helst i din konto, men fristen følger din leveringsdag: senest kl. 23.59 tirsdag (levering lør-søn), onsdag (levering man-tir) eller søndag (levering ons-tor). Opsiger du senere, bliver næste kasse leveret og skal betales. Skal den allerførste kasse afmeldes, skal du ringe til kundeservice på +45 92 45 29 77."
+  - name: Aarstiderne
+    type: merchant
+    support_url: "https://www.aarstiderne.com/kundeservice"
+    notes: "Aarstiderne Plus opsiges under Kundeservice, når du er logget ind. Opsigelse kan ske med 30 dages varsel til udløbet af den efterfølgende måned, dog tidligst til udløb 6 måneder efter tegning af medlemskabet. Bemærk, at du kun opsiger selve medlemskabet — ikke dine abonnementer eller kommende leveringer."
+  - name: Nordea
+    type: merchant
+    cancel_url: "https://www.nordea.dk/privat/produkter/konti-og-betalinger/luk-konto.html"
+    support_url: "https://www.nordea.dk/privat/find-hjaelp/konti-oprettelse-og-lukning.html"
+    notes: "Almindelige hverdagskonti lukker du selv i mobilbanken under 'Indstillinger' eller i netbanken under 'Kontooplysninger' → 'Luk konto'; du vælger den konto, restsaldoen og betalingsserviceaftaler skal flyttes til, og underskriver med MitID. Andre kontotyper, fællesejede konti og din sidste konto i Nordea kræver, at du sender en besked via mobilbank eller netbank."
+  - name: Røde Kors
+    type: merchant
+    cancel_url: "https://www.rodekors.dk/faq"
+    support_url: "https://www.rodekors.dk/om-os/kontakt"
+    notes: "Fast støtte afmelder du selv, og ikke på rodekors.dk: enten sletter du PBS-aftalen i din netbank, eller du går ind i MobilePay under 'Aktiviteter' → 'Faste betalinger' → 'Afslut aftale'. Røde Kors kan også afmelde for dig, hvis du mailer navn, telefon, e-mail og adresse til hej@rodekors.dk; landskontoret træffes på +45 35 25 92 00."
+
+  # --- Government ---
+  - name: Skattestyrelsen
+    type: government
+    help_url: "https://skat.dk/kontakt/borger/personlige-skatteforhold"
+    apply_url: "https://skat.dk/borger/hjaelp-til-tastselv-borger"
+    rights_url: "https://skat.dk/hjaelp/saadan-klager-du"
+    phone: "72 22 28 28"
+    notes: "Årsopgørelse, forskudsopgørelse og fradrag klares i TastSelv Borger, hvor du logger på med MitID eller TastSelv-kode. Telefonen om personlige skatteforhold er åben mandag kl. 9-17, tirsdag-torsdag kl. 9-16 og fredag kl. 9-14. Vil du klage over en afgørelse, er fristen 3 måneder, og gebyret er 1.300 kr."
+  - name: Udbetaling Danmark
+    type: government
+    help_url: "https://www.borger.dk/familie-og-boern/familieydelser-oversigt/boerne-ungeydelse/familieydelser-kontakt"
+    rights_url: "https://www.borger.dk/familie-og-boern/familieydelser-oversigt/boerne-ungeydelse/familieydelser-klage"
+    phone: "70 12 80 62"
+    notes: "Udbetaling Danmark administreres af ATP og betjener borgere gennem borger.dk — atp.dk henviser selv videre dertil for pension, boligstøtte, familieydelser og barsel. Familieydelser træffes på 70 12 80 62 mandag-onsdag 8-16, torsdag 8-17 og fredag 8-15. En klage over børnetilskud eller børne- og ungeydelse skal være modtaget senest 4 uger efter, du har fået afgørelsen."
+  - name: Borger.dk
+    type: government
+    help_url: "https://www.borger.dk/hjaelp-og-vejledning/kontakt"
+    apply_url: "https://www.borger.dk/"
+    notes: "Borger.dk er den fælles offentlige indgang med Digital Post og Mit Overblik, hvor du logger på med MitID. Herfra finder du din kommune eller den rette myndighed, og der er en engelsk udgave på lifeindenmark.dk."
+  - name: A-kasse og dagpenge
+    type: government
+    help_url: "https://star.dk/om-styrelsen/kontakt"
+    apply_url: "https://jobnet.dk/"
+    rights_url: "https://www.borger.dk/arbejde-dagpenge-ferie/Dagpenge-kontanthjaelp-og-sygedagpenge/Arbejdsloeshedsdagpenge"
+    notes: "For at få arbejdsløshedsdagpenge skal du have været medlem af en a-kasse i mindst ét år, melde dig ledig på jobnet.dk fra første ledighedsdag og have et godkendt cv senest to uger efter tilmeldingen. Styrelsen for Arbejdsmarked og Rekruttering svarer ikke på personlige sager — det er kommunen, jobcentret eller a-kassen, du skal henvende dig til."
+  - name: SU
+    type: government
+    help_url: "https://www.su.dk/kontakt"
+    apply_url: "https://min.su.dk"
+    rights_url: "https://www.su.dk/klage"
+    notes: "SU og SU-lån søges og ændres i minSU. Læser du i Danmark, er det altid SU-kontoret på dit eget uddannelsessted, du skal kontakte — også hen over sommeren. En klage afleveres på uddannelsesstedet, mærkes til den rette instans og skal være modtaget senest fire uger efter, du fik afgørelsen."
+  - name: Motorstyrelsen
+    type: government
+    help_url: "https://motorst.dk/om-styrelsen/kontakt-motorstyrelsen"
+    rights_url: "https://motorst.dk/borger/motorafgifter/registreringsafgift/klage-over-registreringsafgift"
+    phone: "72 22 28 71"
+    notes: "Motorekspeditionerne er lukket permanent, så registrering, omregistrering og afgifter klares i Motorregistret eller telefonisk; telefon og chat er åben mandag 9.00-17.00, tirsdag-torsdag 9.00-16.00 og fredag 9.00-14.00. Er du uenig i værdifastsættelsen af dit køretøj, klager du til Motorankenævnet — klagefristen er 3 måneder, og gebyret er 1.300 kr."
+  - name: Forbrugerombudsmanden
+    type: government
+    help_url: "https://forbrugerombudsmanden.dk/kontaktoplysninger"
+    rights_url: "https://forbrugerombudsmanden.dk/alle-emner/abonnementer"
+    phone: "4171 5151"
+    notes: "Efter forbrugeraftalelovens § 28 kan du opsige en aftale om løbende levering af varer eller tjenesteydelser med 1 måneds varsel til udgangen af en måned, når der er gået 5 måneder efter aftalens indgåelse — et abonnement må altså ikke binde dig længere end det. Det er gratis at klage til Forbrugerombudsmanden over markedsføring og urimelige aftalevilkår, og telefonen er åben mandag-fredag 9.00-12.00."

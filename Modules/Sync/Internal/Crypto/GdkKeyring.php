@@ -50,6 +50,20 @@ final readonly class GdkKeyring
         return new self([...$this->epochs, $epoch]);
     }
 
+    // Returns a NEW keyring with the entry for $epoch->epochId swapped for
+    // $epoch, preserving order. Append-only protects keys that decrypt
+    // history; a joining device's self-minted epoch decrypts nothing, and
+    // keeping it shadows the group's real key of the same id forever.
+    public function withEpochReplaced(GdkEpoch $epoch): self
+    {
+        return new self(array_map(
+            static fn (GdkEpoch $existing): GdkEpoch => $existing->epochId === $epoch->epochId
+                ? $epoch
+                : $existing,
+            $this->epochs,
+        ));
+    }
+
     public function keyFor(int $epochId): ?string
     {
         foreach ($this->epochs as $epoch) {

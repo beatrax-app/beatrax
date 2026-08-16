@@ -10,8 +10,11 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Services\HostPipeWatch;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
 use Modules\Desktop\Internal\Http\Livewire\FileStagingPage;
@@ -20,11 +23,14 @@ use Modules\Desktop\Internal\Http\Livewire\WelcomeScreen;
 use Modules\Desktop\Internal\Listeners\ApplyCloseWindowChoice;
 use Modules\Desktop\Internal\Listeners\ContinuePendingFileIntentAfterLogin;
 use Modules\Desktop\Internal\Listeners\DispatchOsNotification;
+use Modules\Desktop\Internal\Listeners\ForgetColdStartVaultOnKeyRotation;
 use Modules\Desktop\Internal\Listeners\HandleNativeOpenFile;
 use Modules\Desktop\Internal\Listeners\LockOnWindowHideOrClose;
 use Modules\Desktop\Internal\Listeners\NavigateOnNotificationDeepLink;
+use Modules\Desktop\Internal\Listeners\StartSyncListenerOnEnable;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
+use Modules\Desktop\Internal\Native\DesktopColdStartVault;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
 use Modules\Desktop\Internal\Native\NativeBiometricUnlock;
 use Modules\Desktop\Internal\Native\OsThemeProbe;
@@ -36,6 +42,8 @@ use Modules\Desktop\Public\Contracts\OsThemeSignal;
 use Modules\Desktop\Public\Contracts\RemembersPendingFileIntent;
 use Modules\Desktop\Public\Events\NotificationDeepLink;
 use Modules\Notifications\Public\Events\NotificationDeliverable;
+use Modules\Sync\Public\Events\DeviceSyncEnabled;
+use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
 use Native\Desktop\Events\App\OpenFile;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
@@ -71,14 +79,15 @@ final class DesktopServiceProvider extends ServiceProvider
         $this->app->singleton(NavigateOnNotificationDeepLink::class);
         $this->app->singleton(ApplyCloseWindowChoice::class);
 
-        // NOT YET WIRED — no caller exists; native Touch ID unlock is
-        // deferred. Registration stands so wiring is a contract-only
-        // change later.
+        // Unused by design, not by omission: Touch ID returns only a bool,
+        // and releasing the data key from it needs a persisted wrapped-KEK
+        // vault like the mobile cold-start one. Wiring the prompt without
+        // that vault would unlock the UI while the key stayed sealed.
         $this->app->singleton(NativeBiometricUnlock::class);
 
-        // NOT YET WIRED — no caller exists; desktop key custody is
-        // deferred. Until wired, the unlocked key follows session
-        // custody on all platforms (see LockStateManager).
+        // Concrete registration; the KeyCustodian contract is pointed at it
+        // inside the NativePHP bundle only (see the binding below). Outside
+        // the bundle the unlocked key follows session custody.
         $this->app->singleton(DesktopKeyCustodian::class);
 
         // OsThemeProbe binds to OsThemeSignal ONLY inside the
@@ -94,6 +103,11 @@ final class DesktopServiceProvider extends ServiceProvider
             // enter this block, so they keep the pass-through session
             // custody.
             $this->app->singleton(KeyCustodian::class, DesktopKeyCustodian::class);
+
+            // Touch ID unlock: the vault wraps the data key and hands it to
+            // safeStorage, so the prompt releases a real key instead of only
+            // reporting that the user authenticated.
+            $this->app->singleton(ColdStartVault::class, DesktopColdStartVault::class);
 
             // At-rest keychain shielding for persisted secrets
             // (biometric wrap blob, OAuth token blob), delegating to
@@ -137,12 +151,37 @@ final class DesktopServiceProvider extends ServiceProvider
             // resetting per poll defuses the 120s ceiling accruing
             // across the long-lived daemon.
             @set_time_limit(0);
+
+            // A force quit never runs the supervisor's before-quit hook, so
+            // this worker was left running for hours against a dead app —
+            // spawning a job process every few seconds the whole time.
+            // Between polls is the one place a blocking worker can notice.
+            if (HostPipeWatch::hostHasGone()) {
+                exit(0);
+            }
         });
 
         // Subscription is NOT bundle-gated: the pending-intent
         // round-trip must work in local dev / CI / tests too, and the
         // listener touches only the Session contract, no facade.
         $events->listen(Login::class, [ContinuePendingFileIntentAfterLogin::class, 'handle']);
+
+        // Also outside the bundle gate: enabling sync must bring the listener
+        // up in the same session, and startIfEnabled() is a no-op wherever
+        // NativePHP's ChildProcess facade is absent.
+
+        // A changed passphrase re-wraps the data key, so anything the vault
+        // holds can no longer decrypt — drop it rather than fail an unlock.
+        $events->listen(
+            AppLockPassphraseChanged::class,
+            [ForgetColdStartVaultOnKeyRotation::class, 'handle'],
+        );
+
+        $events->listen(DeviceSyncEnabled::class, [StartSyncListenerOnEnable::class, 'handle']);
+        $events->listen(
+            SyncTransportCredentialsAvailable::class,
+            [StartSyncListenerOnEnable::class, 'handleCredentialsAvailable'],
+        );
 
         $config = $this->app->make(ConfigRepository::class);
         if ($config->get('nativephp-internal.running') !== true) {

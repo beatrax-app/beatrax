@@ -1,0 +1,90 @@
+# Tax deduction categories — Italy
+# Mirrors the IT dichiarazione dei redditi, Modello 730 Quadro E (Oneri e spese)
+# and the equivalent Quadro RP of the Modello Redditi PF.
+#
+# Authority: Agenzia delle Entrate, „Modello 730/2026 — Istruzioni per la
+# compilazione", capitolo 9 (Quadro E) e Appendice.
+# Tax year 2025 (dichiarato nel 2026).
+#
+# Note: from anno d'imposta 2025 art. 16-ter TUIR caps total detrazioni for
+# redditi over 75.000 EUR, and several righi are split by contract date.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "it_spese_sanitarie"
+    name: "Spese sanitarie"
+    short_name: "Salute"
+    hint: "Spese mediche, farmaci e ticket oltre la franchigia"
+  - key: "it_interessi_mutuo"
+    name: "Interessi per mutui ipotecari sull'abitazione principale"
+    short_name: "Mutuo casa"
+    hint: "Interessi passivi sul mutuo per l'acquisto della prima casa"
+  - key: "it_spese_istruzione"
+    name: "Spese di istruzione diverse da quelle universitarie"
+    short_name: "Istruzione"
+    hint: "Frequenza di scuole dell'infanzia, primo ciclo e secondarie"
+  - key: "it_spese_universitarie"
+    name: "Spese per istruzione universitaria"
+    short_name: "Università"
+    hint: "Tasse per corsi universitari, perfezionamento e specializzazione"
+  - key: "it_asili_nido"
+    name: "Spese per asili nido"
+    short_name: "Asilo nido"
+    hint: "Rette per la frequenza di asili nido pubblici o privati"
+  - key: "it_attivita_sportive_ragazzi"
+    name: "Spese per attività sportive per ragazzi"
+    short_name: "Sport figli"
+    hint: "Palestre, piscine e altre strutture sportive per i ragazzi"
+  - key: "it_assistenza_personale"
+    name: "Spese per addetti all'assistenza personale"
+    short_name: "Assistenza"
+    hint: "Addetti all'assistenza di persone non autosufficienti"
+  - key: "it_servizi_domestici"
+    name: "Contributi per gli addetti ai servizi domestici e familiari"
+    short_name: "Colf/badanti"
+    hint: "Contributi versati per colf, baby-sitter e badanti"
+  - key: "it_contributi_previdenziali"
+    name: "Contributi previdenziali e assistenziali"
+    short_name: "Previdenza"
+    hint: "Contributi previdenziali e assistenziali obbligatori e volontari"
+  - key: "it_previdenza_complementare"
+    name: "Contributi a forme pensionistiche complementari"
+    short_name: "Fondo pens."
+    hint: "Versamenti a fondi pensione, forme individuali e sottoconti PEPP"
+  - key: "it_premi_assicurativi"
+    name: "Premi per assicurazioni sulla vita e contro gli infortuni"
+    short_name: "Assicuraz."
+    hint: "Polizze vita, infortuni, non autosufficienza ed eventi calamitosi"
+  - key: "it_spese_funebri"
+    name: "Spese funebri"
+    short_name: "Funerale"
+    hint: "Spese sostenute in occasione del decesso di una persona"
+  - key: "it_spese_veterinarie"
+    name: "Spese veterinarie"
+    short_name: "Veterinario"
+    hint: "Spese per la cura degli animali, oltre la franchigia"
+  - key: "it_erogazioni_liberali"
+    name: "Erogazioni liberali a ONLUS, APS ed enti del terzo settore"
+    short_name: "Donazioni"
+    hint: "Donazioni a ONLUS, APS, volontariato ed enti del terzo settore"
+  - key: "it_trasporto_pubblico"
+    name: "Abbonamenti ai servizi di trasporto pubblico"
+    short_name: "Trasporti"
+    hint: "Abbonamenti al trasporto pubblico locale, regionale e interregionale"
+  - key: "it_recupero_edilizio"
+    name: "Spese per interventi di recupero del patrimonio edilizio"
+    short_name: "Casa/lavori"
+    hint: "Ristrutturazione, misure antisismiche e interventi agevolati"
+  - key: "it_risparmio_energetico"
+    name: "Spese per interventi finalizzati al risparmio energetico"
+    short_name: "Ecobonus"
+    hint: "Riqualificazione energetica degli edifici esistenti"
+  - key: "it_assegno_coniuge"
+    name: "Assegno periodico corrisposto al coniuge"
+    short_name: "Ex coniuge"
+    hint: "Assegni periodici al coniuge separato, esclusi quelli per i figli"

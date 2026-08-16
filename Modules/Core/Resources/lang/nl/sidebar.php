@@ -7,12 +7,16 @@ return [
     'search_placeholder' => 'Zoeken…',
     'search_aria' => 'Zoekpalet openen',
 
-    'section_this_month' => 'DEZE MAAND',
-    'section_money' => 'GELD',
-    'section_ingestion' => 'INVOER',
+    'section_overview' => 'OVERZICHT',
+    'section_recurring' => 'VASTE LASTEN',
+    'section_planning' => 'PLANNEN',
+    'section_insights' => 'INZICHTEN',
+    'section_ingestion' => 'GEGEVENS ERIN',
+    'section_organise' => 'ORDENEN',
     'section_settings' => 'INSTELLINGEN',
 
     'nav' => [
+        'community' => 'Community',
         'dashboard' => 'Dashboard',
         'transactions' => 'Transacties',
         'forecasts' => 'Prognoses',
@@ -37,7 +41,7 @@ return [
         'cashbook' => 'Kasboek',
         'email' => 'E-mail',
         'categorization' => 'Categorisatie',
-        'sync' => 'Synchronisatie',
+        'data_devices' => 'Gegevens & apparaten',
         'settings' => 'Instellingen',
     ],
 

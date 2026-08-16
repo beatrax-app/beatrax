@@ -32,13 +32,13 @@ use Modules\Auth\Internal\Lock\AppLockKeyWrap;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Auth\Internal\Lock\NullColdStartVault;
 use Modules\Auth\Internal\Lock\NullKeyCustodian;
 use Modules\Auth\Internal\Lock\PinHasher;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Internal\Lock\WebAuthnBiometricService;
 use Modules\Auth\Internal\Recovery\RecoveryCodeAuthenticator;
-use Modules\Auth\Internal\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Internal\Recovery\RecoveryCodeGenerator;
 use Modules\Auth\Internal\Recovery\RecoveryCodeNormalizer;
 use Modules\Auth\Public\Actions\AddUserAction;
@@ -47,7 +47,9 @@ use Modules\Auth\Public\Actions\LogoutAction;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Auth\Public\Actions\ResetPasswordAction;
 use Modules\Auth\Public\Actions\SignupAction;
+use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Auth\Public\Recovery\RecoveryCodeFormatter;
 use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Services\BiometricKeyBlobCodec;
@@ -62,6 +64,11 @@ final class AuthServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        // Overridden by the desktop (Touch ID) and mobile (enclave) bindings
+        // inside their own runtimes; everywhere else the lock screen simply
+        // finds no OS-gated vault and offers PIN + WebAuthn only.
+        $this->app->singleton(ColdStartVault::class, NullColdStartVault::class);
+
         $this->app->register(FortifyServiceProvider::class);
 
         $this->app->singleton(LoginAction::class);

@@ -1,0 +1,111 @@
+# Support-resource corpus — Ireland (IE merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: eir
+    type: merchant
+    cancel_url: "https://www.eir.ie/cancelling/"
+    support_url: "https://www.eir.ie/helpandsupport/fibre-broadband/returns-and-cancellations/how-to-cancel-service/"
+    notes: "Under eir's standard terms and conditions you must give one month's notice to terminate an eir service, unless you are switching or changing service provider — in which case the new provider handles it. Equipment has to be returned separately."
+  - name: Vodafone Ireland
+    type: merchant
+    cancel_url: "https://n.vodafone.ie/support/bill-pay-hub/bill-pay/manage-your-account.html"
+    support_url: "https://n.vodafone.ie/support.html"
+    notes: "There is no self-service cancel button. Inside the 14-day cooling-off period you cancel through customer care on the chat button, with your order reference (or SIM number) and IMEI to hand; outside it you must contact customer care the same way. Vodafone must give at least 30 days' notice of a plan, price or terms change, and you may then have the right to leave without penalty."
+  - name: Three Ireland
+    type: merchant
+    support_url: "https://www.three.ie/contact-us.html"
+    notes: "Three publishes no online cancellation page — ending a bill pay contract goes through Care on freephone 1913 (+353 83 333 3333 from abroad), live chat, or customer.care@three.ie. Bill pay upgrades open 3 months (90 days) before the contract ends."
+  - name: Virgin Media Ireland
+    type: merchant
+    cancel_url: "https://www.virginmedia.ie/customer-support/billing-and-payment/cooling-off/"
+    support_url: "https://www.virginmedia.ie/contact/"
+    notes: "You can cancel without reason or penalty within 14 days of signing (30 days for fixed services and 28 days for mobile if you signed with a field agent). Cancel by calling customer care on 1908, by the online cancellation form, or in writing to Virgin Media Ireland, Limerick Enterprise Development Park, Roxboro Road, Limerick."
+  - name: GoMo
+    type: merchant
+    cancel_url: "https://gomo.ie/cancel-or-moving-home"
+    support_url: "https://gomo.ie/help-support"
+    notes: "All cancellations are subject to 30 days' notice — without it you are still billed for the full 30 days on the final bill. Mobile is cancelled with the online request form; broadband is cancelled in MyGoMo under Account Details, 'Cancel Broadband'."
+  - name: Electric Ireland
+    type: merchant
+    cancel_url: "https://www.electricireland.ie/residential/online-services/close-account-form"
+    support_url: "https://www.electricireland.ie/residential/about-us/contact-us"
+    notes: "Close the account with the online form; the Service Team responds within three days. Have your 9-digit account number (starts with 9), move-out date, day and night meter readings, and a forwarding address ready. Giving the incoming occupier's name and number is optional but avoids disconnection charges."
+  - name: Bord Gáis Energy
+    type: merchant
+    cancel_url: "https://www.bordgaisenergy.ie/home/help/moving-home"
+    support_url: "https://www.bordgaisenergy.ie/home/help"
+    notes: "On the day you move out you fill in the close-account form with your account number, your GPRN and/or MPRN, a final meter reading (not needed on an electricity smart plan), the new occupier's or landlord's contact details, and your new address for the final bill. A Bord Gáis Energy Services account is closed at the same time."
+  - name: Flogas
+    type: merchant
+    cancel_url: "https://www.flogas.ie/help-centre/moving-house/"
+    support_url: "https://www.flogas.ie/help-centre/"
+    notes: "Closing an account means completing the 'moving out' form with your account number, GPRN and/or MPRN, forwarding address and a final meter reading. Without a final read you stay liable for the supply until you tell Flogas you have left and either agree a final reading or let Gas Networks Ireland lock the meter."
+  - name: Irish Life Health
+    type: merchant
+    cancel_url: "https://www.irishlife.ie/withdraw-from-your-plan/"
+    support_url: "https://www.irishlife.ie/health-insurance/health-contact-us/"
+    notes: "There is no cancel button — if the plan does not suit you, you cancel by writing to the email address listed on the withdrawal page, within 30 days of taking it out. Customer service is on 01 562 5100, Monday to Friday 9am to 6pm. Irish Life Health also publishes template cancellation letters for people switching across from VHI or Laya."
+  - name: FLYEfit
+    type: merchant
+    support_url: "https://www.flyefit.ie/help-centre/"
+    notes: "Memberships are monthly with no contract and fully self-service — you cancel or pause from your own account rather than by contacting the gym. Cancel at least 72 hours before your payment is due or you will still be charged for that month."
+  - name: AIB
+    type: merchant
+    cancel_url: "https://www.aib.ie/help-centre/manage-accounts/close-bank-account"
+    notes: "Only Online Saver, Online Notice Deposit 7 and Personal Demand accounts can be closed yourself, in Internet Banking or the app under Account Management. Current accounts, mortgages, overdrafts and credit cards need a branch visit with photo ID or a written request to your branch. Move your direct debits and standing orders first, and allow 7 days' notice on a Notice Deposit 7 account."
+  - name: PhoneWatch
+    type: merchant
+    support_url: "https://www.phonewatch.ie/customer-support/"
+    notes: "PhoneWatch has no online cancellation page — alarm monitoring contracts are ended through customer support, on (01) 582 7920 Monday to Friday 9am to 6pm or through the chat window on the support page."
+  - name: TV Licence
+    type: merchant
+    support_url: "https://www.tvlicence.ie/home/direct-debit.html"
+    notes: "The licence fee is €160 and the direct debit stays in force year to year unless you stop it, so it renews without asking you. Payments can be spread annually (€160), bi-annually (€80), quarterly (€40) or monthly. Direct debit set-up and changes go through your local TV Licence Records Office by post, phone or email; the web helpline is 01 705 8800. The general FAQs also cover who is entitled to a free TV Licence."
+  - name: Concern Worldwide
+    type: merchant
+    support_url: "https://www.concern.net/contact-us"
+    notes: "There is no online page for stopping a regular donation — ring the donations line on 0818 410 510 or email info@concern.net, Monday to Friday 9am to 5pm. General queries are on +353 1 417 7700; the head office is 52–55 Lower Camden Street, Dublin 2, D02 H425."
+
+  # --- Government ---
+  - name: Revenue
+    type: government
+    help_url: "https://www.revenue.ie/en/contact-us/index.aspx"
+    apply_url: "https://www.revenue.ie/en/online-services/services/myaccount/register-for-myaccount.aspx"
+    rights_url: "https://www.revenue.ie/en/corporate/information-about-revenue/appeals/how-to-make-an-appeal.aspx"
+    notes: "PAYE tax credits, reliefs and refunds are handled in myAccount; to register you need your PPSN, date of birth, phone number, email and home address. To appeal an assessment or decision you send a notice of appeal form to the Tax Appeals Commission with a copy of the Revenue notice — generally within 30 days of the date on it, and usually only after your return is filed and any undisputed tax is paid."
+  - name: Department of Social Protection
+    type: government
+    help_url: "https://www.gov.ie/en/organisation/department-of-social-protection/"
+    apply_url: "https://services.mywelfare.ie/"
+    rights_url: "https://www.citizensinformation.ie/en/social-welfare/irish-social-welfare-system/social-welfare-appeals/"
+    notes: "Payments, contribution statements, PRSI refunds and appeals are applied for on MyWelfare with a verified MyGovID. If you are refused you can ask the Department to review the decision or appeal to the independent Social Welfare Appeals Office — 60 days from the decision letter for letters dated on or after 28 April 2025, 21 days for earlier ones, with an extension possible for good reason."
+  - name: Health Service Executive
+    type: government
+    help_url: "https://www2.hse.ie/services/schemes-allowances/medical-cards/"
+    phone: "1800 700 700"
+    notes: "A medical card covers GP visits, prescription medicines and hospital care free of charge, and is means tested. The same section covers applying, checking your application status, and renewing or updating an existing card. The HSE live helpline is open Monday to Friday 8am to 8pm and Saturday 9am to 5pm, or 00 353 1 240 8787 from outside Ireland."
+  - name: SUSI
+    type: government
+    help_url: "https://www.susi.ie/contact-susi/"
+    apply_url: "https://www.susi.ie/how-to-apply/"
+    rights_url: "https://www.susi.ie/applications-in-progress-next-steps/appeal-your-grant-decision/"
+    phone: "0818 888 777"
+    notes: "Student grants are applied for once per academic year and renewed each year. If you disagree with the outcome you can first ask for a review of the grant decision and then appeal it. The support desk is open Monday to Friday 9.00am to 5.30pm, or +353 1 966 3132 from abroad."
+  - name: Citizens Information
+    type: government
+    help_url: "https://www.citizensinformation.ie/en/"
+    rights_url: "https://www.citizensinformation.ie/en/consumer/consumer-laws/your-consumer-rights/"
+    phone: "0818 07 4000"
+    notes: "The state-funded reference point for what you are entitled to across welfare, health, tax, housing and consumer law. On distance and off-premises contracts the cooling-off period ends 14 days after you receive the goods or service, and for doorstep sales you have 30 days from when the contract was agreed to cancel. The phone service runs Monday to Friday, 9am to 8pm."
+  - name: Residential Tenancies Board
+    type: government
+    help_url: "https://rtb.ie/contact-us/"
+    apply_url: "https://rtb.ie/disputes/"
+    rights_url: "https://rtb.ie/renting/rights-responsibilities/tenant-rights-responsibilities/"
+    phone: "0818 30 30 37"
+    notes: "The RTB registers tenancies and resolves disputes over deposits, rent, notices of termination and standards, through mediation, adjudication and tribunals. Security deposits have statutory rules on when a landlord may withhold money. Phone lines and webchat run Monday to Friday 9am to 5pm; the other numbers are 0818 30 30 43 and 01 702 8100."

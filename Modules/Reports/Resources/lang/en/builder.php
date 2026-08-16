@@ -114,20 +114,17 @@ return [
 
     'filter' => [
         'account' => 'Account',
-        'account_one' => ':count account',
-        'account_other' => ':count accounts',
+        'account_count' => ':count account|:count accounts',
         'remove_account' => 'Remove account filter',
         'account_dialog' => 'Account filter',
 
         'category' => 'Category',
-        'category_one' => ':count category',
-        'category_other' => ':count categories',
+        'category_count' => ':count category|:count categories',
         'remove_category' => 'Remove category filter',
         'category_dialog' => 'Category filter',
 
         'counterparty' => 'Counterparty',
-        'counterparty_one' => ':count counterparty',
-        'counterparty_other' => ':count counterparties',
+        'counterparty_count' => ':count counterparty|:count counterparties',
         'remove_counterparty' => 'Remove counterparty filter',
         'counterparty_dialog' => 'Counterparty filter',
 

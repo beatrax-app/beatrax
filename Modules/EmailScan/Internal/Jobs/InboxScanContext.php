@@ -31,6 +31,13 @@ final readonly class InboxScanContext
         private int $userId,
     ) {}
 
+    // Read by the job to bind the guard before any API client runs; the
+    // property itself stays private so nothing else re-scopes off it.
+    public function userId(): int
+    {
+        return $this->userId;
+    }
+
     public function alreadyIndexed(string $messageId): bool
     {
         // Skips a message already fetched+indexed before any provider

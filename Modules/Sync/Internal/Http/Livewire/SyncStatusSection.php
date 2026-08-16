@@ -11,6 +11,7 @@ use Livewire\Component;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Support\Lang;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncStatusService;
 
 /**
@@ -40,13 +41,48 @@ final class SyncStatusSection extends Component
         CurrentUser $currentUser,
         SyncStatusService $statusService,
         Clock $clock,
+        DeviceRegistryService $devices,
     ): void {
         $userId = $currentUser->user()->id;
         $now = $clock->now();
 
-        $this->peerStatuses = $this->buildPeerViewModels($statusService->peerStatuses($userId), $now);
+        // A row named by its raw UUID tells the reader nothing about which
+        // machine it is. The registry knows the names; a session whose device
+        // is gone gets an honest label instead of 36 hex characters.
+        $this->peerStatuses = $this->buildPeerViewModels(
+            $statusService->peerStatuses($userId),
+            $now,
+            $devices->otherDeviceNames($userId),
+        );
         $this->overallStatus = $statusService->overallStatus($userId);
         $this->lastSyncedHuman = $statusService->lastSyncedHuman($now, $userId);
+    }
+
+    // Removes one recorded session and re-reads the surface, so the row and
+    // any error it was holding disappear in the same round trip.
+    public function dismissPeer(
+        string $peerDeviceId,
+        CurrentUser $currentUser,
+        SyncStatusService $statusService,
+        Clock $clock,
+        DeviceRegistryService $devices,
+    ): void {
+        $statusService->forgetSession($currentUser->user()->id, $peerDeviceId);
+
+        $this->mount($currentUser, $statusService, $clock, $devices);
+    }
+
+    // Clears every session with no device behind it — the state a user lands
+    // in after removing a peer, where the list still shows raw UUIDs.
+    public function dismissStale(
+        CurrentUser $currentUser,
+        SyncStatusService $statusService,
+        Clock $clock,
+        DeviceRegistryService $devices,
+    ): void {
+        $statusService->forgetOrphanedSessions($currentUser->user()->id);
+
+        $this->mount($currentUser, $statusService, $clock, $devices);
     }
 
     public function render(ViewFactory $views): View
@@ -57,9 +93,10 @@ final class SyncStatusSection extends Component
     /**
      * @param  array<int, \stdClass>  $rows
      * @param  CarbonImmutable  $now  Reference point for relative time.
+     * @param  array<string, string>  $deviceNames  device_id => display name.
      * @return list<array<string, mixed>>
      */
-    private function buildPeerViewModels(array $rows, CarbonImmutable $now): array
+    private function buildPeerViewModels(array $rows, CarbonImmutable $now, array $deviceNames = []): array
     {
         $viewModels = [];
 
@@ -80,6 +117,9 @@ final class SyncStatusSection extends Component
 
             $viewModels[] = [
                 'peer_device_id' => $peerDeviceId,
+                'display_name' => $deviceNames[$peerDeviceId]
+                    ?? Lang::get('sync::status.unknown_device'),
+                'is_known' => isset($deviceNames[$peerDeviceId]),
                 'status' => $status,
                 'error_message' => $errorMessage,
                 'last_seen_at' => $lastSeenAt,

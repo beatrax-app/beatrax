@@ -10,8 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Prognose wordt bijgewerkt…',
-        'risk_one' => 'Saldo daalt onder € 0 op :date.',
-        'risk_many' => 'Saldo daalt onder € 0 op :count dagen — eerste: :date.',
+        'risk' => 'Saldo daalt onder € 0 op :date.|Saldo daalt onder € 0 op :count dagen — eerste: :date.',
     ],
 
     'toolbar' => [
@@ -48,8 +47,7 @@ return [
     ],
 
     'cell' => [
-        'entry_one' => 'betaling',
-        'entry_many' => 'betalingen',
+        'entry' => 'betaling|betalingen',
         'aria' => ':date: :count :entries',
         'aria_balance_negative' => ', verwacht saldo min €:amount',
         'aria_balance_positive' => ', verwacht saldo €:amount',

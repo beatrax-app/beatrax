@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Редактирай правилото',
+    'heading_new' => 'Ново правило',
+
+    'combinator_aria' => 'Комбинатор на условия',
+    'match_all' => 'Съвпадение с всички условия',
+    'match_any' => 'Съвпадение с което и да е условие',
+
+    'condition_label' => 'Условие :number',
+    'condition_field_aria' => 'Поле на условие :number',
+    'condition_operator_aria' => 'Оператор на условие :number',
+    'condition_value_aria' => 'Стойност на условие :number',
+    'condition_value_from_aria' => 'Стойност на условие :number (от)',
+    'condition_value_to_aria' => 'Стойност на условие :number (до)',
+    'to' => 'до',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'напр. SPOTIFY',
+    'remove_condition' => 'Премахни условието',
+    'add_condition' => '+ Добави условие',
+
+    'then' => 'Тогава',
+    'action_label' => 'Действие :number',
+    'action_type_aria' => 'Тип на действие :number',
+    'action_category' => 'Категория',
+    'action_counterparty' => 'Контрагент',
+    'action_note' => 'Бележка',
+    'action_tax_tag' => 'Данъчен етикет',
+    'assign_category_aria' => 'Задай категория за действие :number',
+    'reassign_counterparty_aria' => 'Преназначи контрагент за действие :number',
+    'note_text_aria' => 'Текст на бележката за действие :number',
+    'note_placeholder' => 'Текст на бележката…',
+    'note_mode_aria' => 'Режим на бележката за действие :number',
+    'note_set' => 'Задай',
+    'note_append' => 'Добави накрая',
+    'deduction_category_aria' => 'Категория на облекчението за действие :number',
+    'remove_action' => 'Премахни действието',
+    'add_action' => '+ Добави действие',
+
+    'this_year_only' => 'Само тази година ▾',
+    'override_tax_year' => 'Замени данъчната година',
+    'tax_year_override_aria' => 'Замяна на данъчната година за действие :number',
+    'tax_tag_note' => 'Действията с данъчен етикет се прилагат при следващото повторно прилагане, а не при текущия импорт.',
+
+    'priority' => 'Приоритет',
+    'priority_help' => 'По-малките числа се изпълняват първи. Правила без общи полета никога не влизат в конфликт.',
+
+    'cancel' => 'Отказ',
+    'save_changes' => 'Запази промените',
+    'save_rule' => 'Запази правилото',
+    'saving' => 'Запазване…',
+
+    'error_rule_unavailable' => 'Това правило вече не е достъпно.',
+    'error_invalid_data' => 'Невалидни данни за правилото — избери от падащите списъци и опитай отново.',
+    'error_duplicate' => 'Вече съществува правило с това поле, съвпадение и стойност. Вместо това редактирай съществуващото правило.',
+    'error_priority_whole' => 'Приоритетът трябва да е цяло число.',
+    'error_add_condition' => 'Добави поне едно условие.',
+    'error_add_action' => 'Добави поне едно действие.',
+    'condition_value_required' => 'Въведи стойност за условие :position.',
+    'condition_bounds_required' => 'Избери долна и горна граница за условие :position.',
+    'condition_amount_invalid' => 'Въведи валидна сума за условие :position.',
+    'action_pick_category' => 'Избери категория за това действие.',
+    'action_pick_counterparty' => 'Избери контрагент, към когото да се преназначи.',
+    'action_note_required' => 'Въведи текст на бележката.',
+    'action_pick_deduction' => 'Избери категория на данъчното облекчение за етикета.',
+];

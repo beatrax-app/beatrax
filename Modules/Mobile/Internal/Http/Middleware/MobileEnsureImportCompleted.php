@@ -21,6 +21,9 @@ final readonly class MobileEnsureImportCompleted
     // Every surface the abandoned ceremony itself needs, plus the escape
     // hatches a stuck user must always keep. Prefix-matched, mirroring
     // MobileEnsureDatabaseReady's own exempt list.
+
+    // sync.index is deliberately NOT here: exempting the app's settings page
+    // let an unfinished setup land there instead of returning to the wizard.
     /** @var array<int, string> */
     private const EXEMPT_ROUTE_PREFIXES = [
         'mobile.pair',
@@ -30,7 +33,6 @@ final readonly class MobileEnsureImportCompleted
         'mobile.welcome',
         'auth.lock',
         'logout',
-        'sync.index',
     ];
 
     // The Livewire AJAX endpoint drives the pairing and setup screens

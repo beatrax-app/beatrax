@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Uredi pravilo',
+    'heading_new' => 'Novo pravilo',
+
+    'combinator_aria' => 'Kombinator uvjeta',
+    'match_all' => 'Podudaranje sa svim uvjetima',
+    'match_any' => 'Podudaranje s bilo kojim uvjetom',
+
+    'condition_label' => 'Uvjet :number',
+    'condition_field_aria' => 'Polje uvjeta :number',
+    'condition_operator_aria' => 'Operator uvjeta :number',
+    'condition_value_aria' => 'Vrijednost uvjeta :number',
+    'condition_value_from_aria' => 'Vrijednost uvjeta :number (od)',
+    'condition_value_to_aria' => 'Vrijednost uvjeta :number (do)',
+    'to' => 'do',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'npr. SPOTIFY',
+    'remove_condition' => 'Ukloni uvjet',
+    'add_condition' => '+ Dodaj uvjet',
+
+    'then' => 'Tada',
+    'action_label' => 'Radnja :number',
+    'action_type_aria' => 'Vrsta radnje :number',
+    'action_category' => 'Kategorija',
+    'action_counterparty' => 'Protustranka',
+    'action_note' => 'Bilješka',
+    'action_tax_tag' => 'Porezna oznaka',
+    'assign_category_aria' => 'Dodijeli kategoriju za radnju :number',
+    'reassign_counterparty_aria' => 'Promijeni protustranku za radnju :number',
+    'note_text_aria' => 'Tekst bilješke za radnju :number',
+    'note_placeholder' => 'Tekst bilješke…',
+    'note_mode_aria' => 'Način bilješke za radnju :number',
+    'note_set' => 'Postavi',
+    'note_append' => 'Dodaj na kraj',
+    'deduction_category_aria' => 'Kategorija odbitka za radnju :number',
+    'remove_action' => 'Ukloni radnju',
+    'add_action' => '+ Dodaj radnju',
+
+    'this_year_only' => 'Samo ova godina ▾',
+    'override_tax_year' => 'Postavi drugu poreznu godinu',
+    'tax_year_override_aria' => 'Druga porezna godina za radnju :number',
+    'tax_tag_note' => 'Radnje porezne oznake primjenjuju se pri sljedećoj ponovnoj primjeni, a ne pri trenutnom uvozu.',
+
+    'priority' => 'Prioritet',
+    'priority_help' => 'Manji brojevi izvršavaju se prvi. Pravila bez zajedničkih polja nikad se ne sukobljavaju.',
+
+    'cancel' => 'Odustani',
+    'save_changes' => 'Spremi promjene',
+    'save_rule' => 'Spremi pravilo',
+    'saving' => 'Spremanje…',
+
+    'error_rule_unavailable' => 'To pravilo više nije dostupno.',
+    'error_invalid_data' => 'Neispravni podaci pravila — odaberi vrijednosti s padajućih popisa i pokušaj ponovno.',
+    'error_duplicate' => 'Pravilo s ovim poljem, podudaranjem i vrijednošću već postoji. Umjesto toga uredi postojeće pravilo.',
+    'error_priority_whole' => 'Prioritet mora biti cijeli broj.',
+    'error_add_condition' => 'Dodaj barem jedan uvjet.',
+    'error_add_action' => 'Dodaj barem jednu radnju.',
+    'condition_value_required' => 'Unesi vrijednost za uvjet :position.',
+    'condition_bounds_required' => 'Odaberi donju i gornju granicu za uvjet :position.',
+    'condition_amount_invalid' => 'Unesi valjani iznos za uvjet :position.',
+    'action_pick_category' => 'Odaberi kategoriju za ovu radnju.',
+    'action_pick_counterparty' => 'Odaberi protustranku na koju ćeš prebaciti.',
+    'action_note_required' => 'Unesi tekst bilješke.',
+    'action_pick_deduction' => 'Odaberi kategoriju odbitka za poreznu oznaku.',
+];

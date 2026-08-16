@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'banner_aria' => 'Systémová upozornění',
+
+    'actions' => [
+        'install_next_launch' => 'Nainstalovat při příštím spuštění',
+        'install_next_launch_aria' => 'Nainstalovat při příštím spuštění — označí systémové upozornění #:id jako vyřešené',
+        'skip_version' => 'Přeskočit tuto verzi',
+        'release_notes' => 'Poznámky k vydání →',
+        'update_now' => 'Aktualizovat teď',
+        'update_now_aria' => 'Aktualizovat teď — označí systémové upozornění #:id jako vyřešené',
+        'remind_later' => 'Připomenout později',
+        'mark_resolved' => 'Označit jako vyřešené',
+        'mark_resolved_aria' => 'Označit jako vyřešené — systémové upozornění #:id',
+    ],
+
+    'messages' => [
+        'update_available' => 'Je dostupná aktualizace — Beatrax :version je připravený. Nainstaluje se při příštím spuštění.',
+        'update_stale' => 'Máš verzi :current — verze :latest je dostupná už 30 dní. Aktualizuj teď.',
+        'update_critical' => 'Je dostupná kritická aktualizace — verze :version opravuje: :summary. Nainstaluj ji co nejdřív.',
+        'backup_corrupt_with_path' => 'Záloha zapsaná v :timestamp neprošla kontrolou integrity. Podívej se na :path. Vyřeš to dřív, než se na zálohy spolehneš.',
+        'backup_corrupt_no_path' => 'Záloha spuštěná v :timestamp skončila dřív, než vznikl jakýkoli soubor — zdrojová databáze neprošla kontrolou integrity. Vyřeš to dřív, než se na zálohy spolehneš.',
+
+        'backup_overdue' => 'Nejnovější ověřená záloha je :hoursh stará. Spusť <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan db:backup</code> nebo počkej na plánované spuštění ve 03:00.',
+        'wal_mode_missing' => 'SQLite není v režimu WAL (aktuálně :mode). Souběžné zápisy se mohou zasekávat. Pokyny získáš spuštěním <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>.',
+        'synchronous_misconfigured' => 'Úroveň synchronous v SQLite je :level (očekává se NORMAL/1). Záruky trvanlivosti se mohou lišit od konfigurace. Pokyny získáš spuštěním <code class="rounded bg-amber-100 px-1 text-amber-900 dark:bg-amber-900 dark:text-amber-200">php artisan Beatrax:doctor</code>.',
+        'reconnect_link' => 'Znovu připojit →',
+    ],
+];

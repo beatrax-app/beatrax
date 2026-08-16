@@ -1,0 +1,148 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'groups' => [
+        'display' => 'Näkymä',
+        'money' => 'Raha',
+        'insights' => 'Havainnot ja hälytykset',
+        'security' => 'Turvallisuus ja laitteet',
+        'data' => 'Tuonnit ja tiedot',
+        'app' => 'Sovellus',
+    ],
+
+    'title' => 'Asetukset',
+    'subtitle' => 'Asetukset sille, miten taloutesi näkyy sovelluksessa.',
+
+    'appearance' => [
+        'heading' => 'Ulkoasu',
+        'theme' => 'Teema',
+        'theme_light' => 'Vaalea',
+        'theme_dark' => 'Tumma',
+        'theme_system' => 'Järjestelmä',
+        'theme_help' => 'Järjestelmä seuraa käyttöjärjestelmäsi vaaleaa tai tummaa asetusta.',
+    ],
+
+    'language' => [
+        'apply' => 'Ota käyttöön',
+        'heading' => 'Kieli',
+        'label' => 'Käyttöliittymän kieli',
+
+        'system' => 'Järjestelmä',
+        'help' => 'Järjestelmä seuraa selaimesi tai käyttöjärjestelmäsi kieltä ja käyttää oletuksena englantia.',
+    ],
+
+    'currency_display' => [
+        'heading' => 'Valuutan näyttö',
+        'label' => 'Oletusnäkymä tapahtumalistalla',
+        'eur_only' => 'Vain EUR',
+        'original' => 'Alkuperäinen valuutta',
+        'help' => 'Voit silti vaihtaa näkymää sivukohtaisesti tapahtumalistalla.',
+    ],
+
+    'base_currency' => [
+        'heading' => 'Raportointivaluutta',
+        'label' => 'Raportointivaluutta',
+        'help' => 'Kaikki summat ja koosteet muunnetaan tähän valuuttaan. Jokainen tili näyttää silti rinnalla oman alkuperäisen valuuttansa.',
+    ],
+
+    'exchange_rates' => [
+        'heading' => 'Valuuttakurssit',
+        'fetch_online' => 'Hae ajantasaiset kurssit verkosta',
+        'online_on' => 'Kurssit haetaan päivittäin lähteestä ECB. Vain valuuttaparien haut — ei henkilötietoja.',
+        'last_updated' => 'Päivitetty viimeksi: :date.',
+        'online_off' => 'Käytössä ovat mukana toimitetut kurssit. Mitään tietoja ei poistu tältä laitteelta.',
+        'fetch_aria' => 'Hae ajantasaiset valuuttakurssit verkosta',
+        'refreshing' => 'Päivitetään…',
+        'next_refresh' => 'Seuraava automaattinen päivitys: päivittäin klo 09:00',
+        'refresh_now' => 'Päivitä nyt',
+    ],
+
+    'period' => [
+        'heading' => 'Jakso',
+        'label' => 'Jakso alkaa päivänä',
+        'help' => 'Numeroitu 1–28. Useimmat pitävät tämän arvossa 1 (kalenterikuukausi). Käytä arvoa 25, jos palkkasi maksetaan 25. päivä ja ajattelet oman kuukautesi alkavan silloin.',
+    ],
+
+    'recurring' => [
+        'heading' => 'Toistuvien tunnistus',
+        'window_label' => 'Tunnistusikkuna (kuukautta)',
+        'window_help' => 'Kuinka monen kuukauden historia käydään läpi, kun tapahtumia ryhmitellään toistuviksi kaavoiksi.',
+        'income_label' => 'Tulojen vähimmäismäärä (senttiä)',
+        'income_help' => 'Tätä rajaa pienempiä tuloja ei ryhmitellä automaattisesti. Tallennetaan sentteinä — 200000 tarkoittaa 2 000,00 €. Poista raja käytöstä asettamalla arvoksi 0.',
+    ],
+
+    'drift' => [
+        'heading' => 'Hinnanmuutoshälytykset',
+        'label' => 'Hinnanmuutoshälytyksen oletusraja',
+        'help' => 'Hälytys laukeaa, kun toistuvan veloituksen viimeisin summa poikkeaa edellisestä enemmän kuin tämän prosenttiosuuden verran. Sarjakohtaiset asetukset menevät tämän edelle.',
+        'options' => [
+            '1' => '±1%',
+            '2' => '±2%',
+            '5' => '±5% (oletus)',
+            '10' => '±10%',
+            '25' => '±25%',
+            '50' => '±50%',
+        ],
+    ],
+
+    'save' => 'Tallenna asetukset',
+    'saved' => 'Tallennettu.',
+
+    'anomaly_heading' => 'Poikkeamien tunnistus',
+    'notifications_heading' => 'Ilmoitukset',
+
+    'forecasting' => [
+        'heading' => 'Ennustaminen',
+        'intro' => 'Beatrax ennustaa saldosi kehityksen tiliesi nykytilasta eteenpäin. Aseta tässä alkusaldo tileille, joilla ei ole tiliotteen saldoa (PayPal, vanhat CSV-tuonnit), jotta ennusteet lähtevät tunnetusta pisteestä.',
+        'no_accounts' => 'Ei vielä tilejä — lisää tili tuomalla tiliote.',
+    ],
+
+    'auto_import' => [
+        'heading' => 'Automaattinen tuonti',
+        'label' => 'Automaattinen tuonti pudotuskansiosta',
+
+        'active_html' => 'Pudotuskansio on käytössä. Beatrax etsii uusia tiedostoja kansiosta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> viiden minuutin välein.',
+        'inactive_html' => 'Kun tämä on päällä, Beatrax etsii kansiosta <code class="font-mono text-slate-700 dark:text-slate-300">storage/app/inbox-drop/:userId/</code> viiden minuutin välein <code class="font-mono text-slate-700 dark:text-slate-300">.eml</code>- ja <code class="font-mono text-slate-700 dark:text-slate-300">.mbox</code>-tiedostoja ja tuo ne saman tunnistinputken kautta kuin ohjattu tuonti. Käsitellyt tiedostot siirtyvät kansioon <code class="font-mono text-slate-700 dark:text-slate-300">/processed/{YYYY-MM}/</code>, jottei niitä koskaan tuoda kahdesti.',
+    ],
+
+    'aliases' => [
+        'heading' => 'Aliakset',
+        'intro' => 'Tarkastele ja muokkaa selkeitä nimiä, jotka olet opettanut Beatraxille kryptisille tiliotekuvauksille.',
+        'manage' => 'Hallitse aliaksia →',
+    ],
+
+    'tax_heading' => 'Verot',
+    'shared_merchant_heading' => 'Jaettu kauppiaslista',
+    'data_backup_heading' => 'Tiedot ja varmuuskopiot',
+    'install_heading' => 'Asennus',
+
+    'about_updates' => [
+        'heading' => 'Tietoa päivityksistä',
+        'body' => 'Beatrax päivittää itsensä automaattisesti asennuksen jälkeen. Kun olet asentanut aivan ensimmäisen version, tulevat versiot saapuvat sovelluksen sisäisellä ilmoituspalkilla — GitHubiin ei tarvitse palata. Jos jokin tuleva päivitys ei asennu, voit aina ladata uusimman asennusohjelman käsin julkaisusivulta.',
+        'open_releases' => 'Avaa julkaisusivu →',
+    ],
+
+    'first_run_tour' => [
+        'heading' => 'Aloituskierros',
+        'body' => 'Käynnistä ohjattu käyttöönotto uudelleen, jos haluat käydä esittelyn läpi uudestaan.',
+        'run_again' => 'Käynnistä ohjattu käyttöönotto uudelleen',
+    ],
+
+    'developer' => [
+        'heading' => 'Kehittäjä',
+        'label' => 'Sovelluksen sisäinen kehityskonsoli',
+        'help' => 'Näytä kehityskonsoli osoitteessa /dev. Nollaa Lisäasetukset-valinnan jokaisella kirjautumisella.',
+        'aria' => 'Kehitystila',
+    ],
+
+    'errors' => [
+        'currency_required' => 'Valitse valuutta.',
+        'window_months' => 'Valitse 2–60 kuukautta.',
+        'threshold' => 'Valitse raja vaihtoehdoista 1%, 2%, 5%, 10%, 25% tai 50%.',
+        'amount' => 'Anna summa, joka on vähintään 0 €.',
+        'period_day' => 'Valitse päivä väliltä 1–28.',
+        'currency_view' => 'Valitse jokin käytettävissä olevista vaihtoehdoista.',
+    ],
+];

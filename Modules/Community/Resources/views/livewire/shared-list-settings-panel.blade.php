@@ -1,26 +1,22 @@
 @use('Modules\Core\Public\Support\Lang')
-{{-- Settings → Shared merchant list panel.
+{{-- Community → Shared merchant list panel.
 
-     Two-column 280px + 1fr grid (collapses to a single column on
-     narrow viewports). The meta-side renders the "About the shared
-     list" headline + stats; the body-side renders three toggle rows.
+     Renders flat: the Community page provides the card, so this draws no
+     box of its own. The stats ride under the intro as a caption; the body
+     side renders three toggle rows.
      Toggle 3 ships disabled with a version-agnostic inline note —
      no invented release number; the note flips to an active state
      when the auto-update plumbing lands. --}}
 
-<div class="settings-section grid grid-cols-1 gap-6 border-b border-slate-200 py-6 md:grid-cols-[280px_1fr] dark:border-slate-700">
-    <aside class="meta-side rounded-md bg-slate-50 px-5 py-5 text-sm text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('community::settings.about_heading') }}</h2>
-        <p class="mt-2 text-sm">
+<div class="space-y-6">
+    {{-- No card of its own: this panel sits inside the Community page's card,
+         and wrapping the intro in a second grey box read as a box in a box.
+         The stats sit inline as a caption rather than in a sidebar. --}}
+    <div class="space-y-2">
+        <p class="max-w-prose text-sm text-slate-500 dark:text-slate-400">
             {{ Lang::get('community::settings.about_body') }}
         </p>
-        <dl class="mt-4 grid grid-cols-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-            <dt>{{ Lang::get('community::settings.mappings') }}</dt>
-            <dd class="text-right" style="font-variant-numeric: tabular-nums;">{{ $mappingsCount }}</dd>
-            <dt>{{ Lang::get('community::settings.contributors') }}</dt>
-            <dd class="text-right" style="font-variant-numeric: tabular-nums;">{{ $contributorCount }}</dd>
-        </dl>
-    </aside>
+    </div>
 
     <div class="body-side space-y-1">
         <div class="toggle-row flex items-start justify-between gap-4 border-b border-slate-200 py-3 dark:border-slate-700">

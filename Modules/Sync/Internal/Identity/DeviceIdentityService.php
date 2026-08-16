@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Identity;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Auth\Public\Services\AppLockKeyService;
@@ -12,6 +13,7 @@ use Modules\Core\Public\Contracts\FileEncryptor;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\SodiumPrimitives;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Ramsey\Uuid\Uuid;
 use SodiumException;
 
@@ -27,6 +29,7 @@ final class DeviceIdentityService
         private readonly Clock $clock,
         private readonly DeviceNameDetector $nameDetector,
         private readonly SodiumPrimitives $sodium,
+        private readonly Dispatcher $events,
     ) {}
 
     // Generates the device identity, encrypts the key-file, and persists the
@@ -87,7 +90,9 @@ final class DeviceIdentityService
             SecureTempFile::write($tmpPath, $payload);
 
             try {
-                $this->backupEncryptor->encrypt($tmpPath, $encPath, $kek);
+                // The KEK is a random key, not a passphrase, so password
+                // hardening buys nothing — see FileEncryptor::encryptWithKey.
+                $this->backupEncryptor->encryptWithKey($tmpPath, $encPath, $kek);
             } finally {
                 @unlink($tmpPath);
             }
@@ -110,6 +115,11 @@ final class DeviceIdentityService
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt,
             ]);
+
+            // This row IS the "sync is on" signal the desktop boot hook reads,
+            // so announce it: a device that enables sync mid-session must
+            // become reachable without waiting for a restart.
+            $this->events->dispatch(new DeviceSyncEnabled($userId));
 
             return $dto;
         } catch (SodiumException $e) {

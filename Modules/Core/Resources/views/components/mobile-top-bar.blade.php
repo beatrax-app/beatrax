@@ -38,19 +38,21 @@
         </button>
     @endif
 
-    {{-- Brand mark, matching the sidebar's own `.side-brand` logo so the two
-         nav surfaces present the same identity rather than the drawer having
-         a logo and the bar only a word. --}}
-    <img
-        src="{{ Vite::asset('resources/brand/logo.svg') }}"
-        alt=""
-        width="20"
-        height="20"
-        class="top-bar-logo"
-        aria-hidden="true"
-    />
+    {{-- Mark and name as ONE unit. The title centres itself across the free
+         space, so a logo left loose beside it stayed pinned against the
+         hamburger and read as part of the menu button. --}}
+    <span class="top-bar-brand">
+        <img
+            src="{{ Vite::asset('resources/brand/logo.svg') }}"
+            alt=""
+            width="20"
+            height="20"
+            class="top-bar-logo"
+            aria-hidden="true"
+        />
 
-    <span class="top-bar-title">{{ $resolvedTitle }}</span>
+        <span class="top-bar-title">{{ $resolvedTitle }}</span>
+    </span>
 
     {{-- One palette/search affordance, not two: this bar used to render a
          separate "palette" and "search" button that carried the same ⌕ glyph
@@ -63,6 +65,19 @@
         aria-label="{{ Lang::get('core::components.topbar.search_transactions') }}"
         x-on:click="window.Livewire && window.Livewire.dispatch('palette:open')"
     >
-        <span aria-hidden="true">⌕</span>
+        {{-- An SVG, not the ⌕ glyph: at the same 22px the character renders
+             13px wide against the hamburger's 19px, so the control looked
+             smaller than its neighbour. Font metrics for that codepoint vary
+             by platform, which a drawn icon does not. --}}
+        <svg
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+        >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
+        </svg>
     </button>
 </header>

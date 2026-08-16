@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'eyebrow' => 'Peržiūra ir įrašymas',
+    'h1' => 'Peržiūrėk viską, ką radome',
+
+    'lede_across' => 'operacijų iš',
+    'source' => 'šaltinio|šaltinių|šaltinių',
+    'lede_confirm' => 'Patvirtink pradinius likučius ir įrašyk.',
+
+    'empty' => 'Kol kas nėra ko peržiūrėti. Ankstesniuose žingsniuose įkelk išrašą, kad čia matytum savo operacijas.',
+
+    'sb_eyebrow_label' => '🧮 PRADINIAI LIKUČIAI ·',
+    'account_detected' => 'APTIKTA SĄSKAITA|APTIKTOS SĄSKAITOS|APTIKTA SĄSKAITŲ',
+    'sb_lede' => 'Nustatėme kiekvienos sąskaitos pradinį likutį. Prieš įrašydamas patvirtink arba pataisyk.',
+
+    'txn' => 'operacija|operacijos|operacijų',
+    'to_commit' => 'bus įrašyta ·',
+    'already_imported' => 'jau importuota',
+    'commit_committing' => 'Įrašoma…',
+    'commit_count' => 'Įrašyti viską (operacijų: :count) →',
+    'commit_empty' => 'Įrašyti viską (—) →',
+
+    'errors' => [
+        'nothing_to_commit' => 'Nėra ko įrašyti.',
+        'commit_failed' => 'Nepavyko įrašyti tavo išrašų. Niekas nepakeista — bandyk dar kartą.',
+    ],
+
+    'section' => [
+        'from_prefix' => 'IŠ ',
+        'from_bank' => 'IŠ TAVO BANKO IŠRAŠO',
+        'from_ics' => 'IŠ TAVO ICS KORTELĖS IŠRAŠŲ',
+        'from_paypal' => 'IŠ PAYPAL',
+        'row' => 'EILUTĖ|EILUTĖS|EILUČIŲ',
+        'badge_ready' => '✓ PARUOŠTA',
+        'badge_empty' => 'TUŠČIA',
+        'badge_error' => 'REIKIA ĮKELTI IŠ NAUJO',
+        'badge_filtered' => 'JAU IMPORTUOTA',
+        'error_body' => 'Nepavyko perskaityti visų šio šaltinio failų. Pabandyk kitą failą →',
+        'empty_body' => 'Šis išrašas tuščias.',
+        'filtered_body' => 'Šis išrašas jau importuotas kitur — jo neįtraukėme.',
+        'col_date' => 'Data',
+        'col_type' => 'Tipas',
+        'col_counterparty' => 'Kita šalis',
+        'col_amount' => 'Suma',
+        'load_more' => 'Įkelti daugiau (liko :remaining)',
+        'rows_shown' => 'Rodoma eilučių: :count',
+    ],
+];

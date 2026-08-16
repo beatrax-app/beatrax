@@ -22,6 +22,21 @@ use SodiumException;
  */
 final class GdkKeyringService
 {
+    // Wide enough that two distinct KEKs cannot collide onto one cache entry;
+    // this is a lookup key, not a security boundary.
+    private const CACHE_FINGERPRINT_BYTES = 16;
+
+    // Above this, the keyring file was written with password-hardening cost
+    // and is worth re-writing once. Deliberately a threshold rather than an
+    // equality check on the current setting, so tuning the write cost never
+    // turns into a re-write loop.
+    private const CHEAP_READ_MEMLIMIT = 1048576;
+
+    // Decrypted keyrings for this process, keyed by user + KEK fingerprint
+    // so a withheld or rotated key can never resolve to a cached entry.
+    /** @var array<string, GdkKeyring> */
+    private array $keyringCache = [];
+
     // Every keyring read/write HARD-throws \LogicException when the KEK is
     // null — the keyring is never touched under anything weaker than the
     // app-lock key. NO key material is ever written to
@@ -141,10 +156,62 @@ final class GdkKeyringService
         }
 
         try {
-            return $this->readKeyringFile($userId, $kek);
+            // SensitiveColumnCodec calls this once per decrypted VALUE, so a
+            // 164-row page paid 164 key derivations — minutes in libsodium,
+            // blowing max_execution_time and wedging the single-threaded
+            // desktop server for every other request.
+            $fingerprint = $this->keyringCacheKey($userId, $kek);
+
+            if (isset($this->keyringCache[$fingerprint])) {
+                return $this->keyringCache[$fingerprint];
+            }
+
+            $keyring = $this->readKeyringFile($userId, $kek);
+            $this->rewriteIfCostlyToRead($userId, $keyring, $kek);
+
+            return $this->keyringCache[$fingerprint] = $keyring;
         } finally {
             sodium_memzero($kek);
         }
+    }
+
+    // Re-writes a keyring that was encrypted with password-hardening cost, so
+    // an existing install stops paying ~500ms per read. Opportunistic: the
+    // keyring already decrypted fine, so a failure here must never turn a
+    // successful load into an error.
+    private function rewriteIfCostlyToRead(int $userId, GdkKeyring $keyring, string $kek): void
+    {
+        if ($keyring->epochs() === []) {
+            return;
+        }
+
+        try {
+            [, $memlimit] = $this->backupEncryptor->kdfParams($this->keyringPath($userId));
+
+            if ($memlimit <= self::CHEAP_READ_MEMLIMIT) {
+                return;
+            }
+
+            $this->writeKeyringFile($userId, $keyring, $kek);
+        } catch (\Throwable) {
+            // Left at the old cost. The next write upgrades it, and the
+            // in-process cache means this load still pays it only once.
+        }
+    }
+
+    // Keyed by the KEK itself, never by user alone: a withheld key never
+    // reaches this method (release() returns null and the caller throws), and
+    // a rotated or re-wrapped key yields a different entry rather than
+    // resolving to a stale keyring.
+    private function keyringCacheKey(int $userId, string $kek): string
+    {
+        // Plain bin2hex, NOT the injectable SodiumPrimitives: this is an array
+        // key, not crypto, and routing it through the seam put a failure point
+        // ahead of the translation that turns libsodium errors into
+        // CryptoOperationFailedException.
+        return $userId.':'.bin2hex(
+            sodium_crypto_generichash($kek, '', self::CACHE_FINGERPRINT_BYTES),
+        );
     }
 
     // Appends $epoch to the keyring WITHOUT discarding any prior epoch,
@@ -165,6 +232,30 @@ final class GdkKeyringService
             $this->setCurrentEpoch($userId, $epoch->epochId);
         } catch (SodiumException $e) {
             throw CryptoOperationFailedException::during('GDK epoch append', $e);
+        } finally {
+            sodium_memzero($kek);
+        }
+    }
+
+    // Swaps the key held for $epoch->epochId, re-encrypts atomically, and
+    // leaves current_epoch where it is. Reserved for adopting the group's
+    // authoritative epoch over a local one that decrypts nothing — the
+    // caller proves that before calling.
+    /**
+     * @throws \LogicException when the app-lock KEK is unavailable.
+     */
+    public function replaceEpoch(int $userId, GdkEpoch $epoch, Session $session): void
+    {
+        $kek = $this->appLockKeyService->release($session);
+        if ($kek === null) {
+            throw new \LogicException('Cannot replace GDK epoch: app-lock not unlocked.');
+        }
+
+        try {
+            $keyring = $this->readKeyringFile($userId, $kek)->withEpochReplaced($epoch);
+            $this->writeKeyringFile($userId, $keyring, $kek);
+        } catch (SodiumException $e) {
+            throw CryptoOperationFailedException::during('GDK epoch replace', $e);
         } finally {
             sodium_memzero($kek);
         }
@@ -272,6 +363,11 @@ final class GdkKeyringService
 
     private function writeKeyringFile(int $userId, GdkKeyring $keyring, string $kek): void
     {
+        // The file about to change is what loadKeyring() memoises, so drop the
+        // cache wholesale — an appended epoch or a re-wrap must never resolve
+        // to the keyring this process read before the write.
+        $this->keyringCache = [];
+
         $encPath = $this->keyringPath($userId);
         $tmpEncPath = $this->stageKeyringFile($userId, $keyring, $kek);
 
@@ -309,7 +405,10 @@ final class GdkKeyringService
         $tmpEncPath = $encPath.'.'.bin2hex(random_bytes(8)).'.tmp';
 
         try {
-            $this->backupEncryptor->encrypt($tmpPlainPath, $tmpEncPath, $kek);
+            // The KEK is 256 random bits, not a passphrase — encryptWithKey
+            // skips the password-hardening cost that made every keyring read
+            // ~500ms for no security gain.
+            $this->backupEncryptor->encryptWithKey($tmpPlainPath, $tmpEncPath, $kek);
         } finally {
             @unlink($tmpPlainPath);
         }

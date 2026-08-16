@@ -1,0 +1,113 @@
+# Support-resource corpus — Slovakia (SK merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: Telekom SK
+    type: merchant
+    cancel_url: "https://www.telekom.sk/wiki/ostatne/zrusenie-sluzby"
+    support_url: "https://www.telekom.sk/podpora"
+    notes: "O zrušenie služby môže požiadať majiteľ alebo splnomocnená osoba osobne v ktoromkoľvek Telekom centre, písomne na adresu Slovak Telekom, Centrum služieb zákazníkom, Bajkalská 28, 817 62 Bratislava, alebo online — vytlačte a podpíšte žiadosť o ukončenie zmluvy a vložte jej sken do prílohy formulára «Napíšte nám» v kroku 3/3 Ukončenie zmluvy. Zrušenie realizujeme s mesačnou výpovednou lehotou, ktorá začína plynúť prvým dňom nasledujúceho zúčtovacieho obdobia a končí posledným dňom vášho zúčtovacieho obdobia (k 31., 7., 14. alebo 21. dňu v mesiaci); ak máte platnú dobu viazanosti, doúčtujeme cenu podľa cenového výmeru akcie a prenajatý hardvér vráťte do 10 dní. Do 14 dní od uzavretia zmluvy na diaľku môžete namiesto výpovede použiť odstúpenie od zmluvy."
+  - name: Orange Slovensko
+    type: merchant
+    support_url: "https://www.orange.sk/orange-slovensko/kontakty"
+    notes: "Orange nemá online tlačidlo na ukončenie — zmluvu ukončíte iba písomnou výpoveďou doručenou spoločnosti (osobne v predajni, poštou do sídla alebo elektronicky podľa čl. 17.1 Všeobecných podmienok). Podľa čl. 4.1 sa Zmluva uzatvára na dobu neurčitú a dodatok s Dobou viazanosti ju len dočasne mení na dobu určitú; po uplynutí viazanosti sa naďalej účtuje štandardná cena podľa Cenníka a zmluvu na dobu neurčitú môžete podľa čl. 4.7 vypovedať z akéhokoľvek dôvodu aj bez udania dôvodu. Ak výpoveď doručíte najneskôr v druhý pracovný deň pred koncom vášho zúčtovacieho obdobia, výpovedná doba skončí posledným dňom tohto obdobia, inak až posledným dňom nasledujúceho. Zákaznícka linka 905 (zo zahraničia +421 905 905 905), technická podpora 0800 500 555."
+  - name: O2 Slovakia
+    type: merchant
+    cancel_url: "https://www.o2.sk/podpora/centrum-podpory/moj-ucet-a-sim-karta/-/asset_publisher/w6eyNUw2uU1H/content/vypoved-zmluvy-zrusenie-pausalu"
+    support_url: "https://www.o2.sk/podpora/centrum-podpory/kontakty"
+    cheaper_url: "https://www.o2.sk/ponuka/mobilne-sluzby/zmena-volacieho-programu"
+    notes: "Možnosť zrušiť telefónne číslo online O2 neponúka — ak si prajete úplne zrušiť číslo, navštívte predajňu alebo zavolajte na zákaznícku linku 0949 949 949 (pracovné dni 8:00 – 20:00, prepojovací poplatok 0,315 € s DPH z čísla O2). Pred odchodom O2 odporúča vyskúšať zmenu programu, ktorú si nastavíte sami v zóne Moje O2 alebo v predajni. Technická podpora 0949 949 966, WhatsApp +421 949 949 949."
+  - name: ZSE
+    type: merchant
+    cancel_url: "https://www.zse.sk/podpora/ukoncenie/elektrina-a-plyn"
+    support_url: "https://www.zse.sk/podpora"
+    notes: "Ak máte zmluvu na dobu neurčitú bez viazanosti, dodávku ukončíte výpoveďou s 2-mesačnou výpovednou lehotou: vyplňte, vytlačte a podpíšte tlačivo «Výpoveď zo zmluvy o združenej dodávke elektriny/plynu» a pošlite ho poštou na Energetika Slovensko, a.s., P.O. Box 325, 810 00 Bratislava, alebo ho odovzdajte osobne v ZSE Centre. Ak byt či dom predávate, prenajímate alebo búrate, použite namiesto toho ukončenie dohodou — podpísanú žiadosť s dokladmi nahráte cez online formulár. Najprv uhraďte všetky faktúry aj preddavkové platby a po vyúčtovacej faktúre si nezabudnite zrušiť trvalý príkaz alebo inkaso."
+  - name: VSE
+    type: merchant
+    cancel_url: "https://www.vse.sk/potrebujem-poradit/ukoncenie-odberu"
+    support_url: "https://www.vse.sk/potrebujem-poradit/ukoncenie-odberu-elektriny"
+    notes: "Ukončenie odberu má tri kroky: vyplňte a podpíšte žiadosť o ukončenie odberu elektriny alebo plynu, odošlite ju online aj s dokumentmi a VSE odber ukončí. K žiadosti treba doložiť doklad podľa dôvodu — pri úmrtí kópiu úmrtného listu alebo čestné prehlásenie, pri búraní povolenie stavebného úradu, pri predaji list vlastníctva alebo návrh na vklad, pri nájme nájomnú zmluvu, dohodu o ukončení nájmu, výpoveď alebo odstúpenie od nájomnej zmluvy. Ak je vaším distribútorom VSD a žiada sa demontáž meradla, priložte aj žiadosť o demontáž meradla."
+  - name: SPP
+    type: merchant
+    support_url: "https://www.spp.sk/domacnosti/kontakty/"
+    notes: "Zmluvu za regulovanú cenu uzavretú na dobu neurčitú môžete vypovedať bez poplatku; výpovedná doba sú dva kalendárne mesiace a začína plynúť prvým dňom mesiaca nasledujúceho po mesiaci, v ktorom ste výpoveď doručili dodávateľovi. Pri zmluve za regulovanú cenu na dobu určitú treba výpoveď doručiť najneskôr dva kalendárne mesiace pred jej ukončením — zmluva potom zanikne posledným dňom prebiehajúceho zmluvného obdobia, tiež bez poplatku. Zákaznícka linka 0850 111 363 (zo zahraničia +421 258699090), zakaznickalinka@spp.sk, v pracovných dňoch od 8.00 do 18.00 h; podania sa prijímajú aj v zákazníckych centrách SPP a v podateľni."
+  - name: Union poisťovňa
+    type: merchant
+    cancel_url: "https://www.union.sk/pomoc-a-podpora/chcem-ukoncit-poistnu-zmluvu-aky-je-postup-ake-doklady-k-tomu-potrebujem/"
+    notes: "Ak nemáte záujem pokračovať v poistení, môžete podať výpoveď poistnej zmluvy ku koncu poistného obdobia podľa § 800 Občianskeho zákonníka — výpoveď je potrebné doručiť do poisťovne minimálne 6 týždňov pred koncom poistného obdobia. Poistenie motorových vozidiel zaniká aj pri predaji vozidla, zmene držiteľa alebo vyradení z evidencie; o tom stačí poisťovňu informovať kópiami dokladov e-mailom na sprava9@union.sk alebo mojeauto@union.sk, prípadne poštou na Union poisťovňa, a. s., Karadžičova 10, 814 53 Bratislava. Vo všeobecných poistných podmienkach konkrétneho produktu môžu byť uvedené aj ďalšie možnosti zániku poistenia."
+  - name: Allianz - Slovenská poisťovňa
+    type: merchant
+    cancel_url: "https://www.allianz.sk/sk/sukromne-osoby/online-riesenie-poziadaviek.html"
+    support_url: "https://www.allianz.sk/sk/sukromne-osoby/otazky-a-odpovede.html"
+    notes: "Sekcia Online riešenie požiadaviek má samostatné postupy «Ukončenie – životný produkt» a «Ukončenie – neživotný produkt», samotnú výpoveď však treba poslať poštou alebo e-mailom na allianz@allianz.sk, ak využívate službu elektronickej korešpondencie. Pri životnom poistení platí výpoveď podľa poistných podmienok najneskôr šesť týždňov pred dátumom splatnosti, odstúpenie od zmluvy do 30 dní od jej uzatvorenia a zákonná možnosť vypovedať zmluvu do 2 mesiacov od uzatvorenia. K výpovedi priložte kópiu identifikačného preukazu a uveďte osobné údaje, adresu, číslo poistnej zmluvy a spôsob výplaty odkupnej hodnoty. Infolinka +421 2 50 122 222."
+  - name: FITINN
+    type: merchant
+    support_url: "https://fitinn.sk/kontakt/"
+    notes: "Členstvo sa uzatvára na dobu určitú a prvé ukončenie je možné najskôr po 12 mesiacoch — vypovedať ho musíte najneskôr 1 mesiac pred uplynutím prvého roku účinnosti zmluvy, inak sa automaticky predĺži vždy o ďalších 6 mesiacov za tých istých podmienok a to isté platí pre každé nasledujúce polročné obdobie. Kontaktný formulár má predmet «Výpoveď členstva» aj «Odvolanie výpovede členstva», FITINN však upozorňuje, že otázky k existujúcim členstvám a ich ukončeniam cez formulár nespracúva a treba sa obrátiť na svoje kmeňové štúdio. Namiesto výpovede sa dá členstvo pozastaviť najviac 2 kalendárne mesiace v 12-mesačnom období, vždy od prvého do posledného dňa mesiaca, pričom o využité pozastavenie sa možný koniec zmluvy predlžuje."
+  - name: City Fitness
+    type: merchant
+    support_url: "https://www.cityfitness.sk/vseobecne-obchodne-podmienky/"
+    notes: "Zakúpením členského programu uzatvárate zmluvu na dobu určitú a podľa bodu 4.3 VOP nie je klient ani prevádzkovateľ oprávnený zmluvu vypovedať — žiadne tlačidlo na zrušenie neexistuje, odstúpiť môžete len pri podstatnom porušení povinností prevádzkovateľom. Pri programe s trvaním 12 a viac mesiacov môžete požiadať o zrušenie zmluvy z vážnych zdravotných dôvodov; prevádzkovateľ môže podľa vlastného uváženia vyhovieť tak, že členstvo ukončí a vráti alikvotnú časť ceny za nevyužité obdobie, alebo ho pozastaví, pričom podmienky sa dohadujú písomne e-mailom. Užívateľský účet je prevádzkovateľ povinný zrušiť do 10 dní od doručenia žiadosti klienta."
+  - name: Slovenská sporiteľňa
+    type: merchant
+    cancel_url: "https://www.slsp.sk/sk/ludia/otazky-a-odpovede/ako-zrusim-ucet"
+    notes: "O zrušenie účtu je možné požiadať osobne v ktorejkoľvek pobočke banky alebo poštou, v takom prípade však musí byť váš podpis riadne overený; poplatok za zrušenie účtu je 0 eur. Pred zrušením treba na účte zrušiť všetky trvalé príkazy a inkasné príkazy a vrátiť aktívne platobné karty. Ak je k účtu vydaná elektronická platobná karta, účet sa zruší do 8 dní po jej vrátení alebo zrušení; pri embosovanej karte to trvá do 30 kalendárnych dní."
+  - name: Jablotron Slovakia
+    type: merchant
+    cancel_url: "https://www.jablotron.com/file/edee/ke-stazeni/zarucni-a-pozarucni-podminky/_sk/jsk-vypoved-zmluvy_i.pdf"
+    support_url: "https://www.jablotron.com/sk/podpora"
+    notes: "Zmluvu ukončíte vyplneným a podpísaným tlačivom «Výpoveď zmluvy», ktoré doručíte poskytovateľovi JABLOTRON Slovakia, s.r.o., Sasinkova 14, 010 01 Žilina, e-mail sluzby@jablotron.sk, telefón +421 41 230 41 00. Podľa čl. VI ods. 2 písm. d) Všeobecných obchodných podmienok je výpovedná doba minimálne 1 mesiac a výpoveď musí byť poskytovateľovi doručená najmenej 31 dní pred ukončením zmluvného vzťahu, teda pred koncom kalendárneho štvrťroka, ak nie je dohodnuté iné obdobie. Pri dodržaní tejto lehoty je ukončenie služieb bezplatné a doplácate len prípadný nedoplatok za komunikačné služby nad rámec služby."
+  - name: Dobrý anjel
+    type: merchant
+    support_url: "https://dobryanjel.sk/caste-otazky/"
+    notes: "Prispievanie nie je viazané žiadnou zmluvou ani záväzkom a môžete ho kedykoľvek prerušiť alebo ukončiť. Ak prispievate trvalým príkazom, stačí ho zrušiť vo svojom internetbankingu alebo v banke — Dobrý anjel to za vás urobiť nemôže. Ak prispievate platobnou kartou, napíšte na info@dobryanjel.sk a uveďte meno a priezvisko, posledné 4 číslice karty, výšku príspevku a deň platby; rovnako postupujte, ak chcete príspevok znížiť."
+
+  # --- Government ---
+  - name: Finančná správa SR
+    type: government
+    help_url: "https://www.financnasprava.sk/sk/kontakt"
+    apply_url: "https://www.financnasprava.sk/sk/elektronicke-sluzby"
+    rights_url: "https://www.financnasprava.sk/sk/kontakt/podnety-staznosti"
+    phone: "048/43 17 222"
+    notes: "Informácie o právach a povinnostiach vo veciach daní a poplatkov poskytuje infolinka 048/43 17 222 s voľbami: 1 elektronická komunikácia a technická podpora, 2 DPH, 3 daň z príjmov, 4 eKasa, QR platby a daň z motorových vozidiel, 5 clá a spotrebné dane, 6 obce. Daňové call centrum je dostupné v pracovných dňoch od 8:00 do 16:00, otázky sa dajú poslať kedykoľvek cez kontaktný formulár na portáli alebo cez Taxanu. Na infolinke sa neposkytujú informácie o osobných účtoch daňových subjektov, o daňových identifikačných číslach ani o finančnej situácii daňových subjektov — na to slúži elektronická komunikácia po prihlásení."
+  - name: Sociálna poisťovňa
+    type: government
+    help_url: "https://www.socpoist.sk/kontakty/informacno-poradenske-centrum"
+    apply_url: "https://www.socpoist.sk/prihlasenie-do-elektronickych-sluzieb"
+    rights_url: "https://www.socpoist.sk/kto-som/zamestnanec/poziadat-o-davku/ako-poziadat-o-davku-v-nezamestnanosti"
+    phone: "0800 123 123"
+    notes: "Dávka v nezamestnanosti sa poskytuje počas podporného obdobia šiestich mesiacov a nárok máte, len ak ste uchádzač o zamestnanie registrovaný v evidencii na úrade práce v mieste trvalého alebo obvyklého pobytu a pred evidenciou ste boli povinne alebo dobrovoľne poistený v nezamestnanosti. Nárok nevzniká napríklad SZČO, ktorá si dobrovoľne neplatí poistné v nezamestnanosti, poberateľom starobného či predčasného dôchodku ani dohodárom na dohode o brigádnickej práci študentov. Bezplatné linky: domáce dôchodky 0800 123 123, zahraničné dôchodky 0800 500 599, ostatné poistenia a dávky +421 906 171 989; osobne v informačno-poradenskom centre na ul. 29. augusta 8 v Bratislave, žiadosť o dôchodok spisuje pobočka po rezervácii termínu."
+  - name: ÚPSVaR
+    type: government
+    help_url: "https://www.upsvr.gov.sk/kontakt.html?page_id=233"
+    apply_url: "https://www.upsvr.gov.sk/obcan.html?page_id=235"
+    rights_url: "https://www.upsvr.gov.sk/obcan/kedy-mi-vznika-narok-na-davku-v-nezamestnanosti.html?page_id=771665"
+    notes: "Nárok na dávku v nezamestnanosti vzniká, ak ste v posledných štyroch rokoch pred zaradením do evidencie uchádzačov o zamestnanie boli poistený v nezamestnanosti najmenej 730 dní (2 roky); spôsob skončenia pracovnoprávneho vzťahu ani to, či bol dohodnutý na určitú alebo neurčitú dobu, na nárok, výšku ani dĺžku výplaty nemá vplyv. Nárok vzniká odo dňa zaradenia do evidencie a zaniká uplynutím šiestich mesiacov. Výška dávky je od 1. januára 2026 v 1. až 3. mesiaci 50 % denného vymeriavacieho základu, vo 4. mesiaci 40 %, v 5. mesiaci 30 % a v 6. mesiaci 20 %; samotné vyplácanie je v kompetencii Sociálnej poisťovne, úrad práce vedie evidenciu."
+  - name: VšZP
+    type: government
+    help_url: "https://www.vszp.sk/poistenci/chcem-poistit/zmena-poistovne.html"
+    apply_url: "https://prihlaska.vszp.sk/prihlaska-online"
+    rights_url: "https://www.vszp.sk/poistenci/prava-povinnosti-poistencov/prava-povinnosti-poistencov.html"
+    phone: "0850 003 003"
+    notes: "Zdravotnú poisťovňu nemôžete zmeniť kedykoľvek — prihlášku na zmenu zdravotnej poisťovne je možné podať do 30. 9. daného roka a zmena je účinná až od nasledujúceho roka. Prihlášku vybavíte online len s občianskym preukazom, prípadne osobne na kontaktnom mieste alebo poštou; ak si to rozmyslíte, existuje samostatné tlačivo «Späťvzatie prihlášky». Poistenec má aj oznamovaciu povinnosť pri zmene platiteľa poistného (nástup do zamestnania, začiatok podnikania, evidencia na úrade práce)."
+  - name: slovensko.sk
+    type: government
+    help_url: "https://www.slovensko.sk/sk/pomoc"
+    apply_url: "https://www.slovensko.sk/sk/zivotne-situacie"
+    rights_url: "https://www.slovensko.sk/sk/navody"
+    phone: "+421 2 35 803 083"
+    notes: "Ak si so situáciou na ústrednom portáli neviete rady, najprv si pozrite sekcie Návody a postupy, Otázky a odpovede a Na stiahnutie (inštalačné prvky a ovládače pre aplikácie portálu). Priamu pomoc poskytuje Ústredné kontaktné centrum na čísle + 421 2 35 803 083 v pracovných dňoch od 8.00 do 17.00 h; mimo tohto času použite kontaktný formulár na hlásenie problémov, pripomienok, otázok a podnetov. Portál má aj samostatné sekcie k elektronickým schránkam, občianskemu preukazu s čipom, uznaným spôsobom autorizácie a k rozpoznaniu podvodnej stránky."
+  - name: Ministerstvo vnútra SR – evidencia vozidiel
+    type: government
+    help_url: "https://www.minv.sk/?evidencia-vozidiel"
+    phone: "0800 222 222"
+    notes: "Agendu evidencie vozidiel a dokladov vybavíte na okresných úradoch a v klientskych centrách, časť úkonov aj cez e-služby MV SR na portáli. Call centrum MV SR má bezplatné číslo 0800 222 222 s úradnými hodinami pondelok, utorok, štvrtok a piatok 8.00 – 16.00 a v stredu 8.00 – 17.00; problém sa dá nahlásiť aj cez kontaktný formulár call centra. Ústredie: Ministerstvo vnútra SR, Pribinova 2, 812 72 Bratislava, telefón +421 2 5094 1111."
+  - name: Ministerstvo školstva SR – sociálne štipendiá
+    type: government
+    help_url: "https://www.minedu.sk/44071-sk/stipendia/"
+    rights_url: "https://www.minedu.sk/socialne-stipendia/"
+    notes: "Sociálne štipendium priznávajú samotné vysoké školy podľa zákona č. 131/2002 Z. z. a vyhlášky č. 102/2006 Z. z., preto sa žiadosť podáva na vysokej škole alebo fakulte, na ktorej ste zapísaný, nie na ministerstve. Žiadosť môžete doručiť kedykoľvek počas akademického roka a štipendium sa priznáva od prvého mesiaca, v ktorom bola doručená — o priznaní rozhoduje škola v lehote 30 dní, v komplikovaných prípadoch aj dlhšie. K žiadosti treba doložiť doklady o príjme žiadateľa a spoločne posudzovaných osôb za predchádzajúci kalendárny rok; ak študujete na viacerých školách, v jednom akademickom roku podáte len jednu žiadosť a pri štúdiu na zahraničnej vysokej škole nárok nevzniká."

@@ -1,7 +1,153 @@
 # Government / public-agency classification rules — Luxembourg.
+# (Student aid moved from CEDIES to the Ministry of Higher Education and no
+# longer bills under a stable creditor name, so it is not listed.)
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "ADMINISTRATION DES CONTRIBUTIONS"
     name: "Administration des contributions directes"
   - pattern: "regex:\\bCCSS\\b"
     name: "Centre commun de la sécurité sociale"
+  - pattern: "ADMINISTRATION DE L'ENREGISTREMENT"
+    name: "Administration de l'enregistrement, des domaines et de la TVA"
+  - pattern: "ADMINISTRATION DES DOUANES"
+    name: "Administration des douanes et accises"
+  - pattern: "CAISSE NATIONALE DE SANTE"
+    name: "Caisse nationale de santé (CNS)"
+  - pattern: "regex:\\bCNS\\b"
+    name: "Caisse nationale de santé (CNS)"
+  - pattern: "CAISSE NATIONALE D'ASSURANCE PENSION"
+    name: "CNAP"
+  - pattern: "regex:\\bCNAP\\b"
+    name: "CNAP"
+  - pattern: "regex:\\bADEM\\b"
+    name: "ADEM"
+  - pattern: "CAISSE POUR L'AVENIR DES ENFANTS"
+    name: "Caisse pour l'avenir des enfants"
+  # Communes bill the impôt foncier and waste/water charges.
+  - pattern: "COMMUNE DE"
+  - pattern: "VILLE DE LUXEMBOURG"
+    name: "Ville de Luxembourg"
+  - pattern: "regex:\\bSNCA\\b"
+    name: "SNCA"
+  - pattern: "TAXE SUR LES VEHICULES"
+    name: "Taxe sur les véhicules automoteurs"
+  - pattern: "ADMINISTRATION DU CADASTRE"
+    name: "Administration du cadastre et de la topographie"
+  - pattern: "POLICE GRAND-DUCALE"
+    name: "Police Grand-Ducale"
+  - pattern: "AVERTISSEMENT TAXE"
+    name: "Avertissement taxé"
+
+  # ---------------------------------------------------------------------
+  # Depth pass. The administration names are taken verbatim from the
+  # official register at gouvernement.lu/fr/administrations.html; the
+  # social-security bodies from ccss.lu, cns.lu, aaa.lu and mde.lu; the
+  # compulsory chambers from cc.lu, cdm.lu and csl.lu (membership is
+  # statutory in Luxembourg); police.lu and cgdis.lu for the police and
+  # rescue corps; and guichet.public.lu for the communal charges.
+  #
+  # French is the usual invoicing language, with German second, so both
+  # appear where a body prints both. Rejected as too ambiguous: bare
+  # "MINISTERE" and "ADMINISTRATION" on their own, "PARQUET" (also the
+  # French word for flooring) and \bCAE\b. The generic French
+  # "ADMINISTRATION COMMUNALE" already carries a rule in be.yaml, so this
+  # file lists the Luxembourg communes by name instead.
+  # ---------------------------------------------------------------------
+
+  # State administrations that invoice residents directly.
+  - pattern: "BUREAU D'IMPOSITION"
+    name: "Bureau d'imposition"
+  - pattern: "TRESORERIE DE L'ETAT"
+    name: "Trésorerie de l'État"
+  - pattern: "ADMINISTRATION DES PONTS ET CHAUSSEES"
+    name: "Administration des ponts et chaussées"
+  - pattern: "ADMINISTRATION DE LA GESTION D'EAU"
+    name: "Administration de la gestion d'eau"
+  - pattern: "ADMINISTRATION DE L'ENVIRONNEMENT"
+    name: "Administration de l'environnement"
+  - pattern: "ADMINISTRATION DE LA NATURE ET DES FORETS"
+    name: "Administration de la nature et des forêts"
+  - pattern: "ADMINISTRATION DES BATIMENTS PUBLICS"
+    name: "Administration des bâtiments publics"
+  - pattern: "ADMINISTRATION PENITENTIAIRE"
+    name: "Administration pénitentiaire"
+  - pattern: "ADMINISTRATION DES TRANSPORTS PUBLICS"
+    name: "Administration des transports publics"
+  - pattern: "CENTRE DES TECHNOLOGIES DE L'INFORMATION"
+    name: "CTIE"
+  - pattern: 'regex:\bSTATEC\b'
+    name: "STATEC"
+
+  # Social security.
+  - pattern: "CENTRE COMMUN DE LA SECURITE SOCIALE"
+    name: "Centre commun de la sécurité sociale"
+  - pattern: "ASSOCIATION D'ASSURANCE ACCIDENT"
+    name: "Association d'assurance accident"
+  - pattern: "MUTUALITE DES EMPLOYEURS"
+    name: "Mutualité des employeurs"
+  - pattern: "CAISSE DE MALADIE DES FONCTIONNAIRES"
+    name: "CMFEP"
+  - pattern: "FONDS NATIONAL DE SOLIDARITE"
+    name: "Fonds national de solidarité"
+  - pattern: "FONDS DU LOGEMENT"
+    name: "Fonds du logement"
+  - pattern: "OFFICE NATIONAL DE L'ENFANCE"
+    name: "Office national de l'enfance"
+  - pattern: "OFFICE NATIONAL D'INCLUSION SOCIALE"
+    name: "Office national d'inclusion sociale"
+  - pattern: "OFFICE NATIONAL DE L'ACCUEIL"
+    name: "Office national de l'accueil"
+  - pattern: "INSPECTION GENERALE DE LA SECURITE SOCIALE"
+    name: "IGSS"
+  - pattern: "INSPECTION DU TRAVAIL ET DES MINES"
+    name: "Inspection du travail et des mines"
+  - pattern: "DIRECTION DE LA SANTE"
+    name: "Direction de la santé"
+
+  # Compulsory professional chambers.
+  - pattern: "CHAMBRE DES METIERS"
+    name: "Chambre des Métiers"
+  - pattern: "CHAMBRE DES SALARIES"
+    name: "Chambre des salariés"
+  - pattern: "CHAMBRE DES FONCTIONNAIRES"
+    name: "Chambre des fonctionnaires et employés publics"
+
+  # Police, rescue and justice.
+  - pattern: "POLICE LETZEBUERG"
+    name: "Police Lëtzebuerg"
+  - pattern: "POLICE LËTZEBUERG"
+    name: "Police Lëtzebuerg"
+  - pattern: "INSPECTION GENERALE DE LA POLICE"
+    name: "Inspection générale de la police"
+  - pattern: 'regex:\bCGDIS\b'
+    name: "CGDIS"
+  - pattern: "CORPS GRAND-DUCAL D'INCENDIE"
+    name: "CGDIS"
+  - pattern: "TRIBUNAL D'ARRONDISSEMENT"
+    name: "Tribunal d'arrondissement"
+
+  # Communes and communal charges.
+  - pattern: "VILLE D'ESCH-SUR-ALZETTE"
+    name: "Ville d'Esch-sur-Alzette"
+  - pattern: "VILLE DE DIFFERDANGE"
+    name: "Ville de Differdange"
+  - pattern: "VILLE DE DUDELANGE"
+    name: "Ville de Dudelange"
+  - pattern: "IMPOT FONCIER"
+    name: "Impôt foncier"
+  - pattern: "TAXE COMMUNALE"
+    name: "Taxe communale"
+  - pattern: "TAXE SUR LES CHIENS"
+    name: "Taxe sur les chiens"
+
+  # Registers and youth services.
+  - pattern: "REGISTRE DE COMMERCE ET DES SOCIETES"
+    name: "RCS Luxembourg"
+  - pattern: "LUXEMBOURG BUSINESS REGISTERS"
+    name: "Luxembourg Business Registers"
+  - pattern: "COMMISSARIAT AUX ASSURANCES"
+    name: "Commissariat aux assurances"
+  - pattern: "SERVICE NATIONAL DE LA JEUNESSE"
+    name: "Service national de la jeunesse"
+  - pattern: "INSTITUT NATIONAL DES LANGUES"
+    name: "Institut national des langues"

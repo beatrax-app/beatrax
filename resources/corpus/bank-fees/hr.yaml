@@ -1,0 +1,31 @@
+# Bank-fee classification rules — Croatia (Croatian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The fee nouns are declined, so `regex:` spells out the case endings inside
+# \b word boundaries: `\bNAKNAD[AEU]\b` matches "naknada", "naknade" and
+# "naknadu" but not "NAKNADNO" (afterwards, subsequently), and
+# `\bKAMAT[AEIU]\b` matches "kamata", "kamate", "kamati" and "kamatu" but
+# not "KAMATNA STOPA" in ordinary text. Diacritics stay out of `regex:`
+# bodies — the matcher runs PCRE without /u, so `#i` case-folds ASCII only
+# and \b never sees "Č" or "Đ" as a word character; "VOĐENJE RAČUNA" and
+# "PREKORAČENJE" are therefore plain substrings, which are matched
+# case-insensitively and multibyte-aware. Regex bodies must be
+# SINGLE-quoted in YAML so the backslash reaches the matcher instead of
+# being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "VOĐENJE RAČUNA"
+    name: "Naknada za vođenje računa"
+  - pattern: 'regex:\bNAKNAD[AEU]\b'
+    name: "Naknada"
+  - pattern: "PREKORAČENJE"
+    name: "Kamata na prekoračenje"
+  - pattern: 'regex:\bKAMAT[AEIU]\b'
+    name: "Kamata"

@@ -11,9 +11,11 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Router;
 use Modules\Auth\Internal\Lock\LockStateManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Services\UserDataPathService;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -31,6 +33,13 @@ final readonly class AppLockMiddleware
         'auth.lock.engage',
         'mobile.lock',
         'logout',
+        // The onboarding ceremony is driven entirely by wire:poll, and a
+        // Livewire request deliberately does not count as activity below — so
+        // the idle timer expired while the user sat watching a working screen
+        // and the PIN dropped over it. These screens show no financial data.
+        'mobile.pair',
+        'mobile.setup',
+        'mobile.setup.done',
     ];
 
     // Present on every Livewire update request; the Livewire JS client
@@ -43,7 +52,14 @@ final readonly class AppLockMiddleware
     // independent of this cache anyway.
     private const SESSION_CONFIG_TTL_SECONDS = 60;
 
-    private const SESSION_CONFIG_CACHE = 'beatrax_lock_config_cache';
+    // Public so a successful unlock can invalidate it. The cache holds
+    // last_activity_at, and a stale copy re-locked the session on the very
+    // next request — making the user enter their PIN twice.
+    public const SESSION_CONFIG_CACHE = 'beatrax_lock_config_cache';
+
+    // The last page this user was actually on, kept so an unlock can restore
+    // it even when the lock was engaged from the client.
+    public const SESSION_LAST_PAGE = 'beatrax_lock_last_page';
 
     public function __construct(
         private CurrentUser $currentUser,
@@ -51,6 +67,7 @@ final readonly class AppLockMiddleware
         private UrlGenerator $urls,
         private DatabaseManager $db,
         private Clock $clock,
+        private Router $routes,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -85,7 +102,7 @@ final readonly class AppLockMiddleware
         }
 
         if (! $this->isExemptRoute($routeName)) {
-            return new RedirectResponse($this->urls->route('auth.lock'));
+            return $this->redirectToLock($request, $session);
         }
 
         return $this->pass($request, $next);
@@ -93,6 +110,8 @@ final readonly class AppLockMiddleware
 
     private function handleUnlocked(Request $request, Closure $next, Session $session, int $userId, ?string $routeName): Response
     {
+        $this->settleUnlockActivity($session, $userId);
+
         $config = $this->resolveConfig($session, $userId);
         if ($config === null || ! $config['lock_enabled']) {
             return $this->pass($request, $next);
@@ -103,8 +122,53 @@ final readonly class AppLockMiddleware
         }
 
         $this->recordActivity($request, $session, $userId, $routeName);
+        $this->rememberPage($request, $session, $routeName);
 
         return $this->pass($request, $next);
+    }
+
+    // Turns a just-completed unlock into recorded activity, before anything
+    // reads the idle clock. Proving presence and then being told the session
+    // has been idle too long is the same contradiction whichever way it
+    // arrives — a re-lock here, or a racing engage POST at the controller.
+    private function settleUnlockActivity(Session $session, int $userId): void
+    {
+        if ($session->pull(LockStateManager::SESSION_UNLOCK_ACTIVITY_PENDING, false) !== true) {
+            return;
+        }
+
+        // Both halves matter. The row is what LockEngageController's grace
+        // window consults, and the cached copy still carries the stale
+        // timestamp the lock screen was rendered with.
+        $session->forget(self::SESSION_CONFIG_CACHE);
+
+        $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->update(['last_activity_at' => $this->clock->now()->toDateTimeString()]);
+    }
+
+    // The page to come back to after an unlock. The idle timer locks from
+    // JAVASCRIPT and goes straight to the lock screen, so the middleware never
+    // sees the request that would have set `url.intended` — and every idle
+    // unlock dropped the user on the dashboard.
+    private function rememberPage(Request $request, Session $session, ?string $routeName): void
+    {
+        if ($this->isExemptRoute($routeName) || ! $this->isRestorablePage($request)) {
+            return;
+        }
+
+        $session->put(self::SESSION_LAST_PAGE, $request->fullUrl());
+    }
+
+    // Only a plain GET page is worth restoring. Replaying a POST after an
+    // unlock would re-submit it, and the Livewire endpoint is not a page a
+    // user can be returned to at all.
+    private function isRestorablePage(Request $request): bool
+    {
+        return $request->isMethod('GET')
+            && ! $request->headers->has(self::LIVEWIRE_HEADER)
+            && ! $request->expectsJson();
     }
 
     /**
@@ -129,10 +193,33 @@ final readonly class AppLockMiddleware
         $session->forget(self::SESSION_CONFIG_CACHE);
 
         if (! $this->isExemptRoute($routeName)) {
-            return new RedirectResponse($this->urls->route('auth.lock'));
+            return $this->redirectToLock($request, $session);
         }
 
         return $this->pass($request, $next);
+    }
+
+    // Sends the user to the lock screen, remembering where they were so
+    // unlocking returns them there instead of the dashboard. LockScreen
+    // already pulls `url.intended`; nothing ever put anything in it.
+    private function redirectToLock(Request $request, Session $session): RedirectResponse
+    {
+        if ($this->isRestorablePage($request)) {
+            $session->put('url.intended', $request->fullUrl());
+        }
+
+        return new RedirectResponse($this->urls->route($this->lockRouteName()));
+    }
+
+    // The mobile runtime has its own full-screen lock screen with safe-area
+    // chrome; `auth.lock` is the desktop one, which renders as a narrow
+    // centred card. Nothing routed here before, so a locked phone always got
+    // the desktop screen — a small panel with margins instead of a lock.
+    private function lockRouteName(): string
+    {
+        return UserDataPathService::isMobileRuntime() && $this->routes->has('mobile.lock')
+            ? 'mobile.lock'
+            : 'auth.lock';
     }
 
     // Exempt routes (lock screen, logout) don't count as activity, and

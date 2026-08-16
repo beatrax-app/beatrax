@@ -14,6 +14,7 @@ return [
         'page_title' => 'Setting up…',
         'pending_heading' => 'Setting up…',
         'pending_body' => 'Beatrax is preparing your data. This only takes a moment.',
+        'failed_body' => 'Setup could not finish. Restart Beatrax; if it keeps failing the log has the reason.',
         'ready_heading' => 'Ready',
         'ready_body' => 'Setup complete. Continuing…',
     ],

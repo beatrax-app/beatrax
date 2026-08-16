@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Modules\Sync\Internal\Pairing\Bip39WordList;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 
@@ -33,6 +34,67 @@ final readonly class DeviceRegistryService
             ->all();
 
         return $keys;
+    }
+
+    // Whether this device is STILL a confirmed peer, asked live rather than
+    // read from a connect-time snapshot. Removing a device cleared the row
+    // but never reached the open connection, so a revoked peer kept syncing
+    // until it happened to reconnect.
+    public function isStillConfirmed(int $userId, string $deviceId): bool
+    {
+        if ($deviceId === '') {
+            return false;
+        }
+
+        return $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('device_id', $deviceId)
+            ->whereNotNull('confirmed_at')
+            ->exists();
+    }
+
+    // Removes every trace of a device AFTER its trust has been revoked and
+    // the keyring rotated. Revocation alone only cleared confirmed_at, so the
+    // device kept appearing as a peer: sync_sessions is what the status
+    // section lists, and it still held a row under the device's own UUID.
+    public function purge(int $userId, int $deviceRegistryId): void
+    {
+        $connection = $this->db->connection();
+
+        $deviceId = $connection->table('device_registry')
+            ->where('id', $deviceRegistryId)
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->value('device_id');
+
+        if (! is_string($deviceId) || $deviceId === '') {
+            return;
+        }
+
+        $connection->table('sync_sessions')
+            ->where('user_id', $userId)
+            ->where('peer_device_id', $deviceId)
+            ->delete();
+
+        $connection->table('relay_mailbox')
+            ->where('recipient_did', $deviceId)
+            ->orWhere('sender_did', $deviceId)
+            ->delete();
+
+        $connection->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where(function (Builder $query) use ($deviceId): void {
+                $query->where('responder_device_id', $deviceId)
+                    ->orWhere('initiator_device_id', $deviceId);
+            })
+            ->delete();
+
+        $connection->table('device_registry')
+            ->where('id', $deviceRegistryId)
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->delete();
     }
 
     /**
@@ -90,6 +152,32 @@ final readonly class DeviceRegistryService
             ->value('device_id');
 
         return is_string($deviceId) && $deviceId !== '' ? $deviceId : null;
+    }
+
+    // This device's own display name, for the QR the peer scans. Null when
+    // sync was never enabled here, in which case the peer keeps its
+    // placeholder rather than being told something wrong.
+    public function localDeviceName(int $userId): ?string
+    {
+        $name = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 1)
+            ->value('name');
+
+        return is_string($name) && $name !== '' ? $name : null;
+    }
+
+    // User-agnostic form of localDeviceId(), for callers that run before any
+    // session exists — the desktop boot hook decides whether to start the
+    // sync listener at all, and a listener is only worth running once some
+    // account on this device has actually enabled sync.
+    public function hasLocalDevice(): bool
+    {
+        return $this->db->connection()
+            ->table('device_registry')
+            ->where('is_self', 1)
+            ->exists();
     }
 
     // Sanctioned crossing for Modules\Notifications; excludes the local

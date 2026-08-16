@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Vergi ülkesi',
+    'country_desc' => 'Hangi vergi indirimi kategorilerinin kullanılabileceğini belirler.',
+    'country_choose' => 'Bir ülke seç…',
+    'country_switch_warning' => 'Ülke değiştirmek yeni kategoriler ekler — mevcut etiketler hiçbir zaman değişmez.',
+
+    'countries' => [
+        'at' => 'Avusturya',
+        'be' => 'Belçika',
+        'bg' => 'Bulgaristan',
+        'ca' => 'Kanada',
+        'ch' => 'İsviçre',
+        'cy' => 'Kıbrıs',
+        'cz' => 'Çekya',
+        'de' => 'Almanya',
+        'dk' => 'Danimarka',
+        'ee' => 'Estonya',
+        'es' => 'İspanya',
+        'fi' => 'Finlandiya',
+        'fr' => 'Fransa',
+        'gb' => 'Birleşik Krallık',
+        'gr' => 'Yunanistan',
+        'hr' => 'Hırvatistan',
+        'hu' => 'Macaristan',
+        'ie' => 'İrlanda',
+        'is' => 'İzlanda',
+        'it' => 'İtalya',
+        'lt' => 'Litvanya',
+        'lu' => 'Lüksemburg',
+        'lv' => 'Letonya',
+        'mt' => 'Malta',
+        'nl' => 'Hollanda',
+        'no' => 'Norveç',
+        'pl' => 'Polonya',
+        'pt' => 'Portekiz',
+        'ro' => 'Romanya',
+        'se' => 'İsveç',
+        'si' => 'Slovenya',
+        'sk' => 'Slovakya',
+        'us' => 'Amerika Birleşik Devletleri',
+    ],
+
+    'categories_label' => 'Vergi indirimi kategorileri',
+    'categories_desc' => 'Etiketlemek için kullandığın grupları özelleştir.',
+    'categories_empty' => 'Henüz kategori yok. İlk kategorini ekle veya varsayılanları yüklemek için ülkeyi değiştir.',
+
+    'from_corpus' => 'korpustan',
+    'rename_input_aria' => ':name için yeni ad',
+    'rename' => 'Yeniden adlandır',
+    'rename_aria' => ':name kategorisini yeniden adlandır',
+    'rename_save_aria' => ':name için yeni adı kaydet',
+    'save' => 'Kaydet',
+    'archive' => 'Arşivle',
+    'archive_aria' => ':name kategorisini arşivle',
+
+    'new_category_label' => 'Yeni kategori adı',
+    'new_category_placeholder' => 'Yeni kategori adı…',
+    'add_category' => 'Kategori ekle',
+    'category_added' => 'Kategori eklendi.',
+
+    'archived_count' => 'Arşivlenen (:count)',
+    'restore' => 'Geri yükle',
+    'restore_aria' => ':name kategorisini geri yükle',
+];

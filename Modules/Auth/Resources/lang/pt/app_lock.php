@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'error_enroll_unsupported' => 'O desbloqueio biométrico não está disponível neste dispositivo.',
+    'error_enroll_locked' => 'Desbloqueia a aplicação antes de fazeres o registo.',
+    'error_enroll_failed' => 'O teu dispositivo recusou guardar a chave. O desbloqueio biométrico não está disponível.',
+    'heading' => 'Bloqueio da aplicação',
+
+    'moved_help' => 'O teu PIN, o tempo de bloqueio automático e o desbloqueio biométrico estão nas definições de sincronização deste dispositivo.',
+    'moved_cta' => 'Abrir Sincronização e dispositivo',
+
+    'toggle_label' => 'Bloquear a aplicação com PIN',
+    'toggle_description' => 'Substitui o início de sessão diário por um PIN. As sessões mantêm-se ativas durante 30 dias.',
+
+    'setup_heading' => 'Define um PIN para ativar o bloqueio',
+    'new_pin_label' => 'Novo PIN (4–10 dígitos)',
+    'confirm_pin_label' => 'Confirmar PIN',
+    'account_password_label' => 'Palavra-passe da conta',
+    'account_password_note' => '(necessária para criar uma chave de recuperação)',
+    'account_password_placeholder' => 'A palavra-passe da tua conta',
+    'set_pin' => 'Definir PIN',
+
+    'pin_row_label' => 'PIN',
+    'pin_row_description' => 'Altera o teu PIN atual.',
+    'change_pin' => 'Alterar PIN',
+    'forgot_pin_link' => 'Esqueceste-te do PIN? Repõe-o com a palavra-passe da conta.',
+
+    'biometric_enrolled_description' => 'Este dispositivo está registado para desbloqueio biométrico.',
+    'biometric_enroll_description' => 'Regista este dispositivo para desbloquear com biometria.',
+    'remove' => 'Remover',
+    'enroll' => 'Registar',
+    'biometric_unavailable' => 'O desbloqueio biométrico não está disponível neste dispositivo.',
+
+    'deenroll_modal_heading' => 'Remover o desbloqueio biométrico — confirma com o PIN',
+    'current_pin_label' => 'PIN atual',
+    'remove_biometric' => 'Remover biometria',
+    'keep_biometric' => 'Manter biometria',
+
+    'auto_lock' => 'Bloqueio automático após',
+    'idle_1' => '1 minuto',
+    'idle_5' => '5 minutos',
+    'idle_15' => '15 minutos',
+    'idle_30' => '30 minutos',
+
+    'disable_modal_heading' => 'Desativar o bloqueio da aplicação — confirma com o PIN',
+    'disable_lock' => 'Desativar bloqueio',
+    'keep_lock' => 'Manter bloqueio',
+
+    'forgot_modal_heading' => 'Repor o PIN — confirma com a palavra-passe da conta',
+    'forgot_modal_body' => 'A palavra-passe da conta recupera a chave de bloqueio, por isso repor o PIN nunca perde dados.',
+    'confirm_new_pin_label' => 'Confirmar o novo PIN',
+    'reset_pin' => 'Repor PIN',
+    'cancel' => 'Cancelar',
+
+    'change_modal_heading' => 'Alterar o PIN — confirma com o PIN atual',
+    'keep_pin' => 'Manter PIN',
+
+    'error_pin_too_short' => 'O PIN tem de ter pelo menos 4 dígitos.',
+    'error_pin_mismatch' => 'Os PIN não coincidem. Tenta novamente.',
+    'error_pin_incorrect' => 'PIN incorreto.',
+    'error_account_password' => 'Palavra-passe da conta incorreta.',
+    'change_pin_success' => 'A tua chave de encriptação foi novamente protegida com o novo PIN.',
+    'error_forgot_failed' => 'Não foi possível repor o PIN — a chave de recuperação não está disponível.',
+    'error_enable_first' => 'Ativa primeiro o bloqueio por PIN antes de registares a biometria.',
+];

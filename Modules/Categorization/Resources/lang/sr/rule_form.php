@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading_edit' => 'Izmeni pravilo',
+    'heading_new' => 'Novo pravilo',
+
+    'combinator_aria' => 'Kombinator uslova',
+    'match_all' => 'Podudaranje sa svim uslovima',
+    'match_any' => 'Podudaranje sa bilo kojim uslovom',
+
+    'condition_label' => 'Uslov :number',
+    'condition_field_aria' => 'Polje uslova :number',
+    'condition_operator_aria' => 'Operator uslova :number',
+    'condition_value_aria' => 'Vrednost uslova :number',
+    'condition_value_from_aria' => 'Vrednost uslova :number (od)',
+    'condition_value_to_aria' => 'Vrednost uslova :number (do)',
+    'to' => 'do',
+    'amount_placeholder' => '0,00',
+    'text_placeholder' => 'npr. SPOTIFY',
+    'remove_condition' => 'Ukloni uslov',
+    'add_condition' => '+ Dodaj uslov',
+
+    'then' => 'Tada',
+    'action_label' => 'Radnja :number',
+    'action_type_aria' => 'Tip radnje :number',
+    'action_category' => 'Kategorija',
+    'action_counterparty' => 'Druga strana',
+    'action_note' => 'Beleška',
+    'action_tax_tag' => 'Poreska oznaka',
+    'assign_category_aria' => 'Dodeli kategoriju za radnju :number',
+    'reassign_counterparty_aria' => 'Promeni drugu stranu za radnju :number',
+    'note_text_aria' => 'Tekst beleške za radnju :number',
+    'note_placeholder' => 'Tekst beleške…',
+    'note_mode_aria' => 'Režim beleške za radnju :number',
+    'note_set' => 'Postavi',
+    'note_append' => 'Dodaj na kraj',
+    'deduction_category_aria' => 'Kategorija odbitka za radnju :number',
+    'remove_action' => 'Ukloni radnju',
+    'add_action' => '+ Dodaj radnju',
+
+    'this_year_only' => 'Samo ova godina ▾',
+    'override_tax_year' => 'Postavi drugu poresku godinu',
+    'tax_year_override_aria' => 'Druga poreska godina za radnju :number',
+    'tax_tag_note' => 'Radnje poreske oznake primenjuju se pri sledećoj ponovnoj primeni, a ne pri trenutnom uvozu.',
+
+    'priority' => 'Prioritet',
+    'priority_help' => 'Manji brojevi se izvršavaju prvi. Pravila bez zajedničkih polja nikad nisu u sukobu.',
+
+    'cancel' => 'Otkaži',
+    'save_changes' => 'Sačuvaj izmene',
+    'save_rule' => 'Sačuvaj pravilo',
+    'saving' => 'Čuvanje…',
+
+    'error_rule_unavailable' => 'To pravilo više nije dostupno.',
+    'error_invalid_data' => 'Neispravni podaci pravila — izaberi vrednosti sa padajućih lista i pokušaj ponovo.',
+    'error_duplicate' => 'Pravilo sa ovim poljem, podudaranjem i vrednošću već postoji. Umesto toga izmeni postojeće pravilo.',
+    'error_priority_whole' => 'Prioritet mora da bude ceo broj.',
+    'error_add_condition' => 'Dodaj bar jedan uslov.',
+    'error_add_action' => 'Dodaj bar jednu radnju.',
+    'condition_value_required' => 'Unesi vrednost za uslov :position.',
+    'condition_bounds_required' => 'Izaberi donju i gornju granicu za uslov :position.',
+    'condition_amount_invalid' => 'Unesi ispravan iznos za uslov :position.',
+    'action_pick_category' => 'Izaberi kategoriju za ovu radnju.',
+    'action_pick_counterparty' => 'Izaberi drugu stranu na koju ćeš prebaciti.',
+    'action_note_required' => 'Unesi tekst beleške.',
+    'action_pick_deduction' => 'Izaberi kategoriju odbitka za poresku oznaku.',
+];

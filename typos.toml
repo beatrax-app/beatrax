@@ -80,6 +80,11 @@ appliable = "appliable"
 encrypter = "encrypter"
 COSE = "COSE"
 
+# Misspelled upstream. bacon/qr-code names the constant
+# DEFAULT_BYTE_MODE_ECODING, and the reference has to match the library
+# rather than the dictionary.
+ECODING = "ECODING"
+
 # Test-local identifiers and abbreviations asserted on literally.
 nwe = "nwe"
 NWE = "NWE"
@@ -107,9 +112,35 @@ extend-exclude = [
   "*.min.css",
   "**/tests/fixtures/",
   "resources/corpus/",
-  # Dutch UI translations are legitimately Dutch; the English-only typo
-  # checker would flag every word. Non-English locale trees are excluded.
+  # Translated UI copy is legitimately not English; the English-only typo
+  # checker flags "Adresse" as "Address" and "Alle" as "All". Every locale
+  # tree except `en` is excluded — `en` is the source language and the one
+  # place a typo here is really a typo.
+  "**/Resources/lang/bg/",
+  "**/Resources/lang/cs/",
+  "**/Resources/lang/da/",
+  "**/Resources/lang/de/",
+  "**/Resources/lang/el/",
+  "**/Resources/lang/es/",
+  "**/Resources/lang/et/",
+  "**/Resources/lang/fi/",
+  "**/Resources/lang/fr/",
+  "**/Resources/lang/hr/",
+  "**/Resources/lang/hu/",
+  "**/Resources/lang/it/",
+  "**/Resources/lang/lt/",
+  "**/Resources/lang/lv/",
+  "**/Resources/lang/nb/",
   "**/Resources/lang/nl/",
+  "**/Resources/lang/pl/",
+  "**/Resources/lang/pt/",
+  "**/Resources/lang/ro/",
+  "**/Resources/lang/sk/",
+  "**/Resources/lang/sl/",
+  "**/Resources/lang/sr/",
+  "**/Resources/lang/sv/",
+  "**/Resources/lang/tr/",
+  "**/Resources/lang/uk/",
   "database/seeders/data/",
   "scripts/anonymize_*.php",
   "scripts/synthesise_*.php",

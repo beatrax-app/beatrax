@@ -10,6 +10,7 @@ use Modules\Sync\Internal\Exceptions\RelayRefusedException;
 use Modules\Sync\Internal\Exceptions\RelayUnavailableException;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Psr\Log\NullLogger;
 
 uses(RefreshDatabase::class);
 
@@ -42,7 +43,7 @@ function relayClientWith(?string $endpoint): RelayClient
         $config->setEndpointUrl($endpoint);
     }
 
-    return new RelayClient(app(HttpFactory::class), $config);
+    return new RelayClient(app(HttpFactory::class), $config, new NullLogger);
 }
 
 it('refuses to use the relay before an endpoint is configured', function (): void {

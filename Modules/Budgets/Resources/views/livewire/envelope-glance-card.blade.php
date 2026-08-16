@@ -30,7 +30,7 @@
                 <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('budgets::messages.page.title') }}</p>
                 <a
                     href="{{ route('budgets.index') }}"
-                    class="text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
+                    class="tap-link text-xs text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
                 >{{ Lang::get('budgets::messages.glance.see_all') }}</a>
             </div>
 

@@ -1,0 +1,31 @@
+# Bank-fee classification rules — Estonia (Estonian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# Estonian builds its fee words as compounds ending in "-tasu", so each
+# entry uses `regex:` with a LEADING \b on the whole compound: that keeps
+# "TEENUSTASU" from being reduced to the bare "TASU", which means "fee" or
+# "payment" in general and would fire on ordinary merchant and salary text,
+# while leaving the right side open for the case endings ("teenustasud",
+# "kuutasult"). All bodies are ASCII, so no diacritic ever reaches the
+# regex — the matcher runs PCRE without /u and `#i` case-folds ASCII only.
+# Regex bodies must be SINGLE-quoted in YAML so the backslash reaches the
+# matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: 'regex:\bTEENUSTASU'
+    name: "Teenustasu"
+  - pattern: 'regex:\bKUUTASU'
+    name: "Kuutasu"
+  - pattern: 'regex:\bHALDUSTASU'
+    name: "Haldustasu"
+  - pattern: 'regex:\bAASTATASU'
+    name: "Aastatasu"
+  - pattern: 'regex:\bINTRESS'
+    name: "Intress"

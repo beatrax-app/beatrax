@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Księga gotówkowa',
+    'heading' => 'Księga gotówkowa',
+    'intro' => 'Rejestruj ręcznie gotówkę i inne wydatki poza bankiem. Wpisy ręczne trafiają do tej samej księgi co importy — są kategoryzowane, brane pod uwagę przy wykrywaniu cykliczności i wliczane do bieżącego miesiąca.',
+
+    'direction' => 'Kierunek',
+    'expense' => 'Wydatek',
+    'income' => 'Przychód',
+
+    'amount' => 'Kwota (€)',
+    'date' => 'Data',
+    'counterparty' => 'Kontrahent',
+    'counterparty_placeholder' => 'np. Piekarnia',
+    'category' => 'Kategoria',
+    'optional' => '(opcjonalnie)',
+    'uncategorized' => 'Bez kategorii',
+    'note' => 'Notatka',
+
+    'add_entry' => 'Dodaj wpis',
+    'manual_entries' => 'Wpisy ręczne',
+    'no_entries' => 'Brak wpisów ręcznych.',
+    'delete_entry' => 'Usuń wpis',
+    'delete' => 'Usuń',
+
+    'errors' => [
+        'amount_positive' => 'Podaj kwotę większą od zera.',
+        'invalid_date' => 'Podaj prawidłową datę.',
+    ],
+
+    'toast' => [
+        'added' => 'Dodano wpis gotówkowy.',
+        'removed' => 'Usunięto wpis gotówkowy.',
+    ],
+];

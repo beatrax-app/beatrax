@@ -1,0 +1,30 @@
+# Bank-fee classification rules — Latvia (Latvian).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The bare "MAKSA" (fee, payment) is never used on its own — it is the
+# everyday word for any payment — so it only appears as part of the fixed
+# statement phrases. "PROCENTI" is the one short word and uses `regex:` with
+# \b word boundaries so it matches the standalone interest line and not a
+# longer token such as "PROCENTUĀLI". Latvian diacritics stay out of
+# `regex:` bodies — the matcher runs PCRE without /u, so `#i` case-folds
+# ASCII only and \b never sees "Š" or "Ē" as a word character; those phrases
+# are plain substrings, which are matched case-insensitively and
+# multibyte-aware. Regex bodies must be SINGLE-quoted in YAML so the
+# backslash reaches the matcher instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "KOMISIJAS MAKSA"
+    name: "Komisijas maksa"
+  - pattern: "APKALPOŠANAS MAKSA"
+    name: "Konta apkalpošanas maksa"
+  - pattern: "MĒNEŠA MAKSA"
+    name: "Mēneša maksa"
+  - pattern: 'regex:\bPROCENTI\b'
+    name: "Procenti"

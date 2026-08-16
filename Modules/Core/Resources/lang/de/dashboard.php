@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => 'Dashboard',
+    'subtitle' => 'Dieser Zeitraum auf einen Blick.',
+
+    'previous_period' => 'Vorheriger Zeitraum',
+    'today' => 'Heute',
+    'next_period' => 'Nächster Zeitraum',
+
+    'totals_aria' => 'Summen dieses Zeitraums',
+    'totals_aria_currency' => 'Summen dieses Zeitraums — :currency',
+    'in' => 'Einnahmen',
+    'out' => 'Ausgaben',
+    'net' => 'Netto',
+
+    'status_tiles_aria' => 'Status-Kacheln',
+    'email_scan_health' => 'Status des E-Mail-Scans — :count verbunden',
+    'inbox' => 'Postfach|Postfächer',
+
+    'top_spending' => 'Größte Ausgaben',
+    'no_expenses' => 'Noch keine kategorisierten Ausgaben.',
+
+    'recent_transactions' => 'Letzte Transaktionen',
+    'view_all' => 'Alle anzeigen',
+    'nothing_period' => 'Nichts in diesem Zeitraum.',
+    'th_date' => 'Datum',
+    'th_counterparty' => 'Zahlungspartner',
+    'th_category' => 'Kategorie',
+    'th_amount' => 'Betrag',
+    'uncategorized' => 'Nicht kategorisiert',
+
+    'reauth' => [
+        'title' => 'Ein Postfach muss neu verbunden werden.',
+        'body' => 'Ein oder mehrere Postfächer wurden abgemeldet — Beatrax kann sie erst wieder scannen, wenn du sie neu verbindest.',
+        'link' => 'Zu den Postfächern',
+        'dismiss' => 'Ausblenden',
+    ],
+
+    'failed_chain' => [
+        'title' => 'Kettenauflösung fehlgeschlagen.',
+        'body' => 'Bei einem oder mehreren Aufträgen zur Kettenauflösung ist ein Fehler aufgetreten.',
+        'link' => 'Queue-Inspektor öffnen',
+    ],
+];

@@ -1,0 +1,75 @@
+# Tax deduction categories — Spain
+# Mirrors ES declaración de la Renta (IRPF, Modelo 100): reducciones de la base
+# imponible, gastos deducibles, deducciones de la cuota y de la cuota diferencial.
+#
+# Authority: Agencia Tributaria, „Manual práctico de Renta 2025"
+# (caps. 3, 13, 16 y 18 y parte 2, deducciones autonómicas).
+# Tax year 2025 (campaña presentada en 2026).
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "es_prevision_social"
+    name: "Aportaciones a sistemas de previsión social"
+    short_name: "Plan pensión"
+    hint: "Aportaciones a planes de pensiones y sistemas de previsión social"
+  - key: "es_prevision_social_conyuge"
+    name: "Aportaciones al plan de pensiones del cónyuge"
+    short_name: "Plan cónyuge"
+    hint: "Aportaciones al plan del cónyuge con rentas del trabajo reducidas"
+  - key: "es_patrimonios_protegidos"
+    name: "Aportaciones a patrimonios protegidos de personas con discapacidad"
+    short_name: "Patrim.prot."
+    hint: "Aportaciones al patrimonio protegido de un familiar con discapacidad"
+  - key: "es_pension_compensatoria"
+    name: "Pensiones compensatorias y anualidades por alimentos"
+    short_name: "Pensión comp"
+    hint: "Pensión compensatoria al cónyuge fijada por resolución judicial"
+  - key: "es_cuotas_profesionales"
+    name: "Cuotas sindicales y de colegios profesionales"
+    short_name: "Cuotas prof."
+    hint: "Cuotas sindicales, colegiación obligatoria y defensa jurídica"
+  - key: "es_gastos_actividad"
+    name: "Gastos deducibles de actividades económicas"
+    short_name: "Autónomos"
+    hint: "Gastos de la actividad económica en estimación directa"
+  - key: "es_vivienda_habitual"
+    name: "Inversión en vivienda habitual (régimen transitorio)"
+    short_name: "Vivienda hab"
+    hint: "Régimen transitorio para viviendas adquiridas antes de 2013"
+  - key: "es_alquiler_vivienda"
+    name: "Alquiler de la vivienda habitual (régimen transitorio)"
+    short_name: "Alquiler"
+    hint: "Régimen transitorio para contratos anteriores a 2015"
+  - key: "es_eficiencia_energetica"
+    name: "Obras de mejora de eficiencia energética en viviendas"
+    short_name: "Eficiencia"
+    hint: "Obras que mejoran la eficiencia energética de la vivienda"
+  - key: "es_donativos"
+    name: "Donativos y otras aportaciones"
+    short_name: "Donativos"
+    hint: "Donativos a entidades sin fines lucrativos y a partidos políticos"
+  - key: "es_empresas_nueva_creacion"
+    name: "Inversión en empresas de nueva o reciente creación"
+    short_name: "Inv. empresa"
+    hint: "Suscripción de acciones o participaciones en empresas nuevas"
+  - key: "es_vehiculos_electricos"
+    name: "Vehículos eléctricos enchufables y puntos de recarga"
+    short_name: "Coche eléct."
+    hint: "Compra de vehículo eléctrico enchufable e instalación de recarga"
+  - key: "es_maternidad"
+    name: "Deducción por maternidad y gastos de guardería"
+    short_name: "Maternidad"
+    hint: "Madres trabajadoras y gastos de custodia en guardería autorizada"
+  - key: "es_familia_numerosa"
+    name: "Familia numerosa y personas con discapacidad a cargo"
+    short_name: "Familia num."
+    hint: "Familia numerosa, discapacidad a cargo o ascendiente con dos hijos"
+  - key: "es_deducciones_autonomicas"
+    name: "Deducciones autonómicas"
+    short_name: "Autonómica"
+    hint: "Deducciones aprobadas por la comunidad autónoma de residencia"

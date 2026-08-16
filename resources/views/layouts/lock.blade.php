@@ -8,8 +8,19 @@
 <!doctype html>
 <html
     lang="{{ $chrome->locale }}"
-    class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
-    style="font-feature-settings: 'tnum';"
+    {{-- Background from CSS, not `bg-white dark:bg-slate-950`. The dark
+         variant needs the class that the pre-paint script adds a beat later,
+         so the utility painted white first and the page visibly flipped. --}}
+    class="beatrax-shell text-slate-900 dark:text-slate-100 {{ $chrome->isDark ? 'dark' : '' }}"
+    {{-- Only when the server already KNOWS the theme. An inline style beats
+         every stylesheet rule, so emitting it while the pre-paint script is
+         authoritative pinned a dark-OS phone to a white <html> and the page
+         flashed light against its own dark content. --}}
+    @if (! $chrome->needsPrePaintScript)
+        style="font-feature-settings: 'tnum'; background-color: {{ $chrome->isDark ? '#020617' : '#ffffff' }};"
+    @else
+        style="font-feature-settings: 'tnum';"
+    @endif
 >
     <head>
         <meta charset="utf-8" />
@@ -21,7 +32,7 @@
         <x-core::head-assets />
     </head>
     <body
-        class="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+        class="beatrax-shell antialiased text-slate-900 dark:text-slate-100"
         style="font-family: 'Inter', system-ui, -apple-system, sans-serif;"
     >
         @yield('content')

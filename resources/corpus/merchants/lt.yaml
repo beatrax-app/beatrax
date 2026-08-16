@@ -1,12 +1,180 @@
 # Merchant corpus — Lithuania. region defaults to LT. Schema: see merchants/nl.yaml.
 entries:
-  - { pattern: "MAXIMA", name: "Maxima", category: "Groceries" }
-  - { pattern: 'regex:\bIKI\b', name: "Iki", category: "Groceries" }
-  - { pattern: "LIDL", name: "Lidl", category: "Groceries" }
-  - { pattern: "RIMI", name: "Rimi", category: "Groceries" }
   - { pattern: "NORFA", name: "Norfa", category: "Groceries" }
-  - { pattern: "CIRCLE K", name: "Circle K", category: "Fuel" }
-  - { pattern: "TELIA", name: "Telia", category: "Internet & Phone" }
-  - { pattern: 'regex:\bBITE\b', name: "Bitė", category: "Internet & Phone" }
-  - { pattern: "TELE2", name: "Tele2", category: "Internet & Phone" }
-  - { pattern: "WOLT", name: "Wolt", category: "Eating out" }
+  - { pattern: "regex:\\bIKI\\b", name: "Iki", category: "Groceries" }
+  # --- Telecom / ISP / TV ---
+  - { pattern: "PILDYK", name: "Pildyk", category: "Internet & Phone", website: "https://pildyk.lt/lt" }
+  - { pattern: "EZYS", name: "Ežys", category: "Internet & Phone", website: "https://www.ezys.lt", support_url: "https://www.ezys.lt/kontaktai" }
+  - pattern: "regex:\\bINIT\\b"
+    name: "Init"
+    category: "Internet & Phone"
+    website: "https://init.lt"
+    support_url: "https://init.lt/kontaktai/"
+    support_phone: "19123"
+    support_email: "info@init.lt"
+  - pattern: "CGATES"
+    name: "Cgates"
+    category: "Internet & Phone"
+    website: "https://www.cgates.lt"
+    support_url: "https://www.cgates.lt/kontaktai/"
+    support_phone: "(0 5) 215 0000"
+    support_email: "info@cgates.lt"
+  - { pattern: "SPLIUS", name: "Splius", category: "Internet & Phone", website: "https://splius.lt" }
+  - pattern: "BALTICUM"
+    name: "Balticum"
+    category: "Internet & Phone"
+    website: "https://www.balticum.lt"
+    support_url: "https://www.balticum.lt/kontaktai/"
+    support_phone: "0 700 555 40"
+  - { pattern: "TELECENTRAS", name: "Telecentras", category: "Internet & Phone", website: "https://telecentras.lt" }
+  - { pattern: "TV3 LIETUVA", name: "TV3", category: "Streaming", website: "https://www.tv3.lt" }
+  # --- Energy, heating, water, waste ---
+  - pattern: "IGNITIS"
+    name: "Ignitis"
+    category: "Utilities"
+    website: "https://ignitis.lt"
+    support_url: "https://ignitis.lt/pagalbos-centras"
+  - { pattern: "IGNITIS GRUPE", name: "Ignitis grupė", category: "Utilities", website: "https://ignitisgrupe.lt" }
+  - pattern: "regex:\\bESO\\b"
+    name: "ESO"
+    category: "Utilities"
+    website: "https://www.eso.lt/namams"
+    cancel_url: "https://www.eso.lt/duk/sutarties-nutraukimas-188"
+  - pattern: "ELEKTRUM LIETUVA"
+    name: "Elektrum Lietuva"
+    category: "Utilities"
+    website: "https://www.elektrum.lt/lt/namams"
+    support_url: "https://www.elektrum.lt/lt/namams/kontaktai"
+  - { pattern: "PERLAS ENERGIJA", name: "Perlas Energija", category: "Utilities" }
+  - { pattern: "ENEFIT LIETUVA", name: "Enefit Lietuva", category: "Utilities" }
+  - { pattern: "VILNIAUS ENERGIJA", name: "Vilniaus energija", category: "Utilities", website: "https://www.vilniausenergija.lt/lt" }
+  - { pattern: "KAUNO ENERGIJA", name: "Kauno energija", category: "Utilities" }
+  - { pattern: "KLAIPEDOS ENERGIJA", name: "Klaipėdos energija", category: "Utilities", website: "https://www.klaipedosenergija.lt" }
+  - { pattern: "VILNIAUS VANDENYS", name: "Vilniaus vandenys", category: "Utilities" }
+  - { pattern: "KAUNO VANDENYS", name: "Kauno vandenys", category: "Utilities", website: "https://www.kaunovandenys.lt" }
+  - { pattern: "ECOSERVICE", name: "Ecoservice", category: "Utilities", website: "https://ecoservice.lt" }
+  - { pattern: "VSA VILNIUS", name: "VSA Vilnius", category: "Utilities", website: "https://www.vsa.lt" }
+  - { pattern: "EKONOVUS", name: "Ekonovus", category: "Utilities", website: "https://www.ekonovus.lt" }
+  # --- Gyms ---
+  - pattern: "LEMON GYM LIETUVA"
+    name: "Lemon Gym"
+    category: "Memberships"
+    website: "https://www.lemongym.lt"
+    cancel_url: "https://www.lemongym.lt/sutarties-nutraukimo-prasymas/"
+  - pattern: "IMPULS"
+    name: "Impuls"
+    category: "Memberships"
+    website: "https://www.impuls.lt"
+    cancel_url: "https://www.impuls.lt/sutarties-nutraukimo-prasymas/"
+    support_url: "https://www.impuls.lt/kontaktai/"
+  - pattern: "GYM PLIUS"
+    name: "Gym+"
+    category: "Memberships"
+    website: "https://gymplius.lt"
+    cancel_url: "https://gymplius.lt/apie-mus/duk/kaip-nutraukti-naryste-be-isipareigojimu/"
+    support_url: "https://gymplius.lt/kontaktai/"
+  # --- Insurance ---
+  - { pattern: "LIETUVOS DRAUDIMAS", name: "Lietuvos draudimas", category: "Insurance" }
+  - { pattern: "IF LIETUVA", name: "If draudimas", category: "Insurance", website: "https://www.if.lt/privatiems" }
+  - { pattern: "COMPENSA LIETUVA", name: "Compensa", category: "Insurance", website: "https://www.compensa.lt" }
+  - { pattern: "GJENSIDIGE LIETUVA", name: "Gjensidige", category: "Insurance", website: "https://www.gjensidige.lt", support_url: "https://www.gjensidige.lt/kontaktai" }
+  - { pattern: "ERGO LIETUVA", name: "ERGO", category: "Insurance", website: "https://ergo.lt" }
+  - { pattern: "BTA LIETUVA", name: "BTA", category: "Insurance", website: "https://www.bta.lt" }
+  - { pattern: "PZU LIETUVA", name: "PZU Lietuva", category: "Insurance" }
+  # --- Banks ---
+  - { pattern: "SWEDBANK LIETUVA", name: "Swedbank", category: "Fees & charges", website: "https://www.swedbank.lt/private" }
+  - { pattern: "SEB BANKAS", name: "SEB bankas", category: "Fees & charges", website: "https://www.seb.lt" }
+  - { pattern: "ARTEA BANKAS", name: "Artea (Šiaulių bankas)", category: "Fees & charges", website: "https://www.artea.lt/lt" }
+  - { pattern: "URBO BANKAS", name: "Urbo bankas", category: "Fees & charges", website: "https://urbo.lt/lt" }
+  - { pattern: "LUMINOR LIETUVA", name: "Luminor", category: "Fees & charges" }
+  # --- Transport / mobility ---
+  - { pattern: "regex:\\bJUDU\\b", name: "JUDU (Vilnius transport)", category: "Public transport", website: "https://judu.lt" }
+  - { pattern: "LTG LINK", name: "LTG Link", category: "Public transport", website: "https://ltglink.lt" }
+  - { pattern: "LIETUVOS GELEZINKELIAI", name: "Lietuvos geležinkeliai", category: "Public transport", website: "https://ltglink.lt" }
+  - { pattern: "KAUTRA", name: "Kautra", category: "Public transport", website: "https://www.kautra.lt", support_url: "https://www.kautra.lt/kontaktai/" }
+  - { pattern: "regex:\\bSTOPS\\b", name: "Stops", category: "Public transport", website: "https://www.stops.lt/vilnius/" }
+  - { pattern: "CITYBEE", name: "CityBee", category: "Transport", website: "https://citybee.lt/lt/" }
+  - { pattern: "TRAFI", name: "Trafi", category: "Public transport", website: "https://www.trafi.com" }
+  - { pattern: "IGNITIS ON", name: "Ignitis ON", category: "Transport", website: "https://ignitison.lt" }
+  # --- News / media ---
+  - { pattern: "DELFI.LT", name: "Delfi", category: "Subscriptions", website: "https://www.delfi.lt" }
+  - { pattern: "15MIN", name: "15min", category: "Subscriptions", website: "https://www.15min.lt" }
+  - { pattern: "LRYTAS", name: "Lrytas", category: "Subscriptions", website: "https://www.lrytas.lt" }
+  - { pattern: "VERSLO ZINIOS", name: "Verslo žinios", category: "Subscriptions", website: "https://www.vz.lt" }
+  - { pattern: "regex:\\bLRT\\b", name: "LRT", category: "Streaming", website: "https://www.lrt.lt" }
+  - { pattern: "RESPUBLIKA", name: "Respublika", category: "Subscriptions", website: "https://www.respublika.lt" }
+  - { pattern: "KAUNO DIENA", name: "Kauno diena", category: "Subscriptions" }
+  - { pattern: "VAKARU EKSPRESAS", name: "Vakarų ekspresas", category: "Subscriptions", website: "https://ve.lt" }
+  # --- Groceries / delivery ---
+  - { pattern: "BARBORA", name: "Barbora", category: "Groceries" }
+  - { pattern: "AIBE", name: "Aibė", category: "Groceries", website: "https://aibe.lt", support_url: "https://aibe.lt/kontaktai/" }
+  - { pattern: "LASTMILE", name: "LastMile", category: "Groceries", website: "https://www.lastmile.lt" }
+  # --- Pharmacies ---
+  - pattern: "EUROVAISTINE"
+    name: "Eurovaistinė"
+    category: "Health"
+    website: "https://www.eurovaistine.lt"
+    support_url: "https://www.eurovaistine.lt/kontaktai"
+  - pattern: "GINTARINE VAISTINE"
+    name: "Gintarinė vaistinė"
+    category: "Health"
+    website: "https://www.gintarine.lt"
+    support_url: "https://www.gintarine.lt/kontaktai"
+    support_phone: "+370 800 10008"
+    support_email: "gintarine@gintarine.lt"
+  - { pattern: "CAMELIA", name: "Camelia", category: "Health", website: "https://camelia.lt", support_url: "https://camelia.lt/kontaktai" }
+  - pattern: "BENU VAISTINE"
+    name: "BENU vaistinė"
+    category: "Health"
+    website: "https://www.benu.lt"
+    support_url: "https://www.benu.lt/kontaktai"
+    support_phone: "+370 37 225 522"
+    support_email: "evaistine@benu.lt"
+  # --- Retail / electronics / DIY ---
+  - { pattern: "PIGU.LT", name: "Pigu.lt", category: "Other", website: "https://pigu.lt/lt/" }
+  - { pattern: "SENUKAI", name: "Senukai", category: "Housing" }
+  - { pattern: "TOPO CENTRAS", name: "Topo centras", category: "Other", website: "https://www.topocentras.lt" }
+  - { pattern: "VARLE.LT", name: "Varlė", category: "Other" }
+  - { pattern: "SPORTLAND LIETUVA", name: "Sportland", category: "Other", website: "https://sportland.lt" }
+  - { pattern: "KIKA LIETUVA", name: "Kika", category: "Housing", website: "https://www.kika.lt" }
+  - { pattern: "HUMANA LIETUVA", name: "Humana", category: "Other", website: "https://www.humana.lt" }
+  - { pattern: "SOULZ", name: "Apranga / Soulz", category: "Other", website: "https://soulz.lt/lt" }
+  # --- Cinemas / ticketing ---
+  - { pattern: "FORUM CINEMAS", name: "Forum Cinemas", category: "Other", website: "https://forumcinemas.lt/lt/" }
+  - { pattern: "MULTIKINO LIETUVA", name: "Multikino", category: "Other", website: "https://multikino.lt" }
+  - { pattern: "TIKETA", name: "Tiketa", category: "Other", website: "https://www.tiketa.lt" }
+  - { pattern: "BILIETAI.LT", name: "Bilietai.lt", category: "Other", website: "https://www.bilietai.lt" }
+  # --- Cloud / hosting ---
+  - { pattern: "INTERNETO VIZIJA", name: "Interneto vizija", category: "Cloud / Software", website: "https://www.iv.lt" }
+  - { pattern: "SERVERIAI.LT", name: "Serveriai.lt", category: "Cloud / Software", website: "https://www.iv.lt/serveriai/" }
+  - { pattern: "HOSTINGER", name: "Hostinger", category: "Cloud / Software", website: "https://www.hostinger.com/lt" }
+  # --- Charities ---
+  - { pattern: "MAISTO BANKAS", name: "Maisto bankas", category: "Donations", website: "https://www.maistobankas.lt" }
+  - { pattern: "CARITAS LIETUVA", name: "Caritas", category: "Donations", website: "https://www.caritas.lt" }
+  - { pattern: "GELBEKIT VAIKUS", name: "Gelbėkit vaikus", category: "Donations", website: "https://gelbekitvaikus.lt" }
+  # --- Post / government / gambling ---
+  - { pattern: "LIETUVOS PASTAS", name: "Lietuvos paštas", category: "Fees & charges", website: "https://www.post.lt" }
+  - { pattern: "LP EXPRESS", name: "LP Express", category: "Fees & charges", website: "https://lpexpress.lt" }
+  - { pattern: "DPD LIETUVA", name: "DPD Lietuva", category: "Fees & charges", website: "https://www.dpd.com/lt/lt/" }
+  - { pattern: "OMNIVA LIETUVA", name: "Omniva", category: "Fees & charges", website: "https://www.omniva.lt" }
+  - { pattern: "VENIPAK LIETUVA", name: "Venipak", category: "Fees & charges", website: "https://venipak.com/lt/" }
+  - { pattern: "REGITRA", name: "Regitra", category: "Car maintenance", website: "https://www.regitra.lt" }
+  - { pattern: "VALSTYBINE MOKESCIU INSPEKCIJA", name: "Valstybinė mokesčių inspekcija", category: "Fees & charges", website: "https://www.vmi.lt/evmi/" }
+  - { pattern: "PERLAS GO", name: "Perlas GO", category: "Other", website: "https://www.perlas.lt" }
+  - { pattern: "OLYMPIC CASINO LIETUVA", name: "Olympic Casino", category: "Other", website: "https://www.olympic-casino.lt/lt" }
+  # --- Healthcare ---
+  - { pattern: "AFFIDEA LIETUVA", name: "Affidea", category: "Healthcare", website: "https://www.affidea.lt" }
+  - { pattern: "NORTHWAY", name: "Northway", category: "Healthcare", website: "https://nmc.lt" }
+  - { pattern: "ANTEJA", name: "Antėja", category: "Healthcare", website: "https://www.anteja.lt" }
+  # --- Fuel / eating out ---
+  - { pattern: "ORLEN LIETUVA", name: "Orlen Lietuva", category: "Fuel", website: "https://www.orlenlietuva.lt/LT/Puslapiai/default.aspx" }
+  - { pattern: "VIADA", name: "Viada", category: "Fuel" }
+  - { pattern: "CAFFEINE", name: "Caffeine", category: "Eating out" }
+  # --- More recurring billers ---
+  - { pattern: "BITE LIETUVA", name: "Bitė Lietuva", category: "Internet & Phone", website: "https://www.bite.lt" }
+  - { pattern: "GIRTEKA", name: "Girteka", category: "Transport", website: "https://www.girteka.eu" }
+  - { pattern: "ATLIEKOS.LT", name: "Atliekos.lt", category: "Utilities", website: "https://atliekos.lt" }
+  - { pattern: "NORFOS MAZMENA", name: "Norfa", category: "Groceries", website: "https://www.norfa.lt", support_url: "https://www.norfa.lt/kontaktai" }
+  - { pattern: "MAXIMA LIETUVA", name: "Maxima", category: "Groceries", website: "https://www.maxima.lt" }
+  - { pattern: "IKI LIETUVA", name: "Iki", category: "Groceries", website: "https://iki.lt" }
+  - { pattern: "RIMI LIETUVA", name: "Rimi", category: "Groceries", website: "https://www.rimi.lt" }

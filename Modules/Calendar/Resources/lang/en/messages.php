@@ -10,8 +10,7 @@ return [
 
     'summary' => [
         'computing' => 'Projection updating…',
-        'risk_one' => 'Balance dips below €0 on :date.',
-        'risk_many' => 'Balance dips below €0 on :count days — first: :date.',
+        'risk' => 'Balance dips below €0 on :date.|Balance dips below €0 on :count days — first: :date.',
     ],
 
     'toolbar' => [
@@ -48,8 +47,7 @@ return [
     ],
 
     'cell' => [
-        'entry_one' => 'entry',
-        'entry_many' => 'entries',
+        'entry' => 'entry|entries',
         'aria' => ':date: :count :entries',
         'aria_balance_negative' => ', projected balance minus €:amount',
         'aria_balance_positive' => ', projected balance €:amount',

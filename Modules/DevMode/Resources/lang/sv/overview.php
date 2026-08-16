@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'heading' => 'Översikt',
+    'subtitle' => 'Driftvy för den inbyggda utvecklarkonsolen.',
+    'worker_heartbeat' => 'Heartbeat för arbetare',
+    'not_running' => 'KÖRS INTE',
+    'queue' => 'Kö',
+    'pending' => 'väntande',
+    'failed' => 'misslyckade',
+    'batches' => 'batcher',
+    'queue_summary' => ':failed misslyckade jobb · :batches aktiv batch',
+    'last_command' => 'Senaste kommando',
+    'waiting_for_logs' => 'Väntar på loggrader…',
+    'recent_runs' => 'Senaste körningar',
+    'recent_runs_empty' => 'Inga körningar än. Tryck på ⌘K för att köra ett kommando.',
+    'open_alerts' => 'Öppna varningar',
+    'open_alerts_empty' => 'Inga öppna varningar.',
+    'reauth' => 'Autentisera igen →',
+];

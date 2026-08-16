@@ -33,8 +33,14 @@ it('defaults to English when every signal is absent', function (): void {
 });
 
 it('ignores an unsupported value and continues down the chain', function (): void {
-    // A stale 'de' override is skipped, not honoured; the session 'nl' wins.
-    expect($this->negotiator->resolve('de', 'nl', 'en'))->toBe('nl');
+    // A stale 'ja' override is skipped, not honoured; the session 'nl' wins.
+    expect($this->negotiator->resolve('ja', 'nl', 'en'))->toBe('nl');
     // And when only unsupported values exist, English is the floor.
-    expect($this->negotiator->resolve('de', 'fr', 'es'))->toBe('en');
+    expect($this->negotiator->resolve('ja', 'ko', 'zh'))->toBe('en');
+});
+
+it('honours every locale the enum declares', function (): void {
+    foreach (Locale::cases() as $case) {
+        expect($this->negotiator->resolve($case->value, null, null))->toBe($case->value);
+    }
 });

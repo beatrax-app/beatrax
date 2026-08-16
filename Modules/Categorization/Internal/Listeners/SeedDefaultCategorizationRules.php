@@ -18,6 +18,12 @@ final class SeedDefaultCategorizationRules
 
     public function handle(UserInstalled $event): void
     {
+        // A device joining an existing account receives this data over sync;
+        // seeding here would collide id-for-id with what the peer sends.
+        if (! $event->seedsStarterData) {
+            return;
+        }
+
         $user = User::query()->findOrFail($event->userId);
         $this->seeder->run($user);
     }

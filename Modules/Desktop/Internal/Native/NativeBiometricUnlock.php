@@ -7,10 +7,10 @@ namespace Modules\Desktop\Internal\Native;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Native\Desktop\Facades\System;
 
-// NOT YET WIRED: no caller exists. The lock screen currently offers
-// only the WebAuthn (browser) biometric path. The crypto release logic
-// lives entirely in the Auth module; this class only ever returns a
-// bool — native Touch ID needs a Desktop→Auth bridge still to be built.
+// Native Touch ID availability and prompt. Deliberately has no caller: the
+// prompt yields a bool, while unlocking needs the data key back, so a desktop
+// equivalent of the mobile cold-start vault (a wrapped KEK persisted under
+// safeStorage) must exist first. The lock screen offers WebAuthn until then.
 final class NativeBiometricUnlock
 {
     public function __construct(

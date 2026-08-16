@@ -51,6 +51,75 @@ final class RelayConfig
         return ! str_starts_with($url, 'https://');
     }
 
+    // Insecure AND routable off this network — the transport refuses these,
+    // since plaintext to a public host exposes ciphertext and metadata sizes
+    // in transit. A private or loopback host is the desktop's own relay,
+    // reachable only from this LAN, and is the out-of-box pairing path.
+    public function isPubliclyInsecure(): bool
+    {
+        if (! $this->isInsecure()) {
+            return false;
+        }
+
+        $host = parse_url((string) $this->endpointUrl(), PHP_URL_HOST);
+
+        // An endpoint with no host at all is treated as public: nothing about
+        // it says it stays on this network.
+        return ! is_string($host) || $host === '' || ! $this->isLanHost($host);
+    }
+
+    // Whether an endpoint names a host reachable only from this network —
+    // the desktop's own relay, whether this device runs it or learned it from
+    // a QR. Anything else is an operator's self-hosted relay: configuration
+    // this device does not own and must never re-point or re-credential.
+    public function isLanEndpoint(string $endpoint): bool
+    {
+        $host = parse_url($endpoint, PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' && $this->isLanHost($host);
+    }
+
+    // The one question all three endpoint checks were each answering for
+    // themselves: is this host reachable only from this network? `localhost`
+    // counts, as does any private or reserved IPv4. A domain name never does —
+    // it resolves to wherever DNS says, which is not ours to assume.
+    private function isLanHost(string $host): bool
+    {
+        if ($host === 'localhost') {
+            return true;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+            return false;
+        }
+
+        // NO_PRIV_RANGE|NO_RES_RANGE fails for private and reserved
+        // addresses, so a failure here is precisely the LAN case.
+        return filter_var(
+            $host,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
+        ) === false;
+    }
+
+    // Whether an endpoint is one the transport would actually use. Callers
+    // that PERSIST an endpoint must ask this first: storing one the client
+    // later refuses leaves a device holding a relay it can never send to.
+    public function wouldAcceptEndpoint(string $endpoint): bool
+    {
+        if (str_starts_with($endpoint, 'https://')) {
+            return true;
+        }
+
+        if (! str_starts_with($endpoint, 'http://')) {
+            return false;
+        }
+
+        // Plaintext is only ever accepted to a host that cannot leave this
+        // network — which is the same question isLanEndpoint() answers.
+        return $this->isLanEndpoint($endpoint);
+    }
+
     // Passing null or empty string clears the endpoint (reverts to "not
     // configured"). Non-HTTPS URLs are stored but flagged insecure.
     /**
@@ -65,11 +134,53 @@ final class RelayConfig
             throw RelayConfigWriteException::couldNotCreateDirectory($dir);
         }
 
-        $data = ['endpoint' => $url ?? ''];
+        // Keep any pin already stored: setEndpointUrl() is also how a peer
+        // records an endpoint it just learned, and dropping the pin here
+        // would silently downgrade a pinned relay to unverified. An
+        // unreadable config must not pre-empt the write error below.
+        try {
+            $existingPin = $this->pin() ?? '';
+        } catch (\Throwable) {
+            $existingPin = '';
+        }
+
+        $data = ['endpoint' => $url ?? '', 'pin' => $existingPin];
         $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
 
         // Suppressed so the `=== false` check decides; unsuppressed the
         // E_WARNING becomes an ErrorException first and the guard never ran.
+        if (@file_put_contents($path, $json, LOCK_EX) === false) {
+            throw RelayConfigWriteException::couldNotWrite($path);
+        }
+    }
+
+    // The peer's pinned SPKI key, learned out-of-band from the QR. Present
+    // means: verify the relay presents exactly this key and nothing else.
+    public function pin(): ?string
+    {
+        $data = $this->readJsonObject(UserDataPathService::appPath(self::CONFIG_SUB));
+
+        if ($data === null) {
+            return null;
+        }
+
+        $pin = $data['pin'] ?? null;
+
+        return is_string($pin) && $pin !== '' ? $pin : null;
+    }
+
+    public function setPin(?string $pin): void
+    {
+        $path = UserDataPathService::appPath(self::CONFIG_SUB);
+        $dir = dirname($path);
+
+        if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
+            throw RelayConfigWriteException::couldNotCreateDirectory($dir);
+        }
+
+        $data = ['endpoint' => $this->endpointUrl() ?? '', 'pin' => $pin ?? ''];
+        $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
+
         if (@file_put_contents($path, $json, LOCK_EX) === false) {
             throw RelayConfigWriteException::couldNotWrite($path);
         }

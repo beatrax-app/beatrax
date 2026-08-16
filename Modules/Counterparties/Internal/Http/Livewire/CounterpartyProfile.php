@@ -14,6 +14,7 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Recurring\Public\Services\RecurringSeriesQuery;
 use Modules\Tax\Public\Http\Livewire\Concerns\HandlesTaxTagging;
+use Modules\Tax\Public\Services\TaxCountrySetup;
 use Modules\Tax\Public\Services\TaxTagQuery;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -64,6 +65,7 @@ final class CounterpartyProfile extends Component
         SupportResourceProvider $supportResources,
         RecurringSeriesQuery $recurring,
         TaxTagQuery $taxTagQuery,
+        TaxCountrySetup $taxCountry,
     ): View {
         $user = $currentUser->user();
         $profile = $query->bySlug($user, $this->slug);
@@ -89,8 +91,15 @@ final class CounterpartyProfile extends Component
             default => 'counterparties::livewire.profile-tabs.unknown',
         };
 
+        // Scoped to the user's country: brands recur across markets under one
+        // name (Sanitas is a Swiss insurer and a Spanish provider), and an
+        // unscoped lookup handed whichever file sorted last to everybody.
+        // Empty means "not set" and searches everywhere, as before.
+        $taxCountryCode = $taxCountry->currentCountry($user->id);
+        $supportCountry = $taxCountryCode === '' ? null : $taxCountryCode;
+
         $supportResource = in_array($profile->type, [CounterpartyType::Merchant->value, CounterpartyType::Government->value], true)
-            ? $supportResources->forCounterparty($profile->displayName, $profile->type)
+            ? $supportResources->forCounterparty($profile->displayName, $profile->type, $supportCountry)
             : null;
 
         $recurringSeries = in_array($profile->type, [CounterpartyType::Merchant->value, CounterpartyType::Bank->value, CounterpartyType::Government->value], true)

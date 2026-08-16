@@ -1,0 +1,34 @@
+# Bank-fee classification rules — Portugal (Portuguese).
+#
+# A transaction whose description matches one of these patterns resolves to
+# type=bank with metadata.subcategory=fee (step 6 of
+# CounterpartyResolverService). The list is deliberately narrow — broad
+# matching fights the merchant resolver (step 3).
+#
+# The fee word uses `regex:` with a LEADING \b on the stem: `\bCOMISS`
+# covers "comissão" and "comissões" in one entry — the stem stops before the
+# accented "ã" because the matcher runs PCRE without /u, so `#i` case-folds
+# ASCII only and an accented letter inside a regex would match one casing at
+# best — and the boundary keeps the stem anchored at the start of a word so
+# it cannot fire mid-token. "MANUTENÇÃO" is only ever used as part of
+# "MANUTENÇÃO DE CONTA", since on its own it belongs to maintenance
+# merchants, and it is a plain substring so the accented letters are matched
+# case-insensitively and multibyte-aware. Stamp duty (imposto do selo) is
+# left out on purpose: it is a tax the bank collects, not a bank fee. Regex
+# bodies must be SINGLE-quoted in YAML so the backslash reaches the matcher
+# instead of being read as a YAML escape.
+#
+# Schema per entry:
+#   pattern  string  required — case-insensitive substring or `regex:` body.
+#   name     string  optional — canonical display name for the fee row.
+entries:
+  - pattern: "MANUTENÇÃO DE CONTA"
+    name: "Comissão de manutenção de conta"
+  - pattern: 'regex:\bCOMISS'
+    name: "Comissão bancária"
+  - pattern: 'regex:\bANUIDADE\b'
+    name: "Anuidade"
+  - pattern: 'regex:\bDESCOBERTO\b'
+    name: "Comissão de descoberto"
+  - pattern: "JUROS DEVEDORES"
+    name: "Juros devedores"

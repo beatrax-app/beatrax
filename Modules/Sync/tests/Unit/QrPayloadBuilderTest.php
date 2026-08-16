@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
+use Modules\Sync\Internal\Pairing\RelayBootstrap;
 
 /*
  * QrPayloadBuilderTest — PAIR-02 QR payload encoding.
@@ -60,7 +61,7 @@ it('appends &relay=<endpoint> when a relay endpoint is supplied', function (): v
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: 'https://relay.example.com',
+        relay: new RelayBootstrap('https://relay.example.com'),
     );
 
     expect($uri)->toContain('relay='.rawurlencode('https://relay.example.com'));
@@ -76,8 +77,7 @@ it('appends &rtok=<token> only when BOTH a relay endpoint AND an auth token are 
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: null,
-        relayAuthToken: 'shared-secret',
+        relay: new RelayBootstrap(authToken: 'shared-secret'),
     );
     expect($uriTokenOnly)->not->toContain('rtok=');
     expect($uriTokenOnly)->not->toContain('relay=');
@@ -87,8 +87,7 @@ it('appends &rtok=<token> only when BOTH a relay endpoint AND an auth token are 
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: 'https://relay.example.com',
-        relayAuthToken: 'shared-secret',
+        relay: new RelayBootstrap('https://relay.example.com', 'shared-secret'),
     );
     expect($uriBoth)->toContain('relay='.rawurlencode('https://relay.example.com'));
     expect($uriBoth)->toContain('rtok='.rawurlencode('shared-secret'));
@@ -102,9 +101,39 @@ it('renders relay params into the SVG-encoded URI too', function (): void {
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: 'https://relay.example.com',
-        relayAuthToken: 'shared-secret',
+        relay: new RelayBootstrap('https://relay.example.com', 'shared-secret'),
     );
 
     expect($svg)->toContain('<svg');
+});
+
+it('renders the QR without any xmlwriter-backed renderer', function (): void {
+    // The PHP binary NativePHP bundles with the desktop app has no
+    // ext-xmlwriter, so bacon's SvgImageBackEnd threw "You need to install the
+    // libxml extension and enable the xmlwriter extension" and Show my code —
+    // the one surface pairing depends on — failed there while every test
+    // passed on a host PHP that ships the extension.
+    $source = (string) file_get_contents(
+        base_path('Modules/Sync/Internal/Pairing/QrPayloadBuilder.php'),
+    );
+
+    // Asserts on the imports, not on prose: the comment explaining this very
+    // trap names the offending class, and matching free text would fail on it.
+    expect($source)->not->toContain('use BaconQrCode\Renderer')
+        ->and($source)->not->toContain('use BaconQrCode\Writer');
+});
+
+it('emits a square SVG whose module grid clears the quiet-zone margin', function (): void {
+    // Guards the hand-rolled geometry: a transposed or off-by-one grid still
+    // produces a plausible-looking SVG that no scanner can read.
+    $svg = (new QrPayloadBuilder)->buildSvg(
+        'device-geometry',
+        str_repeat('a', 64),
+        str_repeat('b', 64),
+        'deadbeef',
+    );
+
+    expect($svg)->toMatch('/viewBox="0 0 (\d+) \1"/')
+        ->and($svg)->toContain('shape-rendering="crispEdges"')
+        ->and(substr_count($svg, '<rect'))->toBeGreaterThan(100);
 });

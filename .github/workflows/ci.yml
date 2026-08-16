@@ -167,6 +167,11 @@ jobs:
               # Full suite: 773s serial, 358s parallel, before sharding.
               env:
                   APP_ENV: testing
+                  # Reaches the paratest WORKERS, which is where the time goes —
+                  # a -d flag would only configure the parent. Enables opcache
+                  # for the CLI and turns pcov off; this step never collects
+                  # coverage, and the coverage workflow sets neither.
+                  PHP_INI_SCAN_DIR: ':tools/test-php-ini'
               run: php artisan test --parallel --testsuite="${{ steps.shard.outputs.suites }}"
 
     # Pint and Larastan read the whole tree and do not care about the tests, so
@@ -390,4 +395,8 @@ jobs:
               working-directory: mobile-app
               env:
                   APP_ENV: testing
+                  # Same settings as the sharded step, reached from the mobile
+                  # root — `tools/` is one of the few directories NOT symlinked
+                  # into this second Composer root, so the path steps out.
+                  PHP_INI_SCAN_DIR: ':../tools/test-php-ini'
               run: vendor/bin/pest --testsuite=Mobile --exclude-group=repo-root-only

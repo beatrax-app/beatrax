@@ -2,15 +2,21 @@
 
 declare(strict_types=1);
 
+use Illuminate\Translation\MessageSelector;
+use Modules\Core\Public\Enums\Locale;
+
 /*
- * en/nl translation parity (G7).
+ * Translation parity across every shipped locale (G7).
  *
- * Every module lang file ships in both shipped locales with the identical
+ * Every module lang file ships in all supported locales with the identical
  * set of (possibly nested) key paths, so a new en key cannot merge without
- * its Dutch translation and a removed key cannot leave a stale nl entry
- * behind. The check compares key paths, not values — a key whose Dutch
- * copy is intentionally identical to English (a proper noun, a symbol)
- * still satisfies parity.
+ * its translations and a removed key cannot leave a stale entry behind. The
+ * check compares key paths, not values — a key whose translation is
+ * intentionally identical to English (a proper noun, a symbol) still
+ * satisfies parity.
+ *
+ * Placeholders are checked too: a dropped :count or %s renders the token
+ * literally to the reader, which is a defect the key-path check cannot see.
  */
 
 /**
@@ -25,64 +31,338 @@ function translationParityKeyPaths(array $translations, string $prefix = ''): ar
         if (is_array($value)) {
             $paths = array_merge($paths, translationParityKeyPaths($value, $path));
         } else {
-            $paths[] = $path;
+            $paths = array_merge($paths, [$path]);
         }
     }
 
     return $paths;
 }
 
-it('ships every en translation key in nl too, per module lang file', function (): void {
-    $enFiles = glob(base_path('Modules/*/Resources/lang/en/*.php')) ?: [];
-    expect($enFiles)->not->toBeEmpty();
-
-    $problems = [];
-    foreach ($enFiles as $enFile) {
-        $nlFile = str_replace('/lang/en/', '/lang/nl/', $enFile);
-        $rel = str_replace(base_path().'/', '', $enFile);
-
-        if (! is_file($nlFile)) {
-            $problems[] = $rel.': no nl counterpart file';
-
-            continue;
-        }
-
-        $en = require $enFile;
-        $nl = require $nlFile;
-        if (! is_array($en) || ! is_array($nl)) {
-            $problems[] = $rel.': a lang file did not return an array';
-
-            continue;
-        }
-
-        $enKeys = translationParityKeyPaths($en);
-        $nlKeys = translationParityKeyPaths($nl);
-        sort($enKeys);
-        sort($nlKeys);
-
-        $missing = array_values(array_diff($enKeys, $nlKeys));
-        $stale = array_values(array_diff($nlKeys, $enKeys));
-        if ($missing !== []) {
-            $problems[] = $rel.': nl is missing ['.implode(', ', $missing).']';
-        }
-        if ($stale !== []) {
-            $problems[] = $rel.': nl has stale ['.implode(', ', $stale).']';
+/**
+ * @param  array<array-key, mixed>  $translations
+ * @return array<string, string>
+ */
+function translationParityStrings(array $translations, string $prefix = ''): array
+{
+    $flat = [];
+    foreach ($translations as $key => $value) {
+        $path = $prefix === '' ? (string) $key : $prefix.'.'.$key;
+        if (is_array($value)) {
+            $flat += translationParityStrings($value, $path);
+        } elseif (is_string($value)) {
+            $flat[$path] = $value;
         }
     }
 
-    expect($problems)->toBe([], "en/nl translation parity broken:\n  ".implode("\n  ", $problems));
+    return $flat;
+}
+
+// A few strings glue a unit abbreviation straight onto the token: ":nh" is
+// ":n" plus an hours suffix, ":secondss" is ":seconds" plus one for seconds.
+// The suffix is localisable and the token is not, so these keys are checked
+// for the token alone. The map holds what the caller actually interpolates.
+const TRANSLATION_PARITY_GLUED_UNIT_KEYS = [
+    'Modules/EmailScan/Resources/lang/en/inboxes.php|retry_seconds' => ':n',
+    'Modules/EmailScan/Resources/lang/en/inboxes.php|retry_minutes' => ':n',
+    'Modules/EmailScan/Resources/lang/en/inboxes.php|retry_hours' => ':n',
+    'Modules/Mobile/Resources/lang/en/lock.php|errors.too_many_attempts' => ':seconds',
+    'Modules/DevMode/Resources/lang/en/sql.php|rows_meta' => ':duration',
+    'Modules/Core/Resources/lang/en/alerts.php|messages.backup_overdue' => ':hours',
+];
+
+/** @return list<string> the placeholder tokens a translator must carry over, as a set */
+function translationParityPlaceholders(string $line, ?string $gluedToken): array
+{
+    if ($gluedToken !== null) {
+        return str_contains($line, $gluedToken) ? [$gluedToken] : [];
+    }
+
+    $tokens = [];
+    if (preg_match_all('/:[a-zA-Z_][a-zA-Z0-9_]*/', $line, $matches) !== false) {
+        $tokens = $matches[0];
+    }
+    if (preg_match_all('/%[sd]/', $line, $formats) !== false) {
+        $tokens = array_merge($tokens, $formats[0]);
+    }
+
+    // A set, not a multiset: a locale needing three plural segments where
+    // English needs two legitimately repeats :count an extra time.
+    $tokens = array_values(array_unique($tokens));
+    sort($tokens);
+
+    return $tokens;
+}
+
+// A numeral glued to a currency sign is an amount, not a count: the "€0" in
+// "Balance dips below €0 on :count days" is the threshold being crossed, and
+// it reads €0 whether the sentence selects one day or five. Amounts are cut
+// before the literal-numeral scan below so the check keeps its aim on a
+// numeral standing in for :count — "1 payment of €5 due" still reports its
+// leading "1".
+function translationParityWithoutAmounts(string $segment): string
+{
+    return (string) preg_replace(
+        '/\p{Sc}[\s\x{00A0}]*\d[\d.,]*|\d[\d.,]*[\s\x{00A0}]*\p{Sc}/u',
+        '',
+        $segment
+    );
+}
+
+// How many `|` segments trans_choice can select in this locale, asked of
+// Laravel's own rule table rather than restated here: English needs two and
+// Polish three, so a two-segment Polish string silently renders the singular
+// for every "many" count.
+function translationParityPluralForms(string $locale): int
+{
+    $selector = new MessageSelector;
+    $indexes = [];
+    foreach (range(0, 200) as $number) {
+        $indexes[$selector->getPluralIndex($locale, $number)] = true;
+    }
+
+    return max(array_keys($indexes)) + 1;
+}
+
+/** @return list<string> every supported locale except the English source of truth */
+function translationParityTargetLocales(): array
+{
+    $locales = [];
+    foreach (Locale::cases() as $case) {
+        if ($case->value !== Locale::DEFAULT) {
+            $locales[] = $case->value;
+        }
+    }
+
+    return $locales;
+}
+
+/** @return list<string> absolute paths to the English lang files every locale mirrors */
+function translationParitySourceFiles(): array
+{
+    $files = glob(base_path('Modules/*/Resources/lang/en/*.php')) ?: [];
+    sort($files);
+
+    return array_values($files);
+}
+
+it('ships every en translation key in every supported locale, per module lang file', function (): void {
+    $enFiles = translationParitySourceFiles();
+    expect($enFiles)->not->toBeEmpty();
+    expect(translationParityTargetLocales())->not->toBeEmpty();
+
+    $problems = [];
+    foreach (translationParityTargetLocales() as $locale) {
+        foreach ($enFiles as $enFile) {
+            $targetFile = str_replace('/lang/en/', '/lang/'.$locale.'/', $enFile);
+            $rel = str_replace(base_path().'/', '', $enFile);
+
+            if (! is_file($targetFile)) {
+                $problems[] = $rel.': no '.$locale.' counterpart file';
+
+                continue;
+            }
+
+            $en = require $enFile;
+            $translated = require $targetFile;
+            if (! is_array($en) || ! is_array($translated)) {
+                $problems[] = $rel.': a lang file did not return an array';
+
+                continue;
+            }
+
+            $enKeys = translationParityKeyPaths($en);
+            $targetKeys = translationParityKeyPaths($translated);
+            sort($enKeys);
+            sort($targetKeys);
+
+            $missing = array_values(array_diff($enKeys, $targetKeys));
+            $stale = array_values(array_diff($targetKeys, $enKeys));
+            if ($missing !== []) {
+                $problems[] = $rel.': '.$locale.' is missing ['.implode(', ', $missing).']';
+            }
+            if ($stale !== []) {
+                $problems[] = $rel.': '.$locale.' has stale ['.implode(', ', $stale).']';
+            }
+        }
+    }
+
+    expect($problems)->toBe([], "translation parity broken:\n  ".implode("\n  ", $problems));
 });
 
-it('has no nl translation file without an en counterpart', function (): void {
-    $nlFiles = glob(base_path('Modules/*/Resources/lang/nl/*.php')) ?: [];
+it('carries every en placeholder into every supported locale', function (): void {
+    $problems = [];
+    foreach (translationParityTargetLocales() as $locale) {
+        foreach (translationParitySourceFiles() as $enFile) {
+            $targetFile = str_replace('/lang/en/', '/lang/'.$locale.'/', $enFile);
+            if (! is_file($targetFile)) {
+                continue;
+            }
 
+            $en = require $enFile;
+            $translated = require $targetFile;
+            if (! is_array($en) || ! is_array($translated)) {
+                continue;
+            }
+
+            $rel = str_replace(base_path().'/', '', $enFile);
+            $translatedStrings = translationParityStrings($translated);
+            foreach (translationParityStrings($en) as $path => $line) {
+                if (! array_key_exists($path, $translatedStrings)) {
+                    continue;
+                }
+
+                $glued = TRANSLATION_PARITY_GLUED_UNIT_KEYS[$rel.'|'.$path] ?? null;
+                $expected = translationParityPlaceholders($line, $glued);
+                $actual = translationParityPlaceholders($translatedStrings[$path], $glued);
+
+                // Containment, not equality. Dropping an en token is the bug —
+                // it renders the literal ":count" to the reader. An extra token
+                // cannot be interpolated, because en defines which keys the
+                // caller passes, and some languages punctuate with a colon:
+                // Finnish writes "HTTP:tä" and "10 Mt:n".
+                $dropped = array_values(array_diff($expected, $actual));
+                if ($dropped !== []) {
+                    $problems[] = $rel.' ['.$path.'] '.$locale.': dropped ['
+                        .implode(', ', $dropped).'] from ['.implode(', ', $expected).']';
+                }
+            }
+        }
+    }
+
+    expect($problems)->toBe([], "translation placeholders broken:\n  ".implode("\n  ", $problems));
+});
+
+it('gives every pluralised string as many segments as the locale selects between', function (): void {
+    $problems = [];
+    foreach (translationParityTargetLocales() as $locale) {
+        $forms = translationParityPluralForms($locale);
+        foreach (translationParitySourceFiles() as $enFile) {
+            $targetFile = str_replace('/lang/en/', '/lang/'.$locale.'/', $enFile);
+            if (! is_file($targetFile)) {
+                continue;
+            }
+
+            $en = require $enFile;
+            $translated = require $targetFile;
+            if (! is_array($en) || ! is_array($translated)) {
+                continue;
+            }
+
+            $rel = str_replace(base_path().'/', '', $enFile);
+            $translatedStrings = translationParityStrings($translated);
+            foreach (translationParityStrings($en) as $path => $line) {
+                if (! str_contains($line, '|') || ! array_key_exists($path, $translatedStrings)) {
+                    continue;
+                }
+
+                $actual = substr_count($translatedStrings[$path], '|') + 1;
+                if ($actual < $forms) {
+                    $problems[] = $rel.' ['.$path.'] '.$locale.': needs '.$forms.' segments, has '.$actual;
+                }
+            }
+        }
+    }
+
+    expect($problems)->toBe([], "plural segments missing:\n  ".implode("\n  ", $problems));
+});
+
+it('never hard-codes a numeral into a plural form that also selects other numbers', function (): void {
+    $selector = new MessageSelector;
+
+    $problems = [];
+    foreach (translationParityTargetLocales() as $locale) {
+        // Which segments this locale reaches for a number other than the one
+        // an English translator would assume. Croatian's first form covers
+        // 21, 31 and 101; Slovenian's covers 101 — so a literal "1" in that
+        // segment renders "1 mjesec" next to the number 21.
+        $unsafe = [];
+        foreach (range(2, 200) as $number) {
+            $unsafe[$selector->getPluralIndex($locale, $number)] = true;
+        }
+
+        foreach (translationParitySourceFiles() as $enFile) {
+            $targetFile = str_replace('/lang/en/', '/lang/'.$locale.'/', $enFile);
+            if (! is_file($targetFile)) {
+                continue;
+            }
+
+            $translated = require $targetFile;
+            if (! is_array($translated)) {
+                continue;
+            }
+
+            $rel = str_replace(base_path().'/', '', $enFile);
+            foreach (translationParityStrings($translated) as $path => $line) {
+                if (! str_contains($line, '|')) {
+                    continue;
+                }
+
+                foreach (explode('|', $line) as $index => $segment) {
+                    // An explicit {1} or [2,*] range is matched exactly, so a
+                    // literal inside it is pinned to the numbers it names.
+                    if (preg_match('/^\s*[\{\[]/', $segment) === 1) {
+                        continue;
+                    }
+                    if (! array_key_exists($index, $unsafe)) {
+                        continue;
+                    }
+                    if (preg_match('/(?<![:\w])\d+/', translationParityWithoutAmounts($segment)) === 1) {
+                        $problems[] = $rel.' ['.$path.'] '.$locale
+                            .': segment '.$index.' hard-codes a numeral but also selects other counts — "'.trim($segment).'"';
+                    }
+                }
+            }
+        }
+    }
+
+    expect($problems)->toBe([], "hard-coded numerals in shared plural forms:\n  ".implode("\n  ", $problems));
+});
+
+it('has no translation file without an en counterpart', function (): void {
     $orphans = [];
-    foreach ($nlFiles as $nlFile) {
-        $enFile = str_replace('/lang/nl/', '/lang/en/', $nlFile);
-        if (! is_file($enFile)) {
-            $orphans[] = str_replace(base_path().'/', '', $nlFile);
+    foreach (translationParityTargetLocales() as $locale) {
+        foreach (glob(base_path('Modules/*/Resources/lang/'.$locale.'/*.php')) ?: [] as $file) {
+            $enFile = str_replace('/lang/'.$locale.'/', '/lang/en/', $file);
+            if (! is_file($enFile)) {
+                $orphans[] = str_replace(base_path().'/', '', $file);
+            }
         }
     }
 
     expect($orphans)->toBe([]);
+});
+
+it('declares every locale whose translation is finished', function (): void {
+    $supported = array_map(static fn (Locale $case): string => $case->value, Locale::cases());
+    $enFiles = translationParitySourceFiles();
+
+    $candidates = [];
+    foreach (glob(base_path('Modules/*/Resources/lang/*'), GLOB_ONLYDIR) ?: [] as $dir) {
+        $candidates[basename($dir)] = true;
+    }
+
+    // A part-translated directory is work in progress and is inert — nothing
+    // can select a locale the enum does not name. A complete one that is still
+    // undeclared is finished work that never reaches a reader, so it fails.
+    $finishedButUndeclared = [];
+    foreach (array_keys($candidates) as $locale) {
+        if (in_array($locale, $supported, true)) {
+            continue;
+        }
+
+        $translated = 0;
+        foreach ($enFiles as $enFile) {
+            if (is_file(str_replace('/lang/en/', '/lang/'.$locale.'/', $enFile))) {
+                $translated++;
+            }
+        }
+        if ($translated === count($enFiles)) {
+            $finishedButUndeclared[] = $locale;
+        }
+    }
+
+    expect($finishedButUndeclared)->toBe(
+        [],
+        'complete but undeclared locales: '.implode(', ', $finishedButUndeclared)
+    );
 });

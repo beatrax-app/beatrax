@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 return [
-    'page_title' => 'Synchroniseren',
-    'heading' => 'Synchroniseren',
+    'page_title' => 'Gegevens & apparaten',
+    'heading' => 'Gegevens & apparaten',
+    'sync_status' => 'Synchronisatiestatus',
     'your_devices' => 'Jouw apparaten',
     'syncing_progress' => 'Synchroniseren… :applied van :expected records',
     'initial_sync_aria' => 'Voortgang eerste synchronisatie',
+    'no_peers' => 'Koppel een ander apparaat om te synchroniseren.',
     'sync_now' => 'Nu synchroniseren',
     'network' => 'Netwerk',
     'pause_cellular' => 'Synchroniseren pauzeren op mobiel netwerk',

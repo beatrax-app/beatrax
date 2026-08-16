@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'country_label' => 'Kraj podatkowy',
+    'country_desc' => 'Określa, które kategorie odliczeń są dostępne.',
+    'country_choose' => 'Wybierz kraj…',
+    'country_switch_warning' => 'Zmiana dodaje nowe kategorie — istniejące znaczniki nigdy się nie zmieniają.',
+
+    'countries' => [
+        'at' => 'Austria',
+        'be' => 'Belgia',
+        'bg' => 'Bułgaria',
+        'ca' => 'Kanada',
+        'ch' => 'Szwajcaria',
+        'cy' => 'Cypr',
+        'cz' => 'Czechy',
+        'de' => 'Niemcy',
+        'dk' => 'Dania',
+        'ee' => 'Estonia',
+        'es' => 'Hiszpania',
+        'fi' => 'Finlandia',
+        'fr' => 'Francja',
+        'gb' => 'Wielka Brytania',
+        'gr' => 'Grecja',
+        'hr' => 'Chorwacja',
+        'hu' => 'Węgry',
+        'ie' => 'Irlandia',
+        'is' => 'Islandia',
+        'it' => 'Włochy',
+        'lt' => 'Litwa',
+        'lu' => 'Luksemburg',
+        'lv' => 'Łotwa',
+        'mt' => 'Malta',
+        'nl' => 'Holandia',
+        'no' => 'Norwegia',
+        'pl' => 'Polska',
+        'pt' => 'Portugalia',
+        'ro' => 'Rumunia',
+        'se' => 'Szwecja',
+        'si' => 'Słowenia',
+        'sk' => 'Słowacja',
+        'us' => 'Stany Zjednoczone',
+    ],
+
+    'categories_label' => 'Kategorie odliczeń',
+    'categories_desc' => 'Dostosuj kategorie, których używasz do oznaczania.',
+    'categories_empty' => 'Brak kategorii. Dodaj pierwszą kategorię lub zmień kraj, aby wczytać domyślne.',
+
+    'from_corpus' => 'z korpusu',
+    'rename_input_aria' => 'Nowa nazwa dla: :name',
+    'rename' => 'Zmień nazwę',
+    'rename_aria' => 'Zmień nazwę — :name',
+    'rename_save_aria' => 'Zapisz nową nazwę dla: :name',
+    'save' => 'Zapisz',
+    'archive' => 'Archiwizuj',
+    'archive_aria' => 'Archiwizuj: :name',
+
+    'new_category_label' => 'Nazwa nowej kategorii',
+    'new_category_placeholder' => 'Nazwa nowej kategorii…',
+    'add_category' => 'Dodaj kategorię',
+    'category_added' => 'Kategoria dodana.',
+
+    'archived_count' => 'Zarchiwizowane (:count)',
+    'restore' => 'Przywróć',
+    'restore_aria' => 'Przywróć: :name',
+];

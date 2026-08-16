@@ -109,43 +109,42 @@ function cruoCreateEntry(object $test, string $field, string $value, int|string 
     );
 }
 
-it('rejects a CreateRow op whose supplied user_id field disagrees with the replay scope — no row is planted in the other user\'s namespace', function (): void {
+it('ignores a CreateRow op\'s supplied user_id and scopes the row to the replaying user — nothing is planted in the other user\'s namespace', function (): void {
     $db = $this->db;
     $userAId = (int) $this->userA->id;
     $userBId = (int) $this->userB->id;
 
-    // Malicious device of user A: entry->userId = A (passes I1), but the
-    // dirtyFields['user_id'] payload claims user B.
+    // Malicious device of user A: the entry is replayed under A's scope, but
+    // the dirtyFields['user_id'] payload claims user B.
     $entries = [
-        cruoCreateEntry($this, 'user_id', (string) $userBId, 'hostile-envelope-1', $userAId),
-        cruoCreateEntry($this, 'category_id', (string) $this->categoryA, 'hostile-envelope-1', $userAId),
-        cruoCreateEntry($this, 'overspend_mode', json_encode('reduce_to_budget', JSON_THROW_ON_ERROR), 'hostile-envelope-1', $userAId),
+        cruoCreateEntry($this, 'user_id', (string) $userBId, 7401, $userAId),
+        cruoCreateEntry($this, 'category_id', (string) $this->categoryA, 7401, $userAId),
+        cruoCreateEntry($this, 'overspend_mode', json_encode('reduce_to_budget', JSON_THROW_ON_ERROR), 7401, $userAId),
     ];
 
     $replayer = new OpLogReplayer($db, $this->deviceKeys);
     $replayer->replay($entries, $userAId);
 
-    // ASSERTION: no envelope_settings row exists under user B's id.
+    // THE invariant: insertOrIgnore carries no WHERE clause, so the forced
+    // scope overwrite is the only thing standing between a wire-supplied
+    // user_id and a row planted in someone else's namespace.
     $plantedInB = $db->connection()
         ->table('envelope_settings')
         ->where('user_id', $userBId)
         ->count();
     expect($plantedInB)->toBe(0);
 
-    // ASSERTION: no envelope_settings row was created at all — the whole
-    // CREATE_ROW set is rejected rather than silently reassigned, since the
-    // supplied identity cannot be trusted once it disagrees with scope.
-    $totalRows = $db->connection()->table('envelope_settings')->count();
-    expect($totalRows)->toBe(0);
-
-    // ASSERTION: quarantined using the same reason as the I1 gate.
-    $quarantined = $db->connection()
-        ->table('op_log_quarantine')
+    // The row is not rejected, it is re-scoped. A confirmed device of user A
+    // sending A's own data is the ordinary case — user_id on the wire is the
+    // sender's local autoincrement and carries no authority here, so it is
+    // overwritten rather than compared.
+    $row = $db->connection()
+        ->table('envelope_settings')
         ->where('user_id', $userAId)
-        ->where('table_name', 'envelope_settings')
-        ->where('reason', 'cross_user')
-        ->count();
-    expect($quarantined)->toBeGreaterThanOrEqual(1);
+        ->first();
+
+    expect($row)->not->toBeNull()
+        ->and((int) $row->user_id)->toBe($userAId);
 });
 
 it('creates the row correctly under the replay scope when the user_id field matches (regression — legitimate creates still work)', function (): void {
@@ -153,9 +152,9 @@ it('creates the row correctly under the replay scope when the user_id field matc
     $userAId = (int) $this->userA->id;
 
     $entries = [
-        cruoCreateEntry($this, 'user_id', (string) $userAId, 'legit-envelope-1', $userAId),
-        cruoCreateEntry($this, 'category_id', (string) $this->categoryA, 'legit-envelope-1', $userAId),
-        cruoCreateEntry($this, 'overspend_mode', json_encode('reduce_to_budget', JSON_THROW_ON_ERROR), 'legit-envelope-1', $userAId),
+        cruoCreateEntry($this, 'user_id', (string) $userAId, 910001, $userAId),
+        cruoCreateEntry($this, 'category_id', (string) $this->categoryA, 910001, $userAId),
+        cruoCreateEntry($this, 'overspend_mode', json_encode('reduce_to_budget', JSON_THROW_ON_ERROR), 910001, $userAId),
     ];
 
     $replayer = new OpLogReplayer($db, $this->deviceKeys);

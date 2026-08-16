@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'page_title' => ':name · Beatrax',
+    'variance_tolerance_aria' => 'Variationstolerans',
+    'tolerance' => 'Tolerans',
+    'view_profile' => 'Visa profilen för :name →',
+    'back' => 'Tillbaka till Återkommande',
+
+    'amount_over_time' => 'Belopp över tid',
+    'show_recent' => 'Visa de 24 senaste',
+    'view_all_points' => 'Visa alla punkter',
+
+    'occurrences' => 'Förekomster',
+    'no_occurrences' => 'Inga förekomster har registrerats för den här serien ännu.',
+
+    'table' => [
+        'date' => 'Datum',
+        'amount' => 'Belopp',
+        'transaction' => 'Transaktion',
+    ],
+
+    'eur_equivalent' => 'Motsvarande i EUR',
+    'chart_requires_js' => 'Diagrammet kräver JavaScript.',
+
+    'tolerance_toast' => 'Tolerans: :percent%',
+];

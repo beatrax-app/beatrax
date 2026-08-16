@@ -1,0 +1,104 @@
+# Support-resource corpus — Austria (AT merchants + government).
+#
+# See support/international.yaml for the full schema. Government entries lean on
+# help_url / apply_url / rights_url / phone; merchant entries on cancel/support.
+# Where a service has no online cancellation flow the method — registered letter,
+# phone, in branch — is recorded in `notes` instead of linking a generic page.
+entries:
+  # --- Merchants ---
+  - name: A1 Telekom Austria
+    type: merchant
+    cancel_url: "https://www.a1.net/kuendigen"
+    support_url: "https://www.a1.net/kontakt"
+    notes: "Die Kündigung läuft über die Seite 'Infos zur Kündigung': telefonisch unter 0800 664 100 45 (Mo.-Fr. 8:00 – 19:00), über einen gebuchten Rückruf oder online im A1 Chat 'Kara', wo sich die Kündigung eintragen lässt. Achtung: nach der Kündigung werden im Produkt enthaltene Dienste und Optionen (z.B. E-Mail-Adressen) sowie genutzte A1 Family Vorteile gelöscht."
+  - name: Magenta Telekom
+    type: merchant
+    cancel_url: "https://www.magenta.at/hilfe-service/services/kontaktformular/onlinekuendigen"
+    support_url: "https://www.magenta.at/hilfe-service/service"
+    notes: "Online kündigen kann man nur bei Umzug ins Ausland oder im Sterbefall — innerhalb der Mindestvertragsdauer ist dafür ein Nachweis (z. B. Meldezettel, Bestätigung von Arbeitgeber oder Universität) hochzuladen. Alle übrigen Kündigungen laufen über die Kündigungshotline 0800 676 712, Mo. bis Fr. 08:00 - 18:00 Uhr, oder über den Rückrufservice."
+  - name: Drei
+    type: merchant
+    cancel_url: "https://www.drei.at/de/hilfe/vertrag/kuendigung/wie-vertrag-kuendigen.html"
+    support_url: "https://www.drei.at/de/hilfe/"
+    notes: "Für eine Kündigung schickt man eine Nachricht an das Drei Service-Team, alternativ per Post oder persönlich in einem Drei Shop — in jedem Fall wird das Kundenkennwort benötigt. Unabhängig von der Mindestvertragsdauer (Bindefrist) beträgt die Kündigungsfrist einen Monat."
+  - name: HoT
+    type: merchant
+    support_url: "https://www.hot.at/kontakt/"
+    notes: "HoT bietet kein Online-Kündigungsformular an: Anliegen laufen über die HoT Line +43 677 6001 6770, Mo – Sa: 07:00 – 22:00 Uhr ausgenommen Feiertage, kostenlos aus ganz Österreich von der HoT Rufnummer, oder per E-Mail — Rufnummer und PUK1-Code bereithalten. Tarif- und Rufnummerneinstellungen lassen sich rund um die Uhr in der HoT Kundenzone bzw. in der HoT App erledigen."
+  - name: Wien Energie
+    type: merchant
+    support_url: "https://www.wienenergie.at/privat/hilfe-und-kontakt/kontakt-servicezentren/"
+    notes: "Die Abmeldung ist online im Kundenportal Meine Wien Energie möglich; bei einem Umzug genügt statt der Abmeldung die Umzugsmeldung im Portal. Damit die Schlussabrechnung ankommt, muss dem Kund*innenservice die neue Wohnadresse bzw. E-Mail-Adresse bekannt gegeben werden."
+  - name: Energie Steiermark
+    type: merchant
+    cancel_url: "https://www.e-steiermark.com/hilfe-kontakt/thema/abmeldung"
+    support_url: "https://www.e-steiermark.com/hilfe-kontakt"
+    notes: "Die Abmeldung einer Anlage ist unter Einhaltung einer zweiwöchigen Frist postalisch, per Mail, in den E-Kunden-Centern oder telefonisch möglich (Strom/Gas: 0800 73 53 28, werktags 07:00 bis 18:00 Uhr) — benötigt werden Service-PIN, Abmeldedatum, Zählerstand und die Adresse für die Endabrechnung. Wer umzieht und sein Stromprodukt mitnimmt, braucht dank kostenlosem Umzugsservice gar keine An-/Abmeldung."
+  - name: ORF-Beitrag
+    type: merchant
+    cancel_url: "https://www.obs.at/kontakt/faq/abmeldung"
+    support_url: "https://www.obs.at/kontakt"
+    notes: "Der ORF-Beitrag lässt sich nicht kündigen — die Beitragspflicht endet mit der Abmeldung des Hauptwohnsitzes bei der Meldebehörde, die Meldedaten werden im Folgemonat automatisch an die OBS übermittelt. Bei dauerhaftem Umzug ins Ausland ist der Meldezettel, im Sterbefall die Sterbeurkunde nachzureichen; Serviceline 05 0200 800, Mo-Fr. 07:00-19:00 Uhr."
+  - name: ARBÖ
+    type: merchant
+    support_url: "https://www.arboe.at/kontakt/kontaktformular"
+    notes: "Einen Kündigungsbutton gibt es nicht: Laut Statut § 5 Abs. 6 wird der schriftliche Austritt erst mit Ende des Beitragsjahres rechtswirksam, und nur dann, wenn er spätestens drei Monate vor Ende des Beitragsjahres bei der zuständigen Landesorganisation oder der Bundesorganisation eingelangt ist. Wer später schreibt, zahlt den Mitgliedsbeitrag für das Folgejahr noch."
+  - name: ÖAMTC
+    type: merchant
+    support_url: "https://www.oeamtc.at/kontakt/"
+    notes: "Auf oeamtc.at gibt es kein Online-Kündigungsformular — Anliegen zur Mitgliedschaft laufen über das Kontaktformular oder telefonisch über die Landesorganisation (z. B. Wien, NÖ, Burgenland: +43 1 711 99 18120, Oberösterreich: +43 732 33 33). Der Mitgliedsbeitrag wird jeweils für ein Kalenderjahr verrechnet."
+  - name: clever fit Österreich
+    type: merchant
+    cancel_url: "https://www.clever-fit.com/de-AT/vertragskuendigung/"
+    notes: "clever fit stellt für Österreich ein eigenes Online-Formular 'Vertragskündigung' bereit, in dem das jeweilige Studio auszuwählen ist. Für frisch abgeschlossene Verträge gibt es daneben den eigenen Weg 'Vertrag widerrufen'."
+  - name: HelloFresh Österreich
+    type: merchant
+    support_url: "https://www.hellofresh.at/about/faq"
+    notes: "Die Kündigung ist wöchentlich möglich, bedarf laut AGB der Mitteilung in Textform und richtet sich nach dem Liefertag — für eine Montags-Lieferung z. B. bis Mittwoch 23:59 Uhr MEZ/MESZ der Vorwoche; vor Erhalt der ersten Kochbox ist eine Kündigung nicht möglich. Statt zu kündigen lässt sich die Box im Kundenkonto auch wochenweise pausieren, jeweils für jedes Lieferdatum gesondert."
+  - name: Generali Österreich
+    type: merchant
+    support_url: "https://www.generali.at/helpcenter/servicekontakte/"
+    notes: "Für eine Kündigung gibt es kein Online-Formular — die Servicekontakte listen je Bundesland ein Kundenservice mit eigener Telefonnummer und E-Mail-Adresse (Mo-Fr, 08:00-17:30 Uhr), dazu ein allgemeines Kontaktformular. Online abgeschlossene Verträge laufen getrennt davon über 'Rücktritt von Online-Abschlüssen'; tip&tat-Kund_innen erreichen die Hotline 0800 20 44400 rund um die Uhr."
+
+  # --- Government ---
+  - name: Finanzamt Österreich
+    type: government
+    help_url: "https://www.bmf.gv.at/services/finanzonline/fon-hotline.html"
+    apply_url: "https://finanzonline.bmf.gv.at/fon/"
+    phone: "+43 50 233 790"
+    notes: "Arbeitnehmerveranlagung, Steuererklärung, Bescheide und Anträge laufen über FinanzOnline, das mehr als 6,7 Millionen Personen nutzen. Eine eigene FON Hotline beantwortet technische Fragen zu FinanzOnline unter +43 50 233 790, Montag bis Freitag von 08:00 bis 17:00 Uhr."
+  - name: Österreichische Gesundheitskasse
+    type: government
+    help_url: "https://www.oegk.at/cdscontent/?contentid=10007.878901&portal=oegkportal"
+    apply_url: "https://meine.oegk.at/cdscontent/?contentid=10007.901314&portal=oegkportal&LO=1"
+    phone: "+43 5 0766-0"
+    notes: "Anträge und Schriftstücke sind an das für den Wohnort zuständige Kundenservice zu schicken; jedes Bundesland hat eine eigene Nummer (Wien +43 5 0766-11, Niederösterreich -12, Burgenland -13, Oberösterreich -14, Steiermark -15, Kärnten -16, Salzburg -17, Tirol -18, Vorarlberg -19). Außerhalb der Öffnungszeiten eingebrachte Anliegen gelten erst mit dem nächstfolgenden Werktag als eingelangt; sensible Daten laufen über www.oegk.at/databox statt per Fax."
+  - name: Arbeitsmarktservice
+    type: government
+    help_url: "https://www.ams.at/arbeitsuchende/ServiceLine"
+    apply_url: "https://www.ams.at/arbeitsuchende/arbeitslos-was-tun/beim-ams-arbeitslosengeld-beantragen"
+    rights_url: "https://www.ams.at/arbeitsuchende/arbeitslos-was-tun/geld-vom-ams/arbeitslosengeld"
+    notes: "Arbeitslosmeldung und Antrag auf Arbeitslosengeld laufen online über das eAMS-Konto bzw. MeinAMS; das AMS prüft anhand der Antragsfragen, ob und ab wann ein Anspruch auf Geld besteht. Die ServiceLine hat je Bundesland eine eigene Nummer (z. B. Burgenland +43 50 904 140, Niederösterreich +43 50 904 340) und ist Montag bis Donnerstag von 07:30 bis 16:00 Uhr und Freitag von 07:30 bis 13:00 Uhr erreichbar."
+  - name: Pensionsversicherungsanstalt
+    type: government
+    help_url: "https://www.pv.at/web/service-und-kontakt/kontakt"
+    apply_url: "https://www.pv.at/web/service-und-kontakt/online-formulare"
+    phone: "+43 (0)5 03 03"
+    notes: "Pensionsantrag, Pflegegeld und Versicherungszeiten lassen sich über die Online-Anträge einbringen; für persönliche Vorsprachen in den Landesstellen ist eine telefonische Terminvereinbarung und ein Identitätsnachweis nötig. Telefonische Auskunfts- und Beratungszeiten unter +43 (0)5 03 03: Montag bis Mittwoch 7:00 bis 15:30 Uhr, Donnerstag 7:00 bis 18:00 Uhr, Freitag 7:00 bis 15:00 Uhr — Sozialversicherungsnummer bereithalten."
+  - name: oesterreich.gv.at / ID Austria
+    type: government
+    help_url: "https://www.oesterreich.gv.at/de/hilfe"
+    apply_url: "https://www.id-austria.gv.at/de"
+    notes: "Der Hilfebereich von oesterreich.gv.at führt durch die häufigsten ID-Austria-Probleme: Anmeldung, vergessener Benutzername, vergessenes Signatur-Passwort, QR-Code fürs Smartphone und die Fertigstellung der Registrierung nach dem Behördenbesuch. Dort liegt auch die Hilfe zu Mein Postkorb und zu den Apps 'eAusweise' und 'eAusweis Check'."
+  - name: Familienbeihilfe
+    type: government
+    help_url: "https://www.oesterreich.gv.at/de/themen/familie_und_partnerschaft/familienbeihilfe"
+    apply_url: "https://finanzonline.bmf.gv.at/fon/"
+    rights_url: "https://www.oesterreich.gv.at/de/themen/familie_und_partnerschaft/familienbeihilfe/Seite.450233"
+    notes: "Bei der Geburt eines Kindes muss die Familienbeihilfe nicht mehr beantragt werden (antraglose Familienbeihilfe) — die Finanzverwaltung prüft die Voraussetzungen automatisch und überweist auf ein Konto der Eltern, fehlt etwa die Bankverbindung, wird nachgefragt. Grundsätzlich gebührt sie bis zum 24. Geburtstag; ab dem Kalenderjahr, in dem das Kind 20 wird, darf das zu versteuernde Gesamteinkommen 2026 und 2027 17.212 Euro nicht übersteigen, sonst ist der überschreitende Betrag zurückzuzahlen."
+  - name: Studienbeihilfenbehörde
+    type: government
+    help_url: "https://www.stipendium.at/kontakt/stipendienstellen"
+    apply_url: "https://www.stipendium.at/antrag/online-antrag"
+    rights_url: "https://www.stipendium.at/stipendien/studienbeihilfe"
+    notes: "Der Antrag auf Studienbeihilfe wird online mit der ID Austria gestellt oder mit Formularen zum Download eingebracht; für Fristen zur Antragstellung und zur Vorlage des Studienerfolgs gibt es eigene Übersichten. Die Stipendienstellen in Wien, Graz, Innsbruck, Salzburg, Linz und Klagenfurt sind telefonisch und über das Kontaktformular erreichbar — für eine persönliche Beratung vor Ort ist eine Terminvereinbarung notwendig."

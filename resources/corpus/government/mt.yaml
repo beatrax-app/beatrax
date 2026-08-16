@@ -1,7 +1,161 @@
 # Government / public-agency classification rules — Malta.
+# The Office of the Commissioner for Revenue was restyled the Malta Tax and
+# Customs Administration in 2023; all three names still appear on mandates.
+#
+# Sources: gov.mt and servizz.gov.mt service directories, mtca.gov.mt,
+# cfr.gov.mt, socialsecurity.gov.mt, transport.gov.mt, lesa.gov.mt,
+# identita.gov.mt (verified: the agency now trades simply as "Identità" and
+# covers e-ID cards, e-passports, civil-status certificates, property
+# searches and residence permits), mbr.mt, jobsplus.gov.mt,
+# housingauthority.gov.mt, wsc.com.mt, arms.com.mt, wasteservmalta.com,
+# enemalta.com.mt, pa.org.mt, era.org.mt, mfsa.mt, um.edu.mt, mcast.edu.mt,
+# courtservices.gov.mt, pulizija.gov.mt.
+#
+# Language coverage: Malta is bilingual and public creditors issue mandates
+# in both, so the Maltese form is listed alongside the English one wherever
+# it is genuinely printed. Maltese diacritics (Ċ Ġ Ħ Ż) are given both as
+# written and ASCII-folded, since bank descriptors strip them about half the
+# time.
+# Rejected as too collision-prone: bare "ARMS" and "ERA" (English nouns —
+# only the qualified "ARMS LTD" and the full authority name are used),
+# "IDENTITA" on its own (Italian for "identity"), bare "MBR" and "PA",
+# "CONTRAVENTION", and "REGIONAL COUNCIL".
 # Schema: see government/nl.yaml.
 entries:
   - pattern: "COMMISSIONER FOR REVENUE"
     name: "Commissioner for Tax and Customs"
   - pattern: "COMMISSIONER FOR TAX"
     name: "Commissioner for Tax and Customs"
+  - pattern: "MALTA TAX AND CUSTOMS"
+    name: "Malta Tax and Customs Administration"
+  - pattern: "regex:\\bMTCA\\b"
+    name: "Malta Tax and Customs Administration"
+  - pattern: "INLAND REVENUE"
+    name: "Inland Revenue"
+  - pattern: "DEPARTMENT OF SOCIAL SECURITY"
+    name: "Department of Social Security"
+  - pattern: "TRANSPORT MALTA"
+    name: "Transport Malta"
+  - pattern: "regex:\\bLESA\\b"
+    name: "LESA (traffic contraventions)"
+  # The 68 local councils bill residents directly.
+  - pattern: "LOCAL COUNCIL"
+  - pattern: "regex:IDENTIT(Y|A) MALTA"
+    name: "Identità"
+  - pattern: "JOBSPLUS"
+    name: "Jobsplus"
+  - pattern: "LANDS AUTHORITY"
+    name: "Lands Authority"
+  - pattern: "PUBLIC REGISTRY"
+    name: "Public Registry"
+  - pattern: "HOUSING AUTHORITY"
+    name: "Housing Authority"
+  # State-owned utility and its billing arm.
+  - pattern: "WATER SERVICES CORPORATION"
+    name: "Water Services Corporation"
+  - pattern: "regex:\\bARMS LTD\\b"
+    name: "ARMS Ltd"
+  # --- Tax and customs -----------------------------------------------------
+  - pattern: "KUMMISSARJU TAT-TAXXI"
+    name: "Kummissarju tat-Taxxi"
+  - pattern: "VAT DEPARTMENT"
+    name: "VAT Department"
+  - pattern: "CUSTOMS DEPARTMENT"
+    name: "Customs Department"
+  - pattern: "PROVISIONAL TAX"
+    name: "Provisional tax"
+  - pattern: "FINAL SETTLEMENT SYSTEM"
+    name: "Final Settlement System (FSS)"
+  - pattern: "MINISTRY FOR FINANCE"
+    name: "Ministry for Finance"
+  # --- Social security and benefits -------------------------------------------
+  - pattern: "DIPARTIMENT TAS-SIGURTA SOCJALI"
+    name: "Dipartiment tas-Sigurtà Soċjali"
+  - pattern: "DIPARTIMENT TAS-SIGURTÀ SOĊJALI"
+    name: "Dipartiment tas-Sigurtà Soċjali"
+  - pattern: "SOCIAL SECURITY CONTRIBUTIONS"
+    name: "Social security contributions"
+  - pattern: "CHILDRENS ALLOWANCE"
+    name: "Children's Allowance"
+  - pattern: "CHILDREN'S ALLOWANCE"
+    name: "Children's Allowance"
+  - pattern: "SERVIZZ.GOV"
+    name: "servizz.gov"
+  - pattern: "SERVIZZ GOV"
+    name: "servizz.gov"
+  # --- Health -------------------------------------------------------------------
+  - pattern: "MINISTRY FOR HEALTH"
+    name: "Ministry for Health"
+  - pattern: "MATER DEI HOSPITAL"
+    name: "Mater Dei Hospital"
+  - pattern: 'regex:\bPOYC\b'
+    name: "Pharmacy of Your Choice"
+  # --- Local government ------------------------------------------------------------
+  - pattern: "KUNSILL LOKALI"
+    name: "Kunsill Lokali"
+  # --- Transport, road licences and enforcement --------------------------------------
+  - pattern: "TRASPORT MALTA"
+    name: "Transport Malta"
+  - pattern: "LOCAL ENFORCEMENT SYSTEM AGENCY"
+    name: "LESA"
+  - pattern: "ROAD LICENCE"
+    name: "Road licence"
+  - pattern: "LICENZJA TAL-VETTURA"
+    name: "Liċenzja tal-vettura"
+  - pattern: "LIĊENZJA TAL-VETTURA"
+    name: "Liċenzja tal-vettura"
+  # --- Police and courts ----------------------------------------------------------------
+  - pattern: "MALTA POLICE FORCE"
+    name: "Malta Police Force"
+  - pattern: "PULIZIJA"
+    name: "Pulizija ta' Malta"
+  - pattern: "COURTS OF JUSTICE"
+    name: "Courts of Justice"
+  - pattern: "COURT SERVICES AGENCY"
+    name: "Court Services Agency"
+  - pattern: "QORTI"
+    name: "Qorti"
+  # --- Identity, civil and business registries ---------------------------------------------
+  - pattern: "REGISTRU PUBBLIKU"
+    name: "Reġistru Pubbliku"
+  - pattern: "REĠISTRU PUBBLIKU"
+    name: "Reġistru Pubbliku"
+  - pattern: "LAND REGISTRATION AGENCY"
+    name: "Land Registration Agency"
+  - pattern: "MALTA BUSINESS REGISTRY"
+    name: "Malta Business Registry"
+  - pattern: "NOTARIAL ARCHIVES"
+    name: "Notarial Archives"
+  # --- Education ---------------------------------------------------------------------------
+  - pattern: "UNIVERSITY OF MALTA"
+    name: "University of Malta"
+  - pattern: "UNIVERSITA TA MALTA"
+    name: "L-Università ta' Malta"
+  - pattern: "UNIVERSITÀ TA' MALTA"
+    name: "L-Università ta' Malta"
+  - pattern: "MCAST"
+    name: "MCAST"
+  - pattern: "MINISTRY FOR EDUCATION"
+    name: "Ministry for Education"
+  # --- State utilities and waste -------------------------------------------------------------
+  - pattern: "ENEMALTA"
+    name: "Enemalta"
+  - pattern: "WASTESERV"
+    name: "WasteServ Malta"
+  # --- Authorities and regulators --------------------------------------------------------------
+  - pattern: "PLANNING AUTHORITY"
+    name: "Planning Authority"
+  - pattern: "ENVIRONMENT AND RESOURCES AUTHORITY"
+    name: "Environment and Resources Authority"
+  - pattern: "MALTA FINANCIAL SERVICES AUTHORITY"
+    name: "MFSA"
+  - pattern: 'regex:\bMFSA\b'
+    name: "MFSA"
+  - pattern: "MALTA GAMING AUTHORITY"
+    name: "Malta Gaming Authority"
+  - pattern: "MALTA ENTERPRISE"
+    name: "Malta Enterprise"
+  - pattern: "MALTA CHAMBER OF COMMERCE"
+    name: "The Malta Chamber"
+  - pattern: "GOVERNMENT OF MALTA"
+    name: "Government of Malta"

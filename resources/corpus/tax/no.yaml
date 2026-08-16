@@ -1,0 +1,68 @@
+# Tax deduction categories — Norway
+# Mirrors the fradrag posts on the NO skattemelding.
+# Source: Skatteetaten (skatteetaten.no), inntektsåret 2025 (skattemelding levert 2026).
+# Personfradrag is omitted — it is a bunnfradrag granted automatically with no claim.
+#
+# Schema per entry:
+#   key         string  required — machine slug used as corpus_key in DB
+#   name        string  required — display name for the category management list
+#   short_name  string  optional — badge label (≤12 chars)
+#   hint        string  optional — one-line tooltip hint for the picker popover
+#
+entries:
+  - key: "no_minstefradrag"
+    name: "Minstefradrag"
+    short_name: "Minstefradr."
+    hint: "Standardfradrag som trekkes automatisk fra lønn og pensjon"
+  - key: "no_reisefradrag"
+    name: "Reisefradrag"
+    short_name: "Reisefradrag"
+    hint: "Reise mellom hjem og fast arbeidssted, beregnet etter kilometersats"
+  - key: "no_pendler_kost"
+    name: "Merkostnader til kost for pendlere"
+    short_name: "Pendlerkost"
+    hint: "Merkostnader til mat når du overnatter borte fra hjemmet på grunn av jobb"
+  - key: "no_pendler_losji"
+    name: "Merkostnader til losji for pendlere"
+    short_name: "Pendlerlosji"
+    hint: "Husleie, strøm og internett i pendlerboligen"
+  - key: "no_besoeksreiser"
+    name: "Besøksreiser til hjemmet"
+    short_name: "Besøksreiser"
+    hint: "Reiser hjem til familien når du bor på arbeidsstedet som pendler"
+  - key: "no_fagforeningsfradrag"
+    name: "Fagforeningsfradrag"
+    short_name: "Fagforening"
+    hint: "Betalt fagforeningskontingent til arbeidstakerorganisasjon"
+  - key: "no_foreldrefradrag"
+    name: "Foreldrefradrag"
+    short_name: "Foreldrefrad"
+    hint: "Dokumenterte utgifter til pass og stell av barn som er 11 år eller yngre"
+  - key: "no_gjeldsrenter"
+    name: "Fradrag for gjeldsrenter"
+    short_name: "Gjeldsrenter"
+    hint: "Renter du har betalt på lån og annen gjeld"
+  - key: "no_bsu"
+    name: "Boligsparing for ungdom (BSU)"
+    short_name: "BSU"
+    hint: "Skattefradrag for sparing til første bolig for deg som er under 34 år"
+  - key: "no_ips"
+    name: "Individuell sparing til pensjon (IPS)"
+    short_name: "IPS"
+    hint: "Fradrag i alminnelig inntekt for innskudd i individuell pensjonssparing"
+  - key: "no_gaver_frivillige"
+    name: "Gaver til frivillige organisasjoner"
+    short_name: "Gaver"
+    hint: "Pengegaver til godkjente frivillige organisasjoner og tros- og livssynssamfunn"
+  - key: "no_finnmarksfradrag"
+    name: "Finnmarksfradraget"
+    short_name: "Finnmarksfr."
+    hint: "Særskilt fradrag for deg som bor i Finnmark eller i tiltakssonen i Troms"
+  - key: "no_saerfradrag_sykdom"
+    name: "Særfradrag for store sykdomsutgifter"
+    short_name: "Sykdomsutg."
+    hint: "Kun for deg som fikk særfradraget både i 2010 og 2011 og fortsatt oppfyller vilkårene"
+  - key: "no_doktorgrad"
+    name: "Fradrag for kostnader til doktorgrad"
+    short_name: "Doktorgrad"
+    hint: "Utgifter til trykking, reise og doktorgradsmiddag i forbindelse med disputas"
