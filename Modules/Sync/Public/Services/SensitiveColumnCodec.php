@@ -203,11 +203,15 @@ final class SensitiveColumnCodec
         }
     }
 
+    // RuntimeException too, matching tryCurrentEpoch. A held key that cannot
+    // open the keyring raises BackupDecryptionException, which escaped — so
+    // one wrong key 500'd every screen reading an encrypted column, with no
+    // way back to the lock that would replace it.
     private function tryLoadKeyring(int $userId, Session $session): ?GdkKeyring
     {
         try {
             $keyring = $this->keyringService->loadKeyring($userId, $session);
-        } catch (LogicException) {
+        } catch (LogicException|RuntimeException) {
             return null;
         }
 
