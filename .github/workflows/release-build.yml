@@ -143,8 +143,25 @@ jobs:
               shell: bash
               env:
                   NATIVEPHP_APP_VERSION: ${{ inputs.tag }}
+                  # Kept in lockstep with release.yml, which carries the same
+                  # block and the same guard: electron-builder.mjs drops
+                  # azureSignOptions when any NATIVEPHP_AZURE_* value is empty,
+                  # so an absent secret ships an UNSIGNED installer from a
+                  # green build.
+                  NATIVEPHP_AZURE_ENDPOINT: ${{ vars.NATIVEPHP_AZURE_ENDPOINT }}
+                  NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME: ${{ vars.NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+                  NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME: ${{ vars.NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME }}
+                  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+                  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+                  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
               run: |
                   set -euo pipefail
+                  for required in NATIVEPHP_AZURE_ENDPOINT NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
+                      if [ -z "${!required:-}" ]; then
+                          echo "::error::${required} is empty — refusing to publish an unsigned Windows build."
+                          exit 1
+                      fi
+                  done
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
                   php artisan native:build
 
