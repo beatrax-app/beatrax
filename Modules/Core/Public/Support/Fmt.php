@@ -21,10 +21,10 @@ final class Fmt
     {
         $locale = Container::getInstance()->make(Translator::class)->getLocale();
 
-        // The mobile build's ext-intl carries English-only ICU data, so
-        // NumberFormatter cannot be constructed for any other language — it
-        // reports that as IntlException with error-exceptions on, and as
-        // ValueError from the constructor otherwise.
+        // The mobile build's ext-intl carries English-only ICU data, so on
+        // device this throws for all twenty-five other languages — as
+        // IntlException with error-exceptions on, ValueError otherwise. Why
+        // that cannot be fixed by shipping data: .docs/features/mobile.
         try {
             $formatted = Number::format($value, precision: $decimals, locale: $locale);
         } catch (IntlException|ValueError) {

@@ -15,6 +15,9 @@ use ValueError;
 // only way to construct a Money is ofMinor(int, string) — no ofFloat
 // or fromString on purpose, since floats and locale-aware string
 // parsing are the exact failure modes the integer-only rules prevent.
+/**
+ * @link ../../../../.docs/features/mobile/architecture.md
+ */
 final class Money implements Stringable
 {
     // The app represents every amount as an integer count of 1/100 of a major
@@ -81,10 +84,10 @@ final class Money implements Stringable
         try {
             return $this->inner->formatToLocale($resolved);
         } catch (IntlException|ValueError) {
-            // The mobile build's ext-intl cannot construct a NumberFormatter
-            // for these locales, and reports that two ways — IntlException
-            // with intl error-exceptions on, ValueError from the constructor.
-            // Every amount funnels here, so an uncaught one 500s every page.
+            // Not deletable by bundling fuller ICU: the mobile build's ICU
+            // carries English-only locale data, so nl_NL throws here on every
+            // amount, and the data lives in a gitignored downloaded binary.
+            // See the linked mobile architecture page before touching this.
             return $this->formatWithoutIcu($resolved);
         }
     }
