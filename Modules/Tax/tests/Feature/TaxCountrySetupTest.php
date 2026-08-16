@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Tax\Public\Enums\TaxCountry;
 use Modules\Tax\Public\Services\TaxCountrySetup;
 
 /*
@@ -23,18 +24,42 @@ function taxCountrySetupUser(string $username): User
     ]);
 }
 
-it('lists the six allow-listed countries with their display labels', function (): void {
+it('offers every allow-listed country with a display label', function (): void {
     /** @var TaxCountrySetup $setup */
     $setup = app(TaxCountrySetup::class);
 
-    expect($setup->availableCountries())->toBe([
-        'nl' => 'Netherlands',
-        'de' => 'Germany',
-        'be' => 'Belgium',
-        'fr' => 'France',
-        'gb' => 'United Kingdom',
-        'us' => 'United States',
-    ]);
+    $available = $setup->availableCountries();
+
+    // Asserted against the enum rather than a hardcoded list: the allow-list
+    // grew from six to twenty-six as the tax corpus gained countries, and a
+    // literal copy of it here only ever fails on the day someone adds one.
+    $expectedCodes = array_map(
+        static fn (TaxCountry $case): string => $case->value,
+        TaxCountry::cases(),
+    );
+
+    expect(array_keys($available))->toBe($expectedCodes)
+        ->and($available)->each->toBeString();
+
+    // The originals still read the way they always did.
+    expect($available['nl'])->toBe('Netherlands')
+        ->and($available['gb'])->toBe('United Kingdom');
+});
+
+it('backs every offered country with a corpus file that actually loads', function (): void {
+    /** @var TaxCountrySetup $setup */
+    $setup = app(TaxCountrySetup::class);
+
+    // An allow-listed country with no corpus behind it puts an empty
+    // jurisdiction in the settings picker: selectable, then nothing to tag.
+    $empty = [];
+    foreach (array_keys($setup->availableCountries()) as $code) {
+        if (! is_file(base_path("resources/corpus/tax/{$code}.yaml"))) {
+            $empty[] = $code;
+        }
+    }
+
+    expect($empty)->toBe([], 'these countries are offered with no corpus: '.implode(', ', $empty));
 });
 
 it('selectCountry persists users.tax_country_code and seeds the corpus categories', function (): void {

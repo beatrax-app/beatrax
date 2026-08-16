@@ -156,6 +156,20 @@ function lanReceiveFakeConnection(array $messages): WebsocketConnection
     };
 }
 
+/*
+ * The GDK_EPOCH_PUSH header the desktop sends to open the epoch phase,
+ * sealed with its own send cipher exactly as a wrap frame is. The phase now
+ * runs BEFORE catch-up, so its length is announced rather than inferred from
+ * a read timeout, which would have eaten the catch-up request behind it.
+ */
+function lanReceivePushHeader(NoiseSession $desktopNoiseSession, int $count): WebsocketMessage
+{
+    return WebsocketMessage::fromBinary($desktopNoiseSession->encrypt(json_encode(
+        ['type' => 'GDK_EPOCH_PUSH', 'count' => $count],
+        JSON_THROW_ON_ERROR,
+    )));
+}
+
 function lanReceiveUser(string $username): User
 {
     return User::query()->create([
@@ -264,9 +278,12 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
     $rotation = app(GdkRotationService::class);
     $recipientPub = sodium_hex2bin($phone->x25519PublicKeyHex);
     $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId);
+
+    // Sealed in wire order — Noise cipher states are counter-based.
+    $header = lanReceivePushHeader($desktopNoiseSession, 1);
     $pushedFrame = $desktopNoiseSession->encrypt(json_encode($wrap, JSON_THROW_ON_ERROR));
 
-    $connection = lanReceiveFakeConnection([WebsocketMessage::fromBinary($pushedFrame)]);
+    $connection = lanReceiveFakeConnection([$header, WebsocketMessage::fromBinary($pushedFrame)]);
 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
@@ -325,9 +342,10 @@ it('skips a malformed pushed frame without throwing and without appending anythi
     // A genuinely non-JSON pushed frame — still a valid Noise ciphertext
     // (encrypted with the desktop's real send cipher), but not parseable as
     // a control message at all.
+    $header = lanReceivePushHeader($desktopNoiseSession, 1);
     $malformedFrame = $desktopNoiseSession->encrypt('not a control message');
 
-    $connection = lanReceiveFakeConnection([WebsocketMessage::fromBinary($malformedFrame)]);
+    $connection = lanReceiveFakeConnection([$header, WebsocketMessage::fromBinary($malformedFrame)]);
 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
@@ -484,7 +502,7 @@ it('throws LanSyncException when the peer disconnects before sending the Noise m
         ->toThrow(LanSyncException::class, 'peer disconnected before sending Noise msg2');
 });
 
-it('ends the GDK receive loop cleanly when the read times out (no more pushed wraps)', function (): void {
+it('treats a timed-out GDK phase header as a retryable stall and appends nothing', function (): void {
     $user = lanReceiveUser('lan-receive-timeout');
     $userId = (int) $user->id;
     test()->actingAs($user);
@@ -493,20 +511,21 @@ it('ends the GDK receive loop cleanly when the read times out (no more pushed wr
     $session = app(Session::class);
     (new LockStateManager)->unlock($session, str_repeat('k', 32));
 
-    // A read timeout on the very first receive() means "the desktop's fixed
-    // push step is over" — the loop must break without throwing and without
-    // needing to decrypt anything.
+    // The header opens the phase, so a timeout waiting for it is a stalled
+    // peer, not "no more wraps". syncOnce() maps the throw onto its
+    // retryable return; continuing into catch-up would misread the stream.
     $phoneSyncSession = lanReceiveBareSyncSession();
     $connection = lanScriptedFakeConnection(['__TIMEOUT__']);
 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);
 
-    $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session);
+    expect(fn () => $client->receiveGdkEpochWraps($connection, $phoneSyncSession, $userId, $session))
+        ->toThrow(TimeoutException::class);
 
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
-    expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a read-timeout exit must never append anything to the keyring');
+    expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([], 'a stalled phase must never append anything to the keyring');
 });
 
 it('ends the GDK receive loop on a well-formed but non-wrap control frame', function (): void {
@@ -559,9 +578,10 @@ it('ends the GDK receive loop on a well-formed but non-wrap control frame', func
     // (JSON object with a string "type"), but whose type is NOT
     // GDK_EPOCH_WRAP — the desktop's fixed push step is over, so the loop
     // ends here without routing anything into the delivery gateway.
+    $header = lanReceivePushHeader($desktopNoiseSession, 1);
     $nonWrapFrame = $desktopNoiseSession->encrypt(json_encode(['type' => 'CATCH_UP_COMPLETE'], JSON_THROW_ON_ERROR));
 
-    $connection = lanReceiveFakeConnection([WebsocketMessage::fromBinary($nonWrapFrame)]);
+    $connection = lanReceiveFakeConnection([$header, WebsocketMessage::fromBinary($nonWrapFrame)]);
 
     /** @var LanSyncClient $client */
     $client = app(LanSyncClient::class);

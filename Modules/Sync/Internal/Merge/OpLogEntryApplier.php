@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\Merge;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\QueryException;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Internal\Clock\HybridLogicalClock;
@@ -94,26 +96,171 @@ final readonly class OpLogEntryApplier
         string $now,
         array &$touchedTransactionIds,
     ): void {
+        /** @var list<array{table: string, pk: int|string, values: array<string, mixed>}> $deferred */
+        $deferred = [];
+
         foreach ($creates as $table => $rows) {
             foreach ($rows as $pk => $fields) {
-                $tomb = $tombstones[$table][$pk] ?? null;
+                $selfRefs = $this->applyCreatedRow(
+                    $table,
+                    $pk,
+                    $fields,
+                    $tombstones[$table][$pk] ?? null,
+                    $userId,
+                    $now,
+                    $touchedTransactionIds,
+                );
 
-                if ($tomb !== null && $this->tombstoneWins($tomb, $fields)) {
-                    continue;
+                if ($selfRefs !== []) {
+                    $deferred[] = ['table' => $table, 'pk' => $pk, 'values' => $selfRefs];
                 }
+            }
+        }
 
-                if (! $this->createRowComplete($table, $fields, $now)) {
-                    continue;
+        $this->applyDeferredSelfReferences($deferred, $userId);
+    }
+
+    // Runs one created row through the gates and writes it, handing back the
+    // self-referential columns it could not carry at insert time.
+    /**
+     * @param  array<string, list<OpLogEntry>>  $fields
+     * @param  list<int>  $touchedTransactionIds
+     * @return array<string, mixed>
+     */
+    private function applyCreatedRow(
+        string $table,
+        int|string $pk,
+        array $fields,
+        ?OpLogEntry $tomb,
+        int $userId,
+        string $now,
+        array &$touchedTransactionIds,
+    ): array {
+        if ($tomb !== null && $this->tombstoneWins($tomb, $fields)) {
+            return [];
+        }
+
+        if (! $this->createRowComplete($table, $fields, $now)) {
+            return [];
+        }
+
+        $payload = $this->buildCreatePayload($table, $pk, $fields, $userId, $now);
+
+        if ($payload === null) {
+            return [];
+        }
+
+        // A child row carries no user_id, so nothing above proves it belongs
+        // here: without this, an op could attach a condition to ANOTHER
+        // user's rule simply by naming its id.
+        if (! $this->parentBelongsToUser($table, $payload, $userId)) {
+            $firstField = reset($fields);
+
+            if ($firstField !== false) {
+                $this->quarantine->record($firstField[0], QuarantineReason::CrossUser, $now);
+            }
+
+            return [];
+        }
+
+        // A self-referential FK cannot be satisfied at insert time: transfer
+        // pairs point at EACH OTHER, so whichever row lands first names a
+        // partner that does not exist. Stripped here, set once both exist.
+        $selfRefs = $this->extractSelfReferences($table, $payload);
+
+        if (! $this->insertCreatedRow($table, $payload, $fields, $now)) {
+            return [];
+        }
+
+        $this->trackTransaction($table, $pk, $touchedTransactionIds);
+
+        return $selfRefs;
+    }
+
+    // Writes one created row, quarantining it if the database refuses the
+    // reference it names. Mirrors applyFieldMerge(): a single unusable op is
+    // isolated rather than allowed to roll back every op replayed with it.
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, list<OpLogEntry>>  $fields
+     */
+    private function insertCreatedRow(string $table, array $payload, array $fields, string $now): bool
+    {
+        try {
+            $this->db->connection()->table($table)->insertOrIgnore($payload);
+
+            return true;
+        } catch (QueryException) {
+            $firstField = reset($fields);
+
+            if ($firstField !== false) {
+                $this->quarantine->record($firstField[0], QuarantineReason::MissingReference, $now);
+            }
+
+            return false;
+        }
+    }
+
+    // Strips the self-referential columns out of an insert payload, nulling
+    // them in place and handing back what was removed.
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function extractSelfReferences(string $table, array &$payload): array
+    {
+        $extracted = [];
+
+        foreach (self::SELF_REFERENCES[$table] ?? [] as $column) {
+            $value = $payload[$column] ?? null;
+
+            if ($value === null) {
+                continue;
+            }
+
+            $extracted[$column] = $value;
+            $payload[$column] = null;
+        }
+
+        return $extracted;
+    }
+
+    // Re-applies the deferred columns now that every row in the batch is
+    // present. A target still missing (its create was quarantined, or it
+    // lands in a later batch) leaves the column null rather than failing
+    // the row that points at it.
+    /**
+     * @param  list<array{table: string, pk: int|string, values: array<string, mixed>}>  $deferred
+     */
+    private function applyDeferredSelfReferences(array $deferred, int $userId): void
+    {
+        foreach ($deferred as $row) {
+            $resolvable = [];
+
+            foreach ($row['values'] as $column => $target) {
+                $exists = $this->scopeToUser(
+                    $this->db->connection()->table($row['table'])->where('id', $target),
+                    $row['table'],
+                    $userId,
+                )->exists();
+
+                if ($exists) {
+                    $resolvable[$column] = $target;
                 }
+            }
 
-                $payload = $this->buildCreatePayload($table, $fields, $userId, $now);
+            if ($resolvable === []) {
+                continue;
+            }
 
-                if ($payload === null) {
-                    continue;
-                }
+            $query = $this->db->connection()->table($row['table'])->where('id', $row['pk']);
 
-                $this->db->connection()->table($table)->insertOrIgnore($payload);
-                $this->trackTransaction($table, $pk, $touchedTransactionIds);
+            try {
+                $this->scopeToUser($query, $row['table'], $userId)->update($resolvable);
+            } catch (QueryException) {
+                // The link is optional by construction — the row is already
+                // applied and usable without it, so a refusal here costs the
+                // pairing and never the replay.
             }
         }
     }
@@ -172,17 +319,27 @@ final readonly class OpLogEntryApplier
         return false;
     }
 
-    // A CreateRow op may legitimately carry a 'user_id' field, but the resolve
-    // loop lets it overwrite the seeded authoritative user_id — insertOrIgnore
-    // has no WHERE clause, so a device of user A supplying user_id = B must be
-    // caught here and the whole row quarantined.
+    // A CreateRow op may legitimately carry a 'user_id' field, and the resolve
+    // loop would let it overwrite the seeded authoritative one. insertOrIgnore
+    // has no WHERE clause, so the forced re-seed below is what stops a device
+    // supplying somebody else's id from planting a row in their namespace.
     /**
+     * @param  int|string  $pk  The op-log primary key this row must be created under.
      * @param  array<string, list<OpLogEntry>>  $fields
      * @return array<string, mixed>|null
      */
-    private function buildCreatePayload(string $table, array $fields, int $userId, string $now): ?array
+    private function buildCreatePayload(string $table, int|string $pk, array $fields, int $userId, string $now): ?array
     {
-        $payload = ['user_id' => $userId];
+        // Child tables (rule_conditions, rule_actions) are scoped through
+        // their parent and carry no user_id column at all; seeding one made
+        // every insert fail with "table X has no column named user_id".
+        $scoped = $this->hasUserIdColumn($table);
+
+        // The op's own pk, not a fresh autoincrement. Without it every device
+        // invented its own id for the same logical row: children referenced
+        // parents that did not exist (FOREIGN KEY constraint failed), and a
+        // replayed create duplicated instead of colliding with itself.
+        $payload = $scoped ? ['id' => $pk, 'user_id' => $userId] : ['id' => $pk];
 
         foreach ($fields as $field => $fieldEntries) {
             try {
@@ -195,22 +352,104 @@ final readonly class OpLogEntryApplier
             }
         }
 
-        if (isset($fields['user_id'])) {
-            $suppliedUserIdValue = $payload['user_id'] ?? null;
-            $suppliedUserId = is_numeric($suppliedUserIdValue) ? (int) $suppliedUserIdValue : null;
-
-            if ($suppliedUserId !== $userId) {
-                $this->quarantine->record($fields['user_id'][0], QuarantineReason::CrossUser, $now);
-
-                return null;
-            }
+        // A wire-supplied user_id is IGNORED, not compared: it is the origin
+        // device's autoincrement, so rejecting a mismatch quarantined every
+        // row a paired peer sent. The overwrite below is the stronger guard —
+        // the scope comes from the session, never the wire.
+        if ($scoped) {
+            $payload['user_id'] = $userId;
+        } else {
+            unset($payload['user_id']);
         }
 
-        // Force the authoritative user_id even when the op-supplied value
-        // matched — never trust a wire-derived value for the scope column.
-        $payload['user_id'] = $userId;
-
         return $payload;
+    }
+
+    // True for user-scoped tables (already proven by their own user_id) and
+    // for a child row whose parent belongs to this user.
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function parentBelongsToUser(string $table, array $payload, int $userId): bool
+    {
+        if ($this->hasUserIdColumn($table)) {
+            return true;
+        }
+
+        $parent = self::PARENT_SCOPE[$table] ?? null;
+
+        if ($parent === null) {
+            return false;
+        }
+
+        [$foreignKey, $parentTable] = $parent;
+        $parentId = $payload[$foreignKey] ?? null;
+
+        if (! is_int($parentId) && ! is_string($parentId)) {
+            return false;
+        }
+
+        return $this->db->connection()
+            ->table($parentTable)
+            ->where('id', $parentId)
+            ->where('user_id', $userId)
+            ->exists();
+    }
+
+    // Covered tables that carry no user_id of their own; each reaches its
+    // owner through the parent named here. Mirrors OpLogBackfiller.
+    private const PARENT_SCOPE = [
+        'rule_conditions' => ['rule_id', 'categorization_rules'],
+        'rule_actions' => ['rule_id', 'categorization_rules'],
+    ];
+
+    // Columns whose FK targets their OWN table. Ordering cannot resolve these
+    // — a transfer pair references both ways — so they are written in a second
+    // pass once every row in the batch exists.
+    private const SELF_REFERENCES = [
+        'transactions' => ['pair_transaction_id'],
+        'categories' => ['parent_id'],
+    ];
+
+    // Bounds a write to rows this user owns. A child table is bounded through
+    // its parent; an unscoped table with no known parent is refused outright
+    // rather than written user-wide — an op names a row, and a row this
+    // process cannot attribute is not a row it may touch.
+    private function scopeToUser(Builder $query, string $table, int $userId): Builder
+    {
+        if ($this->hasUserIdColumn($table)) {
+            return $query->where('user_id', $userId);
+        }
+
+        $parent = self::PARENT_SCOPE[$table] ?? null;
+
+        if ($parent === null) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        [$foreignKey, $parentTable] = $parent;
+
+        return $query->whereIn(
+            $foreignKey,
+            $this->db->connection()->table($parentTable)->select('id')->where('user_id', $userId),
+        );
+    }
+
+    // Memoised in a function static rather than a property: this class is
+    // readonly, and a schema probe per created row would turn one catch-up
+    // into thousands of PRAGMA reads.
+    private function hasUserIdColumn(string $table): bool
+    {
+        /** @var array<string, bool> $cache */
+        static $cache = [];
+
+        if (! isset($cache[$table])) {
+            $cache[$table] = $this->db->connection()
+                ->getSchemaBuilder()
+                ->hasColumn($table, 'user_id');
+        }
+
+        return $cache[$table];
     }
 
     /**
@@ -263,10 +502,11 @@ final readonly class OpLogEntryApplier
             $columnValue = $this->projector->encodeColumnValue($this->projector->resolveStrategy($table, $field)->resolve($fieldEntries));
             $columnValue = $this->projector->reencryptForProjection($table, $field, $columnValue, $userId);
 
-            $this->db->connection()
+            $query = $this->db->connection()
                 ->table($table)
-                ->where('id', $pk)
-                ->where('user_id', $userId)
+                ->where('id', $pk);
+
+            $this->scopeToUser($query, $table, $userId)
                 ->update([$field => $columnValue]);
         } catch (\Throwable) {
             $this->quarantine->record($fieldEntries[0], QuarantineReason::StrategyError, $now);
@@ -280,6 +520,7 @@ final readonly class OpLogEntryApplier
      * @param  array<string, array<int|string, OpLogEntry>>  $tombstones
      * @param  list<array{partnerId: int, deletedType: string, tombHlcL: int, tombHlcC: int}>  $pairCascades
      * @param  list<int>  $tombstonedTransactionIds
+     * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $creates
      */
     public function applyBareTombstones(
         array $candidatesByField,
@@ -287,10 +528,21 @@ final readonly class OpLogEntryApplier
         int $userId,
         array &$pairCascades,
         array &$tombstonedTransactionIds,
+        array $creates = [],
     ): void {
         foreach ($tombstones as $table => $pks) {
             foreach ($pks as $pk => $tomb) {
                 if (isset($candidatesByField[$table][$pk])) {
+                    continue;
+                }
+
+                // A create that already beat this tombstone in applyCreates()
+                // must not then be deleted by it. Rows used to arrive under a
+                // fresh id, so delete-by-pk never matched the row just
+                // created; preserving the op's pk makes it match.
+                $create = $creates[$table][$pk] ?? null;
+
+                if ($create !== null && ! $this->tombstoneWins($tomb, $create)) {
                     continue;
                 }
 
@@ -341,11 +593,20 @@ final readonly class OpLogEntryApplier
 
     private function deleteRow(string $table, int|string $pk, int $userId): void
     {
-        $this->db->connection()
-            ->table($table)
-            ->where('id', $pk)
-            ->where('user_id', $userId)
-            ->delete();
+        try {
+            // Unscoped child tables have no user_id column at all, so a literal
+            // where('user_id') raised "no such column" and aborted the replay.
+            $this->scopeToUser(
+                $this->db->connection()->table($table)->where('id', $pk),
+                $table,
+                $userId,
+            )->delete();
+        } catch (QueryException) {
+            // Rows still reference this one under an ON DELETE NO ACTION FK
+            // (import_runs, categories). The tombstone is simply not applied
+            // yet — it re-applies once the children are gone, which beats
+            // aborting every other op replayed alongside it.
+        }
     }
 
     // FTS5 freshness tracking is confined to the base `transactions` table

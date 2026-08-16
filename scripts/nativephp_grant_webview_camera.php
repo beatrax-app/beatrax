@@ -39,9 +39,10 @@ if (! is_file($target)) {
 $source = (string) file_get_contents($target);
 
 $marker = 'onPermissionRequest';
-if (str_contains($source, $marker)) {
-    fwrite(STDOUT, "nativephp_grant_webview_camera: already patched.\n");
-    exit(0);
+$shellAlreadyPatched = str_contains($source, $marker);
+
+if ($shellAlreadyPatched) {
+    fwrite(STDOUT, "nativephp_grant_webview_camera: main shell already patched.\n");
 }
 
 $anchor = "return object : WebChromeClient() {\n";
@@ -56,31 +57,178 @@ return object : WebChromeClient() {
             // Added by scripts/nativephp_grant_webview_camera.php — see that
             // file for why the generated shell needs it.
             override fun onPermissionRequest(request: PermissionRequest) {
+                android.util.Log.i("PHPMonitor-Perm", "onPermissionRequest: " + request.resources.joinToString())
+
                 val video = request.resources
                     .filter { it == PermissionRequest.RESOURCE_VIDEO_CAPTURE }
                     .toTypedArray()
 
                 if (video.isEmpty()) {
+                    android.util.Log.i("PHPMonitor-Perm", "denied: no video capture requested")
                     request.deny()
                     return
                 }
 
+                // Granting the WEB permission is meaningless while the APP
+                // lacks the OS one: the capture device cannot open and the
+                // page waits on a promise that never settles. A reinstall
+                // revokes it, which is why the in-page camera only ever
+                // worked after the native scanner had prompted for it.
                 val activity = context as? Activity
-                if (activity != null) {
-                    activity.runOnUiThread { request.grant(video) }
-                } else {
+                val hasOsPermission = activity != null && androidx.core.content.ContextCompat
+                    .checkSelfPermission(activity, android.Manifest.permission.CAMERA) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                if (! hasOsPermission) {
+                    android.util.Log.i("PHPMonitor-Perm", "OS camera permission missing — requesting it")
+
+                    if (activity == null) {
+                        request.deny()
+                        return
+                    }
+
+                    androidx.core.app.ActivityCompat.requestPermissions(
+                        activity,
+                        arrayOf(android.Manifest.permission.CAMERA),
+                        9101,
+                    )
+
+                    // HOLD this request until the prompt is answered instead of
+                    // denying it. Denying meant the first tap always failed —
+                    // the page had already been rejected by the time the user
+                    // pressed Allow — so the camera only opened on a second
+                    // attempt. Waiting off the main thread keeps the UI live.
+                    Thread {
+                        var waitedMs = 0
+                        var granted = false
+
+                        while (waitedMs < 30000) {
+                            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                                    activity,
+                                    android.Manifest.permission.CAMERA,
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                granted = true
+                                break
+                            }
+
+                            Thread.sleep(150)
+                            waitedMs += 150
+                        }
+
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            if (granted) {
+                                android.util.Log.i("PHPMonitor-Perm", "prompt answered — granting")
+                                request.grant(video)
+                            } else {
+                                // Unanswered: reject so the page reports it
+                                // rather than waiting on a dead promise.
+                                android.util.Log.i("PHPMonitor-Perm", "prompt not answered — denying")
+                                request.deny()
+                            }
+                        }
+                    }.start()
+
+                    return
+                }
+
+                // Always on the main looper. Granting from whatever thread the
+                // callback arrived on is accepted but leaves the capture
+                // device unopened, and the page then waits on a promise that
+                // never settles.
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.util.Log.i("PHPMonitor-Perm", "granting video capture")
                     request.grant(video)
                 }
             }
 
 KOTLIN;
 
-$patched = str_replace($anchor, $override, $source);
+if (! $shellAlreadyPatched) {
+    $patched = str_replace($anchor, $override, $source);
 
-if (file_put_contents($target, $patched) === false) {
-    fwrite(STDERR, "nativephp_grant_webview_camera: could not write {$target}.\n");
-    exit(1);
+    if (file_put_contents($target, $patched) === false) {
+        fwrite(STDERR, "nativephp_grant_webview_camera: could not write {$target}.\n");
+        exit(1);
+    }
+
+    fwrite(STDOUT, "nativephp_grant_webview_camera: granted WebView video capture.\n");
 }
 
-fwrite(STDOUT, "nativephp_grant_webview_camera: granted WebView video capture.\n");
+/*
+ * The EDGE renderer's own chrome client needs the same override.
+ *
+ * `WebviewRenderer` (the native-ui plugin's `<native:webview>` host) installs
+ * `NoPopupChromeClient`, which overrides only `onCreateWindow`. A WebView
+ * served by it therefore never answers a getUserMedia() permission request at
+ * all: the promise neither resolves nor rejects — measured hanging past three
+ * minutes on device — so the in-page scanner silently fell back to the
+ * plugin's full-screen activity on every attempt.
+ */
+// Patch the PLUGIN SOURCE, not the generated copy: every build re-copies
+// `vendor/nativephp/mobile-ui/resources/android/` into the Android project, so
+// a patch applied to the generated file survives exactly until the next build
+// — which is why the camera kept falling back to the full-screen scanner.
+$edgeTarget = __DIR__.'/../mobile-app/vendor/nativephp/mobile-ui/resources/android/WebviewRenderer.kt';
+
+if (is_file($edgeTarget)) {
+    $edgeSource = (string) file_get_contents($edgeTarget);
+
+    if (str_contains($edgeSource, 'onPermissionRequest')) {
+        fwrite(STDOUT, "nativephp_grant_webview_camera: EDGE renderer already grants video capture.\n");
+        exit(0);
+    }
+
+    $edgeAnchor = 'private class NoPopupChromeClient : WebChromeClient() {';
+
+    if (! str_contains($edgeSource, $edgeAnchor)) {
+        fwrite(STDERR, "nativephp_grant_webview_camera: NoPopupChromeClient anchor not found.\n");
+        exit(1);
+    }
+
+    $edgeOverride = $edgeAnchor."\n".<<<'KOTLIN'
+    // Same grant as the main shell's chrome client: without it a WebView
+    // rendered here never settles a getUserMedia() promise, so the in-page
+    // QR scanner can never start. Video capture only; anything else is denied.
+    override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+        val video = request.resources
+            .filter { it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE }
+            .toTypedArray()
+
+        if (video.isEmpty()) {
+            request.deny()
+            return
+        }
+
+        // Grant on the main looper, exactly as the shell client does. A grant
+        // delivered off the UI thread is accepted but the capture device then
+        // fails to open — surfacing as NotReadableError rather than a denial,
+        // which sends the scanner down the same full-screen fallback as a
+        // refusal would.
+        android.os.Handler(android.os.Looper.getMainLooper()).post { request.grant(video) }
+    }
+
+    // Without this the shell's console bridge does not apply to this WebView,
+    // so page-side diagnostics never reach logcat and an on-device failure can
+    // only be caught by attaching a debugger at the exact moment it happens.
+    override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage): Boolean {
+        android.util.Log.i(
+            "BeatraxWebView",
+            consoleMessage.message() + " @" + consoleMessage.sourceId() + ":" + consoleMessage.lineNumber(),
+        )
+
+        return true
+    }
+KOTLIN;
+
+    $edgePatched = str_replace($edgeAnchor, $edgeOverride, $edgeSource);
+
+    if (file_put_contents($edgeTarget, $edgePatched) === false) {
+        fwrite(STDERR, "nativephp_grant_webview_camera: could not write {$edgeTarget}.\n");
+        exit(1);
+    }
+
+    fwrite(STDOUT, "nativephp_grant_webview_camera: EDGE renderer now grants video capture.\n");
+}
+
 exit(0);

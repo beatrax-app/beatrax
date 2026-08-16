@@ -108,3 +108,34 @@ it('renders relay params into the SVG-encoded URI too', function (): void {
 
     expect($svg)->toContain('<svg');
 });
+
+it('renders the QR without any xmlwriter-backed renderer', function (): void {
+    // The PHP binary NativePHP bundles with the desktop app has no
+    // ext-xmlwriter, so bacon's SvgImageBackEnd threw "You need to install the
+    // libxml extension and enable the xmlwriter extension" and Show my code —
+    // the one surface pairing depends on — failed there while every test
+    // passed on a host PHP that ships the extension.
+    $source = (string) file_get_contents(
+        base_path('Modules/Sync/Internal/Pairing/QrPayloadBuilder.php'),
+    );
+
+    // Asserts on the imports, not on prose: the comment explaining this very
+    // trap names the offending class, and matching free text would fail on it.
+    expect($source)->not->toContain('use BaconQrCode\Renderer')
+        ->and($source)->not->toContain('use BaconQrCode\Writer');
+});
+
+it('emits a square SVG whose module grid clears the quiet-zone margin', function (): void {
+    // Guards the hand-rolled geometry: a transposed or off-by-one grid still
+    // produces a plausible-looking SVG that no scanner can read.
+    $svg = (new QrPayloadBuilder)->buildSvg(
+        'device-geometry',
+        str_repeat('a', 64),
+        str_repeat('b', 64),
+        'deadbeef',
+    );
+
+    expect($svg)->toMatch('/viewBox="0 0 (\d+) \1"/')
+        ->and($svg)->toContain('shape-rendering="crispEdges"')
+        ->and(substr_count($svg, '<rect'))->toBeGreaterThan(100);
+});

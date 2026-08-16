@@ -7,6 +7,7 @@ namespace Modules\Sync\Internal\Transport\Relay;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Modules\Sync\Internal\Exceptions\RelayRefusedException;
 use Modules\Sync\Internal\Exceptions\RelayUnavailableException;
+use Psr\Log\LoggerInterface;
 
 /**
  * @link ../../../../../.docs/features/sync/architecture.md
@@ -23,6 +24,7 @@ final readonly class RelayClient
     public function __construct(
         private HttpFactory $http,
         private RelayConfig $config,
+        private LoggerInterface $logger,
     ) {}
 
     // ZK: $blob is forwarded verbatim — no inspection, no decryption. It is
@@ -48,6 +50,7 @@ final readonly class RelayClient
         $response = $this->http
             ->createPendingRequest()
             ->withHeaders($this->authHeaders())
+            ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
             ->post("{$endpoint}/relay/deliver", [
                 'sender_did' => $senderDid,
@@ -77,6 +80,7 @@ final readonly class RelayClient
         $response = $this->http
             ->createPendingRequest()
             ->withToken($authToken)
+            ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
             ->get("{$endpoint}/relay/drain", ['did' => $deviceId]);
 
@@ -112,6 +116,7 @@ final readonly class RelayClient
         $response = $this->http
             ->createPendingRequest()
             ->withToken($authToken)
+            ->withOptions($this->tlsOptions())
             ->timeout(self::TIMEOUT_SECONDS)
             ->delete("{$endpoint}/relay/drain/{$id}");
 
@@ -130,7 +135,11 @@ final readonly class RelayClient
             throw RelayRefusedException::notConfigured();
         }
 
-        if ($this->config->isInsecure()) {
+        // Only a PUBLIC http endpoint is refused. Refusing every http://
+        // one made LAN pairing impossible: the desktop's relay is http on a
+        // private address, so the phone stored it from the QR and then
+        // refused to send the delivery the whole handshake waits on.
+        if ($this->config->isPubliclyInsecure()) {
             throw RelayRefusedException::endpointNotHttps();
         }
 
@@ -143,6 +152,76 @@ final readonly class RelayClient
         }
 
         return rtrim($endpoint, '/');
+    }
+
+    // Pinning REPLACES CA validation here. The relay's certificate is
+    // self-signed, so there is no chain to verify; the QR carried the exact
+    // public key out-of-band, which admits one key rather than anything a
+    // public CA has signed. Without a pin, normal CA verification stands.
+    /**
+     * @return array<string, mixed>
+     */
+    private function tlsOptions(): array
+    {
+        $pin = $this->config->pin();
+
+        if ($pin === null) {
+            return [];
+        }
+
+        // Fail CLOSED. `verify => false` without a pin is encrypted to ANYONE
+        // — a LAN attacker can present their own certificate and be accepted
+        // — and CA verification cannot substitute for a self-signed cert that
+        // chains to nothing.
+        if (! $this->supportsPinning()) {
+            $this->logger->error('relay: TLS pinning unsupported on this runtime; refusing to connect unauthenticated.', [
+                'ssl_backend' => $this->sslBackend(),
+            ]);
+
+            throw RelayRefusedException::pinningUnsupported($this->sslBackend());
+        }
+
+        // verify => false is safe ONLY in company with the pin below: it
+        // disables chain/name validation, which a self-signed LAN certificate
+        // cannot satisfy, while the pin still admits exactly one key.
+        return [
+            'verify' => false,
+            'curl' => [CURLOPT_PINNEDPUBLICKEY => $pin],
+        ];
+    }
+
+    // Reported for diagnosis: which TLS backend the runtime actually has is
+    // the difference between pinning working and the transport being refused.
+    private function sslBackend(): string
+    {
+        if (! function_exists('curl_version')) {
+            return 'none';
+        }
+
+        $version = curl_version();
+
+        return is_array($version) && isset($version['ssl_version']) && is_string($version['ssl_version'])
+            ? $version['ssl_version']
+            : 'unknown';
+    }
+
+    // libcurl reports its own capabilities; the option is only honoured by
+    // backends that implement it.
+    private function supportsPinning(): bool
+    {
+        if (! defined('CURLOPT_PINNEDPUBLICKEY') || ! function_exists('curl_version')) {
+            return false;
+        }
+
+        $version = curl_version();
+
+        if (! is_array($version) || ! isset($version['ssl_version']) || ! is_string($version['ssl_version'])) {
+            return false;
+        }
+
+        // OpenSSL, LibreSSL, BoringSSL and GnuTLS all implement it; the
+        // stripped TLS backends that ship in embedded builds do not.
+        return (bool) preg_match('/openssl|libressl|boringssl|gnutls/i', $version['ssl_version']);
     }
 
     // Empty array when no token is configured — some relay deployments may

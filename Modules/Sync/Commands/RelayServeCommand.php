@@ -10,10 +10,15 @@ use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler\ClosureRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
+use Amp\Socket\BindContext;
+use Amp\Socket\Certificate;
+use Amp\Socket\ServerTlsContext;
 use Illuminate\Console\Command;
+use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -52,12 +57,20 @@ final class RelayServeCommand extends Command
         private readonly LoggerInterface $logger,
         private readonly RelayMailbox $mailbox,
         private readonly RelayConfig $config,
+        private readonly RelayTlsMaterial $tls,
+        private readonly DaemonShutdownSignal $shutdown,
     ) {
         parent::__construct();
     }
 
     public function handle(): int
     {
+        // The desktop bundle starts PHP with -d max_execution_time=120, and
+        // a listener is by definition longer-lived than any request: the loop
+        // fatalled every two minutes, the watchdog respawned it, and a peer
+        // dialling during that gap got a refused connection.
+        set_time_limit(0);
+
         $port = (int) $this->option('port');
         if ($port <= 0 || $port > 65535) {
             $this->error("relay:serve: invalid port {$port}.");
@@ -69,7 +82,12 @@ final class RelayServeCommand extends Command
 
         try {
             $httpServer = SocketHttpServer::createForDirectAccess($this->logger);
-            $httpServer->expose("0.0.0.0:{$port}");
+
+            // TLS whenever material exists. The certificate is self-signed —
+            // there is no CA for a LAN address — so peers trust it by pinning
+            // the key from the QR rather than by name validation.
+            $bindContext = $this->tlsBindContext();
+            $httpServer->expose("0.0.0.0:{$port}", $bindContext);
 
             $requestHandler = new ClosureRequestHandler(
                 fn (Request $request): Response => $this->route($request),
@@ -78,11 +96,16 @@ final class RelayServeCommand extends Command
             $httpServer->start($requestHandler, $errorHandler);
 
             $this->logger->info('relay:serve: endpoint started.', ['port' => $port]);
-            $this->info("relay:serve: ZK relay listening on 0.0.0.0:{$port} (SIGTERM/SIGINT to stop).");
+            $stopHint = $this->canTrapSignals() ? 'SIGTERM/SIGINT to stop' : 'no signal handling on this runtime';
+            $this->info("relay:serve: ZK relay listening on 0.0.0.0:{$port} ({$stopHint}).");
 
-            \Amp\trapSignal([\SIGTERM, \SIGINT]);
+            // Identical wait to sync:serve's: a signal where ext-pcntl
+            // exists, plus the host's stdin pipe closing — the only notice a
+            // force-quit gives, and without it this relay outlived the app
+            // and kept holding the port.
+            $this->shutdown->await($this->canTrapSignals());
+            $this->logger->info('relay:serve: shutdown requested — stopping relay.');
 
-            $this->logger->info('relay:serve: shutdown signal received — stopping relay.');
             $httpServer->stop();
         } catch (\Throwable $e) {
             $this->logger->error('relay:serve: fatal error.', ['error' => $e->getMessage()]);
@@ -313,5 +336,27 @@ final class RelayServeCommand extends Command
         $body = json_encode(['error' => $errorCode], JSON_THROW_ON_ERROR);
 
         return new Response($status, ['content-type' => self::JSON_CONTENT_TYPE], $body);
+    }
+
+    // ext-pcntl is absent from the bundled desktop PHP, so the SIGTERM and
+    // SIGINT constants do not exist there and referencing them is fatal.
+    private function tlsBindContext(): ?BindContext
+    {
+        if (! $this->tls->exists()) {
+            $this->logger->warning('relay:serve: no TLS material; serving plaintext.');
+
+            return null;
+        }
+
+        return (new BindContext)->withTlsContext(
+            (new ServerTlsContext)->withDefaultCertificate(
+                new Certificate($this->tls->certPath(), $this->tls->keyPath()),
+            ),
+        );
+    }
+
+    private function canTrapSignals(): bool
+    {
+        return \function_exists('pcntl_signal') && \defined('SIGTERM') && \defined('SIGINT');
     }
 }

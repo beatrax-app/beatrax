@@ -24,7 +24,7 @@
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <div
-    class="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950
+    class="beatrax-shell min-h-screen flex items-center justify-center
             px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
             pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
             motion-reduce:transition-none"

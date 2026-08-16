@@ -79,3 +79,61 @@ it('refuses a word code that is not decodable rather than throwing at the caller
     'wrong length' => ['abc'],
     'plausible but invalid' => ['zzzz-zzzz-zzzz-zzzz'],
 ]);
+
+/*
+ * inFlightFor() had no coverage at all, and shipped a SELECT for a
+ * `safety_number_words` column that pairing_tokens has never had — that one
+ * lives on device_registry. Every load of the pairing screen with a live
+ * ceremony 500'd, which on the phone read as the wizard losing its place, the
+ * back button landing on the wrong step, and nothing ever syncing.
+ */
+it('resumes a live ceremony without reaching for a column that does not exist', function (): void {
+    $id = pairingToken($this->user->id, 'awaiting_confirm');
+
+    DB::table('pairing_tokens')->where('id', $id)->update([
+        'responder_device_id' => 'phone-device',
+        'responder_ed25519_pub_hex' => str_repeat('c', 64),
+        'responder_x25519_pub_hex' => str_repeat('d', 64),
+    ]);
+
+    $inFlight = $this->gateway->inFlightFor($this->user->id);
+
+    expect($inFlight)->not->toBeNull()
+        ->and($inFlight['id'])->toBe($id)
+        ->and($inFlight['state'])->toBe('awaiting_confirm');
+});
+
+// The resumed screen re-emits its responder-accept from these two, so a
+// resume that returned them empty left the retry permanently disarmed.
+it('carries the addressing a resumed screen needs to re-emit its accept', function (): void {
+    $id = pairingToken($this->user->id, 'awaiting_confirm');
+
+    $inFlight = $this->gateway->inFlightFor($this->user->id);
+
+    expect($inFlight['token_hash'])->toBe(hash('sha256', 'token-'.$this->user->id.'-awaiting_confirm'))
+        ->and($inFlight['peer_device_id'])->toBe('desktop-device');
+});
+
+it('derives the safety words from the stored keys once both sides are bound', function (): void {
+    $id = pairingToken($this->user->id, 'awaiting_confirm');
+
+    DB::table('pairing_tokens')->where('id', $id)->update([
+        'responder_ed25519_pub_hex' => str_repeat('c', 64),
+    ]);
+
+    expect($this->gateway->inFlightFor($this->user->id)['safety_words'])->toHaveCount(6);
+});
+
+// Only one side bound yet: there is nothing to derive from, and the screen
+// must render rather than throw a SodiumException at the user.
+it('returns no words while only one side is bound', function (): void {
+    pairingToken($this->user->id, 'awaiting_confirm');
+
+    expect($this->gateway->inFlightFor($this->user->id)['safety_words'])->toBe([]);
+});
+
+it('reports no ceremony for another account', function (): void {
+    pairingToken($this->other->id, 'awaiting_confirm');
+
+    expect($this->gateway->inFlightFor($this->user->id))->toBeNull();
+});

@@ -10,6 +10,7 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
@@ -92,6 +93,40 @@ final readonly class OpLogReplayer
             $quarantine,
         );
         $this->applier = new OpLogEntryApplier($db, $rules, $this->projector, $quarantine, $searchWriter);
+    }
+
+    // Creates arrive grouped by table in HLC order, which says nothing about
+    // referential order: a transaction could be written before the account it
+    // points at, and SQLite rejects that outright.
+    /**
+     * @param  array<string, array<int|string, array<string, list<OpLogEntry>>>>  $creates
+     * @return array<string, array<int|string, array<string, list<OpLogEntry>>>>
+     */
+    private function parentsFirst(array $creates): array
+    {
+        $order = $this->resolveFromContainer(CoveredTableOrder::class);
+
+        if ($order === null) {
+            return $creates;
+        }
+
+        $ordered = [];
+
+        foreach ($order->insertionOrder() as $table) {
+            if (isset($creates[$table])) {
+                $ordered[$table] = $creates[$table];
+            }
+        }
+
+        // Anything the order does not know about keeps its original position
+        // rather than being silently dropped.
+        foreach ($creates as $table => $rows) {
+            if (! isset($ordered[$table])) {
+                $ordered[$table] = $rows;
+            }
+        }
+
+        return $ordered;
     }
 
     private function resolveClock(): Clock
@@ -183,7 +218,7 @@ final readonly class OpLogReplayer
                 &$touchedTransactionIds,
                 &$tombstonedTransactionIds,
             ): void {
-                $this->applier->applyCreates($creates, $tombstones, $userId, $now, $touchedTransactionIds);
+                $this->applier->applyCreates($this->parentsFirst($creates), $tombstones, $userId, $now, $touchedTransactionIds);
                 $this->applier->applyFieldMerges(
                     $candidatesByField,
                     $tombstones,
@@ -199,6 +234,7 @@ final readonly class OpLogReplayer
                     $userId,
                     $pairCascades,
                     $tombstonedTransactionIds,
+                    $creates,
                 );
             },
         );

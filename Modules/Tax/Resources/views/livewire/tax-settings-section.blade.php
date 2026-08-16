@@ -19,8 +19,16 @@
             aria-label="{{ Lang::get('tax::settings.country_label') }}"
             data-testid="tax-country-select"
         >
-            <option value="" @selected($taxCountryCode === '')>{{ Lang::get('tax::settings.country_choose') }}</option>
-            @foreach (['nl', 'de', 'be', 'fr', 'gb', 'us'] as $code)
+            {{-- strlen, not a comparison against '': an empty-string literal inside
+                 a Blade directive reads to Sonar's HTML parser as an opening
+                 attribute quote, and it swallows markup until the next quote —
+                 reporting a deprecated `name` attribute 50 lines further down. --}}
+            <option value="" @selected(strlen($taxCountryCode) === 0)>{{ Lang::get('tax::settings.country_choose') }}</option>
+            {{-- $allowedCountries comes straight from TaxCountry::cases(), the
+                 same enum the setter validates against — a literal list here
+                 would silently disagree with it the next time a country's
+                 corpus file lands. --}}
+            @foreach ($allowedCountries as $code)
                 <option value="{{ $code }}" @selected($taxCountryCode === $code)>{{ Lang::get('tax::settings.countries.'.$code) }}</option>
             @endforeach
         </select>

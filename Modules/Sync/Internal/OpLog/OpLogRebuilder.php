@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Internal\OpLog;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Config\MergeRulesRegistry;
 use Modules\Sync\Internal\Exceptions\RebuildInProgressException;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
@@ -16,6 +17,8 @@ final class OpLogRebuilder
 {
     /** @var list<string> */
     private readonly array $coveredTables;
+
+    private readonly CoveredTableOrder $tableOrder;
 
     // Keyed by userId, true = lock held. Non-static because readonly classes
     // cannot have static properties; each instance tracks its own lock,
@@ -34,7 +37,14 @@ final class OpLogRebuilder
         private readonly OpLogReplayer $replayer,
         MergeRulesRegistry $registry,
         ?array $coveredTables = null,
+        ?CoveredTableOrder $tableOrder = null,
     ) {
+        // Built here when absent rather than left null. The container leaves
+        // this optional parameter unresolved, and the null fallback was plain
+        // registry order — which lists import_runs before transactions, so
+        // every rebuild deleted a parent its children still referenced.
+        $this->tableOrder = $tableOrder ?? new CoveredTableOrder($this->db, $registry);
+
         // Derives the covered-table list from the registry so it stays
         // config-driven; caller can override for testing partial subsets.
         /** @var list<string> $tables */
@@ -163,6 +173,10 @@ final class OpLogRebuilder
             // original epoch tag — dropping this on rebuild would silently
             // lose every sensitive-field edit.
             gdkEpoch: is_numeric($vars['gdk_epoch'] ?? null) ? (int) $vars['gdk_epoch'] : null,
+            // What the origin device signed under. Dropping it here made the
+            // rebuild recompute a v1 payload against the LOCAL user id, so
+            // every peer entry re-verified as forged.
+            originUserId: is_numeric($vars['origin_user_id'] ?? null) ? (int) $vars['origin_user_id'] : null,
         );
     }
 
@@ -177,46 +191,19 @@ final class OpLogRebuilder
         return is_string($pkRaw) ? $pkRaw : '';
     }
 
-    // Covered tables ordered children-before-parents so a scoped DELETE
-    // never removes a parent row before its FK children. Tables not listed
-    // here keep their registry order, appended after the explicit set.
+    // Children before parents, derived from the live foreign keys rather
+    // than a hand-maintained list that drifts as tables are added.
     /**
      * @return list<string>
      */
     private function fkSafeDeletionOrder(): array
     {
-        $preferred = [
-            'tax_transaction_tags',
-            'category_budgets',
-            'transactions',
-            'categorization_rules',
-            'merchant_aliases',
-            'merchant_memories',
-            'counterparties',
-            'pots',
-            'goals',
-            'categories',
-            'accounts',
-        ];
-
         $covered = $this->coveredTables;
 
-        /** @var list<string> $ordered */
-        $ordered = [];
-
-        foreach ($preferred as $table) {
-            if (in_array($table, $covered, true)) {
-                $ordered[] = $table;
-            }
-        }
-
-        foreach ($covered as $table) {
-            if (! in_array($table, $ordered, true)) {
-                $ordered[] = $table;
-            }
-        }
-
-        return $ordered;
+        return array_values(array_filter(
+            $this->tableOrder->deletionOrder(),
+            static fn (string $table): bool => in_array($table, $covered, true),
+        ));
     }
 
     // The only rows safe to DELETE before replay — the CreateRow ops will

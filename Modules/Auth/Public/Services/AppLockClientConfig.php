@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Services;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 
 // Sole source of truth for "does this session have a lock at all",
@@ -29,6 +30,22 @@ final class AppLockClientConfig
             ->first(['lock_enabled']);
 
         return $row !== null && (bool) $row->lock_enabled;
+    }
+
+    // When this user last proved presence. Null when no lock row exists,
+    // which callers read as "no recent activity to protect".
+    public function lastActivityAt(int $userId): ?CarbonImmutable
+    {
+        $value = $this->db->connection()
+            ->table('user_app_lock_configs')
+            ->where('user_id', $userId)
+            ->value('last_activity_at');
+
+        if (! is_string($value) && ! is_int($value)) {
+            return null;
+        }
+
+        return CarbonImmutable::parse($value);
     }
 
     public function idleTimeoutMs(int $userId): ?int

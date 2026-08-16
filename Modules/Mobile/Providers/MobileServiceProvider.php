@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace Modules\Mobile\Providers;
 
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
+use Modules\Core\Public\Contracts\DeviceNameSource;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\MobilePullCommand;
+use Modules\Mobile\Internal\Boot\NativeBuildPatches;
+use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
+use Modules\Mobile\Internal\Native\NativeDeviceName;
 
 /**
  * @link ../../../.docs/features/mobile/architecture.md
@@ -60,6 +66,28 @@ final class MobileServiceProvider extends ServiceProvider
                 SecureStorageKeyCustodian::class,
             );
         }
+
+        // Two facts only the device itself knows: its name, and whether the
+        // OS is in dark mode. Both have shell-wide fallbacks that are simply
+        // wrong on a phone — "Linux" as a device name, and a light first
+        // paint on a dark device.
+        if (class_exists('Native\Mobile\Facades\Device') && UserDataPathService::isMobileRuntime()) {
+            $this->app->singleton(DeviceNameSource::class, NativeDeviceName::class);
+        }
+
+        // NO OsThemeSignal binding on mobile, deliberately. The bridge is read
+        // per request and can answer differently while the app is idle or
+        // paused — exactly when the idle lock renders the PIN screen.
+
+        // The pre-paint script reads prefers-color-scheme instead: the same OS
+        // night-mode flag the native window background uses, so every layer
+        // agrees at all times.
+
+        // The enclave-gated key vault, presented through the shared contract
+        // so the lock screen asks one question on every platform.
+        if (class_exists('Beatrax\BiometricVault\Facades\BiometricVault') && UserDataPathService::isMobileRuntime()) {
+            $this->app->singleton(ColdStartVault::class, MobileColdStartVault::class);
+        }
     }
 
     public function boot(Dispatcher $events): void
@@ -72,6 +100,21 @@ final class MobileServiceProvider extends ServiceProvider
         if (class_exists($clearListener)) {
             $events->listen('Modules\Auth\Public\Events\AppLockPassphraseChanged', [$clearListener, 'handle']);
         }
+
+        // Re-apply the generated-project patches on every mobile build, not
+        // only on composer install: the build tooling regenerates the Android
+        // project, which would otherwise ship without them.
+        $events->listen(CommandStarting::class, function (CommandStarting $event): void {
+            if (! in_array($event->command, ['native:run', 'native:build'], true)) {
+                return;
+            }
+
+            $scripts = dirname($this->app->basePath()).DIRECTORY_SEPARATOR.'scripts';
+
+            if (is_dir($scripts)) {
+                $this->app->make(NativeBuildPatches::class)->apply($scripts);
+            }
+        });
 
         $this->loadModuleResources('mobile');
 
@@ -93,6 +136,7 @@ final class MobileServiceProvider extends ServiceProvider
                 'mobile.lock-screen' => 'MobileLockScreen',
                 'mobile.pairing-scan' => 'MobilePairingScan',
                 'mobile.setup-progress-screen' => 'SetupProgressScreen',
+                'mobile.sync-complete-screen' => 'SyncCompleteScreen',
                 'mobile.sync-screen' => 'SyncScreen',
                 'mobile.welcome-screen' => 'MobileWelcomeScreen',
                 'mobile.cold-start-biometric-settings-section' => 'ColdStartBiometricSettingsSection',

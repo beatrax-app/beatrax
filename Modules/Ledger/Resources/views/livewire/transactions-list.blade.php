@@ -59,7 +59,10 @@
          ============================================================ --}}
     @include('ledger::livewire.partials.search-toolbar')
 
-    <header class="flex items-end justify-between gap-4">
+    {{-- Stacks below sm: the title and the controls together need ~500px,
+         so forcing them onto one row pushed the currency toggle and the
+         history button off the right edge of a phone. --}}
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div class="space-y-1">
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::list.heading') }}</h1>
             <p class="text-sm text-slate-500 dark:text-slate-400">
@@ -71,7 +74,7 @@
             </p>
         </div>
         @if (! $isSearchMode)
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <flux:radio.group wire:model.live="currency" variant="segmented" aria-label="{{ Lang::get('ledger::list.currency_aria') }}">
                     <flux:radio value="eur" label="{{ Lang::get('ledger::list.currency_eur') }}" />
                     <flux:radio value="original" label="{{ Lang::get('ledger::list.currency_original') }}" />
@@ -123,7 +126,10 @@
                             <a
                                 href="{{ route('transactions.show', ['transactionId' => $row['id']]) }}"
                                 wire:navigate
-                                class="block min-w-0 flex-1"
+                                {{-- Full width below sm so the counterparty name gets a
+                                     line of its own: sharing the row with the badges and
+                                     the amount left it 28px of the 324. --}}
+                                class="block min-w-0 w-full sm:w-auto sm:flex-1"
                             >
                                 <div class="min-w-0 flex-1">
                                     {{-- Primary: counterparty name (2-line truncate) --}}

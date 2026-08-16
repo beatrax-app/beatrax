@@ -76,3 +76,16 @@ it('keeps the submitter helper available to those views', function (): void {
     expect((string) file_get_contents(base_path('resources/js/app.js')))
         ->toContain('window.beatraxSubmitPostForm');
 });
+
+it('submits those forms as JSON', function (): void {
+    // The mobile shell forwards ONLY JSON request bodies — urlencoded and
+    // multipart both arrive with an empty input bag, so the route reads
+    // nothing and redirects back with a 200. Nothing else catches this: the
+    // request succeeds, and the control is simply inert on device.
+    $helper = (string) file_get_contents(base_path('resources/js/app.js'));
+    $body = (string) mb_strstr($helper, 'window.beatraxSubmitPostForm');
+
+    expect($body)->toContain("'Content-Type': 'application/json'")
+        ->and($body)->toContain('JSON.stringify')
+        ->and($body)->not->toContain('application/x-www-form-urlencoded');
+});

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Commands;
 
-use Amp\DeferredFuture;
 use Amp\Http\Server\DefaultErrorHandler;
 use Amp\Http\Server\SocketHttpServer;
-use Amp\Websocket\Server\AllowOriginAcceptor;
+use Amp\Websocket\Server\Rfc6455Acceptor;
 use Amp\Websocket\Server\Websocket;
 use Closure;
 use Illuminate\Console\Command;
+use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Discovery\MdnsAdvertiser;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Psr\Log\LoggerInterface;
@@ -33,12 +33,19 @@ final class SyncServeCommand extends Command
         private readonly LoggerInterface $logger,
         private readonly Closure $handler,
         private readonly MdnsAdvertiser $advertiser,
+        private readonly DaemonShutdownSignal $shutdown,
     ) {
         parent::__construct();
     }
 
     public function handle(): int
     {
+        // The desktop bundle starts PHP with -d max_execution_time=120, and
+        // a listener is by definition longer-lived than any request: the loop
+        // fatalled every two minutes, the watchdog respawned it, and a peer
+        // dialling during that gap got a refused connection.
+        set_time_limit(0);
+
         $port = (int) $this->option('port');
         if ($port <= 0 || $port > 65535) {
             $this->error("sync:serve: invalid port {$port}.");
@@ -58,9 +65,11 @@ final class SyncServeCommand extends Command
             $httpServer = SocketHttpServer::createForDirectAccess($this->logger);
             $httpServer->expose("0.0.0.0:{$port}");
 
-            // LAN-only: AllowOriginAcceptor(['*']) skips browser Origin checks.
-            // The Noise handshake is the real authentication gate.
-            $acceptor = new AllowOriginAcceptor(['*']);
+            // No origin restriction: AllowOriginAcceptor compares the Origin
+            // header against its list with in_array(), so ['*'] matched the
+            // LITERAL string and every upgrade got "403 Origin forbidden" —
+            // a native peer sends no Origin at all. Noise is the real gate.
+            $acceptor = new Rfc6455Acceptor;
             $wsServer = new Websocket($httpServer, $this->logger, $acceptor, $handler);
 
             $errorHandler = new DefaultErrorHandler;
@@ -75,21 +84,12 @@ final class SyncServeCommand extends Command
             $stopHint = $this->canTrapSignals() ? 'SIGTERM/SIGINT to stop' : 'no signal handling on this runtime';
             $this->info("sync:serve: listening on 0.0.0.0:{$port} ({$stopHint}).");
 
-            // trapSignal() needs ext-pcntl, and the PHP binary NativePHP
-            // bundles for the desktop build ships without it: SIGTERM is an
-            // undefined constant there, so the command fatalled right after
-            // binding the port and the supervisor restarted it forever.
-            if ($this->canTrapSignals()) {
-                \Amp\trapSignal([\SIGTERM, \SIGINT]);
-                $this->logger->info('sync:serve: shutdown signal received — stopping server.');
-            } else {
-                // Nothing to trap: park the fiber indefinitely and let the
-                // supervisor kill the process. Shutdown is not graceful here,
-                // which is survivable — the listener holds no unflushed state,
-                // and every peer exchange is a bounded open/do/close.
-                $this->logger->info('sync:serve: no signal handling available; running until terminated.');
-                (new DeferredFuture)->getFuture()->await();
-            }
+            // Waits on a signal where ext-pcntl exists, and on the host's
+            // stdin pipe closing either way — which is the only notice a
+            // force-quit gives, and without it this daemon outlived the app
+            // and kept holding the port.
+            $this->shutdown->await($this->canTrapSignals());
+            $this->logger->info('sync:serve: shutdown requested — stopping server.');
 
             $httpServer->stop();
         } catch (\Throwable $e) {

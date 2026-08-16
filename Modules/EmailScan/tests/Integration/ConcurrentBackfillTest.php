@@ -16,6 +16,7 @@ use Modules\EmailScan\Internal\Clients\GmailApiClientContract;
 use Modules\EmailScan\Internal\Clients\GraphApiClientContract;
 use Modules\EmailScan\Internal\InboxScanStateMachine;
 use Modules\EmailScan\Internal\Jobs\BackfillInboxJob;
+use Modules\EmailScan\Internal\Jobs\JobUserContext;
 use Modules\EmailScan\Internal\MimeHeaderParser;
 use Modules\EmailScan\Public\Services\EmlBlobStore;
 use Modules\EmailScan\Public\Services\KnownSenderQuery;
@@ -112,6 +113,7 @@ it('issues PRAGMA busy_timeout = 5000 inside every per-page transaction', functi
         $this->app->make(MimeHeaderParser::class),
         new InboxScanStateMachine($realDb, $this->app->make(Clock::class)),
         $this->app->make(KnownSenderQuery::class),
+        $this->app->make(JobUserContext::class),
     );
 
     // The recording arrays are populated by the connection

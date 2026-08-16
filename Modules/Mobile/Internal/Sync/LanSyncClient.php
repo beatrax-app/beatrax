@@ -47,12 +47,6 @@ final class LanSyncClient
     // larger than this is picked up on the next connect.
     private const int MAX_GDK_WRAPS_PER_CONNECT = 100;
 
-    // A short, dedicated bound (unlike READ_TIMEOUT_SECONDS's generous
-    // catch-up budget): the desktop pushes any pending wraps immediately
-    // after catch-up completes, so a short idle bound detects "no more
-    // wraps" without stalling every sync behind the full catch-up timeout.
-    private const float GDK_WRAP_READ_TIMEOUT_SECONDS = 2.0;
-
     public function __construct(
         private readonly DeviceRegistryService $registryService,
         private readonly DeviceKeySigner $signer,
@@ -99,17 +93,28 @@ final class LanSyncClient
                 throw LanSyncException::peerFailedConfirmedDeviceGate();
             }
 
-            $this->runCatchUp($connection, $syncSession, $identity->userId, $identity->deviceId, $deviceKeys);
-
-            // Consume any pushed GDK_EPOCH_WRAP frames inside the
-            // still-open Noise session (they were encrypted with this
-            // same session, so decrypting them requires it, not a new
-            // connection). Must run BEFORE session->close() below.
+            // Keys BEFORE the data they decrypt, inside the still-open Noise
+            // session that encrypted them. Consumed after catch-up, the first
+            // sync applied the desktop's whole encrypted history against an
+            // empty keyring and quarantined it, which has no replay path.
             $this->receiveGdkEpochWraps($connection, $syncSession, $identity->userId, $session);
+
+            $this->runCatchUp($connection, $syncSession, $identity->userId, $identity->deviceId, $deviceKeys);
 
             $syncSession->close();
 
             return true;
+        } catch (LanSyncException $e) {
+            if (! $e->isPeerRevocation()) {
+                throw $e;
+            }
+
+            // Retrying cannot help: this device has been removed on the other
+            // side. Drop the local confirmation so every surface stops
+            // reporting a peer that no longer accepts it.
+            $this->forgetRevokedPeer($identity->userId);
+
+            return false;
         } catch (WebsocketConnectException|CancelledException|TimeoutException $e) {
             // The FIRST LAN connect per install can hit the iOS Local
             // Network Privacy gate - a clean connect timeout/refused/
@@ -123,6 +128,23 @@ final class LanSyncClient
         } finally {
             $connection?->close();
         }
+    }
+
+    // Clears the local confirmation for every non-self peer. This client
+    // only ever dials one household peer, and it has just said it no longer
+    // knows this device — keeping the row confirmed is a trust claim the
+    // other side has already withdrawn.
+    private function forgetRevokedPeer(int $userId): void
+    {
+        $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', 0)
+            ->update(['confirmed_at' => null]);
+
+        $this->logger?->warning('LanSyncClient: peer reports this device was removed — local confirmation cleared.', [
+            'user_id' => $userId,
+        ]);
     }
 
     private function resolvePeerStaticKeyHex(DeviceIdentityDto $identity): ?string
@@ -270,18 +292,12 @@ final class LanSyncClient
         int $userId,
         Session $session,
     ): void {
-        for ($i = 0; $i < self::MAX_GDK_WRAPS_PER_CONNECT; $i++) {
-            try {
-                $message = $connection->receive(new TimeoutCancellation(self::GDK_WRAP_READ_TIMEOUT_SECONDS));
-            } catch (TimeoutException) {
-                // No more wraps pending — the desktop's fixed push step is
-                // over (it never sends anything further until the phone
-                // itself disconnects). Not an error.
-                break;
-            }
+        $announced = $this->readEpochPushCount($connection, $syncSession);
 
+        for ($i = 0; $i < $announced; $i++) {
+            $message = $this->receiveWithTimeout($connection, 'gdk epoch wrap');
             if ($message === null) {
-                break;
+                return;
             }
 
             $decrypted = $syncSession->decrypt($message->buffer());
@@ -289,22 +305,58 @@ final class LanSyncClient
             try {
                 $parsed = $this->catchUp->parseControlMessage($decrypted);
             } catch (\UnexpectedValueException) {
-                // Malformed frame — the desktop's fixed step only ever
-                // sends wrap frames, so treat this as "push is over" rather
-                // than throwing.
-                break;
+                // Skipped, not fatal. Ending the loop on the first thing this
+                // step did not recognise discarded every wrap queued behind
+                // it, and the desktop had already marked all of them
+                // delivered — the keys were simply gone.
+                continue;
             }
 
             // The literal wire-protocol string mirrors
             // GdkEpochControlHandler::MSG_GDK_EPOCH_WRAP - that class is
             // off-limits to this module directly, so this is not a class
-            // reference. A non-wrap message ends this fixed step.
+            // reference.
             if (($parsed['type'] ?? null) !== 'GDK_EPOCH_WRAP') {
-                break;
+                continue;
             }
 
             $this->epochDelivery->receiveEpochWrap($decrypted, $userId, $session);
         }
+    }
+
+    // Reads the header that opens the epoch-push phase and returns how many
+    // wrap frames follow. The phase runs before catch-up, so its end cannot
+    // be inferred from a read timeout the way a trailing phase's could —
+    // that would consume the catch-up request queued behind it.
+    private function readEpochPushCount(WebsocketConnection $connection, SyncSession $syncSession): int
+    {
+        $message = $this->receiveWithTimeout($connection, 'gdk epoch push header');
+        if ($message === null) {
+            return 0;
+        }
+
+        try {
+            $parsed = $this->catchUp->parseControlMessage($syncSession->decrypt($message->buffer()));
+        } catch (\UnexpectedValueException) {
+            return 0;
+        }
+
+        // Mirrors SyncWebSocketHandler::MSG_PEER_REVOKED. The peer no longer
+        // confirms this device, so there is nothing left to sync and the
+        // local trust record has to stop saying otherwise.
+        if (($parsed['type'] ?? null) === 'PEER_REVOKED') {
+            throw LanSyncException::peerRevokedThisDevice();
+        }
+
+        // Mirrors SyncWebSocketHandler::MSG_GDK_EPOCH_PUSH — that class is
+        // off-limits to this module directly, so this is the wire literal.
+        if (($parsed['type'] ?? null) !== 'GDK_EPOCH_PUSH') {
+            return 0;
+        }
+
+        $count = $parsed['count'] ?? null;
+
+        return is_int($count) ? max(0, min($count, self::MAX_GDK_WRAPS_PER_CONNECT)) : 0;
     }
 
     /**

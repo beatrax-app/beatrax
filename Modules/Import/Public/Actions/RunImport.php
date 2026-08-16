@@ -121,10 +121,10 @@ final class RunImport implements RunsImports
         return $previewResult;
     }
 
-    // The same file uploaded twice resolves to the same on-disk path (a
-    // no-op overwrite keeps it stable); the extension matches the
-    // declared source format so the stored copy round-trips through
-    // the format-specific HeaderSniffer on re-read.
+    // The same file uploaded twice resolves to the same on-disk path — the
+    // name is the content hash, so a second upload publishes identical bytes.
+    // The extension matches the declared source format so the stored copy
+    // round-trips through the format-specific HeaderSniffer on re-read.
     private function copyToStableLocation(string $sourcePath, User $user, string $sha, string $sourceFormat): string
     {
         $disk = $this->storage->disk(self::STORAGE_DISK);
@@ -143,13 +143,29 @@ final class RunImport implements RunsImports
             throw UploadStagingException::sourceUnreadable($sourcePath);
         }
 
-        if (! $disk->put($relative, $contents)) {
+        // Staged beside the destination and renamed over it: put() TRUNCATES
+        // the destination first, and the caller hands that path to the parser
+        // moments later. rename() is atomic, and since the name is the content
+        // hash, a reader sees the same bytes whichever copy it gets.
+        $staged = $relative.'.'.bin2hex(random_bytes(8)).'.part';
+
+        if (! $disk->put($staged, $contents)) {
             throw UploadStagingException::persistFailed($relative);
         }
 
         $absolute = $disk->path($relative);
-        if ($absolute === '') {
+        $stagedAbsolute = $disk->path($staged);
+
+        if ($absolute === '' || $stagedAbsolute === '') {
+            $disk->delete($staged);
+
             throw UploadStagingException::absolutePathsUnsupported();
+        }
+
+        if (! @rename($stagedAbsolute, $absolute)) {
+            $disk->delete($staged);
+
+            throw UploadStagingException::persistFailed($relative);
         }
 
         return $absolute;

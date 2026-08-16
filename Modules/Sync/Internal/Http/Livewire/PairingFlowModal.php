@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Http\Livewire;
 
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -16,6 +17,7 @@ use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\OpLog\PreSyncHistoryCapture;
 use Modules\Sync\Internal\Pairing\InvalidPublicKeyException;
 use Modules\Sync\Internal\Pairing\PairingRelayCourier;
 use Modules\Sync\Internal\Pairing\PairingState;
@@ -24,6 +26,8 @@ use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\PairingGateway;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -80,6 +84,12 @@ final class PairingFlowModal extends Component
      */
     public array $safetyWords = [];
 
+    // Shown beside the words so the user confirms WHICH two devices are
+    // pairing, not just that six words match on two screens.
+    public string $selfDeviceName = '';
+
+    public string $peerDeviceName = '';
+
     public function mount(bool $open = false): void
     {
         $this->open = $open;
@@ -90,8 +100,13 @@ final class PairingFlowModal extends Component
     // transition — Flux only shows the dialog on that transition. Reset the
     // flow so a reopened modal never resumes a stale/cancelled handshake.
     #[On('open-pairing-modal')]
-    public function openModal(): void
+    public function openModal(CurrentUser $currentUser, Dispatcher $events): void
     {
+        // A daemon started while the app was locked holds no transport keypair
+        // and rejects every handshake. Opening this modal is an unlocked,
+        // authenticated moment, and exactly when the listener must be ready.
+        $events->dispatch(new SyncTransportCredentialsAvailable($currentUser->user()->id));
+
         $this->step = 'choose_direction';
         $this->pairingTokenId = '';
         $this->wordCode = '';
@@ -116,6 +131,7 @@ final class PairingFlowModal extends Component
         DatabaseManager $db,
         Session $session,
         RelayConfig $relayConfig,
+        DeviceRegistryService $registry,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -142,8 +158,12 @@ final class PairingFlowModal extends Component
             $identity->ed25519PublicKeyHex,
             $identity->x25519PublicKeyHex,
             $token,
+            // This device's own name, so the scanner can label it with what
+            // it calls itself rather than the "Paired device" placeholder.
+            $registry->localDeviceName($userId),
             $relayConfig->endpointUrl(),
             $relayConfig->authToken(),
+            $relayConfig->pin(),
         );
         $this->wordCode = $wordEncoder->encode($token);
         $this->pairingTokenId = (string) $this->tokenRowId($db, $userId, $token);
@@ -172,6 +192,8 @@ final class PairingFlowModal extends Component
         SafetyNumberDeriver $safetyDeriver,
         DatabaseManager $db,
         Session $session,
+        PairingGateway $gateway,
+        DeviceRegistryService $registry,
     ): void {
         $userId = $currentUser->user()->id;
 
@@ -207,6 +229,7 @@ final class PairingFlowModal extends Component
         $this->pairingTokenId = (string) (is_numeric($accepted->id) ? (int) $accepted->id : 0);
         $this->side = 'responder';
         $this->safetyWords = $this->deriveSafetyWords($db, $safetyDeriver, $userId);
+        $this->hydrateDeviceNames($gateway, $registry, $userId, asResponder: true);
         $this->flashMessage = '';
         $this->step = 'confirm';
     }
@@ -224,6 +247,8 @@ final class PairingFlowModal extends Component
         PairingGateway $gateway,
         LoggerInterface $logger,
         PairingRelayCourier $relayCourier,
+        PreSyncHistoryCapture $historyCapture,
+        DeviceRegistryService $registry,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -255,6 +280,7 @@ final class PairingFlowModal extends Component
 
         if ($row->state === PairingState::AwaitingConfirm->value && $this->step === 'show_code') {
             $this->safetyWords = $this->deriveSafetyWords($db, $safetyDeriver, $userId);
+            $this->hydrateDeviceNames($gateway, $registry, $userId);
             $this->step = 'confirm';
 
             return;
@@ -270,6 +296,11 @@ final class PairingFlowModal extends Component
                 // migration-failure handling below.
             }
 
+            // Everything on this device that predates sync, captured before
+            // the new peer asks for it. A device that enabled sync before
+            // capture worked has an empty log and would hand over nothing.
+            $historyCapture->capture($userId);
+
             // Fans out EVERY desktop epoch to the just-confirmed device —
             // ONLY reachable inside the state === CONFIRMED branch. migrate()
             // runs FIRST so a desktop that had never enabled encryption has
@@ -278,6 +309,21 @@ final class PairingFlowModal extends Component
 
             $this->dispatch('pairing-confirmed');
         }
+    }
+
+    // Which name is "the peer" depends on the side this modal is playing:
+    // showing a code makes it the initiator, typing one makes it the responder.
+    private function hydrateDeviceNames(
+        PairingGateway $gateway,
+        DeviceRegistryService $registry,
+        int $userId,
+        bool $asResponder = false,
+    ): void {
+        $names = $gateway->deviceNamesFor((int) $this->pairingTokenId, $userId);
+        $fallback = Lang::get('sync::devices.peer_default_name');
+
+        $this->selfDeviceName = $registry->localDeviceName($userId) ?? $fallback;
+        $this->peerDeviceName = ($asResponder ? $names['initiator'] : $names['responder']) ?? $fallback;
     }
 
     // Records this side's safety-number confirmation. PairingTokenService::
@@ -295,6 +341,7 @@ final class PairingFlowModal extends Component
         LoggerInterface $logger,
         PairingRelayCourier $relayCourier,
         RelayConfig $relayConfig,
+        PreSyncHistoryCapture $historyCapture,
     ): void {
         if ($this->pairingTokenId === '') {
             return;
@@ -337,6 +384,10 @@ final class PairingFlowModal extends Component
                 // comment above; this never undoes the pairing.
             }
 
+            // Same pre-sync capture as the poll path: whichever side reaches
+            // CONFIRMED first is the one that must have a populated log.
+            $historyCapture->capture($userId);
+
             // Fans out EVERY desktop epoch to the just-confirmed device —
             // ONLY reachable here, inside the state === CONFIRMED branch
             // (trust-gate ordering). migrate() runs FIRST so a desktop that
@@ -351,10 +402,10 @@ final class PairingFlowModal extends Component
         $this->awaitingPeer = true;
     }
 
-    // Resolves the just-confirmed RESPONDER device's device_registry.id from
-    // this in-flight token, then fans out every keyring epoch to it.
-    // Best-effort — a fan-out failure surfaces $fanOutFailed but NEVER undoes
-    // the pairing; logged with device/epoch ids only, never key material.
+    // Fans out every keyring epoch to EVERY confirmed peer, asking the
+    // permanent device_registry rather than this transient token: prune()
+    // drops that row on the next issue(), so resolving the recipient from it
+    // delivered nothing once the ceremony outlived its own token.
     private function fanOutToNewlyConfirmedDevice(
         DatabaseManager $db,
         PairingGateway $gateway,
@@ -362,40 +413,38 @@ final class PairingFlowModal extends Component
         int $userId,
         Session $session,
     ): void {
-        $tokenRow = $db->connection()->table('pairing_tokens')
-            ->where('id', (int) $this->pairingTokenId)
+        $recipients = $db->connection()->table('device_registry')
             ->where('user_id', $userId)
-            ->first(['responder_device_id']);
-
-        $responderDeviceId = $tokenRow !== null && is_string($tokenRow->responder_device_id)
-            ? $tokenRow->responder_device_id
-            : null;
-
-        if ($responderDeviceId === null) {
-            return;
-        }
-
-        $deviceRegistryId = $db->connection()->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('device_id', $responderDeviceId)
             ->where('is_self', 0)
-            ->value('id');
+            ->whereNotNull('confirmed_at')
+            ->pluck('id');
 
-        if (! is_numeric($deviceRegistryId)) {
+        if ($recipients->isEmpty()) {
+            $this->fanOutFailed = true;
+            $logger->warning('GDK epoch fan-out found no confirmed peer to deliver to — the peer cannot decrypt anything until it is admitted.', [
+                'user_id' => $userId,
+            ]);
+
             return;
         }
 
         $this->fanOutFailed = false;
 
-        try {
-            $gateway->deliverAllEpochsToDevice($userId, (int) $deviceRegistryId, $session);
-        } catch (Throwable $e) {
-            $this->fanOutFailed = true;
-            $logger->warning('GDK epoch fan-out to newly-confirmed device failed.', [
-                'user_id' => $userId,
-                'device_registry_id' => (int) $deviceRegistryId,
-                'exception' => $e::class,
-            ]);
+        foreach ($recipients as $deviceRegistryId) {
+            if (! is_numeric($deviceRegistryId)) {
+                continue;
+            }
+
+            try {
+                $gateway->deliverAllEpochsToDevice($userId, (int) $deviceRegistryId, $session);
+            } catch (Throwable $e) {
+                $this->fanOutFailed = true;
+                $logger->warning('GDK epoch fan-out to newly-confirmed device failed.', [
+                    'user_id' => $userId,
+                    'device_registry_id' => (int) $deviceRegistryId,
+                    'exception' => $e::class,
+                ]);
+            }
         }
     }
 
@@ -423,8 +472,9 @@ final class PairingFlowModal extends Component
         DatabaseManager $db,
         Session $session,
         RelayConfig $relayConfig,
+        DeviceRegistryService $registry,
     ): void {
-        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session, $relayConfig);
+        $this->showMyCode($currentUser, $identityLoader, $tokenService, $qrBuilder, $wordEncoder, $db, $session, $relayConfig, $registry);
     }
 
     // Cancels an IN-FLIGHT pairing: expires the still-live token and resets

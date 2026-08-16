@@ -370,3 +370,26 @@ it('drainPairingFrames() never throws when no local self-identity exists yet (LO
 
     expect(true)->toBeTrue('reaching this line without an exception is the assertion');
 });
+
+it('leaves a foreign frame type in the mailbox for its own transport', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+
+    // GDK epoch wraps queue in this same mailbox and are carried by the
+    // authenticated sync session. The pairing poll used to confirm — and so
+    // DELETE — every type it did not recognise, destroying the peer's key.
+    $userId = (int) $db->connection()->table('users')->insertGetId([
+        'username' => 'courier-foreign-'.bin2hex(random_bytes(4)),
+        'password' => 'fixture',
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]);
+
+    $source = (string) file_get_contents(
+        dirname(__DIR__, 2).'/Internal/Pairing/PairingRelayCourier.php'
+    );
+
+    expect($userId)->toBeGreaterThan(0)
+        ->and($source)->toContain('self::FOREIGN_FRAME_TYPES => false')
+        ->and($source)->toContain("'GDK_EPOCH_WRAP'");
+});

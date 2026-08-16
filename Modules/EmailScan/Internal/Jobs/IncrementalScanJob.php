@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\EmailScan\Internal\Jobs;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -42,6 +43,8 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
     use Queueable;
     use SerializesModels;
     use TunedQueueJob;
+
+    public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
 
     // Defensive cap on the cursor-expiry fallback walk so a
     // misbehaving provider returning pages indefinitely cannot
@@ -83,11 +86,16 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
         ScanMessageMapper $mapper,
+        JobUserContext $jobUser,
     ): void {
         $prepared = $this->prepareScan($db, $clock, $blobStore, $mime, $sm, $senderQuery);
         if ($prepared === null) {
             return;
         }
+
+        // Before any API client runs: everything below reaches
+        // OAuthSecretsRepository, which scopes through the guard.
+        $jobUser->bind($prepared->context->userId());
 
         try {
             // The default arm surfaces a misconfigured provider without
@@ -343,16 +351,19 @@ final class IncrementalScanJob implements ShouldBeUnique, ShouldQueue
         );
     }
 
-    // Laravel calls this after the worker exhausts its retry budget;
-    // container DI resolves InboxScanStateMachine so the same
-    // sole-mutator surface handles the terminal error transition.
-    public function failed(Throwable $exception, InboxScanStateMachine $sm): void
+    // Laravel calls this as a bare `$command->failed($e)` — one argument, NO
+    // container resolution (unlike handle()). Declaring collaborators as
+    // parameters made every exhausted job fatal with "Too few arguments", so
+    // the terminal error transition this hook exists to apply never ran.
+    public function failed(?Throwable $exception): void
     {
+        $sm = Container::getInstance()->make(InboxScanStateMachine::class);
+
         try {
             $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                substr($exception->getMessage(), 0, 500),
+                substr($exception?->getMessage() ?? 'unknown failure', 0, 500),
             );
         } catch (Throwable) {
             // Invalid transitions are acceptable on this hook — they

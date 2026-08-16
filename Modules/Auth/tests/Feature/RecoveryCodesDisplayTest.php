@@ -51,24 +51,23 @@ it('returns 404 when visited without a fresh signup', function (): void {
     $this->actingAs($user)->get('/recovery-codes')->assertNotFound();
 });
 
-it('streams the .txt download with the right filename and ten lines', function (): void {
+it('hands the browser everything it needs to save the .txt itself', function (): void {
+    // The save is client-side: a WebView has no download manager to receive a
+    // StreamedResponse, so the old wire:click did nothing on device — and a
+    // Livewire round-trip here can 419 on an expired page, which on this
+    // screen destroys codes that are never shown again.
     $result = signupFirstUser();
 
-    $component = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
-        ->call('download')
-        ->assertSet('downloadShown', true)
-        ->assertFileDownloaded('beatrax-recovery-codes-alice.txt');
+    $rendered = Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
+        ->assertSee('beatrax-recovery-codes-alice.txt')
+        ->assertSeeHtml('data-testid="recovery-codes-download"')
+        ->html();
 
-    $download = $component->effects['download'] ?? null;
-    expect($download)->not->toBeNull();
-    expect($download['contentType'])->toBe('text/plain; charset=UTF-8');
-
-    $body = base64_decode((string) $download['content'], true);
-    expect($body)->toBeString();
-
-    $lines = explode("\n", (string) $body);
-    expect($lines)->toHaveCount(10);
-    expect($lines)->toBe($result['codesPlain']);
+    // The payload the button writes is the formatter's own output, so the
+    // file keeps the exact ten lines the .txt has always carried.
+    foreach ($result['codesPlain'] as $code) {
+        expect($rendered)->toContain($code);
+    }
 });
 
 it('disables Continue until the checkbox is ticked', function (): void {

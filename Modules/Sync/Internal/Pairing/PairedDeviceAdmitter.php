@@ -6,7 +6,7 @@ namespace Modules\Sync\Internal\Pairing;
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
-use Modules\Sync\Internal\Identity\DeviceNameDetector;
+use Modules\Core\Public\Support\Lang;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
@@ -17,7 +17,6 @@ final class PairedDeviceAdmitter
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly SafetyNumberDeriver $safetyNumberDeriver,
-        private readonly DeviceNameDetector $deviceNameDetector,
     ) {}
 
     // Admits the confirmed RESPONDER identity into device_registry.
@@ -32,6 +31,7 @@ final class PairedDeviceAdmitter
             initiatorEdHex: $this->asString($row->initiator_ed25519_pub_hex),
             responderEdHex: $this->asString($row->responder_ed25519_pub_hex),
             userId: $userId,
+            deviceName: $this->asString($row->responder_name ?? null),
         );
     }
 
@@ -47,6 +47,7 @@ final class PairedDeviceAdmitter
             initiatorEdHex: $this->asString($row->initiator_ed25519_pub_hex),
             responderEdHex: $this->asString($row->responder_ed25519_pub_hex),
             userId: $userId,
+            deviceName: $this->asString($row->initiator_name ?? null),
         );
     }
 
@@ -61,6 +62,7 @@ final class PairedDeviceAdmitter
         ?string $initiatorEdHex,
         ?string $responderEdHex,
         int $userId,
+        ?string $deviceName = null,
     ): void {
         if ($deviceId === null
             || $publicEdHex === null
@@ -110,7 +112,12 @@ final class PairedDeviceAdmitter
         $this->db->connection()->table('device_registry')->insert([
             'user_id' => $userId,
             'device_id' => $deviceId,
-            'name' => $this->deviceNameDetector->detect(),
+            // The peer's own name from its accept frame, else a placeholder.
+            // NEVER deviceNameDetector: that reports THIS machine, which is
+            // how a paired phone showed up as "This device (Mac)".
+            'name' => $deviceName !== null && $deviceName !== ''
+                ? $deviceName
+                : Lang::get('sync::devices.peer_default_name'),
             'ed25519_public_key_hex' => $publicEdHex,
             'x25519_public_key_hex' => $publicKxHex,
             'safety_number_words' => $safetyWords,

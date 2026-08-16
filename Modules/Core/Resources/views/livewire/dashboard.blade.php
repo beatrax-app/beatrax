@@ -248,9 +248,12 @@
                 <ul class="space-y-3">
                     @foreach ($summary->topCategories as $cat)
                         <li class="space-y-1">
-                            <div class="flex items-baseline justify-between text-sm">
-                                <span class="text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
-                                <span class="text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
+                            {{-- The name truncates and the amount holds its width:
+                                 without this a long category pushed the figure
+                                 straight off the right edge of a phone. --}}
+                            <div class="flex items-baseline justify-between gap-2 text-sm">
+                                <span class="min-w-0 truncate text-slate-900 dark:text-slate-100">{{ $cat->name }}</span>
+                                <span class="shrink-0 text-slate-900 dark:text-slate-100" style="font-variant-numeric: tabular-nums;">
                                     {{ $fmt($cat->spend) }}
                                 </span>
                             </div>
@@ -276,14 +279,17 @@
                 <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{{ Lang::get('core::dashboard.recent_transactions') }}</h2>
                 <a
                     href="{{ route('transactions.index') }}"
-                    class="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
+                    class="tap-link text-sm text-slate-500 underline underline-offset-2 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:hover:text-slate-100 dark:text-slate-400"
                 >{{ Lang::get('core::dashboard.view_all') }}</a>
             </div>
 
             @if (count($summary->recentTransactions) === 0)
                 <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.nothing_period') }}</p>
             @else
-                <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                {{-- overflow-x-auto, not overflow-hidden: four columns do not fit a
+                     phone, and hidden CLIPPED them — the counterparty and amount
+                     simply vanished past the edge with no way to reach them. --}}
+                <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
                     <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead class="bg-slate-50 dark:bg-slate-900">
                             <tr>

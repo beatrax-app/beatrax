@@ -216,6 +216,24 @@
             on-disk `sqlite` connection and lose per-test isolation.
         -->
         <env name="DB_CONNECTION" value="sqlite_testing" force="true"/>
+        <!--
+            force="true" so the suite never writes to the developer's own log.
+            A local .env carries LOG_CHANNEL=stack / LOG_STACK=single /
+            LOG_LEVEL=debug, and nothing here overrode it: every run appended
+            to storage/logs/laravel.log, the same file the Dev Console tailer
+            reads. One tree reached half a gigabyte that way — mostly
+            deliberately-provoked failure paths, which drowned the real
+            entries the tailer exists to surface.
+
+            `null` and not a second file: a test asserting on a log line does
+            so through an injected LoggerInterface or Log::spy(), never by
+            reading from disk, so a file here would accumulate output nothing
+            ever reads. LOG_STACK is pinned too — leaving it would let the
+            stack driver keep resolving `single` underneath.
+        -->
+        <env name="LOG_CHANNEL" value="null" force="true"/>
+        <env name="LOG_STACK" value="null" force="true"/>
+        <env name="LOG_DEPRECATIONS_CHANNEL" value="null" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

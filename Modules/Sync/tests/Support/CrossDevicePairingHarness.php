@@ -17,9 +17,11 @@ use Mockery;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Commands\RelayServeCommand;
+use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
 use ReflectionMethod;
 
@@ -88,11 +90,20 @@ trait CrossDevicePairingHarness
         $this->harnessRelayConfig->setAuthToken('cross-device-harness-relay-secret');
 
         $mailbox = new RelayMailbox($db, $this->app->make(Clock::class));
-        $command = new RelayServeCommand(new NullLogger, $mailbox, $this->harnessRelayConfig);
+        // The harness drives the relay in-process over a fake HTTP factory, so
+        // it never binds a socket and needs no TLS material of its own.
+        $command = new RelayServeCommand(
+            new NullLogger,
+            $mailbox,
+            $this->harnessRelayConfig,
+            new RelayTlsMaterial,
+            new DaemonShutdownSignal,
+        );
 
         $relayClient = new RelayClient(
             $this->harnessRelayHttpFactory($command, $db),
             $this->harnessRelayConfig,
+            new NullLogger,
         );
 
         // Rebind the SINGLETON so any container resolution (Livewire
@@ -215,12 +226,19 @@ trait CrossDevicePairingHarness
             $table->string('responder_device_id')->nullable();
             $table->string('responder_ed25519_pub_hex')->nullable();
             $table->string('responder_x25519_pub_hex')->nullable();
+            // Mirrors the pairing_tokens migration: the responder's own device
+            // name rides here from accept until admission.
+            $table->string('responder_name')->nullable();
             $table->string('state')->default('pending');
             $table->text('expires_at');
             $table->text('accepted_at')->nullable();
             $table->text('initiator_confirmed_at')->nullable();
             $table->text('responder_confirmed_at')->nullable();
             $table->text('initiator_seeded_at')->nullable();
+            // Mirrors the migration too: the initiator's own name rides from
+            // the scanned QR until admission, so the peer is labelled with
+            // what it calls itself rather than a placeholder.
+            $table->string('initiator_name')->nullable();
             $table->text('created_at');
         });
 

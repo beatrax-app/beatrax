@@ -14,9 +14,11 @@ use League\Uri\Http as HttpUri;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Commands\RelayServeCommand;
+use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
+use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
 
 use function Amp\ByteStream\buffer;
@@ -94,11 +96,12 @@ beforeEach(function (): void {
         app(Clock::class),
     );
 
-    $command = new RelayServeCommand(new NullLogger, $mailbox, $this->relayConfig);
+    $command = new RelayServeCommand(new NullLogger, $mailbox, $this->relayConfig, new RelayTlsMaterial, new DaemonShutdownSignal);
 
     $this->relayClient = new RelayClient(
         relayServerHttpFactory($command),
         $this->relayConfig,
+        new NullLogger,
     );
 });
 

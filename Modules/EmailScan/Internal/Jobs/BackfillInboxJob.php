@@ -7,6 +7,7 @@ namespace Modules\EmailScan\Internal\Jobs;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Bus\Queueable;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,6 +45,8 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
     use SerializesModels;
     use TunedQueueJob;
 
+    public int $timeout = ScanJobBudget::TIMEOUT_SECONDS;
+
     public function __construct(
         public readonly int $inboxId,
         public readonly int $windowMonths,
@@ -76,6 +79,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         MimeHeaderParser $mime,
         InboxScanStateMachine $sm,
         KnownSenderQuery $senderQuery,
+        JobUserContext $jobUser,
     ): void {
         $connection = $db->connection();
 
@@ -90,6 +94,10 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         $userId = is_numeric($rawUserId) ? (int) $rawUserId : 0;
         $rawProvider = $inboxRow->provider;
         $provider = is_string($rawProvider) ? $rawProvider : '';
+
+        // Before any API client runs: they reach OAuthSecretsRepository,
+        // which scopes through the guard a worker has nobody bound to.
+        $jobUser->bind($userId);
 
         /** @var User $user */
         $user = User::query()->where('id', $userId)->firstOrFail();
@@ -337,19 +345,22 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
         return 1;
     }
 
-    // Laravel calls this after the worker exhausts its retry budget;
-    // container DI resolves InboxScanStateMachine so the same
-    // sole-mutator surface handles the terminal error transition.
-    public function failed(
-        Throwable $exception,
-        InboxScanStateMachine $sm,
-        LoggerInterface $logger,
-    ): void {
+    // Laravel calls this as a bare `$command->failed($e)` — one argument, NO
+    // container resolution (unlike handle()). Declaring collaborators as
+    // parameters made every exhausted job fatal with "Too few arguments", so
+    // the terminal error transition this hook exists to apply never ran.
+    public function failed(?Throwable $exception): void
+    {
+        $container = Container::getInstance();
+        $sm = $container->make(InboxScanStateMachine::class);
+        $logger = $container->make(LoggerInterface::class);
+        $reason = $exception?->getMessage() ?? 'unknown failure';
+
         try {
             $sm->applyStatus(
                 $this->inboxId,
                 InboxScanStatus::Error->value,
-                substr($exception->getMessage(), 0, 500),
+                substr($reason, 0, 500),
             );
         } catch (Throwable $stateWriteFailure) {
             // An invalid transition here is acceptable, but a genuine
@@ -360,7 +371,7 @@ final class BackfillInboxJob implements ShouldBeUnique, ShouldQueue
                 'BackfillInboxJob::failed could not apply the terminal error state.',
                 [
                     'inbox_id' => $this->inboxId,
-                    'original_failure' => $exception->getMessage(),
+                    'original_failure' => $reason,
                     'state_write_failure' => $stateWriteFailure->getMessage(),
                 ],
             );

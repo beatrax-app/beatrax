@@ -7,9 +7,10 @@ namespace Modules\Desktop\Internal;
 use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\FirstLaunchBootstrap;
+use Modules\Desktop\Internal\Native\RelayListenerProcess;
+use Modules\Desktop\Internal\Native\SyncListenerProcess;
 use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Contracts\WindowManager;
-use Native\Desktop\Facades\ChildProcess;
 use Native\Desktop\Facades\Menu;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -41,17 +42,14 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
     // disappearing the safety net entirely.
     private const MAX_EXECUTION_TIME = '120';
 
-    // Mirrors config/sync.php 'port' — duplicated here because the
-    // config() global helper is unavailable under phpstan L10's
-    // noGlobalLaravelFunction rule in this provider.
-    private const SYNC_PORT = 51337;
-
     public function __construct(
         private readonly WindowManager $windows,
         private readonly AppMenuBuilder $appMenu,
         private readonly FirstLaunchBootstrap $bootstrap,
         private readonly ConsoleKernel $console,
         private readonly LoggerInterface $logger,
+        private readonly SyncListenerProcess $syncListener,
+        private readonly RelayListenerProcess $relayListener,
     ) {}
 
     /**
@@ -73,7 +71,8 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
         // migrated schema. Idempotent — a no-op on re-launch.
         $this->bootstrap->runPendingMigrations();
 
-        $this->startSyncListener();
+        $this->syncListener->startIfEnabled();
+        $this->relayListener->startIfEnabled();
 
         $this->precompileViews();
 
@@ -86,30 +85,6 @@ final class NativeAppServiceProvider implements ProvidesPhpIni
             ->rememberState();
 
         Menu::create(...$this->appMenu->build());
-    }
-
-    // Starts the sync:serve daemon as a persistent NativePHP
-    // ChildProcess (auto-restarts on crash). Guarded by class_exists
-    // so the call is a no-op in headless/test contexts. relay:serve is
-    // NOT started here — the relay is opt-in, run manually.
-    private function startSyncListener(): void
-    {
-        if (! class_exists(ChildProcess::class)) {
-            return;
-        }
-
-        try {
-            ChildProcess::artisan(
-                'sync:serve --port='.self::SYNC_PORT,
-                'sync-listener',
-                null,
-                true,
-            );
-        } catch (Throwable $e) {
-            $this->logger->warning('NativePHP boot: failed to start sync:serve child process.', [
-                'exception' => $e,
-            ]);
-        }
     }
 
     // On Windows, two simultaneous Livewire requests racing to compile

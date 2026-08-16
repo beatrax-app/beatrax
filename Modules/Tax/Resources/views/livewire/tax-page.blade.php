@@ -319,7 +319,11 @@
                                         @endphp
                                         <li class="px-4 py-3">
                                             <div class="flex items-start justify-between gap-2">
-                                                <div class="min-w-0 flex-1">
+                                                {{-- overflow-wrap on the text, not just min-w-0 on the box:
+                                                     a name with no spaces (an IBAN, a payment reference)
+                                                     cannot break, so it ran out of its column and painted
+                                                     straight over the amount to its right. --}}
+                                                <div class="min-w-0 flex-1" style="overflow-wrap: anywhere;">
                                                     <p style="font-size: var(--text-base); color: var(--color-text); font-weight: 500;">
                                                         {{ $row['counterpartyName'] ?? '—' }}
                                                     </p>
@@ -333,7 +337,7 @@
                                                         <p style="font-size: var(--text-base); color: var(--color-text-muted); font-style: italic; margin-top: 2px;">{{ $row['note'] }}</p>
                                                     @endif
                                                 </div>
-                                                <div class="flex flex-col items-end gap-1">
+                                                <div class="flex shrink-0 flex-col items-end gap-1">
                                                     <span class="kpi-number" style="font-size: var(--text-base); font-weight: 600; color: var(--color-text);">
                                                         {{ $fmtEur(abs($settledMinor)) }}
                                                     </span>

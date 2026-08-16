@@ -38,7 +38,7 @@ it('puts a supported locale into the session and returns the visitor where they 
 it('ignores an unsupported code rather than storing it', function (): void {
     guestLocaleUser();
 
-    $this->post(route('locale.switch'), ['code' => 'de']);
+    $this->post(route('locale.switch'), ['code' => 'ja']);
 
     expect(session('locale'))->toBeNull();
 });

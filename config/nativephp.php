@@ -95,6 +95,32 @@ return [
         'node_modules',
         '*/tests',
 
+        // The toolchain's own scratch space, which has no business in a
+        // shipped app: 194 MB across 8,110 files, a third of everything in
+        // the bundle. Cost is not the disk — it is that codesign runs
+        // per-file with --timestamp, and every one of those files bought its
+        // own network round-trip to Apple's timestamp server. The build spent
+        // the bulk of half an hour notarizing analysis caches.
+        '.phpstan-cache',
+        '.phpunit.cache',
+        '.pint.cache',
+
+        // The repo-root `tests/` tree. `*/tests` above catches every nested
+        // one, but fnmatch needs that slash to match, so the top-level
+        // directory the pattern was plainly aimed at slipped through.
+        'tests',
+
+        // Contributor-facing material, not runtime: the repo docs the
+        // `@link` docblocks point at, and the CI workflows.
+        '.docs',
+        '.github',
+
+        // Vite's dev-server marker, written whenever `npm run dev` is up.
+        // Bundling it makes Laravel emit every asset URL against
+        // http://localhost:5173 — an app that ships with no styling and no
+        // JavaScript, on whichever machine happens to open it.
+        'public/hot',
+
         // The `nativephp/` working dir at the project root holds every
         // prior `php artisan native:build` output (the full Electron
         // distribution under `nativephp/electron/dist/<arch>/beatrax.app/`).
@@ -229,7 +255,13 @@ return [
         'default' => [
             'queues' => ['default'],
             'memory_limit' => 128,
-            'timeout' => 60,
+            // 60s was a CPU-bound figure on a queue whose slowest jobs are
+            // network-bound: an inbox scan pages the Gmail/Graph API over the
+            // wire and routinely needs longer, so the worker killed it
+            // mid-flight and the run was recorded as failed. The scan jobs
+            // carry their own, lower timeout so they fail cleanly on their
+            // own alarm rather than being cut off by this ceiling.
+            'timeout' => 300,
             'sleep' => 3,
         ],
     ],

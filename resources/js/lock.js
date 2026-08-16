@@ -85,9 +85,54 @@ document.addEventListener('alpine:init', () => {
             veil.classList.remove('opacity-0', 'pointer-events-none');
             veil.classList.add('opacity-100', 'pointer-events-auto');
             veil.setAttribute('aria-hidden', 'false');
+
+            // Promote into the browser's TOP LAYER. A z-index — however
+            // large — only competes within the stacking context it lives in,
+            // so a dialog that portals to <body> and opens its own top-layer
+            // entry still painted over the veil. The top layer is the only
+            // place nothing can be stacked above.
+            this._enterTopLayer(veil);
             veil.setAttribute('role', 'dialog');
             veil.setAttribute('aria-modal', 'true');
             veil.setAttribute('aria-label', 'App locked');
+        },
+
+        /**
+         * Raise the veil into the top layer, above every modal.
+         *
+         * showPopover() is the supported way in; a browser without it falls
+         * back to being re-appended last in <body>, which at least beats
+         * same-z-index siblings that were inserted earlier.
+         */
+        _enterTopLayer(veil) {
+            if (typeof veil.showPopover === 'function' && veil.hasAttribute('popover')) {
+                try {
+                    if (!veil.matches(':popover-open')) {
+                        veil.showPopover();
+                    }
+
+                    return;
+                } catch (e) {
+                    // Fall through to the append fallback below.
+                }
+            }
+
+            if (veil.parentElement === document.body && veil !== document.body.lastElementChild) {
+                document.body.appendChild(veil);
+            }
+        },
+
+        /** Drop the veil back out of the top layer. */
+        _leaveTopLayer(veil) {
+            if (typeof veil.hidePopover === 'function' && veil.hasAttribute('popover')) {
+                try {
+                    if (veil.matches(':popover-open')) {
+                        veil.hidePopover();
+                    }
+                } catch (e) {
+                    // Already closed; nothing to undo.
+                }
+            }
         },
 
         /** Hide the privacy veil. */
@@ -99,6 +144,7 @@ document.addEventListener('alpine:init', () => {
             veil.classList.remove('opacity-100', 'pointer-events-auto');
             veil.classList.add('opacity-0', 'pointer-events-none');
             veil.setAttribute('aria-hidden', 'true');
+            this._leaveTopLayer(veil);
             veil.removeAttribute('role');
             veil.removeAttribute('aria-modal');
             veil.removeAttribute('aria-label');
@@ -150,7 +196,7 @@ document.addEventListener('alpine:init', () => {
          *   2. The idle ticker detects inactivity >= idle_timeout_minutes.
          */
         _serverLock() {
-            fetch('/lock/engage', {
+            return fetch('/lock/engage', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
@@ -242,11 +288,21 @@ document.addEventListener('alpine:init', () => {
                     // _serverLock() fires on every app page; there is no
                     // Livewire event path (the old 'idle-timeout-elapsed'
                     // dispatch was removed — IN-04).
-                    this._serverLock();
-                    this.showVeil();
+                    // No veil here. The app is IN VIEW — there is no
+                    // app-switcher snapshot to hide, and the veil landed on
+                    // top of the credential prompt, covering the very control
+                    // the user had to reach. Going to the lock screen is the
+                    // cover: it is a real full-screen page, not an overlay
+                    // with the nav still showing around it.
                     this._broadcast('locked');
-                    // Reset the timer so we don't spam.
                     this._lastActivity = Date.now();
+
+                    this._serverLock().finally(() => {
+                        // Server-provided: /lock is the desktop screen, and a
+                        // phone must land on its own full-screen one instead
+                        // of rendering the wrong surface first.
+                        window.location.assign(window.beatraxLockUrl || '/lock');
+                    });
                 }
             }, 10000);
         },
@@ -283,32 +339,42 @@ document.addEventListener('alpine:init', () => {
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
                     this.showVeil();
+
                     this._startGrace();
                 } else {
-                    // Returned to foreground.
-                    if (this._graceTimer !== null) {
-                        // Within grace window — lift the veil without a
-                        // server round-trip.
-                        this._clearGrace();
-                        this.hideVeil();
-                    }
-                    // If grace elapsed the veil stays and the next request
-                    // will be redirected to /lock by AppLockMiddleware.
-                }
-            });
-
-            // Window blur: show veil + start grace.
-            window.addEventListener('blur', () => {
-                this.showVeil();
-                this._startGrace();
-            });
-
-            // Window focus: return from blur within grace window — lift veil.
-            window.addEventListener('focus', () => {
-                if (this._graceTimer !== null) {
+                    // Returned to foreground: ALWAYS lift the veil.
+                    //
+                    // Keeping it up when the grace had elapsed assumed the
+                    // server was now locked and would redirect. When it is
+                    // not — no app lock configured, or the engage call never
+                    // landed — the veil had nothing to replace it and the app
+                    // stayed stuck behind a blank screen with no way out.
+                    // The server lock is the security boundary; this veil is
+                    // only a privacy screen, so failing open here is right.
                     this._clearGrace();
                     this.hideVeil();
                 }
+            });
+
+            // Window blur: veil ONLY, never the lock countdown.
+            //
+            // Blur fires whenever another window takes focus while ours stays
+            // visible on screen — there is no app-switcher snapshot to defend
+            // against, and starting the 30s grace here meant clicking away for
+            // half a minute locked the app regardless of a 30-minute idle
+            // setting. Genuine backgrounding still locks: visibilitychange
+            // above, plus the native WindowHidden/WindowClosed listener, which
+            // locks immediately with no grace at all.
+            window.addEventListener('blur', () => {
+                this.showVeil();
+            });
+
+            // Window focus: lift the veil. No grace timer runs for a bare
+            // blur any more, so returning is unconditional — a veil that
+            // outlived its blur would strand a visible, unlocked window.
+            window.addEventListener('focus', () => {
+                this._clearGrace();
+                this.hideVeil();
             });
 
             // Start the idle tracker (no-ops when lock is disabled).

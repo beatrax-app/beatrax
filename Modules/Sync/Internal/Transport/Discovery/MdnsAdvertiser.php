@@ -40,6 +40,12 @@ final class MdnsAdvertiser
 
         $this->process = new Process($cmd);
         $this->process->setTimeout(null);
+
+        // Nothing reads this output, so its pipes exist only to give the
+        // destructor something to block on: Symfony's close() reads them with
+        // stream_select() and NO timeout, and a long-lived dns-sd never EOFs.
+        // Under paratest that wedged a worker alive and silent, forever.
+        $this->process->disableOutput();
         $this->process->start();
     }
 

@@ -25,6 +25,10 @@ final class MdnsBrowser
 
     private const int MAX_PORT = 65535;
 
+    // -L streams like -B and never exits; a resolve only has to catch the
+    // first "can be reached at" line, so it is bounded tighter than a browse.
+    private const int RESOLVE_TIMEOUT_SECONDS = 2;
+
     private const string DISCOVERY_MODE_MDNS = 'mdns';
 
     private const string DISCOVERY_MODE_MANUAL = 'manual';
@@ -137,8 +141,8 @@ final class MdnsBrowser
 
     // Avahi parseable format (-p -r): semicolon-delimited fields
     // =;iface;proto;name;type;domain;hostname;address;port;txt.
-    // dns-sd -B format: tab-delimited "Add n n domain type instance-name" —
-    // host/port requires a separate -L resolve not implemented here.
+    // dns-sd -B format: tab-delimited "Add n n domain type instance-name";
+    // its host/port come from the follow-up -L resolve below.
     /**
      * @param  list<string>  $confirmedDeviceIds
      */
@@ -219,12 +223,58 @@ final class MdnsBrowser
             return null;
         }
 
+        // A browse alone carries no address, and an unresolved peer was
+        // dropped as unconnectable — so mDNS discovery returned nothing on
+        // macOS however many peers were advertising.
+        $resolved = $this->resolveInstance($instanceName);
+
+        if ($resolved === null) {
+            return null;
+        }
+
         return new DiscoveredPeer(
             deviceId: $deviceId,
-            host: '',
-            port: 0,
+            host: $resolved['host'],
+            port: $resolved['port'],
             discoveryMode: self::DISCOVERY_MODE_MDNS,
         );
+    }
+
+    // `dns-sd -L` prints "... can be reached at <host>:<port>". It streams
+    // like -B, so it is time-boxed the same way and read from whatever it
+    // printed before the timeout.
+    /**
+     * @return array{host: string, port: int}|null
+     */
+    private function resolveInstance(string $instanceName): ?array
+    {
+        $binary = $this->findBinary('dns-sd');
+
+        if ($binary === null) {
+            return null;
+        }
+
+        $process = new Process([$binary, '-L', $instanceName, self::SERVICE_TYPE, 'local']);
+        $process->setTimeout(self::RESOLVE_TIMEOUT_SECONDS);
+
+        try {
+            $process->run();
+        } catch (ProcessTimedOutException) {
+            // Expected: -L streams until killed, so the timeout is the
+            // normal exit and whatever it printed is the answer.
+        }
+
+        if (preg_match('/can be reached at\s+([^\s:]+):(\d+)/', $process->getOutput(), $matches) !== 1) {
+            return null;
+        }
+
+        $port = (int) $matches[2];
+
+        if ($port <= 0 || $port > self::MAX_PORT) {
+            return null;
+        }
+
+        return ['host' => rtrim($matches[1], '.'), 'port' => $port];
     }
 
     // Extracts the advertised device id and confirms it against the caller's

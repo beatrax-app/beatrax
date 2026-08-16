@@ -77,6 +77,7 @@ final class PairingTokenService
         string $initiatorEd25519PubHex,
         string $initiatorX25519PubHex,
         string $token,
+        ?string $initiatorName = null,
     ): object|false {
         try {
             SafetyNumberDeriver::hexToRawKey($initiatorEd25519PubHex);
@@ -111,6 +112,7 @@ final class PairingTokenService
             'state' => PairingState::Pending->value,
             'expires_at' => $now->addMinutes(self::TTL_MINUTES)->toIso8601String(),
             'initiator_seeded_at' => $now->toIso8601String(),
+            'initiator_name' => $initiatorName,
             'created_at' => $now->toIso8601String(),
         ]);
 
@@ -239,6 +241,7 @@ final class PairingTokenService
         string $responderDeviceId,
         string $responderEd25519Hex,
         string $responderX25519Hex,
+        string $responderName = '',
     ): object|false {
         if (! $this->responderKeysWellFormed($responderEd25519Hex, $responderX25519Hex)) {
             return false;
@@ -273,6 +276,7 @@ final class PairingTokenService
                 $responderDeviceId,
                 $responderEd25519Hex,
                 $responderX25519Hex,
+                $responderName,
             ),
             // Terminal, expired-into-another-state, or unrecognized: fail
             // closed rather than re-opening a handshake that has moved on.
@@ -312,6 +316,7 @@ final class PairingTokenService
         string $responderDeviceId,
         string $responderEd25519Hex,
         string $responderX25519Hex,
+        string $responderName,
     ): object|false {
         $graceExpiry = $now->addMinutes(self::ACCEPT_GRACE_MINUTES);
         $existingExpiry = is_string($row->expires_at)
@@ -328,6 +333,9 @@ final class PairingTokenService
                 'responder_device_id' => $responderDeviceId,
                 'responder_ed25519_pub_hex' => $responderEd25519Hex,
                 'responder_x25519_pub_hex' => $responderX25519Hex,
+                // Cosmetic label only, carried from accept to admission;
+                // see the migration for why it rides on this row.
+                'responder_name' => $responderName !== '' ? $responderName : null,
                 'state' => PairingState::AwaitingConfirm->value,
                 'accepted_at' => $now->toIso8601String(),
                 'expires_at' => $newExpiry->toIso8601String(),

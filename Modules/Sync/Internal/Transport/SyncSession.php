@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Sync\Internal\Transport;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Exceptions\SessionNotAuthenticatedException;
@@ -14,6 +15,7 @@ use Modules\Sync\Internal\Transport\Frame\TransportFramer;
 use Modules\Sync\Internal\Transport\Noise\NoiseSession;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * @link ../../../../.docs/features/sync/architecture.md
@@ -24,6 +26,10 @@ final class SyncSession
     // gets a new SyncSession.
 
     private ?NoiseSession $noiseSession = null;
+
+    // A peer reconnects every couple of seconds; without this it would mean
+    // a database write every couple of seconds, purely for bookkeeping.
+    private const LAST_SEEN_THROTTLE_SECONDS = 60;
 
     private ?string $peerDeviceId = null;
 
@@ -88,6 +94,12 @@ final class SyncSession
         $this->peerDeviceId = $matchedDeviceId;
         $this->status = 'active';
 
+        // Bookkeeping only, deliberately best-effort: losing a race for the
+        // SQLite write lock used to throw straight out of the handshake and
+        // close the connection, so the catch-up that was about to run never
+        // did and no epoch ever reached the peer.
+        $this->touchLastSeen($userId, $matchedDeviceId, $now);
+
         $this->upsertSessionRow(
             userId: $userId,
             localDeviceId: $localDeviceId,
@@ -98,13 +110,39 @@ final class SyncSession
             lastSeenAt: $now,
         );
 
-        $this->db->connection()
-            ->table('device_registry')
-            ->where('user_id', $userId)
-            ->where('device_id', $matchedDeviceId)
-            ->update(['last_seen_at' => $now, 'updated_at' => $now]);
-
         return true;
+    }
+
+    // Throttled: a reconnect every couple of seconds does not need a write
+    // every couple of seconds, and each one competes for the single SQLite
+    // writer that the app itself is using.
+    private function touchLastSeen(int $userId, string $deviceId, string $now): void
+    {
+        try {
+            $connection = $this->db->connection();
+
+            $lastSeen = $connection->table('device_registry')
+                ->where('user_id', $userId)
+                ->where('device_id', $deviceId)
+                ->value('last_seen_at');
+
+            if (is_string($lastSeen) && $lastSeen !== '') {
+                $age = $this->clock->now()->diffInSeconds(CarbonImmutable::parse($lastSeen), absolute: true);
+
+                if ($age < self::LAST_SEEN_THROTTLE_SECONDS) {
+                    return;
+                }
+            }
+
+            $connection->table('device_registry')
+                ->where('user_id', $userId)
+                ->where('device_id', $deviceId)
+                ->update(['last_seen_at' => $now, 'updated_at' => $now]);
+        } catch (Throwable $e) {
+            $this->logger?->debug('SyncSession: last_seen_at write skipped.', [
+                'reason' => $e::class,
+            ]);
+        }
     }
 
     /**
@@ -178,7 +216,7 @@ final class SyncSession
             }
 
             $pubKeyBin = sodium_hex2bin($pubKeyHex);
-            if (! $this->signer->verify($entry->signingPayload(), $entry->signature, $pubKeyBin)) {
+            if (! $this->signer->verifyAny($entry->signatureCandidates(), $entry->signature, $pubKeyBin)) {
                 $this->logger?->warning('SyncSession: dropped entry with invalid signature.', [
                     'device_id' => $entry->deviceId,
                     'reason' => 'signature_invalid',
@@ -259,12 +297,22 @@ final class SyncSession
             return;
         }
 
-        $rowId = $this->db->connection()
-            ->table('sync_sessions')
-            ->insertGetId([
-                'user_id' => $userId,
-                'local_device_id' => $localDeviceId,
-                'peer_device_id' => $peerDeviceId,
+        // Keyed on the table's own unique index, not a plain insert: this
+        // object lives for ONE connection, so its cached row id is null on
+        // every reconnect, and the second connection to a peer died on the
+        // (user, local, peer) unique constraint.
+        $connection = $this->db->connection();
+        $identity = [
+            'user_id' => $userId,
+            'local_device_id' => $localDeviceId,
+            'peer_device_id' => $peerDeviceId,
+        ];
+
+        // Status bookkeeping, never a precondition for the exchange: losing a
+        // race for the single SQLite writer must not close a session that is
+        // otherwise ready to sync.
+        try {
+            $connection->table('sync_sessions')->updateOrInsert($identity, [
                 'status' => $status,
                 'error_message' => $errorMessage,
                 'connected_at' => $connectedAt,
@@ -273,6 +321,13 @@ final class SyncSession
                 'updated_at' => $now,
             ]);
 
-        $this->sessionRowId = $rowId;
+            $rowId = $connection->table('sync_sessions')->where($identity)->value('id');
+
+            $this->sessionRowId = is_numeric($rowId) ? (int) $rowId : null;
+        } catch (Throwable $e) {
+            $this->logger?->debug('SyncSession: session-row write skipped.', [
+                'reason' => $e::class,
+            ]);
+        }
     }
 }

@@ -94,9 +94,7 @@ final class PersistPositionDigest
 
         if ($position->upcoming !== []) {
             $count = count($position->upcoming);
-            $parts[] = $count === 1
-                ? Lang::get('notifications::copy.digest.payments_due_one')
-                : Lang::get('notifications::copy.digest.payments_due_other', ['count' => $count]);
+            $parts[] = Lang::choice('notifications::copy.digest.payments_due', $count, ['count' => $count]);
         }
 
         if ($position->shortfallAhead) {

@@ -15,15 +15,15 @@
 
         @if ($isPending)
             {{--
-                In-flight state (D-21). No CTA — the page polls itself
-                until migrations finish, at which point the
-                EnsureDatabaseReady gate lets the request through to the
-                welcome screen on the next navigation.
+                In-flight state (D-21). No CTA — the tick APPLIES the
+                migrations rather than waiting for them, because the only
+                other caller runs before the window opens; polling alone
+                waited on a state nothing could change.
             --}}
-            <div wire:poll.2000ms class="space-y-2">
+            <div wire:poll.2000ms="poll" class="space-y-2">
                 <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('desktop::screens.setup.pending_heading') }}</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                    {{ Lang::get('desktop::screens.setup.pending_body') }}
+                    {{ $failed ? Lang::get('desktop::screens.setup.failed_body') : Lang::get('desktop::screens.setup.pending_body') }}
                 </p>
             </div>
         @else
@@ -33,7 +33,7 @@
                 screen on the next request — render a calm "ready" line
                 while we wait for the redirect.
             --}}
-            <div wire:poll.500ms class="space-y-2">
+            <div wire:poll.500ms="poll" class="space-y-2">
                 <h1 class="text-2xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('desktop::screens.setup.ready_heading') }}</h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400">
                     {{ Lang::get('desktop::screens.setup.ready_body') }}
