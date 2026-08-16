@@ -63,28 +63,9 @@ final class RelayConfig
 
         $host = parse_url((string) $this->endpointUrl(), PHP_URL_HOST);
 
-        if (! is_string($host) || $host === '') {
-            return true;
-        }
-
-        if ($host === 'localhost') {
-            return false;
-        }
-
-        // FILTER_FLAG_NO_PRIV_RANGE|NO_RES_RANGE fails for private/reserved
-        // addresses, so a failure here means the host IS private — the case
-        // we allow. A non-IP host (a domain) is treated as public.
-        $isPublicIp = filter_var(
-            $host,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
-        ) !== false;
-
-        if ($isPublicIp) {
-            return true;
-        }
-
-        return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false;
+        // An endpoint with no host at all is treated as public: nothing about
+        // it says it stays on this network.
+        return ! is_string($host) || $host === '' || ! $this->isLanHost($host);
     }
 
     // Whether an endpoint names a host reachable only from this network —
@@ -95,10 +76,15 @@ final class RelayConfig
     {
         $host = parse_url($endpoint, PHP_URL_HOST);
 
-        if (! is_string($host) || $host === '') {
-            return false;
-        }
+        return is_string($host) && $host !== '' && $this->isLanHost($host);
+    }
 
+    // The one question all three endpoint checks were each answering for
+    // themselves: is this host reachable only from this network? `localhost`
+    // counts, as does any private or reserved IPv4. A domain name never does —
+    // it resolves to wherever DNS says, which is not ours to assume.
+    private function isLanHost(string $host): bool
+    {
         if ($host === 'localhost') {
             return true;
         }
@@ -129,23 +115,9 @@ final class RelayConfig
             return false;
         }
 
-        $host = parse_url($endpoint, PHP_URL_HOST);
-
-        if (! is_string($host) || $host === '') {
-            return false;
-        }
-
-        if ($host === 'localhost') {
-            return true;
-        }
-
-        $isPublicIp = filter_var(
-            $host,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
-        ) !== false;
-
-        return ! $isPublicIp && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
+        // Plaintext is only ever accepted to a host that cannot leave this
+        // network — which is the same question isLanEndpoint() answers.
+        return $this->isLanEndpoint($endpoint);
     }
 
     // Passing null or empty string clears the endpoint (reverts to "not
