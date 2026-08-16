@@ -42,6 +42,8 @@ final readonly class OpLogReplayer
 
     private SearchIndexRefresher $searchRefresher;
 
+    private TransferPairCascade $pairCascade;
+
     /**
      * @param  DatabaseManager  $db  Raw DB access (bypasses Eloquent model events).
      * @param  array<string, string>  $deviceKeys  device-id => hex Ed25519 public key.
@@ -96,6 +98,7 @@ final readonly class OpLogReplayer
             $quarantine,
         );
         $ownership = new RowOwnership($db);
+        $this->pairCascade = new TransferPairCascade($db);
         $this->applier = new OpLogEntryApplier(
             $db,
             $rules,
@@ -103,6 +106,7 @@ final readonly class OpLogReplayer
             $quarantine,
             $ownership,
             new SelfReferenceDeferral($db, $ownership),
+            $this->pairCascade,
         );
         $this->searchRefresher = new SearchIndexRefresher($db, $searchWriter);
     }
@@ -251,7 +255,7 @@ final readonly class OpLogReplayer
             },
         );
 
-        $this->applier->applyPairCascades($pairCascades, $userId, $now, $touchedTransactionIds);
+        $this->pairCascade->apply($pairCascades, $userId, $now, $touchedTransactionIds);
         $this->searchRefresher->refresh($touchedTransactionIds, $tombstonedTransactionIds, $userId, $now);
     }
 }
