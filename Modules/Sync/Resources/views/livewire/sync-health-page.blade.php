@@ -52,7 +52,11 @@
             {{ Lang::get('sync::health.empty') }}
         </div>
     @else
-        <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+        {{-- overflow-x-auto, not overflow-hidden: this table is the only
+                 rendering of these rows at every width, and hidden CLIPPED the
+                 right-hand columns on a phone rather than letting them scroll —
+                 so the category picker and row actions were unreachable. --}}
+            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
             <table
                 class="w-full text-sm"
                 style="font-size: 13px;"

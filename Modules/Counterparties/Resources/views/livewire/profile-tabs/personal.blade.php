@@ -49,6 +49,7 @@
             <button
                 type="button"
                 wire:click="switchTab('transfers')"
+                class="tap-link"
                 style="background: transparent; border: 0; font-size: var(--text-xs); color: var(--color-text); text-decoration: underline; cursor: pointer;"
             >{{ Lang::get('counterparties::profile.see_all', ['count' => $profile->transactionCount]) }}</button>
         </div>
