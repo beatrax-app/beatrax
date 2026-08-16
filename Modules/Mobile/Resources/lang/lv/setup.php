@@ -28,6 +28,6 @@ return [
     'resuming' => 'Atsāk iestatīšanu…',
     'setting_up' => 'Iestata šo ierīci…',
     'progress_aria' => 'Iestatīšanas gaita',
-    'records' => ':applied no :expected ierakstiem',
+    'records' => 'Ieraksti: :count',
     'records_preparing' => 'Gaida otru ierīci…',
 ];

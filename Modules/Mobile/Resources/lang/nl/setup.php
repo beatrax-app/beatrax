@@ -28,6 +28,6 @@ return [
     'resuming' => 'Instellen hervatten…',
     'setting_up' => 'Dit apparaat instellen…',
     'progress_aria' => 'Voortgang instellen',
-    'records' => ':applied van :expected records',
+    'records' => ':count records',
     'records_preparing' => 'Wachten op het andere apparaat…',
 ];

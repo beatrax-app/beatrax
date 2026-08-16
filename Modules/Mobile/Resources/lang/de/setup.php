@@ -28,6 +28,6 @@ return [
     'resuming' => 'Einrichtung wird fortgesetzt…',
     'setting_up' => 'Dieses Gerät wird eingerichtet…',
     'progress_aria' => 'Fortschritt der Einrichtung',
-    'records' => ':applied von :expected Datensätzen',
+    'records' => ':count Datensätze',
     'records_preparing' => 'Warten auf das andere Gerät…',
 ];

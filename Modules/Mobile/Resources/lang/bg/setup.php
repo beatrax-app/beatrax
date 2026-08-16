@@ -28,6 +28,6 @@ return [
     'resuming' => 'Продължаване на настройката…',
     'setting_up' => 'Настройване на това устройство…',
     'progress_aria' => 'Напредък на настройката',
-    'records' => ':applied от :expected записа',
+    'records' => ':count записа',
     'records_preparing' => 'Изчакване на другото устройство…',
 ];

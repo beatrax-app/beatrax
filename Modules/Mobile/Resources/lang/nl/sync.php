@@ -7,7 +7,7 @@ return [
     'heading' => 'Gegevens & apparaten',
     'sync_status' => 'Synchronisatiestatus',
     'your_devices' => 'Jouw apparaten',
-    'syncing_progress' => 'Synchroniseren… :applied van :expected records',
+    'syncing_progress' => 'Synchroniseren… :count records',
     'initial_sync_aria' => 'Voortgang eerste synchronisatie',
     'no_peers' => 'Koppel een ander apparaat om te synchroniseren.',
     'sync_now' => 'Nu synchroniseren',

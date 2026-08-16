@@ -28,6 +28,6 @@ return [
     'resuming' => 'Продовження налаштування…',
     'setting_up' => 'Налаштування цього пристрою…',
     'progress_aria' => 'Прогрес налаштування',
-    'records' => 'записів: :applied з :expected',
+    'records' => 'Записів: :count',
     'records_preparing' => 'Очікування іншого пристрою…',
 ];

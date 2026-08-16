@@ -61,6 +61,16 @@ final readonly class AppLockMiddleware
     // it even when the lock was engaged from the client.
     public const SESSION_LAST_PAGE = 'beatrax_lock_last_page';
 
+    // When the client last reported leaving the foreground, as a unix
+    // timestamp. Written by lock.js the moment it happens, so the elapsed
+    // time can be judged here rather than by a timer in the page.
+    public const SESSION_BACKGROUNDED_AT = 'beatrax_lock_backgrounded_at';
+
+    // Mirrors lock.js's GRACE_MS. Its timer is the fast path where it runs at
+    // all: an Android WebView is suspended while backgrounded, so the timeout
+    // never fires there and only this clock can measure the absence.
+    private const BACKGROUND_GRACE_SECONDS = 30;
+
     public function __construct(
         private CurrentUser $currentUser,
         private LockStateManager $lockState,
@@ -117,6 +127,13 @@ final readonly class AppLockMiddleware
             return $this->pass($request, $next);
         }
 
+        // Before the idle check: a request proves the app is in the
+        // foreground, so the marker is spent either way — it either locks now
+        // or is cleared as a return within grace.
+        if ($this->backgroundGraceExpired($session)) {
+            return $this->lockForIdle($request, $next, $session, $routeName);
+        }
+
         if ($this->isIdleExpired($config)) {
             return $this->lockForIdle($request, $next, $session, $routeName);
         }
@@ -169,6 +186,20 @@ final readonly class AppLockMiddleware
         return $request->isMethod('GET')
             && ! $request->headers->has(self::LIVEWIRE_HEADER)
             && ! $request->expectsJson();
+    }
+
+    // Whether the app was backgrounded longer ago than the grace window. The
+    // marker is PULLED, not read: any request at all means the app is in the
+    // foreground again, so it has served its purpose on either branch.
+    private function backgroundGraceExpired(Session $session): bool
+    {
+        $markedAt = $session->pull(self::SESSION_BACKGROUNDED_AT);
+
+        if (! is_int($markedAt)) {
+            return false;
+        }
+
+        return $this->clock->now()->getTimestamp() - $markedAt >= self::BACKGROUND_GRACE_SECONDS;
     }
 
     /**

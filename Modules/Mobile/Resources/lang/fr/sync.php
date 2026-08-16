@@ -7,7 +7,7 @@ return [
     'heading' => 'Données et appareils',
     'sync_status' => 'État de la synchronisation',
     'your_devices' => 'Tes appareils',
-    'syncing_progress' => 'Synchronisation… :applied enregistrements sur :expected',
+    'syncing_progress' => 'Synchronisation… :count enregistrements',
     'initial_sync_aria' => 'Progression de la synchronisation initiale',
     'no_peers' => 'Appaire un autre appareil pour lancer la synchronisation.',
     'sync_now' => 'Synchroniser maintenant',

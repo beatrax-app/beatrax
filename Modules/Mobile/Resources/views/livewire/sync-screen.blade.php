@@ -36,7 +36,7 @@
         @if ($initialSyncInProgress)
             <div class="space-y-2" data-testid="sync-initial-progress">
                 <p class="text-sm text-slate-600 dark:text-slate-400" aria-live="polite">
-                    {{ Lang::get('mobile::sync.syncing_progress', ['applied' => $progressApplied, 'expected' => $progressExpected ?? $progressApplied]) }}
+                    {{ Lang::get('mobile::sync.syncing_progress', ['count' => $progressApplied]) }}
                 </p>
                 <div
                     class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700"

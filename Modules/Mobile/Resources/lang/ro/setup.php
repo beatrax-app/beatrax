@@ -28,6 +28,6 @@ return [
     'resuming' => 'Se reia configurarea…',
     'setting_up' => 'Se configurează acest dispozitiv…',
     'progress_aria' => 'Progresul configurării',
-    'records' => ':applied din :expected înregistrări',
+    'records' => ':count înregistrări',
     'records_preparing' => 'Se așteaptă celălalt dispozitiv…',
 ];

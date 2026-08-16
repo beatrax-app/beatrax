@@ -7,7 +7,7 @@ return [
     'heading' => 'Údaje a zariadenia',
     'sync_status' => 'Stav synchronizácie',
     'your_devices' => 'Tvoje zariadenia',
-    'syncing_progress' => 'Synchronizuje sa… záznamy: :applied z :expected',
+    'syncing_progress' => 'Synchronizuje sa… záznamy: :count',
     'initial_sync_aria' => 'Priebeh prvej synchronizácie',
     'no_peers' => 'Spáruj ďalšie zariadenie a spustí sa synchronizácia.',
     'sync_now' => 'Synchronizovať teraz',

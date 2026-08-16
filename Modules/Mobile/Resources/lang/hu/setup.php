@@ -28,6 +28,6 @@ return [
     'resuming' => 'A beállítás folytatása…',
     'setting_up' => 'Ennek az eszköznek a beállítása…',
     'progress_aria' => 'Beállítás folyamata',
-    'records' => ':applied / :expected rekord',
+    'records' => ':count rekord',
     'records_preparing' => 'Várakozás a másik eszközre…',
 ];

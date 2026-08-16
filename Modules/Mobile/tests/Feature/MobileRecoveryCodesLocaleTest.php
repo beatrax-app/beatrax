@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
+use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
+use Tests\Helpers\LivewireRoundTrip;
 
 /*
  * Mobile does NOT use the Auth module's recovery-codes screen — it has its own,
@@ -72,6 +74,41 @@ it('resolves the locale before the desktop database gate redirects', function ()
 
     expect(app('translator')->getLocale())->toBe('nl');
 })->group('repo-root-only');
+
+it('shows the codes in the chosen language on the round-trip that reveals them', function (): void {
+    // The reported bug, end to end. The recovery step is never navigated to:
+    // submit() flips `$step` inside a Livewire ACTION, so the screen is
+    // rendered by the update endpoint. Livewire re-applies the locale it
+    // snapshotted on the previous render there, which is why this one screen
+    // came back English while the signup form before it and the pairing page
+    // after it were both Dutch.
+    //
+    // Skipped under the desktop root, whose EnsureDatabaseReady redirects a
+    // 0-user device away from mobile.import — and 0 users is a precondition,
+    // since SignupAction is first-user-only. Asked of the registered gate
+    // rather than of the response, so a genuine redirect regression on the
+    // mobile root still fails here instead of quietly skipping.
+    $webGroup = app('router')->getMiddlewareGroups()['web'] ?? [];
+    if (! in_array(MobileEnsureDatabaseReady::class, $webGroup, true)) {
+        test()->markTestSkipped('mobile.import is only reachable on a 0-user device under the mobile-app root.');
+    }
+
+    $this->post(route('locale.switch'), ['code' => 'nl']);
+
+    $page = (string) $this->get(route('mobile.import'))->assertOk()->getContent();
+
+    $rendered = LivewireRoundTrip::call($this, $page, 'mobile.import-bootstrap', 'submit', [
+        'username' => 'wessel',
+        'password' => 'opensesame-long-enough',
+        'passwordConfirmation' => 'opensesame-long-enough',
+        'pin' => '1234',
+        'confirmPin' => '1234',
+    ]);
+
+    expect($rendered)
+        ->toContain((include base_path('Modules/Mobile/Resources/lang/nl/import.php'))['recovery_heading'])
+        ->not->toContain((include base_path('Modules/Mobile/Resources/lang/en/import.php'))['recovery_heading']);
+});
 
 it('renders the recovery heading from the mobile keys, not the auth ones', function (): void {
     // Mobile has its OWN recovery screen on mobile::import.recovery_*. Fixing

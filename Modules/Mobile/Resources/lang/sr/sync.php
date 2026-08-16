@@ -7,7 +7,7 @@ return [
     'heading' => 'Podaci i uređaji',
     'sync_status' => 'Stanje sinhronizacije',
     'your_devices' => 'Tvoji uređaji',
-    'syncing_progress' => 'Sinhronizacija… :applied od :expected zapisa',
+    'syncing_progress' => 'Sinhronizacija… zapisa: :count',
     'initial_sync_aria' => 'Napredak početne sinhronizacije',
     'no_peers' => 'Upari drugi uređaj da pokreneš sinhronizaciju.',
     'sync_now' => 'Sinhronizuj sada',

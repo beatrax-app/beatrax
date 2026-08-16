@@ -7,7 +7,7 @@ return [
     'heading' => 'Adatok és eszközök',
     'sync_status' => 'Szinkronizálás állapota',
     'your_devices' => 'Az eszközeid',
-    'syncing_progress' => 'Szinkronizálás… :applied / :expected rekord',
+    'syncing_progress' => 'Szinkronizálás… :count rekord',
     'initial_sync_aria' => 'Az első szinkronizálás előrehaladása',
     'no_peers' => 'Párosíts egy másik eszközt a szinkronizálás elindításához.',
     'sync_now' => 'Szinkronizálás most',

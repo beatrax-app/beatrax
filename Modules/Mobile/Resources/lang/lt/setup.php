@@ -28,6 +28,6 @@ return [
     'resuming' => 'Tęsiama sąranka…',
     'setting_up' => 'Ruošiamas šis įrenginys…',
     'progress_aria' => 'Sąrankos eiga',
-    'records' => ':applied iš :expected įrašų',
+    'records' => 'Įrašų: :count',
     'records_preparing' => 'Laukiama kito įrenginio…',
 ];

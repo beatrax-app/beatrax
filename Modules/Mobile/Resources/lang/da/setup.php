@@ -28,6 +28,6 @@ return [
     'resuming' => 'Genoptager opsætningen…',
     'setting_up' => 'Sætter denne enhed op…',
     'progress_aria' => 'Fremdrift for opsætningen',
-    'records' => ':applied af :expected poster',
+    'records' => ':count poster',
     'records_preparing' => 'Venter på den anden enhed…',
 ];

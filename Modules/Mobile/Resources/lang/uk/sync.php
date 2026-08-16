@@ -7,7 +7,7 @@ return [
     'heading' => 'Дані та пристрої',
     'sync_status' => 'Стан синхронізації',
     'your_devices' => 'Твої пристрої',
-    'syncing_progress' => 'Синхронізація… :applied з :expected записів',
+    'syncing_progress' => 'Синхронізація… записів: :count',
     'initial_sync_aria' => 'Прогрес початкової синхронізації',
     'no_peers' => 'Пов’яжи інший пристрій, щоб почати синхронізацію.',
     'sync_now' => 'Синхронізувати зараз',
