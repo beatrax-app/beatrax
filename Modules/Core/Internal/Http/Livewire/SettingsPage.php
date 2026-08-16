@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Http\Livewire;
 
-use Illuminate\Contracts\Translation\Translator;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -105,13 +105,13 @@ final class SettingsPage extends Component
 
     // Validates against the supported-locale allow-list before the preference
     // write, so an out-of-enum value never reaches the users row. "auto" persists as NULL
-    // (no override → browser detection). The translator is retargeted in the
+    // (no override → browser detection). The locale is retargeted in the
     // same request too, so the page re-renders in the new language at once.
     public function setLocale(
         string $locale,
         CurrentUser $currentUser,
         WriteUserPreference $writeUserPreference,
-        Translator $translator,
+        Application $app,
     ): void {
         $this->locale = $locale;
         $this->validateOnly('locale');
@@ -120,7 +120,11 @@ final class SettingsPage extends Component
 
         ($writeUserPreference)($currentUser->user()->id, ['locale' => $storedLocale]);
 
-        $translator->setLocale($storedLocale ?? Locale::DEFAULT);
+        // Through the application, not the translator alone: Livewire snapshots
+        // `app()->getLocale()` on dehydrate and re-applies it on the next
+        // action, so retargeting only the translator re-rendered this page in
+        // the new language and then reverted the one after it.
+        $app->setLocale($storedLocale ?? Locale::DEFAULT);
     }
 
     public function setDevMode(bool $value, CurrentUser $currentUser): void
