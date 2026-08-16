@@ -235,16 +235,61 @@ echo "Upload resources/brand/social-preview-1280.png via Settings → General �
 
 ---
 
+## Release signing
+
+Both desktop platforms are signed with real certificates. The values live
+as repository secrets and variables; the originals are in the Beatrax
+1Password vault.
+
+| Platform | Secrets | Variables |
+|---|---|---|
+| Windows | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | `NATIVEPHP_AZURE_ENDPOINT`, `NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME`, `NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME` |
+| macOS | `CSC_LINK`, `CSC_KEY_PASSWORD`, `NATIVEPHP_APPLE_ID`, `NATIVEPHP_APPLE_ID_PASS` | `NATIVEPHP_MAC_IDENTITY`, `NATIVEPHP_APPLE_TEAM_ID` |
+
+The three Azure entries are variables rather than secrets deliberately:
+they name an endpoint, an account and a certificate profile, none of
+which is confidential, and masking them turns a failed signing run into a
+log full of `***` at the moment those values are what you need to read.
+
+`CSC_LINK` holds ONLY the Developer ID identity. The Keychain export that
+produces it (`security export -t identities`) emits every identity on the
+machine, which here includes the Apple Distribution key used for iOS —
+that key has no business in a desktop CI secret, so the bundle is split
+and rebuilt around the Developer ID certificate alone before upload.
+
+### Every gap here fails silently
+
+This is the property to design against, not the individual credentials.
+`electron-builder.mjs` omits `azureSignOptions` entirely when any
+`NATIVEPHP_AZURE_*` value is empty; the macOS Developer ID prebuild hook
+exits non-zero but NativePHP's `HasPreAndPostProcessing::runProcess()`
+swallows that with a `return` that leaves the closure rather than the
+build; electron-builder then falls back to an ad-hoc signature with a
+warning, and `notarize.js` skips notarisation with another. Four ways to
+ship something unsigned from a build that reports success.
+
+So the release workflows guard on both sides: the build step fails when a
+required value is empty, and the produced artifact is verified to carry a
+real signature before it is uploaded.
+
+### Expiry
+
+The Developer ID certificate expires **2027-02-01** — a short window,
+capped by the Developer Program membership rather than the usual five
+years. The Azure client secret expires **2027-07-15**. Neither expiry
+fails the build on its own; macOS in particular degrades back to ad-hoc,
+which is what the artifact verification exists to catch.
+
 ## What this runbook does not cover
 
-- **`signing-prod` GitHub Environment.** Not created — the codebase
-  ships no paid signing certs, so there are no signing secrets to gate.
-  The single repo secret in use is `ED25519_PRIVATE_KEY` for the
-  in-house manifest signature, configured separately during the release
-  workflow setup.
-- **macOS Developer ID / Azure Trusted Signing secrets.** Not used —
-  the public-release posture relies on the user-side first-launch
-  unblock for unsigned binaries.
+- **`signing-prod` GitHub Environment.** Not created. The signing secrets
+  above are repository-scoped; gating them behind an environment with
+  required reviewers is a reasonable hardening step and has not been done.
+- **Mobile signing.** Android and iOS are built and signed by Bifrost from
+  credentials uploaded to its own panel, not from this repository. The
+  Android release keystore and its passwords live in 1Password; a local
+  release build reads them from `mobile-app/.env` (see
+  `mobile-app/.env.example`).
 
 ---
 
