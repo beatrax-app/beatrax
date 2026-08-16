@@ -23,6 +23,7 @@ use Modules\Sync\Internal\Pairing\PairingRelayCourier;
 use Modules\Sync\Internal\Pairing\PairingState;
 use Modules\Sync\Internal\Pairing\PairingTokenService;
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
+use Modules\Sync\Internal\Pairing\RelayBootstrap;
 use Modules\Sync\Internal\Pairing\SafetyNumberDeriver;
 use Modules\Sync\Internal\Pairing\WordCodeEncoder;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
@@ -161,9 +162,11 @@ final class PairingFlowModal extends Component
             // This device's own name, so the scanner can label it with what
             // it calls itself rather than the "Paired device" placeholder.
             $registry->localDeviceName($userId),
-            $relayConfig->endpointUrl(),
-            $relayConfig->authToken(),
-            $relayConfig->pin(),
+            new RelayBootstrap(
+                $relayConfig->endpointUrl(),
+                $relayConfig->authToken(),
+                $relayConfig->pin(),
+            ),
         );
         $this->wordCode = $wordEncoder->encode($token);
         $this->pairingTokenId = (string) $this->tokenRowId($db, $userId, $token);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Sync\Internal\Pairing\QrPayloadBuilder;
+use Modules\Sync\Internal\Pairing\RelayBootstrap;
 
 /*
  * QrPayloadBuilderTest — PAIR-02 QR payload encoding.
@@ -60,7 +61,7 @@ it('appends &relay=<endpoint> when a relay endpoint is supplied', function (): v
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: 'https://relay.example.com',
+        relay: new RelayBootstrap('https://relay.example.com'),
     );
 
     expect($uri)->toContain('relay='.rawurlencode('https://relay.example.com'));
@@ -76,8 +77,7 @@ it('appends &rtok=<token> only when BOTH a relay endpoint AND an auth token are 
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: null,
-        relayAuthToken: 'shared-secret',
+        relay: new RelayBootstrap(authToken: 'shared-secret'),
     );
     expect($uriTokenOnly)->not->toContain('rtok=');
     expect($uriTokenOnly)->not->toContain('relay=');
@@ -87,8 +87,7 @@ it('appends &rtok=<token> only when BOTH a relay endpoint AND an auth token are 
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: 'https://relay.example.com',
-        relayAuthToken: 'shared-secret',
+        relay: new RelayBootstrap('https://relay.example.com', 'shared-secret'),
     );
     expect($uriBoth)->toContain('relay='.rawurlencode('https://relay.example.com'));
     expect($uriBoth)->toContain('rtok='.rawurlencode('shared-secret'));
@@ -102,8 +101,7 @@ it('renders relay params into the SVG-encoded URI too', function (): void {
         str_repeat('a', 64),
         str_repeat('b', 64),
         'deadbeef',
-        relayEndpoint: 'https://relay.example.com',
-        relayAuthToken: 'shared-secret',
+        relay: new RelayBootstrap('https://relay.example.com', 'shared-secret'),
     );
 
     expect($svg)->toContain('<svg');

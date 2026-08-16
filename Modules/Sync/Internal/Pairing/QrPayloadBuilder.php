@@ -17,14 +17,10 @@ final class QrPayloadBuilder
     private const int MARGIN = 1;
 
     /**
-     * @param  ?string  $relayEndpoint  Optional relay endpoint URL to bootstrap
-     *                                  a fresh responder's `RelayConfig` from.
-     *                                  Omitted (null) when no relay is
-     *                                  configured on this device — the QR
-     *                                  carries no `relay` param.
-     * @param  ?string  $relayAuthToken  Optional relay bearer token, appended
-     *                                   only when both this AND $relayEndpoint
-     *                                   are non-null.
+     * @param  ?RelayBootstrap  $relay  What this device can tell a fresh
+     *                                  responder about reaching a relay.
+     *                                  Omitted when none is configured here —
+     *                                  the QR then carries no relay params.
      */
     public function buildUri(
         string $deviceId,
@@ -32,9 +28,7 @@ final class QrPayloadBuilder
         string $x25519PubHex,
         string $token,
         ?string $deviceName = null,
-        ?string $relayEndpoint = null,
-        ?string $relayAuthToken = null,
-        ?string $relayPin = null,
+        ?RelayBootstrap $relay = null,
     ): string {
         $uri = sprintf(
             'beatrax://pair?v=1&token=%s&ed=%s&kx=%s&device=%s',
@@ -51,18 +45,18 @@ final class QrPayloadBuilder
             $uri .= '&name='.rawurlencode($deviceName);
         }
 
-        if ($relayEndpoint !== null && $relayEndpoint !== '') {
-            $uri .= '&relay='.rawurlencode($relayEndpoint);
+        if ($relay !== null && $relay->isAdvertisable()) {
+            $uri .= '&relay='.rawurlencode((string) $relay->endpoint);
 
-            if ($relayAuthToken !== null && $relayAuthToken !== '') {
-                $uri .= '&rtok='.rawurlencode($relayAuthToken);
+            if ($relay->authToken !== null && $relay->authToken !== '') {
+                $uri .= '&rtok='.rawurlencode($relay->authToken);
             }
 
             // The pin is what makes a self-signed relay certificate
             // trustworthy: the QR is an out-of-band channel the network
             // cannot touch, so the key it names is the only one accepted.
-            if ($relayPin !== null && $relayPin !== '') {
-                $uri .= '&rpin='.rawurlencode($relayPin);
+            if ($relay->pin !== null && $relay->pin !== '') {
+                $uri .= '&rpin='.rawurlencode($relay->pin);
             }
         }
 
@@ -70,9 +64,7 @@ final class QrPayloadBuilder
     }
 
     /**
-     * @param  ?string  $relayEndpoint  See {@see self::buildUri()}.
-     * @param  ?string  $relayAuthToken  See {@see self::buildUri()}.
-     * @param  ?string  $relayPin  See {@see self::buildUri()}.
+     * @param  ?RelayBootstrap  $relay  See {@see self::buildUri()}.
      */
     public function buildSvg(
         string $deviceId,
@@ -80,11 +72,9 @@ final class QrPayloadBuilder
         string $x25519PubHex,
         string $token,
         ?string $deviceName = null,
-        ?string $relayEndpoint = null,
-        ?string $relayAuthToken = null,
-        ?string $relayPin = null,
+        ?RelayBootstrap $relay = null,
     ): string {
-        $uri = $this->buildUri($deviceId, $ed25519PubHex, $x25519PubHex, $token, $deviceName, $relayEndpoint, $relayAuthToken, $relayPin);
+        $uri = $this->buildUri($deviceId, $ed25519PubHex, $x25519PubHex, $token, $deviceName, $relay);
 
         return $this->renderSvg($uri);
     }
