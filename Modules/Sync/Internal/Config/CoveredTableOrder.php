@@ -45,22 +45,12 @@ final readonly class CoveredTableOrder
 
         // Bounded: each pass places at least one table unless a cycle remains,
         // and a remaining cycle is appended in registry order rather than
-        // looping forever.
-        foreach ($covered as $ignored) {
-            foreach ($covered as $table) {
-                if (isset($placed[$table])) {
-                    continue;
-                }
+        // looping forever. A counted repeat rather than a walk over $covered —
+        // the values are not what is being iterated, only the count.
+        $passes = count($covered);
 
-                foreach ($dependencies[$table] as $parent) {
-                    if (! isset($placed[$parent])) {
-                        continue 2;
-                    }
-                }
-
-                $ordered[] = $table;
-                $placed[$table] = true;
-            }
+        for ($pass = 0; $pass < $passes; $pass++) {
+            $this->placeTablesWhoseParentsAreDown($covered, $dependencies, $ordered, $placed);
         }
 
         foreach ($covered as $table) {
@@ -70,6 +60,33 @@ final readonly class CoveredTableOrder
         }
 
         return $ordered;
+    }
+
+    // One settling pass: appends every table not yet placed whose parents all
+    // are. Split out of insertionOrder() so the loop that repeats it reads as
+    // the bound it is, rather than as a third level of nesting.
+    /**
+     * @param  list<string>  $covered
+     * @param  array<string, list<string>>  $dependencies
+     * @param  list<string>  $ordered
+     * @param  array<string, bool>  $placed
+     */
+    private function placeTablesWhoseParentsAreDown(array $covered, array $dependencies, array &$ordered, array &$placed): void
+    {
+        foreach ($covered as $table) {
+            if (isset($placed[$table])) {
+                continue;
+            }
+
+            foreach ($dependencies[$table] as $parent) {
+                if (! isset($placed[$parent])) {
+                    continue 2;
+                }
+            }
+
+            $ordered[] = $table;
+            $placed[$table] = true;
+        }
     }
 
     // Children first — the exact reverse, so a scoped DELETE never strands a
