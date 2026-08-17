@@ -105,3 +105,7 @@ yarn-error.log
 # Pint reuses this to skip files it has already seen unchanged; CI restores
 # it between runs, where it takes the style check from ~175s to ~4s.
 /.pint.cache
+
+# Console logs and page snapshots dropped by the Playwright MCP server when
+# it drives the app during local debugging.
+/.playwright-mcp/
