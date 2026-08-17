@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Counterparties\Public\Queries;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
@@ -147,7 +148,14 @@ final readonly class CounterpartyIndexQuery
             $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $this->session)['value'];
         }
 
-        $date = is_string($postedAt) ? substr($postedAt, 0, 10) : '';
+        // isoFormat('L'), not a substr of the ISO column: this card sits in a
+        // page that writes 25-08-2026 everywhere else, and the raw prefix wrote
+        // 2026-08-25 beside it. 'L' is the short-date pattern of whichever
+        // locale is rendering — the same source the date field takes its own
+        // pattern from, so the two agree by construction rather than by luck.
+        $date = is_string($postedAt) && $postedAt !== ''
+            ? CarbonImmutable::parse($postedAt)->isoFormat('L')
+            : '';
         $label = match (true) {
             is_string($description) && $description !== '' => $description,
             is_string($counterpartyName) => $counterpartyName,

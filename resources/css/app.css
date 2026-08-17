@@ -4965,3 +4965,75 @@ mark {
         font-size: 16px;
     }
 }
+
+/*
+ * The rules table, restacked below the tablet breakpoint.
+ *
+ * Six columns — priority, conditions, actions, hits, created, row actions —
+ * measured 739px against 346px of container, the widest table in the app by
+ * some way. It scrolled, with the same missing affordance as the two already
+ * restacked: nothing tells the reader the rest of a row exists.
+ *
+ * What a rule IS lives in conditions and actions, so those lead. Priority,
+ * hits and created are the metadata you check afterwards, so they share a
+ * muted line. Same cells, same DOM order, same reading order for assistive
+ * tech — only the visual arrangement changes.
+ */
+@media (max-width: 767px) {
+    .rules-table,
+    .rules-table tbody {
+        display: block;
+    }
+
+    /* Every cell below is self-describing once stacked, so the column labels
+       stop earning their line. */
+    .rules-table thead {
+        display: none;
+    }
+
+    .rules-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--space-3);
+        row-gap: var(--space-2);
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .rules-table td {
+        padding: 0;
+    }
+
+    /* Conditions lead the row; row actions hold the right of the same line. */
+    .rules-table td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .rules-table td:nth-child(6) {
+        grid-column: 2;
+        grid-row: 1;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    /* What the rule does, full width underneath. */
+    .rules-table td:nth-child(3) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        overflow-wrap: anywhere;
+    }
+
+    /* Priority, hits and created share the metadata line. */
+    .rules-table td:nth-child(1),
+    .rules-table td:nth-child(4),
+    .rules-table td:nth-child(5) {
+        grid-row: 3;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .rules-table td:nth-child(1) { grid-column: 1; }
+    .rules-table td:nth-child(4) { grid-column: 2; text-align: right; white-space: nowrap; }
+    .rules-table td:nth-child(5) { grid-column: 1 / -1; grid-row: 4; }
+}

@@ -87,7 +87,7 @@
                  right-hand columns on a phone rather than letting them scroll —
                  so the category picker and row actions were unreachable. --}}
             <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <table class="rules-table min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                 <thead class="bg-slate-50 dark:bg-slate-900">
                     <tr>
                         <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rules.col_priority') }}</th>

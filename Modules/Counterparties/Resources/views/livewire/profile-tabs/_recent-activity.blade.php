@@ -21,7 +21,9 @@
     <ul style="margin: 0; padding: 0; list-style: none;">
         @foreach ($rows as $tx)
             @php
-                $date = is_string($tx->posted_at ?? null) ? substr($tx->posted_at, 0, 10) : '';
+                $date = is_string($tx->posted_at ?? null) && $tx->posted_at !== ''
+                    ? \Carbon\CarbonImmutable::parse($tx->posted_at)->isoFormat('L')
+                    : '';
                 $desc = $tx->description ?? '';
                 $amount = (int) ($tx->amount_minor ?? 0);
                 $currency = $tx->currency ?? BaseCurrency::value();
