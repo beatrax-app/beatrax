@@ -980,12 +980,12 @@ td.date,
             padding-top: calc(var(--space-3) + var(--safe-top));
         }
 
-        /* Four equal tracks at 390px leave each tile ~85px, which breaks the
-           labels one word per line. Two rows of two is the same information
-           at a readable measure. */
-        .mini-steps {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
+        /* The narrow-width .mini-steps override lives beside its own base
+           rule further down, not here. Both are in @layer components, both
+           are a single class, so the LATER declaration wins whatever the
+           media query says — and the base four-track rule is later. Declared
+           here it lost silently at every width, which is how the wizard went
+           on showing four ~85px tiles on a phone after it was "fixed". */
 
         .wiz-dots {
             order: 3;
@@ -1143,6 +1143,21 @@ td.date,
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
         margin: var(--space-6) 0;
+    }
+
+    /* Four equal tracks at 390px leave each tile ~85px, and the labels break
+       one word per line — "Downloa / den", "CAMT.05 / 3 (.xml)". Two rows of
+       two is the same information at a readable measure.
+
+       Immediately after the rule it overrides, deliberately. Both live in
+       @layer components and both are a single class, so a cascade layer
+       cannot separate them and specificity cannot either: only source order
+       decides, and an override declared earlier in the file loses at every
+       width no matter what its media query asks for. */
+    @media (max-width: 640px) {
+        .mini-steps {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     .mini {

@@ -51,12 +51,19 @@ scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
 stops when the page is backgrounded rather than holding the camera open
 behind a backgrounded finance app.
 
-**The generated shell needs two patches, applied from the mobile root's
-`post-update-cmd`.** `native:install` regenerates the Android tree, so neither
-is hand-edited; both are idempotent and fail loudly if their anchor moves.
+**The generated shell needs three patches, applied from the mobile root's
+`post-update-cmd`.** `native:install` regenerates the Android tree, so none is
+hand-edited; all are idempotent and fail loudly if their anchor moves.
 
 - `nativephp_grant_webview_camera.php` adds the missing `onPermissionRequest`
   override so the in-page scanner can obtain a camera. Video capture only.
+- `nativephp_android_file_chooser.php` adds the missing `onShowFileChooser`
+  override and the matching activity-result plumbing. Android's default
+  implementation returns false and shows nothing at all — no picker, no error
+  — so every `<input type="file">` in the app was inert. That is not cosmetic:
+  `/` redirects to `/imports/new` while the device holds no transactions, and
+  every wizard drop-zone uses the same control, so a freshly installed phone
+  could not take in a statement or reach the dashboard by any route.
 - `nativephp_keep_webview_cookies.php` removes the `clearAllCookies()` call
   from `MainActivity.initializeEnvironment()`. It ran on every process start
   and took the Laravel session cookie with it, so each cold launch — and
@@ -65,7 +72,24 @@ is hand-edited; both are idempotent and fail loudly if their anchor moves.
   security boundary here. `clearAllCookies()` itself is left in place for
   callers that genuinely want a clean jar.
 
-`composer native:patch` runs both on demand.
+**When each patch is present, and when it is not.** Worth stating plainly,
+because the failure is silent — an unpatched shell builds, installs and runs,
+and only the patched behaviour is missing:
+
+- `composer update` regenerates the tree via `native:install` and then
+  re-applies all three, because they follow it in `post-update-cmd`. Net
+  effect: patched.
+- `php artisan native:run android` (and `native:build`) does **not** regenerate
+  the tree, so patches already in it survive the build. A patch script added
+  after the last `composer update` is therefore **not** in the build — writing
+  the script is not applying it. That cost a device pass: the file-chooser fix
+  was written, committed, built and installed, and the picker was still inert
+  because nothing had run the script.
+- `php artisan native:install` on its own regenerates the tree and drops all
+  three.
+
+`composer native:patch` runs all three on demand, and is the recovery for the
+last case — and the step to run the first time a new patch script lands.
 
 The `post-update-cmd` invocation is `native:install --with-icu --quiet`, and both
 flags are load-bearing. v4 inverted `--force`: overwriting the generated tree is

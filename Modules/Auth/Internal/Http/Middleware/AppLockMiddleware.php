@@ -9,6 +9,8 @@ use Closure;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
@@ -233,13 +235,61 @@ final readonly class AppLockMiddleware
     // Sends the user to the lock screen, remembering where they were so
     // unlocking returns them there instead of the dashboard. LockScreen
     // already pulls `url.intended`; nothing ever put anything in it.
-    private function redirectToLock(Request $request, Session $session): RedirectResponse
+    private function redirectToLock(Request $request, Session $session): Response
     {
         if ($this->isRestorablePage($request)) {
             $session->put('url.intended', $request->fullUrl());
         }
 
-        return new RedirectResponse($this->urls->route($this->lockRouteName()));
+        $lockUrl = $this->urls->route($this->lockRouteName());
+
+        if ($request->headers->has(self::LIVEWIRE_HEADER)) {
+            // Thrown, not returned. Livewire re-runs this middleware for an
+            // update request through a pipeline of its own, and that pipeline
+            // stops for a RedirectResponse and NOTHING else — every other
+            // response it simply discards before hydrating the component and
+            // running the action. Returning the lock answer would therefore
+            // have served it while also doing the thing the lock exists to
+            // prevent. Throwing is the same mechanism Livewire's own
+            // `abort($response)` uses one line further on.
+            throw new HttpResponseException($this->livewireLockResponse($lockUrl));
+        }
+
+        return new RedirectResponse($lockUrl);
+    }
+
+    /**
+     * The lock answer for a Livewire XHR, which cannot be a redirect.
+     *
+     * Livewire's client reads the response body as JSON. Handed a 302 to an
+     * HTML page it has two escape routes, and on Android neither is available:
+     * `response.redirected` is false because NativePHP's bridge follows the
+     * redirect in-process and hands back an ordinary response, and a non-2xx
+     * status would only reach the branch that renders the body in a modal. So
+     * the lock page's HTML went into `JSON.parse`, threw
+     * `SyntaxError: Unexpected token '<'`, and left the old component and the
+     * new page half-mounted over each other: the lock screen painted as a
+     * narrow inset column over the page it was meant to replace, then blanked,
+     * and no further tap produced a request at all. Only a force-stop
+     * recovered it — a locked app that cannot be unlocked or logged out of.
+     *
+     * `components: []` is what makes this inert rather than merely different.
+     * Livewire iterates that array to find the payload for each message it
+     * sent; empty means it finds nothing, morphs nothing and throws nothing,
+     * so a client that somehow never registered the interceptor below is left
+     * exactly where it was instead of wrecked. The redirect travels in the
+     * BODY, not a header or a status, because the body is the one part of the
+     * answer no transport in this stack rewrites — the same reason the resume
+     * check reads its answer there.
+     *
+     * @see resources/js/lock.js — the interceptor that acts on this.
+     */
+    private function livewireLockResponse(string $lockUrl): JsonResponse
+    {
+        return new JsonResponse([
+            'components' => [],
+            'beatraxLock' => ['redirect' => $lockUrl],
+        ]);
     }
 
     // The mobile runtime has its own full-screen lock screen with safe-area
