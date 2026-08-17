@@ -180,3 +180,24 @@ it('fundPot rejects an amount exceeding unallocated with an inline error and no 
         'pot_id' => $pot->id,
     ]);
 });
+
+/*
+ * The i18n conversion reached the unauthenticated guard branch of render()
+ * and stopped there, so the branch every signed-in reader takes kept a
+ * literal 'Pots · Beatrax'. The lang key already existed in all 26 locales;
+ * only the call site was missing.
+ */
+it('localizes the browser tab title on the branch a signed-in reader takes', function (): void {
+    // A full page request, not Livewire::test: the title is set through
+    // $view->extends(), which only reaches the document on a real render.
+    // The locale has to come off the user row too — SetLocale re-resolves it
+    // per request, so an app()->setLocale() before the call is discarded.
+    $this->user->forceFill(['locale' => 'nl'])->save();
+
+    $response = $this->actingAs($this->user)->get('/pots');
+
+    $response->assertOk();
+    expect((string) $response->getContent())
+        ->toContain('<title>Potjes · Beatrax</title>')
+        ->not->toContain('<title>Pots · Beatrax</title>');
+});
