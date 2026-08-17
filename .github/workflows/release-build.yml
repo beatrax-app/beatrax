@@ -176,12 +176,13 @@ jobs:
                   NATIVEPHP_AZURE_ENDPOINT: ${{ vars.NATIVEPHP_AZURE_ENDPOINT }}
                   NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME: ${{ vars.NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME }}
                   NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME: ${{ vars.NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME }}
+                  NATIVEPHP_AZURE_PUBLISHER_NAME: ${{ vars.NATIVEPHP_AZURE_PUBLISHER_NAME }}
                   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
                   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
                   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
               run: |
                   set -euo pipefail
-                  for required in NATIVEPHP_AZURE_ENDPOINT NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
+                  for required in NATIVEPHP_AZURE_ENDPOINT NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME NATIVEPHP_AZURE_PUBLISHER_NAME AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
                       if [ -z "${!required:-}" ]; then
                           echo "::error::${required} is empty — refusing to publish an unsigned Windows build."
                           exit 1
