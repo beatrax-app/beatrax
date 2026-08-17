@@ -30,6 +30,8 @@ final readonly class NativeBuildPatches
         'nativephp_theme_native_shell.php',
         'nativephp_brand_boot_splash.php',
         'nativephp_extend_bundle_copy_timeout.php',
+        'nativephp_ios_request_body_stream.php',
+        'nativephp_ios_download_delegate.php',
     ];
 
     public function __construct(

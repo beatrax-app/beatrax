@@ -51,8 +51,8 @@ scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
 stops when the page is backgrounded rather than holding the camera open
 behind a backgrounded finance app.
 
-**The generated shell needs three patches, applied from the mobile root's
-`post-update-cmd`.** `native:install` regenerates the Android tree, so none is
+**The generated shell needs five patches, applied from the mobile root's
+`post-update-cmd`.** `native:install` regenerates the native trees, so none is
 hand-edited; all are idempotent and fail loudly if their anchor moves.
 
 - `nativephp_grant_webview_camera.php` adds the missing `onPermissionRequest`
@@ -71,25 +71,67 @@ hand-edited; all are idempotent and fail loudly if their anchor moves.
   a valid session row on-device. The app-lock, not cookie lifetime, is the
   security boundary here. `clearAllCookies()` itself is left in place for
   callers that genuinely want a clean jar.
+- `nativephp_ios_request_body_stream.php` drains `request.httpBodyStream` when
+  `request.httpBody` is nil. WebKit populates the latter only for simple string
+  bodies; a FormData or Blob body — every file upload — arrives as a stream, and
+  the generated handler read only `httpBody`. PHP saw a `multipart/form-data`
+  Content-Type with its boundary, a null CONTENT_LENGTH and a zero-byte
+  `php://input`, so `$_FILES` was empty on every upload while ordinary Livewire
+  round trips, which post strings, worked perfectly.
+- `nativephp_ios_download_delegate.php` answers a download navigation with
+  `.download` and adds the `WKDownloadDelegate` the shell never had. Without it
+  a blob: URL from an `<a download>` fell through to `decisionHandler(.allow)`
+  and the WebView *navigated onto the blob*: the app replaced by its own raw
+  bytes, no chrome, no back gesture, nothing saved, and only a force-quit out.
+  On the recovery-codes screen that destroyed one-time data.
 
 **When each patch is present, and when it is not.** Worth stating plainly,
 because the failure is silent — an unpatched shell builds, installs and runs,
 and only the patched behaviour is missing:
 
-- `composer update` regenerates the tree via `native:install` and then
-  re-applies all three, because they follow it in `post-update-cmd`. Net
+- `composer update` regenerates the trees via `native:install` and then
+  re-applies all five, because they follow it in `post-update-cmd`. Net
   effect: patched.
-- `php artisan native:run android` (and `native:build`) does **not** regenerate
-  the tree, so patches already in it survive the build. A patch script added
-  after the last `composer update` is therefore **not** in the build — writing
-  the script is not applying it. That cost a device pass: the file-chooser fix
-  was written, committed, built and installed, and the picker was still inert
-  because nothing had run the script.
-- `php artisan native:install` on its own regenerates the tree and drops all
-  three.
+- `php artisan native:run android|ios` (and `native:build`) does **not**
+  regenerate the tree, so patches already in it survive the build. A patch
+  script added after the last `composer update` is therefore **not** in the
+  build — writing the script is not applying it. That cost a device pass: the
+  file-chooser fix was written, committed, built and installed, and the picker
+  was still inert because nothing had run the script.
+- `php artisan native:install` on its own regenerates the trees and drops all
+  five.
 
-`composer native:patch` runs all three on demand, and is the recovery for the
+`composer native:patch` runs all five on demand, and is the recovery for the
 last case — and the step to run the first time a new patch script lands.
+
+The two iOS patches are also listed in `NativeBuildPatches`, which re-applies
+them immediately before `native:run` / `native:build`, so a regenerated tree
+cannot ship without them.
+
+### Signed URLs cannot be absolute on iOS
+
+The iOS shell serves the app from `php://127.0.0.1` and installs
+`Native\Mobile\Support\Ios\PhpUrlGenerator`, whose `formatScheme()` answers
+`php://` for every absolute URL Laravel writes. The verifier cannot follow it:
+`hasValidSignature()` rebuilds the URL from `Request::url()`, which is
+Symfony's and can only ever say `http://`. Measured on the device, the same
+request reports `URL::to('/') === 'php://127.0.0.1'` and
+`$request->root() === 'http://127.0.0.1'`, so the two halves hash different
+strings and **every absolutely-signed URL fails its own check**.
+
+Livewire's temporary-upload URL was the one that mattered: it answered 401 from
+`abort_unless(request()->hasValidSignature(), 401)`, so no statement could be
+imported and a fresh install could not reach the dashboard by any route.
+`BridgeSignedUploadUrl` replaces Livewire's generator through its facade,
+signing against the root the incoming request will present and returning the
+URL relative so the WebView still resolves it on the `php://` origin — the
+browser and the verifier need different halves of the same URL. Off that shell
+it defers to the ordinary absolute URL, keyed on the scheme actually in use
+rather than on the platform.
+
+`livewire.preview-file` has the same shape and is left alone: nothing in the
+app previews an upload (no control accepts an image, and nothing calls
+`temporaryUrl()`), so it is unreachable here.
 
 ### The runtime is persistent, and request headers leak between requests
 
