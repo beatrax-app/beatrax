@@ -35,6 +35,7 @@ import { palette } from './palette.js';
 import { datePicker } from './date-picker.js';
 import { timePicker } from './time-picker.js';
 import './lock.js';
+import './mobile-upload.js';
 
 // Stamp ApexCharts on the global so Alpine `x-init` handlers in
 // chart-rendering Blade components can call `new window.ApexCharts(...)`
