@@ -194,3 +194,25 @@ it('renders the critical row strictly before the warning row in DOM order', func
     expect($warnPos)->not->toBeFalse();
     expect($critPos)->toBeLessThan((int) $warnPos);
 });
+
+/*
+ * The action buttons never shrink, so a row that is a flex row at every
+ * width left the message about 130px on a phone and broke one sentence
+ * over six lines — on every page, since the banner sits above all of them.
+ * Each severity row therefore stacks below `sm`.
+ */
+it('stacks the message above the actions on a phone, in every severity', function (): void {
+    foreach ([['backup_corrupt', 'critical'], ['wal_mode_missing', 'warning'], ['update_available', 'info']] as [$kind, $severity]) {
+        sabInsert($this->db, [
+            'user_id' => $this->userA->id,
+            'kind' => $kind,
+            'severity' => $severity,
+            'message' => 'fixture',
+            'metadata' => json_encode(['current_mode' => 'delete', 'version' => '1.2.3']),
+        ]);
+    }
+
+    $html = (string) Livewire::actingAs($this->userA)->test(SystemAlertsBanner::class)->html();
+
+    expect(substr_count($html, 'flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4'))->toBe(3);
+});

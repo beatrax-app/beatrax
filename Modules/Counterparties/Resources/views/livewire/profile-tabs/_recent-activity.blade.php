@@ -9,9 +9,6 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
-@php
-    use Illuminate\Support\Number;
-@endphp
 
 @if (count($rows) === 0)
     <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
@@ -39,7 +36,7 @@
                 <span style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}</span>
                 {{-- Tax badge on counterparty transaction rows (D-19/D-20). --}}
                 <x-tax::tax-badge :transaction="$txRowArr" :showAlways="false" />
-                <span style="white-space: nowrap;">{{ Number::currency(abs($amount) / Money::MINOR_UNITS_PER_MAJOR, $currency, 'nl') }}</span>
+                <span style="white-space: nowrap;">{{ Money::ofMinor(abs($amount), $currency)->format() }}</span>
             </li>
         @endforeach
     </ul>
