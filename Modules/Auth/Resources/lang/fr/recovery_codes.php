@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Enregistré sous beatrax-recovery-codes-:username.txt',
     'confirm' => 'J\'ai rangé ces codes en lieu sûr.',
     'continue' => 'Continuer vers Beatrax',
+
+    'settings' => [
+        'heading' => 'Codes de récupération',
+        'body' => 'Les codes de récupération sont le seul moyen de revenir dans ton compte si tu oublies ton mot de passe.',
+        'warning' => 'Ils sont stockés hachés et ne peuvent donc plus être affichés. Générer un nouveau jeu annule immédiatement l\'ancien.',
+        'regenerate' => 'Générer de nouveaux codes',
+    ],
 ];

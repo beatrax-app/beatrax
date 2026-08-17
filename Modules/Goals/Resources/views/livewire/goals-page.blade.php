@@ -347,7 +347,7 @@
                     id="goal-amount-sheet"
                     wire:model="targetAmount"
                     inputmode="decimal"
-                    placeholder="0.00"
+                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
@@ -358,12 +358,9 @@
 
             <div>
                 <label for="goal-date-sheet" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.target_date') }}</label>
-                <input
-                    type="date"
-                    id="goal-date-sheet"
+                <x-core::date-input
+                    field-id="goal-date-sheet"
                     wire:model="targetDate"
-                    style="font-size: 16px;"
-                    class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
                 @if ($errorDate !== '')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
@@ -390,8 +387,12 @@
                     type="submit"
                     class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                 >{{ $editGoalId ? Lang::get('goals::messages.form.save_changes') : Lang::get('goals::messages.form.save_goal') }}</button>
+                {{-- Closes on the client as well as clearing server state: the
+                     panel's open flag is Alpine's, so wire:click alone left it
+                     on screen however many times it was tapped. --}}
                 <button
                     type="button"
+                    x-on:click="open = false"
                     wire:click="cancel"
                     class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none dark:border-slate-700 dark:hover:text-slate-100"
                 >{{ Lang::get('goals::messages.form.close') }}</button>
@@ -454,7 +455,7 @@
                         id="goal-amount"
                         wire:model="targetAmount"
                         inputmode="decimal"
-                        placeholder="0.00"
+                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                         @if ($errorAmount !== '') aria-invalid="true" aria-describedby="goal-amount-error" @endif
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-variant-numeric: tabular-nums;"
@@ -467,12 +468,10 @@
                 {{-- Target date --}}
                 <div>
                     <label for="goal-date" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.target_date') }}</label>
-                    <input
-                        type="date"
-                        id="goal-date"
+                    <x-core::date-input
+                        field-id="goal-date"
                         wire:model="targetDate"
                         @if ($errorDate !== '') aria-invalid="true" aria-describedby="goal-date-error" @endif
-                        class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                     />
                     @if ($errorDate !== '')
                         <p id="goal-date-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>

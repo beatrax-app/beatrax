@@ -19,7 +19,17 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 // round-trips to the browser wire snapshot.
 final class RecoveryCodesDisplay extends Component
 {
-    private const SESSION_KEY = 'auth.signup.recovery_codes_plain';
+    public const SESSION_KEY = 'auth.signup.recovery_codes_plain';
+
+    // Which surface sent the user here. The ceremony is reached from two
+    // places now — signup, and regenerating from Settings — and finishing it
+    // must return to whichever asked, not to a fixed destination.
+    public const SESSION_RETURN_KEY = 'auth.recovery_codes.return_to';
+
+    // Settings is the only alternative to the wizard, and it is matched as a
+    // token rather than used as a URL: a session value that becomes a
+    // redirect target is an open redirect the moment anything can write it.
+    public const RETURN_TO_SETTINGS = 'settings';
 
     public bool $confirmed = false;
 
@@ -36,9 +46,17 @@ final class RecoveryCodesDisplay extends Component
             return;
         }
 
+        $returnTo = $session->pull(self::SESSION_RETURN_KEY);
         $session->forget(self::SESSION_KEY);
 
-        $this->redirect($urls->route('dashboard'), navigate: false);
+        // Default is the setup wizard, because this screen is now the step
+        // between signup and setup: sending the user onward to the dashboard
+        // would silently drop the nine-step onboarding they have not seen yet.
+        $target = $returnTo === self::RETURN_TO_SETTINGS
+            ? $urls->route('settings')
+            : $urls->route('setup');
+
+        $this->redirect($target, navigate: false);
     }
 
     public function render(

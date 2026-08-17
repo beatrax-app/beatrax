@@ -61,14 +61,22 @@
         <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">
             {{ Lang::get('counterparties::triage.heading') }}
         </h1>
-        <span style="font-size: var(--text-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
-            {{ Lang::get('counterparties::triage.progress', ['seen' => $seen, 'total' => $total, 'percent' => $percent, 'minutes' => $minutesRemaining]) }}
-        </span>
+        {{-- Only when there is something to be through. With an empty queue
+             this read "0 of 0 · 100 % · ~1 min remaining" over a full bar —
+             asserting both that work existed and that it was done. The
+             all-caught-up card below already says the true thing. --}}
+        @if ($total > 0)
+            <span style="font-size: var(--text-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
+                {{ Lang::get('counterparties::triage.progress', ['seen' => $seen, 'total' => $total, 'percent' => $percent, 'minutes' => $minutesRemaining]) }}
+            </span>
+        @endif
     </header>
 
-    <div class="progress-bar" aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}">
-        <div class="progress-fill" style="width: {{ $percent }}%;"></div>
-    </div>
+    @if ($total > 0)
+        <div class="progress-bar" aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}">
+            <div class="progress-fill" style="width: {{ $percent }}%;"></div>
+        </div>
+    @endif
 
     @if ($queueEmpty)
         <section class="triage-card" aria-label="{{ Lang::get('counterparties::triage.all_caught_aria') }}">

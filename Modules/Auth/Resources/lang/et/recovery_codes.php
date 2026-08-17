@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Salvestatud kui beatrax-recovery-codes-:username.txt',
     'confirm' => 'Olen need koodid kindlasse kohta salvestanud.',
     'continue' => 'Jätka Beatraxi',
+
+    'settings' => [
+        'heading' => 'Taastekoodid',
+        'body' => 'Taastekoodid on ainus viis oma kontole tagasi pääseda, kui unustad parooli.',
+        'warning' => 'Neid hoitakse räsituna, seega ei saa neid uuesti näidata. Uue komplekti loomine tühistab vana kohe.',
+        'regenerate' => 'Loo uued koodid',
+    ],
 ];

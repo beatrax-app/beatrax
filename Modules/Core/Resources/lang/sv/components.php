@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Öppna navigeringen',
         'search_transactions' => 'Sök transaktioner',
     ],
+
+    'file' => [
+        'choose' => 'Välj fil',
+        'none' => 'Ingen fil vald',
+        'count' => ':count filer valda',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Välj ett datum',
+        'prev_month' => 'Föregående månad',
+        'next_month' => 'Nästa månad',
+        'today' => 'I dag',
+        'clear' => 'Rensa',
+    ],
 ];

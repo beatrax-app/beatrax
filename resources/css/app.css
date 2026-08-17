@@ -722,11 +722,16 @@ td.date,
         background: var(--color-bg-subtle);
     }
 
+    /* The wizard is a full-bleed shell with no top bar of its own, so nothing
+       else reserves the status-bar strip: without --safe-top the brand mark
+       renders under the system clock and the skip link under the signal icons
+       — and the skip link is the only way out of nine steps. */
     .wiz-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: var(--space-4) var(--space-6);
+        padding-top: calc(var(--space-4) + var(--safe-top));
     }
 
     .wiz-brand {
@@ -957,6 +962,14 @@ td.date,
             flex-wrap: wrap;
             gap: var(--space-2);
             padding: var(--space-3) var(--space-4);
+            padding-top: calc(var(--space-3) + var(--safe-top));
+        }
+
+        /* Four equal tracks at 390px leave each tile ~85px, which breaks the
+           labels one word per line. Two rows of two is the same information
+           at a readable measure. */
+        .mini-steps {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .wiz-dots {
@@ -991,11 +1004,15 @@ td.date,
         }
     }
 
+    /* Same seam as .wiz-top at the other edge: the footer is the last thing in
+       the flex column, so the Android navigation bar draws straight over the
+       privacy pill and the help link without --safe-bottom. */
     .wiz-footer {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: var(--space-4) var(--space-6);
+        padding-bottom: calc(var(--space-4) + var(--safe-bottom));
         color: var(--color-text-muted);
         font-size: var(--text-xs);
     }
@@ -1102,9 +1119,13 @@ td.date,
         font-weight: 400;
     }
 
+    /* minmax(0, 1fr), not 1fr: a 1fr track floors at min-content, so the
+       longest unbreakable label in a tile widens its track, then the grid, the
+       card and the document. That is how the PayPal step — whose labels are the
+       longest — pushed its primary button off the right edge of the phone. */
     .mini-steps {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
         margin: var(--space-6) 0;
     }
@@ -1117,6 +1138,12 @@ td.date,
         flex-direction: column;
         gap: var(--space-1);
         font-size: var(--text-xs);
+        /* Pairs with the minmax(0, …) tracks above. Letting the track shrink
+           below min-content only helps if the tile may shrink with it and the
+           Dutch compounds inside it may break — "Transactiegegevens" is one
+           word wider than a quarter of a 390px screen. */
+        min-width: 0;
+        overflow-wrap: break-word;
     }
 
     .mini.done {
@@ -1884,6 +1911,16 @@ td.date,
         justify-content: space-between;
         align-items: center;
         gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    /* Skip and commit travel together as one unit, so the counter keeps the
+       far side of the row when the footer wraps at phone width rather than
+       the two buttons splitting across the gap. */
+    .commit-footer-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
         flex-wrap: wrap;
     }
 

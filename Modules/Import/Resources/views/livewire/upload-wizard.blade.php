@@ -67,13 +67,11 @@
 
         <div class="space-y-1">
             <label for="file" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::upload.file_label') }}</label>
-            <input
-                type="file"
+            <x-core::file-input
                 id="file"
                 name="file"
                 wire:model="file"
                 accept=".csv,.xml,.sta,.mt940,.940,.txt,.pdf,.eml,.mbox,.zip"
-                class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
             />
             @error('file')
                 <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>

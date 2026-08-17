@@ -21,6 +21,7 @@ use Modules\Auth\Internal\Http\Livewire\LockScreen;
 use Modules\Auth\Internal\Http\Livewire\LoginPage;
 use Modules\Auth\Internal\Http\Livewire\ManageUserPage;
 use Modules\Auth\Internal\Http\Livewire\RecoveryCodesDisplay;
+use Modules\Auth\Internal\Http\Livewire\RecoveryCodesSection;
 use Modules\Auth\Internal\Http\Livewire\ResetPasswordPage;
 use Modules\Auth\Internal\Http\Livewire\SignupPage;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
@@ -141,6 +142,7 @@ final class AuthServiceProvider extends ServiceProvider
         $livewire->component('auth.login-page', LoginPage::class);
         $livewire->component('auth.signup-page', SignupPage::class);
         $livewire->component('auth.recovery-codes-display', RecoveryCodesDisplay::class);
+        $livewire->component('auth.recovery-codes-section', RecoveryCodesSection::class);
         $livewire->component('auth.change-password-page', ChangePasswordPage::class);
         $livewire->component('auth.add-user-page', AddUserPage::class);
         $livewire->component('auth.reset-password-page', ResetPasswordPage::class);

@@ -31,6 +31,11 @@
 <div
     x-data="{ open: false }"
     x-on:open-sheet.window="($event.detail && $event.detail.name === {{ Js::from($name) }}) && (open = true)"
+    {{-- The mirror of open-sheet. Without it the sheet could only be dismissed
+         by the scrim or Escape: a labelled Close button doing wire:click
+         reached the server, reset the form, and left the panel sitting open,
+         because its open state lives here in Alpine and nothing told it. --}}
+    x-on:close-sheet.window="($event.detail && $event.detail.name === {{ Js::from($name) }}) && (open = false)"
 >
     {{-- Scrim: only rendered/shown at phone width (CSS .bottom-sheet-scrim display:none at desktop) --}}
     <div

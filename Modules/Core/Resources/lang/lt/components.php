@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Atverti naršymą',
         'search_transactions' => 'Ieškoti operacijų',
     ],
+
+    'file' => [
+        'choose' => 'Pasirinkti failą',
+        'none' => 'Nepasirinktas joks failas',
+        'count' => 'Pasirinkta failų: :count',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Pasirink datą',
+        'prev_month' => 'Ankstesnis mėnuo',
+        'next_month' => 'Kitas mėnuo',
+        'today' => 'Šiandien',
+        'clear' => 'Išvalyti',
+    ],
 ];

@@ -26,4 +26,20 @@ return [
         'open_nav' => 'Navigatie openen',
         'search_transactions' => 'Transacties zoeken',
     ],
+
+    'file' => [
+        'choose' => 'Bestand kiezen',
+        'none' => 'Geen bestand gekozen',
+        'count' => ':count bestanden gekozen',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Kies een datum',
+        'prev_month' => 'Vorige maand',
+        'next_month' => 'Volgende maand',
+        'today' => 'Vandaag',
+        'clear' => 'Wissen',
+    ],
 ];

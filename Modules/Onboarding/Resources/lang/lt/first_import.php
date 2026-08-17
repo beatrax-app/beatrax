@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Įrašoma…',
     'commit_count' => 'Įrašyti viską (operacijų: :count) →',
     'commit_empty' => 'Įrašyti viską (—) →',
+    'skip' => 'Kol kas praleisti',
 
     'errors' => [
         'nothing_to_commit' => 'Nėra ko įrašyti.',

@@ -155,14 +155,28 @@
                 <span class="tabular-nums">{{ $preview->alreadyImportedCount }}</span>
                 {{ Lang::get('onboarding::first_import.already_imported') }}
             </p>
-            <button
-                type="button"
-                class="commit-btn-primary"
-                wire:click="commitEverything"
-                @if ($commitDisabled) aria-disabled="true" disabled @endif
-            >
-                {{ $commitButtonLabel }}
-            </button>
+            {{-- The commit button is disabled whenever nothing is ready, which
+                 is the ordinary state for someone who skipped the connectors.
+                 The skip sits beside it so the step always has one enabled way
+                 forward; the header's "continue later" leaves the wizard and is
+                 not the same affordance. --}}
+            <div class="commit-footer-actions">
+                <button
+                    type="button"
+                    class="pill-btn-ghost"
+                    wire:click="skip"
+                >
+                    {{ Lang::get('onboarding::first_import.skip') }}
+                </button>
+                <button
+                    type="button"
+                    class="commit-btn-primary"
+                    wire:click="commitEverything"
+                    @if ($commitDisabled) aria-disabled="true" disabled @endif
+                >
+                    {{ $commitButtonLabel }}
+                </button>
+            </div>
         </div>
     </x-onboarding::wiz-card>
 </section>

@@ -95,6 +95,7 @@
         "post-update-cmd": [
             "@php artisan native:install --with-icu --quiet",
             "@php ../scripts/nativephp_grant_webview_camera.php",
+            "@php ../scripts/nativephp_android_file_chooser.php",
             "@php ../scripts/nativephp_keep_webview_cookies.php",
             "@php ../scripts/nativephp_theme_native_shell.php",
             "@php ../scripts/nativephp_brand_boot_splash.php",
@@ -106,6 +107,7 @@
             "@php ../scripts/nativephp_android_adaptive_icon.php",
             "@php ../scripts/nativephp_ios_app_icon.php",
             "@php ../scripts/nativephp_grant_webview_camera.php",
+            "@php ../scripts/nativephp_android_file_chooser.php",
             "@php ../scripts/nativephp_keep_webview_cookies.php",
             "@php ../scripts/nativephp_theme_native_shell.php"
         ]

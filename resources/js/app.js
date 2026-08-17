@@ -32,6 +32,7 @@
 })();
 import ApexCharts from 'apexcharts';
 import { palette } from './palette.js';
+import { datePicker } from './date-picker.js';
 import './lock.js';
 
 // Stamp ApexCharts on the global so Alpine `x-init` handlers in
@@ -357,6 +358,7 @@ document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);
         window.Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
+        window.Alpine.data('beatraxDatePicker', datePicker);
 
         // Mobile navigation drawer state (Phase 4, D-01)
         window.Alpine.store('mobileNav', {
