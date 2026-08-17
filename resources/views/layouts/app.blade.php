@@ -156,7 +156,7 @@
                     && $container->make(\Illuminate\Routing\Router::class)->has('mobile.lock')
                         ? route('mobile.lock')
                         : route('auth.lock'))
-                <script>
+                <script nonce="{{ Vite::cspNonce() }}">
                     window.beatraxIdleMs = {{ $beatraxIdleMs }};
                     window.beatraxLockUrl = @js($beatraxLockUrl);
                 </script>
@@ -178,7 +178,7 @@
                 `load` event ensures the SW registration does not block the
                 initial render or compete with critical resource fetches.
             --}}
-            <script>
+            <script nonce="{{ Vite::cspNonce() }}">
                 if ('serviceWorker' in navigator) {
                     window.addEventListener('load', function () {
                         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {
@@ -210,7 +210,7 @@
                     here previously 500'd every mobile surface —
                     MobileSurfaceParityTest run from `mobile-app/` caught it.
                 --}}
-                <script>
+                <script nonce="{{ Vite::cspNonce() }}">
                     (function () {
                         if (typeof window === 'undefined' || typeof document === 'undefined') {
                             return;

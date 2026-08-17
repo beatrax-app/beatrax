@@ -27,7 +27,7 @@
             html, body, .beatrax-shell { background-color: #020617; }
         }
     </style>
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
         (function () {
             try {
                 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {

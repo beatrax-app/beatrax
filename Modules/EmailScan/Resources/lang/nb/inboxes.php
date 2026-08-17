@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'nytt forsøk om :nt',
 
     'reconnect' => 'Koble til på nytt',
+    'disconnect' => 'Koble fra',
     'scan_now' => 'Skann nå',
     'scan_in_progress_title' => 'Skanning pågår allerede',
 

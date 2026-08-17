@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Amp\Http\Server\Driver\Client as AmpClient;
 use Amp\Http\Server\Request as AmpRequest;
 use Amp\Http\Server\Response as AmpResponse;
+use Amp\Socket\InternetAddress;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,8 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
+use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
@@ -40,9 +43,11 @@ uses(RefreshDatabase::class);
  * Build a bare amphp Request for direct dispatch through
  * RelayServeCommand::route() (private — invoked via reflection).
  */
-function buildRelayLimitsRequest(string $method, string $path, string $body = '', array $headers = []): AmpRequest
+function buildRelayLimitsRequest(string $method, string $path, string $body = '', array $headers = [], string $clientIp = '203.0.113.1'): AmpRequest
 {
     $client = Mockery::mock(AmpClient::class);
+    // Deliver reads the source IP for its per-IP rate-limit bucket.
+    $client->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress($clientIp, 12345));
     $uri = HttpUri::new("https://relay.test{$path}");
 
     return new AmpRequest($client, $method, $uri, $headers, $body);
@@ -79,15 +84,24 @@ beforeEach(function (): void {
         app(Clock::class),
     );
 
-    $this->command = new RelayServeCommand(new NullLogger, $this->mailbox, $this->relayConfig, new RelayTlsMaterial, new DaemonShutdownSignal);
+    $this->command = new RelayServeCommand(
+        new NullLogger,
+        $this->mailbox,
+        new RelayDrainRegistry,
+        new RelayDeliverRateLimiter(app(Clock::class)),
+        new RelayTlsMaterial,
+        new DaemonShutdownSignal,
+    );
 });
 
 afterEach(function (): void {
-    $tokenPath = UserDataPathService::secretsPath()
-        .DIRECTORY_SEPARATOR.'sync-relay-token.json';
+    $secretsDir = UserDataPathService::secretsPath();
+    $tokenPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-token.json';
+    $drainSecretPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json';
+    $drainRegistryPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json';
     $relayPath = UserDataPathService::appPath('sync/relay.json');
 
-    foreach ([$tokenPath, $relayPath] as $path) {
+    foreach ([$tokenPath, $drainSecretPath, $drainRegistryPath, $relayPath] as $path) {
         if (is_file($path)) {
             @unlink($path);
         }
@@ -243,7 +257,7 @@ it('drain caps at the page size and a subsequent drain returns the remainder', f
     }
     DB::table('relay_mailbox')->insert($rows);
 
-    $token = $this->relayConfig->deriveDeviceToken($recipientDid);
+    $token = $this->relayConfig->deviceDrainSecret();
     expect($token)->not->toBeNull();
 
     $firstPage = dispatchRelayLimitsRequest(
@@ -292,7 +306,7 @@ it('happy path: a normal blob with valid dids still delivers and drains', functi
 
     expect($deliverResult['status'])->toBe(202);
 
-    $token = $this->relayConfig->deriveDeviceToken($recipientDid);
+    $token = $this->relayConfig->deviceDrainSecret();
     $drainResult = dispatchRelayLimitsRequest(
         $this->command,
         buildRelayLimitsRequest('GET', "/relay/drain?did={$recipientDid}", '', ['authorization' => "Bearer {$token}"]),
@@ -301,4 +315,33 @@ it('happy path: a normal blob with valid dids still delivers and drains', functi
     expect($drainResult['status'])->toBe(200);
     expect($drainResult['body']['blobs'])->toHaveCount(1);
     expect(base64_decode((string) $drainResult['body']['blobs'][0]['blob'], true))->toBe($blob);
+});
+
+it('throttles a burst of deliveries from one source IP with 429 rate_limited (L13)', function (): void {
+    $recipientDid = 'device-flood-victim';
+    $flooderIp = '203.0.113.7';
+
+    $deliver = fn (string $ip): array => dispatchRelayLimitsRequest(
+        $this->command,
+        buildRelayLimitsRequest('POST', '/relay/deliver', json_encode([
+            'sender_did' => 'device-flooder',
+            'recipient_did' => $recipientDid,
+            'blob' => base64_encode(random_bytes(16)),
+        ], JSON_THROW_ON_ERROR), [], $ip),
+    );
+
+    // The whole per-window budget from one source IP is accepted (all well
+    // under MAX_PENDING_PER_RECIPIENT, so the quota cap never fires here).
+    for ($i = 0; $i < RelayDeliverRateLimiter::MAX_PER_WINDOW; $i++) {
+        expect($deliver($flooderIp)['status'])->toBe(202);
+    }
+
+    // The next delivery from the SAME IP is throttled — and it is the rate
+    // limit, not the mailbox_full quota (distinct error code proves which).
+    $throttled = $deliver($flooderIp);
+    expect($throttled['status'])->toBe(429);
+    expect($throttled['body']['error'] ?? null)->toBe('rate_limited');
+
+    // A different source IP is unaffected — the limit is strictly per-source.
+    expect($deliver('198.51.100.23')['status'])->toBe(202);
 });

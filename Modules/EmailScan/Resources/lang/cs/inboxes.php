@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'další pokus za :nh',
 
     'reconnect' => 'Připojit znovu',
+    'disconnect' => 'Odpojit',
     'scan_now' => 'Skenovat',
     'scan_in_progress_title' => 'Skenování už běží',
 

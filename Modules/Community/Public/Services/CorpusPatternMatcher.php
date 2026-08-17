@@ -13,6 +13,11 @@ final class CorpusPatternMatcher
 {
     public const REGEX_PREFIX = 'regex:';
 
+    // A corpus regex body longer than this is refused before it runs: real
+    // classification patterns are short merchant tokens, so the cap only ever
+    // rejects a hostile or accidental blob, bounding worst-case match cost.
+    public const MAX_REGEX_BODY_LENGTH = 256;
+
     public function __construct(
         private readonly LoggerInterface $logger,
     ) {}
@@ -40,15 +45,19 @@ final class CorpusPatternMatcher
 
     private function matchesRegex(string $body, string $haystack, string $original): bool
     {
-        if ($body === '') {
+        $delimited = '#'.str_replace('#', '\#', $body).'#i';
+
+        if (! $this->isUsableRegex($body, $delimited, $original)) {
             return false;
         }
 
-        $delimited = '#'.str_replace('#', '\#', $body).'#i';
-
         $result = @preg_match($delimited, $haystack);
         if ($result === false) {
-            $this->logger->warning('CorpusPatternMatcher: invalid regex pattern, treated as non-match.', [
+            // Compiled against an empty subject in the guard, yet failed on
+            // this haystack -- e.g. pcre.backtrack_limit tripped. Treat as a
+            // non-match rather than surface the error, and record it so a
+            // pathological corpus entry stays visible in the logs.
+            $this->logger->warning('CorpusPatternMatcher: regex match failed, treated as non-match.', [
                 'pattern' => $original,
             ]);
 
@@ -56,5 +65,36 @@ final class CorpusPatternMatcher
         }
 
         return $result === 1;
+    }
+
+    // A corpus regex is only run against transaction text once its body is
+    // non-empty, within MAX_REGEX_BODY_LENGTH, and compiles -- the compile
+    // check uses an empty subject, which cannot backtrack, so a hostile or
+    // malformed pattern is rejected before it can burn CPU on the haystack.
+    private function isUsableRegex(string $body, string $delimited, string $original): bool
+    {
+        if ($body === '') {
+            return false;
+        }
+
+        $length = mb_strlen($body);
+        if ($length > self::MAX_REGEX_BODY_LENGTH) {
+            $this->logger->warning('CorpusPatternMatcher: regex pattern exceeds the length cap, treated as non-match.', [
+                'pattern' => $original,
+                'length' => $length,
+            ]);
+
+            return false;
+        }
+
+        if (@preg_match($delimited, '') === false) {
+            $this->logger->warning('CorpusPatternMatcher: invalid regex pattern, treated as non-match.', [
+                'pattern' => $original,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 }

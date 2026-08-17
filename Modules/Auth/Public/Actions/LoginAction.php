@@ -30,7 +30,17 @@ final class LoginAction
         /** @var User|null $user */
         $user = User::query()->where('username', $normalized)->first();
 
-        if (! $user instanceof User || ! $this->hasher->check($password, $user->password)) {
+        if (! $user instanceof User) {
+            // Burn one hash on the account-not-found path so a missing username
+            // takes the same time as a wrong password — no enumeration oracle.
+            // make() runs the same bcrypt work as the check() below and the
+            // result is discarded; nothing is hardcoded.
+            $this->hasher->make($password);
+
+            return false;
+        }
+
+        if (! $this->hasher->check($password, $user->password)) {
             return false;
         }
 
