@@ -4747,3 +4747,88 @@ mark {
         opacity: 0.35;
     }
 }
+
+/*
+ * Date-picker calendar (Modules/Core .../components/date-input.blade.php).
+ *
+ * At desktop the calendar hangs off the field, which is what a popover should
+ * do. At phone width it cannot: the field is usually the last row of a bottom
+ * sheet, the sheet is `position: fixed; bottom: 0` and only as tall as its
+ * content, and a 288px calendar dropped below the field lands past the fold —
+ * the bottom two week rows and the Today/Clear controls sit outside the
+ * viewport entirely. Flipping it above does not help either; the sheet is not
+ * tall enough to hold the calendar in either direction.
+ *
+ * So on a phone it stops being a popover and becomes what every native date
+ * control is there — a centred dialog over the page. `position: fixed` is
+ * honoured here because nothing between it and the viewport carries a
+ * transform, filter or containment (the sheet's slide-up transform is only
+ * applied while the sheet is animating, and the calendar cannot be open then).
+ */
+@media (max-width: 767px) {
+    .bx-date-pop {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        margin-top: 0;
+        width: min(20rem, calc(100vw - 2rem));
+        max-width: none;
+        z-index: 70;
+    }
+}
+
+/*
+ * Failure pages (G2-R1). Deliberately plain: a page that appears because
+ * something already went wrong should not depend on much. No grid, no
+ * component classes borrowed from elsewhere, nothing that needs JS — if the
+ * stylesheet itself fails to load the markup still reads top to bottom.
+ */
+@layer components {
+    .bx-error {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-3);
+        padding: calc(var(--space-6) + var(--safe-top)) var(--space-6)
+                 calc(var(--space-6) + var(--safe-bottom));
+        text-align: center;
+        background: var(--color-bg-subtle);
+    }
+
+    .bx-error-status {
+        margin: 0;
+        font-size: var(--text-sm);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.08em;
+        color: var(--color-text-faint);
+    }
+
+    .bx-error-title {
+        margin: 0;
+        max-width: 28rem;
+        font-size: var(--text-2xl);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .bx-error-body {
+        margin: 0;
+        max-width: 32rem;
+        font-size: var(--text-base);
+        color: var(--color-text-muted);
+    }
+
+    .bx-error-action {
+        margin-top: var(--space-2);
+        padding: 10px var(--space-5);
+        border-radius: var(--radius-md);
+        background: var(--color-text);
+        color: var(--color-bg-subtle);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+    }
+}
