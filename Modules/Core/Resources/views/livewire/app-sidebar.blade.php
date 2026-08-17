@@ -221,15 +221,19 @@
             <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.imports', ['count' => $navCounts['imports']]) }}">{{ $navCount('imports') }}</span>
         @endif
     </a>
-    {{-- Migrating from another app is a once-ever errand, so it does not earn
+    {{-- Two entries are deliberately absent here.
+
+         Migrating from another app is a once-ever errand, so it does not earn
          a permanent nav slot — and naming the competitors in the sidebar put
          two other products in front of the user on every screen. It is reached
          from the Imports page now, which is where someone looking to bring
-         data in already is. --}}
-    <a href="#" class="side-item">
-        <span class="ic" aria-hidden="true">⌗</span>
-        {{ Lang::get('core::sidebar.nav.receipts') }}
-    </a>
+         data in already is.
+
+         Receipts had no destination to offer: the module registers no web
+         routes at all, only console ones, so the row sat here as
+         `<a href="#">` and swallowed every tap — highlighting on press and
+         going nowhere, which reads as a broken app rather than an absent
+         feature. It comes back when there is a page to point at. --}}
     <a href="{{ route('cashbook.index') }}" class="side-item {{ $isActive('/cash') }}">
         <span class="ic" aria-hidden="true">€</span>
         {{ Lang::get('core::sidebar.nav.cashbook') }}
