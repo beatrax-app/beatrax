@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Amp\Http\Server\Driver\Client as AmpClient;
 use Amp\Http\Server\Request as AmpRequest;
 use Amp\Http\Server\Response as AmpResponse;
+use Amp\Socket\InternetAddress;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory as HttpFactory;
@@ -17,6 +18,8 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
+use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
@@ -59,6 +62,8 @@ function relayServerHttpFactory(RelayServeCommand $command): HttpFactory
         $url = $request->url();
 
         $ampClient = Mockery::mock(AmpClient::class);
+        // Deliver reads the source IP for its rate-limit bucket.
+        $ampClient->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress('127.0.0.1', 12345));
         $ampUri = HttpUri::new($url);
 
         $headers = [];
@@ -86,7 +91,8 @@ function relayServerHttpFactory(RelayServeCommand $command): HttpFactory
 
 beforeEach(function (): void {
     // Configure the relay endpoint (HTTPS so RelayClient does not reject it) and
-    // a relay secret. The per-device drain token is derived from this secret.
+    // the relay-wide authToken. Per-device drain auth is now the client's OWN
+    // deviceDrainSecret(), TOFU-verified server-side — not derived from this.
     $this->relayConfig = new RelayConfig;
     $this->relayConfig->setEndpointUrl('https://relay.test');
     $this->relayConfig->setAuthToken('relay-shared-secret');
@@ -96,7 +102,7 @@ beforeEach(function (): void {
         app(Clock::class),
     );
 
-    $command = new RelayServeCommand(new NullLogger, $mailbox, $this->relayConfig, new RelayTlsMaterial, new DaemonShutdownSignal);
+    $command = new RelayServeCommand(new NullLogger, $mailbox, new RelayDrainRegistry, new RelayDeliverRateLimiter(app(Clock::class)), new RelayTlsMaterial, new DaemonShutdownSignal);
 
     $this->relayClient = new RelayClient(
         relayServerHttpFactory($command),
@@ -109,11 +115,13 @@ afterEach(function (): void {
     // Clean up the on-disk relay config + token written during the test. Delete
     // the files outright (not just clear the values) so no artifact is left in
     // storage/app/secrets — keeping the working tree clean.
-    $tokenPath = UserDataPathService::secretsPath()
-        .DIRECTORY_SEPARATOR.'sync-relay-token.json';
+    $secretsDir = UserDataPathService::secretsPath();
+    $tokenPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-token.json';
+    $drainSecretPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json';
+    $drainRegistryPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json';
     $relayPath = UserDataPathService::appPath('sync/relay.json');
 
-    foreach ([$tokenPath, $relayPath] as $path) {
+    foreach ([$tokenPath, $drainSecretPath, $drainRegistryPath, $relayPath] as $path) {
         if (is_file($path)) {
             @unlink($path);
         }
@@ -138,7 +146,9 @@ it('round-trips deliver -> drain -> confirm against the real relay handler (CR-0
     expect($row->delivered_at)->toBeNull('freshly delivered blob is pending');
 
     // 2. DRAIN — proves CR-02 (?did= query key) + CR-03 ({blobs:[...]} unwrap).
-    $deviceToken = $this->relayConfig->deriveDeviceToken($recipientDid);
+    // The owning device presents its OWN drain secret; the relay TOFU-registers
+    // it on this first drain.
+    $deviceToken = $this->relayConfig->deviceDrainSecret();
     expect($deviceToken)->not->toBeNull();
 
     $rows = $this->relayClient->drain($recipientDid, $deviceToken);
@@ -158,36 +168,44 @@ it('round-trips deliver -> drain -> confirm against the real relay handler (CR-0
     expect($confirmed->delivered_at)->not->toBeNull('confirm() must mark the row delivered');
 });
 
-it('rejects a drain whose per-device token is scoped to a different device (CR-04)', function (): void {
+it('rejects a drain from a different device once the owner has TOFU-registered its secret (M1/CR-04)', function (): void {
     $recipientDid = 'device-victim';
     $this->relayClient->deliver('device-sender', $recipientDid, random_bytes(48));
 
-    // Token derived for a DIFFERENT device — must not unlock the victim's mailbox.
-    $wrongDeviceToken = $this->relayConfig->deriveDeviceToken('device-attacker');
-    expect($wrongDeviceToken)->not->toBeNull();
+    // The owning device drains first with its OWN drain secret — the relay
+    // TOFU-binds this did to that secret's hash.
+    $ownerSecret = $this->relayConfig->deviceDrainSecret();
+    expect($this->relayClient->drain($recipientDid, $ownerSecret))->toHaveCount(1);
 
-    expect(fn () => $this->relayClient->drain($recipientDid, $wrongDeviceToken))
+    // A DIFFERENT device — same relay-wide authToken, DIFFERENT drain secret —
+    // is rejected draining the owner's did. This is the core M1 regression: the
+    // old shared-secret-derived token every peer could recompute is gone.
+    expect(fn () => $this->relayClient->drain($recipientDid, 'another-device-drain-secret'))
         ->toThrow(RuntimeException::class);
 
-    // The relay-wide shared secret must ALSO be rejected (no single global token).
+    // The relay-wide authToken from the QR must ALSO be rejected — it is no
+    // longer a drain credential.
     expect(fn () => $this->relayClient->drain($recipientDid, 'relay-shared-secret'))
         ->toThrow(RuntimeException::class);
 });
 
-it('rejects a confirm whose per-device token is scoped to a different device (CR-04)', function (): void {
+it('confirm honours the same per-device auth — a different device is rejected, the owner is not (M1/CR-04)', function (): void {
     $recipientDid = 'device-victim-2';
     $this->relayClient->deliver('device-sender', $recipientDid, random_bytes(48));
 
-    $id = (int) DB::table('relay_mailbox')
-        ->where('recipient_did', $recipientDid)
-        ->value('id');
+    // Owner drains first, TOFU-registering its own drain secret for this did.
+    $ownerSecret = $this->relayConfig->deviceDrainSecret();
+    $rows = $this->relayClient->drain($recipientDid, $ownerSecret);
+    $id = (int) $rows[0]['id'];
 
-    $wrongDeviceToken = $this->relayConfig->deriveDeviceToken('device-attacker');
-
-    expect(fn () => $this->relayClient->confirm($id, $wrongDeviceToken))
+    // A different device's secret cannot confirm (delete) the owner's row.
+    expect(fn () => $this->relayClient->confirm($id, 'another-device-drain-secret'))
         ->toThrow(RuntimeException::class);
-
-    // Row must remain pending — the unauthorized confirm did not delete/mark it.
     $row = DB::table('relay_mailbox')->where('id', $id)->first();
     expect($row->delivered_at)->toBeNull('unauthorized confirm must not mark the row delivered');
+
+    // The owner, presenting the SAME secret it drained with, can confirm.
+    $this->relayClient->confirm($id, $ownerSecret);
+    $confirmed = DB::table('relay_mailbox')->where('id', $id)->first();
+    expect($confirmed->delivered_at)->not->toBeNull('the owning device confirm marks the row delivered');
 });
