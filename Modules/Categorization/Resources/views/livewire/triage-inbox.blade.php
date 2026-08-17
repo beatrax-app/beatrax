@@ -56,9 +56,17 @@
             {{-- overflow-x-auto, not overflow-hidden: this table is the only
                  rendering of these rows at every width, and hidden CLIPPED the
                  right-hand columns on a phone rather than letting them scroll —
-                 so the category picker and row actions were unreachable. --}}
+                 so the category picker and row actions were unreachable.
+
+                 Scrolling was still not good enough. With real data the table
+                 is 484px against 346px of room, so it opens on DATUM /
+                 WINKELIER / BEDRAG and the category picker — the only control
+                 on a screen whose entire purpose is choosing a category — is
+                 off the right edge, reachable only by swiping a table nothing
+                 marks as swipeable. `triage-inbox-table` restacks the row below
+                 768px so the picker and the row actions are simply there. --}}
             <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                <table class="triage-inbox-table min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_date') }}</th>

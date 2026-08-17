@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Carbon\CarbonImmutable')
 {{--
     /counterparties/triage focused single-card queue.
 
@@ -97,7 +98,7 @@
             <p class="triage-meta">
                 {{ Lang::get('counterparties::triage.meta', [
                     'count' => count($recentTransactions),
-                    'date' => ! empty($recentTransactions) ? substr((string) $recentTransactions[0]->posted_at, 0, 10) : '—',
+                    'date' => ! empty($recentTransactions) ? CarbonImmutable::parse((string) $recentTransactions[0]->posted_at)->isoFormat('L') : '—',
                 ]) }}
             </p>
 
@@ -149,7 +150,13 @@
                     <ul style="margin: 0; padding: 0; list-style: none;">
                         @foreach ($recentTransactions as $tx)
                             @php
-                                $date = is_string($tx->posted_at ?? null) ? substr($tx->posted_at, 0, 10) : '';
+                                // isoFormat('L'), not a substr of the ISO string: this
+                                // list sat inside a Dutch page writing 2026-08-13
+                                // while every other date in the app read 13-08-2026.
+                                // 'L' is the short-date pattern of whatever locale is
+                                // rendering, so it follows the reader rather than the
+                                // database.
+                                $date = is_string($tx->posted_at ?? null) ? CarbonImmutable::parse($tx->posted_at)->isoFormat('L') : '';
                             @endphp
                             <li class="triage-tx">
                                 <span class="triage-tx__date">{{ $date }}</span>

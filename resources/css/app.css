@@ -4860,3 +4860,78 @@ mark {
         white-space: nowrap;
     }
 }
+
+/*
+ * Uncategorised-triage rows at phone width.
+ *
+ * Five columns — date, counterparty, amount, category picker, row actions —
+ * measure 484px against 346px of room. The table scrolls rather than clipping,
+ * which is better than losing them, but it opens on the first three and the
+ * CATEGORY PICKER is the part past the edge. That is the only control on a
+ * screen that exists to assign categories, and nothing on screen says a table
+ * can be swiped.
+ *
+ * Restacked below 768px: counterparty and amount on the first line, the date
+ * beneath as secondary, then the picker and the actions each on their own full
+ * width. Same cells, same DOM order, same reading order for assistive tech.
+ */
+@media (max-width: 767px) {
+    .triage-inbox-table,
+    .triage-inbox-table tbody {
+        display: block;
+    }
+
+    /* The cells below name themselves — a merchant, a date, an amount, a
+       picker — so the column labels stop earning their line. */
+    .triage-inbox-table thead {
+        display: none;
+    }
+
+    .triage-inbox-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--space-3);
+        row-gap: var(--space-2);
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .triage-inbox-table td {
+        padding: 0;
+    }
+
+    /* Counterparty leads, amount holds the right of the same line. */
+    .triage-inbox-table td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .triage-inbox-table td:nth-child(3) {
+        grid-column: 2;
+        grid-row: 1;
+        white-space: nowrap;
+    }
+
+    .triage-inbox-table td:nth-child(1) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    /* Picker and actions get the full width — they are what the row is for. */
+    .triage-inbox-table td:nth-child(4) {
+        grid-column: 1 / -1;
+        grid-row: 3;
+    }
+
+    .triage-inbox-table td:nth-child(5) {
+        grid-column: 1 / -1;
+        grid-row: 4;
+    }
+
+    .triage-inbox-table td:nth-child(4) select,
+    .triage-inbox-table td:nth-child(4) input {
+        width: 100%;
+    }
+}
