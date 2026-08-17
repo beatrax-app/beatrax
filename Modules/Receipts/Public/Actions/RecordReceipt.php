@@ -35,10 +35,12 @@ final class RecordReceipt
     public function __invoke(string $emlBytes, User $user, ?string $sourceFilename = null): MatchOutcomeDto
     {
         $parsed = $this->reader->read($emlBytes);
-        $messageId = $parsed->headers['message-id'] ?? '';
-        $providerMessageId = $messageId !== ''
-            ? $this->sanitiseMessageId($messageId)
-            : hash('sha256', $emlBytes);
+
+        // Dedup and the blob path key on the content hash, never the RFC 822
+        // Message-ID: that header is attacker-chosen, so keying on it would let
+        // a crafted message pre-occupy a real receipt's slot and have it
+        // dropped as a duplicate. Identical bytes still collapse to one row.
+        $providerMessageId = hash('sha256', $emlBytes);
 
         $senderEmail = $parsed->headers['from'] ?? '';
         $subject = $parsed->headers['subject'] ?? null;
@@ -122,21 +124,6 @@ final class RecordReceipt
             ->update($update);
 
         return $outcome;
-    }
-
-    // Sanitises the Message-ID to fit the blob store's
-    // [A-Za-z0-9._-]{1,200} allow-list — falls back to sha256(value)
-    // when the sanitised result would otherwise be empty.
-    private function sanitiseMessageId(string $raw): string
-    {
-        $trimmed = trim($raw, " \t\n\r\0\x0B<>");
-        $sanitised = (string) preg_replace('/[^A-Za-z0-9._-]+/', '-', $trimmed);
-        $sanitised = substr($sanitised, 0, 200);
-        if ($sanitised === '' || $sanitised === '-') {
-            return hash('sha256', $raw);
-        }
-
-        return $sanitised;
     }
 
     private function parseInternalDate(string $dateRaw): DateTimeImmutable
