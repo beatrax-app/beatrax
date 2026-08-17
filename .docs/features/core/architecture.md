@@ -589,20 +589,28 @@ nothing there; their channel is `SystemAlertsBanner`. The reauth toast
 mirrors a session-scoped dismiss flag (`reauth_toast_dismissed_at`) so
 a refresh in the same tab keeps it hidden, but a fresh login resets it.
 
-Middleware (`LoopbackOnly`, `NoStoreFinancialData`):
+Middleware (`LoopbackOnly`, `TrustedHostGuard`, `NoStoreFinancialData`):
 
 `LoopbackOnly` refuses any request whose `SERVER_ADDR` is not a
 loopback address, throwing a 404 `NotFoundHttpException` so the app
-never advertises its existence to non-loopback callers. Requests
-without `SERVER_ADDR` pass through — this is what keeps CLI
-invocations and Pest fixtures running, but it also means a production
-listener MUST always set `SERVER_ADDR` for the guard to be effective
-(most web servers do this by default; a custom php-fpm dispatcher may
-not). Loopback detection accepts the IPv4 range 127.0.0.0/8, the IPv6
+never advertises its existence to non-loopback callers. A request with
+no `SERVER_ADDR` passes through only in the console context (CLI, queue
+worker, Pest fixtures); a real HTTP request that arrives without one
+fails closed rather than being assumed loopback, so a production
+listener MUST set `SERVER_ADDR` (most web servers do by default; a
+custom php-fpm dispatcher may not, and there it now 404s until it
+does). Loopback detection accepts the IPv4 range 127.0.0.0/8, the IPv6
 `::1`, and the IPv4-mapped-IPv6 form `::ffff:127.x.x.x` (common on
 dual-stack Linux listeners and Docker bridges); comparison runs on the
 binary form returned by `inet_pton` so textual representation variants
-normalise correctly. `NoStoreFinancialData` adds strict no-store
+normalise correctly. `TrustedHostGuard` is the second half of that
+boundary: it validates the client-supplied `Host` against an allow-list
+of the loopback names the bundled shells use plus the host baked into
+`APP_URL`, 404ing anything else. LoopbackOnly alone cannot see a DNS
+rebinding attack — a website that rebinds its own domain to 127.0.0.1
+reaches a genuinely loopback socket — so the Host check is what refuses
+the attacker-controlled domain the browser sends in that case.
+`NoStoreFinancialData` adds strict no-store
 cache-control headers to every response, preventing the browser from
 caching authenticated finance pages where the back button could
 otherwise reveal sensitive balances after sign-out.

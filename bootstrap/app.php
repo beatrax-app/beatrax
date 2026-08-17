@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
+use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 
@@ -30,6 +31,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(LoopbackOnly::class);
+        // Paired with LoopbackOnly, and prepended so it runs before any route
+        // resolves. LoopbackOnly gates the interface the connection landed on;
+        // this gates the Host the client asked for, which is the half a
+        // DNS-rebinding site defeats — its rebound request is genuinely
+        // loopback but carries an attacker-controlled Host.
+        $middleware->prepend(TrustedHostGuard::class);
         // Global append (not group-scoped) so the no-store header lands on
         // every response the app emits — including non-web routes such as
         // the /up health endpoint and any future API or CLI HTTP handler.
@@ -119,6 +126,11 @@ return Application::configure(basePath: dirname(__DIR__))
         }
         if (! file_exists($dbFile)) {
             @touch($dbFile);
+            // The database holds every transaction, balance and account number
+            // in plaintext, so restrict it to the owner the moment it exists —
+            // before the migrator writes anything — rather than leaving it at
+            // the process umask default (commonly 0644, world-readable).
+            @chmod($dbFile, 0600);
         }
     })
     ->create();

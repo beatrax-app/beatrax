@@ -8,6 +8,7 @@ use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Core\Models\User;
@@ -22,6 +23,10 @@ final class ManageUserPage extends Component
 {
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
+    // Locked so a Livewire update cannot retarget the developer's password
+    // reset at another account: mount() is the only writer, and it runs the
+    // is_developer + partner-exists checks before setting it.
+    #[Locked]
     public string $partnerUsername = '';
 
     public string $newPartnerPassword = '';
@@ -48,8 +53,16 @@ final class ManageUserPage extends Component
         $this->partnerUsername = $partner->username;
     }
 
-    public function setPartnerPassword(Hasher $hasher, DatabaseManager $db): void
+    public function setPartnerPassword(Hasher $hasher, DatabaseManager $db, CurrentUser $currentUser): void
     {
+        // Re-check the developer tier on the action itself, not only on the
+        // mount() gate: the developer route middleware does not re-run on a
+        // Livewire update, so a developer downgraded mid-session must not keep
+        // resetting passwords from a page still open in their browser.
+        if ($currentUser->user()->is_developer !== true) {
+            throw new NotFoundHttpException;
+        }
+
         if (strlen($this->newPartnerPassword) < self::MINIMUM_PASSWORD_LENGTH) {
             $this->flashMessage = Lang::get('auth::manage_user.error_min_length');
             $this->newPartnerPassword = '';

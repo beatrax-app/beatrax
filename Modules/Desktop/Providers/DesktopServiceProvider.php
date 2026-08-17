@@ -14,6 +14,7 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Auth\Public\Events\AppLockPassphraseChanged;
 use Modules\Core\Public\Contracts\SecretShield;
+use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\HostPipeWatch;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Desktop\Internal\Http\Livewire\CloseWindowPrompt;
@@ -29,6 +30,9 @@ use Modules\Desktop\Internal\Listeners\LockOnWindowHideOrClose;
 use Modules\Desktop\Internal\Listeners\NavigateOnNotificationDeepLink;
 use Modules\Desktop\Internal\Listeners\StartSyncListenerOnEnable;
 use Modules\Desktop\Internal\Listeners\SurfaceWorkerCrashAlert;
+use Modules\Desktop\Internal\Listeners\TriggerUpdateDownload;
+use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
+use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
 use Modules\Desktop\Internal\Native\AppMenuBuilder;
 use Modules\Desktop\Internal\Native\DesktopColdStartVault;
 use Modules\Desktop\Internal\Native\DesktopKeyCustodian;
@@ -45,6 +49,8 @@ use Modules\Notifications\Public\Events\NotificationDeliverable;
 use Modules\Sync\Public\Events\DeviceSyncEnabled;
 use Modules\Sync\Public\Events\SyncTransportCredentialsAvailable;
 use Native\Desktop\Events\App\OpenFile;
+use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
+use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
 use Native\Desktop\Events\ChildProcess\ProcessExited;
 use Native\Desktop\Events\Windows\WindowBlurred;
 use Native\Desktop\Events\Windows\WindowClosed;
@@ -209,5 +215,13 @@ final class DesktopServiceProvider extends ServiceProvider
         $events->listen(WindowClosed::class, [LockOnWindowHideOrClose::class, 'handle']);
 
         $events->listen(NotificationDeepLink::class, [NavigateOnNotificationDeepLink::class, 'handle']);
+
+        // The explicit-consent auto-update chain, live only inside the bundle:
+        // electron-updater discovers an update but downloads nothing until the
+        // first listener verifies the signed manifest and the user consents,
+        // and the last listener re-verifies the binary before it installs.
+        $events->listen(UpdateAvailable::class, [VerifyAndAnnounceUpdate::class, 'handle']);
+        $events->listen(UpdateInstallRequested::class, [TriggerUpdateDownload::class, 'handle']);
+        $events->listen(UpdateDownloaded::class, [VerifyAndInstallDownload::class, 'handle']);
     }
 }

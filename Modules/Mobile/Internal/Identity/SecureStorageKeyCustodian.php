@@ -7,6 +7,7 @@ namespace Modules\Mobile\Internal\Identity;
 use Modules\Auth\Public\Contracts\KeyCustodian;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Mobile\Internal\Exceptions\SecureStorageException;
 use Native\Mobile\Facades\SecureStorage;
 
 /**
@@ -40,12 +41,12 @@ class SecureStorageKeyCustodian implements KeyCustodian
 
         $slot = self::SLOT_PREFIX.$this->currentUser->id();
 
-        // set() returns false on a native-side failure. Fall back to holding
-        // the raw key in the session (degraded pass-through); read() then
-        // takes the `! str_starts_with(handle, SLOT_PREFIX)` branch and
-        // returns it unchanged.
+        // On device, a native set() failure must NOT fall back to holding the
+        // raw key in-session: with SESSION_DRIVER=database that KEK would land
+        // in the sessions table in plaintext. Fail closed so the unlock surface
+        // re-runs the PIN path instead of degrading to a plaintext key.
         if (! $this->nativeSet($slot, base64_encode($rawKey))) {
-            return $rawKey;
+            throw SecureStorageException::nativeSetFailed($slot);
         }
 
         $this->keyCache[$slot] = $rawKey;
@@ -57,7 +58,9 @@ class SecureStorageKeyCustodian implements KeyCustodian
     {
         if (! $this->runtimeAvailable() || ! str_starts_with($handle, self::SLOT_PREFIX)) {
             // Not on device, or the handle is a pass-through raw key from a
-            // store() that ran while unavailable / failed — return unchanged.
+            // store() that ran while the runtime was unavailable -- return it
+            // unchanged. An on-device set() failure no longer reaches here: it
+            // throws instead, so a handle is never a failed-store raw key.
             return $handle;
         }
 

@@ -65,9 +65,9 @@ final readonly class RelayClient
 
     /**
      * @param  string  $deviceId  Authenticated device draining its mailbox
-     * @param  string  $authToken  Per-device bearer token bound to $deviceId
-     *                             (RelayConfig::deriveDeviceToken($deviceId)); a
-     *                             relay-wide token is rejected by the server.
+     * @param  string  $authToken  The draining device's own drain secret
+     *                             (RelayConfig::deviceDrainSecret()), which the
+     *                             relay verifies per-device via trust-on-first-use.
      * @return list<array<string, mixed>>
      *
      * @throws RelayRefusedException when no endpoint is configured or it is not HTTPS
@@ -101,10 +101,9 @@ final readonly class RelayClient
 
     /**
      * @param  int  $id  relay_mailbox.id from a drain() response row
-     * @param  string  $authToken  Per-device bearer token bound to the recipient
-     *                             device that owns the row
-     *                             (RelayConfig::deriveDeviceToken($recipientDid)); a
-     *                             relay-wide token is rejected by the server.
+     * @param  string  $authToken  The owning device's own drain secret
+     *                             (RelayConfig::deviceDrainSecret()), which the
+     *                             relay verifies per-device via trust-on-first-use.
      *
      * @throws RelayRefusedException when no endpoint is configured or it is not HTTPS
      * @throws RelayUnavailableException when the relay answers with a non-2xx

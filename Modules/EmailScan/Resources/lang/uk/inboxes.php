@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'повтор через :nгод',
 
     'reconnect' => 'Підключити знову',
+    'disconnect' => 'Відключити',
     'scan_now' => 'Сканувати зараз',
     'scan_in_progress_title' => 'Сканування вже триває',
 

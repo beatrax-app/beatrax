@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Http\Request;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\HorizonServiceProvider as BaseHorizonServiceProvider;
+use Modules\Core\Models\User;
 
 // The single registered Horizon provider: the package's own provider is
 // excluded from auto-discovery, so route/asset/event/command registration
@@ -28,14 +29,19 @@ final class HorizonServiceProvider extends BaseHorizonServiceProvider
 
         $this->gate();
 
-        Horizon::auth(static fn (Request $request): bool => $request->user() !== null);
+        Horizon::auth(static function (Request $request): bool {
+            $user = $request->user();
+
+            return $user instanceof User && $user->is_developer === true;
+        });
     }
 
-    // Any authenticated user on the loopback dev box may view Horizon;
-    // multi-user tightening will revisit this when a second user lands.
+    // Queue payloads can carry transaction data, so the dashboard is scoped to
+    // the developer tier rather than any authenticated account — the same
+    // is_developer gate the /dev routes and DevMode surfaces already enforce.
     protected function gate(): void
     {
         $gate = $this->app->make(Gate::class);
-        $gate->define('viewHorizon', static fn ($user): bool => $user !== null);
+        $gate->define('viewHorizon', static fn ($user): bool => $user instanceof User && $user->is_developer === true);
     }
 }

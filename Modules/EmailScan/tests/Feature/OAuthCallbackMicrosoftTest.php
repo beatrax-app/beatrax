@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
+use Modules\EmailScan\Internal\OAuth\AuthorizationRequest;
 use Modules\EmailScan\Internal\OAuth\InvalidStateException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
@@ -78,14 +79,14 @@ it('OAuth callback (microsoft) happy path inserts inbox + scan_state + saves ref
             // Skip parent constructor — we replace the surface.
         }
 
-        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        public function getAuthorizationUrl(string $state, string $redirectUri): AuthorizationRequest
         {
             $this->lastRedirectUri = $redirectUri;
 
-            return 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state='.$state;
+            return new AuthorizationRequest('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state='.$state, '');
         }
 
-        public function exchangeAuthorizationCode(string $code, string $redirectUri): AccessTokenWithEmail
+        public function exchangeAuthorizationCode(string $code, string $redirectUri, string $pkceVerifier = ''): AccessTokenWithEmail
         {
             $this->lastRedirectUri = $redirectUri;
 

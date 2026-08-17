@@ -69,8 +69,9 @@ final class OAuthConnectController
         $redirectUri = $this->loopback->forProvider($provider);
 
         $state = $this->oauthState->issueState($provider, $this->currentUser->user()->id, $existingInboxId);
-        $authorizationUrl = $oauth->getAuthorizationUrl($state, $redirectUri);
+        $authorization = $oauth->getAuthorizationUrl($state, $redirectUri);
+        $this->oauthState->storePkceVerifier($provider, $authorization->pkceVerifier);
 
-        return $this->redirector->away($authorizationUrl);
+        return $this->redirector->away($authorization->url);
     }
 }

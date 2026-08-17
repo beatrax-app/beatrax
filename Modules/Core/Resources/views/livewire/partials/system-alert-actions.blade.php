@@ -39,9 +39,9 @@
         <div class="flex flex-wrap items-center justify-end gap-2">
             <button
                 type="button"
-                wire:click="acknowledge({{ $alert->id }})"
+                wire:click="install({{ $alert->id }})"
                 wire:loading.attr="disabled"
-                wire:target="acknowledge({{ $alert->id }})"
+                wire:target="install({{ $alert->id }})"
                 aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-slate-900 text-white hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 px-3 py-1.5 text-sm font-medium dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300"
@@ -87,9 +87,9 @@
         <div class="flex items-center justify-end">
             <button
                 type="button"
-                wire:click="acknowledge({{ $alert->id }})"
+                wire:click="install({{ $alert->id }})"
                 wire:loading.attr="disabled"
-                wire:target="acknowledge({{ $alert->id }})"
+                wire:target="install({{ $alert->id }})"
                 aria-label="{{ Lang::get('core::alerts.actions.install_next_launch_aria', ['id' => $alert->id]) }}"
                 data-testid="resolve-alert-{{ $alert->id }}"
                 class="rounded bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-rose-600 px-3 py-1.5 text-sm font-medium dark:hover:bg-rose-400 dark:bg-rose-500"

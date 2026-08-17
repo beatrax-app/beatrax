@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'нов опит след :nч',
 
     'reconnect' => 'Свържи отново',
+    'disconnect' => 'Прекъсване',
     'scan_now' => 'Сканирай сега',
     'scan_in_progress_title' => 'Вече тече сканиране',
 

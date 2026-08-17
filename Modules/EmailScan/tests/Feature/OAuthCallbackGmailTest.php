@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\EmailScan\Internal\OAuth\AccessTokenWithEmail;
+use Modules\EmailScan\Internal\OAuth\AuthorizationRequest;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\InvalidStateException;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
@@ -81,14 +82,14 @@ it('OAuth callback (gmail) happy path inserts inbox + scan_state + saves refresh
             // Skip parent constructor — we replace the surface.
         }
 
-        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        public function getAuthorizationUrl(string $state, string $redirectUri): AuthorizationRequest
         {
             $this->lastRedirectUri = $redirectUri;
 
-            return 'https://accounts.google.com/o/oauth2/auth?state='.$state;
+            return new AuthorizationRequest('https://accounts.google.com/o/oauth2/auth?state='.$state, '');
         }
 
-        public function exchangeAuthorizationCode(string $code, string $redirectUri): AccessTokenWithEmail
+        public function exchangeAuthorizationCode(string $code, string $redirectUri, string $pkceVerifier = ''): AccessTokenWithEmail
         {
             $this->lastRedirectUri = $redirectUri;
 
@@ -223,12 +224,12 @@ it('new-inbox callback without a refresh token rejects with flash and inserts no
             // Skip parent constructor.
         }
 
-        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        public function getAuthorizationUrl(string $state, string $redirectUri): AuthorizationRequest
         {
-            return 'https://accounts.google.com/?state='.$state;
+            return new AuthorizationRequest('https://accounts.google.com/?state='.$state, '');
         }
 
-        public function exchangeAuthorizationCode(string $code, string $redirectUri): AccessTokenWithEmail
+        public function exchangeAuthorizationCode(string $code, string $redirectUri, string $pkceVerifier = ''): AccessTokenWithEmail
         {
             return $this->token;
         }
@@ -286,12 +287,12 @@ it('compensating rollback: secret-write failure deletes the just-inserted inbox 
             // Skip parent.
         }
 
-        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        public function getAuthorizationUrl(string $state, string $redirectUri): AuthorizationRequest
         {
-            return 'https://accounts.google.com/?state='.$state;
+            return new AuthorizationRequest('https://accounts.google.com/?state='.$state, '');
         }
 
-        public function exchangeAuthorizationCode(string $code, string $redirectUri): AccessTokenWithEmail
+        public function exchangeAuthorizationCode(string $code, string $redirectUri, string $pkceVerifier = ''): AccessTokenWithEmail
         {
             return $this->token;
         }

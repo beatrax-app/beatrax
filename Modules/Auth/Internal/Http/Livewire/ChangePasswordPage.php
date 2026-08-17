@@ -6,6 +6,7 @@ namespace Modules\Auth\Internal\Http\Livewire;
 
 use Illuminate\Contracts\Hashing\Hasher;
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
@@ -32,6 +33,7 @@ final class ChangePasswordPage extends Component
         Hasher $hasher,
         DatabaseManager $db,
         UrlGenerator $urls,
+        Session $session,
     ): void {
         $user = $currentUser->user();
 
@@ -62,6 +64,15 @@ final class ChangePasswordPage extends Component
                 'password' => $hasher->make($this->newPassword),
                 'force_password_change_at_next_login' => false,
             ]);
+
+        // Drop every other session this user holds (a second paired device,
+        // a browser left open elsewhere) so a password changed in response to
+        // suspected compromise actually severs the other sessions; the current
+        // one is kept so this request can complete its redirect.
+        $db->connection()->table('sessions')
+            ->where('user_id', $user->id)
+            ->where('id', '!=', $session->getId())
+            ->delete();
 
         $this->redirect($urls->route('dashboard'), navigate: false);
     }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Encryption\Encrypter;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\OpenBanking\Public\Dto\OpenBankingCredentials;
@@ -58,6 +59,9 @@ function openBankingSecretsFixtureCredentials(): OpenBankingCredentials
 beforeEach(function (): void {
     $this->obSecretsPath = openBankingSecretsFixturePath();
     $this->obFiles = new Filesystem;
+    // A real APP_KEY-style encrypter so the at-rest layer is exercised for
+    // real (genuine ciphertext on disk), not stubbed.
+    $this->obEncrypter = new Encrypter(Encrypter::generateKey('aes-256-cbc'), 'aes-256-cbc');
     if ($this->obFiles->exists($this->obSecretsPath)) {
         $this->obFiles->delete($this->obSecretsPath);
     }
@@ -76,7 +80,7 @@ afterEach(function (): void {
 });
 
 it('round-trips all six credential fields through save then load', function (): void {
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     $credentials = openBankingSecretsFixtureCredentials();
 
     $repo->save($credentials);
@@ -92,7 +96,7 @@ it('round-trips all six credential fields through save then load', function (): 
 });
 
 it('writes the file mode 0600 in a 0700 parent dir', function (): void {
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     $repo->save(openBankingSecretsFixtureCredentials());
 
     expect(is_file($this->obSecretsPath))->toBeTrue();
@@ -101,7 +105,7 @@ it('writes the file mode 0600 in a 0700 parent dir', function (): void {
 });
 
 it('shields the on-disk bytes so raw credential JSON is never plaintext-readable', function (): void {
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     $repo->save(openBankingSecretsFixtureCredentials());
 
     $onDisk = (string) file_get_contents($this->obSecretsPath);
@@ -112,7 +116,7 @@ it('shields the on-disk bytes so raw credential JSON is never plaintext-readable
 });
 
 it('raises SecretsWriteFailed with no credential material on a simulated rename failure, cleans up the temp file, and restores umask', function (): void {
-    $repo = new class(new Filesystem, new OpenBankingReversingShield) extends OpenBankingSecretsRepository
+    $repo = new class(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter) extends OpenBankingSecretsRepository
     {
         protected function performRename(string $tmp, string $final): bool
         {
@@ -139,12 +143,12 @@ it('raises SecretsWriteFailed with no credential material on a simulated rename 
 });
 
 it('returns null from load() when the file is missing (no throw)', function (): void {
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     expect($repo->load())->toBeNull();
 });
 
 it('reports hasApplication false before save and true after', function (): void {
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     expect($repo->hasApplication())->toBeFalse();
 
     $repo->save(openBankingSecretsFixtureCredentials());
@@ -152,7 +156,7 @@ it('reports hasApplication false before save and true after', function (): void 
 });
 
 it('clear removes the credential file, load returns null afterward, and clear is idempotent', function (): void {
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     $repo->save(openBankingSecretsFixtureCredentials());
     expect($repo->load())->not->toBeNull();
 
@@ -177,7 +181,7 @@ it('treats an empty secrets file as no credentials rather than a corrupt one', f
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, '');
 
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
 
     expect($repo->load())->toBeNull()
         ->and($repo->hasApplication())->toBeFalse();
@@ -190,7 +194,7 @@ it('refuses a secrets file whose revealed bytes are not JSON', function (): void
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, strrev('{"applicationId": '));
 
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
 
     expect(fn () => $repo->load())
         ->toThrow(OpenBankingCredentialsException::class, $this->obSecretsPath);
@@ -203,7 +207,7 @@ it('names only the path when it refuses an unreadable secrets file', function ()
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, strrev('{"applicationId": "super-secret-value"'));
 
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
 
     try {
         $repo->load();
@@ -221,7 +225,7 @@ it('reads a well-formed non-object secrets file as an empty store', function (st
     $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
     $this->obFiles->put($this->obSecretsPath, strrev($revealed));
 
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
 
     expect($repo->load())->toBeNull();
 })->with([
@@ -252,7 +256,7 @@ it('raises SecretsWriteFailed when the secrets parent directory cannot be create
     $this->obFiles->ensureDirectoryExists(dirname($secretsDir));
     file_put_contents($secretsDir, 'blocking file');
 
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
 
     try {
         expect(fn () => $repo->save(openBankingSecretsFixtureCredentials()))
@@ -266,7 +270,7 @@ it('raises SecretsWriteFailed when the secrets parent directory cannot be create
 // encodePayload() maps the JsonException to SecretsWriteFailed without echoing
 // the payload.
 it('raises SecretsWriteFailed when the payload cannot be encoded, without leaking it', function (): void {
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
 
     $badCredentials = new OpenBankingCredentials(
         applicationId: 'app-fixture-123',
@@ -296,7 +300,7 @@ it('raises SecretsWriteFailed when the temp file cannot be opened, and restores 
     // A directory sitting where the temp file wants to be — fopen('wb') fails.
     @mkdir($this->obSecretsPath.'.tmp', 0700);
 
-    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield);
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
     $prevUmask = umask();
 
     try {
@@ -306,4 +310,65 @@ it('raises SecretsWriteFailed when the temp file cannot be opened, and restores 
     } finally {
         @rmdir($this->obSecretsPath.'.tmp');
     }
+});
+
+/*
+ * At-rest encryption layer (APP_KEY encrypter) added on top of the shield.
+ * The on-disk bytes are shield(encrypt(json)); with the reversing shield
+ * that is strrev(ciphertext), so a test can strrev() back to the exact
+ * Laravel ciphertext and decrypt it to prove the encrypter actually ran —
+ * not merely the (identity-on-web) shield. Legacy installs whose file
+ * predates this layer hold strrev(json) and must still load, upgrading to
+ * ciphertext on the next save.
+ */
+
+it('encrypts the payload at rest so the on-disk bytes decrypt back to the saved JSON, and reads its own encrypted file', function (): void {
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
+    $repo->save(openBankingSecretsFixtureCredentials());
+
+    $ciphertext = strrev((string) file_get_contents($this->obSecretsPath));
+    $decryptedJson = $this->obEncrypter->decryptString($ciphertext);
+
+    expect($decryptedJson)->toContain('app-fixture-123')
+        ->and($decryptedJson)->toContain('session-fixture-abc')
+        ->and($ciphertext)->not->toContain('app-fixture-123')
+        ->and($ciphertext)->not->toContain('BEGIN PRIVATE KEY')
+        ->and($ciphertext)->not->toContain('session-fixture-abc');
+
+    $loaded = $repo->load();
+    expect($loaded)->not->toBeNull();
+    expect($loaded->applicationId)->toBe('app-fixture-123');
+    expect($loaded->privateKeyPem)->toBe(openBankingSecretsFixtureCredentials()->privateKeyPem);
+    expect($loaded->sessionId)->toBe('session-fixture-abc');
+});
+
+it('still reads a legacy plaintext secrets file, then re-persists it encrypted on the next save', function (): void {
+    // Pre-encryption on-disk format: shield-protected but NOT encrypted.
+    // With the reversing shield that is strrev(json).
+    $legacyJson = json_encode([
+        'application_id' => 'legacy-app-777',
+        'private_key_pem' => "-----BEGIN PRIVATE KEY-----\nlegacy-bytes\n-----END PRIVATE KEY-----",
+        'session_id' => 'legacy-session-xyz',
+        'consent_expires_at' => '2026-08-01T00:00:00+00:00',
+        'bank_sca_host' => 'sca.asnbank.nl',
+        'institution_id' => 'ASNBNL21',
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+    $this->obFiles->ensureDirectoryExists(dirname($this->obSecretsPath));
+    $this->obFiles->put($this->obSecretsPath, strrev($legacyJson));
+
+    $repo = new OpenBankingSecretsRepository(new Filesystem, new OpenBankingReversingShield, $this->obEncrypter);
+
+    $loaded = $repo->load();
+    expect($loaded)->not->toBeNull();
+    expect($loaded->applicationId)->toBe('legacy-app-777');
+    expect($loaded->privateKeyPem)->toContain('legacy-bytes');
+    expect($loaded->sessionId)->toBe('legacy-session-xyz');
+
+    // The upgrade path: saving again rewrites the file through the APP_KEY
+    // layer, so the bytes are now genuine ciphertext for the same secrets.
+    $repo->save($loaded);
+    $upgradedCiphertext = strrev((string) file_get_contents($this->obSecretsPath));
+    expect($this->obEncrypter->decryptString($upgradedCiphertext))->toContain('legacy-app-777');
+    expect($repo->load()?->applicationId)->toBe('legacy-app-777');
 });

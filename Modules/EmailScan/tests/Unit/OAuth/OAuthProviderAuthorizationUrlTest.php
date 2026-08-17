@@ -34,7 +34,7 @@ beforeEach(function (): void {
 it('asks Google for read-only mail and nothing wider', function (): void {
     $this->secrets->saveProviderClient('gmail', 'google-client', 'google-secret', $this->redirect);
 
-    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl('state-token-123', $this->redirect);
+    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl('state-token-123', $this->redirect)->url;
     parse_str((string) parse_url($url, PHP_URL_QUERY), $params);
 
     // The League provider prepends its own openid/email/profile defaults, so
@@ -54,7 +54,7 @@ it('asks Google for read-only mail and nothing wider', function (): void {
 it('asks Google for a refresh token, which only offline consent returns', function (): void {
     $this->secrets->saveProviderClient('gmail', 'google-client', 'google-secret', $this->redirect);
 
-    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl('s', $this->redirect);
+    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl('s', $this->redirect)->url;
     parse_str((string) parse_url($url, PHP_URL_QUERY), $params);
 
     // Without both of these Google returns an access token only, and the
@@ -71,7 +71,7 @@ it('asks Google for a refresh token, which only offline consent returns', functi
 it('carries the state through verbatim, since it is the CSRF check', function (string $state): void {
     $this->secrets->saveProviderClient('gmail', 'google-client', 'google-secret', $this->redirect);
 
-    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl($state, $this->redirect);
+    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl($state, $this->redirect)->url;
     parse_str((string) parse_url($url, PHP_URL_QUERY), $params);
 
     expect($params['state'])->toBe($state);
@@ -91,7 +91,7 @@ it('refuses to start the dance before the OAuth client is configured', function 
 it('does not leak the client secret into the authorization URL', function (): void {
     $this->secrets->saveProviderClient('gmail', 'google-client', 'super-secret-value', $this->redirect);
 
-    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl('s', $this->redirect);
+    $url = app(GoogleOAuthProvider::class)->getAuthorizationUrl('s', $this->redirect)->url;
 
     // The URL goes to the user's browser and into their history; only the
     // client id belongs in it.

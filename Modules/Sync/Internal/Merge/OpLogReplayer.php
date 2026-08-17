@@ -89,6 +89,7 @@ final readonly class OpLogReplayer
         $this->verifier = new OpLogEntryVerifier(
             $db,
             $rules,
+            new RegisteredColumns($db),
             $sensitiveFields,
             $deviceKeys,
             new DeviceKeySigner,

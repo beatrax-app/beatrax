@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\OpenBanking\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Filesystem\Filesystem;
 use JsonException;
 use Modules\Core\Models\User;
@@ -32,9 +34,13 @@ class OpenBankingSecretsRepository
     public function __construct(
         private readonly Filesystem $files,
         private readonly SecretShield $shield,
+        // Second at-rest layer beyond the shield: the Laravel encrypter
+        // (APP_KEY) so the private key + session id stay ciphertext even
+        // where the bound shield is the identity PassthroughSecretShield.
+        private readonly Encrypter $encrypter,
         // Injected (not the Log facade — larastan strict rules forbid
         // facades here) so the single-user guard can warn. Defaults to
-        // NullLogger so the DB-less unit construction stays 2-arg.
+        // NullLogger so unit construction can omit it.
         private readonly LoggerInterface $logger = new NullLogger,
     ) {}
 
@@ -156,12 +162,14 @@ class OpenBankingSecretsRepository
             return [];
         }
 
-        // Reveal BEFORE decode: on the desktop bundle $raw is
-        // safeStorage-shielded ciphertext, not JSON.
+        // Undo the write layers outer-to-inner: reveal the shield (on the
+        // desktop bundle $raw is safeStorage ciphertext, not JSON), then
+        // decrypt the APP_KEY layer back to the JSON bytes.
         $revealed = $this->shield->reveal($raw);
+        $json = $this->decryptAtRest($revealed);
 
         try {
-            $decoded = json_decode($revealed, true, flags: JSON_THROW_ON_ERROR);
+            $decoded = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             throw OpenBankingCredentialsException::unreadable($absolute, $e);
         }
@@ -180,6 +188,21 @@ class OpenBankingSecretsRepository
         return $out;
     }
 
+    // Legacy fallback: a file written before the APP_KEY layer existed
+    // holds shielded-but-unencrypted JSON, for which decrypt() raises
+    // DecryptException — treat those revealed bytes as plaintext so the
+    // connection survives, and the next save() re-persists them encrypted.
+    private function decryptAtRest(string $revealed): string
+    {
+        try {
+            $plaintext = $this->encrypter->decrypt($revealed, false);
+        } catch (DecryptException) {
+            return $revealed;
+        }
+
+        return is_string($plaintext) ? $plaintext : $revealed;
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -188,10 +211,12 @@ class OpenBankingSecretsRepository
         $absolute = $this->absolutePath();
         $this->ensureSecretsDirectory(dirname($absolute));
 
-        // Shield the encoded JSON bytes before they ever touch disk —
-        // identity on web/desktop-without-keychain, safeStorage ciphertext
-        // on the desktop bundle.
-        $bytes = $this->shield->protect($this->encodePayload($data, $absolute));
+        // Two at-rest layers applied inner-to-outer before the bytes touch
+        // disk: the APP_KEY encrypter first (ciphertext even where the shield
+        // is identity), then the shield — safeStorage ciphertext on the
+        // desktop bundle, identity on web/mobile/docker.
+        $ciphertext = $this->encrypter->encrypt($this->encodePayload($data, $absolute), false);
+        $bytes = $this->shield->protect($ciphertext);
 
         $tmp = $absolute.'.tmp';
         $this->writeTempFile($tmp, $bytes);

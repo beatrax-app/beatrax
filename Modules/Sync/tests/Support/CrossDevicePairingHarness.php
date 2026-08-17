@@ -7,6 +7,7 @@ namespace Modules\Sync\Tests\Support;
 use Amp\Http\Server\Driver\Client as AmpClient;
 use Amp\Http\Server\Request as AmpRequest;
 use Amp\Http\Server\Response as AmpResponse;
+use Amp\Socket\InternetAddress;
 use Closure;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Schema\Blueprint;
@@ -20,6 +21,8 @@ use Modules\Sync\Commands\RelayServeCommand;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
+use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\NullLogger;
@@ -91,11 +94,14 @@ trait CrossDevicePairingHarness
 
         $mailbox = new RelayMailbox($db, $this->app->make(Clock::class));
         // The harness drives the relay in-process over a fake HTTP factory, so
-        // it never binds a socket and needs no TLS material of its own.
+        // it never binds a socket and needs no TLS material of its own. The
+        // per-device drain auth is now TOFU via RelayDrainRegistry, so the
+        // command no longer takes the relay-wide RelayConfig.
         $command = new RelayServeCommand(
             new NullLogger,
             $mailbox,
-            $this->harnessRelayConfig,
+            new RelayDrainRegistry,
+            new RelayDeliverRateLimiter($this->app->make(Clock::class)),
             new RelayTlsMaterial,
             new DaemonShutdownSignal,
         );
@@ -144,10 +150,13 @@ trait CrossDevicePairingHarness
      */
     protected function crossDevicePairingTearDown(): void
     {
-        $tokenPath = UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.'sync-relay-token.json';
+        $secretsDir = UserDataPathService::secretsPath();
+        $tokenPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-token.json';
+        $drainSecretPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-secret.json';
+        $drainRegistryPath = $secretsDir.DIRECTORY_SEPARATOR.'sync-relay-drain-registry.json';
         $relayPath = UserDataPathService::appPath('sync/relay.json');
 
-        foreach ([$tokenPath, $relayPath] as $path) {
+        foreach ([$tokenPath, $drainSecretPath, $drainRegistryPath, $relayPath] as $path) {
             if (is_file($path)) {
                 @unlink($path);
             }
@@ -179,6 +188,9 @@ trait CrossDevicePairingHarness
                 $url = $request->url();
 
                 $ampClient = Mockery::mock(AmpClient::class);
+                // Deliver reads the source IP for its rate-limit bucket; the
+                // in-process harness has no socket, so supply a stable address.
+                $ampClient->shouldReceive('getRemoteAddress')->andReturn(new InternetAddress('127.0.0.1', 12345));
                 $ampUri = HttpUri::new($url);
 
                 $headers = [];

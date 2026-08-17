@@ -17,6 +17,8 @@ final class RelayConfig
 
     private const TOKEN_FILE = 'sync-relay-token.json';
 
+    private const DRAIN_SECRET_FILE = 'sync-relay-drain-secret.json';
+
     // Never throws on a missing file — absent file/empty `endpoint` key
     // both mean "not configured".
     public function endpointUrl(): ?string
@@ -220,23 +222,6 @@ final class RelayConfig
         return is_array($data) ? $data : null;
     }
 
-    // Derives a per-device drain token = HMAC-SHA256(authToken, device_id) —
-    // a single shared bearer token would let any holder drain an arbitrary
-    // recipient's mailbox. ZK preserved: only HMACs the device_id (routing
-    // metadata already visible).
-    /**
-     * @param  string  $deviceId  The device_id whose mailbox the token authorizes.
-     */
-    public function deriveDeviceToken(string $deviceId): ?string
-    {
-        $secret = $this->authToken();
-        if ($secret === null || $secret === '' || $deviceId === '') {
-            return null;
-        }
-
-        return hash_hmac('sha256', $deviceId, $secret);
-    }
-
     // Mirrors the DeviceIdentityService key-file write pattern: mkdir 0700
     // -> write -> chmod 0600. Passing null clears the stored token.
     /**
@@ -263,6 +248,67 @@ final class RelayConfig
 
         // A silently-swallowed chmod failure would leave the secret token
         // file world-readable with no signal — verify and throw instead.
+        if (! @chmod($path, 0600)) {
+            throw SecretFileException::couldNotLockDown($path);
+        }
+    }
+
+    // This device's OWN per-instance drain secret, minted once and persisted
+    // like the token/pin. The draining client presents it and the relay
+    // verifies it via trust-on-first-use, so it is per-device — NOT the
+    // relay-wide authToken every paired peer receives through the QR.
+    /**
+     * @throws SecretFileException on an I/O failure, including one that would
+     *                             leave the secret readable
+     */
+    public function deviceDrainSecret(): string
+    {
+        $existing = $this->readDeviceDrainSecret();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $secret = bin2hex(random_bytes(32));
+        $this->writeDeviceDrainSecret($secret);
+
+        return $secret;
+    }
+
+    private function readDeviceDrainSecret(): ?string
+    {
+        $data = $this->readJsonObject(UserDataPathService::secretsPath().DIRECTORY_SEPARATOR.self::DRAIN_SECRET_FILE);
+        if ($data === null) {
+            return null;
+        }
+
+        $secret = $data['secret'] ?? null;
+
+        return is_string($secret) && $secret !== '' ? $secret : null;
+    }
+
+    // Same mkdir 0700 -> write -> chmod 0600 discipline as setAuthToken: the
+    // secret is a per-device bearer credential, so a chmod failure that would
+    // leave it world-readable throws rather than being swallowed.
+    /**
+     * @throws SecretFileException on an I/O failure
+     */
+    private function writeDeviceDrainSecret(string $secret): void
+    {
+        $dir = UserDataPathService::secretsPath();
+        $path = $dir.DIRECTORY_SEPARATOR.self::DRAIN_SECRET_FILE;
+
+        if (! is_dir($dir) && ! @mkdir($dir, 0700, true)) {
+            throw SecretFileException::couldNotCreateSecretsDirectory($dir);
+        }
+
+        $json = json_encode(['secret' => $secret], JSON_THROW_ON_ERROR);
+
+        // Suppressed so the `=== false` check decides; unsuppressed the
+        // E_WARNING becomes an ErrorException first and the guard never ran.
+        if (@file_put_contents($path, $json, LOCK_EX) === false) {
+            throw SecretFileException::couldNotWriteDrainSecret($path);
+        }
+
         if (! @chmod($path, 0600)) {
             throw SecretFileException::couldNotLockDown($path);
         }

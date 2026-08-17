@@ -7,6 +7,7 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Models\User;
@@ -77,6 +78,7 @@ function ocdSeedApplication(string $privateKeyPem, ?string $bankScaHost = null, 
     $repo = new OpenBankingSecretsRepository(
         new Filesystem,
         app(SecretShield::class),
+        app(Encrypter::class),
     );
 
     $repo->save(new OpenBankingCredentials(

@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'proovin uuesti :nh pärast',
 
     'reconnect' => 'Ühenda uuesti',
+    'disconnect' => 'Ühenda lahti',
     'scan_now' => 'Skanni kohe',
     'scan_in_progress_title' => 'Skannimine juba käib',
 

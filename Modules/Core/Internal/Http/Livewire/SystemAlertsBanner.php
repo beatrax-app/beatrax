@@ -14,6 +14,7 @@ use Modules\Core\Models\UserPreference;
 use Modules\Core\Public\Actions\AcknowledgeSystemAlert;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\UpdateAlertKind;
+use Modules\Core\Public\Events\UpdateInstallRequested;
 use Modules\Core\Public\Services\SystemAlertQuery;
 
 /**
@@ -38,6 +39,26 @@ final class SystemAlertsBanner extends Component
     public function acknowledge(int $alertId, AcknowledgeSystemAlert $action, CurrentUser $currentUser): void
     {
         $action($alertId, $currentUser->user());
+    }
+
+    // The user consenting to a verified update. This shared banner only raises
+    // the request; the desktop module is the sole listener and turns it into a
+    // re-verified download, so on web or mobile — where no listener is bound —
+    // the click is inert and nothing outside the app stores ever installs.
+    public function install(int $alertId, AcknowledgeSystemAlert $acknowledge, CurrentUser $currentUser): void
+    {
+        $alert = SystemAlert::withoutGlobalScopes()->find($alertId);
+        if ($alert === null) {
+            return;
+        }
+
+        $metadata = is_array($alert->metadata) ? $alert->metadata : [];
+        $latestVersion = $metadata['latestVersion'] ?? null;
+        if (is_string($latestVersion) && $latestVersion !== '') {
+            UpdateInstallRequested::dispatch($latestVersion);
+        }
+
+        $acknowledge($alertId, $currentUser->user());
     }
 
     // Persists metadata.latestVersion into skipped_update_versions AND

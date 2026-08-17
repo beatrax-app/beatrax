@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Modules\Core\Internal\Http\Middleware\LoopbackOnly;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Internal\Http\Middleware\SetLocale;
+use Modules\Core\Internal\Http\Middleware\TrustedHostGuard;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Mobile\Internal\Boot\MobileFirstLaunchBootstrap;
 use Modules\Mobile\Internal\Http\Middleware\MobileEnsureDatabaseReady;
@@ -93,6 +94,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(LoopbackOnly::class);
+        // Paired with LoopbackOnly (mirrors the desktop root): LoopbackOnly
+        // gates the interface the connection arrived on, TrustedHostGuard gates
+        // the Host the client asked for — the half a DNS-rebinding site defeats.
+        // The mobile webview is loopback-served too, so it needs the same gate.
+        $middleware->prepend(TrustedHostGuard::class);
         $middleware->append(NoStoreFinancialData::class);
         // First-launch fresh-install gate (the mobile mirror of the desktop
         // EnsureDatabaseReady welcome branch): a 0-user device is redirected

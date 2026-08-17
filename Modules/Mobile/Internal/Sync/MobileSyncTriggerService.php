@@ -103,13 +103,22 @@ final class MobileSyncTriggerService
     // device's mailbox; it does not yet interpret or confirm drained rows.
     private function relayLeg(DeviceIdentityDto $identity): bool
     {
-        // An unconfigured relay and one that yields no device token are the
-        // same outcome for this leg: there is nothing to dial.
-        $token = $this->relayConfig->isConfigured()
-            ? $this->relayConfig->deriveDeviceToken($identity->deviceId)
-            : null;
+        if (! $this->relayConfig->isConfigured()) {
+            return false;
+        }
 
-        if ($token === null) {
+        // This device presents its OWN per-device drain secret, TOFU-verified
+        // by the relay and matching PairingRelayCourier — the shared HMAC token
+        // every relay peer could recompute is gone. Minting can only fail on a
+        // secrets-file write error, treated here as nothing to dial.
+        try {
+            $token = $this->relayConfig->deviceDrainSecret();
+        } catch (Throwable $e) {
+            $this->logger?->info('MobileSyncTriggerService: could not resolve device drain secret.', [
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return false;
         }
 

@@ -68,13 +68,19 @@ final class OAuthClientWizardModal extends Component
         $provider = $this->provider;
         if (! is_string($provider) || MailProvider::tryFrom($provider) === null) {
             $this->errorMessage = Lang::get('email-scan::wizard.errors.pick_provider');
+            $this->clientSecret = '';
 
             return null;
         }
 
         $validationError = $this->validateCredentials($provider);
         if ($validationError !== null) {
+            // Wipe the secret on a rejected submit too, not only on the
+            // success path: otherwise the plaintext lingers on the component
+            // and re-serialises into the wire:snapshot on every later render.
+            // The user re-enters it alongside fixing what the message flags.
             $this->errorMessage = $validationError;
+            $this->clientSecret = '';
 
             return null;
         }

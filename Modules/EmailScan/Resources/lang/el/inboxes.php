@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'νέα προσπάθεια σε :nώ',
 
     'reconnect' => 'Επανασύνδεση',
+    'disconnect' => 'Αποσύνδεση',
     'scan_now' => 'Σάρωση τώρα',
     'scan_in_progress_title' => 'Η σάρωση βρίσκεται ήδη σε εξέλιξη',
 

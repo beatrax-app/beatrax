@@ -298,6 +298,11 @@ return [
         // integrity is preserved.
         'php scripts/nativephp_inject_macos_update_settings.php',
 
+        // Hold electron-updater at update-available (autoDownload=false,
+        // autoInstallOnAppQuit=false) so nothing downloads or installs until
+        // the Ed25519-signed manifest is verified and the user consents.
+        'php scripts/nativephp_inject_explicit_consent_updates.php',
+
         // Expose `#plugin/*` in the electron package.json `imports` map so
         // subpath imports like `#plugin/server/state.js` resolve under Node
         // subpath imports. The NativePHP-published template only declares the

@@ -12,11 +12,13 @@ use Amp\Http\Server\Response;
 use Amp\Http\Server\SocketHttpServer;
 use Amp\Socket\BindContext;
 use Amp\Socket\Certificate;
+use Amp\Socket\InternetAddress;
 use Amp\Socket\ServerTlsContext;
 use Illuminate\Console\Command;
 use Modules\Sync\Internal\Transport\DaemonShutdownSignal;
 use Modules\Sync\Internal\Transport\Relay\RelayClient;
-use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Internal\Transport\Relay\RelayDeliverRateLimiter;
+use Modules\Sync\Internal\Transport\Relay\RelayDrainRegistry;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\Relay\RelayTlsMaterial;
 use Psr\Log\LoggerInterface;
@@ -56,7 +58,8 @@ final class RelayServeCommand extends Command
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly RelayMailbox $mailbox,
-        private readonly RelayConfig $config,
+        private readonly RelayDrainRegistry $drainRegistry,
+        private readonly RelayDeliverRateLimiter $rateLimiter,
         private readonly RelayTlsMaterial $tls,
         private readonly DaemonShutdownSignal $shutdown,
     ) {
@@ -148,12 +151,18 @@ final class RelayServeCommand extends Command
         return $idStr !== '' && ctype_digit($idStr) ? (int) $idStr : null;
     }
 
-    // POST /relay/deliver — open submission; the recipient's drain token gates
-    // retrieval, not this endpoint. Bounded by blob size, DID_PATTERN, and
-    // MAX_PENDING_PER_RECIPIENT since the endpoint is intentionally
-    // unauthenticated (see class @link).
+    // POST /relay/deliver — open submission; the recipient's drain secret
+    // gates retrieval, not this endpoint. Bounded by a per-source-IP rate
+    // limit, blob size, DID_PATTERN, and MAX_PENDING_PER_RECIPIENT since the
+    // endpoint is intentionally unauthenticated (see class @link).
     private function handleDeliver(Request $request): Response
     {
+        // Per-source-IP throttle first, so a flood is refused before any JSON
+        // parse or DB work — the cheapest possible rejection path.
+        if (! $this->rateLimiter->allow($this->clientKey($request))) {
+            return $this->jsonError(HttpStatus::TOO_MANY_REQUESTS, 'rate_limited');
+        }
+
         $body = json_decode($request->getBody()->buffer(), true, 512, 0);
         $senderDid = $this->stringField($body, 'sender_did');
         $recipientDid = $this->stringField($body, 'recipient_did');
@@ -308,22 +317,34 @@ final class RelayServeCommand extends Command
     }
 
     // Authorization is bound to the specific device whose mailbox is being
-    // accessed (see class @link): timing-safe compare against the per-device
-    // token derived from RelayConfig::deriveDeviceToken($did). Returns false
-    // when no token is configured, $did is empty, or the header is missing/mismatched.
+    // accessed (see class @link): the presented Bearer token is verified
+    // against this device's TOFU-registered per-device drain secret. Rejects
+    // an empty did, a missing/non-Bearer header, and any non-matching token.
     private function isAuthorized(Request $request, string $did): bool
     {
-        $expectedToken = $this->config->deriveDeviceToken($did);
+        if ($did === '') {
+            return false;
+        }
+
         $authHeader = $request->getHeader('authorization');
 
-        // hash_equals only runs in the default arm, so the timing-safe compare
-        // is still the only place a configured token is examined.
-        return match (true) {
-            $expectedToken === null => false,
-            $authHeader === null || $authHeader === '' => false,
-            ! str_starts_with($authHeader, 'Bearer ') => false,
-            default => hash_equals($expectedToken, substr($authHeader, strlen('Bearer '))),
-        };
+        if ($authHeader === null || $authHeader === '' || ! str_starts_with($authHeader, 'Bearer ')) {
+            return false;
+        }
+
+        // The registry runs the timing-safe compare and TOFU-registers a did's
+        // first token; an empty bearer is rejected there before it registers.
+        return $this->drainRegistry->authorizes($did, substr($authHeader, strlen('Bearer ')));
+    }
+
+    // The source IP the deliver rate-limit buckets on. amphp always hands a
+    // real remote address here; InternetAddress drops the ephemeral port so
+    // every connection from one host shares one bucket.
+    private function clientKey(Request $request): string
+    {
+        $address = $request->getClient()->getRemoteAddress();
+
+        return $address instanceof InternetAddress ? $address->getAddress() : $address->toString();
     }
 
     private function isValidDid(string $did): bool

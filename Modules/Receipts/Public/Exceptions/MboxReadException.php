@@ -19,4 +19,9 @@ final class MboxReadException extends RuntimeException
     {
         return new self("MboxIterator: cannot open mbox at {$path}.");
     }
+
+    public static function messageTooLarge(string $path): self
+    {
+        return new self("MboxIterator: a single message in {$path} exceeds the size cap.");
+    }
 }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +43,7 @@ function obcqSeedCredentials(?string $institutionId): void
     }
     openssl_pkey_export($resource, $privateKeyPem);
 
-    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class));
+    $repo = new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class));
     $repo->save(new OpenBankingCredentials(
         applicationId: 'fixture-application-id',
         privateKeyPem: $privateKeyPem,
@@ -84,7 +85,7 @@ function obcqQuery(): OpenBankingConnectionQuery
 
     return new OpenBankingConnectionQuery(
         app(DatabaseManager::class),
-        new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class)),
+        new OpenBankingSecretsRepository(new Filesystem, app(SecretShield::class), app(Encrypter::class)),
         $clock,
     );
 }

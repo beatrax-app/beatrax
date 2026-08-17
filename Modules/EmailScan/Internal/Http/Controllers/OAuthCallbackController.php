@@ -18,6 +18,7 @@ use Modules\EmailScan\Internal\OAuth\InvalidStateException;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\OAuthExchangeFailed;
 use Modules\EmailScan\Internal\OAuth\OAuthStateRepository;
+use Modules\EmailScan\Internal\SafeMessage;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
 use Modules\EmailScan\Public\Enums\MailProvider;
 use Modules\EmailScan\Public\LoopbackRedirectUri;
@@ -87,9 +88,13 @@ final class OAuthCallbackController
         $description = $request->query('error_description');
         $message = is_string($description) && $description !== '' ? $description : $errorParam;
 
+        // Cap the provider-supplied text before flashing it — it renders
+        // escaped so it is not an XSS vector, but the length is attacker
+        // controlled and SafeMessage keeps every forwarded provider string
+        // to one bounded shape.
         return $this->redirector
             ->route('inboxes.index')
-            ->with('oauth_canceled', $message);
+            ->with('oauth_canceled', SafeMessage::cap($message));
     }
 
     private function consumeStateOrFail(Request $request, string $provider, int $userId): int
@@ -118,8 +123,10 @@ final class OAuthCallbackController
             return 'OAuth callback returned no authorization code.';
         }
 
+        $pkceVerifier = $this->oauthState->consumePkceVerifier($provider) ?? '';
+
         try {
-            return $oauth->exchangeAuthorizationCode($code, $this->loopback->forProvider($provider));
+            return $oauth->exchangeAuthorizationCode($code, $this->loopback->forProvider($provider), $pkceVerifier);
         } catch (InvalidGrantException|OAuthExchangeFailed $e) {
             return $e->getMessage();
         }

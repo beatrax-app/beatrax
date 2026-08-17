@@ -6,6 +6,7 @@ namespace Modules\Receipts\Public\Pipeline;
 
 use Generator;
 use Modules\Receipts\Public\Exceptions\MboxReadException;
+use Modules\Receipts\Public\Support\UploadLimits;
 
 // Streaming mboxrd iterator: messages split on lines starting with the
 // literal "From " (stripped); an escaped body line ('>From ') is
@@ -45,6 +46,14 @@ final class MboxIterator
                 }
 
                 $buffer .= $line;
+
+                // "From "-less input (a corrupt archive, or a single crafted
+                // message with no delimiter) would otherwise grow the buffer
+                // without bound; cap one message so the archive is quarantined
+                // rather than exhausting the worker's memory.
+                if (strlen($buffer) > UploadLimits::MAX_MESSAGE_BYTES) {
+                    throw MboxReadException::messageTooLarge($mboxPath);
+                }
             }
             if ($inMessage && $buffer !== '') {
                 yield ['eml' => $buffer, 'byteOffset' => $offset, 'index' => $index];

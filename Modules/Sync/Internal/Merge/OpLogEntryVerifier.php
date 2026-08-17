@@ -12,6 +12,7 @@ use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\OpLogFieldCrypto;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
+use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineReason;
 use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
@@ -26,6 +27,7 @@ final readonly class OpLogEntryVerifier
     public function __construct(
         private DatabaseManager $db,
         private MergeRulesRegistry $rules,
+        private RegisteredColumns $columns,
         private SensitiveFieldRegistry $sensitiveFields,
         private array $deviceKeys,
         private DeviceKeySigner $signer,
@@ -107,7 +109,7 @@ final readonly class OpLogEntryVerifier
     // cascade ops are local, bypass the Ed25519 gate, and keep that check.
     private function rejectionReason(OpLogEntry $entry, int $userId): ?QuarantineReason
     {
-        return match (true) {
+        $reason = match (true) {
             ! $this->rules->isRegistered($entry->table) => QuarantineReason::UnknownTable,
             $this->isSystemDevice($entry->deviceId) => $entry->userId === $userId
                 ? null
@@ -116,6 +118,22 @@ final readonly class OpLogEntryVerifier
             ! $this->verifySignature($entry) => QuarantineReason::ForgedSignature,
             default => null,
         };
+
+        if ($reason !== null) {
+            return $reason;
+        }
+
+        // Only an entry past the table + cross-user + Ed25519 gates reaches the
+        // column gate: a SET/CREATE naming a field that is not a real column of
+        // its table quarantines here instead of failing at the DB write. The
+        // DeleteTombstone sentinel never names a column, so it is exempt.
+        return $this->hasRegisteredColumn($entry) ? null : QuarantineReason::UnknownColumn;
+    }
+
+    private function hasRegisteredColumn(OpLogEntry $entry): bool
+    {
+        return $entry->opType === OpType::DeleteTombstone
+            || $this->columns->isRegistered($entry->table, $entry->field);
     }
 
     // Whether a device id belongs to a deterministically re-derived system op

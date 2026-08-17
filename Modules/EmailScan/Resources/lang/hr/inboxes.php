@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'ponovni pokušaj za :nh',
 
     'reconnect' => 'Poveži ponovno',
+    'disconnect' => 'Odspoji',
     'scan_now' => 'Skeniraj sada',
     'scan_in_progress_title' => 'Skeniranje je već u tijeku',
 

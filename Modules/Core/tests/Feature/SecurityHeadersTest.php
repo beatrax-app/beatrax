@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Vite;
 use Illuminate\Http\Request;
 use Modules\Core\Internal\Http\Middleware\NoStoreFinancialData;
 use Modules\Core\Models\User;
@@ -16,12 +17,10 @@ uses(RefreshDatabase::class);
  * The app renders text it did not write — counterparty names, payment
  * references and receipt bodies all arrive from bank exports and mailboxes,
  * and the transactions list deliberately emits server-built HTML for search
- * highlighting. Escaping is the control; these headers are what stands
- * between a missed escape and a working attack, and they cost nothing.
- *
- * A full Content-Security-Policy is deliberately NOT set here: Alpine
- * evaluates expressions at runtime and would need `unsafe-eval`, which is
- * most of what a CSP is for. These four have no such trade-off.
+ * highlighting. Escaping is the control; these headers, and the nonce-based
+ * Content-Security-Policy, are what stands between a missed escape and a
+ * working attack. The policy admits first-party scripts by nonce and keeps
+ * 'unsafe-eval' only because Alpine compiles its expressions at runtime.
  */
 
 function securityHeadersUser(): User
@@ -39,9 +38,22 @@ it('sends the baseline security headers on an authenticated page', function (): 
 
     $response->assertOk();
     $response->assertHeader('X-Content-Type-Options', 'nosniff');
-    $response->assertHeader('X-Frame-Options', 'DENY');
     $response->assertHeader('Referrer-Policy', 'no-referrer');
     $response->assertHeader('X-Permitted-Cross-Domain-Policies', 'none');
+});
+
+it('sends a nonce-based Content-Security-Policy that backstops a missed escape', function (): void {
+    $response = test()->actingAs(securityHeadersUser())->get('/settings');
+
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+    expect($csp)->toContain("script-src 'self' 'nonce-")
+        ->and($csp)->toContain("object-src 'none'")
+        ->and($csp)->toContain("base-uri 'self'")
+        ->and($csp)->toContain("frame-ancestors 'none'");
+
+    // frame-ancestors supersedes X-Frame-Options, which is withdrawn to avoid
+    // the browsers-disagree conflict when both a CSP and the header are set.
+    expect($response->headers->has('X-Frame-Options'))->toBeFalse();
 });
 
 it('keeps the no-store cache posture the headers were added alongside', function (): void {
@@ -57,7 +69,7 @@ it('does not fight a response that sets its own frame policy', function (): void
     // The Dev Console embeds Horizon and allows it with
     // `frame-ancestors 'self'`. Browsers disagree on whether CSP or
     // X-Frame-Options wins when both are present, so ours stands down.
-    $middleware = new NoStoreFinancialData;
+    $middleware = new NoStoreFinancialData(app(Vite::class), app());
 
     $response = $middleware->handle(
         Request::create('/dev/queue'),

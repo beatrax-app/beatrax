@@ -241,7 +241,7 @@ it('an applied frame is DELETED from the relay mailbox — redraining returns no
 
     // Directly inspect the relay's own mailbox (drain via RelayClient) —
     // the row must be GONE (deleted, not merely re-appliable no-op-idle).
-    $desktopRelayToken = app(RelayConfig::class)->deriveDeviceToken($desktopIdentity->deviceId);
+    $desktopRelayToken = app(RelayConfig::class)->deviceDrainSecret();
     expect($desktopRelayToken)->not->toBeNull();
 
     /** @var RelayClient $relayClient */
@@ -351,7 +351,7 @@ it('a malformed relay blob is drained and deleted (terminal-invalid) — never r
 
     // The malformed row is GONE from the mailbox (terminally deleted, not
     // left pending forever).
-    $desktopRelayToken = app(RelayConfig::class)->deriveDeviceToken($desktopIdentity->deviceId);
+    $desktopRelayToken = app(RelayConfig::class)->deviceDrainSecret();
     expect($desktopRelayToken)->not->toBeNull();
     $pending = $relayClient->drain($desktopIdentity->deviceId, $desktopRelayToken);
     expect($pending)->toBe([]);
