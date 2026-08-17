@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * Names for the default category tree.
+ *
+ * Keyed by the slug DefaultCategoryTreeSeeder assigns, which is stable and
+ * never shown. The tree is created for every real user, so these are product
+ * copy rather than seeded demo data — the names a Dutch user sees on their own
+ * budget screen should not be English.
+ */
+return [
+    'income' => 'Prihodi',
+    'income-salary' => 'Plata',
+    'income-refunds' => 'Povraćaji',
+    'income-other' => 'Ostali prihodi',
+    'housing' => 'Stanovanje',
+    'housing-rent' => 'Kirija / Hipoteka',
+    'housing-utilities' => 'Režije',
+    'housing-internet' => 'Internet i telefon',
+    'groceries' => 'Namirnice',
+    'transport' => 'Prevoz',
+    'transport-public' => 'Javni prevoz',
+    'transport-fuel' => 'Gorivo',
+    'transport-car' => 'Održavanje auta',
+    'insurance' => 'Osiguranje',
+    'insurance-health' => 'Zdravstveno',
+    'insurance-liability' => 'Odgovornost',
+    'insurance-other' => 'Ostalo',
+    'subscriptions' => 'Pretplate',
+    'subscriptions-streaming' => 'Striming',
+    'subscriptions-music' => 'Muzika',
+    'subscriptions-cloud' => 'Oblak / Softver',
+    'subscriptions-memberships' => 'Članarine',
+    'eating-out' => 'Izlasci na jelo',
+    'cash-withdrawal' => 'Podizanje gotovine',
+    'healthcare' => 'Zdravstvo',
+    'personal-care' => 'Lična nega',
+    'donations' => 'Donacije',
+    'transfers-internal' => 'Prenosi (interni)',
+    'fees' => 'Naknade',
+];
