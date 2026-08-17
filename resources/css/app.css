@@ -1461,8 +1461,11 @@ td.date,
         display: grid;
         /* Single column first. A fixed 280px track plus its 1fr sibling needs
            ~330px before padding, so on a phone the second column was laid out
-           past the right edge of a container narrower than the track itself. */
-        grid-template-columns: 1fr;
+           past the right edge of a container narrower than the track itself.
+           minmax(0, …) rather than a bare 1fr: a fr track's automatic minimum
+           is min-content, and the tax deduction-category rows measure ~367px
+           of it, which pushed that whole section 92px past its container. */
+        grid-template-columns: minmax(0, 1fr);
         gap: 24px;
         padding: 22px;
         border-bottom: 1px solid var(--color-border);
@@ -1484,7 +1487,7 @@ td.date,
 
     @media (min-width: 768px) {
         .settings-section {
-            grid-template-columns: 280px 1fr;
+            grid-template-columns: 280px minmax(0, 1fr);
         }
     }
 
@@ -1502,6 +1505,11 @@ td.date,
         display: flex;
         align-items: center;
         justify-content: space-between;
+        /* The control side does not shrink, so on a phone a row with a long
+           label and two ghost buttons ran past the section. Wrapping only
+           engages once the row cannot fit, so a row that does is unchanged. */
+        flex-wrap: wrap;
+        gap: 8px;
         padding: 12px 0;
         border-bottom: 1px solid var(--color-border);
     }
