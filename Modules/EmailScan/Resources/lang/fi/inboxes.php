@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'uusi yritys :nh kuluttua',
 
     'reconnect' => 'Yhdistä uudelleen',
+    'disconnect' => 'Katkaise yhteys',
     'scan_now' => 'Skannaa nyt',
     'scan_in_progress_title' => 'Skannaus on jo käynnissä',
 

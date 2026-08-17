@@ -189,6 +189,13 @@
                             wire:click="scanNow({{ $inbox->inboxId }})"
                             class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900 {{ $scanDisabled ? 'cursor-not-allowed opacity-60' : '' }}"
                         >{{ Lang::get('email-scan::inboxes.scan_now') }}</button>
+                        <button
+                            type="button"
+                            wire:click="disconnect({{ $inbox->inboxId }})"
+                            wire:confirm="{{ Lang::get('email-scan::inboxes.disconnect') }}"
+                            data-testid="disconnect-inbox-{{ $inbox->inboxId }}"
+                            class="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-sm font-medium text-slate-600 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-900"
+                        >{{ Lang::get('email-scan::inboxes.disconnect') }}</button>
                     </div>
                 </li>
             @endforeach

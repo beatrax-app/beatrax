@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'opnieuw over :nu',
 
     'reconnect' => 'Opnieuw verbinden',
+    'disconnect' => 'Ontkoppelen',
     'scan_now' => 'Nu scannen',
     'scan_in_progress_title' => 'Er loopt al een scan',
 

@@ -103,6 +103,27 @@ final class OAuthStateRepository
         return $ageSeconds >= 0 && $ageSeconds <= self::MAX_AGE_SECONDS;
     }
 
+    public function storePkceVerifier(string $provider, string $verifier): void
+    {
+        $this->assertProvider($provider);
+        if ($verifier === '') {
+            return;
+        }
+
+        ($this->session)()->put($this->pkceSessionKey($provider), $verifier);
+    }
+
+    // Single-use like the state entry: the callback pulls the code_verifier to
+    // send on the token exchange, and it is gone from the session afterwards.
+    public function consumePkceVerifier(string $provider): ?string
+    {
+        $this->assertProvider($provider);
+
+        $verifier = ($this->session)()->pull($this->pkceSessionKey($provider));
+
+        return is_string($verifier) && $verifier !== '' ? $verifier : null;
+    }
+
     public function issueClientWizardSuccess(string $provider): void
     {
         $this->assertProvider($provider);
@@ -125,6 +146,11 @@ final class OAuthStateRepository
     private function sessionKey(string $provider): string
     {
         return 'oauth_state_'.$provider;
+    }
+
+    private function pkceSessionKey(string $provider): string
+    {
+        return 'oauth_pkce_'.$provider;
     }
 
     private function wizardSessionKey(string $provider): string

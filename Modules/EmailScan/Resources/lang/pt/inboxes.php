@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'nova tentativa dentro de :nh',
 
     'reconnect' => 'Voltar a ligar',
+    'disconnect' => 'Desligar',
     'scan_now' => 'Analisar agora',
     'scan_in_progress_title' => 'Já há uma análise em curso',
 

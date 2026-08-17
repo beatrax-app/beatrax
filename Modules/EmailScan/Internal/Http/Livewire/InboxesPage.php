@@ -20,6 +20,7 @@ use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
 use Modules\EmailScan\Internal\Jobs\IncrementalScanJob;
+use Modules\EmailScan\Public\Actions\DisconnectInbox;
 use Modules\EmailScan\Public\Actions\DismissDiscoveredSender;
 use Modules\EmailScan\Public\Actions\PromoteDiscoveredSender;
 use Modules\EmailScan\Public\Enums\InboxScanStatus;
@@ -278,6 +279,18 @@ final class InboxesPage extends Component
         // $this->redirectRoute(...)). Plain RedirectResponse return is
         // not picked up by the Livewire wire:click protocol.
         return $this->redirect($target);
+    }
+
+    // Severs the mailbox: best-effort provider-side token revoke, then the
+    // local tokens and inbox row (children cascade). The row leaving the
+    // re-rendered list is the confirmation; the user's already-imported
+    // receipts live in file_imports and are not touched.
+    public function disconnect(
+        int $inboxId,
+        CurrentUser $currentUser,
+        DisconnectInbox $disconnect,
+    ): void {
+        ($disconnect)($inboxId, $currentUser->user());
     }
 
     // Promotes a discovered_senders candidate into known_senders and

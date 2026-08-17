@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'nytt försök om :ntim',
 
     'reconnect' => 'Anslut på nytt',
+    'disconnect' => 'Koppla från',
     'scan_now' => 'Skanna nu',
     'scan_in_progress_title' => 'Skanning pågår redan',
 

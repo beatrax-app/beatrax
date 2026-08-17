@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'reîncercare în :nh',
 
     'reconnect' => 'Reconectează',
+    'disconnect' => 'Deconectează',
     'scan_now' => 'Scanează acum',
     'scan_in_progress_title' => 'O scanare este deja în curs',
 

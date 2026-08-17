@@ -90,7 +90,7 @@ function azureMeResponse(string $email = 'owner@contoso.com'): Response
 it('asks Microsoft for mail read plus the offline access a refresh needs', function (): void {
     $provider = microsoftProviderReturning([azureOpenIdConfigResponse()]);
 
-    $url = $provider->getAuthorizationUrl('state-token-456', $this->redirect);
+    $url = $provider->getAuthorizationUrl('state-token-456', $this->redirect)->url;
     parse_str((string) parse_url($url, PHP_URL_QUERY), $params);
 
     expect($params['scope'])->toContain('Mail.Read')

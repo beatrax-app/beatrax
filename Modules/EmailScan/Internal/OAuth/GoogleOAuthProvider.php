@@ -30,22 +30,34 @@ class GoogleOAuthProvider
         private readonly OAuthProviderFactory $providers,
     ) {}
 
-    public function getAuthorizationUrl(string $state, string $redirectUri): string
+    public function getAuthorizationUrl(string $state, string $redirectUri): AuthorizationRequest
     {
         $provider = $this->makeProvider($redirectUri);
 
-        return $provider->getAuthorizationUrl([
+        $url = $provider->getAuthorizationUrl([
             'scope' => [
                 self::GMAIL_READONLY_SCOPE,
                 self::USERINFO_EMAIL_SCOPE,
             ],
             'state' => $state,
         ]);
+
+        // The league provider mints the PKCE verifier while building the URL
+        // (pkceMethod is set on the factory); it is captured so the callback
+        // can send code_verifier on the exchange — the RFC 8252 defence that
+        // keeps an intercepted loopback code useless on its own.
+        $verifier = $provider->getPkceCode();
+
+        return new AuthorizationRequest($url, is_string($verifier) ? $verifier : '');
     }
 
-    public function exchangeAuthorizationCode(string $code, string $redirectUri): AccessTokenWithEmail
+    public function exchangeAuthorizationCode(string $code, string $redirectUri, string $pkceVerifier = ''): AccessTokenWithEmail
     {
         $provider = $this->makeProvider($redirectUri);
+
+        if ($pkceVerifier !== '') {
+            $provider->setPkceCode($pkceVerifier);
+        }
 
         try {
             $token = $provider->getAccessToken('authorization_code', [
