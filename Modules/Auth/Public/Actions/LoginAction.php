@@ -16,6 +16,12 @@ use Modules\Core\Public\Services\SessionFactory;
  */
 final class LoginAction
 {
+    // A valid bcrypt hash at the production cost, verified against on the
+    // account-not-found path so a missing username burns the same time as a
+    // wrong password. Its plaintext is irrelevant — the check always fails;
+    // it exists only to close the username-enumeration timing oracle.
+    private const DUMMY_HASH = '$2y$12$izdfjJdUqNnoGna9BMw/Uu9nmn8X0cCc9YwktU.V/7/mkWX6jvOLS';
+
     public function __construct(
         private readonly Hasher $hasher,
         private readonly AuthManager $auth,
@@ -30,7 +36,13 @@ final class LoginAction
         /** @var User|null $user */
         $user = User::query()->where('username', $normalized)->first();
 
-        if (! $user instanceof User || ! $this->hasher->check($password, $user->password)) {
+        if (! $user instanceof User) {
+            $this->hasher->check($password, self::DUMMY_HASH);
+
+            return false;
+        }
+
+        if (! $this->hasher->check($password, $user->password)) {
             return false;
         }
 

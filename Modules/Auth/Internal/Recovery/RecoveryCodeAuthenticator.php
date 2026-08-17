@@ -17,6 +17,12 @@ final class RecoveryCodeAuthenticator
 {
     private const GROUP_LENGTH = 4;
 
+    // Verified against on the account-not-found path so a missing username is
+    // not visibly faster than a real one's code check — the same enumeration
+    // oracle the login path closes. The check always fails; the plaintext is
+    // irrelevant.
+    private const DUMMY_HASH = '$2y$12$izdfjJdUqNnoGna9BMw/Uu9nmn8X0cCc9YwktU.V/7/mkWX6jvOLS';
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
@@ -33,6 +39,7 @@ final class RecoveryCodeAuthenticator
             $user = User::query()->where('username', $username)->first();
 
             if (! $user instanceof User) {
+                $this->hasher->check($codeInput, self::DUMMY_HASH);
                 $this->emitFailure($usernameInput, null);
 
                 return null;
