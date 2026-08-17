@@ -455,13 +455,8 @@ document.addEventListener('alpine:init', () => {
 
             // Navigating away hides this document too, and the hide is
             // indistinguishable from backgrounding by the time
-            // visibilitychange runs. Chrome fires pagehide FIRST when a
-            // document is being replaced, so the flag is set in time.
-            //
-            // `persisted` is the whole distinction: false means this document
-            // is being torn down for another page of the app, true means it is
-            // going into the back/forward cache, which is a real background and
-            // must still arm the lock.
+            // visibilitychange runs. pagehide fires first when a document is
+            // being replaced, so the flag is set in time.
             //
             // Without this, every in-app navigation POSTed /lock/background.
             // The server pulls that marker on the next request to clear it —
@@ -470,12 +465,30 @@ document.addEventListener('alpine:init', () => {
             // and the marker simply waited. A user reading one page for longer
             // than the 30s grace was then locked on their next tap, whatever
             // their idle timeout said.
+            //
+            // `persisted` is NOT the discriminator, though the first version of
+            // this read it as one. Chrome reports false for an ordinary
+            // navigation, but WebKit bfcaches the outgoing document and reports
+            // **true** for the same navigation — measured on an iPhone as
+            // `pagehide persisted=true t=30996` then `visibilitychange hidden
+            // t=30997`. Keying off it meant the fix worked on Android and left
+            // iOS locking ~75s into a five-minute timeout without the app ever
+            // leaving the foreground.
+            //
+            // What actually separates the two cases is whether pagehide fires
+            // at all. Backgrounding an app shell does not unload its document,
+            // so only a replacement raises it — on either engine. And the flag
+            // cannot go stale, because a document being replaced has no later:
+            // the one exception is bfcache restore, where this very document
+            // lives again, which pageshow tells us about.
             this._unloading = false;
 
-            window.addEventListener('pagehide', (event) => {
-                if (! event.persisted) {
-                    this._unloading = true;
-                }
+            window.addEventListener('pagehide', () => {
+                this._unloading = true;
+            });
+
+            window.addEventListener('pageshow', () => {
+                this._unloading = false;
             });
 
             // Visibility change: background → show veil + start grace.
