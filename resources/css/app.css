@@ -202,6 +202,21 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/*
+ * Alpine strips x-cloak once it boots but ships no stylesheet, so the
+ * attribute only hides anything because @livewireStyles injects this same
+ * declaration into every layout's head. Owning it here removes a dependency
+ * on an undocumented framework detail that ~20 attributes across twelve
+ * modules quietly rely on.
+ *
+ * Deliberately unscoped, and deliberately before the drawer rules: the
+ * .drawer-container is the static desktop sidebar at >=1024px, and the
+ * exemption in that media query is what keeps it visible.
+ */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Tabular numerals on every money cell + date cell to keep columns aligned. */
 td.money,
 td.date,
@@ -1494,8 +1509,11 @@ td.date,
         display: grid;
         /* Single column first. A fixed 280px track plus its 1fr sibling needs
            ~330px before padding, so on a phone the second column was laid out
-           past the right edge of a container narrower than the track itself. */
-        grid-template-columns: 1fr;
+           past the right edge of a container narrower than the track itself.
+           minmax(0, …) rather than a bare 1fr: a fr track's automatic minimum
+           is min-content, and the tax deduction-category rows measure ~367px
+           of it, which pushed that whole section 92px past its container. */
+        grid-template-columns: minmax(0, 1fr);
         gap: 24px;
         padding: 22px;
         border-bottom: 1px solid var(--color-border);
@@ -1517,7 +1535,7 @@ td.date,
 
     @media (min-width: 768px) {
         .settings-section {
-            grid-template-columns: 280px 1fr;
+            grid-template-columns: 280px minmax(0, 1fr);
         }
     }
 
@@ -1535,6 +1553,11 @@ td.date,
         display: flex;
         align-items: center;
         justify-content: space-between;
+        /* The control side does not shrink, so on a phone a row with a long
+           label and two ghost buttons ran past the section. Wrapping only
+           engages once the row cannot fit, so a row that does is unchanged. */
+        flex-wrap: wrap;
+        gap: 8px;
         padding: 12px 0;
         border-bottom: 1px solid var(--color-border);
     }
@@ -2120,8 +2143,18 @@ td.date,
     .cp-stats {
         display: flex;
         align-items: baseline;
+        flex-wrap: wrap;
         gap: var(--space-3);
         font-variant-numeric: tabular-nums;
+    }
+
+    /* A card is ~290px on a phone and holds two amounts plus their labels,
+       so without these the row broke inside a number: "€ 3.750," on one
+       line and "00" on the next. The amounts stay whole and the pairs wrap
+       instead. */
+    .cp-stats .value,
+    .cp-stats .label {
+        white-space: nowrap;
     }
 
     .cp-stats .label {
@@ -2162,6 +2195,21 @@ td.date,
         display: flex;
         flex-direction: column;
         gap: 2px;
+    }
+
+    /* Two side-by-side cards on a profile tab. Held to one column on a
+       phone, where halving 390px left a category name and its amount with
+       nothing between them ("Groceries€ 828,31"). */
+    .cp-tab-duo {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+    }
+
+    @media (min-width: 640px) {
+        .cp-tab-duo {
+            grid-template-columns: 1fr 1fr;
+        }
     }
 
     /* ─── View toggle (Cards / List segmented) ───────────────────── */
@@ -3011,6 +3059,14 @@ td.date,
         transform: none !important;
         display: block !important;
         height: auto !important;
+    }
+
+    /* Higher specificity than [x-cloak] on purpose, because equal would lose:
+       the rule above is one class, the cloak rule one attribute, and the copy
+       Livewire injects lands after this file. Without the extra weight the
+       desktop sidebar — which this element is — blanks until Alpine boots. */
+    .drawer-container[x-cloak] {
+        display: block !important;
     }
 
     /*

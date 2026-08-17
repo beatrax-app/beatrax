@@ -22,7 +22,6 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
-    use Illuminate\Support\Number;
 
     /**
      * IBAN-masking helper for the triage card display. Keeps the
@@ -161,7 +160,7 @@
                             <li class="triage-tx">
                                 <span class="triage-tx__date">{{ $date }}</span>
                                 <span class="triage-tx__desc">{{ $tx->description ?? '' }}</span>
-                                <span class="triage-tx__amount">{{ Number::currency(abs((int) ($tx->amount_minor ?? 0)) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
+                                <span class="triage-tx__amount">{{ Money::ofMinor(abs((int) ($tx->amount_minor ?? 0)), 'EUR')->format() }}</span>
                             </li>
                         @endforeach
                     </ul>

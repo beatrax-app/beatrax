@@ -36,7 +36,7 @@
 @endphp
 
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
         <div class="min-w-0 flex-1">
             <p class="flex flex-wrap items-baseline gap-2 text-sm">
                 @if ($upArrow)
@@ -79,7 +79,7 @@
             @endif
         </div>
         @if ($tab === 'open')
-            <div class="flex shrink-0 items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
                 @if ($showThresholdEditor)
                     @livewire('drift-alerts.drift-threshold-editor', ['recurringSeriesId' => $alert->recurringSeriesId], key('threshold-row-'.$alert->driftAlertId))
                 @endif

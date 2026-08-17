@@ -13,12 +13,9 @@
       $fundingChain      ChainSummary|null
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
-@php
-    use Illuminate\Support\Number;
-@endphp
 
 <div class="space-y-6" style="margin-top: var(--space-5);">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
+    <div class="cp-tab-duo">
         {{-- Categories -------------------------------------------- --}}
         <x-counterparties::frame>
             <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
@@ -33,7 +30,7 @@
                     @foreach ($categoryBreakdown as $cat)
                         <li style="display: flex; justify-content: space-between; padding: var(--space-1) 0; font-size: var(--text-sm); font-variant-numeric: tabular-nums;">
                             <span>{{ $cat->category_name ?? Lang::get('counterparties::profile.uncategorized') }}</span>
-                            <span>{{ Number::currency(abs((int) $cat->total_minor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
+                            <span>{{ Money::ofMinor(abs((int) $cat->total_minor), 'EUR')->format() }}</span>
                         </li>
                     @endforeach
                 </ul>

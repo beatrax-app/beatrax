@@ -128,6 +128,51 @@ patches below. `--with-icu` is what keeps `ext-intl` in the bundled PHP
 binaries; the money formatting the whole ledger renders through needs it, and its
 absence shows up only on-device.
 
+### `--with-icu` ships ICU code, not ICU locale data
+
+`--with-icu` is not the whole story, and the gap cost a device debugging session
+(2026-08-17). The flag selects the `-icu` variant of the prebuilt PHP binaries and
+`nativephp.lock` records `"icu": true`, so `ext-intl` loads and `INTL_ICU_VERSION`
+answers — but the data package inside those binaries is filtered to **English
+only**. Read the shipped archive to see it:
+
+```
+strings mobile-app/nativephp/android/app/src/main/staticLibs/arm64-v8a/libicudata.a \
+  | grep -E '^icudt[0-9]+l/' | sort -u
+```
+
+At ICU 77 that lists 250 entries: `root`, `en`, 130 `en_XX` regionals, 114
+`curr/en_XX`, and the shared `.icu`/`.nrm` blobs. There is no `nl`, and no other
+language of the twenty-six the UI ships. `libicudata.a` is 2.3MB where a full ICU
+data package is ~30MB.
+
+The consequence: `new NumberFormatter($locale, …)` **throws for every locale
+except English**, as `IntlException` when intl error-exceptions are on and as
+`ValueError` from the constructor otherwise. That reaches the product through two
+seams, both of which now catch it and render from marks the repo carries itself
+(`Locale::groupMark()` / `Locale::decimalMark()`):
+
+- `Money::format()` — every rendered amount. Currency-anchored, so EUR asks for
+  `nl_NL` and threw on device while `en_US` (USD, GBP, …) worked, which is why
+  the dashboard showed `EUR 3850.00` beside a hand-rolled Dutch `€ 1.237,89`.
+- `Fmt::number()` — counts and percentages. Threw for all twenty-five non-English
+  UI languages; only `/rules`, `/inboxes` and `/drift/watch` call it, so it had
+  not been noticed.
+
+Direct `Illuminate\Support\Number::currency()` calls have no such guard and 500'd
+the page outright — `tests/Contracts/CurrencyRendersThroughMoneyArchTest` now
+keeps them out of the tree.
+
+**Do not delete the guards on the assumption that fuller ICU data can be
+bundled.** The static libraries arrive inside a zip that `native:install`
+downloads into `mobile-app/nativephp/`, which is gitignored and regenerated —
+anything injected there is unreproducible and gone at the next install, and this
+repository has no step that could re-apply it. Replacing the data set is a change
+to the upstream NativePHP PHP build. The guards are also cheap to keep honest:
+`Modules/Ledger/tests/Unit/MoneyFormatTest` asserts the ICU-less output is byte
+for byte what ICU produces on a host that has the data, so if the data ever does
+arrive nothing about the rendering changes.
+
 ## Navigation
 
 **Sidebar entries no longer carry `wire:navigate`, and this is a mitigation
