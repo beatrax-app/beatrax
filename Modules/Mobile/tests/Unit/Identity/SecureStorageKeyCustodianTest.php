@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Mobile\Internal\Exceptions\SecureStorageException;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 
 /*
@@ -115,16 +116,16 @@ it('scopes the slot per user so two users never collide', function (): void {
         ->and($b->store(random_bytes(32)))->toBe('beatrax.session.data_key.9');
 });
 
-it('falls back to the raw key when the native set() fails', function (): void {
+it('fails closed by throwing instead of returning the raw key when native set() fails', function (): void {
     $custodian = new FakeSecureStorageCustodian(secureStorageCurrentUser(7));
     $custodian->setSucceeds = false;
     $raw = random_bytes(32);
 
-    // Degraded pass-through: the raw key becomes the handle, and read() sees
-    // it does not start with the slot prefix and returns it unchanged.
-    $handle = $custodian->store($raw);
-    expect($handle)->toBe($raw)
-        ->and($custodian->read($handle))->toBe($raw);
+    // A native-set failure on-device must never degrade to a plaintext key in
+    // the session (SESSION_DRIVER=database would persist it), so store() throws
+    // rather than handing back the raw key as its handle — and writes nothing.
+    expect(fn () => $custodian->store($raw))->toThrow(SecureStorageException::class);
+    expect($custodian->slots)->not->toHaveKey('beatrax.session.data_key.7');
 });
 
 it('returns null (not the slot name) when the entry is missing/evicted', function (): void {
