@@ -4791,3 +4791,72 @@ mark {
         text-decoration: none;
     }
 }
+
+/*
+ * Dashboard "recent transactions" at phone width.
+ *
+ * Four columns do not fit 411px. The table already scrolled sideways rather
+ * than clipping, which is better than losing the data — but it opened on
+ * DATUM / TEGENPARTIJ / CATEGORIE with BEDRAG past the right edge, and nothing
+ * on screen says a table can be swiped. The row exists to show an amount and
+ * the amount was the part you could not see.
+ *
+ * So below 768px the row restacks: counterparty first, then the date and
+ * category beneath it as secondary lines, with the amount held to the right
+ * across all three. Same cells, same order in the DOM and for a screen reader
+ * — only the visual grid changes. Above 768px the ordinary table is untouched.
+ */
+@media (max-width: 767px) {
+    .dash-recent-table,
+    .dash-recent-table tbody {
+        display: block;
+    }
+
+    /* The header labels the columns of a grid that no longer exists here; the
+       cells below are self-describing (name, date, category, amount). */
+    .dash-recent-table thead {
+        display: none;
+    }
+
+    .dash-recent-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .dash-recent-table td {
+        padding: 0;
+    }
+
+    /* Counterparty leads: it is what a reader scans for. */
+    .dash-recent-table td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .dash-recent-table td:nth-child(1),
+    .dash-recent-table td:nth-child(3) {
+        grid-column: 1;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .dash-recent-table td:nth-child(1) {
+        grid-row: 2;
+    }
+
+    .dash-recent-table td:nth-child(3) {
+        grid-row: 3;
+    }
+
+    /* Spans the three stacked lines so it reads as the row's figure rather
+       than as a fourth line of detail. */
+    .dash-recent-table td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1 / span 3;
+        align-self: center;
+        white-space: nowrap;
+    }
+}

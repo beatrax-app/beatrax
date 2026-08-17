@@ -136,7 +136,12 @@ final class PotsPage extends Component
                     $this->goalId = '';
                 }
                 $this->clearErrors();
-                $this->dispatch('modal-show', name: 'pot-form');
+
+                // Deliberately does NOT dispatch `modal-show` — see the same
+                // note in GoalsPage::openEdit(). Every Edit affordance here
+                // already picks sheet-or-modal from the viewport width, and
+                // announcing it from the server put the desktop modal on top
+                // of the phone sheet.
 
                 return;
             }

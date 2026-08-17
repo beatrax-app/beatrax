@@ -468,11 +468,29 @@
                 {{-- Target date --}}
                 <div>
                     <label for="goal-date" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('goals::messages.form.target_date') }}</label>
-                    <x-core::date-input
-                        field-id="goal-date"
-                        wire:model="targetDate"
-                        @if ($errorDate !== '') aria-invalid="true" aria-describedby="goal-date-error" @endif
-                    />
+                    {{-- Two spellings of one field, and they cannot be collapsed
+                         into one with an inline @if.
+
+                         Blade's component-tag compiler matches the tag with a
+                         regex over its attribute list, and a directive inside
+                         that list defeats the match. It does not error — it
+                         emits `<x-core::date-input …>` into the page as an
+                         unknown HTML element, which renders as nothing. This
+                         modal shipped with no target-date field at all, and the
+                         only sign was a label with empty space under it. --}}
+                    @if ($errorDate !== '')
+                        <x-core::date-input
+                            field-id="goal-date"
+                            wire:model="targetDate"
+                            aria-invalid="true"
+                            aria-describedby="goal-date-error"
+                        />
+                    @else
+                        <x-core::date-input
+                            field-id="goal-date"
+                            wire:model="targetDate"
+                        />
+                    @endif
                     @if ($errorDate !== '')
                         <p id="goal-date-error" class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $errorDate }}</p>
                     @endif

@@ -91,6 +91,34 @@ and only the patched behaviour is missing:
 `composer native:patch` runs all three on demand, and is the recovery for the
 last case — and the step to run the first time a new patch script lands.
 
+### The runtime is persistent, and request headers leak between requests
+
+The embedded PHP process serves many requests. Its superglobals are not fully
+rebuilt per request, so **`$_SERVER['HTTP_*']` set by one request is still
+readable by every request that follows it in the same worker.**
+
+Measured on device (2026-08-17): a Livewire POST sets `HTTP_X_LIVEWIRE`, and
+from then on every ordinary page load in that app session sees it too. The
+Kotlin side is innocent and its own log proves it — `PHPRequestHandler: 📤
+Final request headers` for the offending GET contains no `X-Livewire` at all.
+The leak is on the PHP side of the bridge.
+
+**Never branch on a request header to decide what KIND of request this is.**
+`AppLockMiddleware` did, in three places, and all three misbehaved: a locked
+page load was answered with a Livewire JSON body and painted the raw payload on
+screen as the whole page; `last_activity_at` stopped being refreshed by
+navigation after the first Livewire request of a session, locking the reader out
+mid-use; and no page was ever remembered to return to after an unlock, so every
+unlock landed on the dashboard. Use something resolved per request instead —
+the router's current route name is the obvious one.
+
+**This class of bug is invisible to local testing.** PHP-FPM and `artisan
+serve` build superglobals fresh per request, so the header never leaks there
+and the same code is correct on a laptop, in CI, and in every feature test.
+Anyone reproducing on a desktop will conclude the code is fine. Only the device
+shows it, which is why the guard is a test that sends a *stale* header at an
+ordinary page request and asserts it is still treated as one.
+
 The `post-update-cmd` invocation is `native:install --with-icu --quiet`, and both
 flags are load-bearing. v4 inverted `--force`: overwriting the generated tree is
 now the default (`--no-force` opts out) and `--force` means "re-download the PHP

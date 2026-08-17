@@ -125,7 +125,14 @@ final class GoalsPage extends Component
                 $linkedPotId = $potBalance->linkedPotIdForGoal($goalId, $currentUser->user());
                 $this->linkedPotId = $linkedPotId !== null ? (string) $linkedPotId : '';
                 $this->clearErrors();
-                $this->dispatch('modal-show', name: 'goal-form');
+
+                // Deliberately does NOT dispatch `modal-show`. Which surface
+                // this form opens in is a viewport decision, and both Edit
+                // buttons already make it — sheet below 768px, Flux modal
+                // above. Announcing it from the server overrode that and
+                // opened the desktop modal on a phone ON TOP of the bottom
+                // sheet the button had just opened: two copies of the same
+                // form stacked, one of them the wrong shape for the screen.
 
                 return;
             }

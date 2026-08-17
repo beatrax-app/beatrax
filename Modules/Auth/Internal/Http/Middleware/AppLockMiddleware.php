@@ -44,10 +44,29 @@ final readonly class AppLockMiddleware
         'mobile.setup.done',
     ];
 
-    // Present on every Livewire update request; the Livewire JS client
-    // always sends it, so it identifies wire:poll/component-update traffic
-    // that must not count as user activity.
-    private const LIVEWIRE_HEADER = 'X-Livewire';
+    /*
+     * How a Livewire update request is recognised here.
+     *
+     * NOT the `X-Livewire` request header, which is what this used to read.
+     * Under NativePHP's Android runtime the PHP process is persistent and its
+     * superglobals are not fully rebuilt per request, so `HTTP_X_LIVEWIRE`
+     * set by ONE Livewire POST is still present on every ordinary page load
+     * that follows it in the same worker — for the rest of the app's life.
+     * Measured on device: after the first Livewire request of a session,
+     * `last_activity_at` stopped moving entirely, because every page load
+     * looked like machine traffic and took the early return in
+     * recordActivity(). A reader was then locked out five minutes after the
+     * last Livewire request no matter how much they used the app, and no
+     * navigation was ever remembered to return them to.
+     *
+     * Livewire's update endpoint always carries this route name (it renames a
+     * custom route to end with it, hence the leading wildcard), and a route is
+     * resolved per request by the router rather than read out of $_SERVER, so
+     * it cannot leak across requests the way the header does. It is the same
+     * signal Livewire itself uses to decide whether to run persistent
+     * middleware at all.
+     */
+    private const LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
 
     // 60s balances "settings change takes effect quickly" against DB load:
     // the per-request write of last_activity_at keeps the DB fresh
@@ -186,8 +205,18 @@ final readonly class AppLockMiddleware
     private function isRestorablePage(Request $request): bool
     {
         return $request->isMethod('GET')
-            && ! $request->headers->has(self::LIVEWIRE_HEADER)
+            && ! $this->isLivewireUpdate()
             && ! $request->expectsJson();
+    }
+
+    // See LIVEWIRE_UPDATE_ROUTE. Reads the router's current route rather than
+    // the request handed in, because during a Livewire update this middleware
+    // is re-run against a SYNTHESISED request wearing the original page's path
+    // and method — that request looks like an ordinary GET and the router's
+    // current route is the only thing that still says otherwise.
+    private function isLivewireUpdate(): bool
+    {
+        return $this->routes->currentRouteNamed(self::LIVEWIRE_UPDATE_ROUTE);
     }
 
     // Whether the app was backgrounded longer ago than the grace window. The
@@ -243,7 +272,7 @@ final readonly class AppLockMiddleware
 
         $lockUrl = $this->urls->route($this->lockRouteName());
 
-        if ($request->headers->has(self::LIVEWIRE_HEADER)) {
+        if ($this->isLivewireUpdate()) {
             // Thrown, not returned. Livewire re-runs this middleware for an
             // update request through a pipeline of its own, and that pipeline
             // stops for a RedirectResponse and NOTHING else — every other
@@ -308,7 +337,7 @@ final readonly class AppLockMiddleware
     // hold the idle timer open forever.
     private function recordActivity(Request $request, Session $session, int $userId, ?string $routeName): void
     {
-        if ($this->isExemptRoute($routeName) || $request->headers->has(self::LIVEWIRE_HEADER)) {
+        if ($this->isExemptRoute($routeName) || $this->isLivewireUpdate()) {
             return;
         }
 
