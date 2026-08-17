@@ -43,4 +43,10 @@ return [
         'today' => 'Today',
         'clear' => 'Clear',
     ],
+
+    'time' => [
+        'open' => 'Choose a time',
+        'hour' => 'Hour',
+        'minute' => 'Minute',
+    ],
 ];

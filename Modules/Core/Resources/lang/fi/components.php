@@ -43,4 +43,10 @@ return [
         'today' => 'Tänään',
         'clear' => 'Tyhjennä',
     ],
+
+    'time' => [
+        'open' => 'Valitse kellonaika',
+        'hour' => 'Tunti',
+        'minute' => 'Minuutti',
+    ],
 ];

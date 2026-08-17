@@ -43,4 +43,10 @@ return [
         'today' => 'Heute',
         'clear' => 'Löschen',
     ],
+
+    'time' => [
+        'open' => 'Uhrzeit wählen',
+        'hour' => 'Stunde',
+        'minute' => 'Minute',
+    ],
 ];
