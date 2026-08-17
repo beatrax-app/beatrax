@@ -16,11 +16,14 @@ use Psr\Log\NullLogger;
  * a broken feed can never reach the verification step as a bad expectation.
  */
 
-function makeManifestFetcher(?string $feedUrl): HttpPublisherManifestFetcher
+function makeManifestFetcher(?string $feedUrl, string $platformFamily = 'Windows'): HttpPublisherManifestFetcher
 {
     $config = new Repository(['auto_update' => ['manifest_feed_url' => $feedUrl]]);
 
-    return new HttpPublisherManifestFetcher(app(HttpClient::class), $config, new NullLogger);
+    // Platform is injected so the manifest-name assertions do not depend on the
+    // OS the suite runs on (Windows -> latest.yml keeps the base-case fakes
+    // simple; the -mac/-linux cases assert the per-platform names explicitly).
+    return new HttpPublisherManifestFetcher(app(HttpClient::class), $config, new NullLogger, $platformFamily);
 }
 
 function manifestYaml(string $version, string $sha512Base64): string
@@ -55,6 +58,45 @@ it('reads beta.yml for a non-stable channel', function (): void {
     $result = makeManifestFetcher('https://feed.test')->fetch('preview');
 
     expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('2.0.0-rc.1');
+});
+
+it('fetches the macOS manifest (latest-mac.yml) on a Darwin bundle', function (): void {
+    $digest = str_repeat("\x03", 64);
+    Http::fake([
+        'https://feed.test/latest-mac.yml' => Http::response(manifestYaml('3.1.0', base64_encode($digest)), 200),
+        'https://feed.test/latest-mac.yml.sig' => Http::response(str_repeat('ef', 64), 200),
+        // A Windows-named manifest at the same feed must not be what a mac
+        // bundle reads — verifyBinary() would get another OS's installer hash.
+        'https://feed.test/latest.yml' => Http::response('version: 9.9.9', 200),
+    ]);
+
+    $result = makeManifestFetcher('https://feed.test', 'Darwin')->fetch('stable');
+
+    expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('3.1.0');
+});
+
+it('fetches the Linux manifest (latest-linux.yml) on a Linux bundle', function (): void {
+    $digest = str_repeat("\x04", 64);
+    Http::fake([
+        'https://feed.test/latest-linux.yml' => Http::response(manifestYaml('3.2.0', base64_encode($digest)), 200),
+        'https://feed.test/latest-linux.yml.sig' => Http::response(str_repeat('ab', 64), 200),
+    ]);
+
+    $result = makeManifestFetcher('https://feed.test', 'Linux')->fetch('stable');
+
+    expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('3.2.0');
+});
+
+it('fetches the macOS preview manifest (beta-mac.yml) on a Darwin bundle', function (): void {
+    $digest = str_repeat("\x05", 64);
+    Http::fake([
+        'https://feed.test/beta-mac.yml' => Http::response(manifestYaml('3.3.0-rc.1', base64_encode($digest)), 200),
+        'https://feed.test/beta-mac.yml.sig' => Http::response(str_repeat('cd', 64), 200),
+    ]);
+
+    $result = makeManifestFetcher('https://feed.test', 'Darwin')->fetch('preview');
+
+    expect($result)->not->toBeNull()->and($result['latest_version'])->toBe('3.3.0-rc.1');
 });
 
 it('returns null when no feed url is configured', function (): void {

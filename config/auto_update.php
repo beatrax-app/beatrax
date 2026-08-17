@@ -44,12 +44,21 @@ return [
     'update_channel' => env('AUTO_UPDATE_CHANNEL', 'stable'),
 
     /*
-     * Public base URL of the update feed — the same origin electron-updater
-     * is pointed at, holding `latest.yml`/`beta.yml` and their detached
-     * `.sig` siblings. The desktop update listeners fetch the manifest and
-     * signature from here to run the Ed25519 check BEFORE any download or
-     * install proceeds; left unset (self-hosted / web / mobile) the fetch
-     * yields null and no update is ever surfaced or applied.
+     * Public base URL of the update feed — the GitHub Releases origin
+     * electron-updater is pointed at (NATIVEPHP_UPDATER_PROVIDER=github),
+     * holding the per-platform publisher manifests and their detached `.sig`
+     * siblings. The desktop update listeners fetch the manifest for the running
+     * platform (`latest.yml` on Windows, `latest-mac.yml` on macOS,
+     * `latest-linux.yml` on Linux) and run the Ed25519 check BEFORE any
+     * download or install proceeds; left unset (self-hosted / web / mobile)
+     * the fetch yields null and no update is ever surfaced or applied.
+     *
+     * Set at release-build time by the `release` workflow from the GitHub
+     * context (`https://github.com/<owner>/<repo>/releases/latest/download`),
+     * so an organisation move re-points the feed with the repo rather than at
+     * a hardcoded owner. `releases/latest/download` resolves the newest
+     * *published* (human-reviewed, non-draft) release, so a drafted stable
+     * release surfaces nothing until it is deliberately published.
      */
     'manifest_feed_url' => env('AUTO_UPDATE_FEED_URL'),
 ];

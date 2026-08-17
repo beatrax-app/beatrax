@@ -71,6 +71,16 @@ env:
     GITHUB_OWNER: ${{ github.repository_owner }}
     GITHUB_REPO: ${{ github.event.repository.name }}
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # The origin the app's own Ed25519 pre-check fetches the signed
+    # publisher manifest from before any download or install (read at
+    # runtime as `config('auto_update.manifest_feed_url')`). Derived from
+    # the GitHub context — same reason as the owner/repo above: an
+    # organisation move re-points the feed with the repo, never at a
+    # hardcoded owner. `releases/latest/download` resolves the newest
+    # *published* (non-draft) release, so a drafted stable release surfaces
+    # nothing until a human publishes it. Appended to the bundled `.env` in
+    # each desktop staging step below.
+    AUTO_UPDATE_FEED_URL: https://github.com/${{ github.repository }}/releases/latest/download
 
 jobs:
     gate:
@@ -191,6 +201,10 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # The desktop updater's Ed25519 pre-check reads this feed at
+                  # runtime; the bundled .env is this file, so the origin has to
+                  # be written in before native:build copies the app tree.
+                  printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -326,6 +340,10 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # The desktop updater's Ed25519 pre-check reads this feed at
+                  # runtime; the bundled .env is this file, so the origin has to
+                  # be written in before native:build copies the app tree.
+                  printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 
@@ -438,6 +456,10 @@ jobs:
               run: |
                   set -euo pipefail
                   cp .env.example .env
+                  # The desktop updater's Ed25519 pre-check reads this feed at
+                  # runtime; the bundled .env is this file, so the origin has to
+                  # be written in before native:build copies the app tree.
+                  printf 'AUTO_UPDATE_FEED_URL=%s\n' "$AUTO_UPDATE_FEED_URL" >> .env
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
 

@@ -23,6 +23,11 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
         private HttpClient $http,
         private Repository $config,
         private LoggerInterface $logger,
+        // The OS the running bundle targets. electron-updater names its
+        // channel file per platform, so the manifest to fetch depends on it.
+        // Defaults to the live platform; injected in tests to assert each
+        // platform resolves its own manifest without mocking a constant.
+        private string $platformFamily = PHP_OS_FAMILY,
     ) {}
 
     public function fetch(string $channel): ?array
@@ -32,10 +37,7 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
             return null;
         }
 
-        // `stable` reads the `latest.yml` electron-updater writes for release
-        // tags; anything else reads the `beta.yml` it writes for prereleases.
-        $manifestName = $channel === 'stable' ? 'latest.yml' : 'beta.yml';
-        $manifestUrl = rtrim($base, '/').'/'.$manifestName;
+        $manifestUrl = rtrim($base, '/').'/'.$this->manifestName($channel);
 
         try {
             return $this->fetchAndParse($manifestUrl);
@@ -49,6 +51,23 @@ final readonly class HttpPublisherManifestFetcher implements PublisherManifestFe
 
             return null;
         }
+    }
+
+    // electron-updater names its channel file per platform: `latest.yml` on
+    // Windows, `latest-mac.yml`/`latest-linux.yml` elsewhere (`beta*` for the
+    // preview channel). Fetching another platform's manifest would check the
+    // binary against a different OS's SHA512, so a real update never installs.
+    private function manifestName(string $channel): string
+    {
+        $base = $channel === 'stable' ? 'latest' : 'beta';
+
+        $suffix = match ($this->platformFamily) {
+            'Darwin' => '-mac',
+            'Linux' => '-linux',
+            default => '',
+        };
+
+        return $base.$suffix.'.yml';
     }
 
     /**
