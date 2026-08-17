@@ -31,7 +31,13 @@ final class BridgeSignedUploadUrl extends GenerateSignedUploadUrl
 
     public function forLocal(): string
     {
-        $expiry = Carbon::now()->addMinutes(FileUploadConfiguration::maxUploadTime());
+        // Livewire declares no return type here, so the value is mixed. Narrowed
+        // rather than cast: a config file holding a string or null should fall
+        // back to Livewire's own default, not be coerced into a nonsense expiry.
+        $configured = FileUploadConfiguration::maxUploadTime();
+        $minutes = is_int($configured) || is_float($configured) ? $configured : 5;
+
+        $expiry = Carbon::now()->addMinutes($minutes);
 
         // Everywhere the app's own generator writes a root the verifier can
         // rebuild, the ordinary absolute URL already verifies. Keyed on the
