@@ -238,7 +238,8 @@ echo "Upload resources/brand/social-preview-1280.png via Settings → General �
 ## Release signing
 
 macOS is signed with a real Developer ID certificate and notarised, proven
-end to end on a CI runner. **Windows is not yet signable** — see below.
+end to end on a CI runner. **Windows now has every input in place, but no
+Windows release has been built with them yet** — see below.
 The values live as repository secrets and variables; the originals are in
 the Beatrax 1Password vault.
 
@@ -252,32 +253,50 @@ name an endpoint, an account, a certificate profile and a publisher, none
 of which is confidential, and masking them turns a failed signing run into
 a log full of `***` at the moment those values are what you need to read.
 
-### Windows: blocked on a certificate profile
+### Windows: check the values resolve, not that they exist
 
-The Azure Trusted Signing account (`beatraxsigning` in
-`rg-beatrax-signing`) exists, the service principal authenticates, and it
-holds the Trusted Signing Certificate Profile Signer role. But the account
-has **no certificate profile**:
+The Azure Trusted Signing account `beatraxsigning` (`rg-beatrax-signing`,
+North Europe, Basic SKU) holds one Public Trust certificate profile,
+`beatrax-public-trust`, issued against identity validation
+`1433edcb-d405-4bc3-95de-474a39ae2796` — organisation `NightWorks.io`,
+Completed, valid to 2028-10-17.
+
+This section previously described the opposite state, and the way that was
+missed is the thing to learn from: every credential was confirmed to
+*exist* — `gh variable list` printed a name, `op read` returned a non-empty
+string — and none was confirmed to *resolve*. The profile-name variable
+held the literal text `(pending — set after cert profile is created)`,
+copied out of 1Password. Ask the question that fails when the thing is
+absent:
 
 ```sh
-az rest --method get --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/rg-beatrax-signing/providers/Microsoft.CodeSigning/codeSigningAccounts/beatraxsigning/certificateProfiles?api-version=2024-09-30-preview"
-# {"value": []}
+az rest --method get --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/rg-beatrax-signing/providers/Microsoft.CodeSigning/codeSigningAccounts/beatraxsigning/certificateProfiles/beatrax-public-trust?api-version=2025-10-13"
+# .properties.status                     -> "Active"
+# .properties.certificates[].subjectName -> "CN=NightWorks.io, O=NightWorks.io, L=Utrecht, S=Utrecht, C=NL"
 ```
 
-The last two variables are therefore unset on purpose, so the guard blocks
-a Windows release rather than a build silently producing an unsigned
-artifact. To unblock, create a certificate profile in the Trusted Signing
-portal against the approved identity validation, then set:
+`NATIVEPHP_AZURE_PUBLISHER_NAME` must equal that subject's `CN` exactly:
+`NightWorks.io`, the validated legal entity, not the product name. It is
+also what Windows shows users as the publisher of Beatrax. signtool
+compares the two, so a mismatch fails at sign time rather than at config
+validation — inside the `runProcess()` call that swallows the error.
 
-- `NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME` — the profile's name
-- `NATIVEPHP_AZURE_PUBLISHER_NAME` — the certificate subject's common
-  name, which is the validated legal entity name. signtool compares this
-  against the certificate, so a guess fails at sign time rather than at
-  config validation.
+Two properties of Trusted Signing that surprise people reading this later:
 
-Record both on the Azure service principal item in 1Password, replacing
-the `(pending — set after cert profile is created)` placeholder that field
-currently holds.
+- **Identity validation has no ARM surface.** `Microsoft.CodeSigning`
+  registers only `codeSigningAccounts` and
+  `codeSigningAccounts/certificateProfiles`; a request to
+  `identityValidations` returns `ResourceTypeRegistrationNotFound` on every
+  api-version. Its status lives solely in the portal blade and cannot be
+  asserted from CI or a script.
+- **The certificates are deliberately short-lived** — the first one issued
+  under this profile expires three days after issue, and they rotate
+  continuously. Signatures outlive them only because they are timestamped.
+  Dropping timestamping would make Windows builds stop verifying within 72
+  hours of signing, long after the release looked successful.
+
+The service principal's client secret (`rbac`, hint `S6~`) expires
+**2027-07-15**. Nothing warns before it lapses.
 
 `publisherName` is required by electron-builder 26 but not emitted by
 NativePHP, so `scripts/nativephp_azure_publisher_name.php` patches it into
