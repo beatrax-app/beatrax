@@ -46,9 +46,19 @@
         aria-hidden="true"
     ></div>
 
-    {{-- Bottom sheet panel --}}
+    {{-- Bottom sheet panel.
+
+         x-cloak AND the inline display:none, matching the scrim above. The
+         panel carried neither, so between first paint and Alpine booting the
+         whole sheet — heading, every field, both buttons — painted expanded
+         over the page on every full load, for ≥50ms. The scrim did not paint
+         with it, so it read as a form appearing and vanishing. The inline
+         style is what holds before the stylesheet arrives; x-cloak is what
+         holds if a transition leaves the inline value cleared. --}}
     <div
         class="bottom-sheet"
+        x-cloak
+        style="display: none;"
         x-show="open"
         x-transition:enter="transition ease-[var(--ease-smooth)] duration-[250ms]"
         x-transition:enter-start="translate-y-full"
