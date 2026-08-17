@@ -206,10 +206,23 @@ window.beatraxSubmitPostForm = async function (form, submitter) {
         redirect: 'follow',
     });
 
-    // Follow wherever the server sent us. A redirected response exposes its
-    // final URL; anything else means "re-render where you are".
-    if (response.redirected && response.url) {
-        window.location.assign(response.url);
+    // Follow wherever the server sent us.
+    //
+    // Deliberately NOT gated on `response.redirected`. That flag is false
+    // under NativePHP's mobile bridge — the bridge follows the redirect
+    // itself and hands back an ordinary response — which is the same trap
+    // that made the app lock never reload. Here it meant sign-out fell
+    // through to reload(): the login page rendered correctly, at the URL of
+    // the page the user had just left, so `location.href` said `/settings`
+    // while a login form was on screen.
+    //
+    // `response.url` is the useful half and survives on both paths, so
+    // compare it instead and only reload when it genuinely has not moved.
+    const landed = typeof response.url === 'string' ? response.url : '';
+    const submitted = new URL(form.getAttribute('action'), window.location.href).href;
+
+    if (landed !== '' && landed !== submitted && landed !== window.location.href) {
+        window.location.assign(landed);
 
         return;
     }
