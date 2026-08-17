@@ -18,6 +18,7 @@ use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Goals\Public\Services\GoalWriter;
 use Modules\Ledger\Public\ValueObjects\Money;
+use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
 use Modules\Pots\Public\Services\PotWriter;
@@ -119,7 +120,11 @@ final class GoalsPage extends Component
                 $this->name = $row->name;
                 // Integer-only minor -> display formatting — no float
                 // division on a money amount.
-                $this->targetAmount = sprintf('%d.%02d', intdiv($row->targetMinor, Money::MINOR_UNITS_PER_MAJOR), $row->targetMinor % Money::MINOR_UNITS_PER_MAJOR);
+                // MoneyInput::formatMinor, not a hand-rolled sprintf: it emits the
+                // same comma-decimal form the field's own placeholder shows and
+                // tryToMinor() parses back. The sprintf wrote 5000.00 into a
+                // field hinted 0,00 — two number conventions on one control.
+                $this->targetAmount = MoneyInput::formatMinor($row->targetMinor);
                 $this->targetDate = $row->targetDate;
                 $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
                 $linkedPotId = $potBalance->linkedPotIdForGoal($goalId, $currentUser->user());

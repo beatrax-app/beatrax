@@ -1186,8 +1186,14 @@ td.date,
         font-variant-numeric: tabular-nums;
     }
 
+    /* Wrapping, because the row is a label plus as many format chips as the
+       connector offers and there is no width at which four of them fit a
+       375px phone. Without it the row measured 402px against 375 and pushed
+       the whole document sideways — visible on iOS first only because that
+       is the narrowest viewport the product meets. */
     .format-chips {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: var(--space-2);
         margin: var(--space-3) 0 var(--space-4);
@@ -4933,5 +4939,29 @@ mark {
     .triage-inbox-table td:nth-child(4) select,
     .triage-inbox-table td:nth-child(4) input {
         width: 100%;
+    }
+}
+
+/*
+ * Stop iOS zooming the page when a control takes focus.
+ *
+ * WKWebView zooms in whenever a focused input/select/textarea computes below
+ * 16px, and every control in this product computes to 13px (--text-sm). The
+ * page then sits zoomed with no way back except a pinch, on a viewport that
+ * declares `viewport-fit=cover` and nothing about scale.
+ *
+ * 16px on coarse pointers only, so the desktop density the design specifies is
+ * untouched. The alternative — `maximum-scale=1` on the viewport — is worse on
+ * both counts: it disables pinch-zoom for everyone, which is an accessibility
+ * regression, and iOS has ignored it since iOS 10 anyway.
+ *
+ * One input already carried `style="font-size: 16px"` inline for this reason;
+ * this generalises that rather than leaving it as the only field that knew.
+ */
+@media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+        font-size: 16px;
     }
 }
