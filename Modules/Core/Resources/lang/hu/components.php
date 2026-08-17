@@ -43,4 +43,10 @@ return [
         'today' => 'Ma',
         'clear' => 'Törlés',
     ],
+
+    'time' => [
+        'open' => 'Válassz időpontot',
+        'hour' => 'Óra',
+        'minute' => 'Perc',
+    ],
 ];

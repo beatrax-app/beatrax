@@ -43,4 +43,10 @@ return [
         'today' => 'Azi',
         'clear' => 'Șterge',
     ],
+
+    'time' => [
+        'open' => 'Alege o oră',
+        'hour' => 'Oră',
+        'minute' => 'Minut',
+    ],
 ];

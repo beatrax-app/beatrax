@@ -43,4 +43,10 @@ return [
         'today' => 'Šiandien',
         'clear' => 'Išvalyti',
     ],
+
+    'time' => [
+        'open' => 'Pasirink laiką',
+        'hour' => 'Valanda',
+        'minute' => 'Minutė',
+    ],
 ];

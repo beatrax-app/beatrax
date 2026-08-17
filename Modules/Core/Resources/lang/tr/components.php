@@ -43,4 +43,10 @@ return [
         'today' => 'Bugün',
         'clear' => 'Temizle',
     ],
+
+    'time' => [
+        'open' => 'Bir saat seç',
+        'hour' => 'Saat',
+        'minute' => 'Dakika',
+    ],
 ];
