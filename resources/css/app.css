@@ -2077,8 +2077,18 @@ td.date,
     .cp-stats {
         display: flex;
         align-items: baseline;
+        flex-wrap: wrap;
         gap: var(--space-3);
         font-variant-numeric: tabular-nums;
+    }
+
+    /* A card is ~290px on a phone and holds two amounts plus their labels,
+       so without these the row broke inside a number: "€ 3.750," on one
+       line and "00" on the next. The amounts stay whole and the pairs wrap
+       instead. */
+    .cp-stats .value,
+    .cp-stats .label {
+        white-space: nowrap;
     }
 
     .cp-stats .label {
@@ -2119,6 +2129,21 @@ td.date,
         display: flex;
         flex-direction: column;
         gap: 2px;
+    }
+
+    /* Two side-by-side cards on a profile tab. Held to one column on a
+       phone, where halving 390px left a category name and its amount with
+       nothing between them ("Groceries€ 828,31"). */
+    .cp-tab-duo {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+    }
+
+    @media (min-width: 640px) {
+        .cp-tab-duo {
+            grid-template-columns: 1fr 1fr;
+        }
     }
 
     /* ─── View toggle (Cards / List segmented) ───────────────────── */

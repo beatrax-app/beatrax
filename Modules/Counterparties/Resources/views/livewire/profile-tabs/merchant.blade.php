@@ -15,7 +15,7 @@
 @use('Modules\Ledger\Public\ValueObjects\Money')
 
 <div class="space-y-6" style="margin-top: var(--space-5);">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
+    <div class="cp-tab-duo">
         {{-- Categories -------------------------------------------- --}}
         <x-counterparties::frame>
             <h3 style="font-size: var(--text-sm); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); font-weight: 600; margin: 0 0 var(--space-3);">
