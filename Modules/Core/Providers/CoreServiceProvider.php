@@ -7,6 +7,7 @@ namespace Modules\Core\Providers;
 use App\Models\User;
 use Illuminate\Support\ServiceProvider;
 use Livewire\LivewireManager;
+use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Internal\Console\BackupDatabaseCommand;
 use Modules\Core\Internal\Console\DoctorCommand;
 use Modules\Core\Internal\Console\FailedJobsCommand;
@@ -32,6 +33,7 @@ use Modules\Core\Public\Actions\WriteUserPreference;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\FileEncryptor;
+use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Contracts\SecretShield;
 use Modules\Core\Public\Services\BackupEncryptor;
 use Modules\Core\Public\Services\CurrentUserService;
@@ -74,6 +76,7 @@ final class CoreServiceProvider extends ServiceProvider
         // behaviour change); the Desktop provider overrides this on its
         // bundle to add the Electron safeStorage layer.
         $this->app->singleton(SecretShield::class, PassthroughSecretShield::class);
+        $this->app->bind(PublisherManifestFetcher::class, HttpPublisherManifestFetcher::class);
         $this->app->singleton(SystemAlertQuery::class);
         $this->app->singleton(AcknowledgeSystemAlert::class);
         $this->app->singleton(WriteUserPreference::class);

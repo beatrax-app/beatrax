@@ -26,11 +26,12 @@ return [
      * launch. Bundles still on the old binary continue to verify
      * against the old key until they auto-update through the
      * cross-over release that ships the new value.
+     *
+     * Pinned as a literal, not env-overridable: it is the trust anchor
+     * the live update path verifies against, and a runtime .env write must
+     * not be able to swap it for an attacker's key. Rotation is a code diff.
      */
-    'publisher_public_key_hex' => env(
-        'AUTO_UPDATE_PUBLIC_KEY_HEX',
-        '5cd2b2a3c5a09b4d3e0c778556dd500717a9b10ce396b0a0267363ea20b1abbf',
-    ),
+    'publisher_public_key_hex' => '5cd2b2a3c5a09b4d3e0c778556dd500717a9b10ce396b0a0267363ea20b1abbf',
 
     /*
      * Update channel: `stable` resolves `latest.yml` on the publisher
@@ -41,4 +42,14 @@ return [
      * later polish item).
      */
     'update_channel' => env('AUTO_UPDATE_CHANNEL', 'stable'),
+
+    /*
+     * Public base URL of the update feed — the same origin electron-updater
+     * is pointed at, holding `latest.yml`/`beta.yml` and their detached
+     * `.sig` siblings. The desktop update listeners fetch the manifest and
+     * signature from here to run the Ed25519 check BEFORE any download or
+     * install proceeds; left unset (self-hosted / web / mobile) the fetch
+     * yields null and no update is ever surfaced or applied.
+     */
+    'manifest_feed_url' => env('AUTO_UPDATE_FEED_URL'),
 ];
