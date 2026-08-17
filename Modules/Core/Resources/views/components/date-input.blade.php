@@ -1,9 +1,9 @@
 @use('Modules\Core\Public\Support\Lang')
 @use('Carbon\CarbonImmutable')
-{{-- `fieldId` lands on the BUTTON, not the bound input: a <label for="…">
-     must point at the thing a user actually clicks, and the bound input is
-     sr-only. Callers that had `id` on their old <input type="date"> pass it
-     here so their existing label keeps working. --}}
+{{-- `fieldId` lands on the BUTTON: a <label for="…"> must point at the thing a
+     user actually clicks. Callers that had `id` on their old
+     `<input type="date">` pass it here so their existing label keeps
+     working. --}}
 @props(['fieldId' => null, 'ariaLabel' => null])
 @php
     // Every piece of language and format data comes from Carbon, for the
@@ -32,6 +32,13 @@
     // 0 = Sunday … 6 = Saturday, matching JS Date#getDay so the grid maths
     // needs no translation on the client.
     $firstDow = (int) $weekStart->dayOfWeek;
+
+    // The Livewire binding goes on the ROOT, where `x-modelable` can hand it
+    // straight to the component's own `value`. Everything else — aria-invalid,
+    // aria-describedby, data-* — belongs on the button, which is the element a
+    // reader actually focuses and a label actually points at.
+    $bindings = $attributes->whereStartsWith('wire:');
+    $passthrough = $attributes->whereDoesntStartWith('wire:')->except('class');
 @endphp
 {{--
     Localised date field.
@@ -41,9 +48,18 @@
     Sunday-first calendar inside a Dutch app, and dates read back as
     08/31/2026 next to € 1.234,56.
 
-    The submitted value stays ISO `YYYY-MM-DD` on a real input, so wire:model,
-    validation and form submission behave exactly as before. Only what the
-    reader sees changed.
+    The value handed to and taken from Livewire stays ISO `YYYY-MM-DD`, so
+    wire:model, validation and every server-side rule behave exactly as they
+    did with the native control. Only what the reader sees changed.
+
+    `x-modelable` is what carries it. The caller's `wire:model` is applied to
+    this root by Livewire as an Alpine `x-model` (that is literally how the
+    directive is implemented), and `x-modelable` entangles that with the
+    `value` property below — two-way, in both directions, with no hidden input
+    to keep in step. The earlier shape put `wire:model` on an `sr-only` input
+    that ALSO carried `x-model="value"`, which meant two bindings owning one
+    element: Alpine's copy, still empty at that point, won the race and wiped
+    the server's value out of the field on every render.
 --}}
 <div
     x-data="beatraxDatePicker({
@@ -52,30 +68,20 @@
         weekdays: @js($weekdayNames),
         firstDow: @js($firstDow),
     })"
+    x-modelable="value"
+    {{ $bindings }}
     x-on:keydown.escape.window="open = false"
     x-on:click.outside="open = false"
     {{ $attributes->only('class')->class(['relative']) }}
 >
-    {{-- The bound field. Kept in the DOM as a real input rather than a
-         hidden one so wire:model, required and validation all still see it;
-         sr-only keeps it reachable for assistive tech. --}}
-    <input
-        type="text"
-        x-ref="field"
-        x-model="value"
-        class="sr-only"
-        tabindex="-1"
-        aria-hidden="true"
-        {{ $attributes->except('class') }}
-    />
-
     <button
         type="button"
         @if ($fieldId !== null) id="{{ $fieldId }}" @endif
-        x-on:click="open = ! open"
+        x-on:click="toggle()"
         x-bind:aria-expanded="open ? 'true' : 'false'"
         aria-haspopup="dialog"
         aria-label="{{ $ariaLabel ?? Lang::get('core::components.date.open') }}"
+        {{ $passthrough }}
         class="flex w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
         <span x-text="display || '—'"></span>
@@ -88,7 +94,12 @@
         role="dialog"
         aria-modal="false"
         aria-label="{{ Lang::get('core::components.date.open') }}"
-        class="absolute z-30 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-950"
+        {{-- max-w keeps the calendar inside the viewport when the field sits
+             near the right edge of a narrow screen; the compact search
+             toolbar is the case that finds it. `bx-date-pop` is what turns it
+             into a centred dialog below 768px — see app.css for why it cannot
+             stay a popover there. --}}
+        class="bx-date-pop absolute left-0 z-40 mt-1 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-950"
     >
         <div class="flex items-center justify-between">
             <button

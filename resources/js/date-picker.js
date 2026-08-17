@@ -14,9 +14,9 @@
  * mobile build ships ICU with English-only data; anything routed through ICU
  * would be English again, or would throw.
  *
- * The value the form submits is always ISO `YYYY-MM-DD` on a real input, so
- * Livewire binding, validation and browser autofill behave exactly as they did
- * with the native control. Only the presentation changed.
+ * `value` is always ISO `YYYY-MM-DD`, and the view's `x-modelable` entangles it
+ * with the caller's `wire:model`, so Livewire sees exactly what the native
+ * control used to give it. Only the presentation changed.
  */
 export function datePicker(config) {
     const pattern = config.pattern || 'YYYY-MM-DD';
@@ -27,34 +27,43 @@ export function datePicker(config) {
 
     return {
         open: false,
+        // Entangled with the caller's Livewire property by `x-modelable` in
+        // the view. Assigning it here is what makes the server agree; there is
+        // no second copy of the value anywhere to fall out of step with.
         value: '',
         viewYear: 1970,
         viewMonth: 0,
 
-        init() {
-            // Read the value off the bound input rather than taking it as a
-            // prop. Livewire has already rendered the authoritative value
-            // there, so this cannot disagree with the server, and callers do
-            // not have to hand-thread a matching PHP expression for every
-            // wire:model path — several of which live inside arrays the view
-            // does not expose directly.
-            this.value = (this.$refs.field && this.$refs.field.value) || '';
+        /**
+         * Open/close, and when opening make sure the calendar is actually on
+         * screen. The field is often the last row of a phone bottom sheet, so
+         * a calendar that simply drops below it lands past the fold inside the
+         * sheet's own scroll area — visible only to someone who thinks to
+         * scroll a panel that has just sprouted content they cannot see.
+         * `block: 'nearest'` scrolls every scrollable ancestor by the least
+         * amount that reveals it, and does nothing when it already fits.
+         */
+        toggle() {
+            this.open = ! this.open;
 
-            this.syncViewToValue();
-
-            // Livewire replaces the input's value on re-render (a reset, a
-            // filter cleared elsewhere); mirror that back into the calendar.
-            if (this.$refs.field) {
-                this.$refs.field.addEventListener('change', () => {
-                    if (this.$refs.field.value !== this.value) {
-                        this.value = this.$refs.field.value || '';
-                    }
-                });
+            if (! this.open) {
+                return;
             }
 
+            this.$nextTick(() => {
+                const popover = this.$el.querySelector('[role="dialog"]');
+
+                popover && popover.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            });
+        },
+
+        init() {
+            this.syncViewToValue();
+
             // The bound property can change from the server (a reset, a
-            // filter cleared elsewhere). Follow it rather than holding a
-            // stale copy the user cannot see is stale.
+            // filter cleared elsewhere, the entanglement handing over the
+            // initial value a microtask after init). Follow it rather than
+            // holding a stale copy the user cannot see is stale.
             this.$watch('value', () => this.syncViewToValue());
         },
 
@@ -144,7 +153,6 @@ export function datePicker(config) {
 
         choose(iso) {
             this.value = iso;
-            this.commit();
             this.open = false;
         },
 
@@ -154,26 +162,7 @@ export function datePicker(config) {
 
         clear() {
             this.value = '';
-            this.commit();
             this.open = false;
-        },
-
-        /*
-         * Livewire binds to the real input, not to this component, so the
-         * value has to be written there and announced. Setting `.value`
-         * alone is invisible to wire:model — it listens for the events a
-         * human typing would have produced.
-         */
-        commit() {
-            const field = this.$refs.field;
-
-            if (! field) {
-                return;
-            }
-
-            field.value = this.value;
-            field.dispatchEvent(new Event('input', { bubbles: true }));
-            field.dispatchEvent(new Event('change', { bubbles: true }));
         },
     };
 }
