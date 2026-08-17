@@ -67,6 +67,55 @@ function _lockPost(path) {
     });
 }
 
+/**
+ * Take the lock screen when a Livewire request comes back locked.
+ *
+ * A lock that engages while a Livewire request is in flight cannot answer with
+ * a redirect: Livewire reads the body as JSON, and under NativePHP's Android
+ * bridge `response.redirected` is false because the bridge follows the redirect
+ * itself. The lock page's HTML therefore reached `JSON.parse`, and the app died
+ * — lock screen painted as a narrow inset over the page it should have
+ * replaced, then blank, then no request from any tap until a force-stop.
+ *
+ * So AppLockMiddleware answers such a request with `{"components": [],
+ * "beatraxLock": {"redirect": "…"}}` and this takes it from there. `components`
+ * being empty is what keeps Livewire's own handling harmless if this listener
+ * is ever missing; the navigation is this listener's job alone.
+ *
+ * Registered unconditionally, and NOT behind `_lockEnabled()`: that flag
+ * reflects what the layout knew when this page rendered, and the case being
+ * defended against is precisely a lock that engaged afterwards.
+ */
+document.addEventListener('livewire:init', () => {
+    if (! window.Livewire || typeof window.Livewire.interceptRequest !== 'function') {
+        return;
+    }
+
+    window.Livewire.interceptRequest(({ onParsed }) => {
+        onParsed(({ body }) => {
+            // Cheap string test before parsing: this runs for every Livewire
+            // response on the page, and all but one of them are ordinary.
+            if (typeof body !== 'string' || ! body.includes('beatraxLock')) {
+                return;
+            }
+
+            let payload;
+
+            try {
+                payload = JSON.parse(body);
+            } catch (e) {
+                return;
+            }
+
+            const redirect = payload && payload.beatraxLock && payload.beatraxLock.redirect;
+
+            if (typeof redirect === 'string' && redirect !== '') {
+                window.location.assign(redirect);
+            }
+        });
+    });
+});
+
 document.addEventListener('alpine:init', () => {
     if (!window.Alpine) {
         return;
