@@ -43,4 +43,10 @@ return [
         'today' => 'I dag',
         'clear' => 'Rensa',
     ],
+
+    'time' => [
+        'open' => 'Välj en tid',
+        'hour' => 'Timme',
+        'minute' => 'Minut',
+    ],
 ];

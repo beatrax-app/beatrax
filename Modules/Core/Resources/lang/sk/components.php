@@ -43,4 +43,10 @@ return [
         'today' => 'Dnes',
         'clear' => 'Vymazať',
     ],
+
+    'time' => [
+        'open' => 'Vyber čas',
+        'hour' => 'Hodina',
+        'minute' => 'Minúta',
+    ],
 ];

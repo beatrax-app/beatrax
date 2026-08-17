@@ -37,7 +37,7 @@
         @endif
     </span>
     <div
-        x-show="open"
+        x-show="open" x-cloak
         x-on:click.outside="open = false"
         x-transition
         class="srch-popover"
@@ -102,7 +102,7 @@
             @endif
         </span>
         <div
-            x-show="open"
+            x-show="open" x-cloak
             x-on:click.outside="open = false"
             x-transition
             class="srch-popover"
@@ -160,7 +160,7 @@
         @endif
     </span>
     <div
-        x-show="open"
+        x-show="open" x-cloak
         x-on:click.outside="open = false"
         x-transition
         class="srch-popover"
@@ -235,7 +235,7 @@
             @endif
         </span>
         <div
-            x-show="open"
+            x-show="open" x-cloak
             x-on:click.outside="open = false"
             x-transition
             class="srch-popover"

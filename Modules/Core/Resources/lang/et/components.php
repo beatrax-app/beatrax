@@ -43,4 +43,10 @@ return [
         'today' => 'Täna',
         'clear' => 'Tühjenda',
     ],
+
+    'time' => [
+        'open' => 'Vali kellaaeg',
+        'hour' => 'Tund',
+        'minute' => 'Minut',
+    ],
 ];

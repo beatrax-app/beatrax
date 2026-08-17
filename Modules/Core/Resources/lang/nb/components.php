@@ -43,4 +43,10 @@ return [
         'today' => 'I dag',
         'clear' => 'Tøm',
     ],
+
+    'time' => [
+        'open' => 'Velg et tidspunkt',
+        'hour' => 'Time',
+        'minute' => 'Minutt',
+    ],
 ];

@@ -42,4 +42,10 @@ return [
         'today' => 'Vandaag',
         'clear' => 'Wissen',
     ],
+
+    'time' => [
+        'open' => 'Kies een tijd',
+        'hour' => 'Uur',
+        'minute' => 'Minuut',
+    ],
 ];
