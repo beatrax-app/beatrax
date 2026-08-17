@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Потвърждаване…',
     'commit_count' => 'Потвърди всичко (:count транзакции) →',
     'commit_empty' => 'Потвърди всичко (—) →',
+    'skip' => 'Пропусни засега',
 
     'errors' => [
         'nothing_to_commit' => 'Няма какво да се потвърди.',

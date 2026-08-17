@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Deschide navigarea',
         'search_transactions' => 'Caută tranzacții',
     ],
+
+    'file' => [
+        'choose' => 'Alege fișier',
+        'none' => 'Niciun fișier ales',
+        'count' => ':count fișiere alese',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Alege o dată',
+        'prev_month' => 'Luna anterioară',
+        'next_month' => 'Luna următoare',
+        'today' => 'Azi',
+        'clear' => 'Șterge',
+    ],
 ];

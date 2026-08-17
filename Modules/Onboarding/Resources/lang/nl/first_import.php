@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Bezig met vastleggen…',
     'commit_count' => 'Leg alles vast (:count transacties) →',
     'commit_empty' => 'Leg alles vast (—) →',
+    'skip' => 'Voorlopig overslaan',
 
     'errors' => [
         'nothing_to_commit' => 'Niets om vast te leggen.',

@@ -66,9 +66,9 @@
                      does not contain the visible text gives the field a name
                      no one can say out loud to a user looking at "From". --}}
                 <label for="search-filter-after" class="srch-filter-label">{{ Lang::get('ledger::list.filter.from') }}</label>
-                <input id="search-filter-after" type="date" wire:model.live="filterAfter" class="srch-date-input" />
+                <x-core::date-input field-id="search-filter-after" wire:model.live="filterAfter" />
                 <label for="search-filter-before" class="srch-filter-label mt-1">{{ Lang::get('ledger::list.filter.to') }}</label>
-                <input id="search-filter-before" type="date" wire:model.live="filterBefore" class="srch-date-input" />
+                <x-core::date-input field-id="search-filter-before" wire:model.live="filterBefore" />
             </div>
         </div>
     </div>

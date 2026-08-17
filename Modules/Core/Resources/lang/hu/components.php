@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Navigáció megnyitása',
         'search_transactions' => 'Tranzakciók keresése',
     ],
+
+    'file' => [
+        'choose' => 'Fájl kiválasztása',
+        'none' => 'Nincs kiválasztott fájl',
+        'count' => ':count fájl kiválasztva',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Válassz dátumot',
+        'prev_month' => 'Előző hónap',
+        'next_month' => 'Következő hónap',
+        'today' => 'Ma',
+        'clear' => 'Törlés',
+    ],
 ];

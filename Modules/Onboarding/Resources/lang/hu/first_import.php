@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Véglegesítés…',
     'commit_count' => 'Minden véglegesítése (:count tranzakció) →',
     'commit_empty' => 'Minden véglegesítése (—) →',
+    'skip' => 'Kihagyás egyelőre',
 
     'errors' => [
         'nothing_to_commit' => 'Nincs mit véglegesíteni.',

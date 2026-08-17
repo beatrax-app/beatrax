@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Ava navigeerimine',
         'search_transactions' => 'Otsi tehinguid',
     ],
+
+    'file' => [
+        'choose' => 'Vali fail',
+        'none' => 'Faili pole valitud',
+        'count' => ':count faili valitud',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Vali kuupäev',
+        'prev_month' => 'Eelmine kuu',
+        'next_month' => 'Järgmine kuu',
+        'today' => 'Täna',
+        'clear' => 'Tühjenda',
+    ],
 ];

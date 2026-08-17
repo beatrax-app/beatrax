@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Фіксація…',
     'commit_count' => 'Зафіксувати все (транзакцій: :count) →',
     'commit_empty' => 'Зафіксувати все (—) →',
+    'skip' => 'Пропустити поки що',
 
     'errors' => [
         'nothing_to_commit' => 'Нема чого фіксувати.',

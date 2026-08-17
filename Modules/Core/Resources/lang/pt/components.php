@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Abrir a navegação',
         'search_transactions' => 'Pesquisar transações',
     ],
+
+    'file' => [
+        'choose' => 'Escolher ficheiro',
+        'none' => 'Nenhum ficheiro escolhido',
+        'count' => ':count ficheiros escolhidos',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Escolher uma data',
+        'prev_month' => 'Mês anterior',
+        'next_month' => 'Mês seguinte',
+        'today' => 'Hoje',
+        'clear' => 'Limpar',
+    ],
 ];

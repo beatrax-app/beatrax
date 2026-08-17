@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Salvat ca beatrax-recovery-codes-:username.txt',
     'confirm' => 'Am salvat aceste coduri într-un loc sigur.',
     'continue' => 'Continuă către Beatrax',
+
+    'settings' => [
+        'heading' => 'Coduri de recuperare',
+        'body' => 'Codurile de recuperare sunt singura cale înapoi în contul tău dacă îți uiți parola.',
+        'warning' => 'Sunt păstrate sub formă de hash, așa că nu mai pot fi afișate. Un set nou îl anulează imediat pe cel vechi.',
+        'regenerate' => 'Generează coduri noi',
+    ],
 ];

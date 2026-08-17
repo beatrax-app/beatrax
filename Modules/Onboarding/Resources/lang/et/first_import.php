@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Kinnitan…',
     'commit_count' => 'Kinnita kõik (:count tehingut) →',
     'commit_empty' => 'Kinnita kõik (—) →',
+    'skip' => 'Jäta praegu vahele',
 
     'errors' => [
         'nothing_to_commit' => 'Pole midagi kinnitada.',

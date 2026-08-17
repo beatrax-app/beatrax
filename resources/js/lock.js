@@ -215,20 +215,42 @@ document.addEventListener('alpine:init', () => {
         /**
          * Ask the server whether the grace window closed while we were away.
          *
-         * The answer is a redirect, not a body: an expired marker makes
-         * AppLockMiddleware lock and bounce this POST to the lock screen, so
-         * `redirected` is the signal. Reloading then lands on the lock screen
-         * without waiting for the user to touch anything.
+         * The answer is the body `{"locked": false}`, and anything else means
+         * lock. It used to be `response.redirected`, which is unreadable under
+         * NativePHP's Android bridge: the bridge follows the middleware's
+         * redirect to the lock screen in-process and returns that page as an
+         * ordinary response, so `redirected` was always false and the reload
+         * never fired. The session was locked server-side while the phone went
+         * on showing — and accepting taps on — the previous screen.
+         *
+         * Reading the body inverts the default: any answer that is not
+         * explicitly "unlocked" reloads. A lock screen is HTML and fails to
+         * parse, a network error is caught below and left to the next
+         * navigation, and only a genuine unlocked reply stays put.
          */
         _checkResume() {
             return _lockPost('/lock/resume')
                 .then((response) => {
-                    if (response && response.redirected) {
-                        window.location.reload();
+                    if (! response) {
+                        return;
                     }
+
+                    // A reply arrived, so the answer is knowable: reload unless
+                    // it is explicitly the unlocked one. Unparseable means the
+                    // lock screen came back instead.
+                    return response.json().then(
+                        (payload) => {
+                            if (! payload || payload.locked !== false) {
+                                window.location.reload();
+                            }
+                        },
+                        () => window.location.reload(),
+                    );
                 })
                 .catch(() => {
-                    // Swallow — the next navigation is gated the same way.
+                    // Swallow — the request itself failed, which says nothing
+                    // about the lock. Reloading on a dropped connection would
+                    // spin. The next navigation is gated the same way.
                 });
         },
 
@@ -382,10 +404,41 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            // Navigating away hides this document too, and the hide is
+            // indistinguishable from backgrounding by the time
+            // visibilitychange runs. Chrome fires pagehide FIRST when a
+            // document is being replaced, so the flag is set in time.
+            //
+            // `persisted` is the whole distinction: false means this document
+            // is being torn down for another page of the app, true means it is
+            // going into the back/forward cache, which is a real background and
+            // must still arm the lock.
+            //
+            // Without this, every in-app navigation POSTed /lock/background.
+            // The server pulls that marker on the next request to clear it —
+            // but the marker is written by a keepalive POST that lands ~30ms
+            // AFTER the incoming page's own GET, so nothing was there to pull
+            // and the marker simply waited. A user reading one page for longer
+            // than the 30s grace was then locked on their next tap, whatever
+            // their idle timeout said.
+            this._unloading = false;
+
+            window.addEventListener('pagehide', (event) => {
+                if (! event.persisted) {
+                    this._unloading = true;
+                }
+            });
+
             // Visibility change: background → show veil + start grace.
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
+                    // The veil is unconditional: it is a privacy screen, and
+                    // a torn-down document is about to disappear anyway.
                     this.showVeil();
+
+                    if (this._unloading) {
+                        return;
+                    }
 
                     // Both: the timer is the fast path where it genuinely
                     // runs, the marker is what survives a suspended WebView.

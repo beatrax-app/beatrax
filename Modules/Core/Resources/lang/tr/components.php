@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Gezinmeyi aç',
         'search_transactions' => 'İşlemlerde ara',
     ],
+
+    'file' => [
+        'choose' => 'Dosya seç',
+        'none' => 'Dosya seçilmedi',
+        'count' => ':count dosya seçildi',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Bir tarih seç',
+        'prev_month' => 'Önceki ay',
+        'next_month' => 'Sonraki ay',
+        'today' => 'Bugün',
+        'clear' => 'Temizle',
+    ],
 ];

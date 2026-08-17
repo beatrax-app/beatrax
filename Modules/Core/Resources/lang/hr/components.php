@@ -27,4 +27,20 @@ return [
         'open_nav' => 'Otvori navigaciju',
         'search_transactions' => 'Pretraži transakcije',
     ],
+
+    'file' => [
+        'choose' => 'Odaberi datoteku',
+        'none' => 'Nije odabrana datoteka',
+        'count' => 'Odabrano datoteka: :count',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Odaberi datum',
+        'prev_month' => 'Prethodni mjesec',
+        'next_month' => 'Sljedeći mjesec',
+        'today' => 'Danas',
+        'clear' => 'Očisti',
+    ],
 ];
