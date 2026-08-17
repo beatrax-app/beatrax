@@ -105,7 +105,11 @@ it('loads the pot into the form when editing opens', function (): void {
         ->assertSet('editPotId', $pot->id)
         ->assertSet('name', 'Buffer')
         ->assertSet('linkType', 'none')
-        ->assertDispatched('modal-show');
+        // Deliberately NOT dispatched. Every Edit affordance picks sheet or
+        // modal from the viewport width on the client; announcing it from the
+        // server as well put the desktop modal on top of the phone sheet. The
+        // server's job here is to load the pot, which the assertions above are.
+        ->assertNotDispatched('modal-show');
 });
 
 it('shows the goal picker for a pot that is linked to one', function (): void {

@@ -7,6 +7,7 @@ namespace Modules\Mobile\Providers;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl;
 use Livewire\LivewireManager;
@@ -164,14 +165,18 @@ final class MobileServiceProvider extends ServiceProvider
         // Swapped once everything has booted rather than inside this boot():
         // Livewire installs its own generator from its provider, and whichever
         // of the two ran last would otherwise win by accident of ordering.
-        // Bound on the container rather than through the facade's swap(): the
-        // facade resolves this very key, so binding it is the same act, and the
-        // repo's strict rules forbid reaching for a facade here.
         $this->app->booted(function (): void {
+            // Both halves, because Facade::swap() does both and binding alone
+            // is not equivalent: the facade caches whatever it resolved first,
+            // so a container binding installed afterwards is handed out by the
+            // container and ignored by the facade. Livewire mints the URL
+            // through the facade, so the stale root would have won.
             $this->app->instance(
                 GenerateSignedUploadUrl::class,
                 $this->app->make(BridgeSignedUploadUrl::class),
             );
+
+            Facade::clearResolvedInstance(GenerateSignedUploadUrl::class);
         });
     }
 
