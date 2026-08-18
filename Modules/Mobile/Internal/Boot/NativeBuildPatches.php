@@ -45,11 +45,10 @@ final readonly class NativeBuildPatches
         private LoggerInterface $log,
     ) {}
 
-    // Where the patch scripts are, which is not one place. The dev mobile root
-    // reaches them at ../scripts; a Bifrost tree is materialized FROM that root,
-    // so ../ climbs out of the build repo entirely and materialize.sh copies
-    // them to scripts/ instead. Probed by content, because both roots have a
-    // scripts/ directory and only one of them has these in it.
+    // Where the patch scripts are, which is not one place: the dev mobile root
+    // reaches them at ../scripts, while a Bifrost tree is materialized FROM
+    // that root, so ../ climbs out of the build repo. Probed by content —
+    // both roots have a scripts/ directory, only one has these in it.
     public static function locate(string $basePath): ?string
     {
         $probe = self::SCRIPTS[0];
