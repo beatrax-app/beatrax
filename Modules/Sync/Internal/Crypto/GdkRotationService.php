@@ -9,6 +9,9 @@ use Illuminate\Database\DatabaseManager;
 use InvalidArgumentException;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Sync\Internal\Exceptions\CryptoOperationFailedException;
+use Modules\Sync\Internal\Identity\DeviceIdentityDto;
+use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 use SodiumException;
@@ -29,6 +32,8 @@ final class GdkRotationService
         private readonly DatabaseManager $db,
         private readonly Clock $clock,
         private readonly SodiumPrimitives $sodium,
+        private readonly DeviceIdentityLoader $identityLoader,
+        private readonly DeviceKeySigner $signer,
     ) {}
 
     // $session is a PER-METHOD parameter, not a constructor-captured field —
@@ -70,6 +75,11 @@ final class GdkRotationService
             $newEpochId = max($newEpochId, $epoch->epochId + 1);
         }
 
+        // The acting device's identity signs each fan-out wrap so recipients can
+        // authenticate its provenance. Loaded after loadKeyring() has proven the
+        // app-lock KEK is available.
+        $identity = $this->requireIdentity($userId, $session);
+
         $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
 
         try {
@@ -77,7 +87,7 @@ final class GdkRotationService
             // ONE SQL transaction, so a failure anywhere after the revoke can
             // no longer COMMIT the revoke-only state. Residual: appendEpoch()
             // writes the keyring FILE, which cannot join the SQL transaction.
-            $connection->transaction(function () use ($connection, $userId, $deviceRegistryId, $now, $newEpochId, $rawGdkKey, $session): void {
+            $connection->transaction(function () use ($connection, $userId, $deviceRegistryId, $now, $newEpochId, $rawGdkKey, $session, $identity): void {
                 // Step 1: revoke trust. Clearing confirmed_at is the exact
                 // column DeviceRegistryService's device-key queries already
                 // filter on, so this single write closes the Ed25519 gate.
@@ -103,7 +113,7 @@ final class GdkRotationService
                     }
 
                     $recipientPub = $this->sodium->hexToBin($x25519PublicKeyHex);
-                    $wrap = $this->buildGdkEpochWrap($newEpochId, $rawGdkKey, $recipientPub, $deviceId);
+                    $wrap = $this->buildGdkEpochWrap($newEpochId, $rawGdkKey, $recipientPub, $deviceId, $identity->deviceId, $identity->ed25519SecretKeyHex);
 
                     $this->relayMailbox->deliver(
                         senderDid: $selfDeviceId ?? '',
@@ -119,35 +129,51 @@ final class GdkRotationService
         }
     }
 
-    // Builds the opaque GDK_EPOCH_WRAP blob for one recipient device.
-    // SECURITY PRECONDITION: sodium_crypto_box_seal provides confidentiality
-    // but NO sender authentication, so this wrap is safe to trust on receipt
-    // ONLY over a channel that has independently authenticated the sender as a CONFIRMED peer.
+    // Builds the GDK_EPOCH_WRAP for one recipient. The seal gives confidentiality;
+    // the detached Ed25519 signature over the sealed bytes + epoch id + both
+    // device ids gives sender authenticity, so GdkEpochControlHandler rejects a
+    // forged wrap against the sender's confirmed key rather than trust the channel.
     /**
-     * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string}
+     * @return array{type: string, epoch_id: int, wrapped_key_b64: string, recipient_device_id: string, sender_device_id: string, sig_hex: string}
      *
-     * @throws InvalidArgumentException when $rawGdkKey or
-     *                                  $recipientX25519PublicKeyBin is empty.
+     * @throws InvalidArgumentException when a required argument is empty.
+     * @throws SodiumException on a libsodium failure (translated by callers).
      */
     public function buildGdkEpochWrap(
         int $epochId,
         string $rawGdkKey,
         string $recipientX25519PublicKeyBin,
         string $recipientDeviceId,
+        string $senderDeviceId,
+        string $senderEd25519SecretKeyHex,
     ): array {
-        if ($rawGdkKey === '' || $recipientX25519PublicKeyBin === '') {
+        if ($rawGdkKey === '' || $recipientX25519PublicKeyBin === ''
+            || $senderDeviceId === '' || $senderEd25519SecretKeyHex === '') {
             throw new InvalidArgumentException(
-                'GdkRotationService::buildGdkEpochWrap — rawGdkKey/recipientX25519PublicKeyBin must not be empty.',
+                'GdkRotationService::buildGdkEpochWrap — rawGdkKey/recipientX25519PublicKeyBin/sender identity must not be empty.',
             );
         }
 
         $sealed = sodium_crypto_box_seal($rawGdkKey, $recipientX25519PublicKeyBin);
+
+        $senderSecretBin = $this->sodium->hexToBin($senderEd25519SecretKeyHex);
+
+        try {
+            $sigHex = $this->signer->sign(
+                GdkEpochWrapSignature::signingMessage($epochId, $sealed, $recipientDeviceId, $senderDeviceId),
+                $senderSecretBin,
+            );
+        } finally {
+            sodium_memzero($senderSecretBin);
+        }
 
         return [
             'type' => 'GDK_EPOCH_WRAP',
             'epoch_id' => $epochId,
             'wrapped_key_b64' => base64_encode($sealed),
             'recipient_device_id' => $recipientDeviceId,
+            'sender_device_id' => $senderDeviceId,
+            'sig_hex' => $sigHex,
         ];
     }
 
@@ -174,6 +200,10 @@ final class GdkRotationService
         $selfDeviceId = $this->selfDeviceId($userId);
         $recipientDeviceId = $recipient['deviceId'];
 
+        // The acting device's identity signs each wrap so the new peer can
+        // authenticate its provenance (see rotateAndRevoke()).
+        $identity = $this->requireIdentity($userId, $session);
+
         try {
             // Inside the try, like the per-epoch conversion below it. Outside,
             // a libsodium failure here escaped as a raw SodiumException while
@@ -181,12 +211,12 @@ final class GdkRotationService
             // reported as two types, depending on which key it was converting.
             $recipientPub = $this->sodium->hexToBin($recipient['pubHex']);
 
-            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId): void {
+            $this->db->connection()->transaction(function () use ($keyring, $recipientPub, $recipientDeviceId, $selfDeviceId, $identity): void {
                 foreach ($keyring->epochs() as $epoch) {
                     $rawKey = $this->sodium->hexToBin($epoch->keyHex);
 
                     try {
-                        $wrap = $this->buildGdkEpochWrap($epoch->epochId, $rawKey, $recipientPub, $recipientDeviceId);
+                        $wrap = $this->buildGdkEpochWrap($epoch->epochId, $rawKey, $recipientPub, $recipientDeviceId, $identity->deviceId, $identity->ed25519SecretKeyHex);
 
                         $this->relayMailbox->deliver(
                             senderDid: $selfDeviceId ?? '',
@@ -243,5 +273,21 @@ final class GdkRotationService
             ->value('device_id');
 
         return is_string($value) ? $value : null;
+    }
+
+    // The acting device's own identity, needed to SIGN each epoch wrap. Loaded
+    // only after loadKeyring() proved the KEK is available, so a null here is an
+    // unexpected state (KEK present, identity absent), not the ordinary locked
+    // case — fail closed rather than emit an unsigned, un-adoptable wrap.
+    private function requireIdentity(int $userId, Session $session): DeviceIdentityDto
+    {
+        $identity = $this->identityLoader->load($userId, $session);
+        if ($identity === null) {
+            throw new \LogicException(
+                "GdkRotationService — no local device identity for user {$userId}; cannot sign epoch wraps.",
+            );
+        }
+
+        return $identity;
     }
 }

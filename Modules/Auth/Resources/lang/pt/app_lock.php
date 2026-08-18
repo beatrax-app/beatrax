@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Substitui o início de sessão diário por um PIN. As sessões mantêm-se ativas durante 30 dias.',
 
     'setup_heading' => 'Define um PIN para ativar o bloqueio',
-    'new_pin_label' => 'Novo PIN (4–10 dígitos)',
+    'new_pin_label' => 'Novo PIN (6–10 dígitos)',
     'confirm_pin_label' => 'Confirmar PIN',
     'account_password_label' => 'Palavra-passe da conta',
     'account_password_note' => '(necessária para criar uma chave de recuperação)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'Alterar o PIN — confirma com o PIN atual',
     'keep_pin' => 'Manter PIN',
 
-    'error_pin_too_short' => 'O PIN tem de ter pelo menos 4 dígitos.',
+    'error_pin_too_short' => 'O PIN tem de ter pelo menos 6 dígitos.',
     'error_pin_mismatch' => 'Os PIN não coincidem. Tenta novamente.',
     'error_pin_incorrect' => 'PIN incorreto.',
     'error_account_password' => 'Palavra-passe da conta incorreta.',

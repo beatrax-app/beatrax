@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Odhlásiť sa',
 
     'errors' => [
-        'pin_length' => 'PIN musí mať aspoň 4 číslice.',
+        'pin_length' => 'PIN musí mať aspoň 6 číslice.',
 
         'too_many_attempts' => 'Priveľa pokusov — skús to znova o :secondss.',
         'incorrect_pin_remaining' => 'Nesprávny PIN. Zostáva pokusov: :count.',

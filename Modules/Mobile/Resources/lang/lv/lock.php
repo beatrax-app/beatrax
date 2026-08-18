@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Atteikties',
 
     'errors' => [
-        'pin_length' => 'PIN kodā jābūt vismaz 4 cipariem.',
+        'pin_length' => 'PIN kodā jābūt vismaz 6 cipariem.',
 
         'too_many_attempts' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :secondss.',
         'incorrect_pin_remaining' => 'Nepareizs PIN kods. Atlikušie mēģinājumi: :count.',

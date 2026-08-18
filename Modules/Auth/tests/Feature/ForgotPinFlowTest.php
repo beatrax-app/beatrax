@@ -42,7 +42,7 @@ it('after password re-auth a new PIN re-wraps the data key and the same key is r
     $keyWrap = $this->app->make(AppLockKeyWrap::class);
 
     // Enable the lock with PIN 1234 and the real account password.
-    $provisioner->enable($user->id, '1234', 'my-secure-password');
+    $provisioner->enable($user->id, '123456', 'my-secure-password');
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     // Read the original data key by unwrapping the pin wrap.
@@ -57,17 +57,17 @@ it('after password re-auth a new PIN re-wraps the data key and the same key is r
     $kdfSalt = $row->kdf_salt;
     expect(is_string($kdfSalt))->toBeTrue();
 
-    $pinWrapKey = $kdf->deriveWrapKey('1234', $kdfSalt);
+    $pinWrapKey = $kdf->deriveWrapKey('123456', $kdfSalt);
     $originalDataKey = $keyWrap->unwrap($row->pin_wrapped_key, $pinWrapKey);
     sodium_memzero($pinWrapKey);
     expect($originalDataKey)->not->toBeFalse();
 
     // Perform the forgot-PIN re-wrap: wrong password returns false.
-    $result = $provisioner->rewrapForNewPin($user->id, 'wrong-password', '5678');
+    $result = $provisioner->rewrapForNewPin($user->id, 'wrong-password', '567890');
     expect($result)->toBeFalse();
 
     // Correct password re-wraps under the new PIN.
-    $result = $provisioner->rewrapForNewPin($user->id, 'my-secure-password', '5678');
+    $result = $provisioner->rewrapForNewPin($user->id, 'my-secure-password', '567890');
     expect($result)->toBeTrue();
 
     // Verify the new PIN wrap decrypts to the SAME data key.
@@ -82,7 +82,7 @@ it('after password re-auth a new PIN re-wraps the data key and the same key is r
     $kdfSalt2 = $row2->kdf_salt;
     expect(is_string($kdfSalt2))->toBeTrue();
 
-    $newPinWrapKey = $kdf->deriveWrapKey('5678', $kdfSalt2);
+    $newPinWrapKey = $kdf->deriveWrapKey('567890', $kdfSalt2);
     $recoveredDataKey = $keyWrap->unwrap($row2->pin_wrapped_key, $newPinWrapKey);
     sodium_memzero($newPinWrapKey);
 
@@ -106,33 +106,33 @@ it('settings Forgot PIN flow resets the PIN via the account password (WR-02)', f
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
-    $provisioner->enable($user->id, '1234', 'forgot-ui-pass');
+    $provisioner->enable($user->id, '123456', 'forgot-ui-pass');
 
     // Wrong account password: rejected, PIN unchanged.
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmForgotPin')
         ->assertSet('confirmingForgotPin', true)
         ->set('accountPassword', 'wrong-password')
-        ->set('newPin', '5678')
-        ->set('confirmPin', '5678')
+        ->set('newPin', '567890')
+        ->set('confirmPin', '567890')
         ->call('resetForgottenPin')
         ->assertSee('Incorrect account password.');
 
-    expect($provisioner->verifyPin($user->id, '1234'))->toBeTrue();
+    expect($provisioner->verifyPin($user->id, '123456'))->toBeTrue();
 
     // Correct account password: PIN re-wrapped to the new value.
     Livewire::test(AppLockSettingsSection::class)
         ->call('confirmForgotPin')
         ->set('accountPassword', 'forgot-ui-pass')
-        ->set('newPin', '5678')
-        ->set('confirmPin', '5678')
+        ->set('newPin', '567890')
+        ->set('confirmPin', '567890')
         ->call('resetForgottenPin')
         ->assertSet('confirmingForgotPin', false)
         ->assertSet('accountPassword', '')
         ->assertSet('newPin', '');
 
-    expect($provisioner->verifyPin($user->id, '5678'))->toBeTrue();
-    expect($provisioner->verifyPin($user->id, '1234'))->toBeFalse();
+    expect($provisioner->verifyPin($user->id, '567890'))->toBeTrue();
+    expect($provisioner->verifyPin($user->id, '123456'))->toBeFalse();
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 });
 
@@ -150,7 +150,7 @@ it('changePin preserves the data key under the new PIN', function (): void {
     /** @var AppLockKeyWrap $keyWrap */
     $keyWrap = $this->app->make(AppLockKeyWrap::class);
 
-    $provisioner->enable($user->id, '1111', 'bob-password');
+    $provisioner->enable($user->id, '111111', 'bob-password');
 
     // Capture original data key.
     $row = app(DatabaseManager::class)
@@ -162,13 +162,13 @@ it('changePin preserves the data key under the new PIN', function (): void {
     $kdfSalt = $row->kdf_salt;
     expect(is_string($kdfSalt))->toBeTrue();
 
-    $pinWrapKey = $kdf->deriveWrapKey('1111', $kdfSalt);
+    $pinWrapKey = $kdf->deriveWrapKey('111111', $kdfSalt);
     $originalDataKey = $keyWrap->unwrap($row->pin_wrapped_key, $pinWrapKey);
     sodium_memzero($pinWrapKey);
     expect($originalDataKey)->not->toBeFalse();
 
     // Wrong current PIN returns false and does NOT mutate the row.
-    $result = $provisioner->changePin($user->id, 'wrong', '2222');
+    $result = $provisioner->changePin($user->id, 'wrong', '222222');
     expect($result)->toBeFalse();
 
     // The old PIN still works (row unchanged).
@@ -181,7 +181,7 @@ it('changePin preserves the data key under the new PIN', function (): void {
     expect($rowAfterFail->pin_wrapped_key)->toBe($row->pin_wrapped_key);
 
     // Correct current PIN succeeds.
-    $result = $provisioner->changePin($user->id, '1111', '2222');
+    $result = $provisioner->changePin($user->id, '111111', '222222');
     expect($result)->toBeTrue();
 
     // New PIN decrypts to the same data key.
@@ -194,7 +194,7 @@ it('changePin preserves the data key under the new PIN', function (): void {
     $kdfSalt3 = $row3->kdf_salt;
     expect(is_string($kdfSalt3))->toBeTrue();
 
-    $newPinWrapKey = $kdf->deriveWrapKey('2222', $kdfSalt3);
+    $newPinWrapKey = $kdf->deriveWrapKey('222222', $kdfSalt3);
     $recoveredDataKey = $keyWrap->unwrap($row3->pin_wrapped_key, $newPinWrapKey);
     sodium_memzero($newPinWrapKey);
     expect($recoveredDataKey)->not->toBeFalse();
@@ -217,7 +217,7 @@ it('disable requires the correct PIN and clears all lock material on success', f
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
 
-    $provisioner->enable($user->id, '9999', 'carol-pass');
+    $provisioner->enable($user->id, '999999', 'carol-pass');
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     // Wrong PIN: returns false, lock stays enabled.
@@ -226,7 +226,7 @@ it('disable requires the correct PIN and clears all lock material on success', f
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     // Correct PIN: returns true, lock_enabled=false, PIN material cleared.
-    $result = $provisioner->disable($user->id, '9999');
+    $result = $provisioner->disable($user->id, '999999');
     expect($result)->toBeTrue();
     expect($provisioner->isEnabled($user->id))->toBeFalse();
 
@@ -263,19 +263,19 @@ it('disable() and re-enable() both delete stale biometric credentials (WR-06)', 
 
     // Enable + enroll, then DISABLE: the credential must not survive (its
     // wrap holds the data key disable() destroys).
-    $provisioner->enable($user->id, '1234', 'stale-pass');
+    $provisioner->enable($user->id, '123456', 'stale-pass');
     $store->store($user->id, base64_encode('stale-cred-1'), 'Old Device', str_repeat("\x05", 32), 'fake-cbor', 'webauthn');
     expect($credCount())->toBe(1);
 
-    expect($provisioner->disable($user->id, '1234'))->toBeTrue();
+    expect($provisioner->disable($user->id, '123456'))->toBeTrue();
     expect($credCount())->toBe(0);
 
     // Enable + enroll, then RE-ENABLE: enable() mints a new data key, so any
     // pre-existing credential (old key wrap) must be cleared too.
-    $provisioner->enable($user->id, '1234', 'stale-pass');
+    $provisioner->enable($user->id, '123456', 'stale-pass');
     $store->store($user->id, base64_encode('stale-cred-2'), 'Old Device 2', str_repeat("\x06", 32), 'fake-cbor', 'webauthn');
     expect($credCount())->toBe(1);
 
-    $provisioner->enable($user->id, '5678', 'stale-pass');
+    $provisioner->enable($user->id, '567890', 'stale-pass');
     expect($credCount())->toBe(0);
 });

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Lock;
 
 // Derives a symmetric wrap key from a PIN or password using Argon2id.
-// INTERACTIVE limits (~64 MB RAM, ~1 op) are chosen for unlock-latency,
-// contrasting with BackupEncryptor's MODERATE limits for an offline
-// passphrase that can afford more work.
+// MODERATE limits (~256 MB RAM, ~500ms/derivation) raise the per-guess
+// cost and make derivation memory-hard, resisting an offline brute-force
+// of the low-entropy PIN against a stolen database.
 final class AppLockKdf
 {
     // The caller MUST zero the returned key bytes with sodium_memzero()
@@ -18,8 +18,8 @@ final class AppLockKdf
             SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
             $secret,
             $salt,
-            SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
+            SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
+            SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE,
             SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13,
         );
     }

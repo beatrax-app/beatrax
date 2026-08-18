@@ -13,7 +13,7 @@ return [
     'password_help' => 'Vsaj 12 znakov — ponastavitev gesla ni mogoča, na voljo so le kode za obnovitev.',
     'confirm_password' => 'Potrdi geslo',
     'pin' => 'PIN za zaklep aplikacije',
-    'pin_help' => '4-10 števk — odklene to napravo.',
+    'pin_help' => '6-10 števk — odklene to napravo.',
     'confirm_pin' => 'Potrdi PIN',
     'continue' => 'Nadaljuj',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Gesli se ne ujemata.',
         'password_length' => 'Uporabi vsaj 12 znakov.',
-        'pin_length' => 'PIN mora imeti vsaj 4 števke.',
+        'pin_length' => 'PIN mora imeti vsaj 6 števke.',
         'pins_mismatch' => 'PIN-a se ne ujemata. Poskusi znova.',
         'session_expired' => 'Tvoja seja je potekla, preden se je nastavitev dokončala. Znova vnesi PIN in geslo.',
         'retry_failed' => 'Nastavitve te naprave še vedno ni bilo mogoče dokončati. Poskusi znova.',

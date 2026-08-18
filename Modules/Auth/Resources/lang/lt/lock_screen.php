@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'Gerai — patvirtinti PIN kodą',
     'ok' => 'Gerai',
 
-    'error_too_short' => 'PIN kodą turi sudaryti bent 4 skaitmenys.',
+    'error_too_short' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
 
     'error_backoff' => 'Per daug bandymų — bandyk dar kartą po :wait.',
 

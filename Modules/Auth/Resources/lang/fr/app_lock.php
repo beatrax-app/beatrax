@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Remplace la connexion quotidienne par un PIN. Les sessions restent actives 30 jours.',
 
     'setup_heading' => 'Définis un PIN pour activer le verrouillage',
-    'new_pin_label' => 'Nouveau PIN (4–10 chiffres)',
+    'new_pin_label' => 'Nouveau PIN (6–10 chiffres)',
     'confirm_pin_label' => 'Confirme le PIN',
     'account_password_label' => 'Mot de passe du compte',
     'account_password_note' => '(nécessaire pour créer une clé de récupération)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'Changer le PIN — confirme avec le PIN actuel',
     'keep_pin' => 'Conserver le PIN',
 
-    'error_pin_too_short' => 'Le PIN doit comporter au moins 4 chiffres.',
+    'error_pin_too_short' => 'Le PIN doit comporter au moins 6 chiffres.',
     'error_pin_mismatch' => 'Les PIN ne correspondent pas. Réessaie.',
     'error_pin_incorrect' => 'PIN incorrect.',
     'error_account_password' => 'Mot de passe du compte incorrect.',

@@ -13,7 +13,7 @@ return [
     'password_help' => 'Najmanje 12 znakova — lozinku nije moguće poništiti, postoje samo kodovi za oporavak.',
     'confirm_password' => 'Potvrdi lozinku',
     'pin' => 'PIN za zaključavanje aplikacije',
-    'pin_help' => '4-10 znamenki — otključava ovaj uređaj.',
+    'pin_help' => '6-10 znamenki — otključava ovaj uređaj.',
     'confirm_pin' => 'Potvrdi PIN',
     'continue' => 'Nastavi',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Lozinke se ne podudaraju.',
         'password_length' => 'Upotrijebi najmanje 12 znakova.',
-        'pin_length' => 'PIN mora imati najmanje 4 znamenke.',
+        'pin_length' => 'PIN mora imati najmanje 6 znamenke.',
         'pins_mismatch' => 'PIN-ovi se ne podudaraju. Pokušaj ponovno.',
         'session_expired' => 'Tvoja je sesija istekla prije dovršetka postavljanja. Ponovno unesi PIN i lozinku.',
         'retry_failed' => 'Postavljanje ovog uređaja i dalje nije dovršeno. Pokušaj ponovno.',

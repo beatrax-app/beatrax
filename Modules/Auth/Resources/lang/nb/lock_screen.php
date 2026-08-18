@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'OK — bekreft PIN-kode',
     'ok' => 'OK',
 
-    'error_too_short' => 'PIN-koden må ha minst 4 sifre.',
+    'error_too_short' => 'PIN-koden må ha minst 6 sifre.',
 
     'error_backoff' => 'For mange forsøk — prøv igjen om :wait.',
 

@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Ersetzt die tägliche Anmeldung durch eine PIN. Sitzungen bleiben 30 Tage aktiv.',
 
     'setup_heading' => 'Lege eine PIN fest, um die Sperre zu aktivieren',
-    'new_pin_label' => 'Neue PIN (4–10 Ziffern)',
+    'new_pin_label' => 'Neue PIN (6–10 Ziffern)',
     'confirm_pin_label' => 'PIN bestätigen',
     'account_password_label' => 'Kontopasswort',
     'account_password_note' => '(erforderlich, um einen Wiederherstellungsschlüssel zu erstellen)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'PIN ändern — mit aktueller PIN bestätigen',
     'keep_pin' => 'PIN behalten',
 
-    'error_pin_too_short' => 'Die PIN muss mindestens 4 Ziffern haben.',
+    'error_pin_too_short' => 'Die PIN muss mindestens 6 Ziffern haben.',
     'error_pin_mismatch' => 'Die PINs stimmen nicht überein. Versuch es noch mal.',
     'error_pin_incorrect' => 'Falsche PIN.',
     'error_account_password' => 'Falsches Kontopasswort.',

@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Вийти',
 
     'errors' => [
-        'pin_length' => 'PIN має містити щонайменше 4 цифри.',
+        'pin_length' => 'PIN має містити щонайменше 6 цифри.',
 
         'too_many_attempts' => 'Забагато спроб — повтори через :secondsс.',
         'incorrect_pin_remaining' => 'Неправильний PIN. Залишилося спроб: :count.',

@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometrisches Entsperren ist auf diesem Gerät nicht verfügbar.',
-        'pin_required' => 'Gib deine PIN (4–10 Ziffern) ein, um biometrisches Entsperren zu aktivieren.',
+        'pin_required' => 'Gib deine PIN (6–10 Ziffern) ein, um biometrisches Entsperren zu aktivieren.',
         'enroll_failed' => 'Biometrisches Entsperren konnte nicht aktiviert werden — prüfe deine PIN und versuche es erneut.',
     ],
 ];

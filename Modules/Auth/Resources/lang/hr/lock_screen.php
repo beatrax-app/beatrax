@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'U redu — potvrdi PIN',
     'ok' => 'U redu',
 
-    'error_too_short' => 'PIN mora imati barem 4 znamenke.',
+    'error_too_short' => 'PIN mora imati barem 6 znamenke.',
 
     'error_backoff' => 'Previše pokušaja — pokušaj ponovno za :wait.',
 

@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Erstatter daglig innlogging med en PIN-kode. Øktene er aktive i 30 dager.',
 
     'setup_heading' => 'Angi en PIN-kode for å slå på låsen',
-    'new_pin_label' => 'Ny PIN-kode (4–10 sifre)',
+    'new_pin_label' => 'Ny PIN-kode (6–10 sifre)',
     'confirm_pin_label' => 'Bekreft PIN-kode',
     'account_password_label' => 'Kontopassord',
     'account_password_note' => '(kreves for å opprette en gjenopprettingsnøkkel)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Endre PIN-kode — bekreft med nåværende PIN-kode',
     'keep_pin' => 'Behold PIN-kode',
 
-    'error_pin_too_short' => 'PIN-koden må ha minst 4 sifre.',
+    'error_pin_too_short' => 'PIN-koden må ha minst 6 sifre.',
     'error_pin_mismatch' => 'PIN-kodene er ikke like. Prøv igjen.',
     'error_pin_incorrect' => 'Feil PIN-kode.',
     'error_account_password' => 'Feil kontopassord.',

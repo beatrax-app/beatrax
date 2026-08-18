@@ -13,7 +13,7 @@ return [
     'password_help' => 'Au moins 12 caractères — il n\'y a pas de réinitialisation du mot de passe, seulement des codes de récupération.',
     'confirm_password' => 'Confirme le mot de passe',
     'pin' => 'PIN de verrouillage de l\'app',
-    'pin_help' => '4-10 chiffres — déverrouille cet appareil.',
+    'pin_help' => '6-10 chiffres — déverrouille cet appareil.',
     'confirm_pin' => 'Confirme le PIN',
     'continue' => 'Continuer',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Les mots de passe ne correspondent pas.',
         'password_length' => 'Utilise au moins 12 caractères.',
-        'pin_length' => 'Le PIN doit comporter au moins 4 chiffres.',
+        'pin_length' => 'Le PIN doit comporter au moins 6 chiffres.',
         'pins_mismatch' => 'Les PIN ne correspondent pas. Réessaie.',
         'session_expired' => 'Ta session a expiré avant la fin de la configuration. Ressaisis ton PIN et ton mot de passe.',
         'retry_failed' => 'La configuration de cet appareil n\'a toujours pas pu aboutir. Réessaie.',

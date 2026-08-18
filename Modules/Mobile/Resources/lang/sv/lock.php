@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Logga ut',
 
     'errors' => [
-        'pin_length' => 'PIN-koden måste ha minst 4 siffror.',
+        'pin_length' => 'PIN-koden måste ha minst 6 siffror.',
 
         'too_many_attempts' => 'För många försök — försök igen om :secondss.',
         'incorrect_pin_remaining' => 'Fel PIN-kod. :count försök återstår.',

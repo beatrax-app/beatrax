@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'OK — vahvista PIN-koodi',
     'ok' => 'OK',
 
-    'error_too_short' => 'PIN-koodissa on oltava vähintään 4 numeroa.',
+    'error_too_short' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
 
     'error_backoff' => 'Liikaa yrityksiä — yritä uudelleen :wait kuluttua.',
 

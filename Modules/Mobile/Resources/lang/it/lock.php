@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Esci',
 
     'errors' => [
-        'pin_length' => 'Il PIN deve avere almeno 4 cifre.',
+        'pin_length' => 'Il PIN deve avere almeno 6 cifre.',
 
         'too_many_attempts' => 'Troppi tentativi — riprova tra :secondss.',
         'incorrect_pin_remaining' => 'PIN errato. Restano :count tentativi.',

@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Odjavi se',
 
     'errors' => [
-        'pin_length' => 'PIN mora da ima bar 4 cifre.',
+        'pin_length' => 'PIN mora da ima bar 6 cifre.',
 
         'too_many_attempts' => 'Previše pokušaja — probaj ponovo za :secondss.',
         'incorrect_pin_remaining' => 'Neispravan PIN. Preostalo pokušaja: :count.',

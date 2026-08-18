@@ -557,6 +557,11 @@ final class GraphApiClient implements GraphApiClientContract
         return $this->httpClient ?? new GuzzleClient([
             'timeout' => 30,
             'connect_timeout' => 10,
+            // No redirect-following: the host allow-list is enforced per request
+            // before the bearer is attached, so a redirect to another host would
+            // slip past it. Graph never legitimately 3xx-redirects these calls;
+            // mirrors the EnableBanking client.
+            'allow_redirects' => false,
         ]);
     }
 }

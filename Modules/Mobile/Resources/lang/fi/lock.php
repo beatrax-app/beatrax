@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Kirjaudu ulos',
 
     'errors' => [
-        'pin_length' => 'PIN-koodissa on oltava vähintään 4 numeroa.',
+        'pin_length' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
 
         'too_many_attempts' => 'Liikaa yrityksiä — yritä uudelleen :secondss kuluttua.',
         'incorrect_pin_remaining' => 'Väärä PIN-koodi. :count yritystä jäljellä.',

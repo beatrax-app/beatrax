@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Atsijungti',
 
     'errors' => [
-        'pin_length' => 'PIN kodą turi sudaryti bent 4 skaitmenys.',
+        'pin_length' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
 
         'too_many_attempts' => 'Per daug bandymų — pakartok po :secondss.',
         'incorrect_pin_remaining' => 'Neteisingas PIN kodas. Liko bandymų: :count.',

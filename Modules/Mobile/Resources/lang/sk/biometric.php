@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometrické odomknutie nie je na tomto zariadení dostupné.',
-        'pin_required' => 'Zadaj svoj PIN (4–10 číslic) a zapni biometrické odomknutie.',
+        'pin_required' => 'Zadaj svoj PIN (6–10 číslic) a zapni biometrické odomknutie.',
         'enroll_failed' => 'Biometrické odomknutie sa nepodarilo zapnúť — skontroluj PIN a skús to znova.',
     ],
 ];

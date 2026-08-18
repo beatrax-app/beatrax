@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Le déverrouillage biométrique n\'est pas disponible sur cet appareil.',
-        'pin_required' => 'Saisis ton PIN (4 à 10 chiffres) pour activer le déverrouillage biométrique.',
+        'pin_required' => 'Saisis ton PIN (6 à 10 chiffres) pour activer le déverrouillage biométrique.',
         'enroll_failed' => 'Impossible d\'activer le déverrouillage biométrique — vérifie ton PIN et réessaie.',
     ],
 ];

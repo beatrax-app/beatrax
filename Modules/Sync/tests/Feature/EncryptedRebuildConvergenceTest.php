@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\OpLog\OpLogRebuilder;
 
 uses(RefreshDatabase::class);
@@ -59,20 +60,12 @@ it('a full OpLogRebuilder rebuild after multiple GDK rotations converges to the 
         'updated_at' => '2026-07-01 00:00:00',
     ]);
 
-    $db->connection()->table('device_registry')->insert([
-        'user_id' => $userId,
-        'device_id' => 'self-device',
-        'name' => 'Self',
-        'ed25519_public_key_hex' => bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
-        'x25519_public_key_hex' => bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
-        'safety_number_words' => 'abandon ability able about above absent',
-        'is_self' => 1,
-        'paired_at' => '2026-07-01T10:00:00Z',
-        'confirmed_at' => '2026-07-01T10:05:00Z',
-        'last_seen_at' => null,
-        'created_at' => '2026-07-01T10:00:00Z',
-        'updated_at' => '2026-07-01T10:00:00Z',
-    ]);
+    // The acting/self device needs a REAL on-disk identity: rotateAndRevoke()
+    // now loads it to SIGN each fan-out wrap. generateAndPersist() inserts the
+    // is_self=1 self-row that the rotation excludes from its own fan-out.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $identityService->generateAndPersist($userId, $session);
     $removedDeviceId = $db->connection()->table('device_registry')->insertGetId([
         'user_id' => $userId,
         'device_id' => 'removed-device',

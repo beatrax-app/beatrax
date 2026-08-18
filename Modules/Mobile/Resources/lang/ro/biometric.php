@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Deblocarea biometrică nu este disponibilă pe acest dispozitiv.',
-        'pin_required' => 'Introdu codul PIN (4–10 cifre) pentru a activa deblocarea biometrică.',
+        'pin_required' => 'Introdu codul PIN (6–10 cifre) pentru a activa deblocarea biometrică.',
         'enroll_failed' => 'Nu am putut activa deblocarea biometrică — verifică codul PIN și încearcă din nou.',
     ],
 ];

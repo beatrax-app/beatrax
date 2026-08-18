@@ -13,7 +13,7 @@ return [
     'password_help' => 'Vähintään 12 merkkiä — salasanaa ei voi nollata, vain palautuskoodit auttavat.',
     'confirm_password' => 'Vahvista salasana',
     'pin' => 'Sovelluslukon PIN-koodi',
-    'pin_help' => '4-10 numeroa — avaa tämän laitteen.',
+    'pin_help' => '6-10 numeroa — avaa tämän laitteen.',
     'confirm_pin' => 'Vahvista PIN-koodi',
     'continue' => 'Jatka',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Salasanat eivät täsmää.',
         'password_length' => 'Käytä vähintään 12 merkkiä.',
-        'pin_length' => 'PIN-koodissa on oltava vähintään 4 numeroa.',
+        'pin_length' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
         'pins_mismatch' => 'PIN-koodit eivät täsmää. Yritä uudelleen.',
         'session_expired' => 'Istuntosi vanheni ennen käyttöönoton valmistumista. Anna PIN-koodisi ja salasanasi uudelleen.',
         'retry_failed' => 'Tämän laitteen käyttöönottoa ei vieläkään saatu valmiiksi. Yritä uudelleen.',

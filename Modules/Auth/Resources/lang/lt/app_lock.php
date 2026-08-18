@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Kasdienį prisijungimą pakeičia PIN kodas. Seansai lieka aktyvūs 30 dienų.',
 
     'setup_heading' => 'Nustatyk PIN kodą, kad įjungtum užraktą',
-    'new_pin_label' => 'Naujas PIN kodas (4–10 skaitmenų)',
+    'new_pin_label' => 'Naujas PIN kodas (6–10 skaitmenų)',
     'confirm_pin_label' => 'Patvirtink PIN kodą',
     'account_password_label' => 'Paskyros slaptažodis',
     'account_password_note' => '(reikalingas atkūrimo raktui sukurti)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Keisti PIN kodą — patvirtink dabartiniu PIN kodu',
     'keep_pin' => 'Palikti PIN kodą',
 
-    'error_pin_too_short' => 'PIN kodą turi sudaryti bent 4 skaitmenys.',
+    'error_pin_too_short' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
     'error_pin_mismatch' => 'PIN kodai nesutampa. Bandyk dar kartą.',
     'error_pin_incorrect' => 'Neteisingas PIN kodas.',
     'error_account_password' => 'Neteisingas paskyros slaptažodis.',

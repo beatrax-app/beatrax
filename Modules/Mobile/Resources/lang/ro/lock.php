@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Deconectare',
 
     'errors' => [
-        'pin_length' => 'Codul PIN trebuie să aibă cel puțin 4 cifre.',
+        'pin_length' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
 
         'too_many_attempts' => 'Prea multe încercări — încearcă din nou peste :secondss.',
         'incorrect_pin_remaining' => 'Cod PIN incorect. Ți-au mai rămas :count încercări.',

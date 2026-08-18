@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Vsakodnevno prijavo zamenja PIN. Seje ostanejo aktivne 30 dni.',
 
     'setup_heading' => 'Nastavi PIN, da vklopiš zaklepanje',
-    'new_pin_label' => 'Nov PIN (4–10 števk)',
+    'new_pin_label' => 'Nov PIN (6–10 števk)',
     'confirm_pin_label' => 'Potrdi PIN',
     'account_password_label' => 'Geslo računa',
     'account_password_note' => '(potrebno za ustvarjanje ključa za obnovitev)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Spremeni PIN — potrdi s trenutnim PIN-om',
     'keep_pin' => 'Obdrži PIN',
 
-    'error_pin_too_short' => 'PIN mora imeti vsaj 4 števke.',
+    'error_pin_too_short' => 'PIN mora imeti vsaj 6 števke.',
     'error_pin_mismatch' => 'PIN-a se ne ujemata. Poskusi znova.',
     'error_pin_incorrect' => 'Napačen PIN.',
     'error_account_password' => 'Napačno geslo računa.',

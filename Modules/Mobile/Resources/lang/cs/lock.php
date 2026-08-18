@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Odhlásit se',
 
     'errors' => [
-        'pin_length' => 'PIN musí mít alespoň 4 číslice.',
+        'pin_length' => 'PIN musí mít alespoň 6 číslice.',
 
         'too_many_attempts' => 'Příliš mnoho pokusů — zkus to znovu za :secondss.',
         'incorrect_pin_remaining' => 'Nesprávný PIN. Zbývá pokusů: :count.',

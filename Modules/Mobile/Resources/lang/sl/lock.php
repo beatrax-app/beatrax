@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Odjavi se',
 
     'errors' => [
-        'pin_length' => 'PIN mora imeti vsaj 4 števke.',
+        'pin_length' => 'PIN mora imeti vsaj 6 števke.',
 
         'too_many_attempts' => 'Preveč poskusov — poskusi znova čez :secondss.',
         'incorrect_pin_remaining' => 'Napačen PIN. Preostalo poskusov: :count.',

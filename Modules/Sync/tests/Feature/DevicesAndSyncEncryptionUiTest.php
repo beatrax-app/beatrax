@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Http\Livewire\DevicesAndSyncSettingsSection;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 
 uses(RefreshDatabase::class);
 
@@ -152,7 +154,16 @@ it('(e) removeDevice revokes device_registry trust (rotateAndRevoke) and the row
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    $selfId = $db->connection()->table('device_registry')->insertGetId(deviceRegistryRow($user->id, 'self-device-2', 'This Mac', isSelf: true));
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
+
+    // The acting/self device needs a REAL on-disk identity: removeDevice() ->
+    // rotateAndRevoke() now loads it to SIGN the fan-out wraps. generateAndPersist()
+    // inserts the is_self=1 self-row that stands in for 'self-device-2' here.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $self = $identityService->generateAndPersist((int) $user->id, $session);
+    $selfId = (int) $db->connection()->table('device_registry')->where('device_id', $self->deviceId)->value('id');
     $peerId = $db->connection()->table('device_registry')->insertGetId(deviceRegistryRow($user->id, 'peer-device-2', 'Old Laptop', isSelf: false));
 
     Livewire::test(DevicesAndSyncSettingsSection::class)

@@ -13,7 +13,7 @@ return [
     'password_help' => 'Aspoň 12 znaků — heslo se nedá resetovat, existují jen obnovovací kódy.',
     'confirm_password' => 'Potvrď heslo',
     'pin' => 'PIN pro zámek aplikace',
-    'pin_help' => '4-10 číslic — odemyká toto zařízení.',
+    'pin_help' => '6-10 číslic — odemyká toto zařízení.',
     'confirm_pin' => 'Potvrď PIN',
     'continue' => 'Pokračovat',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Hesla se neshodují.',
         'password_length' => 'Použij aspoň 12 znaků.',
-        'pin_length' => 'PIN musí mít aspoň 4 číslice.',
+        'pin_length' => 'PIN musí mít aspoň 6 číslice.',
         'pins_mismatch' => 'PINy se neshodují. Zkus to znovu.',
         'session_expired' => 'Tvá relace vypršela dřív, než se nastavení dokončilo. Zadej prosím znovu PIN a heslo.',
         'retry_failed' => 'Nastavení tohoto zařízení se pořád nedaří dokončit. Zkus to prosím znovu.',

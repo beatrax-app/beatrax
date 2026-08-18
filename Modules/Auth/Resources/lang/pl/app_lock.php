@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Zastępuje codzienne logowanie kodem PIN. Sesje pozostają aktywne przez 30 dni.',
 
     'setup_heading' => 'Ustaw PIN, aby włączyć blokadę',
-    'new_pin_label' => 'Nowy PIN (4–10 cyfr)',
+    'new_pin_label' => 'Nowy PIN (6–10 cyfr)',
     'confirm_pin_label' => 'Potwierdź PIN',
     'account_password_label' => 'Hasło do konta',
     'account_password_note' => '(wymagane do utworzenia klucza odzyskiwania)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'Zmień PIN — potwierdź obecnym PIN-em',
     'keep_pin' => 'Zachowaj PIN',
 
-    'error_pin_too_short' => 'PIN musi mieć co najmniej 4 cyfry.',
+    'error_pin_too_short' => 'PIN musi mieć co najmniej 6 cyfry.',
     'error_pin_mismatch' => 'Kody PIN nie są zgodne. Spróbuj ponownie.',
     'error_pin_incorrect' => 'Nieprawidłowy PIN.',
     'error_account_password' => 'Nieprawidłowe hasło do konta.',

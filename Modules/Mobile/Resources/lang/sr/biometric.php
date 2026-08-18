@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometrijsko otključavanje nije dostupno na ovom uređaju.',
-        'pin_required' => 'Unesi svoj PIN (4–10 cifara) da uključiš biometrijsko otključavanje.',
+        'pin_required' => 'Unesi svoj PIN (6–10 cifara) da uključiš biometrijsko otključavanje.',
         'enroll_failed' => 'Biometrijsko otključavanje nije bilo moguće uključiti — proveri PIN pa probaj ponovo.',
     ],
 ];

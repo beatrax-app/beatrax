@@ -109,7 +109,7 @@ it('shows the format message on an empty PIN (distinct from a wrong PIN)', funct
         ->set('pin', '')
         ->call('enable')
         ->assertSet('enrolled', false)
-        ->assertSet('flashMessage', 'Enter your PIN (4–10 digits) to enable biometric unlock.');
+        ->assertSet('flashMessage', 'Enter your PIN (6–10 digits) to enable biometric unlock.');
 });
 
 it('disables an active enrollment', function (): void {

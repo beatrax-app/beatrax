@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Çıkış yap',
 
     'errors' => [
-        'pin_length' => 'PIN en az 4 haneli olmalıdır.',
+        'pin_length' => 'PIN en az 6 haneli olmalıdır.',
 
         'too_many_attempts' => 'Çok fazla deneme — :secondssn sonra yeniden dene.',
         'incorrect_pin_remaining' => 'PIN hatalı. :count deneme hakkın kaldı.',

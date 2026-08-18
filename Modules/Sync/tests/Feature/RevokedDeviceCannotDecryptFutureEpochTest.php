@@ -7,6 +7,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Public\Services\DeviceRegistryService;
 
 uses(RefreshDatabase::class);
@@ -43,23 +44,17 @@ it('the removed device is no longer a confirmed/trusted key after rotateAndRevok
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
 
-    $selfKeypair = sodium_crypto_sign_keypair();
-    $removedKeypair = sodium_crypto_sign_keypair();
+    /** @var Session $session */
+    $session = $this->app->make(Session::class);
 
-    $db->connection()->table('device_registry')->insert([
-        'user_id' => $userId,
-        'device_id' => 'self-device',
-        'name' => 'Self',
-        'ed25519_public_key_hex' => bin2hex(sodium_crypto_sign_publickey($selfKeypair)),
-        'x25519_public_key_hex' => bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
-        'safety_number_words' => 'abandon ability able about above absent',
-        'is_self' => 1,
-        'paired_at' => '2026-07-01T10:00:00Z',
-        'confirmed_at' => '2026-07-01T10:05:00Z',
-        'last_seen_at' => null,
-        'created_at' => '2026-07-01T10:00:00Z',
-        'updated_at' => '2026-07-01T10:00:00Z',
-    ]);
+    // The acting/self device: a REAL on-disk identity (rotateAndRevoke() now
+    // loads it to SIGN each fan-out wrap). Its is_self=1 row is the
+    // still-trusted device that must survive the rotation.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $self = $identityService->generateAndPersist($userId, $session);
+
+    $removedKeypair = sodium_crypto_sign_keypair();
     $removedId = $db->connection()->table('device_registry')->insertGetId([
         'user_id' => $userId,
         'device_id' => 'removed-device',
@@ -78,9 +73,6 @@ it('the removed device is no longer a confirmed/trusted key after rotateAndRevok
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
 
-    /** @var Session $session */
-    $session = $this->app->make(Session::class);
-
     $rotation->rotateAndRevoke($userId, $removedId, $session);
 
     /** @var DeviceRegistryService $registry */
@@ -88,7 +80,7 @@ it('the removed device is no longer a confirmed/trusted key after rotateAndRevok
 
     $keys = $registry->deviceKeys($userId);
     expect($keys)->not->toHaveKey('removed-device');
-    expect($keys)->toHaveKey('self-device');
+    expect($keys)->toHaveKey($self->deviceId);
 });
 
 it('an op-log entry signed by the removed device after rotation is rejected (no longer a confirmed key)', function (): void {
@@ -121,6 +113,11 @@ it('an op-log entry signed by the removed device after rotation is rejected (no 
 
     /** @var Session $session */
     $session = $this->app->make(Session::class);
+
+    // The acting device needs a REAL on-disk identity to sign fan-out wraps.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $identityService->generateAndPersist($userId, $session);
 
     $rotation->rotateAndRevoke($userId, $removedId, $session);
 

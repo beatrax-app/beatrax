@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Aizstāj ikdienas pieteikšanos ar PIN kodu. Sesijas paliek aktīvas 30 dienas.',
 
     'setup_heading' => 'Iestatiet PIN kodu, lai ieslēgtu bloķēšanu',
-    'new_pin_label' => 'Jauns PIN kods (4–10 cipari)',
+    'new_pin_label' => 'Jauns PIN kods (6–10 cipari)',
     'confirm_pin_label' => 'Apstipriniet PIN kodu',
     'account_password_label' => 'Konta parole',
     'account_password_note' => '(nepieciešama, lai izveidotu atkopšanas atslēgu)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Mainīt PIN kodu — apstipriniet ar pašreizējo PIN kodu',
     'keep_pin' => 'Paturēt PIN kodu',
 
-    'error_pin_too_short' => 'PIN kodā jābūt vismaz 4 cipariem.',
+    'error_pin_too_short' => 'PIN kodā jābūt vismaz 6 cipariem.',
     'error_pin_mismatch' => 'PIN kodi nesakrīt. Mēģiniet vēlreiz.',
     'error_pin_incorrect' => 'Nepareizs PIN kods.',
     'error_account_password' => 'Nepareiza konta parole.',

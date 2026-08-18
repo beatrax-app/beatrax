@@ -29,7 +29,7 @@ it('changePin flashes the too-short copy and bails before touching the provision
         ->set('newPin', '12')
         ->set('confirmPin', '12')
         ->call('changePin')
-        ->assertSet('flashMessage', 'PIN must be at least 4 digits.')
+        ->assertSet('flashMessage', 'PIN must be at least 6 digits.')
         // Guard returns early — the success message never gets set.
         ->assertSet('changePinSuccessMessage', '');
 });
@@ -40,8 +40,8 @@ it('changePin flashes the mismatch copy when the confirmation differs', function
 
     Livewire::test(AppLockSettingsSection::class)
         ->set('currentPin', '123456')
-        ->set('newPin', '4321')
-        ->set('confirmPin', '9999')
+        ->set('newPin', '432100')
+        ->set('confirmPin', '999999')
         ->call('changePin')
         ->assertSet('flashMessage', "PINs don't match. Try again.");
 });
@@ -55,5 +55,5 @@ it('resetForgottenPin flashes the validation copy before checking the password',
         ->set('newPin', '12')
         ->set('confirmPin', '12')
         ->call('resetForgottenPin')
-        ->assertSet('flashMessage', 'PIN must be at least 4 digits.');
+        ->assertSet('flashMessage', 'PIN must be at least 6 digits.');
 });

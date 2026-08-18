@@ -17,7 +17,7 @@ return [
     'toggle_description' => "Sostituisce l'accesso quotidiano con un PIN. Le sessioni restano attive per 30 giorni.",
 
     'setup_heading' => 'Imposta un PIN per attivare il blocco',
-    'new_pin_label' => 'Nuovo PIN (4–10 cifre)',
+    'new_pin_label' => 'Nuovo PIN (6–10 cifre)',
     'confirm_pin_label' => 'Conferma il PIN',
     'account_password_label' => "Password dell'account",
     'account_password_note' => '(necessaria per creare una chiave di recupero)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Cambia il PIN — conferma con il PIN attuale',
     'keep_pin' => 'Mantieni il PIN',
 
-    'error_pin_too_short' => 'Il PIN deve avere almeno 4 cifre.',
+    'error_pin_too_short' => 'Il PIN deve avere almeno 6 cifre.',
     'error_pin_mismatch' => 'I PIN non coincidono. Riprova.',
     'error_pin_incorrect' => 'PIN errato.',
     'error_account_password' => "Password dell'account errata.",

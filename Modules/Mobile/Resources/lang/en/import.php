@@ -13,7 +13,7 @@ return [
     'password_help' => 'At least 12 characters — there is no password reset, only recovery codes.',
     'confirm_password' => 'Confirm password',
     'pin' => 'App-lock PIN',
-    'pin_help' => '4-10 digits — unlocks this device.',
+    'pin_help' => '6-10 digits — unlocks this device.',
     'confirm_pin' => 'Confirm PIN',
     'continue' => 'Continue',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Passwords do not match.',
         'password_length' => 'Use at least 12 characters.',
-        'pin_length' => 'PIN must be at least 4 digits.',
+        'pin_length' => 'PIN must be at least 6 digits.',
         'pins_mismatch' => "PINs don't match. Try again.",
         'session_expired' => 'Your session expired before setup finished. Please re-enter your PIN and password.',
         'retry_failed' => 'Still could not finish setting up this device. Please try again.',

@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometriskā atbloķēšana šajā ierīcē nav pieejama.',
-        'pin_required' => 'Ievadiet PIN kodu (4–10 cipari), lai ieslēgtu biometrisko atbloķēšanu.',
+        'pin_required' => 'Ievadiet PIN kodu (6–10 cipari), lai ieslēgtu biometrisko atbloķēšanu.',
         'enroll_failed' => 'Neizdevās ieslēgt biometrisko atbloķēšanu — pārbaudiet PIN kodu un mēģiniet vēlreiz.',
     ],
 ];

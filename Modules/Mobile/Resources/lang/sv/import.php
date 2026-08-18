@@ -13,7 +13,7 @@ return [
     'password_help' => 'Minst 12 tecken — det finns ingen återställning av lösenord, bara återställningskoder.',
     'confirm_password' => 'Bekräfta lösenord',
     'pin' => 'PIN-kod för applås',
-    'pin_help' => '4-10 siffror — låser upp den här enheten.',
+    'pin_help' => '6-10 siffror — låser upp den här enheten.',
     'confirm_pin' => 'Bekräfta PIN-kod',
     'continue' => 'Fortsätt',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Lösenorden stämmer inte överens.',
         'password_length' => 'Använd minst 12 tecken.',
-        'pin_length' => 'PIN-koden måste ha minst 4 siffror.',
+        'pin_length' => 'PIN-koden måste ha minst 6 siffror.',
         'pins_mismatch' => 'PIN-koderna stämmer inte överens. Försök igen.',
         'session_expired' => 'Din session gick ut innan konfigurationen blev klar. Ange din PIN-kod och ditt lösenord igen.',
         'retry_failed' => 'Det gick fortfarande inte att slutföra konfigurationen av den här enheten. Försök igen.',

@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometrinen avaus ei ole käytettävissä tällä laitteella.',
-        'pin_required' => 'Anna PIN-koodisi (4–10 numeroa), niin biometrinen avaus otetaan käyttöön.',
+        'pin_required' => 'Anna PIN-koodisi (6–10 numeroa), niin biometrinen avaus otetaan käyttöön.',
         'enroll_failed' => 'Biometristä avausta ei voitu ottaa käyttöön — tarkista PIN-koodisi ja yritä uudelleen.',
     ],
 ];

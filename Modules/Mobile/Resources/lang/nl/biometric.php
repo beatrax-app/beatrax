@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometrisch ontgrendelen is niet beschikbaar op dit apparaat.',
-        'pin_required' => 'Voer je pincode (4–10 cijfers) in om biometrisch ontgrendelen in te schakelen.',
+        'pin_required' => 'Voer je pincode (6–10 cijfers) in om biometrisch ontgrendelen in te schakelen.',
         'enroll_failed' => 'Kon biometrisch ontgrendelen niet inschakelen — controleer je pincode en probeer het opnieuw.',
     ],
 ];

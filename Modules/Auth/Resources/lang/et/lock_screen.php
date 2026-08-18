@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'OK — kinnita PIN-kood',
     'ok' => 'OK',
 
-    'error_too_short' => 'PIN-kood peab olema vähemalt 4 numbrit.',
+    'error_too_short' => 'PIN-kood peab olema vähemalt 6 numbrit.',
 
     'error_backoff' => 'Liiga palju katseid — proovi uuesti :wait pärast.',
 

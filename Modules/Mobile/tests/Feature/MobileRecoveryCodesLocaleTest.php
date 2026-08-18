@@ -101,8 +101,8 @@ it('shows the codes in the chosen language on the round-trip that reveals them',
         'username' => 'wessel',
         'password' => 'opensesame-long-enough',
         'passwordConfirmation' => 'opensesame-long-enough',
-        'pin' => '1234',
-        'confirmPin' => '1234',
+        'pin' => '123456',
+        'confirmPin' => '123456',
     ]);
 
     expect($rendered)

@@ -340,12 +340,32 @@ it('re-delivering an already-installed (stale) epoch wrap through the receive ga
     /** @var GdkKeyringService $keyring */
     $keyring = app(GdkKeyringService::class);
 
+    // A confirmed desktop sender whose Ed25519 secret signs the wrap — the
+    // receive gateway rejects any wrap not signed by a confirmed device (F1).
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $senderSigKp = sodium_crypto_sign_keypair();
+    $senderSecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($senderSigKp));
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => 'desktop-sender',
+        'name' => 'Desktop',
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($senderSigKp)),
+        'x25519_public_key_hex' => bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())),
+        'safety_number_words' => 'one two three four five six',
+        'is_self' => 0,
+        'paired_at' => '2026-07-01 00:00:00',
+        'confirmed_at' => '2026-07-01 00:00:00',
+        'created_at' => '2026-07-01 00:00:00',
+        'updated_at' => '2026-07-01 00:00:00',
+    ]);
+
     $rawEpochKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
 
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $recipientPub = sodium_hex2bin($phone->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId, 'desktop-sender', $senderSecretHex);
     $wrapJson = json_encode($wrap, JSON_THROW_ON_ERROR);
 
     /** @var GdkEpochDeliveryGateway $delivery */

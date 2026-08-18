@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Lo sblocco biometrico non è disponibile su questo dispositivo.',
-        'pin_required' => 'Inserisci il PIN (4–10 cifre) per attivare lo sblocco biometrico.',
+        'pin_required' => 'Inserisci il PIN (6–10 cifre) per attivare lo sblocco biometrico.',
         'enroll_failed' => 'Impossibile attivare lo sblocco biometrico — controlla il PIN e riprova.',
     ],
 ];

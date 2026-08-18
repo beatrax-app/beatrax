@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'OK — pincode bevestigen',
     'ok' => 'OK',
 
-    'error_too_short' => 'Pincode moet minstens 4 cijfers bevatten.',
+    'error_too_short' => 'Pincode moet minstens 6 cijfers bevatten.',
     'error_backoff' => 'Te veel pogingen — probeer het over :wait opnieuw.',
     'error_incorrect_remaining' => 'Onjuiste pincode. Nog :remaining pogingen over.',
     'error_incorrect' => 'Onjuiste pincode.',

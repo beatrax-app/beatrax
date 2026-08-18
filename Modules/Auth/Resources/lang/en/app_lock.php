@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Replaces daily sign-in with a PIN. Sessions stay active for 30 days.',
 
     'setup_heading' => 'Set a PIN to enable lock',
-    'new_pin_label' => 'New PIN (4–10 digits)',
+    'new_pin_label' => 'New PIN (6–10 digits)',
     'confirm_pin_label' => 'Confirm PIN',
     'account_password_label' => 'Account password',
     'account_password_note' => '(required to create a recovery key)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Change PIN — confirm with current PIN',
     'keep_pin' => 'Keep PIN',
 
-    'error_pin_too_short' => 'PIN must be at least 4 digits.',
+    'error_pin_too_short' => 'PIN must be at least 6 digits.',
     'error_pin_mismatch' => 'PINs don\'t match. Try again.',
     'error_pin_incorrect' => 'Incorrect PIN.',
     'error_account_password' => 'Incorrect account password.',

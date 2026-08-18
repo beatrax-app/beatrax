@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Abmelden',
 
     'errors' => [
-        'pin_length' => 'Die PIN muss mindestens 4 Ziffern haben.',
+        'pin_length' => 'Die PIN muss mindestens 6 Ziffern haben.',
 
         'too_many_attempts' => 'Zu viele Versuche — versuche es in :secondss erneut.',
         'incorrect_pin_remaining' => 'Falsche PIN. Noch :count Versuche übrig.',

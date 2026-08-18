@@ -13,7 +13,7 @@ return [
     'password_help' => 'Bent 12 simbolių — slaptažodžio atstatyti negalima, yra tik atkūrimo kodai.',
     'confirm_password' => 'Pakartok slaptažodį',
     'pin' => 'Programėlės užrakto PIN kodas',
-    'pin_help' => '4–10 skaitmenų — atrakina šį įrenginį.',
+    'pin_help' => '6–10 skaitmenų — atrakina šį įrenginį.',
     'confirm_pin' => 'Pakartok PIN kodą',
     'continue' => 'Tęsti',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Slaptažodžiai nesutampa.',
         'password_length' => 'Naudok bent 12 simbolių.',
-        'pin_length' => 'PIN kodą turi sudaryti bent 4 skaitmenys.',
+        'pin_length' => 'PIN kodą turi sudaryti bent 6 skaitmenys.',
         'pins_mismatch' => 'PIN kodai nesutampa. Bandyk dar kartą.',
         'session_expired' => 'Tavo sesija baigėsi nespėjus užbaigti sąrankos. Iš naujo įvesk PIN kodą ir slaptažodį.',
         'retry_failed' => 'Šio įrenginio sąrankos vis tiek nepavyko užbaigti. Bandyk dar kartą.',

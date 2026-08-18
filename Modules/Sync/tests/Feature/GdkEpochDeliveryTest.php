@@ -81,6 +81,38 @@ function deliveryRegistryRow(DatabaseManager $db, int $userId, string $deviceId,
 }
 
 /**
+ * Creates a CONFIRMED peer device in $userId's registry and returns the
+ * Ed25519 signing material needed to build a GDK_EPOCH_WRAP that passes
+ * GdkEpochControlHandler's sender-authenticity gate (F1): the sender must be a
+ * device with a non-null confirmed_at whose ed25519_public_key_hex verifies the
+ * wrap's signature. Mirrors deliveryRegistryRow's columns exactly.
+ *
+ * @return array{0: string, 1: string} [senderDeviceId, ed25519SecretKeyHex]
+ */
+function deliverySender(DatabaseManager $db, int $userId, string $deviceId = 'gdk-sender-a'): array
+{
+    $sigKp = sodium_crypto_sign_keypair();
+    $boxKp = sodium_crypto_box_keypair();
+
+    $db->connection()->table('device_registry')->insert([
+        'user_id' => $userId,
+        'device_id' => $deviceId,
+        'name' => $deviceId,
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($sigKp)),
+        'x25519_public_key_hex' => sodium_bin2hex(sodium_crypto_box_publickey($boxKp)),
+        'safety_number_words' => 'abandon ability able about above absent',
+        'is_self' => 0,
+        'paired_at' => '2026-07-09T10:00:00Z',
+        'confirmed_at' => '2026-07-09T10:05:00Z',
+        'last_seen_at' => null,
+        'created_at' => '2026-07-09T10:00:00Z',
+        'updated_at' => '2026-07-09T10:00:00Z',
+    ]);
+
+    return [$deviceId, sodium_bin2hex(sodium_crypto_sign_secretkey($sigKp))];
+}
+
+/**
  * Minimal WebsocketClient fake — only sendBinary() is exercised by
  * SyncWebSocketHandler::deliverGdkEpochWraps(); every other interface
  * method is unused in this test and throws if ever called.
@@ -224,9 +256,13 @@ it('opens a GDK_EPOCH_WRAP addressed to this device and appends the epoch to the
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
+    // A confirmed peer whose Ed25519 secret signs the wrap — the F1 sender-
+    // authenticity gate rejects any wrap not signed by a confirmed device.
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(7, $rawGdkKey, $recipientPub, $deviceB->deviceId);
+    $wrap = $rotation->buildGdkEpochWrap(7, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     /** @var GdkEpochControlHandler $handler */
     $handler = app(GdkEpochControlHandler::class);
@@ -261,10 +297,15 @@ it('rejects a GDK_EPOCH_WRAP addressed to a foreign device and does not append',
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
+    // Sender args are valid so the call type-checks; the rejection here is at
+    // the recipient-identity gate (foreign recipient_device_id), which runs
+    // BEFORE the sender-authenticity gate.
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     // Sealed to a DIFFERENT (foreign) device's public key, not this device's.
     $foreignPub = sodium_crypto_box_publickey(sodium_crypto_box_keypair());
-    $wrap = $rotation->buildGdkEpochWrap(9, $rawGdkKey, $foreignPub, 'a-foreign-device-id');
+    $wrap = $rotation->buildGdkEpochWrap(9, $rawGdkKey, $foreignPub, 'a-foreign-device-id', $senderId, $senderSecretHex);
 
     /** @var GdkEpochControlHandler $handler */
     $handler = app(GdkEpochControlHandler::class);
@@ -291,9 +332,15 @@ it('rejects a tampered GDK_EPOCH_WRAP wrapped_key_b64 and does not append', func
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
+    // A genuinely confirmed sender, so the wrap clears the sender-key lookup
+    // and the tamper below is caught by the SIGNATURE check (the detached
+    // signature no longer matches the mutated sealed bytes) rather than by an
+    // unrelated unconfirmed-sender rejection.
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(11, $rawGdkKey, $recipientPub, $deviceB->deviceId);
+    $wrap = $rotation->buildGdkEpochWrap(11, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     // Tamper: flip the last byte of the sealed box.
     $sealed = base64_decode((string) $wrap['wrapped_key_b64'], true);
@@ -363,9 +410,11 @@ it('is idempotent — re-handling an already-present epoch does not duplicate or
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
 
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(2, $rawGdkKey, $recipientPub, $deviceB->deviceId);
+    $wrap = $rotation->buildGdkEpochWrap(2, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     /** @var GdkEpochControlHandler $handler */
     $handler = app(GdkEpochControlHandler::class);
@@ -436,9 +485,11 @@ it('adopts the peer GDK epoch over a colliding local key that has encrypted noth
 
     // The desktop's OWN, DIFFERENT epoch-1 key is now fanned out and
     // collides with device B's already-present epoch 1.
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     // The handler logs via a constructor-injected LoggerInterface, NOT the
     // Log facade — bind a container spy so the injected instance is captured.
@@ -507,11 +558,13 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
         'recorded_at' => '2026-01-01 00:00:00',
     ]);
 
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
     $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
 
     /** @var MockInterface $logSpy */
     $logSpy = Mockery::spy(LoggerInterface::class);
@@ -529,6 +582,88 @@ it('keeps a colliding local GDK epoch that local rows are already encrypted unde
 
     $loaded = $keyring->loadKeyring((int) $user->id, $session);
     expect($loaded->keyFor(1))->toBe($localKeyHex, 'a used local epoch key must survive a colliding delivery');
+});
+
+/*
+ * F1 regression guard — sender authenticity. A GDK_EPOCH_WRAP is a
+ * confidential-but-unauthenticated sealed box; before F1 the handler opened
+ * and appended ANY well-formed wrap addressed to this device. It must now
+ * REFUSE a wrap unless its sender_device_id is a STILL-confirmed device in the
+ * recipient's registry AND its Ed25519 signature verifies over the signed
+ * message. These two tests pin both halves of that gate.
+ */
+it('rejects a GDK_EPOCH_WRAP whose sender is not a confirmed device and does not append (F1)', function (): void {
+    $user = deliveryUser('delivery-unconfirmed-sender-user');
+
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    /** @var DeviceIdentityDto $deviceB */
+    $deviceB = $identityService->generateAndPersist((int) $user->id, $session);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+
+    $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
+
+    // A perfectly well-formed, correctly self-signed wrap — but its sender
+    // identity is NEVER inserted into this user's device_registry, so
+    // deviceKeys() has no key for it and senderIsAuthentic() rejects it before
+    // any seal_open. (Before F1 this exact wrap would have been appended.)
+    $ghostSigKp = sodium_crypto_sign_keypair();
+    $ghostSecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($ghostSigKp));
+    $wrap = $rotation->buildGdkEpochWrap(21, $rawGdkKey, $recipientPub, $deviceB->deviceId, 'ghost-sender-not-in-registry', $ghostSecretHex);
+
+    /** @var GdkEpochControlHandler $handler */
+    $handler = app(GdkEpochControlHandler::class);
+    $handler->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $loaded = $keyring->loadKeyring((int) $user->id, $session);
+
+    expect($loaded->keyFor(21))->toBeNull('a wrap from an unconfirmed/unknown sender must never be appended');
+});
+
+it('rejects a GDK_EPOCH_WRAP from a confirmed sender whose signature is corrupted and does not append (F1)', function (): void {
+    $user = deliveryUser('delivery-corrupt-sig-user');
+
+    /** @var Session $session */
+    $session = app(Session::class);
+
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    /** @var DeviceIdentityDto $deviceB */
+    $deviceB = $identityService->generateAndPersist((int) $user->id, $session);
+
+    /** @var GdkRotationService $rotation */
+    $rotation = app(GdkRotationService::class);
+
+    $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
+    $recipientPub = sodium_hex2bin($deviceB->x25519PublicKeyHex);
+
+    // The sender IS a genuinely confirmed device and the sealed bytes are
+    // untouched, so ONLY the corrupted detached signature can cause a
+    // rejection here — isolating the signature-verification half of the gate.
+    [$senderId, $senderSecretHex] = deliverySender(app(DatabaseManager::class), (int) $user->id);
+    $wrap = $rotation->buildGdkEpochWrap(22, $rawGdkKey, $recipientPub, $deviceB->deviceId, $senderId, $senderSecretHex);
+
+    // Flip the first hex nibble of the signature — still valid hex, wrong sig.
+    $sig = (string) $wrap['sig_hex'];
+    $wrap['sig_hex'] = ($sig[0] === '0' ? '1' : '0').substr($sig, 1);
+
+    /** @var GdkEpochControlHandler $handler */
+    $handler = app(GdkEpochControlHandler::class);
+    $handler->handle(json_encode($wrap, JSON_THROW_ON_ERROR), (int) $user->id, $session);
+
+    /** @var GdkKeyringService $keyring */
+    $keyring = app(GdkKeyringService::class);
+    $loaded = $keyring->loadKeyring((int) $user->id, $session);
+
+    expect($loaded->keyFor(22))->toBeNull('a wrap whose signature does not verify against the confirmed sender key must never be appended');
 });
 
 // ---------------------------------------------------------------------
@@ -738,6 +873,8 @@ it('pushes only epoch wraps to the peer and leaves a pairing frame for the couri
         'expires_at' => '2026-12-09T10:00:00Z',
     ]);
 
+    [$senderId, $senderSecretHex] = deliverySender($db, (int) $user->id);
+
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
@@ -746,6 +883,8 @@ it('pushes only epoch wraps to the peer and leaves a pairing frame for the couri
         $rawGdkKey,
         sodium_hex2bin($deviceB->x25519PublicKeyHex),
         $deviceB->deviceId,
+        $senderId,
+        $senderSecretHex,
     );
 
     $db->connection()->table('relay_mailbox')->insert([

@@ -57,8 +57,17 @@ final class PreviewWizard extends Component
 
     public ?string $chainResolutionError = null;
 
-    public function mount(int $id): void
+    public function mount(int $id, CurrentUser $currentUser): void
     {
+        // Ownership gate: the preview cache key (import.<id>.preview) is not
+        // user-scoped, so without this a guessable run id would expose another
+        // user's in-flight import. Not-found (never forbidden) on a foreign id,
+        // matching the sibling ImportResults/PreviewMigration components.
+        ImportRun::query()
+            ->where('id', $id)
+            ->where('user_id', $currentUser->user()->id)
+            ->firstOrFail();
+
         $this->importRunId = $id;
     }
 

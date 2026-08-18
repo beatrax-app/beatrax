@@ -152,7 +152,7 @@ final class MobileImportBootstrap extends Component
     private function pinError(): ?string
     {
         return match (true) {
-            strlen($this->pin) < 4 => Lang::get('mobile::import.errors.pin_length'),
+            strlen($this->pin) < 6 => Lang::get('mobile::import.errors.pin_length'),
             $this->pin !== $this->confirmPin => Lang::get('mobile::import.errors.pins_mismatch'),
             default => null,
         };

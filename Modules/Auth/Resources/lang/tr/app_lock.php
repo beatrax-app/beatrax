@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Günlük girişin yerini PIN alır. Oturumlar 30 gün açık kalır.',
 
     'setup_heading' => 'Kilidi etkinleştirmek için bir PIN belirle',
-    'new_pin_label' => 'Yeni PIN (4–10 hane)',
+    'new_pin_label' => 'Yeni PIN (6–10 hane)',
     'confirm_pin_label' => 'PIN doğrulama',
     'account_password_label' => 'Hesap parolası',
     'account_password_note' => '(kurtarma anahtarı oluşturmak için gerekli)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'PIN değiştir — mevcut PIN ile onayla',
     'keep_pin' => 'PIN kodunu koru',
 
-    'error_pin_too_short' => 'PIN en az 4 haneli olmalı.',
+    'error_pin_too_short' => 'PIN en az 6 haneli olmalı.',
     'error_pin_mismatch' => 'PIN kodları eşleşmiyor. Yeniden dene.',
     'error_pin_incorrect' => 'Hatalı PIN.',
     'error_account_password' => 'Hatalı hesap parolası.',

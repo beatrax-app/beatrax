@@ -13,7 +13,7 @@ return [
     'password_help' => 'En az 12 karakter — parola sıfırlama yoktur, yalnızca kurtarma kodları vardır.',
     'confirm_password' => 'Parolayı doğrula',
     'pin' => 'Uygulama kilidi PIN kodu',
-    'pin_help' => '4-10 hane — bu cihazın kilidini açar.',
+    'pin_help' => '6-10 hane — bu cihazın kilidini açar.',
     'confirm_pin' => 'PIN kodunu doğrula',
     'continue' => 'Devam et',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Parolalar eşleşmiyor.',
         'password_length' => 'En az 12 karakter kullan.',
-        'pin_length' => 'PIN en az 4 haneli olmalıdır.',
+        'pin_length' => 'PIN en az 6 haneli olmalıdır.',
         'pins_mismatch' => 'PIN kodları eşleşmiyor. Yeniden dene.',
         'session_expired' => 'Kurulum tamamlanmadan oturumunun süresi doldu. Lütfen PIN kodunu ve parolanı yeniden gir.',
         'retry_failed' => 'Bu cihazın kurulumu yine tamamlanamadı. Lütfen yeniden dene.',
