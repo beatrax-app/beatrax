@@ -23,7 +23,7 @@ final class ColdStartBiometricSettingsSection extends Component
 
     public bool $available = false;
 
-    #[Validate('nullable|regex:/^[0-9]{4,10}$/')]
+    #[Validate('nullable|regex:/^[0-9]{6,10}$/')]
     public string $pin = '';
 
     public string $flashMessage = '';
@@ -56,7 +56,7 @@ final class ColdStartBiometricSettingsSection extends Component
         $pin = $this->pin;
         $this->pin = '';
 
-        if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
+        if (preg_match('/^\d{6,10}$/', $pin) !== 1) {
             $this->flashMessage = Lang::get('mobile::biometric.errors.pin_required');
 
             return;

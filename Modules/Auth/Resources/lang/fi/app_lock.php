@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Korvaa päivittäisen sisäänkirjautumisen PIN-koodilla. Istunnot pysyvät voimassa 30 päivää.',
 
     'setup_heading' => 'Aseta PIN-koodi, niin lukko otetaan käyttöön',
-    'new_pin_label' => 'Uusi PIN-koodi (4–10 numeroa)',
+    'new_pin_label' => 'Uusi PIN-koodi (6–10 numeroa)',
     'confirm_pin_label' => 'Vahvista PIN-koodi',
     'account_password_label' => 'Tilin salasana',
     'account_password_note' => '(vaaditaan palautusavaimen luomiseen)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Vaihda PIN-koodi — vahvista nykyisellä PIN-koodilla',
     'keep_pin' => 'Säilytä PIN-koodi',
 
-    'error_pin_too_short' => 'PIN-koodissa on oltava vähintään 4 numeroa.',
+    'error_pin_too_short' => 'PIN-koodissa on oltava vähintään 6 numeroa.',
     'error_pin_mismatch' => 'PIN-koodit eivät täsmää. Yritä uudelleen.',
     'error_pin_incorrect' => 'Väärä PIN-koodi.',
     'error_account_password' => 'Väärä tilin salasana.',

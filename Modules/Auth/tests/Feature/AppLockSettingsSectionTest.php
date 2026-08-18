@@ -53,7 +53,7 @@ it('user with no lock can enable it by setting a valid PIN with matching confirm
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 });
 
-it('rejects a PIN shorter than 4 digits with the correct error copy', function (): void {
+it('rejects a PIN shorter than 6 digits with the correct error copy', function (): void {
     $user = appLockSettingsUser('short-pin-user');
     $this->actingAs($user);
 
@@ -65,7 +65,7 @@ it('rejects a PIN shorter than 4 digits with the correct error copy', function (
         ->set('confirmPin', '123')
         ->set('accountPassword', 'settings-pass')
         ->call('setPin')
-        ->assertSee('PIN must be at least 4 digits.');
+        ->assertSee('PIN must be at least 6 digits.');
 
     expect($provisioner->isEnabled($user->id))->toBeFalse();
 });
@@ -78,8 +78,8 @@ it('rejects mismatched PIN confirmation with the correct error copy', function (
     $provisioner = $this->app->make(AppLockProvisioner::class);
 
     Livewire::test(AppLockSettingsSection::class)
-        ->set('newPin', '1234')
-        ->set('confirmPin', '5678')
+        ->set('newPin', '123456')
+        ->set('confirmPin', '654321')
         ->set('accountPassword', 'settings-pass')
         ->call('setPin')
         ->assertSee("PINs don't match. Try again.");
@@ -115,7 +115,7 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
-    $provisioner->enable($user->id, '4321', 'settings-pass');
+    $provisioner->enable($user->id, '432100', 'settings-pass');
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -132,7 +132,7 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
 
     // Wrong PIN: credentials stay, lock untouched.
     Livewire::test(AppLockSettingsSection::class)
-        ->set('deenrollPin', '0000')
+        ->set('deenrollPin', '000000')
         ->call('deenroll')
         ->assertSee('Incorrect PIN.');
 
@@ -141,7 +141,7 @@ it('de-enrolling biometric keeps the lock enabled and both wrapped keys intact (
 
     // Correct PIN: only credentials deleted — lock stays enabled, key material intact.
     Livewire::test(AppLockSettingsSection::class)
-        ->set('deenrollPin', '4321')
+        ->set('deenrollPin', '432100')
         ->call('deenroll')
         ->assertSet('biometricEnrolled', false);
 
@@ -168,14 +168,14 @@ it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled
     $provisioner = $this->app->make(AppLockProvisioner::class);
 
     // Enable the lock first.
-    $provisioner->enable($user->id, '4321', 'settings-pass');
+    $provisioner->enable($user->id, '432100', 'settings-pass');
     expect($provisioner->isEnabled($user->id))->toBeTrue();
 
     // Wrong PIN: lock stays enabled. IN-10: must be a NUMERIC wrong PIN —
     // a non-numeric value fails the #[Validate] regex so the property would
     // stay '' and the test would pass by coincidence (empty PIN also fails).
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '0000')
+        ->set('currentPin', '000000')
         ->call('disable')
         ->assertSee('Incorrect PIN.');
 
@@ -183,7 +183,7 @@ it('disabling the lock requires the correct PIN — wrong PIN keeps lock enabled
 
     // Correct PIN: lock disabled.
     Livewire::test(AppLockSettingsSection::class)
-        ->set('currentPin', '4321')
+        ->set('currentPin', '432100')
         ->call('disable')
         ->assertHasNoErrors();
 

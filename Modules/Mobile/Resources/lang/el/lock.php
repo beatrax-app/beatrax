@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Αποσύνδεση',
 
     'errors' => [
-        'pin_length' => 'Το PIN πρέπει να έχει τουλάχιστον 4 ψηφία.',
+        'pin_length' => 'Το PIN πρέπει να έχει τουλάχιστον 6 ψηφία.',
 
         'too_many_attempts' => 'Πάρα πολλές προσπάθειες — δοκίμασε ξανά σε :seconds δευτ.',
         'incorrect_pin_remaining' => 'Λάθος PIN. Απομένουν :count προσπάθειες.',

@@ -34,7 +34,7 @@ it('enableAppLock provisions the app-lock and leaves the session unlocked with t
     /** @var MobileLockGateway $gateway */
     $gateway = app(MobileLockGateway::class);
 
-    $gateway->enableAppLock((int) $user->id, '4269', 'a-genuinely-long-account-password', $session);
+    $gateway->enableAppLock((int) $user->id, '426900', 'a-genuinely-long-account-password', $session);
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);

@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Se déconnecter',
 
     'errors' => [
-        'pin_length' => 'Le PIN doit comporter au moins 4 chiffres.',
+        'pin_length' => 'Le PIN doit comporter au moins 6 chiffres.',
 
         'too_many_attempts' => 'Trop de tentatives — réessaie dans :secondss.',
         'incorrect_pin_remaining' => 'PIN incorrect. :count tentatives restantes.',

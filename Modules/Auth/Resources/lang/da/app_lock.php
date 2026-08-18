@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Erstatter det daglige login med en PIN-kode. Sessioner er aktive i 30 dage.',
 
     'setup_heading' => 'Angiv en PIN-kode for at slå låsen til',
-    'new_pin_label' => 'Ny PIN-kode (4–10 cifre)',
+    'new_pin_label' => 'Ny PIN-kode (6–10 cifre)',
     'confirm_pin_label' => 'Bekræft PIN-kode',
     'account_password_label' => 'Kontoadgangskode',
     'account_password_note' => '(kræves for at oprette en gendannelsesnøgle)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Skift PIN-kode — bekræft med nuværende PIN-kode',
     'keep_pin' => 'Behold PIN-kode',
 
-    'error_pin_too_short' => 'PIN-koden skal have mindst 4 cifre.',
+    'error_pin_too_short' => 'PIN-koden skal have mindst 6 cifre.',
     'error_pin_mismatch' => 'PIN-koderne er ikke ens. Prøv igen.',
     'error_pin_incorrect' => 'Forkert PIN-kode.',
     'error_account_password' => 'Forkert kontoadgangskode.',

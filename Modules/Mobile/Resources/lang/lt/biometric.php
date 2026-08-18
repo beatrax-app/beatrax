@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Šiame įrenginyje atrakinimas biometriniais duomenimis negalimas.',
-        'pin_required' => 'Įvesk PIN kodą (4–10 skaitmenų), kad įjungtum atrakinimą biometriniais duomenimis.',
+        'pin_required' => 'Įvesk PIN kodą (6–10 skaitmenų), kad įjungtum atrakinimą biometriniais duomenimis.',
         'enroll_failed' => 'Nepavyko įjungti atrakinimo biometriniais duomenimis — patikrink PIN kodą ir bandyk dar kartą.',
     ],
 ];

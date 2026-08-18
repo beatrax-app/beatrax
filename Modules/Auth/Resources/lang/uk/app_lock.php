@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Замінює щоденний вхід на PIN. Сеанси залишаються активними 30 днів.',
 
     'setup_heading' => 'Встанови PIN, щоб увімкнути блокування',
-    'new_pin_label' => 'Новий PIN (4–10 цифр)',
+    'new_pin_label' => 'Новий PIN (6–10 цифр)',
     'confirm_pin_label' => 'Підтверди PIN',
     'account_password_label' => 'Пароль облікового запису',
     'account_password_note' => '(потрібен для створення ключа відновлення)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'Змінити PIN — підтверди поточним PIN',
     'keep_pin' => 'Залишити PIN',
 
-    'error_pin_too_short' => 'PIN має містити щонайменше 4 цифри.',
+    'error_pin_too_short' => 'PIN має містити щонайменше 6 цифри.',
     'error_pin_mismatch' => 'PIN-коди не збігаються. Спробуй ще раз.',
     'error_pin_incorrect' => 'Неправильний PIN.',
     'error_account_password' => 'Неправильний пароль облікового запису.',

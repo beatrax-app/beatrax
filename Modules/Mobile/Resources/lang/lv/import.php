@@ -13,7 +13,7 @@ return [
     'password_help' => 'Vismaz 12 rakstzīmes — paroles atiestatīšanas nav, ir tikai atkopšanas kodi.',
     'confirm_password' => 'Apstipriniet paroli',
     'pin' => 'Lietotnes bloķēšanas PIN kods',
-    'pin_help' => '4-10 cipari — atbloķē šo ierīci.',
+    'pin_help' => '6-10 cipari — atbloķē šo ierīci.',
     'confirm_pin' => 'Apstipriniet PIN kodu',
     'continue' => 'Turpināt',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Paroles nesakrīt.',
         'password_length' => 'Izmantojiet vismaz 12 rakstzīmes.',
-        'pin_length' => 'PIN kodā jābūt vismaz 4 cipariem.',
+        'pin_length' => 'PIN kodā jābūt vismaz 6 cipariem.',
         'pins_mismatch' => 'PIN kodi nesakrīt. Mēģiniet vēlreiz.',
         'session_expired' => 'Sesijas laiks beidzās, pirms iestatīšana tika pabeigta. Ievadiet PIN kodu un paroli vēlreiz.',
         'retry_failed' => 'Šīs ierīces iestatīšanu joprojām neizdevās pabeigt. Mēģiniet vēlreiz.',

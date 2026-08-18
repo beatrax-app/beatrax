@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Nahradí každodenní přihlašování PINem. Relace zůstávají aktivní 30 dní.',
 
     'setup_heading' => 'Nastav PIN a zapni zámek',
-    'new_pin_label' => 'Nový PIN (4–10 číslic)',
+    'new_pin_label' => 'Nový PIN (6–10 číslic)',
     'confirm_pin_label' => 'Potvrď PIN',
     'account_password_label' => 'Heslo k účtu',
     'account_password_note' => '(potřebné k vytvoření obnovovacího klíče)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'Změnit PIN — potvrď současným PINem',
     'keep_pin' => 'Ponechat PIN',
 
-    'error_pin_too_short' => 'PIN musí mít aspoň 4 číslice.',
+    'error_pin_too_short' => 'PIN musí mít aspoň 6 číslice.',
     'error_pin_mismatch' => 'PINy se neshodují. Zkus to znovu.',
     'error_pin_incorrect' => 'Nesprávný PIN.',
     'error_account_password' => 'Nesprávné heslo k účtu.',

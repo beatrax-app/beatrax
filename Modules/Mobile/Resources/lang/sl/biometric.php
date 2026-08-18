@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometrično odklepanje na tej napravi ni na voljo.',
-        'pin_required' => 'Vnesi svoj PIN (4–10 števk), da vklopiš biometrično odklepanje.',
+        'pin_required' => 'Vnesi svoj PIN (6–10 števk), da vklopiš biometrično odklepanje.',
         'enroll_failed' => 'Biometričnega odklepanja ni bilo mogoče vklopiti — preveri PIN in poskusi znova.',
     ],
 ];
