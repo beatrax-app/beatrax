@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Zamenjuje svakodnevnu prijavu PIN-om. Sesije ostaju aktivne 30 dana.',
 
     'setup_heading' => 'Postavi PIN da uključiš zaključavanje',
-    'new_pin_label' => 'Novi PIN (4–10 cifara)',
+    'new_pin_label' => 'Novi PIN (6–10 cifara)',
     'confirm_pin_label' => 'Potvrdi PIN',
     'account_password_label' => 'Lozinka naloga',
     'account_password_note' => '(potrebna za pravljenje ključa za oporavak)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Promeni PIN — potvrdi trenutnim PIN-om',
     'keep_pin' => 'Zadrži PIN',
 
-    'error_pin_too_short' => 'PIN mora da ima bar 4 cifre.',
+    'error_pin_too_short' => 'PIN mora da ima bar 6 cifre.',
     'error_pin_mismatch' => 'PIN-ovi se ne poklapaju. Probaj ponovo.',
     'error_pin_incorrect' => 'Neispravan PIN.',
     'error_account_password' => 'Neispravna lozinka naloga.',

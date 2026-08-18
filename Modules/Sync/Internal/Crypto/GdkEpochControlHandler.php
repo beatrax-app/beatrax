@@ -7,7 +7,9 @@ namespace Modules\Sync\Internal\Crypto;
 use Illuminate\Contracts\Session\Session;
 use Modules\Sync\Internal\Identity\DeviceIdentityDto;
 use Modules\Sync\Internal\Identity\DeviceIdentityLoader;
+use Modules\Sync\Internal\Signing\DeviceKeySigner;
 use Modules\Sync\Internal\Transport\PeerCatchUpExchanger;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Psr\Log\LoggerInterface;
 use SodiumException;
 
@@ -16,10 +18,10 @@ use SodiumException;
  */
 final class GdkEpochControlHandler
 {
-    // SECURITY PRECONDITION: the wrapped epoch key travels as an anonymous
-    // sodium_crypto_box_seal — confidential but unauthenticated. handle() MUST
-    // only be called with a $json envelope that arrived over a channel that
-    // has already authenticated the sender as a CONFIRMED peer (see @link).
+    // The wrapped epoch key is an anonymous sodium_crypto_box_seal — confidential
+    // but not sender-authenticated. handle() therefore verifies a detached
+    // Ed25519 signature over the wrap against the sender's STILL-CONFIRMED device
+    // key before opening it, so a forged wrap is refused however it arrived.
 
     public const string MSG_GDK_EPOCH_WRAP = 'GDK_EPOCH_WRAP';
 
@@ -29,6 +31,8 @@ final class GdkEpochControlHandler
         private readonly GdkKeyringService $keyringService,
         private readonly GdkEpochUsageProbe $usageProbe,
         private readonly LoggerInterface $logger,
+        private readonly DeviceRegistryService $deviceRegistry,
+        private readonly DeviceKeySigner $signer,
     ) {}
 
     // Never throws on a malformed/tampered/foreign message — every rejection
@@ -53,13 +57,67 @@ final class GdkEpochControlHandler
             return;
         }
 
+        // Authenticate the SENDER before opening or appending: a wrap is adopted
+        // only when its Ed25519 signature verifies against a device STILL
+        // confirmed in this user's registry. Closes forged-epoch-key injection
+        // from an untrusted relay or a revoked peer, whatever channel carried it.
+        if (! $this->senderIsAuthentic($wrap, $userId)) {
+            return;
+        }
+
         $this->openAndAppendEpoch($wrap, $identity, $userId, $session);
+    }
+
+    // The anti-forgery gate: the wrap's detached Ed25519 signature must verify
+    // against the public key of a device STILL confirmed in this user's registry
+    // (deviceKeys() filters on confirmed_at). An unconfirmed, unknown, or revoked
+    // sender has no key here and is refused before any seal_open.
+    /**
+     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}  $wrap
+     */
+    private function senderIsAuthentic(array $wrap, int $userId): bool
+    {
+        $senderPublicKeyHex = $this->deviceRegistry->deviceKeys($userId)[$wrap['senderDeviceId']] ?? null;
+        if (! is_string($senderPublicKeyHex) || $senderPublicKeyHex === '') {
+            $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP from an unconfirmed or unknown sender — rejected, no append.', [
+                'sender_device_id' => $wrap['senderDeviceId'],
+            ]);
+
+            return false;
+        }
+
+        try {
+            $senderPublicKeyBin = sodium_hex2bin($senderPublicKeyHex);
+        } catch (SodiumException $e) {
+            $this->logger->warning('GdkEpochControlHandler: sender device key is not valid hex — rejected.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        $message = GdkEpochWrapSignature::signingMessage(
+            $wrap['epochId'],
+            $wrap['wrappedBin'],
+            $wrap['recipientDeviceId'],
+            $wrap['senderDeviceId'],
+        );
+
+        if (! $this->signer->verify($message, $wrap['sigHex'], $senderPublicKeyBin)) {
+            $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP signature did not verify against the sender\'s confirmed key — rejected, no append.', [
+                'sender_device_id' => $wrap['senderDeviceId'],
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 
     // Reads the control envelope, filters to GDK_EPOCH_WRAP, and validates its
     // fields — every rejection returns null so handle() stays a linear pipeline.
     /**
-     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string}|null
+     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}|null
      */
     private function parseWrap(string $json): ?array
     {
@@ -93,17 +151,21 @@ final class GdkEpochControlHandler
 
     /**
      * @param  array<string, mixed>  $msg
-     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string}|null
+     * @return array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}|null
      */
     private function extractWrapFields(array $msg): ?array
     {
         $epochIdRaw = $msg['epoch_id'] ?? null;
         $wrappedB64 = $msg['wrapped_key_b64'] ?? null;
         $recipientDeviceId = $msg['recipient_device_id'] ?? null;
+        $senderDeviceId = $msg['sender_device_id'] ?? null;
+        $sigHex = $msg['sig_hex'] ?? null;
 
         if (! is_int($epochIdRaw)
             || ! is_string($wrappedB64) || $wrappedB64 === ''
             || ! is_string($recipientDeviceId) || $recipientDeviceId === ''
+            || ! is_string($senderDeviceId) || $senderDeviceId === ''
+            || ! is_string($sigHex) || $sigHex === ''
         ) {
             $this->logger->warning('GdkEpochControlHandler: GDK_EPOCH_WRAP missing/malformed fields — rejected.');
 
@@ -117,7 +179,13 @@ final class GdkEpochControlHandler
             return null;
         }
 
-        return ['epochId' => $epochIdRaw, 'wrappedBin' => $wrappedBin, 'recipientDeviceId' => $recipientDeviceId];
+        return [
+            'epochId' => $epochIdRaw,
+            'wrappedBin' => $wrappedBin,
+            'recipientDeviceId' => $recipientDeviceId,
+            'senderDeviceId' => $senderDeviceId,
+            'sigHex' => $sigHex,
+        ];
     }
 
     // Loads the local identity and confirms the wrap is addressed to THIS
@@ -145,7 +213,7 @@ final class GdkEpochControlHandler
     // any, travels into the open — the collision is settled by comparing
     // keys, which needs the wrap decrypted.
     /**
-     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string}  $wrap
+     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}  $wrap
      */
     private function openAndAppendEpoch(array $wrap, DeviceIdentityDto $identity, int $userId, Session $session): void
     {
@@ -166,7 +234,7 @@ final class GdkEpochControlHandler
     // epoch under the device's OWN KEK — the wire never supplies a key here.
     // Every branch zeroes the key material in the finally.
     /**
-     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string}  $wrap
+     * @param  array{epochId: int, wrappedBin: string, recipientDeviceId: string, senderDeviceId: string, sigHex: string}  $wrap
      * @param  string|null  $localKeyHex  The key already held for this epoch id, if any.
      */
     private function decryptAndStore(

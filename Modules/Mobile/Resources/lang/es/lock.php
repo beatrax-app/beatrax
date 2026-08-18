@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Cerrar sesión',
 
     'errors' => [
-        'pin_length' => 'El PIN debe tener al menos 4 dígitos.',
+        'pin_length' => 'El PIN debe tener al menos 6 dígitos.',
 
         'too_many_attempts' => 'Demasiados intentos — inténtalo de nuevo en :secondss.',
         'incorrect_pin_remaining' => 'PIN incorrecto. Te quedan :count intentos.',

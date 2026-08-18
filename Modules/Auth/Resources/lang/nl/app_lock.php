@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Vervangt het dagelijkse inloggen door een pincode. Sessies blijven 30 dagen actief.',
 
     'setup_heading' => 'Stel een pincode in om vergrendeling in te schakelen',
-    'new_pin_label' => 'Nieuwe pincode (4–10 cijfers)',
+    'new_pin_label' => 'Nieuwe pincode (6–10 cijfers)',
     'confirm_pin_label' => 'Pincode bevestigen',
     'account_password_label' => 'Accountwachtwoord',
     'account_password_note' => '(vereist om een herstelsleutel aan te maken)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Pincode wijzigen — bevestig met huidige pincode',
     'keep_pin' => 'Pincode behouden',
 
-    'error_pin_too_short' => 'Pincode moet minstens 4 cijfers bevatten.',
+    'error_pin_too_short' => 'Pincode moet minstens 6 cijfers bevatten.',
     'error_pin_mismatch' => 'Pincodes komen niet overeen. Probeer het opnieuw.',
     'error_pin_incorrect' => 'Onjuiste pincode.',
     'error_account_password' => 'Onjuist accountwachtwoord.',

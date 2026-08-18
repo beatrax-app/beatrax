@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'A biometrikus feloldás nem érhető el ezen az eszközön.',
-        'pin_required' => 'Add meg a PIN-kódodat (4–10 számjegy) a biometrikus feloldás engedélyezéséhez.',
+        'pin_required' => 'Add meg a PIN-kódodat (6–10 számjegy) a biometrikus feloldás engedélyezéséhez.',
         'enroll_failed' => 'A biometrikus feloldást nem sikerült engedélyezni — ellenőrizd a PIN-kódot, és próbáld újra.',
     ],
 ];

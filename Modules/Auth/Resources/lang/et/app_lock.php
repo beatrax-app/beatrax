@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Asendab igapäevase sisselogimise PIN-koodiga. Sessioonid püsivad aktiivsena 30 päeva.',
 
     'setup_heading' => 'Määra PIN-kood, et lukk sisse lülitada',
-    'new_pin_label' => 'Uus PIN-kood (4–10 numbrit)',
+    'new_pin_label' => 'Uus PIN-kood (6–10 numbrit)',
     'confirm_pin_label' => 'Kinnita PIN-kood',
     'account_password_label' => 'Konto parool',
     'account_password_note' => '(vajalik taastevõtme loomiseks)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Muuda PIN-koodi — kinnita praeguse PIN-koodiga',
     'keep_pin' => 'Jäta PIN-kood alles',
 
-    'error_pin_too_short' => 'PIN-kood peab olema vähemalt 4 numbrit.',
+    'error_pin_too_short' => 'PIN-kood peab olema vähemalt 6 numbrit.',
     'error_pin_mismatch' => 'PIN-koodid ei kattu. Proovi uuesti.',
     'error_pin_incorrect' => 'Vale PIN-kood.',
     'error_account_password' => 'Vale konto parool.',

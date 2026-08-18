@@ -75,7 +75,7 @@ final class MobileLockScreen extends Component
         Session $session,
         Clock $clock,
     ): void {
-        if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
+        if (preg_match('/^\d{6,10}$/', $pin) !== 1) {
             $this->flashMessage = Lang::get('mobile::lock.errors.pin_length');
 
             return;

@@ -13,7 +13,7 @@ return [
     'password_help' => 'Pelo menos 12 caracteres — não há reposição de palavra-passe, apenas códigos de recuperação.',
     'confirm_password' => 'Confirmar palavra-passe',
     'pin' => 'PIN de bloqueio da aplicação',
-    'pin_help' => '4-10 dígitos — desbloqueia este dispositivo.',
+    'pin_help' => '6-10 dígitos — desbloqueia este dispositivo.',
     'confirm_pin' => 'Confirmar PIN',
     'continue' => 'Continuar',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'As palavras-passe não coincidem.',
         'password_length' => 'Usa pelo menos 12 caracteres.',
-        'pin_length' => 'O PIN tem de ter pelo menos 4 dígitos.',
+        'pin_length' => 'O PIN tem de ter pelo menos 6 dígitos.',
         'pins_mismatch' => 'Os PIN não coincidem. Tenta novamente.',
         'session_expired' => 'A tua sessão expirou antes de a configuração terminar. Volta a introduzir o PIN e a palavra-passe.',
         'retry_failed' => 'Continua a não ser possível concluir a configuração deste dispositivo. Tenta novamente.',

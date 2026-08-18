@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Sign out',
 
     'errors' => [
-        'pin_length' => 'PIN must be at least 4 digits.',
+        'pin_length' => 'PIN must be at least 6 digits.',
 
         'too_many_attempts' => 'Too many attempts — try again in :secondss.',
         'incorrect_pin_remaining' => 'Incorrect PIN. :count attempts remaining.',

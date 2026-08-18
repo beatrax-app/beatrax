@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'A napi bejelentkezést PIN-kódra cseréli. A munkamenetek 30 napig aktívak maradnak.',
 
     'setup_heading' => 'Állíts be PIN-kódot a zárolás bekapcsolásához',
-    'new_pin_label' => 'Új PIN-kód (4–10 számjegy)',
+    'new_pin_label' => 'Új PIN-kód (6–10 számjegy)',
     'confirm_pin_label' => 'PIN-kód megerősítése',
     'account_password_label' => 'Fiókjelszó',
     'account_password_note' => '(a helyreállítási kulcs létrehozásához szükséges)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'PIN-kód módosítása — erősítsd meg a jelenlegi PIN-kóddal',
     'keep_pin' => 'PIN-kód megtartása',
 
-    'error_pin_too_short' => 'A PIN-kódnak legalább 4 számjegyűnek kell lennie.',
+    'error_pin_too_short' => 'A PIN-kódnak legalább 6 számjegyűnek kell lennie.',
     'error_pin_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
     'error_pin_incorrect' => 'Hibás PIN-kód.',
     'error_account_password' => 'Hibás fiókjelszó.',

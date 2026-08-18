@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Kijelentkezés',
 
     'errors' => [
-        'pin_length' => 'A PIN-kódnak legalább 4 számjegyből kell állnia.',
+        'pin_length' => 'A PIN-kódnak legalább 6 számjegyből kell állnia.',
 
         'too_many_attempts' => 'Túl sok próbálkozás — próbáld újra :secondsmp múlva.',
         'incorrect_pin_remaining' => 'Hibás PIN-kód. Még :count próbálkozás maradt.',

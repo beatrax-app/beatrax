@@ -13,7 +13,7 @@ return [
     'password_help' => 'Mindst 12 tegn — der findes ingen nulstilling af adgangskoden, kun gendannelseskoder.',
     'confirm_password' => 'Bekræft adgangskode',
     'pin' => 'PIN-kode til app-lås',
-    'pin_help' => '4-10 cifre — låser denne enhed op.',
+    'pin_help' => '6-10 cifre — låser denne enhed op.',
     'confirm_pin' => 'Bekræft PIN-kode',
     'continue' => 'Fortsæt',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Adgangskoderne er ikke ens.',
         'password_length' => 'Brug mindst 12 tegn.',
-        'pin_length' => 'PIN-koden skal have mindst 4 cifre.',
+        'pin_length' => 'PIN-koden skal have mindst 6 cifre.',
         'pins_mismatch' => 'PIN-koderne er ikke ens. Prøv igen.',
         'session_expired' => 'Din session udløb, før opsætningen blev færdig. Indtast din PIN-kode og adgangskode igen.',
         'retry_failed' => 'Opsætningen af denne enhed kunne stadig ikke gøres færdig. Prøv igen.',

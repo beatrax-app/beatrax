@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Înlocuiește autentificarea zilnică cu un cod PIN. Sesiunile rămân active 30 de zile.',
 
     'setup_heading' => 'Setează un cod PIN ca să activezi blocarea',
-    'new_pin_label' => 'Cod PIN nou (4–10 cifre)',
+    'new_pin_label' => 'Cod PIN nou (6–10 cifre)',
     'confirm_pin_label' => 'Confirmă codul PIN',
     'account_password_label' => 'Parola contului',
     'account_password_note' => '(necesară pentru a crea o cheie de recuperare)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'Schimbă codul PIN — confirmă cu codul PIN actual',
     'keep_pin' => 'Păstrează codul PIN',
 
-    'error_pin_too_short' => 'Codul PIN trebuie să aibă cel puțin 4 cifre.',
+    'error_pin_too_short' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
     'error_pin_mismatch' => 'Codurile PIN nu coincid. Încearcă din nou.',
     'error_pin_incorrect' => 'Cod PIN incorect.',
     'error_account_password' => 'Parola contului este incorectă.',

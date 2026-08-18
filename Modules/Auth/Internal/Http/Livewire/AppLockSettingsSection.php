@@ -30,7 +30,7 @@ use Modules\Core\Public\Support\Lang;
  */
 final class AppLockSettingsSection extends Component
 {
-    private const PIN_RULES = 'nullable|regex:/^[0-9]{4,10}$/';
+    private const PIN_RULES = 'nullable|regex:/^[0-9]{6,10}$/';
 
     public bool $lockEnabled = false;
 
@@ -443,7 +443,7 @@ final class AppLockSettingsSection extends Component
     private function newPinValidationError(): ?string
     {
         return match (true) {
-            strlen($this->newPin) < 4 => Lang::get('auth::app_lock.error_pin_too_short'),
+            strlen($this->newPin) < 6 => Lang::get('auth::app_lock.error_pin_too_short'),
             $this->newPin !== $this->confirmPin => Lang::get('auth::app_lock.error_pin_mismatch'),
             default => null,
         };

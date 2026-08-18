@@ -810,6 +810,11 @@ jobs:
               if: contains(github.ref_name, '-')
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  # Via env, never inline in the shell: a tag name may contain
+                  # $() or backticks (git ref-format permits them), and inline
+                  # ${{ }} would let a crafted tag execute in this job.
+                  TAG: ${{ github.ref_name }}
+                  REPO: ${{ github.repository }}
               run: |
                   set -euo pipefail
                   # Convert the draft Release softprops just created
@@ -817,8 +822,8 @@ jobs:
                   # Release is still a draft (which immutable-releases
                   # allows); publishing here only flips the visibility
                   # bit, no asset upload happens.
-                  gh release edit "${{ github.ref_name }}" \
-                      --repo "${{ github.repository }}" \
+                  gh release edit "$TAG" \
+                      --repo "$REPO" \
                       --draft=false
 
     verify-published:
@@ -841,10 +846,13 @@ jobs:
             - name: Download published manifests + signatures
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  # Via env, never inline: a crafted tag name must not reach the
+                  # shell as executable $()/backtick text.
+                  TAG: ${{ github.ref_name }}
               run: |
                   set -euo pipefail
                   mkdir -p verify
-                  gh release download "${{ github.ref_name }}" \
+                  gh release download "$TAG" \
                       --dir verify \
                       --pattern 'latest*.yml' \
                       --pattern 'latest*.yml.sig'

@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometric unlock is not available on this device.',
-        'pin_required' => 'Enter your PIN (4–10 digits) to enable biometric unlock.',
+        'pin_required' => 'Enter your PIN (6–10 digits) to enable biometric unlock.',
         'enroll_failed' => 'Could not enable biometric unlock — check your PIN and try again.',
     ],
 ];
