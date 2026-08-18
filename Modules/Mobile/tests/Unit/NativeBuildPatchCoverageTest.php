@@ -18,11 +18,31 @@ use Modules\Mobile\Internal\Boot\NativeBuildPatches;
  * which run `composer install` — and post-update-cmd does not fire for that.
  */
 
+// This suite runs from BOTH roots — the repo root and mobile-app/ — so
+// base_path() is not one place, which is the same asymmetry
+// NativeBuildPatches::locate() exists for. Resolved rather than assumed.
+function mobileComposerManifest(): string
+{
+    foreach ([base_path('composer.json'), base_path('mobile-app/composer.json')] as $candidate) {
+        if (! is_file($candidate)) {
+            continue;
+        }
+
+        $decoded = json_decode((string) file_get_contents($candidate), true);
+
+        if (is_array($decoded) && ($decoded['name'] ?? null) === 'beatrax/beatrax-mobile') {
+            return $candidate;
+        }
+    }
+
+    throw new RuntimeException('no mobile composer.json reachable from '.base_path());
+}
+
 /** @return list<string> the nativephp_*.php scripts a composer hook invokes */
 function patchScriptsIn(string $hook): array
 {
     $manifest = json_decode(
-        (string) file_get_contents(base_path('mobile-app/composer.json')),
+        (string) file_get_contents(mobileComposerManifest()),
         true,
         flags: JSON_THROW_ON_ERROR,
     );
@@ -69,7 +89,11 @@ it('re-applies everything the native:patch command applies', function (): void {
 });
 
 it('names only scripts that exist on disk', function (): void {
+    $scripts = NativeBuildPatches::locate(base_path());
+
+    expect($scripts)->not->toBeNull();
+
     foreach (perBuildPatchScripts() as $script) {
-        expect(base_path('scripts/'.$script))->toBeFile();
+        expect($scripts.'/'.$script)->toBeFile();
     }
 });
