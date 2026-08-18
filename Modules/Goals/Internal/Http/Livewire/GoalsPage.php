@@ -35,8 +35,6 @@ final class GoalsPage extends Component
 
     public string $targetDate = '';
 
-    public string $accountId = '';
-
     public string $linkedPotId = '';
 
     public int $editGoalId = 0;
@@ -53,14 +51,6 @@ final class GoalsPage extends Component
 
     public bool $showArchived = false;
 
-    // The pot picker's option list is scoped to the selected account, but the
-    // bound property survives a re-render — switching accounts would
-    // silently keep (and submit) a pot from the previously selected account.
-    public function updatedAccountId(): void
-    {
-        $this->linkedPotId = '';
-    }
-
     // -----------------------------------------------------------------------
     // Create goal
     // -----------------------------------------------------------------------
@@ -73,20 +63,17 @@ final class GoalsPage extends Component
             return;
         }
 
-        $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
-
         // Goal save + optional pot link run in one transaction so a failed
         // link rolls back the goal — no orphan goal, no duplicate on resubmit.
         // The success dispatch stays inside the try so a thrown write never
         // reaches it.
         try {
-            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId): void {
+            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter): void {
                 $goal = $writer->save(
                     $currentUser->user(),
                     $this->name,
                     $this->targetAmount,
                     $this->targetDate,
-                    $accountId,
                 );
 
                 if ($this->linkedPotId !== '') {
@@ -122,7 +109,6 @@ final class GoalsPage extends Component
                 // parses back, on integer minor units with no float division.
                 $this->targetAmount = MoneyInput::formatMinor($row->targetMinor);
                 $this->targetDate = $row->targetDate;
-                $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
                 $linkedPotId = $potBalance->linkedPotIdForGoal($goalId, $currentUser->user());
                 $this->linkedPotId = $linkedPotId !== null ? (string) $linkedPotId : '';
                 $this->clearErrors();
@@ -145,7 +131,6 @@ final class GoalsPage extends Component
             return;
         }
 
-        $accountId = $this->accountId !== '' ? (int) $this->accountId : null;
         $newPotId = $this->linkedPotId !== '' ? (int) $this->linkedPotId : null;
         $prevPotId = $potBalance->linkedPotIdForGoal($this->editGoalId, $currentUser->user());
 
@@ -153,14 +138,13 @@ final class GoalsPage extends Component
         // transaction so a failed relink rolls back both — the existing
         // goal<->pot link is never silently lost.
         try {
-            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $accountId, $newPotId, $prevPotId): void {
+            $db->connection()->transaction(function () use ($currentUser, $writer, $db, $potWriter, $newPotId, $prevPotId): void {
                 $writer->update(
                     $currentUser->user(),
                     $this->editGoalId,
                     $this->name,
                     $this->targetAmount,
                     $this->targetDate,
-                    $accountId,
                 );
 
                 $this->applyPotRelink($currentUser, $db, $potWriter, $newPotId, $prevPotId);
@@ -250,7 +234,6 @@ final class GoalsPage extends Component
             $view = $views->make('goals::livewire.goals-page', [
                 'rows' => [],
                 'archived' => [],
-                'accounts' => [],
                 'pots' => [],
                 'baseCurrency' => 'EUR',
             ]);
@@ -265,32 +248,15 @@ final class GoalsPage extends Component
         $rows = $query->forUser($user);
         $archived = $query->archivedForUser($user);
 
-        $accounts = $db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->orderByRaw("CASE WHEN kind = 'savings' THEN 0 ELSE 1 END")
-            ->orderBy('name')
-            ->get(['id', 'name', 'kind'])
-            ->toArray();
-
-        // Pot options for the linked-pot picker: only active pots owned by
-        // this user that are fully unlinked (neither goal- nor category-
-        // linked), or already linked to the goal being edited so the
-        // current link stays in the list. Scoped to the selected account.
-        $selectedAccountId = $this->accountId !== '' ? (int) $this->accountId : null;
-
-        // Single source for the base picker query so the edit-mode union
-        // branch cannot drift from the non-edit branch.
-        $basePotsQuery = static function () use ($db, $user, $selectedAccountId): Builder {
+        // Pot options for the linked-pot picker: only active pots owned by this
+        // user that are fully unlinked (neither goal- nor category-linked), or
+        // already linked to the goal being edited so the current link stays in
+        // the list. One base query so the two branches cannot drift apart.
+        $basePotsQuery = static function () use ($db, $user): Builder {
             return $db->connection()
                 ->table('pots')
                 ->where('user_id', $user->id)
                 ->where('status', GoalStatus::Active->value)
-                ->where(static function (Builder $q) use ($selectedAccountId): void {
-                    if ($selectedAccountId !== null) {
-                        $q->where('account_id', $selectedAccountId);
-                    }
-                })
                 ->whereNull('goal_id')
                 ->whereNull('category_id');
         };
@@ -314,7 +280,6 @@ final class GoalsPage extends Component
         $view = $views->make('goals::livewire.goals-page', [
             'rows' => $rows,
             'archived' => $archived,
-            'accounts' => $accounts,
             'pots' => $pots,
             'baseCurrency' => $user->base_currency,
         ]);
@@ -342,7 +307,6 @@ final class GoalsPage extends Component
         $this->name = '';
         $this->targetAmount = '';
         $this->targetDate = '';
-        $this->accountId = '';
         $this->linkedPotId = '';
         $this->editGoalId = 0;
         $this->clearErrors();

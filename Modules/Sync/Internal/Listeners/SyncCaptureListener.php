@@ -8,12 +8,14 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Modules\Notifications\Public\Events\NotificationPreferenceMutated;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesEnvelopeMutations;
+use Modules\Sync\Internal\Listeners\Concerns\CapturesGoalMutations;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesReportAndNotificationMutations;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesTransactionMutations;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
+use Modules\Sync\Public\Events\GoalContributionMutated;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -26,6 +28,7 @@ use Psr\Log\LoggerInterface;
 final class SyncCaptureListener
 {
     use CapturesEnvelopeMutations;
+    use CapturesGoalMutations;
     use CapturesReportAndNotificationMutations;
     use CapturesTransactionMutations;
 
@@ -159,6 +162,31 @@ final class SyncCaptureListener
             $this->report('SyncCaptureListener: envelope move capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'moveId' => $event->moveId,
+                'userId' => $event->userId,
+            ]);
+        }
+    }
+
+    // Routes GoalContributionMutated events to the OpLogWriter with table:
+    // 'goal_contributions'. Attributions are append-only, so 'edit' is not a
+    // state this table can be in and falls through to the unknown-type log.
+    public function handleGoalContribution(GoalContributionMutated $event): void
+    {
+        try {
+            $writer = $this->container->make(OpLogWriter::class);
+
+            match ($event->mutationType) {
+                'delete' => $this->handleGoalContributionDelete($event, $writer),
+                'create' => $this->handleGoalContributionCreate($event, $writer),
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
+                    'mutationType' => $event->mutationType,
+                    'contributionId' => $event->contributionId,
+                ]),
+            };
+        } catch (\Throwable $e) {
+            $this->report('SyncCaptureListener: goal contribution capture failed', $e, [
+                'mutationType' => $event->mutationType,
+                'contributionId' => $event->contributionId,
                 'userId' => $event->userId,
             ]);
         }

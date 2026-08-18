@@ -293,6 +293,14 @@ leg's category; a never-persisted editor collapses purely in memory
 (no mutator call, no op-log entry) since there is nothing to reverse.
 Tax tagging is leg-aware and requires a persisted leg id.
 
+**Savings-goal attribution.** `attributeToGoal()` / `removeGoalAttribution()`
+write the `goal_contributions` pivot through Goals'
+`GoalContributionWriter`, which re-asserts ownership of both the goal and
+the transaction and no-ops silently on a foreign id. This is the one
+mutating action on the page NOT behind the reconciled lock: it writes a
+separate row and leaves the reconciled transaction untouched, and a
+reconciled row is exactly the confirmed money a goal wants to count.
+
 **Delete.** Emits a `delete` tombstone for the parent transaction plus
 one `TransactionSplitMutated` delete tombstone per leg (read before the
 delete, since the DB FK cascade removes the leg rows locally) — sync

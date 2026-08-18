@@ -70,6 +70,15 @@ return [
         'submit' => 'Vaihda',
     ],
 
+    'goal' => [
+        'heading' => 'Säästötavoite',
+        'help' => 'Laske tämä tapahtuma yhteen säästötavoitteistasi.',
+        'choose_aria' => 'Valitse säästötavoite',
+        'choose_option' => 'Valitse tavoite…',
+        'submit' => 'Lisää tavoitteeseen',
+        'remove_aria' => 'Poista :name',
+    ],
+
     'delete' => [
         'heading' => 'Poista tapahtuma',
         'help' => 'Poistaa tämän tapahtuman pysyvästi. Toimintoa ei voi peruuttaa.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Muistiinpano tallennettu',
         'unreconciled' => 'Täsmäytys purettu — voit muokata tätä tapahtumaa taas.',
         'counterparty_updated' => 'Vastapuoli päivitetty',
+        'goal_attributed' => 'Lasketaan tähän tavoitteeseen',
+        'goal_attribution_removed' => 'Ei enää lasketa tähän tavoitteeseen',
         'split_saved' => 'Jako tallennettu',
         'removed_one_remains' => 'Poistettu — yksi kategoria jäljellä',
         'unsplit_restored' => 'Jako purettu — palautettu yhdeksi kategoriaksi',

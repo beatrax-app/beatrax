@@ -70,6 +70,15 @@ return [
         'submit' => 'Reasignar',
     ],
 
+    'goal' => [
+        'heading' => 'Objetivo de ahorro',
+        'help' => 'Cuenta esta transacción para uno de tus objetivos de ahorro.',
+        'choose_aria' => 'Elige un objetivo de ahorro',
+        'choose_option' => 'Elige un objetivo…',
+        'submit' => 'Añadir al objetivo',
+        'remove_aria' => 'Quitar :name',
+    ],
+
     'delete' => [
         'heading' => 'Eliminar la transacción',
         'help' => 'Elimina esta transacción de forma permanente. Esta acción no se puede deshacer.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Nota guardada',
         'unreconciled' => 'Conciliación anulada — ya puedes volver a editar esta transacción.',
         'counterparty_updated' => 'Contraparte actualizada',
+        'goal_attributed' => 'Cuenta para este objetivo',
+        'goal_attribution_removed' => 'Ya no cuenta para este objetivo',
         'split_saved' => 'Desglose guardado',
         'removed_one_remains' => 'Eliminada — queda una categoría',
         'unsplit_restored' => 'Desglose deshecho — restaurada a una sola categoría',

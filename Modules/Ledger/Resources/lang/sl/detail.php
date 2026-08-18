@@ -70,6 +70,15 @@ return [
         'submit' => 'Zamenjaj',
     ],
 
+    'goal' => [
+        'heading' => 'Varčevalni cilj',
+        'help' => 'Vštej to transakcijo v enega od svojih varčevalnih ciljev.',
+        'choose_aria' => 'Izberi varčevalni cilj',
+        'choose_option' => 'Izberi cilj…',
+        'submit' => 'Dodaj k cilju',
+        'remove_aria' => 'Odstrani :name',
+    ],
+
     'delete' => [
         'heading' => 'Izbriši transakcijo',
         'help' => 'Trajno odstrani to transakcijo. Tega dejanja ni mogoče razveljaviti.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Opomba shranjena',
         'unreconciled' => 'Uskladitev razveljavljena — to transakcijo lahko znova urejaš.',
         'counterparty_updated' => 'Nasprotna stranka posodobljena',
+        'goal_attributed' => 'Šteje se v ta cilj',
+        'goal_attribution_removed' => 'Ne šteje se več v ta cilj',
         'split_saved' => 'Razdelitev shranjena',
         'removed_one_remains' => 'Odstranjeno — ostane ena kategorija',
         'unsplit_restored' => 'Razdelitev razveljavljena — obnovljeno na eno kategorijo',

@@ -70,6 +70,15 @@ return [
         'submit' => 'Promijeni',
     ],
 
+    'goal' => [
+        'heading' => 'Cilj štednje',
+        'help' => 'Uračunaj ovu transakciju u jedan od svojih ciljeva štednje.',
+        'choose_aria' => 'Odaberi cilj štednje',
+        'choose_option' => 'Odaberi cilj…',
+        'submit' => 'Dodaj cilju',
+        'remove_aria' => 'Ukloni :name',
+    ],
+
     'delete' => [
         'heading' => 'Izbriši transakciju',
         'help' => 'Trajno uklanja ovu transakciju. Ova se radnja ne može poništiti.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Bilješka spremljena',
         'unreconciled' => 'Usklađivanje poništeno — možeš ponovno uređivati ovu transakciju.',
         'counterparty_updated' => 'Protustranka ažurirana',
+        'goal_attributed' => 'Uračunato u ovaj cilj',
+        'goal_attribution_removed' => 'Više se ne uračunava u ovaj cilj',
         'split_saved' => 'Podjela spremljena',
         'removed_one_remains' => 'Uklonjeno — ostaje jedna kategorija',
         'unsplit_restored' => 'Podjela poništena — vraćeno na jednu kategoriju',

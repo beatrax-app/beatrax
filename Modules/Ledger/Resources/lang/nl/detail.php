@@ -70,6 +70,15 @@ return [
         'submit' => 'Opnieuw toewijzen',
     ],
 
+    'goal' => [
+        'heading' => 'Spaardoel',
+        'help' => 'Laat deze transactie meetellen voor een van je spaardoelen.',
+        'choose_aria' => 'Kies een spaardoel',
+        'choose_option' => 'Kies een doel…',
+        'submit' => 'Aan doel toevoegen',
+        'remove_aria' => ':name verwijderen',
+    ],
+
     'delete' => [
         'heading' => 'Transactie verwijderen',
         'help' => 'Verwijdert deze transactie permanent. Deze actie kan niet ongedaan worden gemaakt.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Notitie opgeslagen',
         'unreconciled' => 'Afstemming opgeheven — je kunt deze transactie weer bewerken.',
         'counterparty_updated' => 'Tegenpartij bijgewerkt',
+        'goal_attributed' => 'Telt mee voor dit doel',
+        'goal_attribution_removed' => 'Telt niet meer mee voor dit doel',
         'split_saved' => 'Splitsing opgeslagen',
         'removed_one_remains' => 'Verwijderd — één categorie blijft over',
         'unsplit_restored' => 'Splitsing ongedaan gemaakt — hersteld naar één categorie',

@@ -70,6 +70,15 @@ return [
         'submit' => 'Riassegna',
     ],
 
+    'goal' => [
+        'heading' => 'Obiettivo di risparmio',
+        'help' => 'Conteggia questa transazione in uno dei tuoi obiettivi di risparmio.',
+        'choose_aria' => 'Scegli un obiettivo di risparmio',
+        'choose_option' => 'Scegli un obiettivo…',
+        'submit' => "Aggiungi all'obiettivo",
+        'remove_aria' => 'Rimuovi :name',
+    ],
+
     'delete' => [
         'heading' => 'Elimina la transazione',
         'help' => "Rimuove definitivamente questa transazione. L'operazione non può essere annullata.",
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Nota salvata',
         'unreconciled' => 'Riconciliazione annullata — puoi modificare di nuovo questa transazione.',
         'counterparty_updated' => 'Controparte aggiornata',
+        'goal_attributed' => 'Conteggiato in questo obiettivo',
+        'goal_attribution_removed' => 'Non è più conteggiato in questo obiettivo',
         'split_saved' => 'Suddivisione salvata',
         'removed_one_remains' => 'Rimossa — resta una categoria',
         'unsplit_restored' => 'Suddivisione annullata — ripristinata a una sola categoria',

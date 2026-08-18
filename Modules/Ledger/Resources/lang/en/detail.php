@@ -70,6 +70,15 @@ return [
         'submit' => 'Reassign',
     ],
 
+    'goal' => [
+        'heading' => 'Savings goal',
+        'help' => 'Count this transaction toward one of your savings goals.',
+        'choose_aria' => 'Choose a savings goal',
+        'choose_option' => 'Choose a goal…',
+        'submit' => 'Add to goal',
+        'remove_aria' => 'Remove :name',
+    ],
+
     'delete' => [
         'heading' => 'Delete transaction',
         'help' => 'Permanently removes this transaction. This action cannot be undone.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Note saved',
         'unreconciled' => 'Un-reconciled — you can edit this transaction again.',
         'counterparty_updated' => 'Counterparty updated',
+        'goal_attributed' => 'Counted toward this goal',
+        'goal_attribution_removed' => 'No longer counted toward this goal',
         'split_saved' => 'Split saved',
         'removed_one_remains' => 'Removed — one category remains',
         'unsplit_restored' => 'Unsplit — restored to a single category',
