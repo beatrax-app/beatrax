@@ -71,13 +71,25 @@ it('translates a libsodium failure while rotating after a device removal', funct
     $session = $this->app->make(Session::class);
     $keyring->generateAndPersist((int) $user->id, $session);
 
+    // Give the acting device a REAL on-disk identity (with real sodium, BEFORE
+    // the failing primitive is swapped in) so rotateAndRevoke() gets past the
+    // new requireIdentity() gate and reaches the epoch-key hex conversion that
+    // the failing sodium throws on.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $identityService->generateAndPersist((int) $user->id, $session);
+
     $this->app->instance(SodiumPrimitives::class, remainingFailingSodium());
     forgetRemainingSingletons($this->app);
 
     /** @var GdkRotationService $rotation */
     $rotation = $this->app->make(GdkRotationService::class);
 
-    expect(fn () => $rotation->rotateAndRevoke((int) $user->id, 1, $session))
+    // A non-existent registry id: the removal is a no-op, but the rotation
+    // (epoch append) still runs, and that is where the swapped-in failing
+    // sodium throws. (Id 1 is now the real self device; revoking it would trip
+    // the self-revocation guard instead of exercising the crypto failure path.)
+    expect(fn () => $rotation->rotateAndRevoke((int) $user->id, 999, $session))
         ->toThrow(CryptoOperationFailedException::class, 'GDK rotation');
 });
 
@@ -93,6 +105,13 @@ it('translates a libsodium failure while fanning out epochs to a new device', fu
     /** @var Session $session */
     $session = $this->app->make(Session::class);
     $keyring->generateAndPersist((int) $user->id, $session);
+
+    // The acting device needs a REAL on-disk identity (real sodium, BEFORE the
+    // swap) so fanOutAllEpochsToDevice() gets past requireIdentity() and reaches
+    // the recipient-key hex conversion that the failing sodium throws on.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $identityService->generateAndPersist((int) $user->id, $session);
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

@@ -6,8 +6,11 @@ use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Sync\Internal\Crypto\GdkEpochWrapSignature;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
+use Modules\Sync\Internal\Signing\DeviceKeySigner;
 
 uses(RefreshDatabase::class);
 
@@ -63,7 +66,12 @@ it('generates a new GDK epoch N+1 and appends it to the acting device keyring on
 
     $initial = $keyring->generateAndPersist((int) $user->id, $session);
 
-    rotationDeviceRow($db, (int) $user->id, 'self-device', true);
+    // rotateAndRevoke() now loads the acting device's on-disk identity to SIGN
+    // each fan-out wrap, so the self device needs a real DeviceIdentityService
+    // identity (a bare device_registry row has no key-file to load).
+    /** @var DeviceIdentityService $identityService */
+    $identityService = $this->app->make(DeviceIdentityService::class);
+    $identityService->generateAndPersist((int) $user->id, $session);
     $removedDeviceId = rotationDeviceRow($db, (int) $user->id, 'removed-device', false);
 
     /** @var GdkRotationService $rotation */
@@ -103,14 +111,30 @@ it('builds one sealed-box GDK epoch wrap per remaining trusted device', function
     $recipientPub = sodium_crypto_box_publickey($recipientKeypair);
     $rawGdkKey = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES);
 
-    $wrap = $rotation->buildGdkEpochWrap(2, $rawGdkKey, $recipientPub, 'remaining-device');
+    // The sender's Ed25519 identity signs the wrap so a recipient can
+    // authenticate its provenance (F1). The public half is what the receiver
+    // holds in its device_registry; assert the detached signature verifies.
+    $senderSigKp = sodium_crypto_sign_keypair();
+    $senderSecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($senderSigKp));
+
+    $wrap = $rotation->buildGdkEpochWrap(2, $rawGdkKey, $recipientPub, 'remaining-device', 'sender-device', $senderSecretHex);
 
     expect($wrap)->toHaveKey('type', 'GDK_EPOCH_WRAP');
     expect($wrap)->toHaveKey('epoch_id', 2);
     expect($wrap)->toHaveKey('recipient_device_id', 'remaining-device');
+    expect($wrap)->toHaveKey('sender_device_id', 'sender-device');
     expect($wrap['wrapped_key_b64'])->toBeString();
+    expect($wrap['sig_hex'])->toBeString();
 
-    $unwrapped = sodium_crypto_box_seal_open(base64_decode((string) $wrap['wrapped_key_b64'], true), $recipientKeypair);
+    $sealed = base64_decode((string) $wrap['wrapped_key_b64'], true);
+    expect($sealed)->not->toBeFalse();
+
+    // The signature covers the sealed bytes + epoch id + both device ids.
+    $message = GdkEpochWrapSignature::signingMessage(2, (string) $sealed, 'remaining-device', 'sender-device');
+    expect((new DeviceKeySigner)->verify($message, (string) $wrap['sig_hex'], sodium_crypto_sign_publickey($senderSigKp)))
+        ->toBeTrue('the wrap must carry a valid detached Ed25519 signature from the sender');
+
+    $unwrapped = sodium_crypto_box_seal_open((string) $sealed, $recipientKeypair);
     expect($unwrapped)->not->toBeFalse();
     expect($unwrapped)->toBe($rawGdkKey);
 });
