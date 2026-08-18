@@ -113,3 +113,20 @@ it('ignores an attribution aimed at another users goal', function (): void {
 
     expect(DB::table('goal_contributions')->count())->toBe(0);
 });
+
+it('ignores a removal aimed at another users goal', function (): void {
+    $other = User::create(['username' => 'other-goal-remover', 'password' => 'opensesame', 'period_start_day' => 1]);
+    $foreign = Goal::factory()->create([
+        'user_id' => $other->id,
+        'name' => 'Foreign goal',
+        'target_minor' => 60000,
+        'status' => 'active',
+    ]);
+
+    $component = Livewire::test(TransactionDetail::class, ['transactionId' => $this->tx->id])
+        ->call('attributeToGoal', $this->goal->id);
+
+    $component->call('removeGoalAttribution', $foreign->id);
+
+    expect(DB::table('goal_contributions')->count())->toBe(1);
+});

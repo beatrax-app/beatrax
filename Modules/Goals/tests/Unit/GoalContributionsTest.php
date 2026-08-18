@@ -228,6 +228,19 @@ it('refuses to attribute to another users goal', function (): void {
     expect(DB::table('goal_contributions')->count())->toBe(0);
 });
 
+it('refuses to detach another users contribution', function (): void {
+    $other = User::create(['username' => 'other', 'password' => 'opensesame', 'period_start_day' => 1]);
+    $goal = Goal::factory()->create(['user_id' => $this->user->id, 'target_minor' => 100000, 'status' => 'active']);
+    $tx = contributionTx($this->user->id, $this->account->id, $this->run->id, 25000, CarbonImmutable::today()->toDateString());
+
+    $writer = app(GoalContributionWriter::class);
+    $writer->attribute($this->user, $goal->id, $tx->id);
+
+    expect($writer->detach($other, $goal->id, $tx->id))->toBeFalse();
+    expect(DB::table('goal_contributions')->count())->toBe(1);
+    expect(contributedByGoalId($this->user)[$goal->id])->toBe(25000);
+});
+
 it('lists the goals a transaction has been attributed to', function (): void {
     $goal = Goal::factory()->create(['user_id' => $this->user->id, 'name' => 'Winter tyres', 'target_minor' => 60000, 'status' => 'active']);
     $tx = contributionTx($this->user->id, $this->account->id, $this->run->id, 25000, CarbonImmutable::today()->toDateString());
