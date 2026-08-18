@@ -37,7 +37,7 @@ if (! is_file($manifest)) {
 
 $source = (string) file_get_contents($manifest);
 
-$androidDone = str_contains($source, 'nativephp_exclude_data_from_backup.php');
+$androidDone = str_contains($source, 'android:allowBackup="false"');
 
 $anchor = 'android:allowBackup="true"';
 
@@ -47,11 +47,40 @@ if (! $androidDone && ! str_contains($source, $anchor)) {
     exit(1);
 }
 
-$replacement = '<!-- android:allowBackup set false by scripts/nativephp_exclude_data_from_backup.php -->'
-    ."\n        ".'android:allowBackup="false"';
+// The flag alone, with no comment beside it: an XML comment between an
+// element's attributes is not well-formed, and the manifest merger rejects the
+// whole file. The note goes above the element, where it is legal.
+$replacement = 'android:allowBackup="false"';
 
-if (! $androidDone && file_put_contents($manifest, str_replace($anchor, $replacement, $source)) === false) {
-    fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$manifest}.\n");
+if (! $androidDone) {
+    $rewritten = str_replace($anchor, $replacement, $source);
+    $rewritten = str_replace(
+        '    <application',
+        "    <!-- allowBackup false, and the rules below, by\n"
+        ."         scripts/nativephp_exclude_data_from_backup.php — see that file. -->\n"
+        .'    <application',
+        $rewritten,
+    );
+
+    if (file_put_contents($manifest, $rewritten) === false) {
+        fwrite(STDERR, "nativephp_exclude_data_from_backup: could not write {$manifest}.\n");
+        exit(1);
+    }
+}
+
+// Proof, not assumption: an earlier version of this script put the note
+// BETWEEN the application element's attributes, which is not well-formed. The
+// attribute was present and readable, every check for it passed, and Gradle
+// died in the manifest merger with a SAX error nobody could see.
+$reparsed = @simplexml_load_file($manifest);
+
+if ($reparsed === false) {
+    fwrite(STDERR, "nativephp_exclude_data_from_backup: {$manifest} is no longer well-formed XML after patching.\n");
+
+    foreach (libxml_get_errors() as $error) {
+        fwrite(STDERR, '  line '.$error->line.': '.trim($error->message)."\n");
+    }
+
     exit(1);
 }
 
