@@ -133,6 +133,43 @@ rather than on the platform.
 app previews an upload (no control accepts an image, and nothing calls
 `temporaryUrl()`), so it is unreachable here.
 
+### A file cannot cross as multipart, so it crosses as base64
+
+Fixing the signature produced a `200` and an empty upload. WebKit hands a
+custom scheme handler **only string request bodies**: a FormData or Blob body
+arrives as neither `httpBody` nor `httpBodyStream`. Measured against a probe
+route in the running app:
+
+| request body | bytes PHP received |
+|---|---|
+| `application/x-www-form-urlencoded` string | 15 of 15 |
+| `application/json` string | 7 of 7 |
+| `Blob` | 0 |
+| `FormData` | 0 |
+
+And a hand-built multipart body sent *as a string* reached `php://input` whole
+while `$_FILES`, `$_POST` and `allFiles()` stayed empty — this runtime has no
+SAPI doing rfc1867 parsing, so multipart cannot work here even when it arrives.
+
+So the file crosses base64-encoded in a JSON body.
+`resources/js/mobile-upload.js` intercepts Livewire's upload XHR and re-sends
+it; `EncodedUploadTransport` middleware rebuilds the bytes and puts a real
+`UploadedFile` into `$request->files` before Livewire's own controller reads
+one. **It is a transport, not a second import path**: the controller, the
+temporary disk, the preview, the verdicts and the confirm step are the same
+code on every platform, and neither end knows which way the bytes came.
+
+The client sends the byte count and a SHA-256 with each file and the server
+verifies both, refusing anything that did not arrive whole or unchanged — a
+truncated statement would import as a wrong number rather than fail. Base64
+being ASCII is also what makes the format restriction go away rather than move:
+a PDF crosses as safely as a CSV, which the string-typed bridge body could
+never have done.
+
+Both halves are inert off that shell: the shim checks `location.protocol` and
+does nothing on http/https, and the middleware acts only on its own marker
+field, which an ordinary request never carries.
+
 ### The runtime is persistent, and request headers leak between requests
 
 The embedded PHP process serves many requests. Its superglobals are not fully

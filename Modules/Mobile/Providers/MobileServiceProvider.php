@@ -7,6 +7,7 @@ namespace Modules\Mobile\Providers;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Facades\GenerateSignedUploadUrlFacade;
 use Livewire\LivewireManager;
@@ -19,6 +20,7 @@ use Modules\Mobile\Commands\MobilePullCommand;
 use Modules\Mobile\Commands\PackageAndroidCommand;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
+use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
@@ -93,7 +95,7 @@ final class MobileServiceProvider extends ServiceProvider
         }
     }
 
-    public function boot(Dispatcher $events): void
+    public function boot(Dispatcher $events, Router $router): void
     {
         // Cold-start biometric: invalidate the enclave blob if the
         // app-lock data key ever rotates (oldKek !== newKek). Runtime FQCN
@@ -159,6 +161,12 @@ final class MobileServiceProvider extends ServiceProvider
         }
 
         $this->commands([PackageAndroidCommand::class]);
+
+        // Where the runtime cannot carry a multipart body, the client sends the
+        // file base64-encoded and this puts a real UploadedFile back before
+        // Livewire's controller reads one. Gated on its own marker, not the
+        // platform: an ordinary request is one array lookup and out.
+        $router->pushMiddlewareToGroup('web', EncodedUploadTransport::class);
 
         // Livewire mints its temporary-upload URL through this facade, the one
         // seam where the signature can be computed against the root the verifier

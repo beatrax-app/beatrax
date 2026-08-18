@@ -110,19 +110,13 @@
                         if ($counterpartyDisplay === null || $counterpartyDisplay === '') {
                             $counterpartyDisplay = $row->counterpartyIban ?? $row->description ?? '—';
                         }
-                        $amountFormatted = '—';
-                        if ($row->amountMinor !== null) {
-                            $major = abs($row->amountMinor) / Money::MINOR_UNITS_PER_MAJOR;
-                            $sign = $row->amountMinor < 0 ? '-' : '';
-                            $currency = $row->currency ?? BaseCurrency::value();
-                            $symbol = match ($currency) {
-                                'EUR' => '€',
-                                'USD' => '$',
-                                'GBP' => '£',
-                                default => $currency.' ',
-                            };
-                            $amountFormatted = $sign.$symbol.number_format($major, 2, '.', ',');
-                        }
+                        // Through Money like every other amount in the app. The
+                        // hand-rolled number_format here wrote US separators, so
+                        // the one table nobody had ever seen with data on a
+                        // device read -€1,154.13 beside a ledger saying € -13,50.
+                        $amountFormatted = $row->amountMinor === null
+                            ? '—'
+                            : Money::ofMinor($row->amountMinor, $row->currency ?? BaseCurrency::value())->format();
                     @endphp
                     <tr>
                         <td class="preview-row-date">{{ $row->bookedAt ?? '—' }}</td>
