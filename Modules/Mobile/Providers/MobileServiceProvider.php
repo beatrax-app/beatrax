@@ -7,6 +7,7 @@ namespace Modules\Mobile\Providers;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Facades\GenerateSignedUploadUrlFacade;
@@ -95,7 +96,7 @@ final class MobileServiceProvider extends ServiceProvider
         }
     }
 
-    public function boot(Dispatcher $events, Router $router): void
+    public function boot(Dispatcher $events, Router $router, ViewFactory $views): void
     {
         // Cold-start biometric: invalidate the enclave blob if the
         // app-lock data key ever rotates (oldKek !== newKek). Runtime FQCN
@@ -167,6 +168,14 @@ final class MobileServiceProvider extends ServiceProvider
         // Livewire's controller reads one. Gated on its own marker, not the
         // platform: an ordinary request is one array lookup and out.
         $router->pushMiddlewareToGroup('web', EncodedUploadTransport::class);
+
+        // Gated on the runtime, not merely on this provider loading: modules
+        // are auto-discovered, so this boots in the DESKTOP root too, and an
+        // ungated share would move every desktop upload onto the encoded path.
+        // The middleware is inert without the marker; the flag is not.
+        if (UserDataPathService::isMobileRuntime()) {
+            $views->share('beatraxEncodedUploads', true);
+        }
 
         // Livewire mints its temporary-upload URL through this facade, the one
         // seam where the signature can be computed against the root the verifier

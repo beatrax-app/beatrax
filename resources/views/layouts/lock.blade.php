@@ -27,6 +27,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <x-core::pwa-head />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
+
+        {{-- Set only by the Mobile provider, which also registers the
+             middleware that decodes it, so the two cannot disagree about
+             which runtime encodes its uploads. --}}
+        @if (($beatraxEncodedUploads ?? false) === true)
+            <meta name="beatrax-upload-transport" content="base64" />
+        @endif
         <title>{{ $title ?? 'Beatrax' }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
         <x-core::head-assets />
