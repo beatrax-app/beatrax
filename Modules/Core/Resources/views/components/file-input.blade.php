@@ -10,13 +10,17 @@
 {{--
     A file picker the product can translate.
 
-    A bare `<input type="file">` renders chrome supplied by the engine — on
-    Android "Choose File / No file chosen" — in English, whatever the page
-    language is, and no attribute or stylesheet can reach it. So the real
-    input is hidden inside a <label>, which keeps the native click-to-open
-    behaviour and the keyboard and screen-reader semantics, and the button and
-    filename are drawn here instead. Same technique the wizard's drop-zone
-    already uses (`.drop-zone-input`).
+    A bare file input renders chrome supplied by the engine — on Android
+    "Choose File / No file chosen" — in English, whatever the page language is,
+    and no attribute or stylesheet can reach it. So the real control is hidden
+    inside the label element, which keeps the native click-to-open behaviour
+    and the keyboard and screen-reader semantics, and the button and filename
+    are drawn here instead. Same technique the wizard's drop-zone already uses
+    (`.drop-zone-input`).
+
+    Element names are spelled out rather than written as tags: the a11y scanner
+    parses this comment as markup, and a quoted tag reads to it as a real
+    control with no label — which is what it flagged before this was reworded.
 
     The chosen filename is rendered from the input's own FileList rather than
     tracked in component state, so it stays correct when the picker is
