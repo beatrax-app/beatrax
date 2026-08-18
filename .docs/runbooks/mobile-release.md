@@ -53,8 +53,17 @@ php artisan native:release patch     # or minor / major
 ```
 
 `NATIVEPHP_APP_VERSION_CODE` must only ever increase. The scheme in use is
-`major*10000 + minor*100 + patch`, so it can be derived from the tag rather
-than incremented by hand.
+`major*10000 + minor*100 + patch`, and `mobile:package-android` derives it from
+the version rather than trusting anything to have set it — CI exports only
+`NATIVEPHP_APP_VERSION`, so an APK built without that derivation carries
+nativephp/mobile's package default of 1 and Play refuses it as a downgrade.
+The command reads the number back out of the generated Gradle file afterwards,
+so "it was set" and "it shipped" are two separate checks.
+
+Note that `native:release` writes `NATIVEPHP_APP_VERSION` alone, and on a `.env`
+freshly copied from the template it writes nothing: it matches the key inside
+the commented line, takes its update branch, and that branch's regex finds no
+real assignment to replace. It reports success either way.
 
 Check the bundle id. `mobile-app/config/nativephp.php` defaults to
 `com.beatrax.mobile`, which is what the App Store profile and Bifrost expect —

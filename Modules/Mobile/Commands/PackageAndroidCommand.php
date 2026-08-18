@@ -6,6 +6,7 @@ namespace Modules\Mobile\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
+use Modules\Mobile\Internal\Boot\AndroidVersionCode;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Boot\PinnedAppId;
 
@@ -55,7 +56,9 @@ final class PackageAndroidCommand extends Command
             );
         }
 
-        $failure = $this->appIdPinFailure($appId) ?? $this->androidProjectFailure();
+        $failure = $this->appIdPinFailure($appId)
+            ?? $this->versionCodeFailure()
+            ?? $this->androidProjectFailure();
 
         if ($failure !== null) {
             return $this->refuse($failure);
@@ -90,7 +93,8 @@ final class PackageAndroidCommand extends Command
             );
         }
 
-        $identityFailure = $this->shippedIdentityFailure($appId);
+        $identityFailure = $this->shippedIdentityFailure($appId)
+            ?? $this->shippedVersionCodeFailure();
 
         if ($identityFailure !== null) {
             return $this->refuse($identityFailure);
@@ -140,6 +144,63 @@ final class PackageAndroidCommand extends Command
 
         return "native:install android did not create {$project}. That command also returns success "
             .'on every failure path, so its output above is the only account of the cause.';
+    }
+
+    private function versionCodeFailure(): ?string
+    {
+        $configured = config('nativephp.version_code');
+
+        // 1 is nativephp/mobile's own package default, which is what resolves
+        // whenever NATIVEPHP_APP_VERSION_CODE is unset — as it is on every CI
+        // runner, because release.yml exports only NATIVEPHP_APP_VERSION. An
+        // APK below the code already on a device is refused as a downgrade.
+        if ($configured !== 1 && $configured !== null) {
+            return null;
+        }
+
+        $version = config('nativephp.version');
+
+        if (! is_string($version)) {
+            return "config('nativephp.version') is not a string, so no version code can be derived from it.";
+        }
+
+        $derived = AndroidVersionCode::fromVersion($version);
+
+        if ($derived === null) {
+            return "No usable NATIVEPHP_APP_VERSION_CODE, and none can be derived from version {$version}: "
+                .'it is not a plain major.minor.patch with both lower parts under 100. Set the code '
+                .'explicitly, or tag a version that can carry one.';
+        }
+
+        config(['nativephp.version_code' => $derived]);
+
+        $this->components->info("Derived versionCode {$derived} from version {$version}.");
+
+        return null;
+    }
+
+    private function shippedVersionCodeFailure(): ?string
+    {
+        $gradlePath = base_path(self::GRADLE);
+
+        if (! $this->files->isFile($gradlePath)) {
+            return "No {$gradlePath}, so the version code the APK carries cannot be read back.";
+        }
+
+        $expected = config('nativephp.version_code');
+        $actual = AndroidVersionCode::inGradle($this->files->get($gradlePath));
+
+        if ($actual === $expected) {
+            return null;
+        }
+
+        return sprintf(
+            'The APK just built carries versionCode %s, not %s. Play orders releases by that number '
+            .'alone, so a wrong one is either refused as a downgrade or spends a number the next '
+            .'release needs.',
+            $actual ?? 'no readable value',
+            is_int($expected) ? $expected : 'the resolved value',
+        );
     }
 
     private function shippedIdentityFailure(string $appId): ?string
