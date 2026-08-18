@@ -366,3 +366,73 @@ it('ignores non-positive overrides and falls back to the default 5-row cap', fun
     expect($zeroBatch->sections[0]->sampleRows)->toHaveCount(5);
     expect($negativeBatch->sections[0]->sampleRows)->toHaveCount(5);
 })->group('phase-16.1.2');
+
+/*
+ * A parse that fails contributes exactly one row, an error row carrying the
+ * reason. It counts as neither committable nor duplicate, so the section used
+ * to come back `ready` with a total of zero — and the wizard drew "0 rows ·
+ * ✓ READY" with a commit button beneath it.
+ *
+ * Measured on a device: an ASN CSV uploaded against the wizard's CAMT.053
+ * default. The parser refused it correctly and said exactly why — "This XML
+ * file does not declare an ISO 20022 CAMT.053 namespace" — and the screen
+ * showed a tick.
+ */
+
+function seedFailedParse(int $importRunId, string $reason): void
+{
+    /** @var PreviewCache $cache */
+    $cache = app(PreviewCache::class);
+    $cache->put(
+        $importRunId,
+        new ImportPreviewResult(
+            importRunId: $importRunId,
+            rows: [new PreviewRowDto(
+                rowIndex: 0,
+                status: 'error',
+                accountId: null,
+                bookedAt: null,
+                counterpartyName: null,
+                counterpartyIban: null,
+                description: null,
+                categoryName: null,
+                amountMinor: null,
+                currency: null,
+                error: $reason,
+            )],
+            accountsToName: [],
+        ),
+        canonical: [],
+        enrichments: [],
+    );
+}
+
+it('reports a failed parse as an error, not as a ready section with no rows', function (): void {
+    $runId = seedConsolidatedRun($this->userA->id, 'camt053');
+    seedFailedParse($runId, 'This XML file does not declare an ISO 20022 CAMT.053 namespace.');
+
+    $batch = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA);
+    $section = $batch->sections[0];
+
+    expect($section->status)->toBe('error')
+        ->and($section->totalRows)->toBe(0);
+});
+
+it('carries the parser reason so the screen can say more than "something went wrong"', function (): void {
+    $runId = seedConsolidatedRun($this->userA->id, 'camt053');
+    seedFailedParse($runId, 'Re-download the CAMT.053 statement from the ASN portal.');
+
+    $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
+
+    expect($section->error)->toBe('Re-download the CAMT.053 statement from the ASN portal.');
+});
+
+it('still reads a genuinely empty statement as empty, not as a failure', function (): void {
+    $runId = seedConsolidatedRun($this->userA->id, 'asn-csv');
+    seedConsolidatedPreview($runId, []);
+
+    $section = $this->app->make(BuildConsolidatedPreviewQuery::class)->build([$runId], $this->userA)->sections[0];
+
+    expect($section->status)->toBe('empty')
+        ->and($section->error)->toBeNull();
+});

@@ -179,6 +179,7 @@ final readonly class BuildConsolidatedPreviewQuery
                 totalRows: $committableRowCount,
                 sampleRows: $sampleRows,
                 status: $status,
+                error: $this->resolveSectionError($allRows),
             ),
             $duplicateRowCount,
         ];
@@ -196,6 +197,33 @@ final readonly class BuildConsolidatedPreviewQuery
             return 'empty';
         }
 
-        return 'ready';
+        // A parse that failed contributes exactly one row, and that row is an
+        // error carrying the reason. Counted as neither committable nor
+        // duplicate, it used to leave the section 'ready' with a total of
+        // zero — so a statement the app had correctly refused was presented as
+        // read and fine, with a commit button under it.
+        foreach ($allRows as $row) {
+            if ($row->status !== 'error') {
+                return 'ready';
+            }
+        }
+
+        return 'error';
+    }
+
+    /**
+     * The reason a section failed, as the parser stated it.
+     *
+     * @param  list<PreviewRowDto>  $allRows
+     */
+    private function resolveSectionError(array $allRows): ?string
+    {
+        foreach ($allRows as $row) {
+            if ($row->status === 'error' && is_string($row->error) && $row->error !== '') {
+                return $row->error;
+            }
+        }
+
+        return null;
     }
 }
