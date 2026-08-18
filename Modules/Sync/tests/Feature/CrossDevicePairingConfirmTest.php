@@ -179,7 +179,7 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
 
     // PHONE sends its signed PAIR_CONFIRM to the DESKTOP — the desktop has
     // not confirmed locally yet, so this must DEFER, not admit.
-    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId']));
+    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
     $deferredState = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
     expect($deferredState)->toBe('deferred');
@@ -198,7 +198,7 @@ it('reaches CONFIRMED on both separate databases only once BOTH sides confirm, a
     expect($desktopFinal)->toBe(PairingState::Confirmed->value);
 
     // DESKTOP sends its own signed PAIR_CONFIRM to the PHONE.
-    $sigFromDesktop = cdpSign($desktop, PairingFrame::confirmSigningMessage($tokenHash, $desktop['deviceId'], $phone['deviceId']));
+    $sigFromDesktop = cdpSign($desktop, PairingFrame::confirmSigningMessage($tokenHash, $desktop['deviceId'], $phone['deviceId'], $desktop['kxPub'], $phone['kxPub']));
     $phoneFinal = $this->asDevice('phone', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $desktop['deviceId'], $phone['deviceId'], $sigFromDesktop));
     expect($phoneFinal)->toBe(PairingState::Confirmed->value);
@@ -269,7 +269,7 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
         app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
     });
 
-    $sigFromAttacker = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $attacker['deviceId'], $desktop['deviceId']));
+    $sigFromAttacker = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $attacker['deviceId'], $desktop['deviceId'], $attacker['kxPub'], $desktop['kxPub']));
     $desktopState = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $attacker['deviceId'], $desktop['deviceId'], $sigFromAttacker));
     expect($desktopState)->toBe(PairingState::Confirmed->value);
@@ -284,7 +284,7 @@ it('a relay-substituted responder identity yields mismatched safety words; the R
     // desktop, addressed to the phone — it does NOT hold the REAL desktop's
     // Ed25519 secret key, so the signature fails verification against the
     // phone-bound REAL desktop public key.
-    $forgedSigClaimingDesktop = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $desktop['deviceId'], $phone['deviceId']));
+    $forgedSigClaimingDesktop = cdpSign($attacker, PairingFrame::confirmSigningMessage($tokenHash, $desktop['deviceId'], $phone['deviceId'], $desktop['kxPub'], $phone['kxPub']));
     $phoneState = $this->asDevice('phone', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $desktop['deviceId'], $phone['deviceId'], $forgedSigClaimingDesktop));
     expect($phoneState)->toBeNull();
@@ -331,7 +331,7 @@ it('rejects a PAIR_CONFIRM with correct device ids but a signature from a random
     // attacker holds the phone's real Ed25519 secret key.
     $randomKeypair = sodium_crypto_sign_keypair();
     $forgedSig = sodium_bin2hex(sodium_crypto_sign_detached(
-        PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId']),
+        PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']),
         sodium_crypto_sign_secretkey($randomKeypair),
     ));
 
@@ -374,7 +374,7 @@ it('defers a valid, correctly-signed PAIR_CONFIRM delivered before the local sid
 
     // The phone's human confirms and signs immediately — but the desktop's
     // human has NOT confirmed yet.
-    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId']));
+    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
 
     $deferred = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
@@ -442,7 +442,7 @@ it('re-delivering an already-applied PAIR_RESPONDER_ACCEPT and an already-applie
         app(PairingTokenService::class)->confirm((int) $row->id, CDP_USER_ID, $desktop['deviceId']);
     });
 
-    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId']));
+    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
 
     // Deliver the SAME PAIR_CONFIRM THREE TIMES (simulates the courier
     // re-draining an undeleted or duplicated relay row).
@@ -507,7 +507,7 @@ it('an expired local row rejects a PAIR_CONFIRM — no admission, propagates not
         app(PairingTokenService::class)->expire((int) $row->id, CDP_USER_ID);
     });
 
-    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId']));
+    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
 
     $result = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
@@ -549,7 +549,7 @@ it('a TTL-lapsed local row (natural expiry) rejects a PAIR_CONFIRM the same way'
     // Let the TTL genuinely lapse (grace window is 5 minutes; jump 30).
     CarbonImmutable::setTestNow('2026-07-14 09:30:00');
 
-    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId']));
+    $sigFromPhone = cdpSign($phone, PairingFrame::confirmSigningMessage($tokenHash, $phone['deviceId'], $desktop['deviceId'], $phone['kxPub'], $desktop['kxPub']));
 
     $result = $this->asDevice('desktop', fn () => app(PairingTokenService::class)
         ->applyPeerConfirm(CDP_USER_ID, $tokenHash, $phone['deviceId'], $desktop['deviceId'], $sigFromPhone));
