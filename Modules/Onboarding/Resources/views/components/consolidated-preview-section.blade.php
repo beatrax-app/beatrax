@@ -80,8 +80,11 @@
     </p>
 
     @if ($section->status === 'error')
+        {{-- The parser's own words where it has them: it names the format it
+             expected and what to re-download, which the generic line cannot.
+             It was already being written to the log and thrown away here. --}}
         <p class="preview-section-error" role="alert">
-            {{ Lang::get('onboarding::first_import.section.error_body') }}
+            {{ $section->error ?? Lang::get('onboarding::first_import.section.error_body') }}
         </p>
     @elseif ($section->status === 'empty')
         <p class="preview-section-empty">{{ Lang::get('onboarding::first_import.section.empty_body') }}</p>

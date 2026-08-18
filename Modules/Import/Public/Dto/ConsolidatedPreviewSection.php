@@ -32,5 +32,10 @@ final class ConsolidatedPreviewSection extends Data
         public readonly int $totalRows,
         public readonly array $sampleRows,
         public readonly string $status,
+        // The parser's own words when status is `error` and the cause was a
+        // failed parse rather than a lost cache. The app writes a genuinely
+        // useful message here — which format it expected, and what to
+        // re-download — and it was being logged and then thrown away.
+        public readonly ?string $error = null,
     ) {}
 }
