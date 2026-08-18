@@ -38,7 +38,13 @@ jobs:
     quality-shard:
         name: quality shard ${{ matrix.shard }} (PHP ${{ matrix.php }})
         runs-on: ubuntu-latest
-        timeout-minutes: 15
+        # 15 was the ceiling until shard 1 grew past it. A shard killed by its
+        # own timeout reports as CANCELLED, with "The operation was canceled"
+        # at whatever step it had reached and no test output at all — which
+        # reads exactly like an external cancellation and cost hours to tell
+        # apart. The sharder balances whole testsuites, and Feature is
+        # indivisible and alone on a shard, so reweighting cannot help it.
+        timeout-minutes: 30
         strategy:
             fail-fast: false
             matrix:
