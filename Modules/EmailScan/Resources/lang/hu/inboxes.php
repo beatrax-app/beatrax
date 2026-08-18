@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'újrapróbálkozás :nó múlva',
 
     'reconnect' => 'Újracsatlakozás',
+    'disconnect' => 'Leválasztás',
     'scan_now' => 'Vizsgálat most',
     'scan_in_progress_title' => 'Már fut egy vizsgálat',
 

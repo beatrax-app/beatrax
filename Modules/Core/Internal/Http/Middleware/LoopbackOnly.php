@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -14,11 +15,21 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class LoopbackOnly
 {
+    public function __construct(private readonly Application $app) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $serverAddr = $request->server('SERVER_ADDR');
 
-        if (is_string($serverAddr) && ! self::isLoopback($serverAddr)) {
+        if (is_string($serverAddr)) {
+            if (! self::isLoopback($serverAddr)) {
+                throw new NotFoundHttpException;
+            }
+        } elseif (! $this->app->runningInConsole() && \PHP_SAPI !== 'cli-server') {
+            // A real HTTP SAPI (php-fpm, mod_php) with no SERVER_ADDR never
+            // advertised its bind address; fail closed rather than assume it
+            // was loopback. The console and PHP's own built-in server serve on
+            // loopback yet omit it, so a request without one is legitimate there.
             throw new NotFoundHttpException;
         }
 

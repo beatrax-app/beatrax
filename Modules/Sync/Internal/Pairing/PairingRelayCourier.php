@@ -121,8 +121,19 @@ final class PairingRelayCourier
             return null;
         }
 
-        $drainToken = $this->relayConfig->deriveDeviceToken($selfDeviceId);
-        if ($drainToken === null) {
+        // This device presents its OWN per-device drain secret (TOFU-verified
+        // by the relay), not a token every relay peer could recompute. Minting
+        // it can only fail on a secrets-file I/O error — treated as "nothing to
+        // poll" so a transient write failure never throws out of the poll.
+        try {
+            $drainToken = $this->relayConfig->deviceDrainSecret();
+        } catch (Throwable $e) {
+            $this->logger?->warning('PairingRelayCourier: could not resolve device drain secret.', [
+                'user_id' => $userId,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return null;
         }
 

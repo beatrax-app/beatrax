@@ -16,6 +16,12 @@ enum QuarantineReason: string
 
     case UnknownTable = 'unknown_table';
 
+    // The entry named a field that is not a real column of its (registered)
+    // table. Ed25519-gated and identifier-quoted, so never injection — but
+    // caught here so a malformed/unknown column quarantines early instead of
+    // failing at the DB write.
+    case UnknownColumn = 'unknown_column';
+
     case MissingDeviceKey = 'missing_device_key';
 
     case ForgedSignature = 'forged_signature';

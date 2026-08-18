@@ -288,6 +288,12 @@ return [
         // repo for local unsigned dev builds.)
         'php scripts/nativephp_developer_id_signing.php',
 
+        // Add the `publisherName` key that NativePHP omits from
+        // `win.azureSignOptions`. electron-builder 26 requires it, so
+        // without this every Azure Trusted Signing build aborts during
+        // config validation before signtool is ever reached.
+        'php scripts/nativephp_azure_publisher_name.php',
+
         // Bypass electron-updater's OS-signature differential-download
         // validation on macOS by setting `autoUpdater.disableDifferential
         // Download = true` in the compiled Electron main-process JS.
@@ -297,6 +303,11 @@ return [
         // verification driven by ElectronUpdateChannel, so end-to-end
         // integrity is preserved.
         'php scripts/nativephp_inject_macos_update_settings.php',
+
+        // Hold electron-updater at update-available (autoDownload=false,
+        // autoInstallOnAppQuit=false) so nothing downloads or installs until
+        // the Ed25519-signed manifest is verified and the user consents.
+        'php scripts/nativephp_inject_explicit_consent_updates.php',
 
         // Expose `#plugin/*` in the electron package.json `imports` map so
         // subpath imports like `#plugin/server/state.js` resolve under Node

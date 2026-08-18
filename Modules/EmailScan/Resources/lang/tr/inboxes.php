@@ -39,6 +39,7 @@ return [
     'retry_hours' => ':nsa sonra yeniden denenecek',
 
     'reconnect' => 'Yeniden bağlan',
+    'disconnect' => 'Bağlantıyı kes',
     'scan_now' => 'Şimdi tara',
     'scan_in_progress_title' => 'Tarama zaten sürüyor',
 

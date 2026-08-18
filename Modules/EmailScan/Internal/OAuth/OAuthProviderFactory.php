@@ -33,7 +33,7 @@ final class OAuthProviderFactory
     {
         $client = $this->clientOrFail(MailProvider::Gmail->value, 'Google');
 
-        return new Google([
+        return new PkceGoogleProvider([
             'clientId' => $client['client_id'],
             'clientSecret' => $client['client_secret'],
             'redirectUri' => $redirectUri,
@@ -49,7 +49,7 @@ final class OAuthProviderFactory
     {
         $client = $this->clientOrFail(MailProvider::Microsoft->value, 'Microsoft');
 
-        return new Azure([
+        return new PkceAzureProvider([
             'clientId' => $client['client_id'],
             'clientSecret' => $client['client_secret'],
             'redirectUri' => $redirectUri,

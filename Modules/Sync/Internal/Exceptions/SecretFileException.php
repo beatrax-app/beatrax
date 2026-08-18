@@ -41,4 +41,14 @@ final class SecretFileException extends RuntimeException
     {
         return new self("Cannot write relay token to: {$path}");
     }
+
+    public static function couldNotWriteDrainSecret(string $path): self
+    {
+        return new self("Cannot write relay drain secret to: {$path}");
+    }
+
+    public static function couldNotWriteDrainRegistry(string $path): self
+    {
+        return new self("Cannot write relay drain registry to: {$path}");
+    }
 }

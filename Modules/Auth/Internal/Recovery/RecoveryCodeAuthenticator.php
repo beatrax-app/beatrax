@@ -33,6 +33,11 @@ final class RecoveryCodeAuthenticator
             $user = User::query()->where('username', $username)->first();
 
             if (! $user instanceof User) {
+                // Burn one hash so a missing account is not visibly faster than
+                // a real one's code check — the same oracle the login path
+                // closes. make() runs the same bcrypt work as the loop's check()
+                // and the result is discarded; nothing is hardcoded.
+                $this->hasher->make($codeInput);
                 $this->emitFailure($usernameInput, null);
 
                 return null;

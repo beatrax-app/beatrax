@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\EmailScan\Internal\OAuth\AuthorizationRequest;
 use Modules\EmailScan\Internal\OAuth\GoogleOAuthProvider;
 use Modules\EmailScan\Internal\OAuth\MicrosoftOAuthProvider;
 use Modules\EmailScan\Public\Services\OAuthSecretsRepository;
@@ -100,18 +101,18 @@ function occMakeOAuthMocks(): array
     {
         public function __construct() {}
 
-        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        public function getAuthorizationUrl(string $state, string $redirectUri): AuthorizationRequest
         {
-            return 'https://accounts.google.com/o/oauth2/auth?state='.$state;
+            return new AuthorizationRequest('https://accounts.google.com/o/oauth2/auth?state='.$state, '');
         }
     };
     $microsoft = new class extends MicrosoftOAuthProvider
     {
         public function __construct() {}
 
-        public function getAuthorizationUrl(string $state, string $redirectUri): string
+        public function getAuthorizationUrl(string $state, string $redirectUri): AuthorizationRequest
         {
-            return 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state='.$state;
+            return new AuthorizationRequest('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?state='.$state, '');
         }
     };
 

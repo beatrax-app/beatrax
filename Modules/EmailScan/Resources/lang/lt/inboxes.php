@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'bandoma vėl po :nh',
 
     'reconnect' => 'Prijungti iš naujo',
+    'disconnect' => 'Atjungti',
     'scan_now' => 'Nuskaityti dabar',
     'scan_in_progress_title' => 'Nuskaitymas jau vyksta',
 

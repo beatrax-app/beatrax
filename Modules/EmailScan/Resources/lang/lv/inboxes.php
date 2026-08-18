@@ -39,6 +39,7 @@ return [
     'retry_hours' => 'mēģinās vēlreiz pēc :nh',
 
     'reconnect' => 'Pievienot atkārtoti',
+    'disconnect' => 'Atvienot',
     'scan_now' => 'Skenēt tagad',
     'scan_in_progress_title' => 'Skenēšana jau notiek',
 
