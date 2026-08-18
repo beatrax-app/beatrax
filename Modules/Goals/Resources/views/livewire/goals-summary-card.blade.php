@@ -39,9 +39,7 @@
         <ul class="mt-4 space-y-3">
             @foreach ($goals as $row)
                 @php
-                    $pct = $row->targetMinor > 0
-                        ? (int) round(min(100, $row->fractionComplete * 100))
-                        : 0;
+                    $pct = $row->percentComplete();
                     $barWidth = $pct === 0 ? 0 : max(2, $pct);
                     $color = $progressColor[$row->progressState] ?? $progressColor['in_progress'];
                 @endphp

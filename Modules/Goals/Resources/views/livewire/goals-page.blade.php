@@ -90,9 +90,7 @@
         <ul class="goals-phone-list space-y-0 rounded-lg border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-700 overflow-hidden">
             @foreach ($rows as $row)
                 @php
-                    $pct = $row->targetMinor > 0
-                        ? (int) round(min(100, $row->fractionComplete * 100))
-                        : 0;
+                    $pct = $row->percentComplete();
                 @endphp
                 <li class="card-list-item">
                     <div class="flex-1 min-w-0">
@@ -128,9 +126,7 @@
         <ul class="goals-desktop-list space-y-4">
             @foreach ($rows as $row)
                 @php
-                    $pct = $row->targetMinor > 0
-                        ? (int) round(min(100, $row->fractionComplete * 100))
-                        : 0;
+                    $pct = $row->percentComplete();
                     $barWidth = $pct === 0 ? 0 : max(2, $pct);
                     $isReached = $row->progressState === 'reached';
                     $isOverdue = $row->progressState === 'overdue';
