@@ -33,10 +33,26 @@ function packageAndroidRoot(): string
     return $root;
 }
 
-function packageAndroid(array $files = [], array $config = [], bool $withPatchScripts = false): int
-{
+function packageAndroid(
+    array $files = [],
+    array $config = [],
+    bool $withPatchScripts = false,
+    bool $withGradleWrapper = false,
+): int {
     $base = packageAndroidRoot();
     app()->setBasePath($base);
+
+    if ($withGradleWrapper) {
+        // A stand-in for gradlew: the point of the diagnosis path is that
+        // whatever the wrapper says reaches the operator, and a real Gradle
+        // run cannot be asked for in a unit test.
+        @mkdir($base.'/nativephp/android', 0o777, true);
+        file_put_contents(
+            $base.'/nativephp/android/gradlew',
+            "#!/bin/sh\necho 'FAILURE: Could not find android-36'\nexit 1\n",
+        );
+        chmod($base.'/nativephp/android/gradlew', 0o755);
+    }
 
     if ($withPatchScripts) {
         @mkdir($base.'/scripts', 0o777, true);
@@ -98,6 +114,7 @@ afterEach(function (): void {
 
     $root = packageAndroidRoot();
     @unlink($root.'/ran');
+    @unlink($root.'/nativephp/android/gradlew');
     @unlink($root.'/scripts/nativephp_grant_webview_camera.php');
     @rmdir($root.'/scripts');
 });
@@ -192,6 +209,36 @@ it('refuses when packaging produced no artifact', function (): void {
     expect(packageAndroid(files: [
         'isFile' => [packageAndroidRoot().'/nativephp/android/app/build/outputs/apk/release/app-release.apk' => false],
     ]))->toBe(1);
+});
+
+it('goes and asks Gradle why, rather than listing what it might have been', function (): void {
+    // native:package prints "Running Gradle" and then nothing on a failed
+    // build, and still returns 0 — so the reason has to be fetched. With no
+    // wrapper on disk it cannot be, and says so instead of staying silent.
+    expect(packageAndroid(files: [
+        'isFile' => [packageAndroidRoot().'/nativephp/android/app/build/outputs/apk/release/app-release.apk' => false],
+    ]))->toBe(1);
+
+    expect(Artisan::output())->toContain('Gradle cannot be asked what went wrong');
+});
+
+it('streams what Gradle actually said, which native:package discarded', function (): void {
+    $root = packageAndroidRoot();
+
+    expect(packageAndroid(
+        files: [
+            'isFile' => [
+                $root.'/nativephp/android/app/build/outputs/apk/release/app-release.apk' => false,
+                $root.'/nativephp/android/gradlew' => true,
+            ],
+        ],
+        withGradleWrapper: true,
+    ))->toBe(1);
+
+    // The refusal is worth nothing without the reason underneath it.
+    expect(Artisan::output())
+        ->toContain('Re-running Gradle')
+        ->toContain('Could not find android-36');
 });
 
 it('refuses an artifact of zero bytes', function (): void {

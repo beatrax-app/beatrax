@@ -32,6 +32,7 @@ final readonly class NativeBuildPatches
         'nativephp_grant_webview_camera.php',
         'nativephp_android_file_chooser.php',
         'nativephp_keep_webview_cookies.php',
+        'nativephp_exclude_data_from_backup.php',
         'nativephp_theme_native_shell.php',
         'nativephp_brand_boot_splash.php',
         'nativephp_android_adaptive_icon.php',
