@@ -16,6 +16,12 @@ use Modules\Core\Public\Contracts\Clock;
  */
 final class AppLockProvisioner
 {
+    // The app-lock PIN's only entropy is its length, so a short one is offline-
+    // brute-forceable from a stolen database (F3-R36). Enforced HERE so no
+    // caller — desktop UI, the mobile gateway, or a future one — can provision a
+    // data key below the floor, whatever the UI-layer validators do.
+    private const MIN_PIN_LENGTH = 6;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly AppLockKdf $kdf,
@@ -27,20 +33,34 @@ final class AppLockProvisioner
         private readonly Dispatcher $events,
     ) {}
 
+    // Refuses a PIN below the length floor. Called by every provisioning entry
+    // point (enable / changePin / rewrapForNewPin) so the floor holds whatever
+    // the caller is.
+    private function assertPinMeetsFloor(string $pin): void
+    {
+        if (mb_strlen($pin) < self::MIN_PIN_LENGTH) {
+            throw ValidationException::withMessages([
+                'pin' => ['The app lock PIN must be at least '.self::MIN_PIN_LENGTH.' digits.'],
+            ]);
+        }
+    }
+
     /**
      * @throws ValidationException
      */
     public function enable(int $userId, string $pin, string $accountPassword, ?Session $session = null): void
     {
-        // Defense-in-depth: every known caller already validates non-empty
-        // input before calling here, but a caller-level gap must never mint
-        // an app-lock key from an empty PIN/password -- that key goes on to
-        // wrap the keyring holding delivered device epochs.
-        if ($pin === '' || $accountPassword === '') {
+        // Defense-in-depth: every known caller already validates its input
+        // before calling here, but a caller-level gap must never mint an
+        // app-lock key from an empty/weak PIN or empty password -- that key goes
+        // on to wrap the keyring holding delivered device epochs.
+        if ($accountPassword === '') {
             throw ValidationException::withMessages([
                 'pin' => ['A PIN and account password are required to enable the app lock.'],
             ]);
         }
+
+        $this->assertPinMeetsFloor($pin);
 
         // Generates a NEW data key, which invalidates every existing
         // per-device biometric wrap (they hold the OLD key). Delete stale
@@ -124,6 +144,8 @@ final class AppLockProvisioner
 
     public function rewrapForNewPin(int $userId, string $accountPassword, string $newPin): bool
     {
+        $this->assertPinMeetsFloor($newPin);
+
         $row = $this->db->connection()
             ->table('user_app_lock_configs')
             ->where('user_id', $userId)
@@ -165,6 +187,8 @@ final class AppLockProvisioner
 
     public function changePin(int $userId, string $currentPin, string $newPin): bool
     {
+        $this->assertPinMeetsFloor($newPin);
+
         $row = $this->db->connection()
             ->table('user_app_lock_configs')
             ->where('user_id', $userId)
