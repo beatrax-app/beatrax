@@ -37,12 +37,26 @@ function packageAndroid(
     array $files = [],
     array $config = [],
     bool $withPatchScripts = false,
-    bool $withGradleWrapper = false,
+    bool|string $withGradleWrapper = false,
 ): int {
     $base = packageAndroidRoot();
     app()->setBasePath($base);
 
-    if ($withGradleWrapper) {
+    if ($withGradleWrapper === 'succeeds') {
+        // Stands in for a Gradle that works where native:package's call did
+        // not — the case actually observed on a runner.
+        @mkdir($base.'/nativephp/android', 0o777, true);
+        @mkdir($base.'/nativephp/android/app/build/outputs/apk/release', 0o777, true);
+        file_put_contents(
+            $base.'/nativephp/android/gradlew',
+            "#!/bin/sh\necho 'BUILD SUCCESSFUL'\n"
+            ."printf 'apk' > \"$base/nativephp/android/app/build/outputs/apk/release/app-release.apk\"\n"
+            .'exit 0'."\n",
+        );
+        chmod($base.'/nativephp/android/gradlew', 0o755);
+    }
+
+    if ($withGradleWrapper === true) {
         // A stand-in for gradlew: the point of the diagnosis path is that
         // whatever the wrapper says reaches the operator, and a real Gradle
         // run cannot be asked for in a unit test.
@@ -81,8 +95,13 @@ function packageAndroid(
     $spec = array_replace_recursive($defaults, $files);
 
     $fs = Mockery::mock(Filesystem::class);
+    // A pinned null means "ask the disk" — the defaults pin the artifact
+    // present, and a test about Gradle producing one needs it to appear only
+    // once Gradle has run.
     $fs->shouldReceive('isFile')->andReturnUsing(
-        static fn (string $path): bool => (bool) ($spec['isFile'][$path] ?? false),
+        static fn (string $path): bool => ($spec['isFile'][$path] ?? false) === null
+            ? is_file($path)
+            : (bool) ($spec['isFile'][$path] ?? is_file($path)),
     );
     $fs->shouldReceive('get')->andReturnUsing(
         static fn (string $path): string => (string) ($spec['get'][$path] ?? ''),
@@ -115,6 +134,7 @@ afterEach(function (): void {
     $root = packageAndroidRoot();
     @unlink($root.'/ran');
     @unlink($root.'/nativephp/android/gradlew');
+    @unlink($root.'/nativephp/android/app/build/outputs/apk/release/app-release.apk');
     @unlink($root.'/scripts/nativephp_grant_webview_camera.php');
     @rmdir($root.'/scripts');
 });
@@ -239,6 +259,32 @@ it('streams what Gradle actually said, which native:package discarded', function
     expect(Artisan::output())
         ->toContain('Re-running Gradle')
         ->toContain('Could not find android-36');
+});
+
+it('uses the artifact when Gradle succeeds where native:package did not', function (): void {
+    $root = packageAndroidRoot();
+    $apk = $root.'/nativephp/android/app/build/outputs/apk/release/app-release.apk';
+
+    // Absent when native:package is asked, present once Gradle has run — which
+    // is the sequence observed on a runner.
+    @unlink($apk);
+
+    // Absent when native:package is asked, written by the Gradle run — which
+    // is the sequence observed on a runner.
+    expect(packageAndroid(
+        files: [
+            'isFile' => [
+                $root.'/nativephp/android/gradlew' => true,
+                $apk => null,
+            ],
+            'size' => 3,
+        ],
+        withGradleWrapper: 'succeeds',
+    ))->toBe(0);
+
+    expect(Artisan::output())
+        ->toContain('BUILD SUCCESSFUL')
+        ->toContain('Gradle run directly did');
 });
 
 it('refuses an artifact of zero bytes', function (): void {

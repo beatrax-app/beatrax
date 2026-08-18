@@ -44,7 +44,23 @@ jobs:
           # below; a shard just runs tests.
 
       - name: Install poppler-utils (pdftotext)
-        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils
+        run: |
+            set -euo pipefail
+            # apt hangs on a bad mirror often enough to have cost a day of CI: the
+            # job sits here until its own timeout and reports as CANCELLED with no
+            # output, which reads as an externally killed run rather than a stalled
+            # download. Bounded and retried, a stall costs a minute, not the job.
+            for attempt in 1 2 3; do
+                if sudo timeout 120 apt-get update -qq -o Acquire::Retries=3 -o Acquire::http::Timeout=20 \
+                    && sudo timeout 180 apt-get install -y --no-install-recommends \
+                        -o Acquire::Retries=3 -o Acquire::http::Timeout=20 poppler-utils; then
+                    exit 0
+                fi
+                echo "::warning::apt attempt ${attempt} stalled or failed; retrying."
+                sleep 5
+            done
+            echo "::error::poppler-utils could not be installed after three attempts."
+            exit 1
 
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
