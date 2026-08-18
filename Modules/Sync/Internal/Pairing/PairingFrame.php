@@ -42,22 +42,26 @@ final class PairingFrame
         ];
     }
 
-    // The canonical, deterministic message a PAIR_CONFIRM frame's signature
-    // covers. Binding both device ids + the token_hash makes a signature
-    // non-replayable into any other handshake, any other pair of devices,
-    // or the opposite direction of the same handshake.
+    // The deterministic message a PAIR_CONFIRM signature covers: token_hash +
+    // both device ids + both X25519 sealing keys, ordered (confirming, peer).
+    // Binding the sealing keys ties them to the safety-number-verified Ed25519
+    // identity, so a relay-swapped accept-frame X25519 fails this signature.
     public static function confirmSigningMessage(
         string $tokenHash,
         string $confirmingDeviceId,
         string $peerDeviceId,
+        string $confirmingDeviceX25519Hex,
+        string $peerDeviceX25519Hex,
     ): string {
-        // Length-prefix each field so a device id containing the '|'
-        // delimiter cannot shift field boundaries in the signed string.
+        // Length-prefix each field so a value containing the '|' delimiter
+        // cannot shift field boundaries in the signed string.
         return implode('|', [
             self::SIG_CONTEXT,
             strlen($tokenHash).':'.$tokenHash,
             strlen($confirmingDeviceId).':'.$confirmingDeviceId,
             strlen($peerDeviceId).':'.$peerDeviceId,
+            strlen($confirmingDeviceX25519Hex).':'.$confirmingDeviceX25519Hex,
+            strlen($peerDeviceX25519Hex).':'.$peerDeviceX25519Hex,
         ]);
     }
 

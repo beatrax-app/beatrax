@@ -641,7 +641,16 @@ fan-out. Two trust properties matter here:
   recipient must already be a CONFIRMED `device_registry` row (re-checked
   inside the fan-out), and confirmation is gated behind the both-screen
   safety-number ceremony, an out-of-band-verified trust anchor independent
-  of this wrap's own confidentiality property.
+  of this wrap's own confidentiality property. The ceremony authenticates the
+  Ed25519 IDENTITY key; the recipient's X25519 SEALING key — the key this
+  seal is actually encrypted to — arrives UNSIGNED in the relayed accept
+  frame, so it is tied back to that identity by binding both devices' X25519
+  keys into the Ed25519-signed `PAIR_CONFIRM` message
+  (`PairingFrame::confirmSigningMessage`). Without that binding a malicious
+  relay could keep the responder's Ed25519 (so the safety words still match on
+  both screens) while swapping its X25519, and receive every epoch sealed to a
+  key it controls; the binding makes such a swap fail the confirm signature
+  before the row is ever admitted.
 - **Trust-gate ordering:** callers must reach this method only from the
   `state === CONFIRMED` branch of the both-confirm transition — never
   speculatively, never on a pending/awaiting/expired/rejected token. The

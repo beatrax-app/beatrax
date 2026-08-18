@@ -89,10 +89,19 @@ final class PeerConfirmVerifier
         $peerBoundDeviceId = $this->peerSideColumn($row, $localSide, 'device_id');
         $peerPublicKeyHex = $this->peerSideColumn($row, $localSide, 'ed25519_pub_hex');
 
+        // The confirming device is the peer side; the frame's peer_device_id is
+        // THIS device. Bind both sealing keys as THIS row holds them, so a relay
+        // that swapped the peer's X25519 makes this reconstruction diverge from
+        // what the honest peer signed — the verify below then fails.
+        $confirmingDeviceKxHex = $this->peerSideColumn($row, $localSide, 'x25519_pub_hex');
+        $peerDeviceKxHex = $this->localSideColumn($row, $localSide, 'x25519_pub_hex');
+
         // A frame purporting to be from some other device id is rejected even
         // before touching sodium.
         if ($peerBoundDeviceId === null
             || $peerPublicKeyHex === null
+            || $confirmingDeviceKxHex === null
+            || $peerDeviceKxHex === null
             || ! hash_equals($peerBoundDeviceId, $confirmingDeviceId)) {
             return false;
         }
@@ -103,7 +112,17 @@ final class PeerConfirmVerifier
             return false;
         }
 
-        $message = PairingFrame::confirmSigningMessage($tokenHash, $confirmingDeviceId, $peerDeviceId);
+        // Deliberately NOT verifyAny() against a legacy no-X25519 payload:
+        // accepting the old shape would re-open the sealing-key substitution
+        // this closes. A cross-version pairing fails closed and retries once
+        // both devices update — no persistent trust state is stranded.
+        $message = PairingFrame::confirmSigningMessage(
+            $tokenHash,
+            $confirmingDeviceId,
+            $peerDeviceId,
+            $confirmingDeviceKxHex,
+            $peerDeviceKxHex,
+        );
 
         return $this->deviceKeySigner->verify($message, $sigHex, $peerPublicKeyBin);
     }
@@ -114,6 +133,15 @@ final class PeerConfirmVerifier
     {
         $prefix = $localSide === 'initiator' ? 'responder_' : 'initiator_';
         $value = $row->{$prefix.$suffix} ?? null;
+
+        return is_string($value) ? $value : null;
+    }
+
+    // The mirror of peerSideColumn(): reads the LOCAL side's own column, used
+    // to bind this device's own X25519 into the confirm-signature reconstruction.
+    private function localSideColumn(\stdClass $row, string $localSide, string $suffix): ?string
+    {
+        $value = $row->{$localSide.'_'.$suffix} ?? null;
 
         return is_string($value) ? $value : null;
     }

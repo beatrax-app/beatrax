@@ -57,7 +57,7 @@ function pafgKeypair(): array
 // both sides bound, and the desktop registered as this device. Returns the
 // token hash and the responder's keypair so a caller can sign as the phone.
 /**
- * @return array{tokenHash: string, phone: array{edPub: string, edSec: string}}
+ * @return array{tokenHash: string, phone: array{edPub: string, edSec: string}, phoneKx: string, desktopKx: string}
  */
 function pafgArrangeAwaitingConfirm(mixed $app, int $userId, bool $withSelfRow = true): array
 {
@@ -98,7 +98,10 @@ function pafgArrangeAwaitingConfirm(mixed $app, int $userId, bool $withSelfRow =
             'initiator_confirmed_at' => '2026-06-15T09:30:00Z',
         ]);
 
-    return ['tokenHash' => $tokenHash, 'phone' => $phone];
+    // The X25519 sealing keys this arrangement bound — the desktop
+    // (initiator) key issued above and the responder key written onto the row
+    // — now covered by the PAIR_CONFIRM signature the guard tests reconstruct.
+    return ['tokenHash' => $tokenHash, 'phone' => $phone, 'phoneKx' => str_repeat('c', 64), 'desktopKx' => str_repeat('b', 64)];
 }
 
 beforeEach(function (): void {
@@ -161,7 +164,7 @@ it('refuses a peer-confirm frame that was addressed to some other device', funct
     /** @var PairingTokenService $service */
     $service = $this->app->make(PairingTokenService::class);
 
-    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, 'a-third-device');
+    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, 'a-third-device', $arranged['phoneKx'], $arranged['desktopKx']);
     $sig = (new DeviceKeySigner)->sign($message, sodium_hex2bin($arranged['phone']['edSec']));
 
     // The signature is genuine and the sender is the bound peer; only the
@@ -178,7 +181,7 @@ it('refuses a peer-confirm frame when this database has no self device row', fun
     /** @var PairingTokenService $service */
     $service = $this->app->make(PairingTokenService::class);
 
-    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, PAFG_DESKTOP);
+    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, PAFG_DESKTOP, $arranged['phoneKx'], $arranged['desktopKx']);
     $sig = (new DeviceKeySigner)->sign($message, sodium_hex2bin($arranged['phone']['edSec']));
 
     // With no is_self row there is no local side to confirm, so there is no
@@ -195,7 +198,7 @@ it('refuses a peer-confirm frame from a device the row never bound as the peer',
     $service = $this->app->make(PairingTokenService::class);
 
     $intruder = pafgKeypair();
-    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], 'pafg-intruder', PAFG_DESKTOP);
+    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], 'pafg-intruder', PAFG_DESKTOP, $arranged['phoneKx'], $arranged['desktopKx']);
     $sig = (new DeviceKeySigner)->sign($message, sodium_hex2bin($intruder['edSec']));
 
     // Correctly self-signed, and the frame is addressed here — but the sender
@@ -222,7 +225,7 @@ it('refuses a peer-confirm frame when the bound peer key on the row is malformed
     /** @var PairingTokenService $service */
     $service = $this->app->make(PairingTokenService::class);
 
-    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, PAFG_DESKTOP);
+    $message = PairingFrame::confirmSigningMessage($arranged['tokenHash'], PAFG_PHONE, PAFG_DESKTOP, $arranged['phoneKx'], $arranged['desktopKx']);
     $sig = (new DeviceKeySigner)->sign($message, sodium_hex2bin($arranged['phone']['edSec']));
 
     expect($service->applyPeerConfirm((int) $user->id, $arranged['tokenHash'], PAFG_PHONE, PAFG_DESKTOP, $sig))

@@ -67,12 +67,53 @@ final class PairingRelayCourier
      */
     public function sendConfirm(DeviceIdentityDto $self, string $peerDid, string $tokenHash): void
     {
-        $message = PairingFrame::confirmSigningMessage($tokenHash, $self->deviceId, $peerDid);
+        // Commit to this device's own sealing key and the peer's sealing key
+        // as this device holds it, so a relay that swapped the peer's X25519
+        // makes the peer reconstruct a different message than this signature
+        // covers — failing the peer's verify.
+        $message = PairingFrame::confirmSigningMessage(
+            $tokenHash,
+            $self->deviceId,
+            $peerDid,
+            $self->x25519PublicKeyHex,
+            $this->peerX25519FromRow($self->userId, $tokenHash, $peerDid),
+        );
         $sigHex = $this->signer->sign($message, sodium_hex2bin($self->ed25519SecretKeyHex));
 
         $frame = PairingFrame::buildConfirm($tokenHash, $self->deviceId, $peerDid, $sigHex);
 
         $this->relayClient->deliver($self->deviceId, $peerDid, json_encode($frame, JSON_THROW_ON_ERROR));
+    }
+
+    // The peer's bound X25519 (sealing) key from THIS device's own pairing
+    // row, keyed off which side the peer device id occupies. Empty string when
+    // absent: the signature then commits to '', which the peer verifier cannot
+    // match against a real key — fail closed, never a silently-missing key.
+    private function peerX25519FromRow(int $userId, string $tokenHash, string $peerDid): string
+    {
+        $row = $this->db->connection()->table('pairing_tokens')
+            ->where('user_id', $userId)
+            ->where('token_hash', $tokenHash)
+            ->first([
+                'initiator_device_id',
+                'initiator_x25519_pub_hex',
+                'responder_device_id',
+                'responder_x25519_pub_hex',
+            ]);
+
+        if ($row === null) {
+            return '';
+        }
+
+        if (is_string($row->initiator_device_id) && hash_equals($row->initiator_device_id, $peerDid)) {
+            return is_string($row->initiator_x25519_pub_hex) ? $row->initiator_x25519_pub_hex : '';
+        }
+
+        if (is_string($row->responder_device_id) && hash_equals($row->responder_device_id, $peerDid)) {
+            return is_string($row->responder_x25519_pub_hex) ? $row->responder_x25519_pub_hex : '';
+        }
+
+        return '';
     }
 
     // Drains this device's own relay mailbox and dispatches every pending
