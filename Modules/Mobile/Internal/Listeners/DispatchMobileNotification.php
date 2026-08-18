@@ -60,8 +60,14 @@ class DispatchMobileNotification
         // Not discarded any more: showRaw() answers null when the bridge
         // function is absent, which left a notification stored and silently
         // undelivered, with nothing anywhere saying so.
-        $result = LocalNotifications::showRaw($payload);
+        $this->recordDeliveryOutcome($notificationId, LocalNotifications::showRaw($payload));
+    }
 
+    // Separate from fire() so it is reachable without the plugin, which ships
+    // only in the mobile Composer root. What the bridge answered is the whole
+    // of the evidence that a notification went anywhere at all.
+    protected function recordDeliveryOutcome(string $notificationId, mixed $result): void
+    {
         if ($result === null || $result === false) {
             $this->log->warning('Mobile notification was not delivered: the native bridge returned nothing.', [
                 'notification_id' => $notificationId,
