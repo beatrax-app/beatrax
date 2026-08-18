@@ -154,6 +154,21 @@ final class PairingGateway
         $this->relayCourier->drainAndApply($userId);
     }
 
+    // Whether the identity can actually be opened right now — false when it
+    // was never minted AND when the app-lock is holding the KEK.
+    public function hasUsableIdentity(int $userId, Session $session): bool
+    {
+        return $this->identityLoader->load($userId, $session) !== null;
+    }
+
+    // Whether this device has ever minted an identity, regardless of whether
+    // the app is unlocked right now. Callers that mint MUST gate on this and
+    // not on a null from acceptToken()/the loader, which also means "locked".
+    public function hasIdentityFile(int $userId): bool
+    {
+        return $this->identityLoader->exists($userId);
+    }
+
     // Identity only — the import path defers epoch acquisition entirely to
     // the desktop's delivered epochs; self-minting here would permanently
     // strand desktop epoch-1 entries (see architecture doc). MUST NOT be

@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use LogicException;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
@@ -300,10 +301,11 @@ final class MobilePairingScan extends Component
             $gateway->configureRelayFromQr($identity['relayEndpoint'], $identity['relayAuthToken'], $identity['relayPin']);
         }
 
-        // Seeding stays import-only: it exists for a fresh, separate database
-        // with no local pending row. Import mode already returned above
-        // without a payload, so $identity is non-null here.
-        if ($this->importMode) {
+        // Every phone holds a separate database from the desktop, not just
+        // an importing one, so the token issued over there is never present
+        // here. No new trust decision: the seeded row is Pending and still
+        // faces the whole acceptToken() + both-sides confirm ceremony.
+        if ($identity !== null) {
             $gateway->seedResponderToken(
                 $identity['token'],
                 $identity['deviceId'],
@@ -317,6 +319,23 @@ final class MobilePairingScan extends Component
             );
         }
 
+        // A responder cannot accept anything without an identity, and on a
+        // phone this screen is the whole of sync setup. Gated on the FILE,
+        // never on a null — null also means "locked", and minting over a
+        // locked device's identity would orphan every pairing it had.
+        if (! $gateway->hasIdentityFile($userId)) {
+            try {
+                // Identity only, no epoch — a responder receives the
+                // initiator's epochs on confirm, as the import path does.
+                // Self-minting one here would strand the peer's.
+                $gateway->enableSyncIdentityWithoutEpoch($userId, $session);
+            } catch (LogicException) {
+                $this->flashMessage = Lang::get('mobile::pairing.errors.identity_locked');
+
+                return;
+            }
+        }
+
         $result = $scannedPayload !== null
             ? $qrBridge->accept($scannedPayload, $userId, $session)
             : $gateway->acceptWordCode($this->wordCode, $userId, $session);
@@ -327,7 +346,13 @@ final class MobilePairingScan extends Component
             // addressing in place, so the next scan is judged against a
             // pairing that no longer exists.
             $this->resetPairingAttempt();
-            $this->flashMessage = Lang::get('mobile::pairing.errors.invalid_code');
+
+            // An identity that cannot be opened means locked, not a bad
+            // code. Sending that user to the other device for a fresh QR is
+            // advice that can never work.
+            $this->flashMessage = $gateway->hasUsableIdentity($userId, $session)
+                ? Lang::get('mobile::pairing.errors.invalid_code')
+                : Lang::get('mobile::pairing.errors.identity_locked');
 
             return;
         }
