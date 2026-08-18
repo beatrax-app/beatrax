@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'O desbloqueio biométrico não está disponível neste dispositivo.',
-        'pin_required' => 'Introduz o teu PIN (4–10 dígitos) para ativares o desbloqueio biométrico.',
+        'pin_required' => 'Introduz o teu PIN (6–10 dígitos) para ativares o desbloqueio biométrico.',
         'enroll_failed' => 'Não foi possível ativar o desbloqueio biométrico — verifica o teu PIN e tenta novamente.',
     ],
 ];

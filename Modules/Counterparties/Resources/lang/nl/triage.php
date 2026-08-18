@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Patroonmatch: **:name** — vertrouwen laag. Controleer voordat je koppelt.',
     'suggestion_high' => '✨ Lijkt op **:name** — vertrouwen hoog',
 
+    'reasoning' => ':hits van :total recente transacties op dit IBAN wijzen naar :name.',
     'yes_link' => 'Ja, koppelen aan :name ↵',
     'no_not' => 'Nee, niet :name',
 

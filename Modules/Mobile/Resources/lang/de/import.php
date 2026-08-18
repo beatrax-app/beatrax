@@ -13,7 +13,7 @@ return [
     'password_help' => 'Mindestens 12 Zeichen — es gibt kein Zurücksetzen des Passworts, nur Wiederherstellungscodes.',
     'confirm_password' => 'Passwort bestätigen',
     'pin' => 'PIN der App-Sperre',
-    'pin_help' => '4-10 Ziffern — entsperrt dieses Gerät.',
+    'pin_help' => '6-10 Ziffern — entsperrt dieses Gerät.',
     'confirm_pin' => 'PIN bestätigen',
     'continue' => 'Weiter',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Die Passwörter stimmen nicht überein.',
         'password_length' => 'Verwende mindestens 12 Zeichen.',
-        'pin_length' => 'Die PIN muss mindestens 4 Ziffern haben.',
+        'pin_length' => 'Die PIN muss mindestens 6 Ziffern haben.',
         'pins_mismatch' => 'Die PINs stimmen nicht überein. Versuch es noch mal.',
         'session_expired' => 'Deine Sitzung ist abgelaufen, bevor die Einrichtung fertig war. Gib deine PIN und dein Passwort erneut ein.',
         'retry_failed' => 'Die Einrichtung dieses Geräts konnte immer noch nicht abgeschlossen werden. Versuch es noch mal.',

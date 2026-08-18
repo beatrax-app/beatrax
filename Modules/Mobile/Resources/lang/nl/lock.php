@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Uitloggen',
 
     'errors' => [
-        'pin_length' => 'De pincode moet minimaal 4 cijfers hebben.',
+        'pin_length' => 'De pincode moet minimaal 6 cijfers hebben.',
 
         'too_many_attempts' => 'Te veel pogingen — probeer het over :secondss opnieuw.',
         'incorrect_pin_remaining' => 'Onjuiste pincode. Nog :count pogingen over.',

@@ -74,19 +74,15 @@
                                 </select>
 
                                 @if ($valueType === 'date')
-                                    <input
-                                        type="date"
+                                    <x-core::date-input
                                         wire:model.lazy="conditions.{{ $i }}.value"
-                                        aria-label="{{ $isBetween ? Lang::get('categorization::rule_form.condition_value_from_aria', ['number' => $i + 1]) : Lang::get('categorization::rule_form.condition_value_aria', ['number' => $i + 1]) }}"
-                                        class="rc-date rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                        :aria-label="$isBetween ? Lang::get('categorization::rule_form.condition_value_from_aria', ['number' => $i + 1]) : Lang::get('categorization::rule_form.condition_value_aria', ['number' => $i + 1])"
                                     />
                                     @if ($isBetween)
                                         <span class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rule_form.to') }}</span>
-                                        <input
-                                            type="date"
+                                        <x-core::date-input
                                             wire:model.lazy="conditions.{{ $i }}.value2"
-                                            aria-label="{{ Lang::get('categorization::rule_form.condition_value_to_aria', ['number' => $i + 1]) }}"
-                                            class="rc-date rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                            :aria-label="Lang::get('categorization::rule_form.condition_value_to_aria', ['number' => $i + 1])"
                                         />
                                     @endif
                                 @elseif ($valueType === 'amount')

@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Committing…',
     'commit_count' => 'Commit everything (:count transactions) →',
     'commit_empty' => 'Commit everything (—) →',
+    'skip' => 'Skip for now',
 
     'errors' => [
         'nothing_to_commit' => 'Nothing to commit.',

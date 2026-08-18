@@ -13,7 +13,7 @@ return [
     'password_help' => 'Cel puțin 12 caractere — nu există resetare a parolei, doar coduri de recuperare.',
     'confirm_password' => 'Confirmă parola',
     'pin' => 'Cod PIN pentru blocarea aplicației',
-    'pin_help' => '4-10 cifre — deblochează acest dispozitiv.',
+    'pin_help' => '6-10 cifre — deblochează acest dispozitiv.',
     'confirm_pin' => 'Confirmă codul PIN',
     'continue' => 'Continuă',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Parolele nu se potrivesc.',
         'password_length' => 'Folosește cel puțin 12 caractere.',
-        'pin_length' => 'Codul PIN trebuie să aibă cel puțin 4 cifre.',
+        'pin_length' => 'Codul PIN trebuie să aibă cel puțin 6 cifre.',
         'pins_mismatch' => 'Codurile PIN nu se potrivesc. Încearcă din nou.',
         'session_expired' => 'Sesiunea ta a expirat înainte de finalizarea configurării. Introdu din nou codul PIN și parola.',
         'retry_failed' => 'Tot nu am putut finaliza configurarea acestui dispozitiv. Încearcă din nou.',

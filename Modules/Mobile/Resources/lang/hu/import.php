@@ -13,7 +13,7 @@ return [
     'password_help' => 'Legalább 12 karakter — nincs jelszó-visszaállítás, csak helyreállítási kódok.',
     'confirm_password' => 'Jelszó megerősítése',
     'pin' => 'Alkalmazászár PIN-kódja',
-    'pin_help' => '4-10 számjegy — ezzel oldható fel ez az eszköz.',
+    'pin_help' => '6-10 számjegy — ezzel oldható fel ez az eszköz.',
     'confirm_pin' => 'PIN-kód megerősítése',
     'continue' => 'Folytatás',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'A jelszavak nem egyeznek.',
         'password_length' => 'Használj legalább 12 karaktert.',
-        'pin_length' => 'A PIN-kódnak legalább 4 számjegyből kell állnia.',
+        'pin_length' => 'A PIN-kódnak legalább 6 számjegyből kell állnia.',
         'pins_mismatch' => 'A PIN-kódok nem egyeznek. Próbáld újra.',
         'session_expired' => 'A munkameneted lejárt, mielőtt a beállítás befejeződött volna. Add meg újra a PIN-kódodat és a jelszavadat.',
         'retry_failed' => 'Az eszköz beállítását továbbra sem sikerült befejezni. Próbáld újra.',

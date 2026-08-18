@@ -1,4 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
+@use('Carbon\CarbonImmutable')
 {{--
     /counterparties/triage focused single-card queue.
 
@@ -21,7 +22,6 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
-    use Illuminate\Support\Number;
 
     /**
      * IBAN-masking helper for the triage card display. Keeps the
@@ -61,14 +61,22 @@
         <h1 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin: 0;">
             {{ Lang::get('counterparties::triage.heading') }}
         </h1>
-        <span style="font-size: var(--text-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
-            {{ Lang::get('counterparties::triage.progress', ['seen' => $seen, 'total' => $total, 'percent' => $percent, 'minutes' => $minutesRemaining]) }}
-        </span>
+        {{-- Only when there is something to be through. With an empty queue
+             this read "0 of 0 · 100 % · ~1 min remaining" over a full bar —
+             asserting both that work existed and that it was done. The
+             all-caught-up card below already says the true thing. --}}
+        @if ($total > 0)
+            <span style="font-size: var(--text-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums;">
+                {{ Lang::get('counterparties::triage.progress', ['seen' => $seen, 'total' => $total, 'percent' => $percent, 'minutes' => $minutesRemaining]) }}
+            </span>
+        @endif
     </header>
 
-    <div class="progress-bar" aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}">
-        <div class="progress-fill" style="width: {{ $percent }}%;"></div>
-    </div>
+    @if ($total > 0)
+        <div class="progress-bar" aria-label="{{ Lang::get('counterparties::triage.progress_aria') }}">
+            <div class="progress-fill" style="width: {{ $percent }}%;"></div>
+        </div>
+    @endif
 
     @if ($queueEmpty)
         <section class="triage-card" aria-label="{{ Lang::get('counterparties::triage.all_caught_aria') }}">
@@ -89,7 +97,7 @@
             <p class="triage-meta">
                 {{ Lang::get('counterparties::triage.meta', [
                     'count' => count($recentTransactions),
-                    'date' => ! empty($recentTransactions) ? substr((string) $recentTransactions[0]->posted_at, 0, 10) : '—',
+                    'date' => ! empty($recentTransactions) ? CarbonImmutable::parse((string) $recentTransactions[0]->posted_at)->isoFormat('L') : '—',
                 ]) }}
             </p>
 
@@ -141,12 +149,18 @@
                     <ul style="margin: 0; padding: 0; list-style: none;">
                         @foreach ($recentTransactions as $tx)
                             @php
-                                $date = is_string($tx->posted_at ?? null) ? substr($tx->posted_at, 0, 10) : '';
+                                // isoFormat('L'), not a substr of the ISO string: this
+                                // list sat inside a Dutch page writing 2026-08-13
+                                // while every other date in the app read 13-08-2026.
+                                // 'L' is the short-date pattern of whatever locale is
+                                // rendering, so it follows the reader rather than the
+                                // database.
+                                $date = is_string($tx->posted_at ?? null) ? CarbonImmutable::parse($tx->posted_at)->isoFormat('L') : '';
                             @endphp
                             <li class="triage-tx">
                                 <span class="triage-tx__date">{{ $date }}</span>
                                 <span class="triage-tx__desc">{{ $tx->description ?? '' }}</span>
-                                <span class="triage-tx__amount">{{ Number::currency(abs((int) ($tx->amount_minor ?? 0)) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}</span>
+                                <span class="triage-tx__amount">{{ Money::ofMinor(abs((int) ($tx->amount_minor ?? 0)), 'EUR')->format() }}</span>
                             </li>
                         @endforeach
                     </ul>

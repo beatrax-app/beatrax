@@ -13,7 +13,7 @@ return [
     'password_help' => 'Co najmniej 12 znaków — nie ma resetu hasła, są tylko kody odzyskiwania.',
     'confirm_password' => 'Potwierdź hasło',
     'pin' => 'PIN blokady aplikacji',
-    'pin_help' => '4-10 cyfr — odblokowuje to urządzenie.',
+    'pin_help' => '6-10 cyfr — odblokowuje to urządzenie.',
     'confirm_pin' => 'Potwierdź PIN',
     'continue' => 'Dalej',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Hasła nie są zgodne.',
         'password_length' => 'Użyj co najmniej 12 znaków.',
-        'pin_length' => 'PIN musi mieć co najmniej 4 cyfry.',
+        'pin_length' => 'PIN musi mieć co najmniej 6 cyfry.',
         'pins_mismatch' => 'Kody PIN nie są zgodne. Spróbuj ponownie.',
         'session_expired' => 'Sesja wygasła przed zakończeniem konfiguracji. Wpisz ponownie PIN i hasło.',
         'retry_failed' => 'Nadal nie udało się dokończyć konfiguracji tego urządzenia. Spróbuj ponownie.',

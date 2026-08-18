@@ -13,7 +13,7 @@ return [
     'password_help' => 'Al menos 12 caracteres — no hay restablecimiento de contraseña, solo códigos de recuperación.',
     'confirm_password' => 'Confirmar contraseña',
     'pin' => 'PIN de bloqueo de la app',
-    'pin_help' => 'De 4 a 10 dígitos — desbloquea este dispositivo.',
+    'pin_help' => 'De 6 a 10 dígitos — desbloquea este dispositivo.',
     'confirm_pin' => 'Confirmar PIN',
     'continue' => 'Continuar',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Las contraseñas no coinciden.',
         'password_length' => 'Usa al menos 12 caracteres.',
-        'pin_length' => 'El PIN debe tener al menos 4 dígitos.',
+        'pin_length' => 'El PIN debe tener al menos 6 dígitos.',
         'pins_mismatch' => 'Los PIN no coinciden. Inténtalo de nuevo.',
         'session_expired' => 'Tu sesión caducó antes de terminar la configuración. Vuelve a introducir tu PIN y tu contraseña.',
         'retry_failed' => 'Sigue sin poder terminarse la configuración de este dispositivo. Inténtalo de nuevo.',

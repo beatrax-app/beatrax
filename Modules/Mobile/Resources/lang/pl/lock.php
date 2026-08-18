@@ -14,7 +14,7 @@ return [
     'sign_out' => 'Wyloguj się',
 
     'errors' => [
-        'pin_length' => 'PIN musi mieć co najmniej 4 cyfry.',
+        'pin_length' => 'PIN musi mieć co najmniej 6 cyfry.',
 
         'too_many_attempts' => 'Zbyt wiele prób — spróbuj ponownie za :secondss.',
         'incorrect_pin_remaining' => 'Nieprawidłowy PIN. Pozostało prób: :count.',

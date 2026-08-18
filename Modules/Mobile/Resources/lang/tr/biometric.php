@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biyometrik kilit açma bu cihazda kullanılamıyor.',
-        'pin_required' => 'Biyometrik kilit açmayı etkinleştirmek için PIN kodunu (4–10 hane) gir.',
+        'pin_required' => 'Biyometrik kilit açmayı etkinleştirmek için PIN kodunu (6–10 hane) gir.',
         'enroll_failed' => 'Biyometrik kilit açma etkinleştirilemedi — PIN kodunu kontrol edip yeniden dene.',
     ],
 ];

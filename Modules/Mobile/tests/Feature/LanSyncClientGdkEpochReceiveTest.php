@@ -236,10 +236,14 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
     expect($keyring->loadKeyring($userId, $session)->epochs())->toBe([]);
 
     // A confirmed desktop peer with a real X25519 keypair (needed so the
-    // phone's SyncSession::authenticate() genuinely admits it).
+    // phone's SyncSession::authenticate() genuinely admits it) AND a real
+    // Ed25519 keypair whose secret signs the wrap it pushes — the phone's
+    // receive gateway authenticates the sender against this confirmed key (F1).
     $desktopKp = sodium_crypto_kx_keypair();
     $desktopSecret = sodium_crypto_kx_secretkey($desktopKp);
     $desktopPublic = sodium_crypto_kx_publickey($desktopKp);
+    $desktopSigKp = sodium_crypto_sign_keypair();
+    $desktopEdSecretHex = sodium_bin2hex(sodium_crypto_sign_secretkey($desktopSigKp));
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
@@ -247,7 +251,7 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
         'user_id' => $userId,
         'device_id' => 'desktop-peer',
         'name' => 'Desktop',
-        'ed25519_public_key_hex' => bin2hex(sodium_crypto_sign_publickey(sodium_crypto_sign_keypair())),
+        'ed25519_public_key_hex' => sodium_bin2hex(sodium_crypto_sign_publickey($desktopSigKp)),
         'x25519_public_key_hex' => sodium_bin2hex($desktopPublic),
         'safety_number_words' => 'abandon ability able about above absent',
         'is_self' => 0,
@@ -277,7 +281,7 @@ it('routes a pushed GDK_EPOCH_WRAP frame through the authenticated session and c
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $recipientPub = sodium_hex2bin($phone->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId);
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawEpochKey, $recipientPub, $phone->deviceId, 'desktop-peer', $desktopEdSecretHex);
 
     // Sealed in wire order — Noise cipher states are counter-based.
     $header = lanReceivePushHeader($desktopNoiseSession, 1);

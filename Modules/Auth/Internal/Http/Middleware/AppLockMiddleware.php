@@ -9,6 +9,8 @@ use Closure;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
@@ -42,10 +44,10 @@ final readonly class AppLockMiddleware
         'mobile.setup.done',
     ];
 
-    // Present on every Livewire update request; the Livewire JS client
-    // always sends it, so it identifies wire:poll/component-update traffic
-    // that must not count as user activity.
-    private const LIVEWIRE_HEADER = 'X-Livewire';
+    // The route name, never the `X-Livewire` header: the Android runtime's
+    // persistent process leaks that header across every later request, which
+    // froze `last_activity_at`. See the auth architecture doc.
+    private const LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
 
     // 60s balances "settings change takes effect quickly" against DB load:
     // the per-request write of last_activity_at keeps the DB fresh
@@ -184,8 +186,16 @@ final readonly class AppLockMiddleware
     private function isRestorablePage(Request $request): bool
     {
         return $request->isMethod('GET')
-            && ! $request->headers->has(self::LIVEWIRE_HEADER)
+            && ! $this->isLivewireUpdate()
             && ! $request->expectsJson();
+    }
+
+    // The router's current route, not the request handed in: a Livewire update
+    // re-runs this middleware against a synthesised request wearing the
+    // original page's path and method, which looks like an ordinary GET.
+    private function isLivewireUpdate(): bool
+    {
+        return $this->routes->currentRouteNamed(self::LIVEWIRE_UPDATE_ROUTE);
     }
 
     // Whether the app was backgrounded longer ago than the grace window. The
@@ -233,13 +243,43 @@ final readonly class AppLockMiddleware
     // Sends the user to the lock screen, remembering where they were so
     // unlocking returns them there instead of the dashboard. LockScreen
     // already pulls `url.intended`; nothing ever put anything in it.
-    private function redirectToLock(Request $request, Session $session): RedirectResponse
+    private function redirectToLock(Request $request, Session $session): Response
     {
         if ($this->isRestorablePage($request)) {
             $session->put('url.intended', $request->fullUrl());
         }
 
-        return new RedirectResponse($this->urls->route($this->lockRouteName()));
+        $lockUrl = $this->urls->route($this->lockRouteName());
+
+        if ($this->isLivewireUpdate()) {
+            // Thrown, not returned: Livewire's own pipeline stops for a
+            // RedirectResponse and discards every other response before
+            // running the action, so returning would have served the lock
+            // answer and done the thing the lock exists to prevent.
+            throw new HttpResponseException($this->livewireLockResponse($lockUrl));
+        }
+
+        return new RedirectResponse($lockUrl);
+    }
+
+    // The lock answer for a Livewire XHR, which cannot be a redirect: the
+    // client reads the body as JSON, and on Android neither of its escape
+    // routes from a 302 is available, so the lock page's HTML reached
+    // JSON.parse and left the app unusable. See the auth architecture doc.
+
+    // `components: []` is what makes this inert rather than merely different:
+    // Livewire iterates it to find each message's payload, so empty morphs and
+    // throws nothing. The redirect travels in the body, the one part of the
+    // answer no transport in this stack rewrites.
+    /**
+     * @see resources/js/lock.js — the interceptor that acts on this.
+     */
+    private function livewireLockResponse(string $lockUrl): JsonResponse
+    {
+        return new JsonResponse([
+            'components' => [],
+            'beatraxLock' => ['redirect' => $lockUrl],
+        ]);
     }
 
     // The mobile runtime has its own full-screen lock screen with safe-area
@@ -258,7 +298,7 @@ final readonly class AppLockMiddleware
     // hold the idle timer open forever.
     private function recordActivity(Request $request, Session $session, int $userId, ?string $routeName): void
     {
-        if ($this->isExemptRoute($routeName) || $request->headers->has(self::LIVEWIRE_HEADER)) {
+        if ($this->isExemptRoute($routeName) || $this->isLivewireUpdate()) {
             return;
         }
 

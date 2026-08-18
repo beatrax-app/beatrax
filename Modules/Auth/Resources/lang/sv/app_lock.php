@@ -17,7 +17,7 @@ return [
     'toggle_description' => 'Ersätter daglig inloggning med en PIN-kod. Sessioner är aktiva i 30 dagar.',
 
     'setup_heading' => 'Ange en PIN-kod för att aktivera låset',
-    'new_pin_label' => 'Ny PIN-kod (4–10 siffror)',
+    'new_pin_label' => 'Ny PIN-kod (6–10 siffror)',
     'confirm_pin_label' => 'Bekräfta PIN-kod',
     'account_password_label' => 'Kontolösenord',
     'account_password_note' => '(krävs för att skapa en återställningsnyckel)',
@@ -59,7 +59,7 @@ return [
     'change_modal_heading' => 'Ändra PIN-kod — bekräfta med nuvarande PIN-kod',
     'keep_pin' => 'Behåll PIN-kod',
 
-    'error_pin_too_short' => 'PIN-koden måste ha minst 4 siffror.',
+    'error_pin_too_short' => 'PIN-koden måste ha minst 6 siffror.',
     'error_pin_mismatch' => 'PIN-koderna stämmer inte överens. Försök igen.',
     'error_pin_incorrect' => 'Fel PIN-kod.',
     'error_account_password' => 'Fel kontolösenord.',

@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Zatwierdzanie…',
     'commit_count' => 'Zatwierdź wszystko (transakcje: :count) →',
     'commit_empty' => 'Zatwierdź wszystko (—) →',
+    'skip' => 'Pomiń na razie',
 
     'errors' => [
         'nothing_to_commit' => 'Nie ma czego zatwierdzić.',

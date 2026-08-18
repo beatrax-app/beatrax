@@ -192,7 +192,7 @@
                              Livewire round trip. Read-only: editing only happens on
                              TransactionDetail. --}}
                         @if ($isSplitRow)
-                            <div id="split-legs-phone-{{ $row['id'] }}" x-show="open">
+                            <div id="split-legs-phone-{{ $row['id'] }}" x-show="open" x-cloak>
                                 @foreach ($rowLegs as $leg)
                                     @php $legAmt = Money::ofMinor($leg['amountMinor'], $leg['amountCurrency']); @endphp
                                     <div

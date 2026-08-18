@@ -186,7 +186,9 @@ it('an empty-keyring phone quarantines a sensitive entry, then installs the deli
     /** @var GdkRotationService $rotation */
     $rotation = app(GdkRotationService::class);
     $recipientPub = sodium_hex2bin($phone->x25519PublicKeyHex);
-    $wrap = $rotation->buildGdkEpochWrap(1, $rawDesktopEpochKey, $recipientPub, $phone->deviceId);
+    // The desktop-peer is a confirmed device in the phone's registry, so its
+    // Ed25519 secret is the authentic signer for the sender-authenticity gate.
+    $wrap = $rotation->buildGdkEpochWrap(1, $rawDesktopEpochKey, $recipientPub, $phone->deviceId, 'desktop-peer', sodium_bin2hex($desktopEdSecret));
 
     /** @var GdkEpochDeliveryGateway $delivery */
     $delivery = app(GdkEpochDeliveryGateway::class);

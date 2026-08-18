@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'OK — PIN bestätigen',
     'ok' => 'OK',
 
-    'error_too_short' => 'Die PIN muss mindestens 4 Ziffern haben.',
+    'error_too_short' => 'Die PIN muss mindestens 6 Ziffern haben.',
 
     'error_backoff' => 'Zu viele Versuche — versuche es in :wait erneut.',
 

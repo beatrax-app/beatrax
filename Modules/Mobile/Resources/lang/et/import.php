@@ -13,7 +13,7 @@ return [
     'password_help' => 'Vähemalt 12 märki — parooli lähtestamist ei ole, on ainult taastekoodid.',
     'confirm_password' => 'Kinnita parool',
     'pin' => 'Rakenduse luku PIN-kood',
-    'pin_help' => '4–10 numbrit — avab selle seadme.',
+    'pin_help' => '6–10 numbrit — avab selle seadme.',
     'confirm_pin' => 'Kinnita PIN-kood',
     'continue' => 'Jätka',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Paroolid ei kattu.',
         'password_length' => 'Kasuta vähemalt 12 märki.',
-        'pin_length' => 'PIN-kood peab olema vähemalt 4 numbrit.',
+        'pin_length' => 'PIN-kood peab olema vähemalt 6 numbrit.',
         'pins_mismatch' => 'PIN-koodid ei kattu. Proovi uuesti.',
         'session_expired' => 'Sinu sessioon aegus enne seadistamise lõppu. Sisesta PIN-kood ja parool uuesti.',
         'retry_failed' => 'Selle seadme seadistamist ei õnnestunud ikka lõpetada. Palun proovi uuesti.',

@@ -43,8 +43,8 @@ it('provisions a local user + app-lock + sync identity (no epoch) and advances t
         ->set('username', 'phone-owner')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '4269')
-        ->set('confirmPin', '4269')
+        ->set('pin', '426900')
+        ->set('confirmPin', '426900')
         ->call('submit')
         ->assertSet('step', 'recovery_codes')
         ->assertSet('flashMessage', '');
@@ -79,8 +79,8 @@ it('continueToPairing() forgets the recovery-codes session key and redirects int
         ->set('username', 'phone-owner-continue')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'a-genuinely-long-password')
-        ->set('pin', '4269')
-        ->set('confirmPin', '4269')
+        ->set('pin', '426900')
+        ->set('confirmPin', '426900')
         ->call('submit')
         ->assertSet('step', 'recovery_codes');
 
@@ -137,7 +137,7 @@ it('retryProvisioning() succeeds with the ORIGINALLY submitted credentials after
     // provisionDeviceLocally() — the real, non-empty PIN/password from the
     // original submission, server-side only.
     session()->put('mobile.import.pending_credentials', [
-        'pin' => '4269',
+        'pin' => '426900',
         'password' => 'a-genuinely-long-password',
     ]);
 
@@ -169,8 +169,8 @@ it('rejects mismatched passwords and a too-short PIN without provisioning anythi
         ->set('username', 'phone-owner-bad')
         ->set('password', 'a-genuinely-long-password')
         ->set('passwordConfirmation', 'does-not-match')
-        ->set('pin', '4269')
-        ->set('confirmPin', '4269')
+        ->set('pin', '426900')
+        ->set('confirmPin', '426900')
         ->call('submit')
         ->assertSet('step', 'collect_pin')
         ->assertSet('flashMessage', 'Passwords do not match.');
@@ -185,7 +185,7 @@ it('rejects mismatched passwords and a too-short PIN without provisioning anythi
         ->set('confirmPin', '12')
         ->call('submit')
         ->assertSet('step', 'collect_pin')
-        ->assertSet('flashMessage', 'PIN must be at least 4 digits.');
+        ->assertSet('flashMessage', 'PIN must be at least 6 digits.');
 
     expect(User::query()->count())->toBe(0, 'a rejected PIN must never reach SignupAction');
 });

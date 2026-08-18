@@ -136,7 +136,10 @@ final class PotsPage extends Component
                     $this->goalId = '';
                 }
                 $this->clearErrors();
-                $this->dispatch('modal-show', name: 'pot-form');
+
+                // Deliberately does NOT dispatch `modal-show` — see the same
+                // note in GoalsPage::openEdit(). Announcing it from the server
+                // put the desktop modal on top of the phone sheet.
 
                 return;
             }
@@ -478,7 +481,7 @@ final class PotsPage extends Component
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */
-        $view->extends('layouts.app', ['title' => 'Pots · Beatrax']);
+        $view->extends('layouts.app', ['title' => Lang::get('pots::messages.page_title')]);
 
         return $view;
     }

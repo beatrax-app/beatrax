@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Odblokowanie biometryczne nie jest dostępne na tym urządzeniu.',
-        'pin_required' => 'Podaj PIN (4–10 cyfr), aby włączyć odblokowanie biometryczne.',
+        'pin_required' => 'Podaj PIN (6–10 cyfr), aby włączyć odblokowanie biometryczne.',
         'enroll_failed' => 'Nie udało się włączyć odblokowania biometrycznego — sprawdź PIN i spróbuj ponownie.',
     ],
 ];

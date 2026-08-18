@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Bogfører…',
     'commit_count' => 'Bogfør det hele (:count transaktioner) →',
     'commit_empty' => 'Bogfør det hele (—) →',
+    'skip' => 'Spring over for nu',
 
     'errors' => [
         'nothing_to_commit' => 'Intet at bogføre.',

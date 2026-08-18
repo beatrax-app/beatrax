@@ -15,7 +15,7 @@ return [
     'ok_aria' => 'Labi — apstiprināt PIN kodu',
     'ok' => 'Labi',
 
-    'error_too_short' => 'PIN kodā jābūt vismaz 4 cipariem.',
+    'error_too_short' => 'PIN kodā jābūt vismaz 6 cipariem.',
 
     'error_backoff' => 'Pārāk daudz mēģinājumu — mēģiniet vēlreiz pēc :wait.',
 

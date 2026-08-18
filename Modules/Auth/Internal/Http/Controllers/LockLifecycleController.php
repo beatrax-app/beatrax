@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Internal\Http\Controllers;
 
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Public\Services\AppLockClientConfig;
@@ -39,11 +40,11 @@ final readonly class LockLifecycleController
         return new Response('', 204);
     }
 
-    // Reaching this body at all means the middleware judged the return to be
-    // within grace; an expired one is redirected to the lock screen before it
-    // gets here, which is the signal lock.js reloads on.
-    public function resume(): Response
+    // Reaching this body means the middleware judged the return within grace.
+    // A body rather than a status or redirect: neither survives the Android
+    // bridge, which rewrites both. See the auth architecture doc.
+    public function resume(): JsonResponse
     {
-        return new Response('', 204);
+        return new JsonResponse(['locked' => false]);
     }
 }

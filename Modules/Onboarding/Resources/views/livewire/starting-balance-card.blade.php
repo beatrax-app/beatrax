@@ -144,14 +144,18 @@
                         />
                         <span class="balance-card-currency-suffix">{{ $currency }} {{ Lang::get('onboarding::starting_balance.minor_units') }}</span>
                     </label>
-                    <label class="balance-card-input">
+                    {{-- A div, not a label: the date field is now a popover
+                         trigger, and a wrapping <label> forwards every click
+                         inside the calendar back to it, so picking a day would
+                         reopen the picker instead of choosing. --}}
+                    <div class="balance-card-input">
                         <span class="balance-card-input-label">{{ Lang::get('onboarding::starting_balance.on_date_label') }}</span>
-                        <input
-                            type="date"
+                        <x-core::date-input
                             wire:model.live="editedDate"
                             class="balance-card-date-input"
+                            :aria-label="Lang::get('onboarding::starting_balance.on_date_label')"
                         />
-                    </label>
+                    </div>
                 </div>
                 @if ($dateWarning !== '')
                     <span class="warn" role="alert">{{ $dateWarning }}</span>
@@ -216,14 +220,18 @@
                         />
                         <span class="balance-card-currency-suffix">{{ $currency }} {{ Lang::get('onboarding::starting_balance.minor_units') }}</span>
                     </label>
-                    <label class="balance-card-input">
+                    {{-- A div, not a label: the date field is now a popover
+                         trigger, and a wrapping <label> forwards every click
+                         inside the calendar back to it, so picking a day would
+                         reopen the picker instead of choosing. --}}
+                    <div class="balance-card-input">
                         <span class="balance-card-input-label">{{ Lang::get('onboarding::starting_balance.on_date_label') }}</span>
-                        <input
-                            type="date"
+                        <x-core::date-input
                             wire:model.live="editedDate"
                             class="balance-card-date-input"
+                            :aria-label="Lang::get('onboarding::starting_balance.on_date_label')"
                         />
-                    </label>
+                    </div>
                 </div>
                 @if ($dateWarning !== '')
                     <span class="warn" role="alert">{{ $dateWarning }}</span>

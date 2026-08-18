@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Kaydediliyor…',
     'commit_count' => 'Hepsini kaydet (:count işlem) →',
     'commit_empty' => 'Hepsini kaydet (—) →',
+    'skip' => 'Şimdilik atla',
 
     'errors' => [
         'nothing_to_commit' => 'Kaydedilecek bir şey yok.',

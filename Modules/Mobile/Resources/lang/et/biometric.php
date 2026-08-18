@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biomeetriline avamine pole selles seadmes saadaval.',
-        'pin_required' => 'Biomeetrilise avamise sisselülitamiseks sisesta oma PIN-kood (4–10 numbrit).',
+        'pin_required' => 'Biomeetrilise avamise sisselülitamiseks sisesta oma PIN-kood (6–10 numbrit).',
         'enroll_failed' => 'Biomeetrilist avamist ei õnnestunud sisse lülitada — kontrolli PIN-koodi ja proovi uuesti.',
     ],
 ];

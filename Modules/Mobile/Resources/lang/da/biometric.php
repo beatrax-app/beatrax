@@ -14,7 +14,7 @@ return [
 
     'errors' => [
         'unavailable' => 'Biometrisk oplåsning er ikke tilgængelig på denne enhed.',
-        'pin_required' => 'Indtast din PIN-kode (4–10 cifre) for at aktivere biometrisk oplåsning.',
+        'pin_required' => 'Indtast din PIN-kode (6–10 cifre) for at aktivere biometrisk oplåsning.',
         'enroll_failed' => 'Biometrisk oplåsning kunne ikke aktiveres — tjek din PIN-kode, og prøv igen.',
     ],
 ];

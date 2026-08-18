@@ -56,7 +56,7 @@ it('idleTimeoutMs returns the per-user preset in milliseconds when the lock is e
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
-    $provisioner->enable($user->id, '1234', 'client-config-pass');
+    $provisioner->enable($user->id, '123456', 'client-config-pass');
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);
@@ -85,7 +85,7 @@ it('layout emits the configured idle timeout for a lock-enabled user', function 
 
     /** @var AppLockProvisioner $provisioner */
     $provisioner = $this->app->make(AppLockProvisioner::class);
-    $provisioner->enable($user->id, '1234', 'client-config-pass');
+    $provisioner->enable($user->id, '123456', 'client-config-pass');
 
     /** @var DatabaseManager $db */
     $db = $this->app->make(DatabaseManager::class);

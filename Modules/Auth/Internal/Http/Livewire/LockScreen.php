@@ -86,7 +86,7 @@ final class LockScreen extends Component
         ColdStartVault $vault,
         MobileLockGateway $gateway,
     ): void {
-        if (preg_match('/^\d{4,10}$/', $pin) !== 1) {
+        if (preg_match('/^\d{6,10}$/', $pin) !== 1) {
             $this->flashMessage = Lang::get('auth::lock_screen.error_too_short');
 
             return;

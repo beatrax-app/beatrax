@@ -15,7 +15,7 @@ return [
     'toggle_description' => 'Αντικαθιστά την καθημερινή σύνδεση με PIN. Οι συνεδρίες παραμένουν ενεργές για 30 ημέρες.',
 
     'setup_heading' => 'Όρισε PIN για να ενεργοποιήσεις το κλείδωμα',
-    'new_pin_label' => 'Νέο PIN (4–10 ψηφία)',
+    'new_pin_label' => 'Νέο PIN (6–10 ψηφία)',
     'confirm_pin_label' => 'Επιβεβαίωση PIN',
     'account_password_label' => 'Κωδικός πρόσβασης λογαριασμού',
     'account_password_note' => '(απαιτείται για τη δημιουργία κλειδιού ανάκτησης)',
@@ -57,7 +57,7 @@ return [
     'change_modal_heading' => 'Αλλαγή PIN — επιβεβαίωση με το τρέχον PIN',
     'keep_pin' => 'Διατήρηση PIN',
 
-    'error_pin_too_short' => 'Το PIN πρέπει να έχει τουλάχιστον 4 ψηφία.',
+    'error_pin_too_short' => 'Το PIN πρέπει να έχει τουλάχιστον 6 ψηφία.',
     'error_pin_mismatch' => 'Τα PIN δεν ταιριάζουν. Δοκίμασε ξανά.',
     'error_pin_incorrect' => 'Λανθασμένο PIN.',
     'error_account_password' => 'Λανθασμένος κωδικός πρόσβασης λογαριασμού.',

@@ -9,6 +9,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Sync\Internal\Crypto\GdkKeyringService;
 use Modules\Sync\Internal\Crypto\GdkRotationService;
+use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Public\Services\PairingGateway;
 
 uses(RefreshDatabase::class);
@@ -74,7 +75,12 @@ it('wraps ALL keyring epochs (not just the latest) to a single newly-confirmed d
     // Enable encryption then rotate twice — keyring now holds epochs 1,2,3.
     $keyring->generateAndPersist((int) $user->id, $session); // epoch 1
 
-    fanOutDeviceRow($db, (int) $user->id, 'self-device', bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())), isSelf: true, confirmed: true);
+    // The acting/self device needs a REAL on-disk identity: rotateAndRevoke()
+    // and fanOutAllEpochsToDevice() both now load it to SIGN each wrap. Its
+    // is_self=1 registry row is what excludes it from every fan-out.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $identityService->generateAndPersist((int) $user->id, $session);
     $throwaway1 = fanOutDeviceRow($db, (int) $user->id, 'throwaway-1', bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())), isSelf: false, confirmed: true);
     $throwaway2 = fanOutDeviceRow($db, (int) $user->id, 'throwaway-2', bin2hex(sodium_crypto_box_publickey(sodium_crypto_box_keypair())), isSelf: false, confirmed: true);
 
@@ -220,6 +226,13 @@ it('enqueues zero wraps for an empty keyring (encryption never enabled)', functi
 
     /** @var DatabaseManager $db */
     $db = app(DatabaseManager::class);
+
+    // The acting device has an identity (sync enabled) but an EMPTY keyring
+    // (encryption never enabled): fanOutAllEpochsToDevice() loads the identity
+    // to sign wraps, then finds zero epochs and enqueues nothing.
+    /** @var DeviceIdentityService $identityService */
+    $identityService = app(DeviceIdentityService::class);
+    $identityService->generateAndPersist((int) $user->id, $session);
 
     $recipientId = fanOutDeviceRow(
         $db,

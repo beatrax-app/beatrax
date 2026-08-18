@@ -13,7 +13,7 @@ return [
     'password_help' => 'Minimaal 12 tekens — er is geen wachtwoordherstel, alleen herstelcodes.',
     'confirm_password' => 'Bevestig wachtwoord',
     'pin' => 'App-vergrendeling pincode',
-    'pin_help' => '4-10 cijfers — ontgrendelt dit apparaat.',
+    'pin_help' => '6-10 cijfers — ontgrendelt dit apparaat.',
     'confirm_pin' => 'Bevestig pincode',
     'continue' => 'Doorgaan',
 
@@ -35,7 +35,7 @@ return [
     'errors' => [
         'passwords_mismatch' => 'Wachtwoorden komen niet overeen.',
         'password_length' => 'Gebruik minimaal 12 tekens.',
-        'pin_length' => 'De pincode moet minimaal 4 cijfers hebben.',
+        'pin_length' => 'De pincode moet minimaal 6 cijfers hebben.',
         'pins_mismatch' => 'De pincodes komen niet overeen. Probeer het opnieuw.',
         'session_expired' => 'Je sessie is verlopen voordat het instellen was voltooid. Voer je pincode en wachtwoord opnieuw in.',
         'retry_failed' => 'Kon dit apparaat nog steeds niet volledig instellen. Probeer het opnieuw.',

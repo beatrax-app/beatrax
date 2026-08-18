@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Poklapanje šablona: **:name** — niska pouzdanost. Proveri pre povezivanja.',
     'suggestion_high' => '✨ Izgleda kao **:name** — visoka pouzdanost',
 
+    'reasoning' => ':hits od :total nedavnih transakcija na ovom IBAN-u upućuje na :name.',
     'yes_link' => 'Da, poveži sa :name ↵',
     'no_not' => 'Ne, nije :name',
 

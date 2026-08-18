@@ -90,7 +90,7 @@ it('refuses to rotate keys for a user with no app-lock row', function (string $m
     /** @var User $user */
     $user = $this->user;
 
-    expect($provisioner->{$method}($user->id, 'irrelevant-credential', '1234'))->toBeFalse();
+    expect($provisioner->{$method}($user->id, 'irrelevant-credential', '123456'))->toBeFalse();
 })->with([
     'changePin' => ['changePin'],
     'rewrapForNewPin' => ['rewrapForNewPin'],

@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Dopasowanie wzorca: **:name** — pewność niska. Sprawdź przed powiązaniem.',
     'suggestion_high' => '✨ Wygląda na **:name** — pewność wysoka',
 
+    'reasoning' => ':hits z :total ostatnich transakcji na tym IBAN-ie wskazuje na :name.',
     'yes_link' => 'Tak, powiąż z: :name ↵',
     'no_not' => 'Nie, to nie :name',
 
