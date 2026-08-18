@@ -13,10 +13,17 @@ final class CorpusPatternMatcher
 {
     public const REGEX_PREFIX = 'regex:';
 
-    // A corpus regex body longer than this is refused before it runs: real
-    // classification patterns are short merchant tokens, so the cap only ever
-    // rejects a hostile or accidental blob, bounding worst-case match cost.
+    // A corpus regex body longer than this is refused before it runs — real
+    // patterns are short merchant tokens. The cap does NOT bound backtracking
+    // (a short `(a+)+$` is still pathological), so ReDoS safety comes from the
+    // explicit budget in matchWithinBudget(), not this length limit.
     public const MAX_REGEX_BODY_LENGTH = 256;
+
+    // Catastrophic backtracking on a corpus-supplied pattern (a hostile input)
+    // is bounded here rather than left to php.ini's 1M default: a match that
+    // exceeds this many steps aborts (preg_match returns false) and is treated
+    // as a non-match. Far above any legitimate merchant-token pattern's needs.
+    private const PCRE_BACKTRACK_BUDGET = 100_000;
 
     public function __construct(
         private readonly LoggerInterface $logger,
@@ -51,12 +58,12 @@ final class CorpusPatternMatcher
             return false;
         }
 
-        $result = @preg_match($delimited, $haystack);
+        $result = $this->matchWithinBudget($delimited, $haystack);
         if ($result === false) {
-            // Compiled against an empty subject in the guard, yet failed on
-            // this haystack -- e.g. pcre.backtrack_limit tripped. Treat as a
-            // non-match rather than surface the error, and record it so a
-            // pathological corpus entry stays visible in the logs.
+            // Compiled clean against an empty subject in the guard, yet failed
+            // on this haystack -- the backtrack budget tripped on a pathological
+            // pattern. Treat as a non-match rather than surface the error, and
+            // record it so a pathological corpus entry stays visible in the logs.
             $this->logger->warning('CorpusPatternMatcher: regex match failed, treated as non-match.', [
                 'pattern' => $original,
             ]);
@@ -67,10 +74,26 @@ final class CorpusPatternMatcher
         return $result === 1;
     }
 
+    // Runs the match under a lowered pcre.backtrack_limit so a pathological
+    // corpus pattern aborts (preg_match returns false) instead of burning CPU,
+    // then restores the previous limit — the bound holds whatever php.ini says.
+    private function matchWithinBudget(string $delimited, string $haystack): int|false
+    {
+        $previousLimit = ini_set('pcre.backtrack_limit', (string) self::PCRE_BACKTRACK_BUDGET);
+
+        try {
+            return @preg_match($delimited, $haystack);
+        } finally {
+            if ($previousLimit !== false) {
+                ini_set('pcre.backtrack_limit', $previousLimit);
+            }
+        }
+    }
+
     // A corpus regex is only run against transaction text once its body is
-    // non-empty, within MAX_REGEX_BODY_LENGTH, and compiles -- the compile
-    // check uses an empty subject, which cannot backtrack, so a hostile or
-    // malformed pattern is rejected before it can burn CPU on the haystack.
+    // non-empty, within MAX_REGEX_BODY_LENGTH, and compiles. The compile check
+    // (empty subject) rejects a malformed pattern; a valid-but-pathological one
+    // still runs, bounded by the backtrack budget in matchWithinBudget().
     private function isUsableRegex(string $body, string $delimited, string $original): bool
     {
         if ($body === '') {

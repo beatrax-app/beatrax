@@ -17,6 +17,12 @@ final class RecoveryCodeAuthenticator
 {
     private const GROUP_LENGTH = 4;
 
+    // A fixed number of bcrypt comparisons per attempt — the provisioned
+    // recovery-code count (RegenerateRecoveryCodesCommand issues 10). Both the
+    // account-not-found and the wrong-code paths run exactly this many hashes,
+    // so response time never distinguishes a missing username from a wrong code.
+    private const HASH_OPS = 10;
+
     public function __construct(
         private readonly DatabaseManager $db,
         private readonly Hasher $hasher,
@@ -28,47 +34,57 @@ final class RecoveryCodeAuthenticator
     {
         /** @var User|null $result */
         $result = $this->db->connection()->transaction(function () use ($usernameInput, $codeInput): ?User {
+            $connection = $this->db->connection();
             $username = strtolower(trim($usernameInput));
 
             $user = User::query()->where('username', $username)->first();
-
-            if (! $user instanceof User) {
-                // Burn one hash so a missing account is not visibly faster than
-                // a real one's code check — the same oracle the login path
-                // closes. make() runs the same bcrypt work as the loop's check()
-                // and the result is discarded; nothing is hardcoded.
-                $this->hasher->make($codeInput);
-                $this->emitFailure($usernameInput, null);
-
-                return null;
-            }
-
             $candidate = $this->reformat($this->normalizer->normalize($codeInput));
 
-            $connection = $this->db->connection();
+            // The unused code rows for a real account, or none for an unknown
+            // username. Loaded under a row lock so a matched code is consumed
+            // atomically within this transaction.
+            $unused = $user instanceof User
+                ? $connection->table('user_recovery_codes')
+                    ->where('user_id', $user->id)
+                    ->whereNull('used_at')
+                    ->lockForUpdate()
+                    ->get(['id', 'code_hash'])
+                    ->all()
+                : [];
 
-            $unused = $connection->table('user_recovery_codes')
-                ->where('user_id', $user->id)
-                ->whereNull('used_at')
-                ->lockForUpdate()
-                ->get(['id', 'code_hash']);
-
-            foreach ($unused as $code) {
-                if (! is_string($code->code_hash)) {
-                    continue;
-                }
-
-                if ($this->hasher->check($candidate, $code->code_hash)) {
-                    $connection->table('user_recovery_codes')
-                        ->where('id', $code->id)
-                        ->update(['used_at' => $this->clock->now()]);
-                    $this->emitSuccess($user);
-
-                    return $user;
+            // Run a FIXED number of bcrypt comparisons regardless of whether the
+            // account exists or how many codes remain, so neither response time
+            // nor match position distinguishes a missing username from a wrong
+            // code. Padding uses make() (same bcrypt cost as check()), one per pass.
+            $matchedId = null;
+            $iterations = max(self::HASH_OPS, count($unused));
+            for ($i = 0; $i < $iterations; $i++) {
+                $row = $unused[$i] ?? null;
+                if ($row !== null && is_string($row->code_hash)) {
+                    if ($this->hasher->check($candidate, $row->code_hash) && $matchedId === null) {
+                        $matchedId = $row->id;
+                    }
+                } else {
+                    $this->hasher->make($candidate);
                 }
             }
 
-            $this->emitFailure($usernameInput, $user);
+            if ($user instanceof User && $matchedId !== null) {
+                $connection->table('user_recovery_codes')
+                    ->where('id', $matchedId)
+                    ->update(['used_at' => $this->clock->now()]);
+                $this->emitSuccess($user);
+
+                return $user;
+            }
+
+            // A failure against a real account warns its owner. An unknown
+            // username has no owner to warn, and a user_id=null alert is shown
+            // to every user (SystemAlertQuery), so recording one would let an
+            // unauthenticated caller flood every banner — so it is not recorded.
+            if ($user instanceof User) {
+                $this->emitFailure($user);
+            }
 
             return null;
         });
@@ -95,13 +111,13 @@ final class RecoveryCodeAuthenticator
         ]);
     }
 
-    private function emitFailure(string $usernameInput, ?User $user): void
+    private function emitFailure(User $user): void
     {
         SystemAlert::query()->create([
-            'user_id' => $user?->id,
+            'user_id' => $user->id,
             'kind' => 'auth.recovery_code_failed',
             'severity' => 'critical',
-            'message' => 'Failed recovery code attempt for '.strtolower(trim($usernameInput)).'.',
+            'message' => "Failed recovery code attempt for {$user->username}.",
         ]);
     }
 }
