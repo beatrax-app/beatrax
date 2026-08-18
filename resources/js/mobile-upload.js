@@ -93,7 +93,19 @@ function partition(formData) {
     return { files, fields };
 }
 
-if (! carriesMultipart()) {
+/*
+ * Installed unconditionally, and the decision made per request inside send().
+ *
+ * It used to be `if (! carriesMultipart())` around the whole patch, evaluated
+ * once as the module executed. On the device that read the meta as absent and
+ * never installed the hook, while the very same meta was demonstrably in the
+ * document afterwards — the bundle was right, the selector matched, and no
+ * exception was thrown. Rather than keep chasing which load-order made that
+ * true, the question is removed: the hook always exists and asks at the moment
+ * it matters. It costs one selector lookup per upload, and none at all on any
+ * other request, because the body has to be FormData to get that far.
+ */
+{
     const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
 
@@ -108,7 +120,8 @@ if (! carriesMultipart()) {
     XMLHttpRequest.prototype.send = function (body) {
         const isUpload = typeof this._beatraxUrl === 'string'
             && this._beatraxUrl.includes(UPLOAD_PATH)
-            && body instanceof FormData;
+            && body instanceof FormData
+            && ! carriesMultipart();
 
         if (! isUpload) {
             return originalSend.call(this, body);
