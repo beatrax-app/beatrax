@@ -212,15 +212,16 @@ final readonly class RelayClient
             return false;
         }
 
-        $version = curl_version();
+        return self::backendHonorsPinning($this->sslBackend());
+    }
 
-        if (! is_array($version) || ! isset($version['ssl_version']) || ! is_string($version['ssl_version'])) {
-            return false;
-        }
-
-        // OpenSSL, LibreSSL, BoringSSL and GnuTLS all implement it; the
-        // stripped TLS backends that ship in embedded builds do not.
-        return (bool) preg_match('/openssl|libressl|boringssl|gnutls/i', $version['ssl_version']);
+    // OpenSSL, LibreSSL, BoringSSL and GnuTLS implement CURLOPT_PINNEDPUBLICKEY;
+    // the stripped TLS backends that ship in some embedded builds (e.g. Schannel)
+    // silently ignore it, which would leave verify=>false with an inert pin, so
+    // they MUST fail closed. Pure + public so the allow-list is pinned by test.
+    public static function backendHonorsPinning(string $sslVersion): bool
+    {
+        return (bool) preg_match('/openssl|libressl|boringssl|gnutls/i', $sslVersion);
     }
 
     // Empty array when no token is configured — some relay deployments may

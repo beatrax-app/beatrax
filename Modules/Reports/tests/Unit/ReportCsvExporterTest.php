@@ -151,3 +151,63 @@ it('data rows match the aggregator totals for the same definition', function ():
     expect($dataRow[2])->toBe('75.00');
     expect($dataRow[3])->toBe('EUR');
 });
+
+it('escapes formula-leading group labels so the CSV is safe to open in Excel', function (): void {
+    /** @var DatabaseManager $db */
+    $db = app(DatabaseManager::class);
+    $user = rceUser();
+    test()->actingAs($user);
+
+    // A free-text account name that leads with a spreadsheet formula — the
+    // account name becomes the group label for dimension=account.
+    $account = Account::query()->create([
+        'user_id' => $user->id,
+        'name' => '=HYPERLINK("http://evil.example","click")',
+        'slug' => 'rce-formula-'.bin2hex(random_bytes(3)),
+        'kind' => 'bank',
+        'iban' => 'NL00RCEX'.strtoupper(bin2hex(random_bytes(6))),
+        'default_currency' => 'EUR',
+    ]);
+
+    $runId = $db->connection()->table('import_runs')->insertGetId([
+        'user_id' => $user->id,
+        'source_format' => 'asn-csv',
+        'raw_file_path' => '/tmp/rce-formula-'.bin2hex(random_bytes(4)).'.csv',
+        'sha256' => hash('sha256', 'rce-formula-'.bin2hex(random_bytes(4))),
+        'uploaded_at' => now(),
+        'status' => 'committed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $db->connection()->table('transactions')->insert([
+        'user_id' => $user->id,
+        'account_id' => $account->id,
+        'import_run_id' => $runId,
+        'type' => 'expense',
+        'posted_at' => now()->toDateString(),
+        'booked_at' => now()->toDateTimeString(),
+        'value_date' => now()->toDateString(),
+        'amount_minor' => -7_500,
+        'currency' => 'EUR',
+        'settled_amount_minor' => -7_500,
+        'settled_currency' => 'EUR',
+        'counterparty_name' => '@payload',
+        'counterparty_normalized' => 'payload',
+        'normalization_version' => 1,
+        'source_format' => 'asn-csv',
+        'source_row_index' => 1,
+        'fingerprint' => hash('sha256', 'rce-formula-tx-'.bin2hex(random_bytes(8))),
+        'fingerprint_version' => 3,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $csv = app(ReportCsvExporter::class)->export($user, rceDefinition('account'));
+
+    // league/csv EscapeFormula prefixes a formula-leading cell with a single
+    // quote. Without the formatter the label would ship as a live =HYPERLINK
+    // formula, so this fails if the EscapeFormula line is removed.
+    expect($csv)->toContain("'=HYPERLINK")
+        ->and($csv)->not->toContain('"=HYPERLINK');
+});
