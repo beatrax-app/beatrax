@@ -739,3 +739,33 @@ secret `BIFROST_BUILD_TOKEN` (a fine-grained PAT scoped to
 needs the private-registry credentials for the paid `nativephp/mobile-*`
 plugins (`COMPOSER_AUTH` / NativePHP licence), the same ones the
 `mobile-app quality` CI job consumes.
+
+## The on-device data is out of platform backup
+
+Both platforms back up app data to the vendor's cloud by default, and both were
+doing it. `native:install` generates an Android manifest with
+`android:allowBackup="true"` pointing at Android Studio's sample rule files —
+whose every rule is commented out — and iOS puts the store under Application
+Support, which is in iCloud backup unless a file says otherwise.
+
+What sits there is `persisted_data/`: the SQLite database with every
+transaction, the sync keyring, and the staged secrets. For a product whose
+stated position is local-first and end-to-end encrypted, a copy of all of it in
+a Google or Apple account is the one exposure no amount of transport encryption
+addresses — and it was silent, with nothing in the app or the build mentioning
+it.
+
+`scripts/nativephp_exclude_data_from_backup.php` closes both. On Android it
+sets `allowBackup="false"` and fills in the rule files; the flag is what stops
+cloud backup, and the rules are written as well because Android 12+ reads
+`<device-transfer>` from `dataExtractionRules` independently of it. On iOS
+there is no manifest flag, so the exclusion is a per-URL resource value set as
+each directory is created in `getAppSupportDir`.
+
+The two halves are guarded separately. They were not at first, and the Android
+marker short-circuited the script before the iOS half ever ran — a patch that
+reported success having done half its job.
+
+Restoring a device therefore starts a fresh install with no data, which is what
+[F4](../core/architecture.md) covers: the encrypted backup
+the user takes deliberately is the recovery path, not the platform's.
