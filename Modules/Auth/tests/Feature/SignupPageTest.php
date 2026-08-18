@@ -49,13 +49,15 @@ it('returns 404 when a user already exists', function (): void {
     $this->get('/signup')->assertNotFound();
 });
 
-it('signs up the first user successfully and redirects to the setup wizard', function (): void {
+it('signs up the first user successfully and redirects to the recovery codes', function (): void {
+    // Not to the wizard: the codes are shown first, and that screen hands off
+    // to /setup. See Onboarding's SignupRoutesToSetupTest for the full chain.
     Livewire::test(SignupPage::class)
         ->set('username', 'alice')
         ->set('password', 'a-long-password-12chars')
         ->set('passwordConfirmation', 'a-long-password-12chars')
         ->call('submit')
-        ->assertRedirect(route('setup'));
+        ->assertRedirect(route('auth.recovery-codes-display'));
 
     $user = User::query()->where('username', 'alice')->first();
     expect($user)->not->toBeNull();

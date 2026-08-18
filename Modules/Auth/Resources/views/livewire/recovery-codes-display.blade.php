@@ -6,14 +6,19 @@
             <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::recovery_codes.subtitle') }}</p>
         </header>
 
-        {{-- Two columns even on a phone. A 20-character code wraps to three
-             lines at the old size, so ten of them ran well past a phone
-             screen and buried the Save/Continue controls below the fold —
-             `tracking-wider` at text-base was costing more width than it
-             bought in legibility. --}}
-        <div aria-live="polite" class="grid grid-cols-2 gap-2 sm:gap-3">
+        {{-- One column on a phone, two from 640px.
+
+             Two columns fit the ten codes on one screen without scrolling,
+             which is why they were there — but they do not fit a CODE. At
+             411px each column is ~180px against a 24-character code, so
+             `break-all` did what it was asked and orphaned the last character
+             of every one of the ten onto a line of its own:
+             "JBDM-KHXE-6BVG-BW4V-2BW" / "J". These are the only way back into
+             an account and the screen's own instruction is to write them down.
+             A transcription hazard is worse here than a scroll. --}}
+        <div aria-live="polite" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             @foreach ($codes as $code)
-                <div class="bg-slate-50 border border-slate-200 rounded-md px-2 py-2 sm:px-4 sm:py-3 text-xs sm:text-lg font-semibold font-mono tabular-nums tracking-tight sm:tracking-wider text-slate-900 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 break-all" style="font-variant-numeric: tabular-nums;">
+                <div class="bg-slate-50 border border-slate-200 rounded-md px-2 py-2 sm:px-4 sm:py-3 text-sm sm:text-lg font-semibold font-mono tabular-nums tracking-tight sm:tracking-wider text-slate-900 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 break-all" style="font-variant-numeric: tabular-nums;">
                     {{ $code }}
                 </div>
             @endforeach

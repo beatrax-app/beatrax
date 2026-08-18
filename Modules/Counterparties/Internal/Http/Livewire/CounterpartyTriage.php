@@ -184,9 +184,18 @@ final class CounterpartyTriage extends Component
         $suggestion = $current !== null && $this->showSuggestion ? $queue->suggestionFor($current) : null;
 
         $seen = count($this->sessionDoneIds);
-        $percent = $total > 0 ? (int) round(($seen / $total) * 100) : 100;
         $remainingCount = max(0, $total - $seen);
-        $minutes = (int) max(1, round($remainingCount * self::MINUTES_PER_UNKNOWN));
+
+        // Zero of zero is not a hundred per cent: an empty queue reported
+        // "0 of 0 · 100 %" above a full bar. Nothing to do is its own state,
+        // which the view now draws instead of a bar.
+        $percent = $total > 0 ? (int) round(($seen / $total) * 100) : 0;
+
+        // Likewise the estimate: max(1, …) floored an empty queue at one
+        // minute of work that does not exist.
+        $minutes = $remainingCount > 0
+            ? (int) max(1, round($remainingCount * self::MINUTES_PER_UNKNOWN))
+            : 0;
 
         $recentTransactions = [];
         if ($current !== null && $current->user_id !== null) {

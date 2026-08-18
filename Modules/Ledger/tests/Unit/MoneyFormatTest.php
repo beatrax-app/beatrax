@@ -46,33 +46,56 @@ it('honours an explicit locale argument for backward compat', function (): void 
 
 /*
  * The no-ICU fallback. `formatToLocale()` builds a NumberFormatter, which the
- * mobile PHP build's ext-intl cannot always construct — and it reports that
- * two ways: IntlException when intl error-exceptions are enabled, ValueError
- * from the constructor when it rejects the locale outright. Every rendered
- * amount in the product funnels through format(), so an uncaught one is a
- * 500 on any page showing money. A locale ICU refuses stands in for the
- * device condition, which cannot be reproduced on a host with full ICU data.
+ * mobile PHP build's ext-intl cannot always construct — its ICU ships locale
+ * data for English only, and it reports the miss two ways: IntlException when
+ * intl error-exceptions are enabled, ValueError from the constructor when it
+ * rejects the locale outright. Every rendered amount in the product funnels
+ * through format(), so an uncaught one is a 500 on any page showing money.
+ * A locale ICU refuses stands in for the device condition, which cannot be
+ * reproduced on a host with full ICU data.
  */
 
-it('falls back to a plain format when the locale cannot build a NumberFormatter', function (): void {
-    $formatted = Money::ofMinor(123456, 'EUR')->format('xx_XX_INVALID');
-
-    expect($formatted)->toBe('EUR 1234.56');
+it('renders EUR in the Dutch convention without ICU', function (): void {
+    expect(Money::ofMinor(123456, 'EUR')->format('xx_XX_INVALID'))->toBe("€\u{00A0}1.234,56");
 })->group('phase-3');
 
-it('keeps the fallback legible for negatives and non-EUR currencies', function (): void {
-    expect(Money::ofMinor(-7443, 'USD')->format('!!bogus!!'))->toBe('USD -74.43');
+it('signs the digits rather than the symbol for EUR without ICU', function (): void {
+    expect(Money::ofMinor(-123450, 'EUR')->format('xx_XX_INVALID'))->toBe("€\u{00A0}-1.234,50");
 })->group('phase-3');
 
-it('pads the fallback to a fixed two-decimal scale', function (): void {
-    // Whole amounts must not render as "EUR 12" — a money column that
+it('renders non-EUR in the US English convention without ICU', function (): void {
+    expect(Money::ofMinor(-7443, 'USD')->format('!!bogus!!'))->toBe('-$74.43');
+})->group('phase-3');
+
+it('falls back to the currency code for a currency with no symbol', function (): void {
+    expect(Money::ofMinor(385000, 'CHF')->format('!!bogus!!'))->toBe("CHF\u{00A0}3,850.00");
+})->group('phase-3');
+
+it('keeps the two-decimal scale without ICU', function (): void {
+    // Whole amounts must not render as "€ 12" — a money column that
     // sometimes shows decimals and sometimes does not is harder to scan
     // than one that always does.
-    expect(Money::ofMinor(1200, 'EUR')->format('xx_XX_INVALID'))->toBe('EUR 12.00');
+    expect(Money::ofMinor(1200, 'EUR')->format('xx_XX_INVALID'))->toBe("€\u{00A0}12,00");
 })->group('phase-3');
+
+it('renders identically with and without ICU for the locales it anchors on', function (int $minor, string $currency): void {
+    // The point of the fallback: mobile must not read differently from
+    // desktop. This host has full ICU data, so the auto-selected locale
+    // takes the ICU path and the rejected one takes the fallback.
+    expect(Money::ofMinor($minor, $currency)->format('xx_XX_INVALID'))
+        ->toBe(Money::ofMinor($minor, $currency)->format());
+})->with([
+    [123456, 'EUR'],
+    [-123450, 'EUR'],
+    [5, 'EUR'],
+    [123456789, 'EUR'],
+    [-7443, 'USD'],
+    [123450, 'GBP'],
+])->group('phase-3');
 
 it('never reaches the fallback when the locale is usable', function (): void {
     // Guards the catch from widening into a silent swallow of working
-    // formatting: a real locale must still produce localised output.
-    expect(Money::ofMinor(1200, 'EUR')->format('nl_NL'))->not->toBe('EUR 12.00');
+    // formatting: German puts the symbol last, which the fallback — which
+    // only knows the two locales this class anchors on — cannot produce.
+    expect(Money::ofMinor(123450, 'EUR')->format('de_DE'))->toBe("1.234,50\u{00A0}€");
 })->group('phase-3');

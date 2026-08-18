@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Categorization\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Models\Category;
 use Modules\Ledger\Public\Enums\CategoryKind;
 
@@ -60,28 +61,48 @@ final class DefaultCategoryTreeSeeder extends Seeder
         foreach (self::TREE as $parent) {
             $order += 10;
 
-            $parentModel = Category::withoutGlobalScopes()->updateOrCreate(
-                ['slug' => $parent['slug'], 'user_id' => null],
-                [
-                    'name' => $parent['name'],
-                    'kind' => $parent['kind'],
-                    'parent_id' => null,
-                    'display_order' => $order,
-                ],
-            );
+            $parentModel = $this->upsert($parent, null, $order);
 
             foreach (($parent['children'] ?? []) as $child) {
                 $order += 1;
-                Category::withoutGlobalScopes()->updateOrCreate(
-                    ['slug' => $child['slug'], 'user_id' => null],
-                    [
-                        'name' => $child['name'],
-                        'kind' => $child['kind'],
-                        'parent_id' => $parentModel->id,
-                        'display_order' => $order,
-                    ],
-                );
+                $this->upsert($child, $parentModel->id, $order);
             }
         }
+    }
+
+    // Structure is re-asserted every run; the NAME is written once, at
+    // creation. The tree is shared and re-seeded per user, so rewriting names
+    // would retranslate a second user's categories into whatever locale was
+    // active and discard any rename the first had made. Editable data, not fixtures.
+    /**
+     * @param  array{name: string, slug: string, kind: string}  $node
+     */
+    private function upsert(array $node, ?int $parentId, int $order): Category
+    {
+        $model = Category::withoutGlobalScopes()->firstOrNew(
+            ['slug' => $node['slug'], 'user_id' => null],
+        );
+
+        if (! $model->exists) {
+            $model->name = $this->localisedName($node['slug'], $node['name']);
+        }
+
+        $model->kind = $node['kind'];
+        $model->parent_id = $parentId;
+        $model->display_order = $order;
+        $model->save();
+
+        return $model;
+    }
+
+    // The English literal in TREE stays the fallback, so an unreachable key
+    // degrades to the name this seeder has always written rather than to the
+    // key itself appearing on someone's budget screen.
+    private function localisedName(string $slug, string $fallback): string
+    {
+        $key = 'categorization::categories.'.$slug;
+        $translated = Lang::get($key);
+
+        return is_string($translated) && $translated !== $key ? $translated : $fallback;
     }
 }

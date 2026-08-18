@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Zapisuje se…',
     'commit_count' => 'Zapsat vše (transakcí: :count) →',
     'commit_empty' => 'Zapsat vše (—) →',
+    'skip' => 'Zatím přeskočit',
 
     'errors' => [
         'nothing_to_commit' => 'Není co zapsat.',

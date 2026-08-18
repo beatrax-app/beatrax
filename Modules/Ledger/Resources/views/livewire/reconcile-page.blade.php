@@ -38,7 +38,7 @@
             </div>
             <div class="space-y-1">
                 <label for="rc-date" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('ledger::reconcile.statement_date') }}</label>
-                <input id="rc-date" type="date" wire:model.live="statementDate" class="{{ $input }}" />
+                <x-core::date-input field-id="rc-date" wire:model.live="statementDate" />
             </div>
         </div>
 

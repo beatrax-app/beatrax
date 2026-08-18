@@ -27,4 +27,26 @@ return [
         'open_nav' => 'Åpne navigasjonen',
         'search_transactions' => 'Søk i transaksjoner',
     ],
+
+    'file' => [
+        'choose' => 'Velg fil',
+        'none' => 'Ingen fil valgt',
+        'count' => ':count filer valgt',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Velg en dato',
+        'prev_month' => 'Forrige måned',
+        'next_month' => 'Neste måned',
+        'today' => 'I dag',
+        'clear' => 'Tøm',
+    ],
+
+    'time' => [
+        'open' => 'Velg et tidspunkt',
+        'hour' => 'Time',
+        'minute' => 'Minutt',
+    ],
 ];

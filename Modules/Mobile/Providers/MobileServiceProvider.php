@@ -7,7 +7,9 @@ namespace Modules\Mobile\Providers;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Facades\GenerateSignedUploadUrlFacade;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
@@ -15,7 +17,10 @@ use Modules\Core\Public\Contracts\DeviceNameSource;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\LoadsModuleResources;
 use Modules\Mobile\Commands\MobilePullCommand;
+use Modules\Mobile\Commands\PackageAndroidCommand;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
+use Modules\Mobile\Internal\Http\BridgeSignedUploadUrl;
+use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
 use Modules\Mobile\Internal\Identity\MobileColdStartVault;
 use Modules\Mobile\Internal\Identity\SecureStorageKeyCustodian;
 use Modules\Mobile\Internal\Native\NativeDeviceName;
@@ -90,7 +95,7 @@ final class MobileServiceProvider extends ServiceProvider
         }
     }
 
-    public function boot(Dispatcher $events): void
+    public function boot(Dispatcher $events, Router $router): void
     {
         // Cold-start biometric: invalidate the enclave blob if the
         // app-lock data key ever rotates (oldKek !== newKek). Runtime FQCN
@@ -103,15 +108,16 @@ final class MobileServiceProvider extends ServiceProvider
 
         // Re-apply the generated-project patches on every mobile build, not
         // only on composer install: the build tooling regenerates the Android
-        // project, which would otherwise ship without them.
+        // project, which would otherwise ship without them. native:package is
+        // the release path, and omitting it kept the patches out of every APK.
         $events->listen(CommandStarting::class, function (CommandStarting $event): void {
-            if (! in_array($event->command, ['native:run', 'native:build'], true)) {
+            if (! in_array($event->command, ['native:run', 'native:build', 'native:package'], true)) {
                 return;
             }
 
-            $scripts = dirname($this->app->basePath()).DIRECTORY_SEPARATOR.'scripts';
+            $scripts = NativeBuildPatches::locate($this->app->basePath());
 
-            if (is_dir($scripts)) {
+            if ($scripts !== null) {
                 $this->app->make(NativeBuildPatches::class)->apply($scripts);
             }
         });
@@ -153,6 +159,22 @@ final class MobileServiceProvider extends ServiceProvider
         if (class_exists($pullCommand)) {
             $this->commands([$pullCommand]);
         }
+
+        $this->commands([PackageAndroidCommand::class]);
+
+        // Where the runtime cannot carry a multipart body, the client sends the
+        // file base64-encoded and this puts a real UploadedFile back before
+        // Livewire's controller reads one. Gated on its own marker, not the
+        // platform: an ordinary request is one array lookup and out.
+        $router->pushMiddlewareToGroup('web', EncodedUploadTransport::class);
+
+        // Livewire mints its temporary-upload URL through this facade, the one
+        // seam where the signature can be computed against the root the verifier
+        // rebuilds. swap() after boot, not $app->instance(): it evicts the
+        // facade's cached root, which Livewire fills with a stub under tests.
+        $this->app->booted(function (): void {
+            GenerateSignedUploadUrlFacade::swap($this->app->make(BridgeSignedUploadUrl::class));
+        });
     }
 
     // Registers a singleton for a class that may not exist yet. The class

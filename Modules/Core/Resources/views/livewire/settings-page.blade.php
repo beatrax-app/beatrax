@@ -365,6 +365,15 @@
             >{{ Lang::get('core::settings.about_updates.open_releases') }}</button>
         </section>
 
+        {{-- The codes are the only way back into a locked-out account, and
+             before this they had exactly one appearance: the post-signup
+             ceremony. Nothing in the app linked to them afterwards, so a user
+             who skipped past that screen had no route to them at all. --}}
+        <section class="space-y-2" id="recovery-codes">
+            <h2 class="{{ $cardHead }}">{{ Lang::get('auth::recovery_codes.settings.heading') }}</h2>
+            @livewire('auth.recovery-codes-section')
+        </section>
+
         <section class="space-y-2" id="first-run-tour">
             <h2 class="{{ $cardHead }}">{{ Lang::get('core::settings.first_run_tour.heading') }}</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400">

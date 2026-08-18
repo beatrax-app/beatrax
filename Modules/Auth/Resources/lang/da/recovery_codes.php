@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Gemt som beatrax-recovery-codes-:username.txt',
     'confirm' => 'Jeg har gemt disse koder et sikkert sted.',
     'continue' => 'Fortsæt til Beatrax',
+
+    'settings' => [
+        'heading' => 'Gendannelseskoder',
+        'body' => 'Gendannelseskoder er den eneste vej tilbage til din konto, hvis du glemmer din adgangskode.',
+        'warning' => 'De gemmes hashet og kan derfor ikke vises igen. Et nyt sæt ugyldiggør det gamle med det samme.',
+        'regenerate' => 'Lav nye koder',
+    ],
 ];

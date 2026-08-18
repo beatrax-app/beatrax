@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Guardado como beatrax-recovery-codes-:username.txt',
     'confirm' => 'He guardado estos códigos en un sitio seguro.',
     'continue' => 'Continuar a Beatrax',
+
+    'settings' => [
+        'heading' => 'Códigos de recuperación',
+        'body' => 'Los códigos de recuperación son la única forma de volver a entrar en tu cuenta si olvidas la contraseña.',
+        'warning' => 'Se guardan con hash, así que no se pueden volver a mostrar. Generar un conjunto nuevo anula el anterior de inmediato.',
+        'regenerate' => 'Generar códigos nuevos',
+    ],
 ];

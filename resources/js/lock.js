@@ -67,6 +67,55 @@ function _lockPost(path) {
     });
 }
 
+/**
+ * Take the lock screen when a Livewire request comes back locked.
+ *
+ * A lock that engages while a Livewire request is in flight cannot answer with
+ * a redirect: Livewire reads the body as JSON, and under NativePHP's Android
+ * bridge `response.redirected` is false because the bridge follows the redirect
+ * itself. The lock page's HTML therefore reached `JSON.parse`, and the app died
+ * — lock screen painted as a narrow inset over the page it should have
+ * replaced, then blank, then no request from any tap until a force-stop.
+ *
+ * So AppLockMiddleware answers such a request with `{"components": [],
+ * "beatraxLock": {"redirect": "…"}}` and this takes it from there. `components`
+ * being empty is what keeps Livewire's own handling harmless if this listener
+ * is ever missing; the navigation is this listener's job alone.
+ *
+ * Registered unconditionally, and NOT behind `_lockEnabled()`: that flag
+ * reflects what the layout knew when this page rendered, and the case being
+ * defended against is precisely a lock that engaged afterwards.
+ */
+document.addEventListener('livewire:init', () => {
+    if (! window.Livewire || typeof window.Livewire.interceptRequest !== 'function') {
+        return;
+    }
+
+    window.Livewire.interceptRequest(({ onParsed }) => {
+        onParsed(({ body }) => {
+            // Cheap string test before parsing: this runs for every Livewire
+            // response on the page, and all but one of them are ordinary.
+            if (typeof body !== 'string' || ! body.includes('beatraxLock')) {
+                return;
+            }
+
+            let payload;
+
+            try {
+                payload = JSON.parse(body);
+            } catch (e) {
+                return;
+            }
+
+            const redirect = payload && payload.beatraxLock && payload.beatraxLock.redirect;
+
+            if (typeof redirect === 'string' && redirect !== '') {
+                window.location.assign(redirect);
+            }
+        });
+    });
+});
+
 document.addEventListener('alpine:init', () => {
     if (!window.Alpine) {
         return;
@@ -215,20 +264,42 @@ document.addEventListener('alpine:init', () => {
         /**
          * Ask the server whether the grace window closed while we were away.
          *
-         * The answer is a redirect, not a body: an expired marker makes
-         * AppLockMiddleware lock and bounce this POST to the lock screen, so
-         * `redirected` is the signal. Reloading then lands on the lock screen
-         * without waiting for the user to touch anything.
+         * The answer is the body `{"locked": false}`, and anything else means
+         * lock. It used to be `response.redirected`, which is unreadable under
+         * NativePHP's Android bridge: the bridge follows the middleware's
+         * redirect to the lock screen in-process and returns that page as an
+         * ordinary response, so `redirected` was always false and the reload
+         * never fired. The session was locked server-side while the phone went
+         * on showing — and accepting taps on — the previous screen.
+         *
+         * Reading the body inverts the default: any answer that is not
+         * explicitly "unlocked" reloads. A lock screen is HTML and fails to
+         * parse, a network error is caught below and left to the next
+         * navigation, and only a genuine unlocked reply stays put.
          */
         _checkResume() {
             return _lockPost('/lock/resume')
                 .then((response) => {
-                    if (response && response.redirected) {
-                        window.location.reload();
+                    if (! response) {
+                        return;
                     }
+
+                    // A reply arrived, so the answer is knowable: reload unless
+                    // it is explicitly the unlocked one. Unparseable means the
+                    // lock screen came back instead.
+                    return response.json().then(
+                        (payload) => {
+                            if (! payload || payload.locked !== false) {
+                                window.location.reload();
+                            }
+                        },
+                        () => window.location.reload(),
+                    );
                 })
                 .catch(() => {
-                    // Swallow — the next navigation is gated the same way.
+                    // Swallow — the request itself failed, which says nothing
+                    // about the lock. Reloading on a dropped connection would
+                    // spin. The next navigation is gated the same way.
                 });
         },
 
@@ -382,10 +453,54 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            // Navigating away hides this document too, and the hide is
+            // indistinguishable from backgrounding by the time
+            // visibilitychange runs. pagehide fires first when a document is
+            // being replaced, so the flag is set in time.
+            //
+            // Without this, every in-app navigation POSTed /lock/background.
+            // The server pulls that marker on the next request to clear it —
+            // but the marker is written by a keepalive POST that lands ~30ms
+            // AFTER the incoming page's own GET, so nothing was there to pull
+            // and the marker simply waited. A user reading one page for longer
+            // than the 30s grace was then locked on their next tap, whatever
+            // their idle timeout said.
+            //
+            // `persisted` is NOT the discriminator, though the first version of
+            // this read it as one. Chrome reports false for an ordinary
+            // navigation, but WebKit bfcaches the outgoing document and reports
+            // **true** for the same navigation — measured on an iPhone as
+            // `pagehide persisted=true t=30996` then `visibilitychange hidden
+            // t=30997`. Keying off it meant the fix worked on Android and left
+            // iOS locking ~75s into a five-minute timeout without the app ever
+            // leaving the foreground.
+            //
+            // What actually separates the two cases is whether pagehide fires
+            // at all. Backgrounding an app shell does not unload its document,
+            // so only a replacement raises it — on either engine. And the flag
+            // cannot go stale, because a document being replaced has no later:
+            // the one exception is bfcache restore, where this very document
+            // lives again, which pageshow tells us about.
+            this._unloading = false;
+
+            window.addEventListener('pagehide', () => {
+                this._unloading = true;
+            });
+
+            window.addEventListener('pageshow', () => {
+                this._unloading = false;
+            });
+
             // Visibility change: background → show veil + start grace.
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
+                    // The veil is unconditional: it is a privacy screen, and
+                    // a torn-down document is about to disappear anyway.
                     this.showVeil();
+
+                    if (this._unloading) {
+                        return;
+                    }
 
                     // Both: the timer is the fast path where it genuinely
                     // runs, the marker is what survives a suspended WebView.

@@ -11,7 +11,6 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
-    use Illuminate\Support\Number;
     $currentYear = (int) now()->format('Y');
 @endphp
 
@@ -32,7 +31,7 @@
                         {{ (int) $year->year }}
                     </span>
                     <span style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
-                        {{ Number::currency(abs((int) $year->total_minor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}
+                        {{ Money::ofMinor(abs((int) $year->total_minor), 'EUR')->format() }}
                     </span>
                 </article>
             @endforeach

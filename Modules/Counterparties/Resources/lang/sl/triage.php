@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Ujemanje vzorca: **:name** — nizka zanesljivost. Pred povezavo preveri.',
     'suggestion_high' => '✨ Izgleda kot **:name** — visoka zanesljivost',
 
+    'reasoning' => ':hits od :total nedavnih transakcij na tem IBAN-u kaže na :name.',
     'yes_link' => 'Da, poveži z :name ↵',
     'no_not' => 'Ne, ni :name',
 

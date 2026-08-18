@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Lagret som beatrax-recovery-codes-:username.txt',
     'confirm' => 'Jeg har lagret disse kodene på et trygt sted.',
     'continue' => 'Fortsett til Beatrax',
+
+    'settings' => [
+        'heading' => 'Gjenopprettingskoder',
+        'body' => 'Gjenopprettingskoder er den eneste veien tilbake til kontoen din hvis du glemmer passordet.',
+        'warning' => 'De lagres hashet og kan derfor ikke vises igjen. Et nytt sett gjør det gamle ugyldig med en gang.',
+        'regenerate' => 'Lag nye koder',
+    ],
 ];

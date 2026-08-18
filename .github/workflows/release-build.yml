@@ -344,17 +344,24 @@ jobs:
                   done
                   export ANDROID_KEYSTORE_FILE="$GITHUB_WORKSPACE/mobile-app/credentials/app-release-key.jks"
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
-                  # native:package, never native:run --build=release: the latter
-                  # has no signing validation and emits app-release-unsigned.apk
-                  # while still reporting success.
-                  php artisan native:package android --build-type=release --no-interaction
+                  # mobile:package-android, never native:package directly and
+                  # never native:run --build=release. native:package returns
+                  # success whatever goes wrong — including with no Android
+                  # project to build, which is the state a `composer install`
+                  # checkout is in. The wrapper generates the project, applies
+                  # the shell patches and fails unless an artifact exists.
+                  php artisan mobile:package-android --build-type=release --no-interaction
 
             - name: Verify the APK is signed by the release key
               env:
                   EXPECTED_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
               run: |
                   set -euo pipefail
-                  apk=$(find mobile-app -name '*.apk' -not -name '*unsigned*' -print -quit)
+                  # Scoped to Gradle's release output rather than the whole
+                  # mobile root, so an intermediate or stale APK elsewhere in
+                  # the tree cannot stand in for the one just built.
+                  apk=$(find mobile-app/nativephp/android/app/build/outputs/apk/release \
+                      -name '*.apk' -not -name '*unsigned*' -print -quit 2>/dev/null || true)
                   if [ -z "$apk" ]; then
                       echo "::error::no signed APK was produced."
                       exit 1

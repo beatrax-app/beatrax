@@ -24,6 +24,11 @@
     output (raw-output Blade) is forbidden in this view —
     system_alerts.message may carry operator-controlled text that we
     treat as untrusted.
+
+    Each row stacks below `sm` and only sits the actions beside the
+    message from `sm` up. The buttons do not shrink, so on a phone a
+    side-by-side row left the message a ~130px column and broke one
+    sentence over six lines.
 --}}
 @use('Modules\Core\Public\Support\Lang')
 <section
@@ -48,7 +53,7 @@
         @switch ($alert->severity)
             @case ('critical')
                 <div role="alert" class="rounded-lg border border-rose-500 bg-rose-50 text-rose-900 p-4 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800">
-                    <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
                             <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
@@ -65,7 +70,7 @@
                 @break
             @case ('warning')
                 <div aria-live="polite" aria-atomic="true" class="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-4 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
-                    <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
                             <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">
@@ -82,7 +87,7 @@
                 @break
             @default
                 <div aria-live="polite" aria-atomic="true" class="rounded-lg border border-slate-200 bg-slate-50 text-slate-700 p-4 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700">
-                    <div class="flex items-start justify-between gap-4">
+                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-medium">@include('core::livewire.partials.system-alert-message', ['alert' => $alert])</p>
                             <p class="mt-1 text-xs" style="font-variant-numeric: tabular-nums;">

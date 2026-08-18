@@ -39,7 +39,7 @@
                 >&times;</button>
             @endif
         </span>
-        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.account_dialog') }}">
+        <div x-show="open" x-cloak x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.account_dialog') }}">
             <div class="srch-popover-inner">
                 @foreach ($availableAccounts as $account)
                     <label class="srch-check-row">
@@ -80,7 +80,7 @@
                 >&times;</button>
             @endif
         </span>
-        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.category_dialog') }}">
+        <div x-show="open" x-cloak x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.category_dialog') }}">
             <div class="srch-popover-inner">
                 @foreach ($availableCategories as $category)
                     <label class="srch-check-row">
@@ -120,7 +120,7 @@
                 >&times;</button>
             @endif
         </span>
-        <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.counterparty_dialog') }}">
+        <div x-show="open" x-cloak x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.counterparty_dialog') }}">
             <div class="srch-popover-inner">
                 @foreach ($availableCounterparties as $counterparty)
                     <label class="srch-check-row">
@@ -165,7 +165,7 @@
             >&times;</button>
         @endif
     </span>
-    <div x-show="open" x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.amount_dialog') }}">
+    <div x-show="open" x-cloak x-on:click.outside="open = false" x-transition class="srch-popover" role="dialog" aria-label="{{ Lang::get('reports::builder.filter.amount_dialog') }}">
         <div class="srch-popover-inner">
             <div class="srch-dir-group mb-3">
                 @foreach (['both' => Lang::get('reports::builder.filter.dir_both'), 'in' => Lang::get('reports::builder.filter.dir_in'), 'out' => Lang::get('reports::builder.filter.dir_out')] as $val => $lbl)

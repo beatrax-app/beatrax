@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Se finalizează…',
     'commit_count' => 'Finalizează tot (:count tranzacții) →',
     'commit_empty' => 'Finalizează tot (—) →',
+    'skip' => 'Omite deocamdată',
 
     'errors' => [
         'nothing_to_commit' => 'Nu e nimic de finalizat.',

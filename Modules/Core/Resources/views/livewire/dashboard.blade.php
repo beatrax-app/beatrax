@@ -288,9 +288,16 @@
             @else
                 {{-- overflow-x-auto, not overflow-hidden: four columns do not fit a
                      phone, and hidden CLIPPED them — the counterparty and amount
-                     simply vanished past the edge with no way to reach them. --}}
+                     simply vanished past the edge with no way to reach them.
+
+                     Scrolling was not enough either. With real data on a phone the
+                     table opened on DATUM / TEGENPARTIJ / CATEGORIE and BEDRAG sat
+                     past the right edge — the one figure the row exists to show,
+                     reachable only by swiping a table nothing marks as swipeable.
+                     `dash-recent-table` restacks each row at phone width so the
+                     amount is on screen without any gesture. --}}
                 <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                    <table class="dash-recent-table min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead class="bg-slate-50 dark:bg-slate-900">
                             <tr>
                                 <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('core::dashboard.th_date') }}</th>

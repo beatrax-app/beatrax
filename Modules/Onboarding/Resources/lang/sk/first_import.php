@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Potvrdzuje sa…',
     'commit_count' => 'Potvrdiť všetko (transakcie: :count) →',
     'commit_empty' => 'Potvrdiť všetko (—) →',
+    'skip' => 'Zatiaľ preskočiť',
 
     'errors' => [
         'nothing_to_commit' => 'Niet čo potvrdiť.',

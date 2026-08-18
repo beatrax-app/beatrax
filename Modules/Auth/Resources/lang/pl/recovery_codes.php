@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Zapisano jako beatrax-recovery-codes-:username.txt',
     'confirm' => 'Mam te kody zapisane w bezpiecznym miejscu.',
     'continue' => 'Przejdź do Beatrax',
+
+    'settings' => [
+        'heading' => 'Kody odzyskiwania',
+        'body' => 'Kody odzyskiwania to jedyny sposób, by wrócić na swoje konto, gdy zapomnisz hasła.',
+        'warning' => 'Są przechowywane w postaci skrótu, więc nie da się ich pokazać ponownie. Nowy zestaw natychmiast unieważnia poprzedni.',
+        'regenerate' => 'Wygeneruj nowe kody',
+    ],
 ];

@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Apstiprina…',
     'commit_count' => 'Apstiprināt visu (darījumi: :count) →',
     'commit_empty' => 'Apstiprināt visu (—) →',
+    'skip' => 'Pagaidām izlaist',
 
     'errors' => [
         'nothing_to_commit' => 'Nav ko apstiprināt.',

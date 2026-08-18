@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+// Keyed by the slug DefaultCategoryTreeSeeder assigns, which is stable and
+// never shown. The tree is created for every real user, so these names are
+// product copy rather than seeded demo data.
+return [
+    'income' => 'Prihodki',
+    'income-salary' => 'Plača',
+    'income-refunds' => 'Vračila',
+    'income-other' => 'Drugi prihodki',
+    'housing' => 'Stanovanje',
+    'housing-rent' => 'Najemnina / Hipoteka',
+    'housing-utilities' => 'Komunalne storitve',
+    'housing-internet' => 'Internet in telefon',
+    'groceries' => 'Živila',
+    'transport' => 'Prevoz',
+    'transport-public' => 'Javni prevoz',
+    'transport-fuel' => 'Gorivo',
+    'transport-car' => 'Vzdrževanje avta',
+    'insurance' => 'Zavarovanje',
+    'insurance-health' => 'Zdravstveno',
+    'insurance-liability' => 'Odgovornost',
+    'insurance-other' => 'Drugo',
+    'subscriptions' => 'Naročnine',
+    'subscriptions-streaming' => 'Pretakanje',
+    'subscriptions-music' => 'Glasba',
+    'subscriptions-cloud' => 'Oblak / Programska oprema',
+    'subscriptions-memberships' => 'Članarine',
+    'eating-out' => 'Restavracije',
+    'cash-withdrawal' => 'Dvig gotovine',
+    'healthcare' => 'Zdravstvo',
+    'personal-care' => 'Osebna nega',
+    'donations' => 'Donacije',
+    'transfers-internal' => 'Prenosi (interni)',
+    'fees' => 'Provizije',
+];

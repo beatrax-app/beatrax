@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Kirjataan…',
     'commit_count' => 'Kirjaa kaikki (:count tapahtumaa) →',
     'commit_empty' => 'Kirjaa kaikki (—) →',
+    'skip' => 'Ohita toistaiseksi',
 
     'errors' => [
         'nothing_to_commit' => 'Ei mitään kirjattavaa.',

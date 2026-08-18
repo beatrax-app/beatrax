@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Potvrđivanje…',
     'commit_count' => 'Potvrdi sve (:count transakcija) →',
     'commit_empty' => 'Potvrdi sve (—) →',
+    'skip' => 'Preskoči zasad',
 
     'errors' => [
         'nothing_to_commit' => 'Nema ničega za potvrdu.',

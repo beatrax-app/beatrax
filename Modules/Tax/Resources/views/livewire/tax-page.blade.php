@@ -104,23 +104,35 @@
         {{-- UI-SPEC Section 9 — country not yet set                            --}}
         {{-- ────────────────────────────────────────────────────────────────── --}}
 
+        {{-- A prompt, not a wall.
+
+             This used to replace the entire page, so a user whose dashboard
+             card read "BELASTING 2026 · € 1.237,89 · 18 items getagd" tapped
+             through and was told only that the app did not know which country
+             they file in. Two screens contradicting each other about money is
+             worse than either being incomplete.
+
+             The country is not a precondition for any of it: TaxPage builds
+             $data from the tagged items before it ever looks the country up.
+             So the prompt sits above the figures it refines, and the figures
+             stay on screen. --}}
         @if (! $hasTaxCountry)
-            <div class="mx-auto max-w-md">
-                <div class="card p-8 text-center" style="border-radius: var(--radius-xl); box-shadow: var(--shadow-md);">
-                    <h2 style="font-size: var(--text-xl); font-weight: 600; color: var(--color-text); margin-bottom: var(--space-4);">
-                        {{ Lang::get('tax::page.country_prompt_heading') }}
-                    </h2>
-                    <p style="font-size: var(--text-base); color: var(--color-text-muted); margin-bottom: var(--space-6);">
-                        {{ Lang::get('tax::page.country_prompt_body') }}
-                    </p>
-                    <a
-                        href="{{ route('settings') }}#tax"
-                        class="pill-btn-primary"
-                        style="display: inline-block; text-decoration: none;"
-                    >{{ Lang::get('tax::page.country_prompt_cta') }}</a>
-                </div>
+            <div class="card mb-6 p-4" style="border-radius: var(--radius-lg);">
+                <p style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin: 0 0 var(--space-1);">
+                    {{ Lang::get('tax::page.country_prompt_heading') }}
+                </p>
+                <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 var(--space-3);">
+                    {{ Lang::get('tax::page.country_prompt_body') }}
+                </p>
+                <a
+                    href="{{ route('settings') }}#tax"
+                    class="pill-btn-primary"
+                    style="display: inline-block; text-decoration: none;"
+                >{{ Lang::get('tax::page.country_prompt_cta') }}</a>
             </div>
-        @elseif ($data !== null)
+        @endif
+
+        @if ($data !== null)
 
         {{-- ────────────────────────────────────────────────────────────────── --}}
         {{-- Year-totals strip (D-11/D-12)                                      --}}

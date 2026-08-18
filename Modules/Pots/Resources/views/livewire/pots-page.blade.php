@@ -433,8 +433,12 @@
                     type="submit"
                     class="flex-1 rounded-md bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-700 focus:outline-none dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                 >{{ $editPotId ? Lang::get('pots::messages.form.save_changes') : Lang::get('pots::messages.form.save_pot') }}</button>
+                {{-- Closes on the client too: the sheet's open flag is
+                     Alpine's, so wire:click alone cleared the form and left
+                     the panel on screen. Same defect as the goals sheet. --}}
                 <button
                     type="button"
+                    x-on:click="open = false"
                     wire:click="cancel"
                     class="rounded-md border border-slate-200 px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-900 focus:outline-none dark:border-slate-700 dark:hover:text-slate-100"
                 >{{ Lang::get('pots::messages.common.cancel') }}</button>
@@ -454,7 +458,7 @@
                     id="fund-amount-sheet"
                     wire:model="operationAmount"
                     inputmode="decimal"
-                    placeholder="0.00"
+                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
@@ -517,7 +521,7 @@
                     id="move-amount-sheet"
                     wire:model="operationAmount"
                     inputmode="decimal"
-                    placeholder="0.00"
+                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 />
@@ -589,7 +593,7 @@
                             id="pot-amount"
                             wire:model="amount"
                             inputmode="decimal"
-                            placeholder="0.00"
+                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                             @if ($errorAmount !== '') aria-invalid="true" aria-describedby="pot-amount-error" @endif
                             class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                             style="font-variant-numeric: tabular-nums;"
@@ -673,7 +677,7 @@
                         id="fund-amount"
                         wire:model="operationAmount"
                         inputmode="decimal"
-                        placeholder="0.00"
+                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                         @if ($errorAmount !== '') aria-invalid="true" aria-describedby="fund-amount-error" @endif
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-variant-numeric: tabular-nums;"
@@ -748,7 +752,7 @@
                         id="move-amount"
                         wire:model="operationAmount"
                         inputmode="decimal"
-                        placeholder="0.00"
+                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                         @if ($errorAmount !== '') aria-invalid="true" aria-describedby="move-amount-error" @endif
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-variant-numeric: tabular-nums;"
@@ -807,7 +811,7 @@
                         id="withdraw-amount"
                         wire:model="operationAmount"
                         inputmode="decimal"
-                        placeholder="0.00"
+                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                         @if ($errorAmount !== '') aria-invalid="true" aria-describedby="withdraw-amount-error" @endif
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-variant-numeric: tabular-nums;"

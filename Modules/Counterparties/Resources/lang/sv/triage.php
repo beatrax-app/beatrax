@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Mönsterträff: **:name** — låg säkerhet. Kontrollera innan du kopplar.',
     'suggestion_high' => '✨ Ser ut som **:name** — hög säkerhet',
 
+    'reasoning' => ':hits av :total senaste transaktioner på detta IBAN pekar mot :name.',
     'yes_link' => 'Ja, koppla till :name ↵',
     'no_not' => 'Nej, inte :name',
 

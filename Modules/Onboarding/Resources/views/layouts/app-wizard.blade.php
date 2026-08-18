@@ -14,7 +14,12 @@
 >
     <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {{-- viewport-fit=cover is what makes iOS populate env(safe-area-inset-*);
+             without it the wizard chrome draws under the notch. The app and lock
+             layouts already carry it — this shell was the only one that did not.
+             Android does not use env() at all: its shell injects --inset-* onto
+             :root, which --safe-* reads through max(). --}}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').' · Beatrax' }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />

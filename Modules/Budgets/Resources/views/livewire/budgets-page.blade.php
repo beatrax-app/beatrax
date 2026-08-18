@@ -128,7 +128,7 @@
                                 wire:keydown.enter="setAssigned({{ $row->categoryId }})"
                                 wire:blur="setAssigned({{ $row->categoryId }})"
                                 aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
-                                placeholder="0.00"
+                                placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                                 class="w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                 style="font-variant-numeric: tabular-nums;"
                             >
@@ -252,7 +252,7 @@
                             wire:keydown.enter="setAssigned({{ $row->categoryId }})"
                             wire:blur="setAssigned({{ $row->categoryId }})"
                             aria-label="{{ Lang::get('budgets::messages.row.assigned_aria', ['category' => $row->categoryName]) }}"
-                            placeholder="0.00"
+                            placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                             class="amount w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                             style="font-variant-numeric: tabular-nums;"
                         >
@@ -315,7 +315,7 @@
                         id="envelope-move-amount"
                         wire:model="moveAmount"
                         inputmode="decimal"
-                        placeholder="0.00"
+                        placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                         @if ($moveError !== '') aria-invalid="true" aria-describedby="envelope-move-amount-error" @endif
                         class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                         style="font-variant-numeric: tabular-nums;"
@@ -371,7 +371,7 @@
                     id="envelope-move-amount-sheet"
                     wire:model="moveAmount"
                     inputmode="decimal"
-                    placeholder="0.00"
+                    placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                     style="font-size: 16px; font-variant-numeric: tabular-nums;"
                     class="block w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                 >

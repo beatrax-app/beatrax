@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Sparad som beatrax-recovery-codes-:username.txt',
     'confirm' => 'Jag har sparat koderna på ett säkert ställe.',
     'continue' => 'Fortsätt till Beatrax',
+
+    'settings' => [
+        'heading' => 'Återställningskoder',
+        'body' => 'Återställningskoder är den enda vägen tillbaka till ditt konto om du glömmer lösenordet.',
+        'warning' => 'De sparas hashade och kan därför inte visas igen. En ny uppsättning ogiltigförklarar den gamla direkt.',
+        'regenerate' => 'Skapa nya koder',
+    ],
 ];

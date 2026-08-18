@@ -113,3 +113,22 @@ it('round-trips default_currency_view = original into the user row', function ()
     expect($this->user->default_currency_view)->toBe('original');
     expect($this->user->period_start_day)->toBe(25);
 })->group('phase-3');
+
+/*
+ * A `1fr` grid track takes min-content as its automatic minimum, so the tax
+ * deduction-category rows — a long label plus two ghost buttons, ~367px of
+ * min-content — pushed their whole settings section 92px past its container
+ * and 35px off a 390px screen, clipping the Rename and Archive buttons. The
+ * track is capped and the row wraps.
+ */
+it('keeps a settings section inside its container on a phone', function (): void {
+    $css = (string) file_get_contents(base_path('resources/css/app.css'));
+
+    expect($css)->toContain('grid-template-columns: minmax(0, 1fr);')
+        ->toContain('grid-template-columns: 280px minmax(0, 1fr);')
+        ->not->toContain('grid-template-columns: 280px 1fr;');
+
+    $toggleRow = substr($css, (int) strpos($css, '.toggle-row {'), 500);
+
+    expect($toggleRow)->toContain('flex-wrap: wrap;');
+});

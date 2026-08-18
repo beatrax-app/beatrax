@@ -151,12 +151,10 @@
 
                 <div class="space-y-2">
                     <label for="import-aliases-file" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('import::aliases.import_from_yaml') }}</label>
-                    <input
-                        type="file"
+                    <x-core::file-input
                         id="import-aliases-file"
                         wire:model="importFile"
                         accept=".yaml,.yml"
-                        class="block text-sm text-slate-700 dark:text-slate-300"
                     />
                     @error('importFile')
                         <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>

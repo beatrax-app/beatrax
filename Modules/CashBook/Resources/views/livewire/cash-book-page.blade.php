@@ -39,11 +39,11 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="space-y-1">
                 <label for="cb-amount" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.amount') }}</label>
-                <input id="cb-amount" type="text" inputmode="decimal" wire:model="amount" placeholder="0.00" class="{{ $input }}" />
+                <input id="cb-amount" type="text" inputmode="decimal" wire:model="amount" placeholder="{{ Lang::get('core::components.amount_placeholder') }}" class="{{ $input }}" />
             </div>
             <div class="space-y-1">
                 <label for="cb-date" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.date') }}</label>
-                <input id="cb-date" type="date" wire:model="date" class="{{ $input }}" />
+                <x-core::date-input field-id="cb-date" wire:model="date" />
             </div>
             <div class="space-y-1">
                 <label for="cb-counterparty" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('cashbook::cash-book.counterparty') }}</label>

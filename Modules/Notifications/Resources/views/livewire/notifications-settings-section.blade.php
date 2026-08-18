@@ -130,22 +130,16 @@
                 <div class="grid grid-cols-2 gap-4" wire:transition>
                     <div class="space-y-1">
                         <label for="quietHoursFrom" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.quiet_hours.from') }}</label>
-                        <input
-                            type="time"
-                            id="quietHoursFrom"
-                            name="quietHoursFrom"
+                        <x-core::time-input
+                            field-id="quietHoursFrom"
                             wire:model="quietHoursFrom"
-                            class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                         />
                     </div>
                     <div class="space-y-1">
                         <label for="quietHoursTo" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('notifications::settings.quiet_hours.to') }}</label>
-                        <input
-                            type="time"
-                            id="quietHoursTo"
-                            name="quietHoursTo"
+                        <x-core::time-input
+                            field-id="quietHoursTo"
                             wire:model="quietHoursTo"
-                            class="block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                         />
                     </div>
                 </div>

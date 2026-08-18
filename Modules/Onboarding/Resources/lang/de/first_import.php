@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Wird übernommen…',
     'commit_count' => 'Alles übernehmen (:count Transaktionen) →',
     'commit_empty' => 'Alles übernehmen (—) →',
+    'skip' => 'Vorerst überspringen',
 
     'errors' => [
         'nothing_to_commit' => 'Nichts zu übernehmen.',

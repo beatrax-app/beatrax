@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Kuvio-osuma: **:name** — varmuus matala. Tarkista ennen linkitystä.',
     'suggestion_high' => '✨ Näyttää olevan **:name** — varmuus korkea',
 
+    'reasoning' => ':hits/:total viimeaikaisesta tapahtumasta tällä IBANilla viittaa :name.',
     'yes_link' => 'Kyllä, linkitä kohteeseen :name ↵',
     'no_not' => 'Ei, ei ole :name',
 

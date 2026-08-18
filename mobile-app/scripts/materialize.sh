@@ -78,6 +78,24 @@ rsync -a --copy-links --delete \
     --exclude='.git/' \
     "${SRC}/" "${OUT}/"
 
+# --- Carry the generated-shell patch scripts into the tree. ------------------
+# They live at the DESKTOP root, and the mobile root reaches them at
+# ../scripts. This output IS that mobile root, standing on its own — so ../
+# climbs out of the build repo and the patches are unreachable. Copied to
+# scripts/ instead, which is where NativeBuildPatches::locate() looks first.
+#
+# Without them a Bifrost artifact ships with no camera permission, no cookie
+# persistence, no shell theming, no boot splash, the framework's icon, and —
+# on Android — no file chooser at all, so nothing can be imported.
+mkdir -p "${OUT}/scripts"
+patches=("${REPO_ROOT}"/scripts/nativephp_*.php)
+if [[ ! -e "${patches[0]}" ]]; then
+    echo "::error:: no nativephp_*.php patch scripts at ${REPO_ROOT}/scripts" >&2
+    exit 4
+fi
+cp "${patches[@]}" "${OUT}/scripts/"
+echo "materialize: carried ${#patches[@]} patch scripts into scripts/"
+
 # --- Ensure Laravel's writable runtime directories exist. --------------------
 # These dirs hold only machine-generated, gitignored content, so git never
 # tracks the empty dirs and they vanish from a clean checkout — which is what

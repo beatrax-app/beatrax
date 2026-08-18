@@ -27,4 +27,26 @@ return [
         'open_nav' => 'Otvoriť navigáciu',
         'search_transactions' => 'Hľadať transakcie',
     ],
+
+    'file' => [
+        'choose' => 'Vybrať súbor',
+        'none' => 'Nevybraný žiadny súbor',
+        'count' => 'Vybraných súborov: :count',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Vyber dátum',
+        'prev_month' => 'Predchádzajúci mesiac',
+        'next_month' => 'Ďalší mesiac',
+        'today' => 'Dnes',
+        'clear' => 'Vymazať',
+    ],
+
+    'time' => [
+        'open' => 'Vyber čas',
+        'hour' => 'Hodina',
+        'minute' => 'Minúta',
+    ],
 ];

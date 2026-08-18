@@ -57,12 +57,10 @@
         <div class="space-y-1">
             <label for="as-of-input-{{ $accountId }}" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::opening_balance.as_of_label') }}</label>
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::opening_balance.as_of_help') }}</p>
-            <input
-                type="date"
-                id="as-of-input-{{ $accountId }}"
+            <x-core::date-input
+                field-id="as-of-input-{{ $accountId }}"
                 wire:model="asOfInput"
-                class="w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700"
-            >
+            />
         </div>
     </div>
 

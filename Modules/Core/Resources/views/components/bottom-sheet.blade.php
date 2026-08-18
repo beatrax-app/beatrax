@@ -31,6 +31,11 @@
 <div
     x-data="{ open: false }"
     x-on:open-sheet.window="($event.detail && $event.detail.name === {{ Js::from($name) }}) && (open = true)"
+    {{-- The mirror of open-sheet. Without it the sheet could only be dismissed
+         by the scrim or Escape: a labelled Close button doing wire:click
+         reached the server, reset the form, and left the panel sitting open,
+         because its open state lives here in Alpine and nothing told it. --}}
+    x-on:close-sheet.window="($event.detail && $event.detail.name === {{ Js::from($name) }}) && (open = false)"
 >
     {{-- Scrim: only rendered/shown at phone width (CSS .bottom-sheet-scrim display:none at desktop) --}}
     <div
@@ -41,9 +46,19 @@
         aria-hidden="true"
     ></div>
 
-    {{-- Bottom sheet panel --}}
+    {{-- Bottom sheet panel.
+
+         x-cloak AND the inline display:none, matching the scrim above. The
+         panel carried neither, so between first paint and Alpine booting the
+         whole sheet — heading, every field, both buttons — painted expanded
+         over the page on every full load, for ≥50ms. The scrim did not paint
+         with it, so it read as a form appearing and vanishing. The inline
+         style is what holds before the stylesheet arrives; x-cloak is what
+         holds if a transition leaves the inline value cleared. --}}
     <div
         class="bottom-sheet"
+        x-cloak
+        style="display: none;"
         x-show="open"
         x-transition:enter="transition ease-[var(--ease-smooth)] duration-[250ms]"
         x-transition:enter-start="translate-y-full"

@@ -216,7 +216,6 @@
 </div>
 
 <style>
-    [x-cloak] { display: none !important; }
     @keyframes cursor-blink-1s { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
     .cursor-blink { animation: cursor-blink-1s 1s steps(1) infinite; }
 </style>

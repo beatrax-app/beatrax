@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Shranjeno kot beatrax-recovery-codes-:username.txt',
     'confirm' => 'Kode so shranjene na varnem mestu.',
     'continue' => 'Nadaljuj na Beatrax',
+
+    'settings' => [
+        'heading' => 'Kode za obnovitev',
+        'body' => 'Kode za obnovitev so edina pot nazaj v tvoj račun, če pozabiš geslo.',
+        'warning' => 'Shranjene so zgoščene, zato jih ni mogoče znova prikazati. Nov nabor takoj razveljavi starega.',
+        'regenerate' => 'Ustvari nove kode',
+    ],
 ];

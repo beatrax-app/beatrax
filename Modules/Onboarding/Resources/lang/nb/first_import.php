@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Bokfører…',
     'commit_count' => 'Bokfør alt (:count transaksjoner) →',
     'commit_empty' => 'Bokfør alt (—) →',
+    'skip' => 'Hopp over for nå',
 
     'errors' => [
         'nothing_to_commit' => 'Ingenting å bokføre.',

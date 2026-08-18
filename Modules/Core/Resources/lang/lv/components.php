@@ -27,4 +27,26 @@ return [
         'open_nav' => 'Atvērt navigāciju',
         'search_transactions' => 'Meklēt darījumus',
     ],
+
+    'file' => [
+        'choose' => 'Izvēlēties failu',
+        'none' => 'Neviens fails nav izvēlēts',
+        'count' => 'Izvēlēti :count faili',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Izvēlieties datumu',
+        'prev_month' => 'Iepriekšējais mēnesis',
+        'next_month' => 'Nākamais mēnesis',
+        'today' => 'Šodien',
+        'clear' => 'Notīrīt',
+    ],
+
+    'time' => [
+        'open' => 'Izvēlieties laiku',
+        'hour' => 'Stunda',
+        'minute' => 'Minūte',
+    ],
 ];

@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Validation…',
     'commit_count' => 'Tout valider (:count transactions) →',
     'commit_empty' => 'Tout valider (—) →',
+    'skip' => 'Passer pour l\'instant',
 
     'errors' => [
         'nothing_to_commit' => 'Rien à valider.',

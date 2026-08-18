@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Kalıp eşleşmesi: **:name** — güven düşük. Bağlamadan önce doğrula.',
     'suggestion_high' => '✨ **:name** gibi görünüyor — güven yüksek',
 
+    'reasoning' => 'Bu IBAN\'daki :total yakın tarihli işlemden :hits tanesi :name ile eşleşiyor.',
     'yes_link' => 'Evet, :name ile bağla ↵',
     'no_not' => 'Hayır, :name değil',
 

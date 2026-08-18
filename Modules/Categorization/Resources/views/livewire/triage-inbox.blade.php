@@ -7,13 +7,17 @@
 
 <div class="space-y-6">
     <header>
-        <div class="flex items-baseline justify-between gap-4">
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('categorization::triage.heading') }}</h1>
+        {{-- flex-wrap + shrink-0: at phone width the heading and the action
+             were both compressed rather than reflowed, breaking the button
+             label over two lines beside the H1. The action wraps to its own
+             row intact instead. Same shape as the /drift header. --}}
+        <div class="flex flex-wrap items-baseline justify-between gap-4">
+            <h1 class="min-w-0 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">{{ Lang::get('categorization::triage.heading') }}</h1>
             <button
                 type="button"
                 wire:click="save"
                 @disabled(count($pending) === 0)
-                class="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                class="inline-flex shrink-0 items-center whitespace-nowrap rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >{{ Lang::get('categorization::triage.save_categories') }}</button>
         </div>
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -52,9 +56,17 @@
             {{-- overflow-x-auto, not overflow-hidden: this table is the only
                  rendering of these rows at every width, and hidden CLIPPED the
                  right-hand columns on a phone rather than letting them scroll —
-                 so the category picker and row actions were unreachable. --}}
+                 so the category picker and row actions were unreachable.
+
+                 Scrolling was still not good enough. With real data the table
+                 is 484px against 346px of room, so it opens on DATUM /
+                 WINKELIER / BEDRAG and the category picker — the only control
+                 on a screen whose entire purpose is choosing a category — is
+                 off the right edge, reachable only by swiping a table nothing
+                 marks as swipeable. `triage-inbox-table` restacks the row below
+                 768px so the picker and the row actions are simply there. --}}
             <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                <table class="triage-inbox-table min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                     <thead class="bg-slate-50 dark:bg-slate-900">
                         <tr>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::triage.col_date') }}</th>

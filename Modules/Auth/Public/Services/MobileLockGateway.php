@@ -7,6 +7,7 @@ namespace Modules\Auth\Public\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
+use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PinVerificationService;
@@ -18,6 +19,14 @@ use Modules\Core\Public\Contracts\Clock;
  */
 final class MobileLockGateway
 {
+    // Where an unlocked session resumes, in precedence order. Two tiers because
+    // a lock arrives by two routes: a middleware redirect leaves `url.intended`,
+    // a client-engaged lock leaves only the last page. Published here because
+    // the mobile lock screen is in another module and AppLockMiddleware is Internal.
+    public const SESSION_INTENDED_URL = 'url.intended';
+
+    public const SESSION_LAST_PAGE = AppLockMiddleware::SESSION_LAST_PAGE;
+
     public function __construct(
         private readonly PinVerificationService $verifier,
         private readonly BiometricDeviceStore $biometricStore,

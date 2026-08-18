@@ -146,6 +146,27 @@ enum Locale: string
         };
     }
 
+    // The digit-group separator this language writes, transcribed from the
+    // ICU 77/78 data for the same locale. It is here rather than read from
+    // ext-intl because the mobile PHP build ships ICU with English-only
+    // locale data, so on device the library cannot answer the question.
+    public function groupMark(): string
+    {
+        return match ($this) {
+            self::En => ',',
+            self::Fr => "\u{202F}",
+            self::Bg, self::Cs, self::Et, self::Fi, self::Hu, self::Lt,
+            self::Lv, self::Nb, self::Pl, self::Sk, self::Sv, self::Uk => "\u{00A0}",
+            self::Da, self::De, self::El, self::Es, self::Hr, self::It,
+            self::Nl, self::Pt, self::Ro, self::Sl, self::Sr, self::Tr => '.',
+        };
+    }
+
+    public function decimalMark(): string
+    {
+        return $this === self::En ? '.' : ',';
+    }
+
     // The language codes, DEFAULT first, so Symfony's getPreferredLanguage()
     // falls back to English rather than to whichever case is declared first.
     /**

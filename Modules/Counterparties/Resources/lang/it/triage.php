@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Corrispondenza per schema: **:name** — affidabilità bassa. Verifica prima di collegare.',
     'suggestion_high' => '✨ Sembra **:name** — affidabilità alta',
 
+    'reasoning' => ':hits di :total transazioni recenti su questo IBAN portano a :name.',
     'yes_link' => 'Sì, collega a :name ↵',
     'no_not' => 'No, non è :name',
 

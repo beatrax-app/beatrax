@@ -24,17 +24,45 @@ final readonly class NativeBuildPatches
     // anything network-bound.
     private const TIMEOUT_SECONDS = 60;
 
+    // Every patch composer applies, because every build regenerates the project
+    // that carries them. NativeBuildPatchCoverageTest holds the two lists
+    // together — the file chooser was in composer's and not in this one, and a
+    // CI-built APK would have shipped with no way to take a file in at all.
     private const SCRIPTS = [
         'nativephp_grant_webview_camera.php',
+        'nativephp_android_file_chooser.php',
         'nativephp_keep_webview_cookies.php',
         'nativephp_theme_native_shell.php',
         'nativephp_brand_boot_splash.php',
+        'nativephp_android_adaptive_icon.php',
+        'nativephp_ios_app_icon.php',
         'nativephp_extend_bundle_copy_timeout.php',
+        'nativephp_ios_request_body_stream.php',
+        'nativephp_ios_download_delegate.php',
     ];
 
     public function __construct(
         private LoggerInterface $log,
     ) {}
+
+    // Where the patch scripts are, which is not one place: the dev mobile root
+    // reaches them at ../scripts, while a Bifrost tree is materialized FROM
+    // that root, so ../ climbs out of the build repo. Probed by content —
+    // both roots have a scripts/ directory, only one has these in it.
+    public static function locate(string $basePath): ?string
+    {
+        $probe = self::SCRIPTS[0];
+
+        foreach ([$basePath, dirname($basePath)] as $root) {
+            $candidate = $root.DIRECTORY_SEPARATOR.'scripts';
+
+            if (is_file($candidate.DIRECTORY_SEPARATOR.$probe)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
 
     // $scriptsDirectory is the repository's scripts/ folder. Missing scripts
     // are skipped: this same provider boots from roots that do not ship them.

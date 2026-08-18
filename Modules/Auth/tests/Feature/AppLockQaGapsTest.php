@@ -7,6 +7,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Modules\Auth\Internal\Http\Livewire\AppLockSettingsSection;
@@ -226,11 +227,23 @@ it('Livewire update requests do NOT refresh last_activity_at (WR-04)', function 
         'updated_at' => CarbonImmutable::now()->toDateTimeString(),
     ]);
 
-    // A request carrying the X-Livewire header (poll / update traffic) must
-    // not count as user activity.
+    // Livewire's update endpoint — wire:poll and component-update traffic —
+    // must not count as user activity.
+    //
+    // Recognised by ROUTE NAME, not by the X-Livewire header this used to
+    // send. Under NativePHP's Android runtime the PHP process is persistent
+    // and HTTP_X_LIVEWIRE leaks from one Livewire POST onto every ordinary
+    // page load that follows it, so the header was answering "yes" for the
+    // rest of the app's life and no navigation refreshed the timer again.
+    // Livewire renames a custom update route to END with `livewire.update`,
+    // which is why the middleware matches the wildcard rather than the
+    // literal name.
+    Route::middleware(['web', 'auth'])
+        ->get('/__lock-livewire-probe', static fn (): string => 'ok')
+        ->name('probe.livewire.update');
+
     $this->withSession([LockStateManager::SESSION_KEY => false])
-        ->withHeaders(['X-Livewire' => '1'])
-        ->get('/help/data-locations');
+        ->get('/__lock-livewire-probe');
 
     $row = DB::connection()->table('user_app_lock_configs')
         ->where('user_id', $user->id)

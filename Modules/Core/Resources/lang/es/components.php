@@ -27,4 +27,26 @@ return [
         'open_nav' => 'Abrir la navegación',
         'search_transactions' => 'Buscar transacciones',
     ],
+
+    'file' => [
+        'choose' => 'Elegir archivo',
+        'none' => 'Ningún archivo seleccionado',
+        'count' => ':count archivos seleccionados',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Elegir una fecha',
+        'prev_month' => 'Mes anterior',
+        'next_month' => 'Mes siguiente',
+        'today' => 'Hoy',
+        'clear' => 'Borrar',
+    ],
+
+    'time' => [
+        'open' => 'Elegir una hora',
+        'hour' => 'Hora',
+        'minute' => 'Minuto',
+    ],
 ];
