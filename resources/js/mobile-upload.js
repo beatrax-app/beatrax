@@ -15,9 +15,16 @@
  * transport that quietly truncated a statement would corrupt an import rather
  * than fail it.
  *
- * Only where multipart genuinely cannot cross. On http/https — desktop, web,
- * and the Android shell, which serves real http — this does nothing at all and
- * Livewire's own transport is used untouched.
+ * Only where multipart genuinely cannot cross, and the SERVER says where that
+ * is. This used to test location.protocol and treat http as proof that
+ * multipart worked — which read Android's real http://127.0.0.1 as safe. It is
+ * not: measured on a device, Livewire's multipart POST returns 200 with
+ * `{"paths":[]}`, PHP having parsed no file at all, and the component then dies
+ * on `Undefined array key 0` in WithFileUploads. Two different runtimes, one
+ * fault, and the scheme did not distinguish them.
+ *
+ * The flag is shared by the same provider that registers the decoding
+ * middleware, so the encoder and the decoder cannot disagree.
  */
 
 // Livewire's endpoint carries a per-install prefix (`/livewire-46b0b3d4/…`),
@@ -29,7 +36,7 @@ const TRANSPORT_MARKER = 'base64';
 
 /** Whether this runtime can carry a multipart body at all. */
 function carriesMultipart() {
-    return window.location.protocol === 'http:' || window.location.protocol === 'https:';
+    return document.querySelector('meta[name="beatrax-upload-transport"][content="base64"]') === null;
 }
 
 /*
