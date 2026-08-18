@@ -194,6 +194,17 @@ it('refuses when packaging produced no artifact', function (): void {
     ]))->toBe(1);
 });
 
+it('goes and asks Gradle why, rather than listing what it might have been', function (): void {
+    // native:package prints "Running Gradle" and then nothing on a failed
+    // build, and still returns 0 — so the reason has to be fetched. With no
+    // wrapper on disk it cannot be, and says so instead of staying silent.
+    expect(packageAndroid(files: [
+        'isFile' => [packageAndroidRoot().'/nativephp/android/app/build/outputs/apk/release/app-release.apk' => false],
+    ]))->toBe(1);
+
+    expect(Artisan::output())->toContain('Gradle cannot be asked what went wrong');
+});
+
 it('refuses an artifact of zero bytes', function (): void {
     expect(packageAndroid(files: ['size' => 0]))->toBe(1);
 });

@@ -10,6 +10,7 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Mobile\Internal\Boot\AndroidVersionCode;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
 use Modules\Mobile\Internal\Boot\PinnedAppId;
+use Symfony\Component\Process\Process;
 
 /**
  * @link ../../../.docs/features/mobile/architecture.md
@@ -30,6 +31,9 @@ final class PackageAndroidCommand extends Command
     private const PROJECT = 'nativephp/android';
 
     private const GRADLE = 'nativephp/android/app/build.gradle.kts';
+
+    // A release assemble on a cold CI runner, with no daemon to reuse.
+    private const GRADLE_TIMEOUT_SECONDS = 1800;
 
     public function __construct(
         private readonly Filesystem $files,
@@ -86,12 +90,10 @@ final class PackageAndroidCommand extends Command
         ]);
 
         if (! $this->files->isFile($artifact) || $this->files->size($artifact) === 0) {
+            $this->reportGradleFailure($buildType);
+
             return $this->refuse(
-                "native:package android --build-type={$buildType} produced nothing at {$artifact}. "
-                .'That command returns success whatever goes wrong, so its own output above is the '
-                .'only account of the cause — most often an absent Android SDK, a Gradle failure, or '
-                .'a missing ANDROID_KEYSTORE_FILE / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / '
-                .'ANDROID_KEY_PASSWORD.',
+                "native:package android --build-type={$buildType} produced nothing at {$artifact}.",
             );
         }
 
@@ -105,6 +107,35 @@ final class PackageAndroidCommand extends Command
         $this->components->info("Packaged {$artifact} as {$appId}");
 
         return self::SUCCESS;
+    }
+
+    // native:package swallows Gradle's output whole: on a failed build it
+    // prints "Running Gradle" and then nothing, and returns 0. So the reason is
+    // fetched rather than guessed at — one more Gradle run, only ever on the
+    // failing path, is worth far more than a list of things it might have been.
+    private function reportGradleFailure(string $buildType): void
+    {
+        $project = $this->laravel->basePath(self::PROJECT);
+        $wrapper = $project.DIRECTORY_SEPARATOR.'gradlew';
+
+        if (! $this->files->isFile($wrapper)) {
+            $this->components->warn(
+                "No {$wrapper}, so Gradle cannot be asked what went wrong. Most often that means "
+                .'native:install never produced a project at all.',
+            );
+
+            return;
+        }
+
+        $this->components->info('Re-running Gradle to recover the error it printed to nobody.');
+
+        $task = $buildType === 'bundle' ? 'bundleRelease' : 'assembleRelease';
+
+        $gradle = new Process([$wrapper, $task, '--stacktrace', '--no-daemon'], $project);
+        $gradle->setTimeout(self::GRADLE_TIMEOUT_SECONDS);
+        $gradle->run(function (string $type, string $buffer): void {
+            $this->output->write($buffer);
+        });
     }
 
     private function appIdPinFailure(string $appId): ?string
