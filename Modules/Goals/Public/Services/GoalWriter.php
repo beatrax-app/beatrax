@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Modules\Goals\Public\Services;
 
 use Carbon\CarbonImmutable;
-use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
-use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
@@ -20,27 +18,19 @@ use Modules\Ledger\Public\ValueObjects\MoneyInput;
  */
 final class GoalWriter
 {
-    public function __construct(
-        private readonly DatabaseManager $db,
-    ) {}
-
     /**
      * @throws InvalidGoalAmountException when `$rawAmount` is invalid or non-positive.
-     * @throws \InvalidArgumentException when `$accountId` is not owned by `$user`.
      */
     public function save(
         User $user,
         string $name,
         string $rawAmount,
         string $targetDate,
-        ?int $accountId,
     ): Goal {
         $minor = $this->parseAmount($rawAmount);
         if ($minor === null) {
             throw new InvalidGoalAmountException('Invalid or non-positive target amount.');
         }
-
-        $this->assertOwnedAccountOrNull($user, $accountId);
 
         // Always create a fresh goal — an updateOrCreate keyed on (user_id,
         // name, start_date) would silently overwrite an existing same-name
@@ -50,7 +40,6 @@ final class GoalWriter
             'user_id' => $user->id,
             'name' => $name,
             'start_date' => CarbonImmutable::today()->toDateString(),
-            'account_id' => $accountId,
             'target_minor' => $minor,
             'target_currency' => $user->base_currency,
             'target_date' => $targetDate,
@@ -61,7 +50,6 @@ final class GoalWriter
     /**
      * @throws GoalNotFoundException when the goal is not found (cross-user / missing).
      * @throws InvalidGoalAmountException when `$rawAmount` is invalid or non-positive.
-     * @throws \InvalidArgumentException when `$accountId` is not owned by `$user`.
      */
     public function update(
         User $user,
@@ -69,7 +57,6 @@ final class GoalWriter
         string $name,
         string $rawAmount,
         string $targetDate,
-        ?int $accountId,
     ): Goal {
         $goal = $this->findOwnedGoal($user, $goalId);
         if (! $goal instanceof Goal) {
@@ -81,12 +68,9 @@ final class GoalWriter
             throw new InvalidGoalAmountException('Invalid or non-positive target amount.');
         }
 
-        $this->assertOwnedAccountOrNull($user, $accountId);
-
         $goal->name = $name;
         $goal->target_minor = $minor;
         $goal->target_date = CarbonImmutable::parse($targetDate);
-        $goal->account_id = $accountId;
         $goal->save();
 
         return $goal;
@@ -143,25 +127,5 @@ final class GoalWriter
             ->withoutGlobalScope(UserScope::class)
             ->where('user_id', $user->id)
             ->find($goalId);
-    }
-
-    /**
-     * @throws \InvalidArgumentException when `$accountId` is not owned by `$user`.
-     */
-    private function assertOwnedAccountOrNull(User $user, ?int $accountId): void
-    {
-        if ($accountId === null) {
-            return;
-        }
-
-        $exists = $this->db->connection()
-            ->table('accounts')
-            ->where('user_id', $user->id)
-            ->where('id', $accountId)
-            ->exists();
-
-        if (! $exists) {
-            throw new \InvalidArgumentException(Lang::get('goals::messages.errors.account_not_owned'));
-        }
     }
 }

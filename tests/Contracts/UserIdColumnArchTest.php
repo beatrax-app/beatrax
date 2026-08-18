@@ -23,6 +23,7 @@ it('every domain table has a nullable user_id column for multi-user readiness', 
         'user_recovery_codes',
         'transaction_splits',
         'envelope_moves',
+        'goal_contributions',
     ];
 
     foreach ($domainTables as $table) {

@@ -70,6 +70,15 @@ return [
         'submit' => 'Mainīt',
     ],
 
+    'goal' => [
+        'heading' => 'Uzkrājumu mērķis',
+        'help' => 'Ieskaitiet šo darījumu vienā no saviem uzkrājumu mērķiem.',
+        'choose_aria' => 'Izvēlieties uzkrājumu mērķi',
+        'choose_option' => 'Izvēlieties mērķi…',
+        'submit' => 'Pievienot mērķim',
+        'remove_aria' => 'Noņemt :name',
+    ],
+
     'delete' => [
         'heading' => 'Dzēst darījumu',
         'help' => 'Neatgriezeniski dzēš šo darījumu. Šo darbību nevar atsaukt.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Piezīme saglabāta',
         'unreconciled' => 'Saskaņojums atcelts — varat atkal rediģēt šo darījumu.',
         'counterparty_updated' => 'Darījuma partneris atjaunināts',
+        'goal_attributed' => 'Ieskaitīts šajā mērķī',
+        'goal_attribution_removed' => 'Vairs netiek ieskaitīts šajā mērķī',
         'split_saved' => 'Sadalījums saglabāts',
         'removed_one_remains' => 'Noņemts — palikusi viena kategorija',
         'unsplit_restored' => 'Sadalījums atcelts — atjaunota viena kategorija',

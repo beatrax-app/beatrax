@@ -21,6 +21,8 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Support\Lang;
+use Modules\Goals\Public\Services\GoalContributionQuery;
+use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Ledger\Internal\Http\Livewire\Concerns\ManagesSplitEditor;
 use Modules\Ledger\Models\Transaction;
 use Modules\Ledger\Public\Contracts\ReassignsCounterparty;
@@ -400,6 +402,34 @@ final class TransactionDetail extends Component
         $this->toast(Lang::get('ledger::detail.toast.counterparty_updated'));
     }
 
+    // Counts this transaction toward a savings goal. Deliberately NOT
+    // behind the reconciled lock the sibling mutators use: an attribution
+    // is a separate row that leaves the reconciled transaction untouched,
+    // and a reconciled row is exactly the confirmed money a goal wants.
+    public function attributeToGoal(
+        int $goalId,
+        CurrentUser $currentUser,
+        GoalContributionWriter $contributions,
+    ): void {
+        if (! $contributions->attribute($currentUser->user(), $goalId, $this->transactionId)) {
+            return;
+        }
+
+        $this->toast(Lang::get('ledger::detail.toast.goal_attributed'));
+    }
+
+    public function removeGoalAttribution(
+        int $goalId,
+        CurrentUser $currentUser,
+        GoalContributionWriter $contributions,
+    ): void {
+        if (! $contributions->detach($currentUser->user(), $goalId, $this->transactionId)) {
+            return;
+        }
+
+        $this->toast(Lang::get('ledger::detail.toast.goal_attribution_removed'));
+    }
+
     // Deletes this transaction and emits a tombstone op so the Sync
     // engine propagates the deletion across devices; redirects to the
     // transactions list after a successful delete.
@@ -519,6 +549,7 @@ final class TransactionDetail extends Component
         TaxTagQuery $taxTagQuery,
         DatabaseManager $db,
         CategoryOptionsQuery $categoryOptions,
+        GoalContributionQuery $goalContributions,
         SensitiveColumnCodec $codec,
         Session $session,
     ): View {
@@ -596,6 +627,8 @@ final class TransactionDetail extends Component
             'counterparties' => $counterparties,
             'isSplittable' => $isSplittable,
             'splitCategories' => $splitCategories,
+            'goalOptions' => $goalContributions->attributableGoals($currentUser->user()),
+            'attributedGoals' => $goalContributions->forTransaction($currentUser->user(), $this->transactionId),
         ]);
 
         /** @phpstan-ignore-next-line method.notFound — registered at runtime by Livewire's SupportPageComponents */

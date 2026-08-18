@@ -55,6 +55,11 @@ Notable per-table quirks:
   the `id` NOT NULL constraint. `notifications.state` is the opposite case:
   deliberately absent from the registry entirely, since it is locally derived
   by `NotificationStateMachine` and never synced.
+- `envelope_moves` and `goal_contributions` are append-only ledgers: a row
+  exists or it does not, so both carry `_create_required` and `_delete_wins`
+  and **no** strategy key at all. A SET op against either is meaningless, and
+  `SyncCaptureListener` logs an `edit` on `goal_contributions` as an unknown
+  mutation type rather than writing one.
 
 ## At-rest encryption (Group Data Key)
 

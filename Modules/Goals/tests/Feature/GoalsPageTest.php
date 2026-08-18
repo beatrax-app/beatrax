@@ -57,34 +57,15 @@ it('creates a goal, writes a goals row, and dispatches a toast', function (): vo
         ->set('name', 'Emergency fund')
         ->set('targetAmount', '1000.00')
         ->set('targetDate', '2027-01-01')
-        ->set('accountId', (string) $this->account->id)
         ->call('createGoal')
         ->assertDispatched('toast');
 
     $this->assertDatabaseHas('goals', [
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'name' => 'Emergency fund',
         'target_minor' => 100000,
         'target_currency' => 'EUR',
         'status' => 'active',
-    ]);
-});
-
-it('creates an unlinked goal when no account is selected', function (): void {
-    Livewire::test(GoalsPage::class)
-        ->set('name', 'Holiday fund')
-        ->set('targetAmount', '500')
-        ->set('targetDate', '2027-06-01')
-        ->set('accountId', '')
-        ->call('createGoal')
-        ->assertDispatched('toast');
-
-    $this->assertDatabaseHas('goals', [
-        'user_id' => $this->user->id,
-        'account_id' => null,
-        'name' => 'Holiday fund',
-        'target_minor' => 50000,
     ]);
 });
 
@@ -130,7 +111,6 @@ it('parses the Dutch grouped amount format', function (): void {
 it('updates an existing goals name and target via edit', function (): void {
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'name' => 'Old name',
         'target_minor' => 50000,
         'status' => 'active',
@@ -154,7 +134,6 @@ it('updates an existing goals name and target via edit', function (): void {
 it('openEdit prefills the target date so the edit can be saved without re-entry', function (): void {
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'name' => 'Old name',
         'target_minor' => 50000,
         'target_date' => '2027-06-01',
@@ -284,17 +263,36 @@ it('shows a date error when the target date is blank', function (): void {
     $this->assertDatabaseMissing('goals', ['name' => 'Dated goal']);
 });
 
-it('surfaces a linked-pot error when the goal write rejects the account', function (): void {
+it('surfaces a linked-pot error when the goal write rejects the pot', function (): void {
+    $other = User::create([
+        'username' => 'mallory-pot',
+        'password' => 'x',
+        'period_start_day' => 1,
+    ]);
+    $foreignAccount = Account::create([
+        'user_id' => $other->id,
+        'name' => 'Mallory ASN',
+        'slug' => 'mallory-asn',
+        'kind' => 'bank',
+        'iban' => 'NL57ASNB1111111111',
+        'default_currency' => 'EUR',
+    ]);
+    $foreignPot = Pot::factory()->create([
+        'user_id' => $other->id,
+        'account_id' => $foreignAccount->id,
+        'goal_id' => null,
+        'category_id' => null,
+    ]);
+
     Livewire::test(GoalsPage::class)
-        ->set('name', 'Bad account goal')
+        ->set('name', 'Bad pot goal')
         ->set('targetAmount', '1000.00')
         ->set('targetDate', '2027-01-01')
-        ->set('accountId', '999999')
+        ->set('linkedPotId', (string) $foreignPot->id)
         ->call('createGoal')
-        ->assertSet('errorLinkedPot', 'Account not owned by the authenticated user.')
         ->assertNotDispatched('toast');
 
-    $this->assertDatabaseMissing('goals', ['name' => 'Bad account goal']);
+    $this->assertDatabaseMissing('goals', ['name' => 'Bad pot goal']);
 });
 
 it('resets the form instead of writing when updating a goal the user does not own', function (): void {
@@ -341,7 +339,6 @@ it('links a selected pot to the goal on create', function (): void {
         ->set('name', 'Linked goal')
         ->set('targetAmount', '1000.00')
         ->set('targetDate', '2027-01-01')
-        ->set('accountId', (string) $this->account->id)
         ->set('linkedPotId', (string) $pot->id)
         ->call('createGoal')
         ->assertDispatched('toast');
@@ -353,7 +350,6 @@ it('links a selected pot to the goal on create', function (): void {
 it('relinks the goal to a different pot on update', function (): void {
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'status' => 'active',
     ]);
     $potA = Pot::factory()->create([
@@ -372,7 +368,6 @@ it('relinks the goal to a different pot on update', function (): void {
         ->set('name', 'Renamed')
         ->set('targetAmount', '500.00')
         ->set('targetDate', '2027-06-01')
-        ->set('accountId', (string) $this->account->id)
         ->set('linkedPotId', (string) $potB->id)
         ->call('updateGoal')
         ->assertDispatched('toast');
@@ -384,7 +379,6 @@ it('relinks the goal to a different pot on update', function (): void {
 it('clears the pot link when the picker is emptied on update', function (): void {
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'status' => 'active',
     ]);
     $pot = Pot::factory()->create([

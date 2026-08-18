@@ -197,6 +197,13 @@ final class MergeRulesRegistry
                 '_delete_wins' => true,
                 '_create_required' => ['name', 'target_minor'],
             ],
+            // Append-only attribution pivot, mirroring envelope_moves: an
+            // attribution exists or it does not, so there is no LWW-mutable
+            // field and no strategy key — only create and delete.
+            'goal_contributions' => [
+                '_delete_wins' => true,
+                '_create_required' => ['goal_id', 'transaction_id'],
+            ],
             // `default_currency` carries a DB default('EUR') so it MUST NOT
             // appear in `_create_required` (same trap as saved_reports.pinned /
             // envelope_settings.overspend_mode). name/kind/iban are the

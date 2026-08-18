@@ -66,16 +66,14 @@ it('hides another users goals via the BelongsToUser global scope', function (): 
 it('stores nullable user_id when no user is set', function (): void {
     $goal = Goal::factory()->create([
         'user_id' => null,
-        'account_id' => null,
-        'name' => 'Unlinked goal',
+        'name' => 'Ownerless goal',
         'target_minor' => 100000,
     ]);
 
     $this->assertDatabaseHas('goals', [
         'id' => $goal->id,
         'user_id' => null,
-        'account_id' => null,
-        'name' => 'Unlinked goal',
+        'name' => 'Ownerless goal',
         'target_minor' => 100000,
     ]);
 });

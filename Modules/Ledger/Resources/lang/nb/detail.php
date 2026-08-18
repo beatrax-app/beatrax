@@ -70,6 +70,15 @@ return [
         'submit' => 'Tildel',
     ],
 
+    'goal' => [
+        'heading' => 'Sparemål',
+        'help' => 'Tell denne transaksjonen med i et av sparemålene dine.',
+        'choose_aria' => 'Velg et sparemål',
+        'choose_option' => 'Velg et mål…',
+        'submit' => 'Legg til i målet',
+        'remove_aria' => 'Fjern :name',
+    ],
+
     'delete' => [
         'heading' => 'Slett transaksjonen',
         'help' => 'Fjerner denne transaksjonen permanent. Handlingen kan ikke angres.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Notatet er lagret',
         'unreconciled' => 'Avstemmingen er opphevet — du kan redigere transaksjonen igjen.',
         'counterparty_updated' => 'Motparten er oppdatert',
+        'goal_attributed' => 'Telles med i dette målet',
+        'goal_attribution_removed' => 'Telles ikke lenger med i dette målet',
         'split_saved' => 'Oppdelingen er lagret',
         'removed_one_remains' => 'Fjernet — én kategori står igjen',
         'unsplit_restored' => 'Oppdelingen er opphevet — gjenopprettet til én kategori',

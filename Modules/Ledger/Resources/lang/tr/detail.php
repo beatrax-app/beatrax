@@ -70,6 +70,15 @@ return [
         'submit' => 'Yeniden ata',
     ],
 
+    'goal' => [
+        'heading' => 'Birikim hedefi',
+        'help' => 'Bu işlemi birikim hedeflerinden birine say.',
+        'choose_aria' => 'Bir birikim hedefi seç',
+        'choose_option' => 'Bir hedef seç…',
+        'submit' => 'Hedefe ekle',
+        'remove_aria' => ':name kaldır',
+    ],
+
     'delete' => [
         'heading' => 'İşlemi sil',
         'help' => 'Bu işlemi kalıcı olarak kaldırır. Bu eylem geri alınamaz.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Not kaydedildi',
         'unreconciled' => 'Mutabakat geri alındı — bu işlemi yeniden düzenleyebilirsin.',
         'counterparty_updated' => 'Karşı taraf güncellendi',
+        'goal_attributed' => 'Bu hedefe sayılıyor',
+        'goal_attribution_removed' => 'Artık bu hedefe sayılmıyor',
         'split_saved' => 'Bölüştürme kaydedildi',
         'removed_one_remains' => 'Kaldırıldı — bir kategori kaldı',
         'unsplit_restored' => 'Bölme geri alındı — tek kategoriye döndürüldü',

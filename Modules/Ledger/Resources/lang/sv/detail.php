@@ -70,6 +70,15 @@ return [
         'submit' => 'Tilldela',
     ],
 
+    'goal' => [
+        'heading' => 'Sparmål',
+        'help' => 'Räkna den här transaktionen mot ett av dina sparmål.',
+        'choose_aria' => 'Välj ett sparmål',
+        'choose_option' => 'Välj ett mål…',
+        'submit' => 'Lägg till i målet',
+        'remove_aria' => 'Ta bort :name',
+    ],
+
     'delete' => [
         'heading' => 'Ta bort transaktionen',
         'help' => 'Tar bort den här transaktionen permanent. Åtgärden kan inte ångras.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Anteckningen sparad',
         'unreconciled' => 'Avstämningen hävd — du kan redigera transaktionen igen.',
         'counterparty_updated' => 'Motparten uppdaterad',
+        'goal_attributed' => 'Räknas mot det här målet',
+        'goal_attribution_removed' => 'Räknas inte längre mot det här målet',
         'split_saved' => 'Uppdelningen sparad',
         'removed_one_remains' => 'Borttagen — en kategori återstår',
         'unsplit_restored' => 'Uppdelningen borttagen — återställd till en enda kategori',

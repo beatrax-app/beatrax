@@ -70,6 +70,15 @@ return [
         'submit' => 'Réattribuer',
     ],
 
+    'goal' => [
+        'heading' => "Objectif d'épargne",
+        'help' => "Comptabiliser cette transaction dans l'un de tes objectifs d'épargne.",
+        'choose_aria' => "Choisir un objectif d'épargne",
+        'choose_option' => 'Choisir un objectif…',
+        'submit' => "Ajouter à l'objectif",
+        'remove_aria' => 'Retirer :name',
+    ],
+
     'delete' => [
         'heading' => 'Supprimer la transaction',
         'help' => 'Supprime définitivement cette transaction. Cette action est irréversible.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Note enregistrée',
         'unreconciled' => 'Rapprochement annulé — tu peux de nouveau modifier cette transaction.',
         'counterparty_updated' => 'Tiers mis à jour',
+        'goal_attributed' => 'Comptabilisé dans cet objectif',
+        'goal_attribution_removed' => "N'est plus comptabilisé dans cet objectif",
         'split_saved' => 'Ventilation enregistrée',
         'removed_one_remains' => 'Supprimée — une catégorie reste',
         'unsplit_restored' => 'Ventilation annulée — rétablie en une seule catégorie',

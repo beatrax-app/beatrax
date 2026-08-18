@@ -1,7 +1,7 @@
 {
     "name": "Goals",
     "alias": "goals",
-    "description": "Savings goals with linked-account contribution tracking and projected finish dates.",
+    "description": "Savings goals funded by a linked pot or explicitly attributed transactions, with projected finish dates.",
     "keywords": ["goals", "savings", "projection"],
     "priority": 9,
     "providers": [

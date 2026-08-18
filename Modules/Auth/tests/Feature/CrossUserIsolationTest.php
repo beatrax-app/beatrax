@@ -667,7 +667,6 @@ it('does not bleed the owner goals into the partner goals page', function (): vo
     $insertGoal = function (int $userId, string $name): void {
         $this->db->connection()->table('goals')->insert([
             'user_id' => $userId,
-            'account_id' => null,
             'name' => $name,
             'target_minor' => 100000,
             'target_currency' => 'EUR',

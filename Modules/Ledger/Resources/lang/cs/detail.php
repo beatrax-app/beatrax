@@ -70,6 +70,15 @@ return [
         'submit' => 'Změnit',
     ],
 
+    'goal' => [
+        'heading' => 'Spořicí cíl',
+        'help' => 'Započítej tuto transakci do některého ze svých spořicích cílů.',
+        'choose_aria' => 'Vyber spořicí cíl',
+        'choose_option' => 'Vyber cíl…',
+        'submit' => 'Přidat k cíli',
+        'remove_aria' => 'Odebrat :name',
+    ],
+
     'delete' => [
         'heading' => 'Smazat transakci',
         'help' => 'Trvale odstraní tuto transakci. Tuhle akci nejde vzít zpět.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Poznámka uložena',
         'unreconciled' => 'Odsouhlasení zrušeno — transakci můžeš zase upravovat.',
         'counterparty_updated' => 'Protistrana upravena',
+        'goal_attributed' => 'Započítáno do tohoto cíle',
+        'goal_attribution_removed' => 'Už se do tohoto cíle nezapočítává',
         'split_saved' => 'Rozdělení uloženo',
         'removed_one_remains' => 'Odebráno — zůstala jedna kategorie',
         'unsplit_restored' => 'Rozdělení zrušeno — obnoveno na jedinou kategorii',

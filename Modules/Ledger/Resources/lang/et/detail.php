@@ -70,6 +70,15 @@ return [
         'submit' => 'Määra uuesti',
     ],
 
+    'goal' => [
+        'heading' => 'Säästueesmärk',
+        'help' => 'Arvesta see tehing mõne oma säästueesmärgi hulka.',
+        'choose_aria' => 'Vali säästueesmärk',
+        'choose_option' => 'Vali eesmärk…',
+        'submit' => 'Lisa eesmärgile',
+        'remove_aria' => 'Eemalda :name',
+    ],
+
     'delete' => [
         'heading' => 'Kustuta tehing',
         'help' => 'Eemaldab selle tehingu jäädavalt. Seda toimingut ei saa tagasi võtta.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Märkus salvestatud',
         'unreconciled' => 'Kooskõlastus tühistatud — saad seda tehingut jälle muuta.',
         'counterparty_updated' => 'Vastaspool uuendatud',
+        'goal_attributed' => 'Arvestatakse selle eesmärgi hulka',
+        'goal_attribution_removed' => 'Enam ei arvestata selle eesmärgi hulka',
         'split_saved' => 'Jaotus salvestatud',
         'removed_one_remains' => 'Eemaldatud — alles jäi üks kategooria',
         'unsplit_restored' => 'Jaotus tühistatud — taastatud ühe kategooriaga',

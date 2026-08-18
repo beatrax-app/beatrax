@@ -14,8 +14,6 @@ final class GoalProgressRow extends Data
     public function __construct(
         public readonly int $id,
         public readonly string $name,
-        public readonly ?int $accountId,
-        public readonly ?string $accountName,
         public readonly int $targetMinor,
         public readonly int $contributedMinor,
         public readonly string $currency,

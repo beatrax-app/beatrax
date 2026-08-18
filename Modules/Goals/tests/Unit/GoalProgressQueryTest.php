@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Modules\Core\Models\User;
 use Modules\Goals\Models\Goal;
+use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\ImportRun;
@@ -15,19 +16,12 @@ use Modules\Pots\Models\Pot;
 
 uses(RefreshDatabase::class);
 
-/**
- * Wave 0 RED stubs for GOAL-02 and GOAL-03.
- *
- * These tests reference GoalProgressQuery (Plan 02) and the GoalProgressRow DTO
- * (Plan 02). They will error with "class not found" until Plan 02 lands — that
- * is correct Wave 0 RED behaviour.
- *
- * Covers:
- *   GOAL-02: linked-account contribution sum = credits (type IN transfer_in,
- *            income) posted >= start_date; FX-converted to base currency.
- *   GOAL-03: fractionComplete / progressState buckets (in_progress / reached /
- *            overdue); unlinked goal yields 0/target with no projection;
- *            cross-user isolation (another user's transactions excluded).
+/*
+ * The read model behind /goals and the dashboard tile: contributed-vs-target,
+ * the progress buckets, and the FX conversion into the goal's own
+ * target_currency. Contributions come from a linked pot's balance or from the
+ * transactions the user attributed to the goal; the attribution semantics
+ * themselves live in GoalContributionsTest.
  */
 beforeEach(function (): void {
     $this->user = User::create([
@@ -57,12 +51,12 @@ beforeEach(function (): void {
 });
 
 /** Persist a transaction for $user. Reused verbatim from BudgetProgressQueryTest. */
-function goalTx(int $userId, int $accountId, int $runId, int $amountMinor, string $type, string $postedAt): void
+function goalTx(int $userId, int $accountId, int $runId, int $amountMinor, string $type, string $postedAt): Transaction
 {
     static $i = 0;
     $i++;
 
-    Transaction::create([
+    return Transaction::create([
         'user_id' => $userId,
         'account_id' => $accountId,
         'type' => $type,
@@ -85,71 +79,28 @@ function goalTx(int $userId, int $accountId, int $runId, int $amountMinor, strin
     ]);
 }
 
-// ---------------------------------------------------------------------------
-// GOAL-02: contribution sum from linked account since start_date
-// ---------------------------------------------------------------------------
-
-it('sums transfer_in and income credits since start_date for a linked goal', function (): void {
-    $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
-    $goal = Goal::factory()->create([
-        'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
-        'target_minor' => 200000,
-        'start_date' => $startDate,
-        'status' => 'active',
-    ]);
-
-    // These should count: transfer_in and income on/after start_date.
-    goalTx($this->user->id, $this->account->id, $this->run->id, 50000, 'transfer_in', $startDate);
-    goalTx($this->user->id, $this->account->id, $this->run->id, 30000, 'income', CarbonImmutable::now()->toDateString());
-
-    // This should NOT count: expense type.
-    goalTx($this->user->id, $this->account->id, $this->run->id, -10000, 'expense', CarbonImmutable::now()->toDateString());
-
-    // This should NOT count: before start_date.
-    goalTx($this->user->id, $this->account->id, $this->run->id, 20000, 'transfer_in', CarbonImmutable::now()->subDays(20)->toDateString());
-
-    $rows = app(GoalProgressQuery::class)->forUser($this->user);
-
-    expect($rows)->toHaveCount(1);
-    expect($rows[0]->contributedMinor)->toBe(80000);
-});
-
-it('excludes transfer_out and expense from contribution sum', function (): void {
-    $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
-    Goal::factory()->create([
-        'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
-        'target_minor' => 100000,
-        'start_date' => $startDate,
-        'status' => 'active',
-    ]);
-
-    goalTx($this->user->id, $this->account->id, $this->run->id, 40000, 'transfer_in', CarbonImmutable::now()->toDateString());
-    goalTx($this->user->id, $this->account->id, $this->run->id, -15000, 'expense', CarbonImmutable::now()->toDateString());
-    goalTx($this->user->id, $this->account->id, $this->run->id, -25000, 'transfer_out', CarbonImmutable::now()->toDateString());
-
-    $rows = app(GoalProgressQuery::class)->forUser($this->user);
-
-    expect($rows[0]->contributedMinor)->toBe(40000);
-});
+/** Persist a credit and attribute it to $goalId, the way the detail screen does. */
+function goalContribution(User $user, int $accountId, int $runId, int $goalId, int $amountMinor, string $postedAt): void
+{
+    $tx = goalTx($user->id, $accountId, $runId, $amountMinor, 'transfer_in', $postedAt);
+    app(GoalContributionWriter::class)->attribute($user, $goalId, $tx->id);
+}
 
 // ---------------------------------------------------------------------------
-// GOAL-03: fractionComplete, progressState buckets
+// fractionComplete, progressState buckets
 // ---------------------------------------------------------------------------
 
 it('computes fractionComplete and reports in_progress when below target', function (): void {
     $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 100000,
         'start_date' => $startDate,
         'target_date' => CarbonImmutable::now()->addDays(60)->toDateString(),
         'status' => 'active',
     ]);
 
-    goalTx($this->user->id, $this->account->id, $this->run->id, 40000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 40000, CarbonImmutable::now()->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
@@ -159,16 +110,15 @@ it('computes fractionComplete and reports in_progress when below target', functi
 
 it('reports reached when contributions meet or exceed target', function (): void {
     $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 50000,
         'start_date' => $startDate,
         'target_date' => CarbonImmutable::now()->addDays(30)->toDateString(),
         'status' => 'active',
     ]);
 
-    goalTx($this->user->id, $this->account->id, $this->run->id, 50000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 50000, CarbonImmutable::now()->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
@@ -178,26 +128,24 @@ it('reports reached when contributions meet or exceed target', function (): void
 
 it('reports overdue when past target_date without reaching target', function (): void {
     $startDate = CarbonImmutable::now()->subDays(60)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 100000,
         'start_date' => $startDate,
         'target_date' => CarbonImmutable::now()->subDay()->toDateString(), // yesterday = past due
         'status' => 'active',
     ]);
 
-    goalTx($this->user->id, $this->account->id, $this->run->id, 30000, 'transfer_in', CarbonImmutable::now()->subDays(10)->toDateString());
+    goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 30000, CarbonImmutable::now()->subDays(10)->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
     expect($rows[0]->progressState)->toBe('overdue');
 });
 
-it('returns 0 contributed and no projection for an unlinked goal', function (): void {
+it('returns 0 contributed and no projection for a goal nothing is attributed to', function (): void {
     Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => null, // unlinked
         'target_minor' => 100000,
         'start_date' => CarbonImmutable::now()->subDays(5)->toDateString(),
         'status' => 'active',
@@ -210,7 +158,7 @@ it('returns 0 contributed and no projection for an unlinked goal', function (): 
     expect($rows[0]->projectedFinishDate)->toBeNull();
 });
 
-it('excludes another users transactions from contribution sum', function (): void {
+it('excludes another users transactions on the same account from the contribution sum', function (): void {
     $other = User::create([
         'username' => 'mallory',
         'password' => 'x',
@@ -234,19 +182,20 @@ it('excludes another users transactions from contribution sum', function (): voi
     ]);
 
     $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 100000,
         'start_date' => $startDate,
         'status' => 'active',
     ]);
 
     // Wessel's legit contribution.
-    goalTx($this->user->id, $this->account->id, $this->run->id, 20000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 20000, CarbonImmutable::now()->toDateString());
 
-    // Mallory's transaction on the SAME account — should be excluded.
-    goalTx($other->id, $this->account->id, $otherRun->id, 80000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    // Mallory's transaction on the SAME account, aimed at Wessel's goal —
+    // the writer refuses it, so it never reaches the sum.
+    $foreign = goalTx($other->id, $this->account->id, $otherRun->id, 80000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    app(GoalContributionWriter::class)->attribute($this->user, $goal->id, $foreign->id);
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
@@ -279,9 +228,8 @@ it('converts contributions into the goal target_currency when it diverges from b
     ]);
 
     $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 110000,        // 1 100.00 USD
         'target_currency' => 'USD',
         'start_date' => $startDate,
@@ -290,7 +238,7 @@ it('converts contributions into the goal target_currency when it diverges from b
     ]);
 
     // A 1 000.00 EUR contribution → 1 100.00 USD at 1.10 → exactly the target.
-    goalTx($this->user->id, $this->account->id, $this->run->id, 100000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 100000, CarbonImmutable::now()->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
@@ -323,9 +271,8 @@ it('converts a USD contribution into the goal target_currency for a EUR goal', f
     ]);
 
     $startDate = CarbonImmutable::now()->subDays(5)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 200000,        // 2 000.00 EUR
         'target_currency' => 'EUR',
         'start_date' => $startDate,
@@ -334,7 +281,7 @@ it('converts a USD contribution into the goal target_currency for a EUR goal', f
     ]);
 
     // A 1 100.00 USD transfer_in → 1 000.00 EUR at 1/1.10 (exact, HALF_UP).
-    Transaction::create([
+    $usdTx = Transaction::create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
         'type' => 'transfer_in',
@@ -355,6 +302,7 @@ it('converts a USD contribution into the goal target_currency for a EUR goal', f
         'fingerprint' => str_pad('9001', 64, '0', STR_PAD_LEFT),
         'fingerprint_version' => 1,
     ]);
+    app(GoalContributionWriter::class)->attribute($this->user, $goal->id, $usdTx->id);
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
@@ -367,24 +315,19 @@ it('converts a USD contribution into the goal target_currency for a EUR goal', f
 });
 
 // ---------------------------------------------------------------------------
-// POTS-04 / D-10: linked pot balance drives goal progress
-//
-// These tests reference PotBalanceQuery (Plan 02) and GoalProgressQuery being
-// wired to inject PotBalanceQuery (Plan 04). They will fail until Plan 04
-// lands — that is correct Wave 0 RED behaviour.
+// A linked pot's balance drives goal progress
 // ---------------------------------------------------------------------------
 
-it('uses the linked pot balance as contributedMinor instead of the transaction sum', function (): void {
+it('uses the linked pot balance as contributedMinor instead of the attributed sum', function (): void {
     $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 100000,
         'start_date' => $startDate,
         'status' => 'active',
     ]);
 
-    // Create a pot linked to this goal (goal_id on pots table = the link, D-10 / POTS-04)
+    // The link lives on pots.goal_id.
     $pot = Pot::factory()->create([
         'user_id' => $this->user->id,
         'account_id' => $this->account->id,
@@ -404,13 +347,13 @@ it('uses the linked pot balance as contributedMinor instead of the transaction s
         'updated_at' => CarbonImmutable::now(),
     ]);
 
-    // Also add transfer_in transactions on the goal's account — these should
-    // NOT count because the linked-pot path overrides the transaction-sum path.
-    goalTx($this->user->id, $this->account->id, $this->run->id, 70000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    // Also attribute a credit to the same goal — it must NOT count, because
+    // the linked-pot path overrides the attributed-transaction path.
+    goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 70000, CarbonImmutable::now()->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
-    // contributedMinor must be the pot balance (40000), not the transaction sum (70000).
+    // contributedMinor must be the pot balance (40000), not the attributed sum (70000).
     expect($rows[0]->contributedMinor)->toBe(40000);
 });
 
@@ -429,7 +372,6 @@ it('converts a linked pot balance into the goal target_currency when they differ
 
     $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 200000,
         'target_currency' => 'EUR',
         'start_date' => CarbonImmutable::now()->subDays(10)->toDateString(),
@@ -463,21 +405,18 @@ it('converts a linked pot balance into the goal target_currency when they differ
     expect($rows[0]->currency)->toBe('EUR');
 });
 
-it('falls back to transfer tracking for a goal with no linked pot', function (): void {
+it('falls back to attributed transactions for a goal with no linked pot', function (): void {
     $startDate = CarbonImmutable::now()->subDays(10)->toDateString();
-    Goal::factory()->create([
+    $goal = Goal::factory()->create([
         'user_id' => $this->user->id,
-        'account_id' => $this->account->id,
         'target_minor' => 100000,
         'start_date' => $startDate,
         'status' => 'active',
     ]);
 
-    // No pot linked — Phase 2 transfer-tracking behavior is unchanged.
-    goalTx($this->user->id, $this->account->id, $this->run->id, 30000, 'transfer_in', CarbonImmutable::now()->toDateString());
+    goalContribution($this->user, $this->account->id, $this->run->id, $goal->id, 30000, CarbonImmutable::now()->toDateString());
 
     $rows = app(GoalProgressQuery::class)->forUser($this->user);
 
-    // contributedMinor must be the transaction sum (30000), not zero.
     expect($rows[0]->contributedMinor)->toBe(30000);
 });

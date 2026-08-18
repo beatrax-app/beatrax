@@ -70,6 +70,15 @@ return [
         'submit' => 'Zmeniť',
     ],
 
+    'goal' => [
+        'heading' => 'Sporiaci cieľ',
+        'help' => 'Započítaj túto transakciu do niektorého zo svojich sporiacich cieľov.',
+        'choose_aria' => 'Vyber sporiaci cieľ',
+        'choose_option' => 'Vyber cieľ…',
+        'submit' => 'Pridať k cieľu',
+        'remove_aria' => 'Odstrániť :name',
+    ],
+
     'delete' => [
         'heading' => 'Odstrániť transakciu',
         'help' => 'Natrvalo odstráni túto transakciu. Túto akciu nemožno vrátiť späť.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Poznámka uložená',
         'unreconciled' => 'Odsúhlasenie zrušené — transakciu môžeš znova upravovať.',
         'counterparty_updated' => 'Protistrana aktualizovaná',
+        'goal_attributed' => 'Započítané do tohto cieľa',
+        'goal_attribution_removed' => 'Už sa do tohto cieľa nezapočítava',
         'split_saved' => 'Rozdelenie uložené',
         'removed_one_remains' => 'Odstránené — zostáva jedna kategória',
         'unsplit_restored' => 'Rozdelenie zrušené — obnovené na jednu kategóriu',

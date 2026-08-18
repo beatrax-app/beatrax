@@ -70,6 +70,15 @@ return [
         'submit' => 'Reatribuir',
     ],
 
+    'goal' => [
+        'heading' => 'Objetivo de poupança',
+        'help' => 'Conta esta transação para um dos teus objetivos de poupança.',
+        'choose_aria' => 'Escolhe um objetivo de poupança',
+        'choose_option' => 'Escolhe um objetivo…',
+        'submit' => 'Adicionar ao objetivo',
+        'remove_aria' => 'Remover :name',
+    ],
+
     'delete' => [
         'heading' => 'Eliminar a transação',
         'help' => 'Remove permanentemente esta transação. Esta ação não pode ser anulada.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Nota guardada',
         'unreconciled' => 'Reconciliação anulada — podes voltar a editar esta transação.',
         'counterparty_updated' => 'Contraparte atualizada',
+        'goal_attributed' => 'Contabilizado neste objetivo',
+        'goal_attribution_removed' => 'Já não é contabilizado neste objetivo',
         'split_saved' => 'Divisão guardada',
         'removed_one_remains' => 'Removida — resta uma categoria',
         'unsplit_restored' => 'Divisão anulada — restaurada como categoria única',

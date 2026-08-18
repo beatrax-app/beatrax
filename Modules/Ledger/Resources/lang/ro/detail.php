@@ -70,6 +70,15 @@ return [
         'submit' => 'Reatribuie',
     ],
 
+    'goal' => [
+        'heading' => 'Obiectiv de economii',
+        'help' => 'Contorizează această tranzacție într-unul dintre obiectivele tale de economii.',
+        'choose_aria' => 'Alege un obiectiv de economii',
+        'choose_option' => 'Alege un obiectiv…',
+        'submit' => 'Adaugă la obiectiv',
+        'remove_aria' => 'Elimină :name',
+    ],
+
     'delete' => [
         'heading' => 'Șterge tranzacția',
         'help' => 'Elimină definitiv această tranzacție. Acțiunea nu poate fi anulată.',
@@ -90,6 +99,8 @@ return [
         'note_saved' => 'Notă salvată',
         'unreconciled' => 'Reconciliere anulată — poți edita din nou această tranzacție.',
         'counterparty_updated' => 'Contraparte actualizată',
+        'goal_attributed' => 'Contorizată în acest obiectiv',
+        'goal_attribution_removed' => 'Nu mai este contorizată în acest obiectiv',
         'split_saved' => 'Împărțire salvată',
         'removed_one_remains' => 'Eliminat — rămâne o singură categorie',
         'unsplit_restored' => 'Împărțire anulată — restaurată la o singură categorie',
