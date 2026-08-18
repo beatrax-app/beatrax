@@ -42,12 +42,20 @@ standard clock fake.
 
 ## The default year is seasonal
 
-With no `?year=` in the URL, `TaxPage::mount()` resolves January–April to
+With no `?year=` in the URL, the default year resolves January–April to
 the *previous* year and May–December to the current one, matching the
 Dutch `aangifte` filing season: someone opening `/tax` in February is
 almost certainly working on last year's return.
-`TaxSummaryCard::render()` applies the same rule so the dashboard card
-and the page it links to always agree.
+
+Unlike the SQL expression above, this rule is written down once, in
+`FilingSeason::defaultYear()`. `TaxPage::mount()` (the cockpit),
+`TaxSummaryCard::render()` (the dashboard card) and
+`HandlesTaxTagging::resolveCurrentTaxYear()` (the tag picker's fallback)
+all read it from there, and a unit test fails if any of them spells the
+comparison out again. Three copies agreeing because someone pasted the
+same line is not the same as agreeing by construction: the boundary month
+could move in one and not the others, and the split would only be visible
+between January and April.
 
 `#[Url(as: 'year', except: 0)]` makes the resolved year deep-linkable and
 back-button-safe. The `0` sentinel means "not yet resolved", which is why
