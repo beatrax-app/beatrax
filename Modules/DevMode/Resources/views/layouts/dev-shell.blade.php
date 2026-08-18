@@ -25,6 +25,12 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
+
+        {{-- See UploadSignalArchTest: every layout hosting posting UI has to
+             tell the client which upload transport this runtime can carry. --}}
+        @if (($beatraxEncodedUploads ?? false) === true)
+            <meta name="beatrax-upload-transport" content="base64" />
+        @endif
         <title>{{ $title ?? Lang::get('dev::shell.title_default') }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
         <x-core::head-assets />
