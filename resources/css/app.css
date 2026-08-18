@@ -1145,9 +1145,10 @@ td.date,
         margin: var(--space-6) 0;
     }
 
-    /* Four equal tracks at 390px leave each tile ~85px, and the labels break
-       one word per line — "Downloa / den", "CAMT.05 / 3 (.xml)". Two rows of
-       two is the same information at a readable measure.
+    /* Four equal tracks at 390px leave each tile ~85px, so the labels break
+       mid-word: the Dutch verb for downloading splits across two lines, and
+       so does "CAMT.053 (.xml)". Two rows of two is the same information at a
+       readable measure.
 
        Immediately after the rule it overrides, deliberately. Both live in
        @layer components and both are a single class, so a cascade layer
