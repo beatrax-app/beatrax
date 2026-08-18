@@ -240,10 +240,12 @@ final class PackageAndroidCommand extends Command
         $scripts = NativeBuildPatches::locate($this->laravel->basePath());
 
         if ($scripts === null) {
+            $base = $this->laravel->basePath();
+
             $this->components->warn(
-                "No patch scripts at {$scripts}. This build ships without the camera permission, "
-                .'cookie persistence, shell theming and boot splash patches. A materialized tree '
-                .'needs them copied in beside the app root.',
+                "No patch scripts in {$base}/scripts or its parent's. This build ships without the "
+                .'camera permission, the file chooser, cookie persistence, shell theming, the boot '
+                .'splash and the app icons. A materialized tree needs them copied in beside the app root.',
             );
 
             return;

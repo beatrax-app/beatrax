@@ -1,5 +1,12 @@
 @use('Modules\Core\Public\Support\Lang')
 @props(['accept' => '', 'multiple' => false])
+@php
+    // Pulled out of the bag so the id and the for= are both literal here. The
+    // id already reached the input through $attributes, and the label already
+    // wrapped it, but neither association was visible to anything reading the
+    // template — including the a11y scanner, which called the input orphaned.
+    $fieldId = $attributes->get('id');
+@endphp
 {{--
     A file picker the product can translate.
 
@@ -28,14 +35,17 @@
     }"
     {{ $attributes->only('class')->class(['flex flex-wrap items-center gap-2']) }}
 >
-    <label class="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-within:outline-none focus-within:ring-2 focus-within:ring-slate-900 focus-within:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+    <label
+        @if ($fieldId !== null) for="{{ $fieldId }}" @endif
+        class="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-within:outline-none focus-within:ring-2 focus-within:ring-slate-900 focus-within:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
         <input
             type="file"
             class="drop-zone-input"
             x-on:change="read($event.target)"
+            @if ($fieldId !== null) id="{{ $fieldId }}" @endif
             @if ($accept !== '') accept="{{ $accept }}" @endif
             @if ($multiple) multiple @endif
-            {{ $attributes->except('class') }}
+            {{ $attributes->except(['class', 'id']) }}
         />
         {{ Lang::get('core::components.file.choose') }}
     </label>
