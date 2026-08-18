@@ -197,11 +197,10 @@ final readonly class BuildConsolidatedPreviewQuery
             return 'empty';
         }
 
-        // A parse that failed contributes exactly one row, and that row is an
-        // error carrying the reason. Counted as neither committable nor
-        // duplicate, it used to leave the section 'ready' with a total of
-        // zero — so a statement the app had correctly refused was presented as
-        // read and fine, with a commit button under it.
+        // A failed parse contributes one row, an error carrying the reason.
+        // Counted as neither committable nor duplicate, it left the section
+        // 'ready' with a total of zero — a statement the app had correctly
+        // refused, presented as read and fine with a commit button under it.
         foreach ($allRows as $row) {
             if ($row->status !== 'error') {
                 return 'ready';
@@ -211,9 +210,10 @@ final readonly class BuildConsolidatedPreviewQuery
         return 'error';
     }
 
+    // The reason a section failed, in the parser's own words: which format it
+    // expected and what to re-download. Written to the log already; this is
+    // what carries it to the screen.
     /**
-     * The reason a section failed, as the parser stated it.
-     *
      * @param  list<PreviewRowDto>  $allRows
      */
     private function resolveSectionError(array $allRows): ?string
