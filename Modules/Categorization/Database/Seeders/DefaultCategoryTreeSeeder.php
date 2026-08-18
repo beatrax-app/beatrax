@@ -70,17 +70,11 @@ final class DefaultCategoryTreeSeeder extends Seeder
         }
     }
 
+    // Structure is re-asserted every run; the NAME is written once, at
+    // creation. The tree is shared and re-seeded per user, so rewriting names
+    // would retranslate a second user's categories into whatever locale was
+    // active and discard any rename the first had made. Editable data, not fixtures.
     /**
-     * Structure is re-asserted on every run; the NAME is written once, at
-     * creation, and never touched again.
-     *
-     * Both halves matter. The name is now the reader's language rather than a
-     * literal, and this tree is shared (`user_id => null`) and re-seeded
-     * whenever a user is installed — so rewriting names on every run would
-     * silently retranslate a second user's categories into whatever locale
-     * happened to be active, and would also have discarded any rename the
-     * first user had made. These rows are editable data, not fixtures.
-     *
      * @param  array{name: string, slug: string, kind: string}  $node
      */
     private function upsert(array $node, ?int $parentId, int $order): Category

@@ -519,3 +519,33 @@ are gateway-specific rather than pure delegation:
 - Both controllers are allow-listed in `AppLockMiddleware`'s route
   exemptions so a session that is already locked (or racing a lock) can
   still reach them to complete an unlock.
+
+### Why the mobile runtime forced two changes here
+
+Both of these were measured on an Android device, and neither reproduces on
+the desktop shell.
+
+**Livewire requests are recognised by route name, not the `X-Livewire`
+header.** Under NativePHP's Android runtime the PHP process is persistent and
+its superglobals are not fully rebuilt per request, so `HTTP_X_LIVEWIRE` set
+by one Livewire POST is still present on every ordinary page load that follows
+it in the same worker — for the rest of the app's life. The effect was that
+after the first Livewire request of a session, `last_activity_at` stopped
+moving entirely: every page load looked like machine traffic and took the
+early return in `recordActivity()`. A reader was locked out five minutes after
+their last Livewire request no matter how much they used the app, and no
+navigation was ever remembered to return them to. Livewire's update endpoint
+always carries its route name (it renames a custom route to end with it, hence
+the leading wildcard in the pattern), and a route is resolved per request by
+the router rather than read out of `$_SERVER`, so it cannot leak across
+requests the way the header does. It is the same signal Livewire itself uses
+to decide whether to run persistent middleware at all.
+
+**`LockLifecycleController::resume()` answers with a body, not a status or a
+redirect.** Neither survives the Android bridge: it follows the middleware's
+redirect in-process and hands the page back as an ordinary response, so the
+`fetch()` Response reads `redirected === false`. `lock.js` trusted that and
+therefore never reloaded on the phone — the previous screen stayed rendered
+and interactive over a locked session. A body the client has to parse cannot
+be forged by transport that rewrites metadata: the lock screen is HTML and
+fails the check.

@@ -17,7 +17,6 @@ use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Goals\Public\Services\GoalProgressQuery;
 use Modules\Goals\Public\Services\GoalWriter;
-use Modules\Ledger\Public\ValueObjects\Money;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
 use Modules\Pots\Public\Services\PotBalanceQuery;
@@ -118,12 +117,9 @@ final class GoalsPage extends Component
             if ($row->id === $goalId) {
                 $this->editGoalId = $goalId;
                 $this->name = $row->name;
-                // Integer-only minor -> display formatting — no float
-                // division on a money amount.
-                // MoneyInput::formatMinor, not a hand-rolled sprintf: it emits the
-                // same comma-decimal form the field's own placeholder shows and
-                // tryToMinor() parses back. The sprintf wrote 5000.00 into a
-                // field hinted 0,00 — two number conventions on one control.
+                // MoneyInput::formatMinor, not a hand-rolled sprintf: it emits
+                // the comma-decimal form the placeholder shows and tryToMinor()
+                // parses back, on integer minor units with no float division.
                 $this->targetAmount = MoneyInput::formatMinor($row->targetMinor);
                 $this->targetDate = $row->targetDate;
                 $this->accountId = $row->accountId !== null ? (string) $row->accountId : '';
@@ -131,13 +127,10 @@ final class GoalsPage extends Component
                 $this->linkedPotId = $linkedPotId !== null ? (string) $linkedPotId : '';
                 $this->clearErrors();
 
-                // Deliberately does NOT dispatch `modal-show`. Which surface
-                // this form opens in is a viewport decision, and both Edit
-                // buttons already make it — sheet below 768px, Flux modal
-                // above. Announcing it from the server overrode that and
-                // opened the desktop modal on a phone ON TOP of the bottom
-                // sheet the button had just opened: two copies of the same
-                // form stacked, one of them the wrong shape for the screen.
+                // Deliberately does NOT dispatch `modal-show`: which surface
+                // this opens in is a viewport decision both Edit buttons
+                // already make, and announcing it from the server stacked the
+                // desktop modal on top of the phone's bottom sheet.
 
                 return;
             }

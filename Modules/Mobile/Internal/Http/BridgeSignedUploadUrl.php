@@ -12,12 +12,10 @@ use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl;
 
-// The iOS shell serves the app under `php://` and swaps in a URL generator
-// whose formatScheme() answers that for every absolute URL Laravel writes —
-// including the string signedRoute() hashes. Verification cannot follow it:
-// hasValidSignature() rebuilds the URL from Request::url(), which is Symfony's
-// and can only ever say `http://`. The two halves hashed different strings, so
-// the upload endpoint answered 401 and no statement could be imported at all.
+// The iOS shell serves under `php://`, so signedRoute() hashes a `php://` URL
+// while hasValidSignature() rebuilds it from Symfony's Request::url(), which
+// can only say `http://`. The two halves hashed different strings and the
+// upload endpoint answered 401 for every statement.
 /**
  * @link ../../../../.docs/features/mobile/architecture.md
  */

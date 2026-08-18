@@ -310,7 +310,7 @@ it('exportPdf returns a response for an unauthenticated component instead of thr
     expect($response)->not->toBeNull();
 });
 
-it('shows the first-visit empty state when no tax country is set', function (): void {
+it('asks for the tax country above the figures rather than instead of them', function (): void {
     $user = taxPageUser(username: 'no-country-user', withCountry: false);
 
     $this->actingAs($user)
@@ -318,9 +318,10 @@ it('shows the first-visit empty state when no tax country is set', function (): 
         ->assertOk()
         ->assertSee('Which country do you file taxes in?')
         // CR-01 regression: the (non-existent) @return directive must not leak
-        // into the output, and the cockpit body must NOT render below the
-        // first-visit setup prompt.
+        // into the output.
         ->assertDontSee('@return')
-        ->assertDontSee('Total deductions')
-        ->assertDontSee('Nothing tagged for');
+        // The prompt used to replace the whole page, so a dashboard card
+        // reading "Tax 2026 · 18 items tagged" led to a screen that showed
+        // none of it. The country refines the figures; it does not gate them.
+        ->assertSee('Total deductions');
 });

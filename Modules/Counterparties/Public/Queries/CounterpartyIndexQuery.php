@@ -148,11 +148,9 @@ final readonly class CounterpartyIndexQuery
             $counterpartyName = $this->codec->decryptValue('transactions', 'counterparty_name', $counterpartyName, $userId, $this->session)['value'];
         }
 
-        // isoFormat('L'), not a substr of the ISO column: this card sits in a
-        // page that writes 25-08-2026 everywhere else, and the raw prefix wrote
-        // 2026-08-25 beside it. 'L' is the short-date pattern of whichever
-        // locale is rendering — the same source the date field takes its own
-        // pattern from, so the two agree by construction rather than by luck.
+        // isoFormat('L'), not a substr of the ISO column: 'L' is the rendering
+        // locale's short-date pattern, the same source the date field takes its
+        // own from, so the two agree by construction rather than by luck.
         $date = is_string($postedAt) && $postedAt !== ''
             ? CarbonImmutable::parse($postedAt)->isoFormat('L')
             : '';

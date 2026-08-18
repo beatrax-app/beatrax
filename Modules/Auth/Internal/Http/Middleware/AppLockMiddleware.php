@@ -44,28 +44,9 @@ final readonly class AppLockMiddleware
         'mobile.setup.done',
     ];
 
-    /*
-     * How a Livewire update request is recognised here.
-     *
-     * NOT the `X-Livewire` request header, which is what this used to read.
-     * Under NativePHP's Android runtime the PHP process is persistent and its
-     * superglobals are not fully rebuilt per request, so `HTTP_X_LIVEWIRE`
-     * set by ONE Livewire POST is still present on every ordinary page load
-     * that follows it in the same worker — for the rest of the app's life.
-     * Measured on device: after the first Livewire request of a session,
-     * `last_activity_at` stopped moving entirely, because every page load
-     * looked like machine traffic and took the early return in
-     * recordActivity(). A reader was then locked out five minutes after the
-     * last Livewire request no matter how much they used the app, and no
-     * navigation was ever remembered to return them to.
-     *
-     * Livewire's update endpoint always carries this route name (it renames a
-     * custom route to end with it, hence the leading wildcard), and a route is
-     * resolved per request by the router rather than read out of $_SERVER, so
-     * it cannot leak across requests the way the header does. It is the same
-     * signal Livewire itself uses to decide whether to run persistent
-     * middleware at all.
-     */
+    // The route name, never the `X-Livewire` header: the Android runtime's
+    // persistent process leaks that header across every later request, which
+    // froze `last_activity_at`. See the auth architecture doc.
     private const LIVEWIRE_UPDATE_ROUTE = '*livewire.update';
 
     // 60s balances "settings change takes effect quickly" against DB load:
@@ -209,11 +190,9 @@ final readonly class AppLockMiddleware
             && ! $request->expectsJson();
     }
 
-    // See LIVEWIRE_UPDATE_ROUTE. Reads the router's current route rather than
-    // the request handed in, because during a Livewire update this middleware
-    // is re-run against a SYNTHESISED request wearing the original page's path
-    // and method — that request looks like an ordinary GET and the router's
-    // current route is the only thing that still says otherwise.
+    // The router's current route, not the request handed in: a Livewire update
+    // re-runs this middleware against a synthesised request wearing the
+    // original page's path and method, which looks like an ordinary GET.
     private function isLivewireUpdate(): bool
     {
         return $this->routes->currentRouteNamed(self::LIVEWIRE_UPDATE_ROUTE);
@@ -273,44 +252,26 @@ final readonly class AppLockMiddleware
         $lockUrl = $this->urls->route($this->lockRouteName());
 
         if ($this->isLivewireUpdate()) {
-            // Thrown, not returned. Livewire re-runs this middleware for an
-            // update request through a pipeline of its own, and that pipeline
-            // stops for a RedirectResponse and NOTHING else — every other
-            // response it simply discards before hydrating the component and
-            // running the action. Returning the lock answer would therefore
-            // have served it while also doing the thing the lock exists to
-            // prevent. Throwing is the same mechanism Livewire's own
-            // `abort($response)` uses one line further on.
+            // Thrown, not returned: Livewire's own pipeline stops for a
+            // RedirectResponse and discards every other response before
+            // running the action, so returning would have served the lock
+            // answer and done the thing the lock exists to prevent.
             throw new HttpResponseException($this->livewireLockResponse($lockUrl));
         }
 
         return new RedirectResponse($lockUrl);
     }
 
+    // The lock answer for a Livewire XHR, which cannot be a redirect: the
+    // client reads the body as JSON, and on Android neither of its escape
+    // routes from a 302 is available, so the lock page's HTML reached
+    // JSON.parse and left the app unusable. See the auth architecture doc.
+
+    // `components: []` is what makes this inert rather than merely different:
+    // Livewire iterates it to find each message's payload, so empty morphs and
+    // throws nothing. The redirect travels in the body, the one part of the
+    // answer no transport in this stack rewrites.
     /**
-     * The lock answer for a Livewire XHR, which cannot be a redirect.
-     *
-     * Livewire's client reads the response body as JSON. Handed a 302 to an
-     * HTML page it has two escape routes, and on Android neither is available:
-     * `response.redirected` is false because NativePHP's bridge follows the
-     * redirect in-process and hands back an ordinary response, and a non-2xx
-     * status would only reach the branch that renders the body in a modal. So
-     * the lock page's HTML went into `JSON.parse`, threw
-     * `SyntaxError: Unexpected token '<'`, and left the old component and the
-     * new page half-mounted over each other: the lock screen painted as a
-     * narrow inset column over the page it was meant to replace, then blanked,
-     * and no further tap produced a request at all. Only a force-stop
-     * recovered it — a locked app that cannot be unlocked or logged out of.
-     *
-     * `components: []` is what makes this inert rather than merely different.
-     * Livewire iterates that array to find the payload for each message it
-     * sent; empty means it finds nothing, morphs nothing and throws nothing,
-     * so a client that somehow never registered the interceptor below is left
-     * exactly where it was instead of wrecked. The redirect travels in the
-     * BODY, not a header or a status, because the body is the one part of the
-     * answer no transport in this stack rewrites — the same reason the resume
-     * check reads its answer there.
-     *
      * @see resources/js/lock.js — the interceptor that acts on this.
      */
     private function livewireLockResponse(string $lockUrl): JsonResponse

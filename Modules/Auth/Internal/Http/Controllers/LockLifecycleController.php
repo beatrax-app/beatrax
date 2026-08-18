@@ -40,18 +40,9 @@ final readonly class LockLifecycleController
         return new Response('', 204);
     }
 
-    // Reaching this body at all means the middleware judged the return to be
-    // within grace; an expired one is redirected to the lock screen before it
-    // gets here.
-    //
-    // The answer is a body rather than a status or a redirect because neither
-    // survives NativePHP's Android bridge: it follows the middleware's redirect
-    // in-process and hands the page back as an ordinary response, so the
-    // fetch() Response reads `redirected === false`. lock.js trusted that and
-    // therefore never reloaded on the phone — the previous screen stayed
-    // rendered and interactive over a locked session. A body the client has to
-    // parse cannot be forged by transport that rewrites metadata: the lock
-    // screen is HTML and fails the check.
+    // Reaching this body means the middleware judged the return within grace.
+    // A body rather than a status or redirect: neither survives the Android
+    // bridge, which rewrites both. See the auth architecture doc.
     public function resume(): JsonResponse
     {
         return new JsonResponse(['locked' => false]);

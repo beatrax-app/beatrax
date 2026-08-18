@@ -30,12 +30,9 @@ final class LogoutAction
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();
 
-        // Read before logout(), while the user is still resolvable. A guest
-        // has no stored preference, so SetLocale negotiates from the session
-        // and then Accept-Language — and invalidate() takes the session with
-        // it. Someone who set the whole app to Dutch was therefore handed an
-        // English login form, with an English language picker, as the gate
-        // back into their own data.
+        // Read before logout(), while the user is still resolvable: a guest has
+        // no stored preference, SetLocale then negotiates from the session, and
+        // invalidate() takes the session with it.
         $locale = $this->currentLocale($guard);
 
         $guard->logout();

@@ -7,9 +7,8 @@ namespace Modules\Mobile\Providers;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Session\Session;
-use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
-use Livewire\Features\SupportFileUploads\GenerateSignedUploadUrl;
+use Livewire\Facades\GenerateSignedUploadUrlFacade;
 use Livewire\LivewireManager;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Contracts\KeyCustodian;
@@ -157,26 +156,12 @@ final class MobileServiceProvider extends ServiceProvider
             $this->commands([$pullCommand]);
         }
 
-        // Livewire mints its temporary-upload URL through this facade, which is
-        // the one seam where the signature can be computed against the root the
-        // verifier rebuilds. The replacement defers to the ordinary absolute URL
-        // wherever the app's generator already writes a verifiable root.
-        //
-        // Swapped once everything has booted rather than inside this boot():
-        // Livewire installs its own generator from its provider, and whichever
-        // of the two ran last would otherwise win by accident of ordering.
+        // Livewire mints its temporary-upload URL through this facade, the one
+        // seam where the signature can be computed against the root the verifier
+        // rebuilds. swap() after boot, not $app->instance(): it evicts the
+        // facade's cached root, which Livewire fills with a stub under tests.
         $this->app->booted(function (): void {
-            // Both halves, because Facade::swap() does both and binding alone
-            // is not equivalent: the facade caches whatever it resolved first,
-            // so a container binding installed afterwards is handed out by the
-            // container and ignored by the facade. Livewire mints the URL
-            // through the facade, so the stale root would have won.
-            $this->app->instance(
-                GenerateSignedUploadUrl::class,
-                $this->app->make(BridgeSignedUploadUrl::class),
-            );
-
-            Facade::clearResolvedInstance(GenerateSignedUploadUrl::class);
+            GenerateSignedUploadUrlFacade::swap($this->app->make(BridgeSignedUploadUrl::class));
         });
     }
 

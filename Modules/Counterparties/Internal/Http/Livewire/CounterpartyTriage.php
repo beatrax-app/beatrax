@@ -186,11 +186,9 @@ final class CounterpartyTriage extends Component
         $seen = count($this->sessionDoneIds);
         $remainingCount = max(0, $total - $seen);
 
-        // Zero of zero is not a hundred per cent. An empty queue used to
-        // report "0 of 0 · 100 % · ~1 min remaining" above a full progress
-        // bar, which claims both that there was work and that it is finished.
-        // Nothing to do is its own state, and the view now says so instead of
-        // drawing a bar; 0 here keeps any other reader of $percent honest.
+        // Zero of zero is not a hundred per cent: an empty queue reported
+        // "0 of 0 · 100 %" above a full bar. Nothing to do is its own state,
+        // which the view now draws instead of a bar.
         $percent = $total > 0 ? (int) round(($seen / $total) * 100) : 0;
 
         // Likewise the estimate: max(1, …) floored an empty queue at one

@@ -209,13 +209,10 @@ final class MobileLockScreen extends Component
     // Private helpers
     // -------------------------------------------------------------------------
 
-    // Two tiers, matching the desktop LockScreen, because a lock arrives by
-    // two different routes. `url.intended` exists only when the middleware
-    // redirected the user here; a lock engaged from the client — the idle
-    // timeout and the return-from-background path, which is how a phone
-    // locks nearly every time — leaves only the last page they were on.
-    // Reading just the first tier sent every mobile unlock to the dashboard,
-    // which on a first-run device bounces straight on to /imports/new.
+    // Two tiers, matching the desktop LockScreen: `url.intended` exists only
+    // when the middleware redirected here, while a client-engaged lock leaves
+    // only the last page. Reading the first tier alone sent every mobile
+    // unlock to the dashboard, which on a first-run device bounces onward.
     private function redirectToIntendedUrl(Session $session, UrlGenerator $urls): void
     {
         $intended = $session->pull(MobileLockGateway::SESSION_INTENDED_URL);

@@ -12,13 +12,9 @@ use Livewire\Component;
 use Modules\Auth\Public\Actions\RegenerateRecoveryCodesAction;
 use Modules\Core\Public\Contracts\CurrentUser;
 
-// The settings entry point to the recovery codes. Codes are shown once, at
-// signup, and cannot be shown again -- they are stored hashed. So the only
-// honest way back is to mint a fresh set, which invalidates the old one.
-//
-// Like RecoveryCodesDisplay, the plaintext never touches a public component
-// property: it goes into the session and the ceremony screen reads it from
-// there, so it never round-trips through the browser wire snapshot.
+// Codes are stored hashed and shown once, so the only honest way back is to
+// mint a fresh set. Like RecoveryCodesDisplay, the plaintext goes through the
+// session rather than a public property, never the browser wire snapshot.
 final class RecoveryCodesSection extends Component
 {
     public function regenerate(
