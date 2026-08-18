@@ -165,9 +165,25 @@ it('leaves an explicitly set version code alone', function (): void {
     ))->toBe(0)->and(config('nativephp.version_code'))->toBe(10300);
 });
 
+it('recovers when native:install does create the project', function (): void {
+    // The B1 path: a `composer install` checkout has no Android project,
+    // because native:install runs only from post-update-cmd. The command
+    // generates it and carries on rather than refusing.
+    expect(packageAndroid(files: ['isDirectory' => false]))->toBe(0);
+});
+
 it('refuses when the Gradle file never appeared', function (): void {
     expect(packageAndroid(files: [
         'isDirectory' => false,
+        'isFile' => [packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => false],
+    ]))->toBe(1);
+});
+
+it('refuses when the identity cannot be read back at all', function (): void {
+    // A half-generated project: the directory is there, so the project check
+    // passes early and never looks at Gradle, but the build file itself is
+    // missing — so what the APK carries cannot be established either way.
+    expect(packageAndroid(files: [
         'isFile' => [packageAndroidRoot().'/nativephp/android/app/build.gradle.kts' => false],
     ]))->toBe(1);
 });
