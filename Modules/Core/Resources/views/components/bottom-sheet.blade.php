@@ -36,6 +36,13 @@
          reached the server, reset the form, and left the panel sitting open,
          because its open state lives here in Alpine and nothing told it. --}}
     x-on:close-sheet.window="($event.detail && $event.detail.name === {{ Js::from($name) }}) && (open = false)"
+    {{-- `modal-close` is the name the pages actually dispatch, and nothing in
+         the codebase has ever dispatched `close-sheet`. So a save reached the
+         server, wrote the row, closed the DESKTOP modal, and left the phone
+         sheet sitting open over the list it had just added to. Both names are
+         honoured rather than renaming one: the desktop modal answers to
+         `modal-close` too, and one signal closing both surfaces is the point. --}}
+    x-on:modal-close.window="($event.detail && $event.detail.name === {{ Js::from($name) }}) && (open = false)"
 >
     {{-- Scrim: only rendered/shown at phone width (CSS .bottom-sheet-scrim display:none at desktop) --}}
     <div
