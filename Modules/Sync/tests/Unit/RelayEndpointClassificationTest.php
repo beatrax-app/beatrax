@@ -37,6 +37,10 @@ it('treats only unroutable hosts as LAN', function (string $endpoint, bool $isLa
     'private class A' => ['http://10.0.0.5:8443/ws', true],
     'public address' => ['http://8.8.8.8:8443/ws', false],
     'domain name' => ['http://relay.example/ws', false],
+    // Link-local (APIPA + the 169.254.169.254 cloud-metadata endpoint) and other
+    // reserved ranges are NOT LAN — a scanned QR must not reach them over http.
+    'link-local metadata' => ['http://169.254.169.254:8443/ws', false],
+    'zero network' => ['http://0.0.0.0:8443/ws', false],
     'https to a LAN address' => ['https://192.168.1.10:8443/ws', true],
     'no host at all' => ['not-a-url', false],
 ]);
@@ -49,6 +53,7 @@ it('accepts https anywhere but plaintext only on this network', function (string
     'plaintext to loopback' => ['http://localhost:8443/ws', true],
     'plaintext to a private address' => ['http://192.168.1.10:8443/ws', true],
     'plaintext to a public address' => ['http://8.8.8.8:8443/ws', false],
+    'plaintext to link-local metadata' => ['http://169.254.169.254/ws', false],
     'plaintext to a domain' => ['http://relay.example/ws', false],
     'not a URL at all' => ['relay.example', false],
 ]);
