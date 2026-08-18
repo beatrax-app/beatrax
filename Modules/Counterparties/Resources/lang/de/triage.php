@@ -20,6 +20,7 @@ return [
     'suggestion_low' => 'Mustertreffer: **:name** — geringe Zuverlässigkeit. Prüfe das, bevor du verknüpfst.',
     'suggestion_high' => '✨ Sieht aus wie **:name** — hohe Zuverlässigkeit',
 
+    'reasoning' => ':hits von :total kürzlichen Buchungen auf dieser IBAN verweisen auf :name.',
     'yes_link' => 'Ja, mit :name verknüpfen ↵',
     'no_not' => 'Nein, nicht :name',
 

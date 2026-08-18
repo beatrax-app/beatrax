@@ -7,6 +7,7 @@ namespace Modules\Counterparties\Public\Queries;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Import\Public\Services\MerchantNameResolver;
@@ -137,12 +138,15 @@ final readonly class CounterpartyTriageQueue
             default => 'low',
         };
 
-        $reasoning = sprintf(
-            '%d of %d recent transactions on this IBAN resolve to %s via the merchant name resolver.',
-            $topHits,
-            $total,
-            $topName,
-        );
+        // Translated, not sprintf'd: this sentence renders directly beneath a
+        // localised suggestion banner, so an English format string put two
+        // languages in one card. The resolver is named in the banner's own
+        // copy, so the sentence carries only the counts and the name.
+        $reasoning = Lang::get('counterparties::triage.reasoning', [
+            'hits' => $topHits,
+            'total' => $total,
+            'name' => $topName,
+        ]);
 
         return new TriageSuggestion(
             suggestedCounterpartyName: $topName,

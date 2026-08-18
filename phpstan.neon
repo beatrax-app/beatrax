@@ -229,6 +229,22 @@ parameters:
             paths:
                 - Modules/Mobile/Internal/Listeners/*.php
             reportUnmatched: false
+        # Livewire's upload-URL facade, in the one place the mobile bridge can
+        # reach it. `swap()` is the whole point of the call and has no
+        # container equivalent: it sets the facade's resolved-instance cache as
+        # well as the binding, and under `runningUnitTests()` Livewire has
+        # already put a stub of its own in that cache
+        # (SupportFileUploads::provide()). Binding alone leaves the stub
+        # winning for every caller that goes through the facade — which is how
+        # Livewire itself mints the URL. Not a testability loss either: the
+        # swapped-in generator is an ordinary injectable class, and
+        # BridgeSignedUploadUrlTest asserts against the facade root directly.
+        # The BoundaryArchTest facade scan does not cover this because
+        # `Livewire\Facades` is not `Illuminate\Support\Facades`; larastan's
+        # noFacadeRule flags it only because it extends Illuminate's base.
+        -
+            message: '#Livewire\\Facades\\GenerateSignedUploadUrlFacade facade should not be used\.#'
+            path: Modules/Mobile/Providers/MobileServiceProvider.php
         # First-party cold-start biometric-vault plugin facade (spike). Same
         # carve-out rationale as the nativephp/mobile facades above: the plugin
         # lives only in mobile-app/vendor, so the enclave-gated vault is reached

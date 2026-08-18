@@ -24,9 +24,9 @@
             @break
 
         @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::AddOneOff->value)
-            <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.date') }}
-                <input type="date" wire:model.live="form.date" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-            </label>
+            <div class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.date') }}
+                <x-core::date-input class="mt-1" wire:model.live="form.date" :aria-label="Lang::get('forecasting::scenario.form.date')" />
+            </div>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.amount') }}
                 <input type="text" wire:model.live="form.amount" placeholder="50,00" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
@@ -45,9 +45,9 @@
             @break
 
         @case(\Modules\Forecasting\Public\Enums\ScenarioMutationKind::AddRecurring->value)
-            <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.start_date') }}
-                <input type="date" wire:model.live="form.startDate" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-            </label>
+            <div class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.start_date') }}
+                <x-core::date-input class="mt-1" wire:model.live="form.startDate" :aria-label="Lang::get('forecasting::scenario.form.start_date')" />
+            </div>
             <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.amount') }}
                 <input type="text" wire:model.live="form.amount" placeholder="15,00" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
             </label>
@@ -93,9 +93,9 @@
                     @endforeach
                 </select>
             </label>
-            <label class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.new_next_date') }}
-                <input type="date" wire:model.live="form.newNextDate" class="mt-1 block w-full rounded-md border border-slate-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 dark:border-slate-700">
-            </label>
+            <div class="block text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::scenario.form.new_next_date') }}
+                <x-core::date-input class="mt-1" wire:model.live="form.newNextDate" :aria-label="Lang::get('forecasting::scenario.form.new_next_date')" />
+            </div>
             <div class="text-xs text-slate-500 dark:text-slate-400">
                 <p class="mb-1">{{ Lang::get('forecasting::scenario.form.scope') }}</p>
                 <label class="inline-flex items-center gap-1">

@@ -51,12 +51,19 @@ scan anything at that point. Decoding runs on `requestAnimationFrame`, so it
 stops when the page is backgrounded rather than holding the camera open
 behind a backgrounded finance app.
 
-**The generated shell needs two patches, applied from the mobile root's
-`post-update-cmd`.** `native:install` regenerates the Android tree, so neither
-is hand-edited; both are idempotent and fail loudly if their anchor moves.
+**The generated shell needs five patches, applied from the mobile root's
+`post-update-cmd`.** `native:install` regenerates the native trees, so none is
+hand-edited; all are idempotent and fail loudly if their anchor moves.
 
 - `nativephp_grant_webview_camera.php` adds the missing `onPermissionRequest`
   override so the in-page scanner can obtain a camera. Video capture only.
+- `nativephp_android_file_chooser.php` adds the missing `onShowFileChooser`
+  override and the matching activity-result plumbing. Android's default
+  implementation returns false and shows nothing at all — no picker, no error
+  — so every `<input type="file">` in the app was inert. That is not cosmetic:
+  `/` redirects to `/imports/new` while the device holds no transactions, and
+  every wizard drop-zone uses the same control, so a freshly installed phone
+  could not take in a statement or reach the dashboard by any route.
 - `nativephp_keep_webview_cookies.php` removes the `clearAllCookies()` call
   from `MainActivity.initializeEnvironment()`. It ran on every process start
   and took the Laravel session cookie with it, so each cold launch — and
@@ -64,8 +71,132 @@ is hand-edited; both are idempotent and fail loudly if their anchor moves.
   a valid session row on-device. The app-lock, not cookie lifetime, is the
   security boundary here. `clearAllCookies()` itself is left in place for
   callers that genuinely want a clean jar.
+- `nativephp_ios_request_body_stream.php` drains `request.httpBodyStream` when
+  `request.httpBody` is nil. WebKit populates the latter only for simple string
+  bodies; a FormData or Blob body — every file upload — arrives as a stream, and
+  the generated handler read only `httpBody`. PHP saw a `multipart/form-data`
+  Content-Type with its boundary, a null CONTENT_LENGTH and a zero-byte
+  `php://input`, so `$_FILES` was empty on every upload while ordinary Livewire
+  round trips, which post strings, worked perfectly.
+- `nativephp_ios_download_delegate.php` answers a download navigation with
+  `.download` and adds the `WKDownloadDelegate` the shell never had. Without it
+  a blob: URL from an `<a download>` fell through to `decisionHandler(.allow)`
+  and the WebView *navigated onto the blob*: the app replaced by its own raw
+  bytes, no chrome, no back gesture, nothing saved, and only a force-quit out.
+  On the recovery-codes screen that destroyed one-time data.
 
-`composer native:patch` runs both on demand.
+**When each patch is present, and when it is not.** Worth stating plainly,
+because the failure is silent — an unpatched shell builds, installs and runs,
+and only the patched behaviour is missing:
+
+- `composer update` regenerates the trees via `native:install` and then
+  re-applies all five, because they follow it in `post-update-cmd`. Net
+  effect: patched.
+- `php artisan native:run android|ios` (and `native:build`) does **not**
+  regenerate the tree, so patches already in it survive the build. A patch
+  script added after the last `composer update` is therefore **not** in the
+  build — writing the script is not applying it. That cost a device pass: the
+  file-chooser fix was written, committed, built and installed, and the picker
+  was still inert because nothing had run the script.
+- `php artisan native:install` on its own regenerates the trees and drops all
+  five.
+
+`composer native:patch` runs all five on demand, and is the recovery for the
+last case — and the step to run the first time a new patch script lands.
+
+The two iOS patches are also listed in `NativeBuildPatches`, which re-applies
+them immediately before `native:run` / `native:build`, so a regenerated tree
+cannot ship without them.
+
+### Signed URLs cannot be absolute on iOS
+
+The iOS shell serves the app from `php://127.0.0.1` and installs
+`Native\Mobile\Support\Ios\PhpUrlGenerator`, whose `formatScheme()` answers
+`php://` for every absolute URL Laravel writes. The verifier cannot follow it:
+`hasValidSignature()` rebuilds the URL from `Request::url()`, which is
+Symfony's and can only ever say `http://`. Measured on the device, the same
+request reports `URL::to('/') === 'php://127.0.0.1'` and
+`$request->root() === 'http://127.0.0.1'`, so the two halves hash different
+strings and **every absolutely-signed URL fails its own check**.
+
+Livewire's temporary-upload URL was the one that mattered: it answered 401 from
+`abort_unless(request()->hasValidSignature(), 401)`, so no statement could be
+imported and a fresh install could not reach the dashboard by any route.
+`BridgeSignedUploadUrl` replaces Livewire's generator through its facade,
+signing against the root the incoming request will present and returning the
+URL relative so the WebView still resolves it on the `php://` origin — the
+browser and the verifier need different halves of the same URL. Off that shell
+it defers to the ordinary absolute URL, keyed on the scheme actually in use
+rather than on the platform.
+
+`livewire.preview-file` has the same shape and is left alone: nothing in the
+app previews an upload (no control accepts an image, and nothing calls
+`temporaryUrl()`), so it is unreachable here.
+
+### A file cannot cross as multipart, so it crosses as base64
+
+Fixing the signature produced a `200` and an empty upload. WebKit hands a
+custom scheme handler **only string request bodies**: a FormData or Blob body
+arrives as neither `httpBody` nor `httpBodyStream`. Measured against a probe
+route in the running app:
+
+| request body | bytes PHP received |
+|---|---|
+| `application/x-www-form-urlencoded` string | 15 of 15 |
+| `application/json` string | 7 of 7 |
+| `Blob` | 0 |
+| `FormData` | 0 |
+
+And a hand-built multipart body sent *as a string* reached `php://input` whole
+while `$_FILES`, `$_POST` and `allFiles()` stayed empty — this runtime has no
+SAPI doing rfc1867 parsing, so multipart cannot work here even when it arrives.
+
+So the file crosses base64-encoded in a JSON body.
+`resources/js/mobile-upload.js` intercepts Livewire's upload XHR and re-sends
+it; `EncodedUploadTransport` middleware rebuilds the bytes and puts a real
+`UploadedFile` into `$request->files` before Livewire's own controller reads
+one. **It is a transport, not a second import path**: the controller, the
+temporary disk, the preview, the verdicts and the confirm step are the same
+code on every platform, and neither end knows which way the bytes came.
+
+The client sends the byte count and a SHA-256 with each file and the server
+verifies both, refusing anything that did not arrive whole or unchanged — a
+truncated statement would import as a wrong number rather than fail. Base64
+being ASCII is also what makes the format restriction go away rather than move:
+a PDF crosses as safely as a CSV, which the string-typed bridge body could
+never have done.
+
+Both halves are inert off that shell: the shim checks `location.protocol` and
+does nothing on http/https, and the middleware acts only on its own marker
+field, which an ordinary request never carries.
+
+### The runtime is persistent, and request headers leak between requests
+
+The embedded PHP process serves many requests. Its superglobals are not fully
+rebuilt per request, so **`$_SERVER['HTTP_*']` set by one request is still
+readable by every request that follows it in the same worker.**
+
+Measured on device (2026-08-17): a Livewire POST sets `HTTP_X_LIVEWIRE`, and
+from then on every ordinary page load in that app session sees it too. The
+Kotlin side is innocent and its own log proves it — `PHPRequestHandler: 📤
+Final request headers` for the offending GET contains no `X-Livewire` at all.
+The leak is on the PHP side of the bridge.
+
+**Never branch on a request header to decide what KIND of request this is.**
+`AppLockMiddleware` did, in three places, and all three misbehaved: a locked
+page load was answered with a Livewire JSON body and painted the raw payload on
+screen as the whole page; `last_activity_at` stopped being refreshed by
+navigation after the first Livewire request of a session, locking the reader out
+mid-use; and no page was ever remembered to return to after an unlock, so every
+unlock landed on the dashboard. Use something resolved per request instead —
+the router's current route name is the obvious one.
+
+**This class of bug is invisible to local testing.** PHP-FPM and `artisan
+serve` build superglobals fresh per request, so the header never leaks there
+and the same code is correct on a laptop, in CI, and in every feature test.
+Anyone reproducing on a desktop will conclude the code is fine. Only the device
+shows it, which is why the guard is a test that sends a *stale* header at an
+ordinary page request and asserts it is still treated as one.
 
 The `post-update-cmd` invocation is `native:install --with-icu --quiet`, and both
 flags are load-bearing. v4 inverted `--force`: overwriting the generated tree is
@@ -75,6 +206,51 @@ dropped `--publish` outright — passing it aborts the command, and with it the 
 patches below. `--with-icu` is what keeps `ext-intl` in the bundled PHP
 binaries; the money formatting the whole ledger renders through needs it, and its
 absence shows up only on-device.
+
+### `--with-icu` ships ICU code, not ICU locale data
+
+`--with-icu` is not the whole story, and the gap cost a device debugging session
+(2026-08-17). The flag selects the `-icu` variant of the prebuilt PHP binaries and
+`nativephp.lock` records `"icu": true`, so `ext-intl` loads and `INTL_ICU_VERSION`
+answers — but the data package inside those binaries is filtered to **English
+only**. Read the shipped archive to see it:
+
+```
+strings mobile-app/nativephp/android/app/src/main/staticLibs/arm64-v8a/libicudata.a \
+  | grep -E '^icudt[0-9]+l/' | sort -u
+```
+
+At ICU 77 that lists 250 entries: `root`, `en`, 130 `en_XX` regionals, 114
+`curr/en_XX`, and the shared `.icu`/`.nrm` blobs. There is no `nl`, and no other
+language of the twenty-six the UI ships. `libicudata.a` is 2.3MB where a full ICU
+data package is ~30MB.
+
+The consequence: `new NumberFormatter($locale, …)` **throws for every locale
+except English**, as `IntlException` when intl error-exceptions are on and as
+`ValueError` from the constructor otherwise. That reaches the product through two
+seams, both of which now catch it and render from marks the repo carries itself
+(`Locale::groupMark()` / `Locale::decimalMark()`):
+
+- `Money::format()` — every rendered amount. Currency-anchored, so EUR asks for
+  `nl_NL` and threw on device while `en_US` (USD, GBP, …) worked, which is why
+  the dashboard showed `EUR 3850.00` beside a hand-rolled Dutch `€ 1.237,89`.
+- `Fmt::number()` — counts and percentages. Threw for all twenty-five non-English
+  UI languages; only `/rules`, `/inboxes` and `/drift/watch` call it, so it had
+  not been noticed.
+
+Direct `Illuminate\Support\Number::currency()` calls have no such guard and 500'd
+the page outright — `tests/Contracts/CurrencyRendersThroughMoneyArchTest` now
+keeps them out of the tree.
+
+**Do not delete the guards on the assumption that fuller ICU data can be
+bundled.** The static libraries arrive inside a zip that `native:install`
+downloads into `mobile-app/nativephp/`, which is gitignored and regenerated —
+anything injected there is unreproducible and gone at the next install, and this
+repository has no step that could re-apply it. Replacing the data set is a change
+to the upstream NativePHP PHP build. The guards are also cheap to keep honest:
+`Modules/Ledger/tests/Unit/MoneyFormatTest` asserts the ICU-less output is byte
+for byte what ICU produces on a host that has the data, so if the data ever does
+arrive nothing about the rendering changes.
 
 ## Navigation
 

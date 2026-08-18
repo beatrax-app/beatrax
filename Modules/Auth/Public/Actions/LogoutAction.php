@@ -8,6 +8,7 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\LockStateManager;
+use Modules\Core\Models\User;
 use Modules\Core\Public\Services\SessionFactory;
 
 final class LogoutAction
@@ -28,9 +29,32 @@ final class LogoutAction
 
         /** @var StatefulGuard $guard */
         $guard = $this->auth->guard();
+
+        // Read before logout(), while the user is still resolvable: a guest has
+        // no stored preference, SetLocale then negotiates from the session, and
+        // invalidate() takes the session with it.
+        $locale = $this->currentLocale($guard);
+
         $guard->logout();
 
         ($this->session)()->invalidate();
         ($this->session)()->regenerateToken();
+
+        // Carried into the fresh session, not the old one: invalidate() flushes
+        // everything, so this has to be put back afterwards to survive.
+        if ($locale !== null) {
+            ($this->session)()->put('locale', $locale);
+        }
+    }
+
+    private function currentLocale(StatefulGuard $guard): ?string
+    {
+        $user = $guard->user();
+
+        // null is a real stored value meaning "auto" — carrying nothing then
+        // is correct, because negotiation should resume from the browser.
+        $locale = $user instanceof User ? $user->locale : null;
+
+        return is_string($locale) && $locale !== '' ? $locale : null;
     }
 }

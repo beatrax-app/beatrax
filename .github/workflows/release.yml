@@ -83,6 +83,55 @@ env:
     AUTO_UPDATE_FEED_URL: https://github.com/${{ github.repository }}/releases/latest/download
 
 jobs:
+    spec-gate:
+        # release-preflight.yml runs this same check, but it is
+        # workflow_dispatch-only while this workflow fires on any `v*` tag
+        # push — so a human pushing a tag bypassed the spec entirely and the
+        # pipeline would build and draft a release for a version the spec does
+        # not consider releasable (OPS-R18). Its own job, ahead of the builds,
+        # so it costs seconds and fails before anything is compiled.
+        name: spec gate
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Check out the canonical spec
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  persist-credentials: false
+                  repository: beatrax-app/spec
+                  ref: main
+                  path: .spec-canonical
+
+            - name: The tagged version is releasable in the spec
+              env:
+                  REF_NAME: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  VERSION="${REF_NAME#v}"
+                  printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+                    || { echo "::error::tag must be vX.Y.Z or vX.Y.Z-<prerelease>, got '${REF_NAME}'."; exit 1; }
+                  export VERSION
+                  python3 - <<'PY'
+                  import os, sys, tomllib, pathlib
+                  version = os.environ["VERSION"]
+                  base, _, pre = version.partition("-")
+                  path = pathlib.Path(".spec-canonical/70-operations/versions") / f"{base}.toml"
+                  if not path.exists():
+                      sys.exit(f"::error::no manifest at 70-operations/versions/{base}.toml — stage the version first.")
+                  m = tomllib.loads(path.read_text(encoding="utf-8"))
+                  status, repos, goals = m.get("status"), m.get("repos", []), m.get("goals", [])
+                  if "beatrax" not in repos:
+                      sys.exit(f"::error::{base}.toml does not cut this repo (repos = {repos}).")
+                  # A preview tag rides a staged version — the point of a preview is to
+                  # exercise goals that are not all satisfied yet. A stable tag needs
+                  # every goal satisfied, which is what `releasable` means (staging.md).
+                  wanted = ("staged", "releasable") if pre else ("releasable",)
+                  if status not in wanted:
+                      sys.exit(f"::error::{base}.toml is '{status}'; a {'preview' if pre else 'stable'} tag needs one of {wanted}.")
+                  kind = f"preview ({pre})" if pre else "stable"
+                  print(f"{base}.toml is '{status}' with {len(goals)} locked goals — {kind} tag accepted.")
+                  PY
+
     gate:
         name: gate (PHP ${{ matrix.php }})
         runs-on: ubuntu-latest
@@ -161,7 +210,7 @@ jobs:
         # "Installing on macOS" section. arm64 is the only
         # prebuilt arch shipped from CI.
         name: build (macOS, arm64)
-        needs: gate
+        needs: [gate, spec-gate]
         runs-on: macos-14
         timeout-minutes: 20
         steps:
@@ -298,7 +347,7 @@ jobs:
 
     build-windows:
         name: build (Windows)
-        needs: gate
+        needs: [gate, spec-gate]
         runs-on: windows-2025
         timeout-minutes: 30
         steps:
@@ -425,7 +474,7 @@ jobs:
 
     build-linux:
         name: build (Linux)
-        needs: gate
+        needs: [gate, spec-gate]
         runs-on: ubuntu-24.04
         timeout-minutes: 30
         steps:
@@ -516,7 +565,7 @@ jobs:
         # artifacts from its own credentials; this leg exists so a signed
         # download sits alongside the desktop ones on the Release page.
         name: build (Android)
-        needs: gate
+        needs: [gate, spec-gate]
         runs-on: ubuntu-24.04
         timeout-minutes: 40
         env:
@@ -593,17 +642,24 @@ jobs:
                   done
                   export ANDROID_KEYSTORE_FILE="$GITHUB_WORKSPACE/mobile-app/credentials/app-release-key.jks"
                   export NATIVEPHP_APP_VERSION="${NATIVEPHP_APP_VERSION#v}"
-                  # native:package, never native:run --build=release: the latter
-                  # has no signing validation and emits app-release-unsigned.apk
-                  # while still reporting success.
-                  php artisan native:package android --build-type=release --no-interaction
+                  # mobile:package-android, never native:package directly and
+                  # never native:run --build=release. native:package returns
+                  # success whatever goes wrong — including with no Android
+                  # project to build, which is the state a `composer install`
+                  # checkout is in. The wrapper generates the project, applies
+                  # the shell patches and fails unless an artifact exists.
+                  php artisan mobile:package-android --build-type=release --no-interaction
 
             - name: Verify the APK is signed by the release key
               env:
                   EXPECTED_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
               run: |
                   set -euo pipefail
-                  apk=$(find mobile-app -name '*.apk' -not -name '*unsigned*' -print -quit)
+                  # Scoped to Gradle's release output rather than the whole
+                  # mobile root, so an intermediate or stale APK elsewhere in
+                  # the tree cannot stand in for the one just built.
+                  apk=$(find mobile-app/nativephp/android/app/build/outputs/apk/release \
+                      -name '*.apk' -not -name '*unsigned*' -print -quit 2>/dev/null || true)
                   if [ -z "$apk" ]; then
                       echo "::error::no signed APK was produced."
                       exit 1

@@ -32,7 +32,10 @@
 })();
 import ApexCharts from 'apexcharts';
 import { palette } from './palette.js';
+import { datePicker } from './date-picker.js';
+import { timePicker } from './time-picker.js';
 import './lock.js';
+import './mobile-upload.js';
 
 // Stamp ApexCharts on the global so Alpine `x-init` handlers in
 // chart-rendering Blade components can call `new window.ApexCharts(...)`
@@ -204,10 +207,23 @@ window.beatraxSubmitPostForm = async function (form, submitter) {
         redirect: 'follow',
     });
 
-    // Follow wherever the server sent us. A redirected response exposes its
-    // final URL; anything else means "re-render where you are".
-    if (response.redirected && response.url) {
-        window.location.assign(response.url);
+    // Follow wherever the server sent us.
+    //
+    // Deliberately NOT gated on `response.redirected`. That flag is false
+    // under NativePHP's mobile bridge — the bridge follows the redirect
+    // itself and hands back an ordinary response — which is the same trap
+    // that made the app lock never reload. Here it meant sign-out fell
+    // through to reload(): the login page rendered correctly, at the URL of
+    // the page the user had just left, so `location.href` said `/settings`
+    // while a login form was on screen.
+    //
+    // `response.url` is the useful half and survives on both paths, so
+    // compare it instead and only reload when it genuinely has not moved.
+    const landed = typeof response.url === 'string' ? response.url : '';
+    const submitted = new URL(form.getAttribute('action'), window.location.href).href;
+
+    if (landed !== '' && landed !== submitted && landed !== window.location.href) {
+        window.location.assign(landed);
 
         return;
     }
@@ -357,6 +373,8 @@ document.addEventListener('alpine:init', () => {
     if (window.Alpine) {
         window.Alpine.data('palette', palette);
         window.Alpine.data('beatraxInlineScanner', beatraxInlineScanner);
+        window.Alpine.data('beatraxDatePicker', datePicker);
+        window.Alpine.data('beatraxTimePicker', timePicker);
 
         // Mobile navigation drawer state (Phase 4, D-01)
         window.Alpine.store('mobileNav', {

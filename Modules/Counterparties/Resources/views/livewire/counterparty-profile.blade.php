@@ -18,7 +18,6 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @php
-    use Illuminate\Support\Number;
     $isSelf = $profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::SelfAccount->value;
 @endphp
 
@@ -54,7 +53,7 @@
                     @if ($profile->type === \Modules\Counterparties\Public\Enums\CounterpartyType::Personal->value){{ Lang::get('counterparties::profile.hero_net_received') }}@else{{ Lang::get('counterparties::profile.hero_12mo_total') }}@endif
                 </div>
                 <div style="font-size: var(--text-2xl); font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums;">
-                    {{ Number::currency(abs($profile->total12mMinor) / Money::MINOR_UNITS_PER_MAJOR, 'EUR', 'nl') }}
+                    {{ Money::ofMinor(abs($profile->total12mMinor), 'EUR')->format() }}
                 </div>
             </div>
             <div class="frame frame-tight">

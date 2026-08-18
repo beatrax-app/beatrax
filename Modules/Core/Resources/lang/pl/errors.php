@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'back' => 'Wróć do Beatrax',
+
+    '404' => [
+        'title' => 'Ta strona nie istnieje',
+        'body' => 'Link może być stary albo strona zmieniła nazwę. Z twoimi danymi wszystko w porządku.',
+    ],
+
+    '419' => [
+        'title' => 'Twoja sesja wygasła',
+        'body' => 'Nie było cię na tyle długo, że strona straciła ważność. Otwórz Beatrax ponownie i kontynuuj.',
+    ],
+
+    '500' => [
+        'title' => 'Coś poszło nie tak',
+        'body' => 'Problem został zapisany w dzienniku na tym urządzeniu. Twoje dane nie zostały zmienione.',
+    ],
+
+    '503' => [
+        'title' => 'Beatrax jest chwilowo niedostępny',
+        'body' => 'Kończy się aktualizacja lub prace konserwacyjne. Spróbuj za chwilę.',
+    ],
+];

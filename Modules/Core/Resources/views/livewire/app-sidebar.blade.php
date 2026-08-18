@@ -221,15 +221,19 @@
             <span class="side-badge muted" aria-label="{{ Lang::get('core::sidebar.badge.imports', ['count' => $navCounts['imports']]) }}">{{ $navCount('imports') }}</span>
         @endif
     </a>
-    {{-- Migrating from another app is a once-ever errand, so it does not earn
+    {{-- Two entries are deliberately absent here.
+
+         Migrating from another app is a once-ever errand, so it does not earn
          a permanent nav slot — and naming the competitors in the sidebar put
          two other products in front of the user on every screen. It is reached
          from the Imports page now, which is where someone looking to bring
-         data in already is. --}}
-    <a href="#" class="side-item">
-        <span class="ic" aria-hidden="true">⌗</span>
-        {{ Lang::get('core::sidebar.nav.receipts') }}
-    </a>
+         data in already is.
+
+         Receipts had no destination to offer: the module registers no web
+         routes at all, only console ones, so the row sat here as
+         `<a href="#">` and swallowed every tap — highlighting on press and
+         going nowhere, which reads as a broken app rather than an absent
+         feature. It comes back when there is a page to point at. --}}
     <a href="{{ route('cashbook.index') }}" class="side-item {{ $isActive('/cash') }}">
         <span class="ic" aria-hidden="true">€</span>
         {{ Lang::get('core::sidebar.nav.cashbook') }}
@@ -375,7 +379,16 @@
         <form method="POST" action="{{ route('logout') }}" x-data x-on:submit.prevent="beatraxSubmitPostForm($el, $event.submitter)">
             @csrf
             <button type="submit" class="side-item" style="width: 100%;">
-                <span class="ic" aria-hidden="true">⏻</span>
+                {{-- U+23FB POWER SYMBOL has no glyph in the Android system font
+                     stack and rendered as tofu on device. Every other row's
+                     codepoint is Arrows or Geometric Shapes and is covered; this
+                     one is Miscellaneous Technical. Drawn instead, the same way
+                     the sync row already sidesteps the problem. --}}
+                <span class="ic" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+                    </svg>
+                </span>
                 {{ Lang::get('core::sidebar.sign_out') }}
             </button>
         </form>

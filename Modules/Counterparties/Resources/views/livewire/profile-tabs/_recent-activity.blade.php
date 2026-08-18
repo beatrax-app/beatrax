@@ -9,9 +9,6 @@
 --}}
 @use('Modules\Ledger\Public\ValueObjects\Money')
 @use('Modules\Ledger\Public\Services\BaseCurrency')
-@php
-    use Illuminate\Support\Number;
-@endphp
 
 @if (count($rows) === 0)
     <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0;">
@@ -21,7 +18,9 @@
     <ul style="margin: 0; padding: 0; list-style: none;">
         @foreach ($rows as $tx)
             @php
-                $date = is_string($tx->posted_at ?? null) ? substr($tx->posted_at, 0, 10) : '';
+                $date = is_string($tx->posted_at ?? null) && $tx->posted_at !== ''
+                    ? \Carbon\CarbonImmutable::parse($tx->posted_at)->isoFormat('L')
+                    : '';
                 $desc = $tx->description ?? '';
                 $amount = (int) ($tx->amount_minor ?? 0);
                 $currency = $tx->currency ?? BaseCurrency::value();
@@ -37,7 +36,7 @@
                 <span style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ $desc }}</span>
                 {{-- Tax badge on counterparty transaction rows (D-19/D-20). --}}
                 <x-tax::tax-badge :transaction="$txRowArr" :showAlways="false" />
-                <span style="white-space: nowrap;">{{ Number::currency(abs($amount) / Money::MINOR_UNITS_PER_MAJOR, $currency, 'nl') }}</span>
+                <span style="white-space: nowrap;">{{ Money::ofMinor(abs($amount), $currency)->format() }}</span>
             </li>
         @endforeach
     </ul>

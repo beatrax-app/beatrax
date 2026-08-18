@@ -52,8 +52,8 @@
     {{-- Submitting on change needs JS, so this stays in the markup for a
          first paint that has not booted yet — but once Alpine is alive the
          select submits itself and a second control is just a button that
-         does what already happened. x-cloak keeps it from flashing in on
-         the way past. --}}
+         does what already happened. Deliberately NOT x-cloak'd: cloaking
+         would hide it from the no-JS reader it exists for. --}}
     <button
         type="submit"
         class="locale-switcher-go"

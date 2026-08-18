@@ -93,9 +93,9 @@
                             @endforeach
                         </div>
                         <div class="srch-date-range">
-                            <input type="date" wire:model.live="filterAfter" class="srch-date-input" aria-label="{{ Lang::get('ledger::list.filter.after_aria') }}" />
+                            <x-core::date-input wire:model.live="filterAfter" :aria-label="Lang::get('ledger::list.filter.after_aria')" />
                             <span class="srch-date-sep">–</span>
-                            <input type="date" wire:model.live="filterBefore" class="srch-date-input" aria-label="{{ Lang::get('ledger::list.filter.before_aria') }}" />
+                            <x-core::date-input wire:model.live="filterBefore" :aria-label="Lang::get('ledger::list.filter.before_aria')" />
                         </div>
                     </div>
                 </div>

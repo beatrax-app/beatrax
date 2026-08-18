@@ -44,7 +44,10 @@ final class SignupPage extends Component
             return;
         }
 
-        $this->redirect($urls->route('setup'), navigate: false);
+        // The ceremony sits between signup and the wizard, not beside it:
+        // going straight to setup skipped the only screen that ever shows the
+        // recovery codes. RecoveryCodesDisplay hands off to setup afterwards.
+        $this->redirect($urls->route('auth.recovery-codes-display'), navigate: false);
     }
 
     public function render(ViewFactory $views): View

@@ -16,12 +16,13 @@
                 <form wire:submit="restore" class="mt-3 space-y-3">
                     <div class="space-y-1">
                         <label for="restore-file" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('core::backup.restore.file_label') }}</label>
-                        <input
-                            type="file"
+                        {{-- `file:` utilities style the native button but cannot
+                             relabel it: the words inside stay engine-supplied
+                             English in every language. --}}
+                        <x-core::file-input
                             id="restore-file"
                             wire:model="backup"
                             accept=".enc"
-                            class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-200 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-50 dark:text-slate-300 dark:file:border-slate-700 dark:file:bg-slate-900"
                         />
                         <div wire:loading wire:target="backup" class="text-xs text-slate-400">{{ Lang::get('core::backup.restore.uploading') }}</div>
                     </div>

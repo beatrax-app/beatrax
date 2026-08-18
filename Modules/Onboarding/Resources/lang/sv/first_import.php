@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'Bokför…',
     'commit_count' => 'Bokför allt (:count transaktioner) →',
     'commit_empty' => 'Bokför allt (—) →',
+    'skip' => 'Hoppa över tills vidare',
 
     'errors' => [
         'nothing_to_commit' => 'Inget att bokföra.',

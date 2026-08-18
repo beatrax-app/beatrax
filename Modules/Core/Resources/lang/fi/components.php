@@ -27,4 +27,26 @@ return [
         'open_nav' => 'Avaa navigointi',
         'search_transactions' => 'Hae tapahtumia',
     ],
+
+    'file' => [
+        'choose' => 'Valitse tiedosto',
+        'none' => 'Ei tiedostoa valittuna',
+        'count' => ':count tiedostoa valittu',
+    ],
+
+    'amount_placeholder' => '0,00',
+
+    'date' => [
+        'open' => 'Valitse päivä',
+        'prev_month' => 'Edellinen kuukausi',
+        'next_month' => 'Seuraava kuukausi',
+        'today' => 'Tänään',
+        'clear' => 'Tyhjennä',
+    ],
+
+    'time' => [
+        'open' => 'Valitse kellonaika',
+        'hour' => 'Tunti',
+        'minute' => 'Minuutti',
+    ],
 ];

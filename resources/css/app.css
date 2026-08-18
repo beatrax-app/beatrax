@@ -202,6 +202,21 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/*
+ * Alpine strips x-cloak once it boots but ships no stylesheet, so the
+ * attribute only hides anything because @livewireStyles injects this same
+ * declaration into every layout's head. Owning it here removes a dependency
+ * on an undocumented framework detail that ~20 attributes across twelve
+ * modules quietly rely on.
+ *
+ * Deliberately unscoped, and deliberately before the drawer rules: the
+ * .drawer-container is the static desktop sidebar at >=1024px, and the
+ * exemption in that media query is what keeps it visible.
+ */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Tabular numerals on every money cell + date cell to keep columns aligned. */
 td.money,
 td.date,
@@ -722,11 +737,16 @@ td.date,
         background: var(--color-bg-subtle);
     }
 
+    /* The wizard is a full-bleed shell with no top bar of its own, so nothing
+       else reserves the status-bar strip: without --safe-top the brand mark
+       renders under the system clock and the skip link under the signal icons
+       — and the skip link is the only way out of nine steps. */
     .wiz-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: var(--space-4) var(--space-6);
+        padding-top: calc(var(--space-4) + var(--safe-top));
     }
 
     .wiz-brand {
@@ -957,7 +977,15 @@ td.date,
             flex-wrap: wrap;
             gap: var(--space-2);
             padding: var(--space-3) var(--space-4);
+            padding-top: calc(var(--space-3) + var(--safe-top));
         }
+
+        /* The narrow-width .mini-steps override lives beside its own base
+           rule further down, not here. Both are in @layer components, both
+           are a single class, so the LATER declaration wins whatever the
+           media query says — and the base four-track rule is later. Declared
+           here it lost silently at every width, which is how the wizard went
+           on showing four ~85px tiles on a phone after it was "fixed". */
 
         .wiz-dots {
             order: 3;
@@ -991,11 +1019,15 @@ td.date,
         }
     }
 
+    /* Same seam as .wiz-top at the other edge: the footer is the last thing in
+       the flex column, so the Android navigation bar draws straight over the
+       privacy pill and the help link without --safe-bottom. */
     .wiz-footer {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: var(--space-4) var(--space-6);
+        padding-bottom: calc(var(--space-4) + var(--safe-bottom));
         color: var(--color-text-muted);
         font-size: var(--text-xs);
     }
@@ -1102,11 +1134,31 @@ td.date,
         font-weight: 400;
     }
 
+    /* minmax(0, 1fr), not 1fr: a 1fr track floors at min-content, so the
+       longest unbreakable label in a tile widens its track, then the grid, the
+       card and the document. That is how the PayPal step — whose labels are the
+       longest — pushed its primary button off the right edge of the phone. */
     .mini-steps {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 10px;
         margin: var(--space-6) 0;
+    }
+
+    /* Four equal tracks at 390px leave each tile ~85px, so the labels break
+       mid-word: the Dutch verb for downloading splits across two lines, and
+       so does "CAMT.053 (.xml)". Two rows of two is the same information at a
+       readable measure.
+
+       Immediately after the rule it overrides, deliberately. Both live in
+       @layer components and both are a single class, so a cascade layer
+       cannot separate them and specificity cannot either: only source order
+       decides, and an override declared earlier in the file loses at every
+       width no matter what its media query asks for. */
+    @media (max-width: 640px) {
+        .mini-steps {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     .mini {
@@ -1117,6 +1169,12 @@ td.date,
         flex-direction: column;
         gap: var(--space-1);
         font-size: var(--text-xs);
+        /* Pairs with the minmax(0, …) tracks above. Letting the track shrink
+           below min-content only helps if the tile may shrink with it and the
+           Dutch compounds inside it may break — "Transactiegegevens" is one
+           word wider than a quarter of a 390px screen. */
+        min-width: 0;
+        overflow-wrap: break-word;
     }
 
     .mini.done {
@@ -1144,8 +1202,14 @@ td.date,
         font-variant-numeric: tabular-nums;
     }
 
+    /* Wrapping, because the row is a label plus as many format chips as the
+       connector offers and there is no width at which four of them fit a
+       375px phone. Without it the row measured 402px against 375 and pushed
+       the whole document sideways — visible on iOS first only because that
+       is the narrowest viewport the product meets. */
     .format-chips {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: var(--space-2);
         margin: var(--space-3) 0 var(--space-4);
@@ -1446,8 +1510,11 @@ td.date,
         display: grid;
         /* Single column first. A fixed 280px track plus its 1fr sibling needs
            ~330px before padding, so on a phone the second column was laid out
-           past the right edge of a container narrower than the track itself. */
-        grid-template-columns: 1fr;
+           past the right edge of a container narrower than the track itself.
+           minmax(0, …) rather than a bare 1fr: a fr track's automatic minimum
+           is min-content, and the tax deduction-category rows measure ~367px
+           of it, which pushed that whole section 92px past its container. */
+        grid-template-columns: minmax(0, 1fr);
         gap: 24px;
         padding: 22px;
         border-bottom: 1px solid var(--color-border);
@@ -1469,7 +1536,7 @@ td.date,
 
     @media (min-width: 768px) {
         .settings-section {
-            grid-template-columns: 280px 1fr;
+            grid-template-columns: 280px minmax(0, 1fr);
         }
     }
 
@@ -1487,6 +1554,11 @@ td.date,
         display: flex;
         align-items: center;
         justify-content: space-between;
+        /* The control side does not shrink, so on a phone a row with a long
+           label and two ghost buttons ran past the section. Wrapping only
+           engages once the row cannot fit, so a row that does is unchanged. */
+        flex-wrap: wrap;
+        gap: 8px;
         padding: 12px 0;
         border-bottom: 1px solid var(--color-border);
     }
@@ -1887,6 +1959,16 @@ td.date,
         flex-wrap: wrap;
     }
 
+    /* Skip and commit travel together as one unit, so the counter keeps the
+       far side of the row when the footer wraps at phone width rather than
+       the two buttons splitting across the gap. */
+    .commit-footer-actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+    }
+
     .commit-counter {
         margin: 0;
         font-size: var(--text-sm);
@@ -2062,8 +2144,18 @@ td.date,
     .cp-stats {
         display: flex;
         align-items: baseline;
+        flex-wrap: wrap;
         gap: var(--space-3);
         font-variant-numeric: tabular-nums;
+    }
+
+    /* A card is ~290px on a phone and holds two amounts plus their labels,
+       so without these the row broke inside a number: "€ 3.750," on one
+       line and "00" on the next. The amounts stay whole and the pairs wrap
+       instead. */
+    .cp-stats .value,
+    .cp-stats .label {
+        white-space: nowrap;
     }
 
     .cp-stats .label {
@@ -2104,6 +2196,21 @@ td.date,
         display: flex;
         flex-direction: column;
         gap: 2px;
+    }
+
+    /* Two side-by-side cards on a profile tab. Held to one column on a
+       phone, where halving 390px left a category name and its amount with
+       nothing between them ("Groceries€ 828,31"). */
+    .cp-tab-duo {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+    }
+
+    @media (min-width: 640px) {
+        .cp-tab-duo {
+            grid-template-columns: 1fr 1fr;
+        }
     }
 
     /* ─── View toggle (Cards / List segmented) ───────────────────── */
@@ -2450,6 +2557,22 @@ td.date,
         font-size: var(--text-md);
         color: var(--color-text);
         letter-spacing: 0.08em;
+    }
+
+    /* The mask is one identifier and has to read as one. At 375px the head row
+       squeezed it to 129px and it broke across THREE lines; the tracking makes
+       it wider than the row assumed, so the chip won and the IBAN lost. The
+       chip drops below instead, and 25 fixed characters then fit on one line. */
+    @media (max-width: 767px) {
+        .triage-head {
+            flex-wrap: wrap;
+        }
+
+        .triage-iban {
+            font-size: var(--text-sm);
+            letter-spacing: normal;
+            white-space: nowrap;
+        }
     }
 
     .triage-meta {
@@ -2953,6 +3076,14 @@ td.date,
         transform: none !important;
         display: block !important;
         height: auto !important;
+    }
+
+    /* Higher specificity than [x-cloak] on purpose, because equal would lose:
+       the rule above is one class, the cloak rule one attribute, and the copy
+       Livewire injects lands after this file. Without the extra weight the
+       desktop sidebar — which this element is — blanks until Alpine boots. */
+    .drawer-container[x-cloak] {
+        display: block !important;
     }
 
     /*
@@ -4653,4 +4784,329 @@ mark {
         width: 100%;
         opacity: 0.35;
     }
+}
+
+/*
+ * Date-picker calendar (Modules/Core .../components/date-input.blade.php).
+ *
+ * At desktop the calendar hangs off the field, which is what a popover should
+ * do. At phone width it cannot: the field is usually the last row of a bottom
+ * sheet, the sheet is `position: fixed; bottom: 0` and only as tall as its
+ * content, and a 288px calendar dropped below the field lands past the fold —
+ * the bottom two week rows and the Today/Clear controls sit outside the
+ * viewport entirely. Flipping it above does not help either; the sheet is not
+ * tall enough to hold the calendar in either direction.
+ *
+ * So on a phone it stops being a popover and becomes what every native date
+ * control is there — a centred dialog over the page. `position: fixed` is
+ * honoured here because nothing between it and the viewport carries a
+ * transform, filter or containment (the sheet's slide-up transform is only
+ * applied while the sheet is animating, and the calendar cannot be open then).
+ */
+@media (max-width: 767px) {
+    .bx-date-pop {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        margin-top: 0;
+        width: min(20rem, calc(100vw - 2rem));
+        max-width: none;
+        z-index: 70;
+    }
+}
+
+/*
+ * Failure pages (G2-R1). Deliberately plain: a page that appears because
+ * something already went wrong should not depend on much. No grid, no
+ * component classes borrowed from elsewhere, nothing that needs JS — if the
+ * stylesheet itself fails to load the markup still reads top to bottom.
+ */
+@layer components {
+    .bx-error {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-3);
+        padding: calc(var(--space-6) + var(--safe-top)) var(--space-6)
+                 calc(var(--space-6) + var(--safe-bottom));
+        text-align: center;
+        background: var(--color-bg-subtle);
+    }
+
+    .bx-error-status {
+        margin: 0;
+        font-size: var(--text-sm);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.08em;
+        color: var(--color-text-faint);
+    }
+
+    .bx-error-title {
+        margin: 0;
+        max-width: 28rem;
+        font-size: var(--text-2xl);
+        font-weight: 600;
+        color: var(--color-text);
+    }
+
+    .bx-error-body {
+        margin: 0;
+        max-width: 32rem;
+        font-size: var(--text-base);
+        color: var(--color-text-muted);
+    }
+
+    .bx-error-action {
+        margin-top: var(--space-2);
+        padding: 10px var(--space-5);
+        border-radius: var(--radius-md);
+        background: var(--color-text);
+        color: var(--color-bg-subtle);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        text-decoration: none;
+    }
+}
+
+/*
+ * Dashboard "recent transactions" at phone width.
+ *
+ * Four columns do not fit 411px. The table already scrolled sideways rather
+ * than clipping, which is better than losing the data — but it opened on
+ * DATUM / TEGENPARTIJ / CATEGORIE with BEDRAG past the right edge, and nothing
+ * on screen says a table can be swiped. The row exists to show an amount and
+ * the amount was the part you could not see.
+ *
+ * So below 768px the row restacks: counterparty first, then the date and
+ * category beneath it as secondary lines, with the amount held to the right
+ * across all three. Same cells, same order in the DOM and for a screen reader
+ * — only the visual grid changes. Above 768px the ordinary table is untouched.
+ */
+@media (max-width: 767px) {
+    .dash-recent-table,
+    .dash-recent-table tbody {
+        display: block;
+    }
+
+    /* The header labels the columns of a grid that no longer exists here; the
+       cells below are self-describing (name, date, category, amount). */
+    .dash-recent-table thead {
+        display: none;
+    }
+
+    .dash-recent-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .dash-recent-table td {
+        padding: 0;
+    }
+
+    /* Counterparty leads: it is what a reader scans for. */
+    .dash-recent-table td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .dash-recent-table td:nth-child(1),
+    .dash-recent-table td:nth-child(3) {
+        grid-column: 1;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .dash-recent-table td:nth-child(1) {
+        grid-row: 2;
+    }
+
+    .dash-recent-table td:nth-child(3) {
+        grid-row: 3;
+    }
+
+    /* Spans the three stacked lines so it reads as the row's figure rather
+       than as a fourth line of detail. */
+    .dash-recent-table td:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1 / span 3;
+        align-self: center;
+        white-space: nowrap;
+    }
+}
+
+/*
+ * Uncategorised-triage rows at phone width.
+ *
+ * Five columns — date, counterparty, amount, category picker, row actions —
+ * measure 484px against 346px of room. The table scrolls rather than clipping,
+ * which is better than losing them, but it opens on the first three and the
+ * CATEGORY PICKER is the part past the edge. That is the only control on a
+ * screen that exists to assign categories, and nothing on screen says a table
+ * can be swiped.
+ *
+ * Restacked below 768px: counterparty and amount on the first line, the date
+ * beneath as secondary, then the picker and the actions each on their own full
+ * width. Same cells, same DOM order, same reading order for assistive tech.
+ */
+@media (max-width: 767px) {
+    .triage-inbox-table,
+    .triage-inbox-table tbody {
+        display: block;
+    }
+
+    /* The cells below name themselves — a merchant, a date, an amount, a
+       picker — so the column labels stop earning their line. */
+    .triage-inbox-table thead {
+        display: none;
+    }
+
+    .triage-inbox-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--space-3);
+        row-gap: var(--space-2);
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .triage-inbox-table td {
+        padding: 0;
+    }
+
+    /* Counterparty leads, amount holds the right of the same line. */
+    .triage-inbox-table td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .triage-inbox-table td:nth-child(3) {
+        grid-column: 2;
+        grid-row: 1;
+        white-space: nowrap;
+    }
+
+    .triage-inbox-table td:nth-child(1) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    /* Picker and actions get the full width — they are what the row is for. */
+    .triage-inbox-table td:nth-child(4) {
+        grid-column: 1 / -1;
+        grid-row: 3;
+    }
+
+    .triage-inbox-table td:nth-child(5) {
+        grid-column: 1 / -1;
+        grid-row: 4;
+    }
+
+    .triage-inbox-table td:nth-child(4) select,
+    .triage-inbox-table td:nth-child(4) input {
+        width: 100%;
+    }
+}
+
+/*
+ * Stop iOS zooming the page when a control takes focus.
+ *
+ * WKWebView zooms in whenever a focused input/select/textarea computes below
+ * 16px, and every control in this product computes to 13px (--text-sm). The
+ * page then sits zoomed with no way back except a pinch, on a viewport that
+ * declares `viewport-fit=cover` and nothing about scale.
+ *
+ * 16px on coarse pointers only, so the desktop density the design specifies is
+ * untouched. The alternative — `maximum-scale=1` on the viewport — is worse on
+ * both counts: it disables pinch-zoom for everyone, which is an accessibility
+ * regression, and iOS has ignored it since iOS 10 anyway.
+ *
+ * One input already carried `style="font-size: 16px"` inline for this reason;
+ * this generalises that rather than leaving it as the only field that knew.
+ */
+@media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+        font-size: 16px;
+    }
+}
+
+/*
+ * The rules table, restacked below the tablet breakpoint.
+ *
+ * Six columns — priority, conditions, actions, hits, created, row actions —
+ * measured 739px against 346px of container, the widest table in the app by
+ * some way. It scrolled, with the same missing affordance as the two already
+ * restacked: nothing tells the reader the rest of a row exists.
+ *
+ * What a rule IS lives in conditions and actions, so those lead. Priority,
+ * hits and created are the metadata you check afterwards, so they share a
+ * muted line. Same cells, same DOM order, same reading order for assistive
+ * tech — only the visual arrangement changes.
+ */
+@media (max-width: 767px) {
+    .rules-table,
+    .rules-table tbody {
+        display: block;
+    }
+
+    /* Every cell below is self-describing once stacked, so the column labels
+       stop earning their line. */
+    .rules-table thead {
+        display: none;
+    }
+
+    .rules-table tr {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: var(--space-3);
+        row-gap: var(--space-2);
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .rules-table td {
+        padding: 0;
+    }
+
+    /* Conditions lead the row; row actions hold the right of the same line. */
+    .rules-table td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        overflow-wrap: anywhere;
+    }
+
+    .rules-table td:nth-child(6) {
+        grid-column: 2;
+        grid-row: 1;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    /* What the rule does, full width underneath. */
+    .rules-table td:nth-child(3) {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        overflow-wrap: anywhere;
+    }
+
+    /* Priority, hits and created share the metadata line. */
+    .rules-table td:nth-child(1),
+    .rules-table td:nth-child(4),
+    .rules-table td:nth-child(5) {
+        grid-row: 3;
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .rules-table td:nth-child(1) { grid-column: 1; }
+    .rules-table td:nth-child(4) { grid-column: 2; text-align: right; white-space: nowrap; }
+    .rules-table td:nth-child(5) { grid-column: 1 / -1; grid-row: 4; }
 }

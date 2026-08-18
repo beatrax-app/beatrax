@@ -22,6 +22,7 @@ return [
     'commit_committing' => 'A confirmar…',
     'commit_count' => 'Confirmar tudo (:count transações) →',
     'commit_empty' => 'Confirmar tudo (—) →',
+    'skip' => 'Ignorar por agora',
 
     'errors' => [
         'nothing_to_commit' => 'Não há nada para confirmar.',

@@ -154,6 +154,14 @@ final class FirstImportStep extends Component
         }
     }
 
+    // Commit is disabled whenever no section is ready — the normal state for
+    // someone who skipped the connector steps. Without this the step has no
+    // forward control and the three steps after it are unreachable.
+    public function skip(): void
+    {
+        $this->dispatch('wizard.step.skipped');
+    }
+
     // Only ready sections feed the commit loop, so a half-broken section
     // doesn't take the whole batch down.
     /**

@@ -33,7 +33,7 @@
                                 id="budget-{{ $id }}"
                                 type="text"
                                 inputmode="decimal"
-                                placeholder="0.00"
+                                placeholder="{{ Lang::get('core::components.amount_placeholder') }}"
                                 wire:model="amounts.{{ $id }}"
                                 aria-label="{{ Lang::get('onboarding::budgets.row_aria', ['name' => $name]) }}"
                             >

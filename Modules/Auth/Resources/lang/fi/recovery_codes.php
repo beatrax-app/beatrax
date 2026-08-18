@@ -13,4 +13,11 @@ return [
     'saved_as' => 'Tallennettu nimellä beatrax-recovery-codes-:username.txt',
     'confirm' => 'Olen tallentanut nämä koodit turvalliseen paikkaan.',
     'continue' => 'Jatka Beatraxiin',
+
+    'settings' => [
+        'heading' => 'Palautuskoodit',
+        'body' => 'Palautuskoodit ovat ainoa tapa päästä takaisin tilillesi, jos unohdat salasanasi.',
+        'warning' => 'Ne tallennetaan tiivisteinä, joten niitä ei voi näyttää uudelleen. Uusi sarja mitätöi vanhan heti.',
+        'regenerate' => 'Luo uudet koodit',
+    ],
 ];

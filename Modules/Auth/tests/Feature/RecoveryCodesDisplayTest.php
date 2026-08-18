@@ -83,10 +83,13 @@ it('disables Continue until the checkbox is ticked', function (): void {
 it('completes the ceremony and clears the session key', function (): void {
     $result = signupFirstUser();
 
+    // On to the setup wizard, not the dashboard: this screen sits between
+    // signup and setup, so finishing it resumes onboarding rather than
+    // skipping the nine steps the user has not seen yet.
     Livewire::actingAs($result['user'])->test(RecoveryCodesDisplay::class)
         ->set('confirmed', true)
         ->call('continueAfterSave')
-        ->assertRedirect(route('dashboard'));
+        ->assertRedirect(route('setup'));
 
     expect(session('auth.signup.recovery_codes_plain'))->toBeNull();
 
