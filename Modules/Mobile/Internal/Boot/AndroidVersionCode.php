@@ -17,7 +17,9 @@ final class AndroidVersionCode
 
     private const MINOR = 100;
 
-    // Google Play's own ceiling.
+    // Google Play's own ceiling. Reached at major 210000, which no version
+    // this scheme can express will ever get near — it is here so the failure
+    // is a refusal rather than a store rejection.
     private const CEILING = 2100000000;
 
     public static function fromVersion(string $version): ?int

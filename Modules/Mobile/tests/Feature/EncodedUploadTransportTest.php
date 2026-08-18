@@ -5,6 +5,9 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Testing\TestResponse;
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
+use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
 
 /*
@@ -18,11 +21,16 @@ use Modules\Mobile\Internal\Http\Middleware\EncodedUploadTransport;
  * it arrived as multipart or encoded, and whether it is text or binary.
  */
 
-/** The bytes as they lie on Livewire's temporary disk after an upload. */
+// The bytes as they lie on Livewire's temporary disk after an upload. It
+// writes a .json metadata sidecar beside each one, so the upload itself is
+// what is left after those are set aside.
 function storedUpload(): string
 {
-    $disk = Storage::disk('livewire-tmp');
-    $files = $disk->allFiles();
+    $disk = Storage::disk(FileUploadConfiguration::disk());
+    $files = array_values(array_filter(
+        $disk->allFiles(),
+        static fn (string $path): bool => ! str_ends_with($path, '.json'),
+    ));
 
     expect($files)->toHaveCount(1);
 
@@ -30,7 +38,7 @@ function storedUpload(): string
 }
 
 /** @param  array<int, array<string, mixed>>  $files */
-function postEncoded(array $files): \Illuminate\Testing\TestResponse
+function postEncoded(array $files): TestResponse
 {
     return test()->postJson(
         URL::temporarySignedRoute('livewire.upload-file', now()->addMinutes(5)),
@@ -52,7 +60,17 @@ function encodedFile(string $contents, string $name): array
 }
 
 beforeEach(function (): void {
-    Storage::fake('livewire-tmp');
+    Storage::fake(FileUploadConfiguration::disk());
+
+    // The upload endpoint sits behind the web guard, and UserScope is
+    // fail-closed for web requests — an unauthenticated post does not merely
+    // redirect, the first scoped query throws.
+    test()->actingAs(User::query()->create([
+        'username' => 'encoded-upload-user',
+        'password' => bcrypt('fixture'),
+        'period_start_day' => 1,
+        'default_currency_view' => 'eur_only',
+    ]));
 });
 
 it('lands the same bytes a multipart upload would', function (): void {
@@ -81,7 +99,7 @@ it('refuses a file that did not arrive whole', function (): void {
 
     postEncoded([$entry])->assertStatus(422);
 
-    expect(Storage::disk('livewire-tmp')->allFiles())->toBeEmpty();
+    expect(Storage::disk(FileUploadConfiguration::disk())->allFiles())->toBeEmpty();
 });
 
 it('refuses a file whose bytes changed on the way', function (): void {
@@ -90,7 +108,7 @@ it('refuses a file whose bytes changed on the way', function (): void {
 
     postEncoded([$entry])->assertStatus(422);
 
-    expect(Storage::disk('livewire-tmp')->allFiles())->toBeEmpty();
+    expect(Storage::disk(FileUploadConfiguration::disk())->allFiles())->toBeEmpty();
 });
 
 it('leaves an ordinary multipart upload alone', function (): void {

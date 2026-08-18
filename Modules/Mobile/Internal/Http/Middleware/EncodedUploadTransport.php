@@ -8,14 +8,12 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
-// The iOS shell serves the app over a custom scheme, and WebKit hands a custom
-// scheme handler only string request bodies — a FormData body arrives as
-// neither httpBody nor httpBodyStream, so an upload reached PHP as a multipart
-// Content-Type over a zero-byte php://input. The client encodes the file into a
-// JSON body instead; this rebuilds the bytes and puts a real UploadedFile back
-// where a multipart POST would have left one, so the controller behind it — and
-// every step after it — cannot tell the two apart.
+// WebKit hands a custom-scheme handler only string request bodies, so a
+// FormData upload reached PHP as a multipart Content-Type over a zero-byte
+// php://input. The client encodes the file into JSON instead and this puts a
+// real UploadedFile back, so nothing behind it can tell the two apart.
 /**
  * @link ../../../../../.docs/features/mobile/architecture.md
  */
@@ -30,6 +28,9 @@ final class EncodedUploadTransport
     // than an upload the user can see failed and retry.
     private const REJECTION = 422;
 
+    /**
+     * @param  Closure(Request): Response  $next
+     */
     public function handle(Request $request, Closure $next): Response
     {
         if ($request->input(self::FIELD) !== self::MARKER) {
@@ -65,21 +66,21 @@ final class EncodedUploadTransport
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array<array-key, mixed>>
      */
     private function entries(Request $request): array
     {
         $files = $request->input('files');
 
         if (! is_array($files) || $files === []) {
-            abort(self::REJECTION, 'The upload carried no files.');
+            throw new HttpException(self::REJECTION, 'The upload carried no files.');
         }
 
         $entries = [];
 
         foreach ($files as $entry) {
             if (! is_array($entry)) {
-                abort(self::REJECTION, 'The upload was not shaped as this transport sends it.');
+                throw new HttpException(self::REJECTION, 'The upload was not shaped as this transport sends it.');
             }
 
             $entries[] = $entry;
@@ -88,10 +89,12 @@ final class EncodedUploadTransport
         return $entries;
     }
 
+    // The decoded bytes on disk, proven identical to the ones the client read.
+    // Refuses rather than repairs: a statement that arrives short would import
+    // as a truncated one, and a wrong number in the ledger is worse than an
+    // upload the user can see failed.
     /**
-     * The decoded bytes on disk, proven identical to the ones the client read.
-     *
-     * @param  array<string, mixed>  $entry
+     * @param  array<array-key, mixed>  $entry
      */
     private function write(array $entry): string
     {
@@ -99,36 +102,35 @@ final class EncodedUploadTransport
         $decoded = is_string($content) ? base64_decode($content, true) : false;
 
         if ($decoded === false) {
-            abort(self::REJECTION, 'The upload was not valid base64.');
+            throw new HttpException(self::REJECTION, 'The upload was not valid base64.');
         }
 
         $declaredSize = $entry['size'] ?? null;
 
         if (! is_int($declaredSize) || strlen($decoded) !== $declaredSize) {
-            abort(self::REJECTION, 'The upload did not arrive whole.');
+            throw new HttpException(self::REJECTION, 'The upload did not arrive whole.');
         }
 
         $declaredDigest = $entry['sha256'] ?? null;
 
         if (! is_string($declaredDigest) || ! hash_equals(hash('sha256', $decoded), $declaredDigest)) {
-            abort(self::REJECTION, 'The upload did not survive the crossing intact.');
+            throw new HttpException(self::REJECTION, 'The upload did not survive the crossing intact.');
         }
 
         $path = tempnam(sys_get_temp_dir(), 'beatrax-upload-');
 
         if ($path === false || file_put_contents($path, $decoded) === false) {
-            abort(500, 'The upload could not be staged for parsing.');
+            throw new HttpException(500, 'The upload could not be staged for parsing.');
         }
 
         return $path;
     }
 
+    // `test: true` because no SAPI moved this file into place — the bytes came
+    // over the bridge — so the is_uploaded_file() check it skips would be asking
+    // a question that cannot be true here.
     /**
-     * `test: true` because no SAPI moved this file into place — the bytes came
-     * over the bridge — so the is_uploaded_file() check it skips would be
-     * asking a question that cannot be true here.
-     *
-     * @param  array<string, mixed>  $entry
+     * @param  array<array-key, mixed>  $entry
      */
     private function uploaded(array $entry, string $path): UploadedFile
     {

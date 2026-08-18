@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Mobile\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Mobile\Internal\Boot\AndroidVersionCode;
 use Modules\Mobile\Internal\Boot\NativeBuildPatches;
@@ -33,6 +34,7 @@ final class PackageAndroidCommand extends Command
     public function __construct(
         private readonly Filesystem $files,
         private readonly NativeBuildPatches $patches,
+        private readonly Repository $config,
     ) {
         parent::__construct();
     }
@@ -47,7 +49,7 @@ final class PackageAndroidCommand extends Command
             );
         }
 
-        $appId = config('nativephp.app_id');
+        $appId = $this->config->get('nativephp.app_id');
 
         if (! is_string($appId) || $appId === '') {
             return $this->refuse(
@@ -138,7 +140,10 @@ final class PackageAndroidCommand extends Command
             '--with-icu' => true,
         ]);
 
-        if ($this->files->isDirectory($project)) {
+        // The Gradle build file, not the directory again: it is what the
+        // identity and version read-backs below both parse, so its absence is
+        // the failure that actually matters.
+        if ($this->files->isFile(base_path(self::GRADLE))) {
             return null;
         }
 
@@ -148,7 +153,7 @@ final class PackageAndroidCommand extends Command
 
     private function versionCodeFailure(): ?string
     {
-        $configured = config('nativephp.version_code');
+        $configured = $this->config->get('nativephp.version_code');
 
         // 1 is nativephp/mobile's own package default, which is what resolves
         // whenever NATIVEPHP_APP_VERSION_CODE is unset — as it is on every CI
@@ -158,7 +163,7 @@ final class PackageAndroidCommand extends Command
             return null;
         }
 
-        $version = config('nativephp.version');
+        $version = $this->config->get('nativephp.version');
 
         if (! is_string($version)) {
             return "config('nativephp.version') is not a string, so no version code can be derived from it.";
@@ -172,7 +177,7 @@ final class PackageAndroidCommand extends Command
                 .'explicitly, or tag a version that can carry one.';
         }
 
-        config(['nativephp.version_code' => $derived]);
+        $this->config->set('nativephp.version_code', $derived);
 
         $this->components->info("Derived versionCode {$derived} from version {$version}.");
 
@@ -187,7 +192,7 @@ final class PackageAndroidCommand extends Command
             return "No {$gradlePath}, so the version code the APK carries cannot be read back.";
         }
 
-        $expected = config('nativephp.version_code');
+        $expected = $this->config->get('nativephp.version_code');
         $actual = AndroidVersionCode::inGradle($this->files->get($gradlePath));
 
         if ($actual === $expected) {
