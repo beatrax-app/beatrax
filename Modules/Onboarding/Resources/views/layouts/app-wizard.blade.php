@@ -21,6 +21,14 @@
              :root, which --safe-* reads through max(). --}}
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
+
+        {{-- The wizard has its own layout, and the first import happens here:
+             the signal was added to the two shared layouts and missed this
+             one, so the encoded transport never engaged where it was needed
+             most. UploadSignalArchTest holds every layout to it now. --}}
+        @if (($beatraxEncodedUploads ?? false) === true)
+            <meta name="beatrax-upload-transport" content="base64" />
+        @endif
         <title>{{ $title ?? Lang::get('onboarding::wizard.page_title').' · Beatrax' }}</title>
         <x-core::theme-prepaint :enabled="$chrome->needsPrePaintScript" />
         <x-core::head-assets />
