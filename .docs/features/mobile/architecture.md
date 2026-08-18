@@ -769,3 +769,37 @@ reported success having done half its job.
 Restoring a device therefore starts a fresh install with no data, which is what
 [F4](../core/architecture.md) covers: the encrypted backup
 the user takes deliberately is the recovery path, not the platform's.
+
+## The pairing screen is the whole of sync setup on a phone
+
+On a phone, `/data-devices` renders `MobilePairingScan` — the same component
+`/mobile/pair` does. There is no separate "enable sync" step to reach first,
+the way `DevicesAndSyncSettingsSection` provides one on the desktop. That makes
+the scan screen responsible for establishing its own preconditions, and two of
+them were originally treated as import-path concerns:
+
+**The responder's identity.** `enableSyncIdentityWithoutEpoch()` had exactly one
+caller, `MobileImportBootstrap`. A phone that reached the scanner any other way
+had no `sync/identity/{userId}.enc`, so `DeviceIdentityLoader::load()` returned
+null and `PairingGateway::acceptToken()` returned null before it ever looked at
+the token. Identity-only is the right shape here for the same reason it is on
+the import path: a responder receives the initiator's epochs on confirm, and
+self-minting an epoch would strand the peer's.
+
+**The local pending row.** `seedResponderToken()` was gated on import mode,
+described as being for "a fresh, separate database with no local pending row".
+That describes *every* phone — a phone's database is always separate from the
+desktop's, so the token issued on the desktop is never present locally, and
+`acceptToken()` has nothing to match. Seeding makes no trust decision: the row
+is written `Pending` and still has to survive `acceptToken()` and the
+both-sides confirm ceremony.
+
+Anything that mints an identity must gate on `hasIdentityFile()` (the key-file)
+and never on a null from the loader. `load()` returns null both when sync was
+never enabled *and* when the app-lock holds the KEK, and minting over a locked
+device's existing identity would orphan every pairing it already had.
+
+Both failures surfaced as `pairing.errors.invalid_code` — "this code is invalid
+or expired, ask the other device to generate a new one" — which points the user
+at the one device that was working correctly. A null from the accept path now
+distinguishes a locked identity from a genuinely bad code.

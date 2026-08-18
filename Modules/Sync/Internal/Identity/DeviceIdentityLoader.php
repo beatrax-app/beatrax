@@ -20,6 +20,15 @@ final class DeviceIdentityLoader
         private readonly FileEncryptor $backupEncryptor,
     ) {}
 
+    // Whether a key-file exists at all, WITHOUT needing the KEK. load()
+    // folds "never enabled" and "locked" into the same null, and a caller
+    // that mints on null would overwrite a locked device's existing identity
+    // — separating the two is what makes minting safe.
+    public function exists(int $userId): bool
+    {
+        return file_exists(UserDataPathService::appPath("sync/identity/{$userId}.enc"));
+    }
+
     // Returns null when sync was never enabled (no key-file) or the app-lock
     // is locked (no KEK) — callers treat null as "no usable identity right
     // now" and either surface the unlock screen or run keyless.
