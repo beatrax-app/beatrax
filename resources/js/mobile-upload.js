@@ -94,18 +94,31 @@ function partition(formData) {
 }
 
 /*
- * Installed unconditionally, and the decision made per request inside send().
+ * Re-asserted rather than installed once, because we have to be the OUTERMOST
+ * wrapper and we are not the only one wrapping.
  *
- * It used to be `if (! carriesMultipart())` around the whole patch, evaluated
- * once as the module executed. On the device that read the meta as absent and
- * never installed the hook, while the very same meta was demonstrably in the
- * document afterwards — the bundle was right, the selector matched, and no
- * exception was thrown. Rather than keep chasing which load-order made that
- * true, the question is removed: the hook always exists and asks at the moment
- * it matters. It costs one selector lookup per upload, and none at all on any
- * other request, because the body has to be FormData to get that far.
+ * The Android shell injects its own XHR shim AFTER the page's modules run:
+ *
+ *     XMLHttpRequest.prototype.send = function (data) {
+ *         if (["post","patch","put"].includes(this._method.toLowerCase()) && data) {
+ *             var reqId = 'nphp_' + (++_nphpReqId) + ...
+ *
+ * It replaces the prototype outright, so a hook installed at module load is
+ * simply gone by the time an upload happens — which is exactly what the device
+ * showed: app.js had demonstrably run (window.ApexCharts was set, the scheme
+ * cookie written) and yet prototype.send was the shell's, not ours.
+ *
+ * That shim is also WHY multipart never arrives. It routes POST bodies through
+ * the native bridge, and the bridge cannot carry a FormData — the same reason
+ * iOS could not. So this has to sit outside it and hand it a string.
+ *
+ * install() is idempotent and marks its own work, so re-running it is free.
  */
-{
+function install() {
+    if (XMLHttpRequest.prototype.send.beatraxTransport === true) {
+        return;
+    }
+
     const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
 
@@ -156,4 +169,31 @@ function partition(formData) {
 
         return undefined;
     };
+
+    XMLHttpRequest.prototype.send.beatraxTransport = true;
 }
+
+install();
+
+/*
+ * The shell's shim lands at some point after the modules run, and exactly when
+ * is its business, not ours. Rather than guess, re-assert at each point the
+ * document is known to have moved on. install() returns immediately when we
+ * are already outermost, so the repetition costs a property read.
+ */
+document.addEventListener('DOMContentLoaded', install);
+window.addEventListener('load', install);
+document.addEventListener('livewire:init', install);
+document.addEventListener('livewire:navigated', install);
+
+// A short tail for the shell itself, which injects on its own schedule and
+// answers to no document event. Five seconds of one property read, then it
+// stops; an upload cannot happen before the user has seen the screen anyway.
+let attempts = 0;
+const settle = setInterval(() => {
+    install();
+
+    if (++attempts >= 10) {
+        clearInterval(settle);
+    }
+}, 500);
