@@ -92,10 +92,18 @@ final class PackageAndroidCommand extends Command
         ]);
 
         if (! $this->files->isFile($artifact) || $this->files->size($artifact) === 0) {
-            $this->reportGradleFailure($buildType);
+            $this->runGradleDirectly($buildType);
 
-            return $this->refuse(
-                "native:package android --build-type={$buildType} produced nothing at {$artifact}.",
+            if (! $this->files->isFile($artifact) || $this->files->size($artifact) === 0) {
+                return $this->refuse(
+                    "native:package android --build-type={$buildType} produced nothing at {$artifact}, "
+                    .'and neither did running Gradle directly. Its output is above.',
+                );
+            }
+
+            $this->components->warn(
+                'native:package produced nothing; Gradle run directly did. The artifact below is '
+                .'from that run — same task, on the project native:package had already prepared.',
             );
         }
 
@@ -111,11 +119,11 @@ final class PackageAndroidCommand extends Command
         return self::SUCCESS;
     }
 
-    // native:package swallows Gradle's output whole: on a failed build it
-    // prints "Running Gradle" and then nothing, and returns 0. So the reason is
-    // fetched rather than guessed at — one more Gradle run, only ever on the
-    // failing path, is worth far more than a list of things it might have been.
-    private function reportGradleFailure(string $buildType): void
+    // native:package prints "Running Gradle" and then nothing, and returns 0
+    // whatever happened. On a runner its call returned instantly having done
+    // nothing while the wrapper here assembled the same task successfully — so
+    // this recovers both the error and, when Gradle works, the artifact.
+    private function runGradleDirectly(string $buildType): void
     {
         $project = $this->laravel->basePath(self::PROJECT);
         $wrapper = $project.DIRECTORY_SEPARATOR.'gradlew';
