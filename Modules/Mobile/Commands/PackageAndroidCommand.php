@@ -32,7 +32,9 @@ final class PackageAndroidCommand extends Command
 
     private const GRADLE = 'nativephp/android/app/build.gradle.kts';
 
-    // A release assemble on a cold CI runner, with no daemon to reuse.
+    // A release assemble on a cold CI runner, with no daemon to reuse and the
+    // whole Android toolchain to warm up. Only ever spent on a build that has
+    // already failed, so a generous ceiling costs nothing in the normal case.
     private const GRADLE_TIMEOUT_SECONDS = 1800;
 
     public function __construct(
