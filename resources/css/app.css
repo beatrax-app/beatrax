@@ -2559,6 +2559,22 @@ td.date,
         letter-spacing: 0.08em;
     }
 
+    /* The mask is one identifier and has to read as one. At 375px the head row
+       squeezed it to 129px and it broke across THREE lines; the tracking makes
+       it wider than the row assumed, so the chip won and the IBAN lost. The
+       chip drops below instead, and 25 fixed characters then fit on one line. */
+    @media (max-width: 767px) {
+        .triage-head {
+            flex-wrap: wrap;
+        }
+
+        .triage-iban {
+            font-size: var(--text-sm);
+            letter-spacing: normal;
+            white-space: nowrap;
+        }
+    }
+
     .triage-meta {
         font-size: var(--text-sm);
         color: var(--color-text-muted);
