@@ -115,9 +115,9 @@ final class MobileServiceProvider extends ServiceProvider
                 return;
             }
 
-            $scripts = dirname($this->app->basePath()).DIRECTORY_SEPARATOR.'scripts';
+            $scripts = NativeBuildPatches::locate($this->app->basePath());
 
-            if (is_dir($scripts)) {
+            if ($scripts !== null) {
                 $this->app->make(NativeBuildPatches::class)->apply($scripts);
             }
         });

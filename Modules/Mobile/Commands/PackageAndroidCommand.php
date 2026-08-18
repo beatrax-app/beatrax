@@ -73,7 +73,7 @@ final class PackageAndroidCommand extends Command
 
     private function package(string $buildType, string $appId): int
     {
-        $artifact = base_path(self::ARTIFACTS[$buildType]);
+        $artifact = $this->laravel->basePath(self::ARTIFACTS[$buildType]);
 
         // native:package reports success on every failure path, so a leftover
         // artifact from an earlier build would satisfy the check below.
@@ -109,7 +109,7 @@ final class PackageAndroidCommand extends Command
 
     private function appIdPinFailure(string $appId): ?string
     {
-        $envPath = base_path('.env');
+        $envPath = $this->laravel->basePath('.env');
         $contents = $this->files->isFile($envPath) ? $this->files->get($envPath) : '';
 
         if (PinnedAppId::isPinnedIn($contents)) {
@@ -124,7 +124,7 @@ final class PackageAndroidCommand extends Command
 
     private function androidProjectFailure(): ?string
     {
-        $project = base_path(self::PROJECT);
+        $project = $this->laravel->basePath(self::PROJECT);
 
         if ($this->files->isDirectory($project)) {
             return null;
@@ -143,7 +143,7 @@ final class PackageAndroidCommand extends Command
         // The Gradle build file, not the directory again: it is what the
         // identity and version read-backs below both parse, so its absence is
         // the failure that actually matters.
-        if ($this->files->isFile(base_path(self::GRADLE))) {
+        if ($this->files->isFile($this->laravel->basePath(self::GRADLE))) {
             return null;
         }
 
@@ -186,7 +186,7 @@ final class PackageAndroidCommand extends Command
 
     private function shippedVersionCodeFailure(): ?string
     {
-        $gradlePath = base_path(self::GRADLE);
+        $gradlePath = $this->laravel->basePath(self::GRADLE);
 
         if (! $this->files->isFile($gradlePath)) {
             return "No {$gradlePath}, so the version code the APK carries cannot be read back.";
@@ -210,7 +210,7 @@ final class PackageAndroidCommand extends Command
 
     private function shippedIdentityFailure(string $appId): ?string
     {
-        $gradlePath = base_path(self::GRADLE);
+        $gradlePath = $this->laravel->basePath(self::GRADLE);
 
         if (! $this->files->isFile($gradlePath)) {
             return "No {$gradlePath}, so the identity the APK carries cannot be read back.";
@@ -237,9 +237,9 @@ final class PackageAndroidCommand extends Command
         // CommandStarting never fires for a nested $this->call(), so the
         // provider's listener cannot reach the native:package below. Applying
         // them here is what keeps a CI-built APK equal to a developer's.
-        $scripts = dirname(base_path()).DIRECTORY_SEPARATOR.'scripts';
+        $scripts = NativeBuildPatches::locate($this->laravel->basePath());
 
-        if (! $this->files->isDirectory($scripts)) {
+        if ($scripts === null) {
             $this->components->warn(
                 "No patch scripts at {$scripts}. This build ships without the camera permission, "
                 .'cookie persistence, shell theming and boot splash patches. A materialized tree '

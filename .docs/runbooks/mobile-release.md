@@ -174,3 +174,17 @@ item. A mismatch means it was signed by something else — do not distribute it.
 The iOS distribution certificate expires **2027-07-03**. The Android keystore
 does not expire, and must never be replaced: a new key means users cannot
 upgrade over an existing install.
+
+## The patch scripts in a Bifrost tree
+
+`materialize.sh` carries `scripts/nativephp_*.php` into the output, because the
+build repo *is* the mobile root standing on its own — `../scripts`, which is how
+the dev tree reaches them, climbs out of it. `NativeBuildPatches::locate()`
+probes `scripts/` before `../scripts/` and identifies the right one by content,
+since both trees have a `scripts/` directory and only one has the patches in it.
+
+`mobile-app/composer.json` still spells those hooks `../scripts/…`. That is
+correct for the dev tree and inert everywhere else: `post-update-cmd` does not
+fire for `composer install`, which is what CI and Bifrost run. The patches reach
+a built artifact through `NativeBuildPatches`, not through composer — running
+`composer update` inside a materialized tree would fail on those paths.
