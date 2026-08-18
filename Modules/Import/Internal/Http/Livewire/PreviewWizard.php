@@ -8,6 +8,7 @@ use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\DatabaseManager;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -37,6 +38,11 @@ final class PreviewWizard extends Component
     // unambiguous regardless of the user.
     private const ICS_OWN_IBAN = 'ICS-CARD';
 
+    // #[Locked] because a Livewire property is client-mutable across requests:
+    // without it, a mount()-only ownership check is bypassed by setting
+    // importRunId to another user's (guessable, sequential) run id and
+    // re-rendering. render() and applyRenameInPlace() re-verify ownership too.
+    #[Locked]
     public int $importRunId = 0;
 
     public string $accountName = '';
@@ -59,16 +65,20 @@ final class PreviewWizard extends Component
 
     public function mount(int $id, CurrentUser $currentUser): void
     {
-        // Ownership gate: the preview cache key (import.<id>.preview) is not
-        // user-scoped, so without this a guessable run id would expose another
-        // user's in-flight import. Not-found (never forbidden) on a foreign id,
-        // matching the sibling ImportResults/PreviewMigration components.
+        $this->importRunId = $id;
+        $this->assertOwnedRun($currentUser);
+    }
+
+    // Ownership gate re-run on every request that touches the preview (mount,
+    // render, rename): the preview cache key is not user-scoped, so a foreign
+    // run id would else expose another user's in-flight import. Not-found on a
+    // foreign id, matching the sibling ImportResults/PreviewMigration components.
+    private function assertOwnedRun(CurrentUser $currentUser): void
+    {
         ImportRun::query()
-            ->where('id', $id)
+            ->where('id', $this->importRunId)
             ->where('user_id', $currentUser->user()->id)
             ->firstOrFail();
-
-        $this->importRunId = $id;
     }
 
     // Updates the affected preview row's aliasFriendlyName in the cache
@@ -76,11 +86,13 @@ final class PreviewWizard extends Component
     // pipeline. Out-of-bounds rowIndex silently no-ops (returns false)
     // — a stale dispatch from a previous wizard render never throws.
     #[On('rename-counterparty:saved')]
-    public function applyRenameInPlace(int $rowIndex, string $friendlyName, PreviewCache $cache): void
+    public function applyRenameInPlace(int $rowIndex, string $friendlyName, PreviewCache $cache, CurrentUser $currentUser): void
     {
         if ($this->importRunId <= 0) {
             return;
         }
+
+        $this->assertOwnedRun($currentUser);
 
         $cache->applyAliasInPlace($this->importRunId, $rowIndex, $friendlyName);
     }
@@ -333,6 +345,8 @@ final class PreviewWizard extends Component
         CurrentUser $currentUser,
         DatabaseManager $db,
     ): View {
+        $this->assertOwnedRun($currentUser);
+
         $preview = $cache->getPreview($this->importRunId);
         $needsIcsAccountName = $this->needsIcsAccountName($currentUser, $db);
         $needsPaypalAccountName = $this->needsPaypalAccountName($currentUser, $db);
