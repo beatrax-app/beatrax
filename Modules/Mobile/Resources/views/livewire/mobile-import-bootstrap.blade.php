@@ -161,9 +161,9 @@
                 {{-- Denser than the desktop card: a 24-character code at text-lg
                      with wide tracking wrapped to three lines, so ten of them
                      pushed Save and Continue below the fold on a phone. --}}
-                <div aria-live="polite" class="grid grid-cols-2 gap-2">
+                <div aria-live="polite" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     @foreach ($codes as $code)
-                        <div class="bg-slate-50 border border-slate-200 rounded-md px-2 py-2 text-xs font-semibold font-mono tabular-nums tracking-tight text-slate-900 break-all dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
+                        <div class="bg-slate-50 border border-slate-200 rounded-md px-2 py-2 text-sm sm:text-xs font-semibold font-mono tabular-nums tracking-tight text-slate-900 break-all dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
                             {{ $code }}
                         </div>
                     @endforeach

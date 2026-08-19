@@ -144,6 +144,7 @@
             <directory suffix="Test.php">./Modules/Tax/tests/Arch</directory>
         </testsuite>
         <testsuite name="Sync">
+            <directory suffix="Test.php">./Modules/Sync/tests/Arch</directory>
             <directory suffix="Test.php">./Modules/Sync/tests/Feature</directory>
             <directory suffix="Test.php">./Modules/Sync/tests/Unit</directory>
         </testsuite>

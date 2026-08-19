@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Без категорії',
     'status' => [
         'cleared' => 'Проведена',
         'uncleared' => 'Не проведена',

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Kategoriseerimata',
     'status' => [
         'cleared' => 'Laekunud',
         'uncleared' => 'Laekumata',

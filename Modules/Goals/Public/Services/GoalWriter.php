@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Goals\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
 use Modules\Goals\Models\Goal;
@@ -12,12 +13,15 @@ use Modules\Goals\Public\Enums\GoalStatus;
 use Modules\Goals\Public\Exceptions\GoalNotFoundException;
 use Modules\Goals\Public\Exceptions\InvalidGoalAmountException;
 use Modules\Ledger\Public\ValueObjects\MoneyInput;
+use Modules\Sync\Public\Events\GoalMutated;
 
 /**
  * @link ../../../../.docs/features/goals/architecture.md
  */
 final class GoalWriter
 {
+    public function __construct(private readonly Dispatcher $events) {}
+
     /**
      * @throws InvalidGoalAmountException when `$rawAmount` is invalid or non-positive.
      */
@@ -36,7 +40,7 @@ final class GoalWriter
         // name, start_date) would silently overwrite an existing same-name
         // same-day goal (e.g. two "Holiday" goals). Bypass the global scope
         // so the authed $user stays authoritative regardless of guard state.
-        return Goal::query()->withoutGlobalScope(UserScope::class)->create([
+        $attributes = [
             'user_id' => $user->id,
             'name' => $name,
             'start_date' => CarbonImmutable::today()->toDateString(),
@@ -44,7 +48,13 @@ final class GoalWriter
             'target_currency' => $user->base_currency,
             'target_date' => $targetDate,
             'status' => GoalStatus::Active->value,
-        ]);
+        ];
+
+        $goal = Goal::query()->withoutGlobalScope(UserScope::class)->create($attributes);
+
+        $this->capture($goal, $user, 'create', $attributes);
+
+        return $goal;
     }
 
     /**
@@ -73,6 +83,12 @@ final class GoalWriter
         $goal->target_date = CarbonImmutable::parse($targetDate);
         $goal->save();
 
+        $this->capture($goal, $user, 'edit', [
+            'name' => $name,
+            'target_minor' => $minor,
+            'target_date' => $targetDate,
+        ]);
+
         return $goal;
     }
 
@@ -85,6 +101,8 @@ final class GoalWriter
 
         $goal->status = GoalStatus::Completed->value;
         $goal->save();
+
+        $this->capture($goal, $user, 'edit', ['status' => $goal->status]);
     }
 
     public function archive(User $user, int $goalId): void
@@ -96,6 +114,8 @@ final class GoalWriter
 
         $goal->status = GoalStatus::Archived->value;
         $goal->save();
+
+        $this->capture($goal, $user, 'edit', ['status' => $goal->status]);
     }
 
     public function restore(User $user, int $goalId): void
@@ -107,6 +127,24 @@ final class GoalWriter
 
         $goal->status = GoalStatus::Active->value;
         $goal->save();
+
+        $this->capture($goal, $user, 'edit', ['status' => $goal->status]);
+    }
+
+    // Every write here goes through one place so a new mutation cannot ship
+    // uncaptured — goals were absent from the capture wiring entirely, so a
+    // goal created on a phone stayed on that phone forever.
+    /**
+     * @param  array<string, mixed>  $fields
+     */
+    private function capture(Goal $goal, User $user, string $mutationType, array $fields): void
+    {
+        $this->events->dispatch(new GoalMutated(
+            goalId: $goal->id,
+            userId: $user->id,
+            mutationType: $mutationType,
+            dirtyFields: $fields,
+        ));
     }
 
     // Parses a user-entered positive amount to integer minor units — the

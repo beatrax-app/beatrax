@@ -48,10 +48,12 @@ use Modules\Sync\Internal\Transport\Relay\RelayConfig;
 use Modules\Sync\Internal\Transport\Relay\RelayMailbox;
 use Modules\Sync\Internal\Transport\SyncWebSocketHandler;
 use Modules\Sync\Public\Events\DeviceSyncEnabled;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 use Modules\Sync\Public\Events\GoalContributionMutated;
+use Modules\Sync\Public\Events\GoalMutated;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -446,6 +448,8 @@ final class SyncServiceProvider extends ServiceProvider
             [EnvelopeMoveMutated::class, 'handleEnvelopeMove'],
             [EnvelopeSettingMutated::class, 'handleEnvelopeSetting'],
             [GoalContributionMutated::class, 'handleGoalContribution'],
+            [GoalMutated::class, 'handleGoal'],
+            [EntityMutated::class, 'handleEntity'],
             [SavedReportMutated::class, 'handleSavedReport'],
             [NotificationMutated::class, 'handleNotificationMutated'],
             [NotificationPreferenceMutated::class, 'handleNotificationPreferenceMutated'],

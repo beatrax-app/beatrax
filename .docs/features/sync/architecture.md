@@ -1014,3 +1014,48 @@ devices exist for that id). In production, the NativePHP ChildProcess host
 resolves real credentials via `DeviceIdentityLoader` before starting
 `sync:serve`; the daemon exits non-zero if credentials are unavailable, and
 NativePHP auto-restarts it.
+
+## Capture must cover every table the merge registry declares
+
+`MergeRulesRegistry` names the tables sync knows how to merge. Capture is a
+separate, explicit list: each writer dispatches a mutation event and
+`SyncCaptureListener` turns it into op-log entries. Nothing reconciles the two
+lists at runtime, and they drifted — 25 tables had merge rules while 9 had
+capture.
+
+A table with merge rules and no capture is worse than one with neither. It
+ships in the pairing snapshot, so both devices start identical, and then every
+later edit stays on the device that made it. The two devices agree about
+history and disagree about the present, with nothing on screen saying so. A
+goal created on a paired phone was still only on that phone.
+
+`SyncCaptureCoverageTest` now holds the two lists against each other. It fails
+when a syncable table has no capture, when a captured table has no merge rules
+(the peer would quarantine every op), and when a table on the known-gaps
+backlog gains capture without being struck off — so the backlog can only
+shrink.
+
+Two ways to capture, both explicit at the write site:
+
+- A bespoke event (`TransactionMutated`, `GoalMutated`, …) where the entity
+  needs its own shape or several handlers.
+- `EntityMutated`, which carries its table name, for writers that need nothing
+  more than create/edit/delete. This is not discovery — the writer still
+  dispatches by hand; it only avoids one event class per table.
+
+An edit dispatches one op per changed column rather than a whole row, so two
+devices editing different fields of the same row both keep their change.
+
+### Deliberately not captured
+
+`migration_import_baseline` and `migration_source_map` are rewritten wholesale
+by a migration run and never edited by hand; a partial replay of one would
+describe a state neither device was ever in.
+
+### Known gap: pot balances
+
+`pots` is syncable and now captured, but `pot_movements` — which is where a
+pot's balance actually lives — has no merge rules at all. Pot definitions
+therefore sync while their balances do not. Closing that means giving an
+append-only money ledger merge semantics, which is a larger change than adding
+capture and is not attempted here.

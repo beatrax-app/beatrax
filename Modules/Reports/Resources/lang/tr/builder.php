@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Kategorisiz',
     'title' => 'Raporlar',
     'page_title' => 'Raporlar · Beatrax',
     'subtitle' => 'Defterinden bir rapor oluştur.',

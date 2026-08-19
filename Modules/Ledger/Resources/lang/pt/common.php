@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Sem categoria',
     'status' => [
         'cleared' => 'Compensada',
         'uncleared' => 'Por compensar',

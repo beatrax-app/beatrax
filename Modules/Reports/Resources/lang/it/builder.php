@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Senza categoria',
     'title' => 'Report',
     'page_title' => 'Report · Beatrax',
     'subtitle' => 'Componi un report a partire dal tuo registro.',

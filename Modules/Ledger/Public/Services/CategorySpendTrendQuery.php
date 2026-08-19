@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\CategoryDelta;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Ledger\Public\Dto\SpendTrend;
@@ -47,7 +48,7 @@ final class CategorySpendTrendQuery
             }
             $movers[] = new CategoryDelta(
                 categoryId: $categoryId,
-                name: $names[$categoryId] ?? 'Uncategorized',
+                name: $names[$categoryId] ?? Lang::get('ledger::common.uncategorized'),
                 currentMinor: $currentMinor,
                 previousMinor: $previousMinor,
                 deltaMinor: $delta,
@@ -100,7 +101,9 @@ final class CategorySpendTrendQuery
 
         $names = [];
         foreach ($rows as $row) {
-            $names[self::toInt($row->id)] = is_string($row->name) ? $row->name : 'Uncategorized';
+            $names[self::toInt($row->id)] = is_string($row->name)
+                ? $row->name
+                : Lang::get('ledger::common.uncategorized');
         }
 
         return $names;

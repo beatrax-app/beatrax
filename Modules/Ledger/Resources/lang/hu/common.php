@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Kategorizálatlan',
     'status' => [
         'cleared' => 'Elszámolt',
         'uncleared' => 'Nem elszámolt',

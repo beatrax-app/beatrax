@@ -386,8 +386,7 @@ document.addEventListener('alpine:init', () => {
 
         /** Start the idle-check interval. No-ops when beatraxIdleMs is absent. */
         _startIdleWatch() {
-            const idleMs = window.beatraxIdleMs;
-            if (typeof idleMs !== 'number' || idleMs <= 0) {
+            if (typeof window.beatraxIdleMs !== 'number' || window.beatraxIdleMs <= 0) {
                 // Lock feature is disabled for this session.
                 return;
             }
@@ -399,6 +398,15 @@ document.addEventListener('alpine:init', () => {
 
             // Check every 10 s whether the idle threshold has been exceeded.
             this._idleInterval = window.setInterval(() => {
+                // Re-read rather than closing over the value: the setting is
+                // changed by a Livewire action that never re-renders this
+                // layout, so a captured copy kept locking on the old window
+                // for the rest of the page's life.
+                const idleMs = window.beatraxIdleMs;
+                if (typeof idleMs !== 'number' || idleMs <= 0) {
+                    return;
+                }
+
                 const elapsed = Date.now() - this._lastActivity;
                 if (elapsed >= idleMs) {
                     // Idle threshold elapsed — lock the server session via the
@@ -549,6 +557,18 @@ document.addEventListener('alpine:init', () => {
 
             // Start the idle tracker (no-ops when lock is disabled).
             this._startIdleWatch();
+
+            // The auto-lock setting is applied by a Livewire action that does
+            // not re-render the layout that emitted beatraxIdleMs, so the
+            // server sends the new window here. Without it, choosing 30
+            // minutes kept locking on the old one until a full reload.
+            window.addEventListener('beatrax-idle-timeout-changed', (event) => {
+                const ms = event.detail && event.detail.ms;
+                if (typeof ms === 'number' && ms > 0) {
+                    window.beatraxIdleMs = ms;
+                    this._resetActivity();
+                }
+            });
 
             // ---------------------------------------------------------------
             // WebAuthn unlock — beatrax:webauthn-get (D-15, T-05-23)

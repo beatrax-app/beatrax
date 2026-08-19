@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Niet gecategoriseerd',
     'title' => 'Rapporten',
     'page_title' => 'Rapporten · Beatrax',
     'subtitle' => 'Stel een rapport samen uit je grootboek.',

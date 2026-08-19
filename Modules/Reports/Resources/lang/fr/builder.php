@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Non catégorisé',
     'title' => 'Rapports',
     'page_title' => 'Rapports · Beatrax',
     'subtitle' => 'Compose un rapport à partir de ton registre.',

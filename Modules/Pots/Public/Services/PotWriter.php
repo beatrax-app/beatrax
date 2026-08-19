@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Pots\Public\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Scopes\UserScope;
@@ -14,6 +15,7 @@ use Modules\Pots\Models\Pot;
 use Modules\Pots\Public\Enums\PotStatus;
 use Modules\Pots\Public\Exceptions\InsufficientUnallocatedException;
 use Modules\Pots\Public\Exceptions\PotNotFoundException;
+use Modules\Sync\Public\Events\EntityMutated;
 
 /**
  * @link ../../../../.docs/features/pots/architecture.md
@@ -28,6 +30,7 @@ final class PotWriter
         private readonly DatabaseManager $db,
         private readonly PotBalanceQuery $balance,
         private readonly BaseCurrency $baseCurrency,
+        private readonly Dispatcher $events,
     ) {}
 
     /**
@@ -105,6 +108,16 @@ final class PotWriter
             return $pot;
         });
 
+        $this->capture($pot, 'create', [
+            'user_id' => $user->id,
+            'account_id' => $accountId,
+            'goal_id' => $goalId,
+            'category_id' => $categoryId,
+            'name' => $name,
+            'currency' => $currency,
+            'status' => $pot->status,
+        ]);
+
         return $pot;
     }
 
@@ -138,6 +151,12 @@ final class PotWriter
         $pot->goal_id = $goalId;
         $pot->category_id = $categoryId;
         $pot->save();
+
+        $this->capture($pot, 'edit', [
+            'name' => $name,
+            'goal_id' => $goalId,
+            'category_id' => $categoryId,
+        ]);
 
         return $pot;
     }
@@ -326,6 +345,8 @@ final class PotWriter
 
             $pot->status = PotStatus::Archived->value;
             $pot->save();
+
+            $this->capture($pot, 'edit', ['status' => $pot->status]);
         });
     }
 
@@ -361,6 +382,8 @@ final class PotWriter
 
         $pot->status = PotStatus::Active->value;
         $pot->save();
+
+        $this->capture($pot, 'edit', ['status' => $pot->status]);
     }
 
     // Parses a user-entered positive amount to integer minor units — the
@@ -369,6 +392,23 @@ final class PotWriter
     public function parseAmount(string $value): ?int
     {
         return MoneyInput::tryToPositiveMinor($value);
+    }
+
+    // Pots were absent from the capture wiring, so a pot created or renamed
+    // on one device never reached the other. One place, so a new write path
+    // cannot ship uncaptured.
+    /**
+     * @param  array<string, mixed>  $fields
+     */
+    private function capture(Pot $pot, string $mutationType, array $fields): void
+    {
+        $this->events->dispatch(new EntityMutated(
+            table: 'pots',
+            pk: $pot->id,
+            userId: (int) $pot->user_id,
+            mutationType: $mutationType,
+            dirtyFields: $fields,
+        ));
     }
 
     // -------------------------------------------------------------------------

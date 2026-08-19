@@ -83,7 +83,18 @@ it('renders "—" in the balance corner when ForecastDto.isComputing is true for
     $user = cpcsUser('cpcs-computing');
     $accountId = cpcsAccount($db, $user->id, 'Computing Account');
 
-    // No forecast_run seeded → ForecastQuery returns isComputing=true sentinel
+    // A run that is genuinely in flight. A MISSING run is not the same thing
+    // and no longer claims to be computing — nothing is running, so the
+    // calendar would have promised a projection that was never coming.
+    $db->connection()->table('forecast_runs')->insert([
+        'user_id' => $user->id,
+        'scenario_id' => null,
+        'horizon_days' => 365,
+        'status' => 'running',
+        'result_json' => null,
+        'created_at' => '2026-06-12 00:00:00',
+        'updated_at' => '2026-06-12 00:00:00',
+    ]);
 
     Livewire::actingAs($user)
         ->test(CalendarPage::class, [

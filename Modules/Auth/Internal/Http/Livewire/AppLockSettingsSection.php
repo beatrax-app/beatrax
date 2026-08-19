@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Modules\Auth\Internal\Http\Middleware\AppLockMiddleware;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\PlatformDetector;
@@ -22,6 +23,7 @@ use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
+use Modules\Core\Public\Http\Livewire\Concerns\DispatchesToast;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Lang;
 
@@ -30,6 +32,8 @@ use Modules\Core\Public\Support\Lang;
  */
 final class AppLockSettingsSection extends Component
 {
+    use DispatchesToast;
+
     private const PIN_RULES = 'nullable|regex:/^[0-9]{6,10}$/';
 
     public bool $lockEnabled = false;
@@ -189,7 +193,7 @@ final class AppLockSettingsSection extends Component
     // Action: idle timeout (instant-apply, no PIN confirmation)
     // -------------------------------------------------------------------------
 
-    public function setIdleTimeout(CurrentUser $currentUser, DatabaseManager $db, Clock $clock): void
+    public function setIdleTimeout(CurrentUser $currentUser, DatabaseManager $db, Clock $clock, Session $session): void
     {
         $this->validateOnly('idleTimeoutMinutes');
 
@@ -201,6 +205,19 @@ final class AppLockSettingsSection extends Component
                 'idle_timeout_minutes' => $this->idleTimeoutMinutes,
                 'updated_at' => $clock->now()->toDateTimeString(),
             ]);
+
+        // The middleware caches this config in the session for a minute, and
+        // the client's idle watcher holds the value the layout rendered with.
+        // Neither notices a change on its own, so the new window is pushed to
+        // both rather than waiting out a TTL or a full page reload.
+        $session->forget(AppLockMiddleware::SESSION_CONFIG_CACHE);
+
+        $this->dispatch(
+            'beatrax-idle-timeout-changed',
+            ms: $this->idleTimeoutMinutes * 60_000,
+        );
+
+        $this->toast(Lang::get('core::settings.saved'));
     }
 
     // -------------------------------------------------------------------------

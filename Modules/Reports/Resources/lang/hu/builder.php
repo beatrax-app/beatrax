@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Kategorizálatlan',
     'title' => 'Jelentések',
     'page_title' => 'Jelentések · Beatrax',
     'subtitle' => 'Állíts össze jelentést a nyilvántartásodból.',

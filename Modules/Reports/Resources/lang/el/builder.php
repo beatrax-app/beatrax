@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Χωρίς κατηγορία',
     'title' => 'Αναφορές',
     'page_title' => 'Αναφορές · Beatrax',
     'subtitle' => 'Σύνθεσε μια αναφορά από το καθολικό σου.',

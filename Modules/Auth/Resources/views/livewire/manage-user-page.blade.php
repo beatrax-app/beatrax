@@ -105,9 +105,9 @@
 
         @if ($regeneratedCodes !== [])
             <div class="space-y-3 pt-2">
-                <div aria-live="polite" class="grid grid-cols-2 gap-3">
+                <div aria-live="polite" class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                     @foreach ($regeneratedCodes as $code)
-                        <div class="bg-slate-50 border border-slate-200 rounded-md px-4 py-3 text-lg font-semibold font-mono tabular-nums tracking-wider text-slate-900 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
+                        <div class="bg-slate-50 border border-slate-200 rounded-md px-2 py-2 sm:px-4 sm:py-3 text-sm sm:text-lg font-semibold font-mono tabular-nums tracking-tight sm:tracking-wider text-slate-900 break-all dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700" style="font-variant-numeric: tabular-nums;">
                             {{ $code }}
                         </div>
                     @endforeach
