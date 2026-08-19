@@ -17,8 +17,9 @@ uses(RefreshDatabase::class);
  * The whole point of the op log: what one device captured must reconstruct
  * on another, byte for byte, with relationships intact. Replaying onto an
  * emptied database is that same journey minus the socket — and it is what
- * catches identity bugs (rows arriving under fresh autoincrement ids) and
- * scope bugs (user_id seeded into tables that have no such column).
+ * catches identity bugs, rows arriving under fresh autoincrement ids that
+ * strand every reference to them. Rules are device-local and never captured,
+ * so the pair here is a merchant and the memory that points at it.
  */
 
 it('reconstructs a captured parent and its children with ids and links intact', function (): void {
@@ -33,26 +34,35 @@ it('reconstructs a captured parent and its children with ids and links intact', 
         'default_currency_view' => 'eur_only',
     ]);
 
-    $ruleId = (int) $connection->table('categorization_rules')->insertGetId([
+    $categoryId = (int) $connection->table('categories')->insertGetId([
         'user_id' => $userId,
-        'priority' => 7,
-        'active' => true,
-        'combinator' => 'all',
+        'name' => 'Abonnementen',
+        'slug' => 'roundtrip-'.bin2hex(random_bytes(3)),
+        'kind' => 'expense',
+        'display_order' => 1,
         'created_at' => '2026-06-14 00:00:00',
         'updated_at' => '2026-06-14 00:00:00',
     ]);
 
-    $connection->table('rule_conditions')->insert([
-        'rule_id' => $ruleId,
-        'field' => 'counterparty',
-        'op' => 'contains',
-        'value_type' => 'string',
-        'value' => 'Netflix',
+    $merchantId = (int) $connection->table('merchants')->insertGetId([
+        'user_id' => $userId,
+        'name' => 'Netflix',
+        'normalized_name' => 'netflix',
         'created_at' => '2026-06-14 00:00:00',
         'updated_at' => '2026-06-14 00:00:00',
     ]);
 
-    $conditionId = (int) $connection->table('rule_conditions')->where('rule_id', $ruleId)->value('id');
+    $connection->table('merchant_memories')->insert([
+        'user_id' => $userId,
+        'merchant_id' => $merchantId,
+        'category_id' => $categoryId,
+        'occurrence_count' => 7,
+        'last_seen_at' => '2026-06-14 00:00:00',
+        'created_at' => '2026-06-14 00:00:00',
+        'updated_at' => '2026-06-14 00:00:00',
+    ]);
+
+    $memoryId = (int) $connection->table('merchant_memories')->where('merchant_id', $merchantId)->value('id');
 
     $keypair = sodium_crypto_sign_keypair();
     $publicKey = sodium_crypto_sign_publickey($keypair);
@@ -71,8 +81,8 @@ it('reconstructs a captured parent and its children with ids and links intact', 
 
     // Stand in for the receiving device: the same signed history, applied to a
     // database that no longer holds the rows.
-    $connection->table('rule_conditions')->delete();
-    $connection->table('categorization_rules')->where('user_id', $userId)->delete();
+    $connection->table('merchant_memories')->where('user_id', $userId)->delete();
+    $connection->table('merchants')->where('user_id', $userId)->delete();
 
     $replayer = new OpLogReplayer(
         db: $db,
@@ -101,12 +111,12 @@ it('reconstructs a captured parent and its children with ids and links intact', 
 
     $replayer->replay($replayed, $userId);
 
-    $rebuiltRule = $connection->table('categorization_rules')->where('id', $ruleId)->first();
-    $rebuiltCondition = $connection->table('rule_conditions')->where('id', $conditionId)->first();
+    $rebuiltMerchant = $connection->table('merchants')->where('id', $merchantId)->first();
+    $rebuiltMemory = $connection->table('merchant_memories')->where('id', $memoryId)->first();
 
-    expect($rebuiltRule)->not->toBeNull()
-        ->and((int) $rebuiltRule->priority)->toBe(7)
-        ->and($rebuiltCondition)->not->toBeNull()
-        ->and((int) $rebuiltCondition->rule_id)->toBe($ruleId)
-        ->and($rebuiltCondition->value)->toBe('Netflix');
+    expect($rebuiltMerchant)->not->toBeNull()
+        ->and($rebuiltMerchant->name)->toBe('Netflix')
+        ->and($rebuiltMemory)->not->toBeNull()
+        ->and((int) $rebuiltMemory->merchant_id)->toBe($merchantId)
+        ->and((int) $rebuiltMemory->category_id)->toBe($categoryId);
 });

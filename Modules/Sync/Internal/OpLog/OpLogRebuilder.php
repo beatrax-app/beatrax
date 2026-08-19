@@ -108,9 +108,9 @@ final class OpLogRebuilder
     }
 
     // Delete ONLY the rows the op-log can recreate (a CreateRow op for this
-    // user) — import-created rows never enter the log, so preserving them lets
-    // their SET ops replay on top (see @link). FK-safe order avoids aborting
-    // on foreign_keys=ON.
+    // user). Rows predating capture have no create op and are preserved so
+    // their SET ops replay on top; imports now DO carry create ops. FK-safe
+    // order avoids aborting on foreign_keys=ON.
     private function deleteReplayableRows(int $userId): void
     {
         foreach ($this->fkSafeDeletionOrder() as $table) {

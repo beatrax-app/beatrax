@@ -26,6 +26,12 @@ final readonly class OpLogBackfiller
     // only bounds how much of a table is held in memory at once.
     private const CHUNK = 200;
 
+    // Rules stay on the device that authored them, so they are never put on
+    // the wire — not in the pairing snapshot and not incrementally. They keep
+    // merge rules so a peer can still apply an op from an older build, but
+    // nothing here produces one. The rules screen says so.
+    private const DEVICE_LOCAL_TABLES = ['categorization_rules', 'rule_conditions', 'rule_actions'];
+
     // Never emitted as a field: the row's identity travels as the op's pk,
     // and re-stating it invites a create whose pk and user_id disagree.
     private const SKIPPED_COLUMNS = ['id'];
@@ -61,8 +67,56 @@ final readonly class OpLogBackfiller
         // Parents first, so the entries a peer replays arrive in an order its
         // foreign keys accept.
         foreach ($this->order->insertionOrder() as $table) {
+            if (in_array($table, self::DEVICE_LOCAL_TABLES, true)) {
+                continue;
+            }
+
             $captured += $this->captureTable($connection, $table, $userId, $writer);
         }
+
+        return $captured;
+    }
+
+    // Capture specific rows as create ops, for writes that happen AFTER the
+    // one-time backfill — an import, above all. Shares plaintextFields() with
+    // the backfill rather than restating it: a second copy of which columns
+    // are ciphertext at rest is the one that would rot.
+    /**
+     * @param  list<int|string>  $ids
+     */
+    public function captureRowsById(string $table, array $ids, int $userId, OpLogWriter $writer): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+
+        $connection = $this->db->connection();
+        $columns = $this->columnsOf($connection, $table);
+
+        if ($columns === []) {
+            return 0;
+        }
+
+        $captured = 0;
+
+        $this->scopedQuery($connection, $table, $userId, $columns)
+            ->whereIn($table.'.id', $ids)
+            ->orderBy($table.'.id')
+            ->chunk(self::CHUNK, function ($rows) use ($table, $userId, $writer, &$captured): void {
+                foreach ($rows as $row) {
+                    /** @var array<string, mixed> $fields */
+                    $fields = (array) $row;
+                    $pk = $fields['id'] ?? null;
+                    unset($fields['id']);
+
+                    if (! is_int($pk) && ! is_string($pk)) {
+                        continue;
+                    }
+
+                    $writer->writeCreateRow($table, $pk, $this->plaintextFields($table, $fields, $userId));
+                    $captured++;
+                }
+            });
 
         return $captured;
     }

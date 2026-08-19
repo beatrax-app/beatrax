@@ -15,6 +15,30 @@ use Modules\Sync\Internal\Config\MergeRulesRegistry;
  * because both devices show the same history and disagree about the present.
  */
 
+/**
+ * Never put on the wire at all: not in the pairing snapshot, not
+ * incrementally. They keep merge rules so a peer can still apply an op from an
+ * older build, but nothing produces one. The rules screen tells the user.
+ *
+ * @return list<string>
+ */
+function deviceLocalTables(): array
+{
+    return ['categorization_rules', 'rule_conditions', 'rule_actions'];
+}
+
+/**
+ * Reference data: written by migrations, seeders and the bundled corpus, never
+ * by a user action, so every device derives the same rows from the same build.
+ * Capturing them would put identical rows on the wire for no one to merge.
+ *
+ * @return list<string>
+ */
+function referenceDataTables(): array
+{
+    return ['categories'];
+}
+
 /** @return list<string> */
 function snapshotOnlyTables(): array
 {
@@ -38,16 +62,6 @@ function snapshotOnlyTables(): array
 function uncapturedBacklog(): array
 {
     return [
-        'accounts',
-        'categories',
-        'categorization_rules',
-        'counterparties',
-        'import_runs',
-        'merchant_aliases',
-        'merchant_memories',
-        'merchants',
-        'rule_actions',
-        'rule_conditions',
     ];
 }
 
@@ -78,8 +92,12 @@ function capturedTables(): array
 
             $isListener = str_contains($file->getPathname(), '/Internal/Listeners/');
             $isDispatch = str_contains($source, 'new EntityMutated(');
+            // Bulk capture names its tables in a list rather than one call
+            // each, so the whole file is scanned. Only CALLERS count — the
+            // file that defines the method also names the tables it EXCLUDES.
+            $isBulk = str_contains($source, '->captureRowsById(');
 
-            if (! $isListener && ! $isDispatch) {
+            if (! $isListener && ! $isDispatch && ! $isBulk) {
                 continue;
             }
 
@@ -87,6 +105,22 @@ function capturedTables(): array
 
             foreach ($matches[1] as $table) {
                 $found[$table] = true;
+            }
+
+            if (! $isBulk) {
+                continue;
+            }
+
+            // Only the declared table list, not every quoted string in the
+            // file — log-context keys and column names are quoted too.
+            preg_match_all("/const [A-Z_]+ = \[([^\]]*)\];/", $source, $lists);
+
+            foreach ($lists[1] as $list) {
+                preg_match_all("/'([a-z_]{3,})'/", $list, $bulk);
+
+                foreach ($bulk[1] as $table) {
+                    $found[$table] = true;
+                }
             }
         }
     }
@@ -101,6 +135,8 @@ it('opens no new capture gap', function (): void {
         $syncable,
         capturedTables(),
         snapshotOnlyTables(),
+        deviceLocalTables(),
+        referenceDataTables(),
         uncapturedBacklog(),
     ));
 
@@ -129,9 +165,53 @@ it('does not capture a table the merge registry cannot merge', function (): void
 
 // Both excuse lists name real syncable tables. A stale entry silently widens
 // the exemption, which is how a gap becomes permanent.
+it('never captures a table that is meant to stay on the device', function (): void {
+    $leaked = array_values(array_intersect(deviceLocalTables(), capturedTables()));
+
+    expect($leaked)->toBe([], sprintf(
+        "These are device-local and the rules screen says so, but something now writes them to the op log:\n  - %s",
+        implode("\n  - ", $leaked),
+    ));
+});
+
 it('keeps every excuse pointing at a real syncable table', function (): void {
     $syncable = array_keys(app(MergeRulesRegistry::class)->rules());
-    $excused = array_merge(snapshotOnlyTables(), uncapturedBacklog());
+    $excused = array_merge(snapshotOnlyTables(), deviceLocalTables(), referenceDataTables(), uncapturedBacklog());
 
     expect(array_values(array_diff($excused, $syncable)))->toBe([]);
 });
+
+// The reference-data excuse only holds while nothing writes these at runtime.
+// A user-facing writer would make them per-device data that silently diverges.
+it('keeps reference data free of any runtime writer', function (string $table): void {
+    $writers = [];
+
+    /** @var iterable<SplFileInfo> $files */
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('Modules')));
+
+    foreach ($files as $file) {
+        $path = $file->getPathname();
+
+        if (! $file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+
+        // Migrations and seeders are exactly how reference data is meant to
+        // arrive; a demo seeder is not a user action either.
+        if (preg_match('#/(tests|Database/Migrations|Database/Seeders)/#', $path) === 1) {
+            continue;
+        }
+
+        $source = (string) file_get_contents($path);
+
+        if (preg_match("/table\('{$table}'\)\s*->\s*(insert|update|delete|upsert)/", $source) === 1) {
+            $writers[] = str_replace(base_path().'/', '', $path);
+        }
+    }
+
+    expect($writers)->toBe([], sprintf(
+        "%s is excused from capture as reference data, but these write it at runtime:\n  - %s",
+        $table,
+        implode("\n  - ", $writers),
+    ));
+})->with(['categories']);
