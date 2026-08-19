@@ -49,4 +49,15 @@ return [
         'hour' => 'Hodina',
         'minute' => 'Minúta',
     ],
+
+    'veil_locked' => 'Aplikácia uzamknutá',
+
+    'chart' => [
+        'donut' => 'Prstencový graf',
+        'bar' => 'Stĺpcový graf',
+        'line' => 'Čiarový graf',
+        'range_area' => 'Rozsahový graf',
+    ],
+
+    'sheet_untitled' => 'Dialógové okno',
 ];

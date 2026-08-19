@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Releases-Seite öffnen →',
     ],
 
+    'privacy' => [
+        'heading' => 'Datenschutzerklärung',
+        'body' => 'Beatrax hält deine Finanzen auf deinen eigenen Geräten. Die Erklärung sagt, was das heißt, was die optionalen Online-Funktionen senden und wie du deine Daten entfernst.',
+        'open' => 'Datenschutzerklärung lesen →',
+        'url_hint' => 'Falls der Link nicht öffnet, rufe auf:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Einführungstour',
         'body' => 'Starte den Einrichtungsassistenten erneut, wenn du den Einstieg noch einmal durchlaufen möchtest.',

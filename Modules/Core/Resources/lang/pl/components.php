@@ -49,4 +49,15 @@ return [
         'hour' => 'Godzina',
         'minute' => 'Minuta',
     ],
+
+    'veil_locked' => 'Aplikacja zablokowana',
+
+    'chart' => [
+        'donut' => 'Wykres pierścieniowy',
+        'bar' => 'Wykres słupkowy',
+        'line' => 'Wykres liniowy',
+        'range_area' => 'Wykres zakresu',
+    ],
+
+    'sheet_untitled' => 'Okno dialogowe',
 ];

@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Ava väljalasete leht →',
     ],
 
+    'privacy' => [
+        'heading' => 'Privaatsuspoliitika',
+        'body' => 'Beatrax hoiab su rahaasju sinu enda seadmetes. Poliitika selgitab, mida see tähendab, mida valikulised veebifunktsioonid saadavad ja kuidas oma andmeid eemaldada.',
+        'open' => 'Loe privaatsuspoliitikat →',
+        'url_hint' => 'Kui link ei avane, mine aadressile:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Esmakäivituse tutvustus',
         'body' => 'Käivita seadistusviisard uuesti, kui soovid tutvustava voo uuesti läbi teha.',

@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Odpri stran izdaj →',
     ],
 
+    'privacy' => [
+        'heading' => 'Pravilnik o zasebnosti',
+        'body' => 'Beatrax hrani tvoje finance na tvojih napravah. Pravilnik pojasnjuje, kaj to pomeni, kaj pošiljajo izbirne spletne funkcije in kako odstraniš svoje podatke.',
+        'open' => 'Preberi pravilnik o zasebnosti →',
+        'url_hint' => 'Če se povezava ne odpre, obišči:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Vodnik ob prvem zagonu',
         'body' => 'Znova zaženi čarovnika za nastavitev, če želiš še enkrat skozi uvodni potek.',

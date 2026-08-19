@@ -49,4 +49,15 @@ return [
         'hour' => 'Hour',
         'minute' => 'Minute',
     ],
+
+    'veil_locked' => 'App locked',
+
+    'chart' => [
+        'donut' => 'Donut chart',
+        'bar' => 'Bar chart',
+        'line' => 'Line chart',
+        'range_area' => 'Range chart',
+    ],
+
+    'sheet_untitled' => 'Dialog',
 ];

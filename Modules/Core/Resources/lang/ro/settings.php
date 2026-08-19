@@ -124,6 +124,13 @@ return [
         'open_releases' => 'Deschide pagina de versiuni →',
     ],
 
+    'privacy' => [
+        'heading' => 'Politica de confidențialitate',
+        'body' => 'Beatrax îți ține finanțele pe propriile tale dispozitive. Politica explică ce înseamnă asta, ce trimit funcțiile online opționale și cum îți poți elimina datele.',
+        'open' => 'Citește politica de confidențialitate →',
+        'url_hint' => 'Dacă linkul nu se deschide, intră pe:',
+    ],
+
     'first_run_tour' => [
         'heading' => 'Tur la prima pornire',
         'body' => 'Repornește asistentul de configurare dacă vrei să parcurgi din nou fluxul introductiv.',

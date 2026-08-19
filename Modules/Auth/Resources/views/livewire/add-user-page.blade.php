@@ -1,5 +1,5 @@
 @use('Modules\Core\Public\Support\Lang')
-<div class="mx-auto max-w-md px-8 py-12 space-y-12">
+<div class="mx-auto max-w-md px-4 py-12 space-y-12 sm:px-8">
     <header class="space-y-1">
         <h1 class="text-3xl font-semibold text-slate-900 tracking-tight dark:text-slate-100">{{ Lang::get('auth::add_user.title') }}</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">{{ Lang::get('auth::add_user.subtitle') }}</p>

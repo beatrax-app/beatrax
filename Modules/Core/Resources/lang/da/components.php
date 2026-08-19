@@ -49,4 +49,15 @@ return [
         'hour' => 'Time',
         'minute' => 'Minut',
     ],
+
+    'veil_locked' => 'Appen er låst',
+
+    'chart' => [
+        'donut' => 'Ringdiagram',
+        'bar' => 'Søjlediagram',
+        'line' => 'Kurvediagram',
+        'range_area' => 'Intervaldiagram',
+    ],
+
+    'sheet_untitled' => 'Dialogboks',
 ];
