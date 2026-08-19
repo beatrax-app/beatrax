@@ -35,6 +35,14 @@ final class TrustedHostGuard
     // loopback socket, so only the attacker-controlled Host gives it away.
     private function isAllowedHost(string $host): bool
     {
+        // No Host at all is the in-process shell, not an attacker. Rebinding
+        // works by NAMING a domain, and every browser sends Host on HTTP/1.1,
+        // so an empty one cannot carry the attack this gate exists to stop —
+        // while LoopbackOnly still gates the interface it arrived on.
+        if ($host === '') {
+            return true;
+        }
+
         return in_array(strtolower($host), $this->allowedHosts(), true);
     }
 
