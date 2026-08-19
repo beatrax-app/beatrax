@@ -12,10 +12,12 @@ use Modules\Sync\Internal\Listeners\Concerns\CapturesGoalMutations;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesReportAndNotificationMutations;
 use Modules\Sync\Internal\Listeners\Concerns\CapturesTransactionMutations;
 use Modules\Sync\Internal\OpLog\OpLogWriter;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Events\EnvelopeAssignmentMutated;
 use Modules\Sync\Public\Events\EnvelopeMoveMutated;
 use Modules\Sync\Public\Events\EnvelopeSettingMutated;
 use Modules\Sync\Public\Events\GoalContributionMutated;
+use Modules\Sync\Public\Events\GoalMutated;
 use Modules\Sync\Public\Events\NotificationMutated;
 use Modules\Sync\Public\Events\SavedReportMutated;
 use Modules\Sync\Public\Events\TransactionMutated;
@@ -187,6 +189,70 @@ final class SyncCaptureListener
             $this->report('SyncCaptureListener: goal contribution capture failed', $e, [
                 'mutationType' => $event->mutationType,
                 'contributionId' => $event->contributionId,
+                'userId' => $event->userId,
+            ]);
+        }
+    }
+
+    // The table travels on the event, so a writer for a table with no
+    // bespoke handler can still be captured without another event class per
+    // table. The dispatch is still by hand at the write site — nothing here
+    // discovers writes on its own.
+    public function handleEntity(EntityMutated $event): void
+    {
+        try {
+            $writer = $this->container->make(OpLogWriter::class);
+
+            match ($event->mutationType) {
+                'create' => $writer->writeCreateRow($event->table, $event->pk, $event->dirtyFields),
+                'edit' => $this->writeEntityEdit($event, $writer),
+                'delete' => $writer->writeDelete($event->table, $event->pk),
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
+                    'mutationType' => $event->mutationType,
+                    'table' => $event->table,
+                    'pk' => $event->pk,
+                ]),
+            };
+        } catch (\Throwable $e) {
+            $this->report('SyncCaptureListener: entity capture failed', $e, [
+                'mutationType' => $event->mutationType,
+                'table' => $event->table,
+                'pk' => $event->pk,
+                'userId' => $event->userId,
+            ]);
+        }
+    }
+
+    // One op per touched column, so two devices editing different fields of
+    // the same row both keep their change.
+    private function writeEntityEdit(EntityMutated $event, OpLogWriter $writer): void
+    {
+        foreach ($event->dirtyFields as $field => $value) {
+            $writer->writeSet($event->table, $event->pk, $field, $value);
+        }
+    }
+
+    // Routes GoalMutated events to the OpLogWriter with table: 'goals'.
+    // Distinct from handleGoalContribution above: that captures which
+    // transactions fund a goal, this captures the goal itself.
+    public function handleGoal(GoalMutated $event): void
+    {
+        try {
+            $writer = $this->container->make(OpLogWriter::class);
+
+            match ($event->mutationType) {
+                'create' => $this->handleGoalCreate($event, $writer),
+                'edit' => $this->handleGoalEdit($event, $writer),
+                'delete' => $this->handleGoalDelete($event, $writer),
+                default => $this->log->warning(self::UNKNOWN_MUTATION_TYPE, [
+                    'mutationType' => $event->mutationType,
+                    'goalId' => $event->goalId,
+                ]),
+            };
+        } catch (\Throwable $e) {
+            $this->report('SyncCaptureListener: goal capture failed', $e, [
+                'mutationType' => $event->mutationType,
+                'goalId' => $event->goalId,
                 'userId' => $event->userId,
             ]);
         }

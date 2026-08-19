@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Sem categoria',
     'title' => 'Relatórios',
     'page_title' => 'Relatórios · Beatrax',
     'subtitle' => 'Compõe um relatório a partir do teu livro-razão.',

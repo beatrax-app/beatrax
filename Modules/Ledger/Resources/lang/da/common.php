@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Ikke kategoriseret',
     'status' => [
         'cleared' => 'Bogført',
         'uncleared' => 'Ikke bogført',

@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
+use Modules\Core\Public\Support\Lang;
 use Modules\Ledger\Public\Dto\Period;
 use Modules\Reports\Public\Dto\ReportResultRow;
 use stdClass;
@@ -116,12 +117,19 @@ final class CategorySpendQuery
         $result = [];
         foreach ($map as $key => $amountMinor) {
             if ($key === self::UNCATEGORIZED_SENTINEL) {
-                $result[] = new ReportResultRow(groupKey: null, groupLabel: 'Uncategorized', amountMinor: $amountMinor, currency: $currency);
+                $result[] = new ReportResultRow(
+                    groupKey: null,
+                    groupLabel: Lang::get('reports::builder.uncategorized'),
+                    amountMinor: $amountMinor,
+                    currency: $currency,
+                );
 
                 continue;
             }
 
-            $label = isset($categoriesById[$key]) ? $this->fullPath($key, $categoriesById) : 'Uncategorized';
+            $label = isset($categoriesById[$key])
+                ? $this->fullPath($key, $categoriesById)
+                : Lang::get('reports::builder.uncategorized');
             $result[] = new ReportResultRow(groupKey: $key, groupLabel: $label, amountMinor: $amountMinor, currency: $currency);
         }
 

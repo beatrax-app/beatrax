@@ -51,6 +51,34 @@ final class CarryoverQuery
         private readonly LoggerInterface $log,
     ) {}
 
+    // Every expense category at zero: what the envelope grid looks like
+    // before the first assignment, so the first assignment has somewhere to go.
+    /**
+     * @return array<int, EnvelopeRow>
+     */
+    private function unstartedRows(User $user): array
+    {
+        $settings = $this->envelopeSettings($user);
+        $rows = [];
+
+        foreach ($this->budgetProgress->expenseCategories($user) as $categoryId => $categoryName) {
+            $rows[$categoryId] = new EnvelopeRow(
+                categoryId: $categoryId,
+                categoryName: $categoryName,
+                assignedMinor: 0,
+                spentMinor: 0,
+                carriedInMinor: 0,
+                netMovedMinor: 0,
+                availableMinor: 0,
+                overspendMode: $settings['modes'][$categoryId] ?? self::DEFAULT_OVERSPEND_MODE,
+                currency: self::CURRENCY,
+                notifyThresholdPercent: $settings['thresholds'][$categoryId] ?? self::DEFAULT_NOTIFY_THRESHOLD_PERCENT,
+            );
+        }
+
+        return $rows;
+    }
+
     /**
      * @return array{toBudgetMinor: int, overspentCount: int, rows: array<int, EnvelopeRow>}
      */
@@ -59,9 +87,15 @@ final class CarryoverQuery
         $genesisInstant = $this->genesisAnchorFor($user);
 
         if ($genesisInstant === null) {
-            // No envelope activation yet -- every period is
-            // genesis-equivalent; nothing to fold over.
-            return ['toBudgetMinor' => 0, 'overspentCount' => 0, 'rows' => []];
+            // Nothing to fold over yet, but the categories still exist and
+            // the page still needs a cell to put the first assignment in.
+            // Returning [] rendered "you have no expense categories" at 24 of
+            // them, with no cell to click and no advice that could help.
+            return [
+                'toBudgetMinor' => 0,
+                'overspentCount' => 0,
+                'rows' => $this->unstartedRows($user),
+            ];
         }
 
         $genesisPeriod = $this->periods->containing($genesisInstant);

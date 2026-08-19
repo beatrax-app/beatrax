@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Без категорії',
     'title' => 'Звіти',
     'page_title' => 'Звіти · Beatrax',
     'subtitle' => 'Склади звіт зі свого реєстру.',

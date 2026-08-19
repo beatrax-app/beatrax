@@ -13,6 +13,7 @@ use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
+use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use Modules\Tax\Public\Events\TransactionTagged;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -157,11 +158,53 @@ final class TagTransaction
             deductionCategoryId: $deductionCategoryId,
         ));
 
+        $this->captureTag($userId, $transactionId, $transactionSplitId, $deductionCategoryId, $taxYearOverride);
+
         // Optional nullable injection — a no-op when the Search module is
         // absent. The writer re-verifies ownership from the passed actor
         // id, so a forged transaction id can never reach another user's
         // index doc.
         $this->searchIndex?->upsertForTransaction($transactionId, $userId);
+    }
+
+    // Tax tags had no capture at all, so a transaction tagged on one device
+    // stayed untagged everywhere else. The row's identity is composite, so
+    // the pk is read back after the write rather than guessed.
+    private function captureTag(
+        int $userId,
+        int $transactionId,
+        ?int $transactionSplitId,
+        ?int $deductionCategoryId,
+        ?int $taxYearOverride,
+    ): void {
+        $id = $this->db->connection()
+            ->table('tax_transaction_tags')
+            ->where('user_id', $userId)
+            ->where('transaction_id', $transactionId)
+            ->when(
+                $transactionSplitId === null,
+                static fn (QueryBuilder $q) => $q->whereNull('transaction_split_id'),
+                static fn (QueryBuilder $q) => $q->where('transaction_split_id', $transactionSplitId),
+            )
+            ->value('id');
+
+        if (! is_numeric($id)) {
+            return;
+        }
+
+        $this->events->dispatch(new EntityMutated(
+            table: 'tax_transaction_tags',
+            pk: (int) $id,
+            userId: $userId,
+            mutationType: 'create',
+            dirtyFields: [
+                'user_id' => $userId,
+                'transaction_id' => $transactionId,
+                'transaction_split_id' => $transactionSplitId,
+                'deduction_category_id' => $deductionCategoryId,
+                'tax_year_override' => $taxYearOverride,
+            ],
+        ));
     }
 
     // See the full-payload upsert contract at the class @link: a bare

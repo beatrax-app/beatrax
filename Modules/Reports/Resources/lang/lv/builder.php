@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Bez kategorijas',
     'title' => 'Atskaites',
     'page_title' => 'Atskaites · Beatrax',
     'subtitle' => 'Izveidojiet atskaiti no savas virsgrāmatas.',

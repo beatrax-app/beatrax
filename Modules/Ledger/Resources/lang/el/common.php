@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Χωρίς κατηγορία',
     'status' => [
         'cleared' => 'Εκκαθαρισμένη',
         'uncleared' => 'Μη εκκαθαρισμένη',

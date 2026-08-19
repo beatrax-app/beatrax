@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Sin categorizar',
     'title' => 'Informes',
     'page_title' => 'Informes · Beatrax',
     'subtitle' => 'Compón un informe a partir de tu libro mayor.',

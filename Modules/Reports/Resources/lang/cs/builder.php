@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Bez kategorie',
     'title' => 'Sestavy',
     'page_title' => 'Sestavy · Beatrax',
     'subtitle' => 'Poskládej si sestavu ze své knihy.',

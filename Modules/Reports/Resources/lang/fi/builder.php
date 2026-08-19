@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Luokittelematon',
     'title' => 'Raportit',
     'page_title' => 'Raportit · Beatrax',
     'subtitle' => 'Kokoa raportti tilikirjastasi.',
