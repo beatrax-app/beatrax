@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Kategoriseerimata',
     'title' => 'Aruanded',
     'page_title' => 'Aruanded · Beatrax',
     'subtitle' => 'Koosta oma pearaamatust aruanne.',

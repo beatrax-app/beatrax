@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Bez kategorije',
     'title' => 'Izvješća',
     'page_title' => 'Izvješća · Beatrax',
     'subtitle' => 'Sastavi izvješće iz svoje glavne knjige.',

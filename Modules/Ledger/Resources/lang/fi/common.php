@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Luokittelematon',
     'status' => [
         'cleared' => 'Kuitattu',
         'uncleared' => 'Kuittaamaton',

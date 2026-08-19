@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Nicht kategorisiert',
     'title' => 'Berichte',
     'page_title' => 'Berichte · Beatrax',
     'subtitle' => 'Stelle einen Bericht aus deinem Hauptbuch zusammen.',

@@ -22,6 +22,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final readonly class ForecastQuery
 {
+    // The two non-terminal run states. 'complete' and 'failed' are answers;
+    // these are the only ones the user is still waiting on.
+    private const IN_FLIGHT_STATUSES = ['pending', 'running'];
+
     use CoercesScalars;
 
     // A series' forecast confidence follows its band ratio — the full band
@@ -67,12 +71,15 @@ final readonly class ForecastQuery
 
         $asOf = $this->clock->now()->startOfDay();
 
-        // A missing run, a not-yet-complete run, or an unparseable
-        // result_json all resolve to the same "still computing" sentinel;
-        // decodeCompletedRun returns null for every one of those cases.
         $decoded = $this->decodeCompletedRun($row);
         if ($decoded === null) {
-            return $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf);
+            // Only a run that is actually in flight may say "updating". A
+            // device that has never computed one, or whose last one is
+            // unreadable, has nothing pending — saying otherwise left the
+            // calendar promising a projection that was never coming.
+            return $this->isRunInFlight($row)
+                ? $this->computingSentinel($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf)
+                : $this->flatLineFallback($accountId, $accountName, $defaultCurrency, $horizonDays, $scenarioId, $asOf, $user);
         }
 
         $accountsBlock = is_array($decoded['accounts'] ?? null) ? $decoded['accounts'] : [];
@@ -95,6 +102,17 @@ final readonly class ForecastQuery
             isComputing: false,
             seriesConfidence: $confidence,
         );
+    }
+
+    // In flight means a row exists and has not finished. No row at all, or a
+    // terminal status, is not something the user is waiting on.
+    private function isRunInFlight(mixed $row): bool
+    {
+        if (! $row instanceof stdClass) {
+            return false;
+        }
+
+        return in_array(self::toString($row->status ?? null), self::IN_FLIGHT_STATUSES, true);
     }
 
     /**

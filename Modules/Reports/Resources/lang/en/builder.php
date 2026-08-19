@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Uncategorized',
     'title' => 'Reports',
     'page_title' => 'Reports · Beatrax',
     'subtitle' => 'Compose a report from your ledger.',

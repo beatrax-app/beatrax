@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'uncategorized' => 'Necategorizat',
     'title' => 'Rapoarte',
     'page_title' => 'Rapoarte · Beatrax',
     'subtitle' => 'Compune un raport din registrul tău.',

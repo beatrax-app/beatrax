@@ -99,9 +99,84 @@ final readonly class SyncStatusService
         return match (true) {
             $hasError => 'error',
             $hasSyncing => 'syncing',
-            $hasFinished => 'all_synced',
+            // "Up to date" is a claim about this device's changes, not just
+            // about the last session closing cleanly. Anything written since
+            // then has not been anywhere, and saying otherwise is how a goal
+            // that only ever existed on one phone looked fully synced.
+            $hasFinished => $this->hasUndeliveredLocalOps($userId) ? 'syncing' : 'all_synced',
             default => 'offline',
         };
+    }
+
+    // Ops this device authored after the last session ended. There is no
+    // per-peer delivery cursor to consult, so the session boundary is the
+    // only honest watermark available: nothing written after it can have
+    // been sent.
+    private function hasUndeliveredLocalOps(int $userId): bool
+    {
+        $lastSessionEnd = $this->latestInstant(
+            $this->db->connection()
+                ->table('sync_sessions')
+                ->where('user_id', $userId)
+                ->pluck('last_seen_at')
+                ->all(),
+        );
+
+        if (! $lastSessionEnd instanceof CarbonImmutable) {
+            return false;
+        }
+
+        $selfDeviceId = $this->db->connection()
+            ->table('device_registry')
+            ->where('user_id', $userId)
+            ->where('is_self', true)
+            ->value('device_id');
+
+        if (! is_string($selfDeviceId) || $selfDeviceId === '') {
+            return false;
+        }
+
+        $latestLocalOp = $this->latestInstant(
+            $this->db->connection()
+                ->table('op_log_entries')
+                ->where('user_id', $userId)
+                ->where('device_id', $selfDeviceId)
+                ->pluck('recorded_at')
+                ->all(),
+        );
+
+        return $latestLocalOp instanceof CarbonImmutable
+            && $latestLocalOp->greaterThan($lastSessionEnd);
+    }
+
+    // sync_sessions writes ISO8601 with an offset and op_log_entries writes
+    // 'Y-m-d H:i:s', so comparing them as strings is not comparing times at
+    // all: ' ' sorts before 'T', which made every local op look older than
+    // the session it came after. Parse both, compare instants.
+    /**
+     * @param  array<mixed>  $values
+     */
+    private function latestInstant(array $values): ?CarbonImmutable
+    {
+        $latest = null;
+
+        foreach ($values as $value) {
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+
+            try {
+                $parsed = CarbonImmutable::parse($value);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if ($latest === null || $parsed->greaterThan($latest)) {
+                $latest = $parsed;
+            }
+        }
+
+        return $latest;
     }
 
     // Returns null when no session has recorded a last_seen_at. The caller
