@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Todo al día — todas las contrapartes están etiquetadas.',
     'back_to_index' => 'Volver a las contrapartes →',
 
-    'meta' => ':count transacciones · visto por última vez el :date',
+    'meta' => ':count transacción · visto por última vez el :date|:count transacciones · visto por última vez el :date',
 
     'suggested_aria' => 'Coincidencia sugerida',
     'suggestion_medium' => '✨ Quizá **:name** — confianza media',

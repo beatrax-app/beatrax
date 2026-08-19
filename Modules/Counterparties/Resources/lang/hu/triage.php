@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Kész vagy — minden partner fel van címkézve.',
     'back_to_index' => 'Vissza a partnerekhez →',
 
-    'meta' => ':count tranzakció · legutóbb: :date',
+    'meta' => ':count tranzakció · legutóbb: :date|:count tranzakció · legutóbb: :date',
 
     'suggested_aria' => 'Javasolt egyezés',
     'suggestion_medium' => '✨ Talán **:name** — közepes megbízhatóság',

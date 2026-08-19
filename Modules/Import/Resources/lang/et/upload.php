@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Kolid teisest eelarverakendusest?',
     'migrate_link' => 'Impordi YNAB-ist või Actualist',
     'subtitle' => 'Lohista siia panga, kaardi või PayPali eksport või e-posti kviitungi fail.',
-    'mime_hint' => 'See fail ei tundu olevat toetatud väljavõtte eksport. Lohista siia panga CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kaardiväljavõtte PDF, e-kiri (.eml) või postkasti arhiiv (.mbox).',
+    'mime_hint' => 'Toetatud failid: panga CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kaardiväljavõtte PDF, e-kirja sõnum (.eml) või postkastiarhiiv (.mbox).',
 
     'source_label' => 'Allikas',
 

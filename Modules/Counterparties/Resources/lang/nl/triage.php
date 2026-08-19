@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Helemaal bij — elke tegenpartij is gelabeld.',
     'back_to_index' => 'Terug naar tegenpartijen →',
 
-    'meta' => ':count transacties · laatst gezien :date',
+    'meta' => ':count transactie · laatst gezien :date|:count transacties · laatst gezien :date',
 
     'suggested_aria' => 'Voorgestelde match',
     'suggestion_medium' => '✨ Misschien **:name** — vertrouwen gemiddeld',

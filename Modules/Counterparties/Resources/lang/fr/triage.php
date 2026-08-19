@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Tout est à jour — chaque tiers est étiqueté.',
     'back_to_index' => 'Retour aux tiers →',
 
-    'meta' => ':count transactions · dernière apparition le :date',
+    'meta' => ':count transaction · dernière apparition le :date|:count transactions · dernière apparition le :date',
 
     'suggested_aria' => 'Correspondance suggérée',
     'suggestion_medium' => '✨ Peut-être **:name** — confiance moyenne',

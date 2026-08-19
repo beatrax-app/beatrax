@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => 'Pārejiet no citas budžeta lietotnes?',
     'migrate_link' => 'Importēt no YNAB vai Actual',
     'subtitle' => 'Ievelciet bankas, kartes vai PayPal eksportu vai e-pasta čeka failu.',
-    'mime_hint' => 'Šis fails neizskatās pēc atbalstīta konta izraksta eksporta. Ievelciet bankas CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kartes izraksta PDF, e-pasta ziņojumu (.eml) vai pastkastes arhīvu (.mbox).',
+    'mime_hint' => 'Atbalstītie faili: bankas CSV, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, kartes izraksta PDF, e-pasta ziņojums (.eml) vai pastkastes arhīvs (.mbox).',
 
     'source_label' => 'Avots',
 

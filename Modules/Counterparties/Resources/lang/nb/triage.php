@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Alt er unnagjort — hver motpart er merket.',
     'back_to_index' => 'Tilbake til motparter →',
 
-    'meta' => ':count transaksjoner · sist sett :date',
+    'meta' => ':count transaksjon · sist sett :date|:count transaksjoner · sist sett :date',
 
     'suggested_aria' => 'Foreslått treff',
     'suggestion_medium' => '✨ Kanskje **:name** — middels sikkerhet',

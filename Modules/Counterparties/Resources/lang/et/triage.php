@@ -13,7 +13,7 @@ return [
     'all_caught_heading' => '🎉 Kõik tehtud — iga vastaspool on sildistatud.',
     'back_to_index' => 'Tagasi vastaspoolte juurde →',
 
-    'meta' => ':count tehingut · viimati nähtud :date',
+    'meta' => ':count tehing · viimati nähtud :date|:count tehingut · viimati nähtud :date',
 
     'suggested_aria' => 'Soovitatud vaste',
     'suggestion_medium' => '✨ Võib-olla **:name** — keskmine kindlus',

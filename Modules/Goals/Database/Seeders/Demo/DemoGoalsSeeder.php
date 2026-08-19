@@ -7,6 +7,7 @@ namespace Modules\Goals\Database\Seeders\Demo;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Support\Lang;
 use Modules\Goals\Models\Goal;
 use Modules\Goals\Public\Services\GoalContributionWriter;
 use Modules\Goals\Public\Services\GoalWriter;
@@ -21,12 +22,12 @@ final class DemoGoalsSeeder
     // ships a goal whose deadline has already passed, and `complete` exercises
     // the finished-goal rendering path. `fundedBy` picks the attributed credits
     // by (type, amount) — description is ciphertext at rest under encryption.
-    /** @var list<array{name: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool, fundedBy: ?array{type: string, amountMinor: int}}> */
+    /** @var list<array{nameKey: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool, fundedBy: ?array{type: string, amountMinor: int}}> */
     private const GOALS = [
-        ['name' => 'Emergency fund', 'amount' => '5000,00', 'monthsOut' => 18, 'startedDaysAgo' => 80, 'complete' => false, 'fundedBy' => null],
-        ['name' => 'Japan trip', 'amount' => '4500,00', 'monthsOut' => 14, 'startedDaysAgo' => 62, 'complete' => false, 'fundedBy' => null],
-        ['name' => 'Replace the laptop', 'amount' => '1800,00', 'monthsOut' => 8, 'startedDaysAgo' => 45, 'complete' => false, 'fundedBy' => null],
-        ['name' => 'Winter tyres', 'amount' => '600,00', 'monthsOut' => 3, 'startedDaysAgo' => 30, 'complete' => true, 'fundedBy' => ['type' => 'transfer_in', 'amountMinor' => 10000]],
+        ['nameKey' => 'goal_emergency_fund', 'amount' => '5000,00', 'monthsOut' => 18, 'startedDaysAgo' => 80, 'complete' => false, 'fundedBy' => null],
+        ['nameKey' => 'goal_japan_trip', 'amount' => '4500,00', 'monthsOut' => 14, 'startedDaysAgo' => 62, 'complete' => false, 'fundedBy' => null],
+        ['nameKey' => 'goal_replace_laptop', 'amount' => '1800,00', 'monthsOut' => 8, 'startedDaysAgo' => 45, 'complete' => false, 'fundedBy' => null],
+        ['nameKey' => 'goal_winter_tyres', 'amount' => '600,00', 'monthsOut' => 3, 'startedDaysAgo' => 30, 'complete' => true, 'fundedBy' => ['type' => 'transfer_in', 'amountMinor' => 10000]],
     ];
 
     public function __construct(
@@ -53,13 +54,17 @@ final class DemoGoalsSeeder
     }
 
     /**
-     * @param  array{name: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool, fundedBy: ?array{type: string, amountMinor: int}}  $row
+     * @param  array{nameKey: string, amount: string, monthsOut: int, startedDaysAgo: int, complete: bool, fundedBy: ?array{type: string, amountMinor: int}}  $row
      */
     private function upsertGoal(User $user, array $row): void
     {
+        // Demo content is the first thing a new install shows, so it is named
+        // in the interface language rather than in English.
+        $name = Lang::get('core::demo.'.$row['nameKey']);
+
         $existing = Goal::query()
             ->where('user_id', $user->id)
-            ->where('name', $row['name'])
+            ->where('name', $name)
             ->first();
 
         if ($existing !== null) {
@@ -68,7 +73,7 @@ final class DemoGoalsSeeder
 
         $goal = $this->writer->save(
             $user,
-            $row['name'],
+            $name,
             $row['amount'],
             CarbonImmutable::today()->addMonths($row['monthsOut'])->toDateString(),
         );

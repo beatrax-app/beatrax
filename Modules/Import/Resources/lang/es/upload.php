@@ -8,7 +8,7 @@ return [
     'migrate_prompt' => '¿Vienes de otra app de presupuestos?',
     'migrate_link' => 'Importar desde YNAB o Actual',
     'subtitle' => 'Suelta aquí una exportación de banco, de tarjeta o de PayPal, o un archivo de recibo por correo.',
-    'mime_hint' => 'Ese archivo no parece una exportación de extracto compatible. Suelta un CSV bancario, un MT940 (.sta / .mt940 / .txt), un XML CAMT.053, un PDF de extracto de tarjeta, un mensaje de correo (.eml) o un archivo de buzón (.mbox).',
+    'mime_hint' => 'Archivos admitidos: CSV bancario, MT940 (.sta / .mt940 / .txt), CAMT.053 XML, PDF de extracto de tarjeta, mensaje de correo (.eml) o archivo de buzón (.mbox).',
 
     'source_label' => 'Fuente',
 
